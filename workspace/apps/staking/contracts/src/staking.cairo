@@ -1,19 +1,73 @@
+use starknet::ContractAddress;
+
+
+#[derive(Drop, Serde, starknet::Store)]
+struct StakerInfo {
+    reward_address: ContractAddress,
+    operational_address: ContractAddress,
+    unstake_time: Option<felt252>,
+    amount: u256,
+    index: u256,
+    unclaimed_rewards: u256,
+}
+
+
+#[derive(Drop, Serde)]
+struct StakingContractInfo {
+    max_leverage: u256,
+    min_stake: u256,
+}
+
 #[starknet::interface]
-trait EmptyContractInterface<T> {
+trait IStaking<TContractState> {
+    fn stake(
+        ref self: TContractState,
+        staker_address: ContractAddress,
+        reward_address: ContractAddress,
+        operational_address: ContractAddress,
+        amount: u256,
+        pooling_enabled: bool
+    ) -> bool;
+    fn increase_stake(
+        ref self: TContractState, staker_address: ContractAddress, amount: u256
+    ) -> u256;
+    fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> u256;
+    fn unstake_intent(ref self: TContractState, staker_address: ContractAddress) -> felt252;
+    fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> u256;
+    fn add_to_pool(ref self: TContractState, staker_address: ContractAddress, amount: u256) -> u256;
+    fn remove_from_pool_intent(
+        ref self: TContractState, staker_address: ContractAddress, amount: u256
+    ) -> felt252;
+    fn remove_from_pool_action(ref self: TContractState, staker_address: ContractAddress) -> u256;
+    fn switch_pool(
+        ref self: TContractState,
+        from_staker_address: ContractAddress,
+        to_staker_address: ContractAddress,
+        pool_address: ContractAddress,
+        amount: u256,
+        data: ByteArray
+    ) -> bool;
+    fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
+    fn set_open_for_pooling(ref self: TContractState) -> ContractAddress;
+    fn state_of(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
+    fn contract_parameters(self: @TContractState) -> StakingContractInfo;
 }
 
 #[starknet::contract]
-mod my_contract {
-    
+mod Staking {
+    use starknet::{ContractAddress, get_block_timestamp, contract_address_const};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
+    use super::{StakerInfo, StakingContractInfo};
 
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
 
+
     #[abi(embed_v0)]
-    impl AccessControlImpl = AccessControlComponent::AccessControlImpl<ContractState>;
+    impl AccessControlImpl =
+        AccessControlComponent::AccessControlImpl<ContractState>;
 
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
@@ -23,7 +77,25 @@ mod my_contract {
         #[substorage(v0)]
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
-        src5: SRC5Component::Storage
+        src5: SRC5Component::Storage,
+        global_index: u256,
+        min_stake: u256,
+        staker_address_to_staker_info: LegacyMap::<ContractAddress, StakerInfo>,
+        operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
+        global_rev_share: u256,
+        max_leverage: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct BalanceChanged {
+        staker_address: ContractAddress,
+        amount: u256
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct NewPool {
+        staker_address: ContractAddress,
+        pooling_contract_address: ContractAddress
     }
 
     #[event]
@@ -34,6 +106,98 @@ mod my_contract {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
+    fn constructor(ref self: ContractState) {}
+
+
+    #[abi(embed_v0)]
+    impl StakingImpl of super::IStaking<ContractState> {
+        fn stake(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            reward_address: ContractAddress,
+            operational_address: ContractAddress,
+            amount: u256,
+            pooling_enabled: bool
+        ) -> bool {
+            true
+        }
+
+        fn increase_stake(
+            ref self: ContractState, staker_address: ContractAddress, amount: u256
+        ) -> u256 {
+            0
+        }
+
+        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u256 {
+            0
+        }
+
+        fn unstake_intent(ref self: ContractState, staker_address: ContractAddress) -> felt252 {
+            0
+        }
+
+        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u256 {
+            0
+        }
+
+        fn add_to_pool(
+            ref self: ContractState, staker_address: ContractAddress, amount: u256
+        ) -> u256 {
+            0
+        }
+
+        fn remove_from_pool_intent(
+            ref self: ContractState, staker_address: ContractAddress, amount: u256
+        ) -> felt252 {
+            0
+        }
+
+        fn remove_from_pool_action(
+            ref self: ContractState, staker_address: ContractAddress
+        ) -> u256 {
+            0
+        }
+
+        fn switch_pool(
+            ref self: ContractState,
+            from_staker_address: ContractAddress,
+            to_staker_address: ContractAddress,
+            pool_address: ContractAddress,
+            amount: u256,
+            data: ByteArray
+        ) -> bool {
+            true
+        }
+
+        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
+            true
+        }
+
+        fn set_open_for_pooling(ref self: ContractState) -> ContractAddress {
+            contract_address_const::<0>()
+        }
+
+        fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
+            StakerInfo {
+                reward_address: contract_address_const::<0>(),
+                operational_address: contract_address_const::<0>(),
+                unstake_time: Option::None,
+                amount: 0,
+                index: 0,
+                unclaimed_rewards: 0,
+            }
+        }
+
+        fn contract_parameters(self: @ContractState) -> StakingContractInfo {
+            StakingContractInfo { min_stake: 0, max_leverage: 0 }
+        }
+    }
+
+
+    #[generate_trait]
+    impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+        fn calculate_rewards(ref self: ContractState, staker_address: ContractAddress) -> bool {
+            true
+        }
     }
 }
