@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use super::access_control_interface::RoleId;
+type RoleId = felt252;
 
 // Role                |   Role Admin
 // ----------------------------------------
