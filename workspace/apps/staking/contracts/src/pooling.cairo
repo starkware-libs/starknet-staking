@@ -7,8 +7,8 @@ trait IPooling<TContractState> {
     fn unpool_intent(ref self: TContractState) -> u256;
     fn unpool_action(ref self: TContractState) -> u256;
     fn claim_rewards(ref self: TContractState, pooler_address: ContractAddress) -> u256;
-    // fn switch_pool()
-    // fn enter_from_staking_contract
+// fn switch_pool()
+// fn enter_from_staking_contract
 }
 
 #[starknet::contract]
