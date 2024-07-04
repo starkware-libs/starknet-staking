@@ -6,16 +6,16 @@ struct StakerInfo {
     reward_address: ContractAddress,
     operational_address: ContractAddress,
     unstake_time: Option<felt252>,
-    amount: u256,
-    index: u256,
-    unclaimed_rewards: u256,
+    amount: u128,
+    index: u128,
+    unclaimed_rewards: u128,
 }
 
 
 #[derive(Drop, Serde)]
 struct StakingContractInfo {
-    max_leverage: u256,
-    min_stake: u256,
+    max_leverage: u128,
+    min_stake: u128,
 }
 
 #[starknet::interface]
@@ -24,26 +24,26 @@ trait IStaking<TContractState> {
         ref self: TContractState,
         reward_address: ContractAddress,
         operational_address: ContractAddress,
-        amount: u256,
+        amount: u128,
         pooling_enabled: bool
     ) -> bool;
     fn increase_stake(
-        ref self: TContractState, staker_address: ContractAddress, amount: u256
-    ) -> u256;
-    fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> u256;
+        ref self: TContractState, staker_address: ContractAddress, amount: u128
+    ) -> u128;
+    fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> u128;
     fn unstake_intent(ref self: TContractState, staker_address: ContractAddress) -> felt252;
-    fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> u256;
-    fn add_to_pool(ref self: TContractState, staker_address: ContractAddress, amount: u256) -> u256;
+    fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> u128;
+    fn add_to_pool(ref self: TContractState, staker_address: ContractAddress, amount: u128) -> u128;
     fn remove_from_pool_intent(
-        ref self: TContractState, staker_address: ContractAddress, amount: u256
+        ref self: TContractState, staker_address: ContractAddress, amount: u128
     ) -> felt252;
-    fn remove_from_pool_action(ref self: TContractState, staker_address: ContractAddress) -> u256;
+    fn remove_from_pool_action(ref self: TContractState, staker_address: ContractAddress) -> u128;
     fn switch_pool(
         ref self: TContractState,
         from_staker_address: ContractAddress,
         to_staker_address: ContractAddress,
         pool_address: ContractAddress,
-        amount: u256,
+        amount: u128,
         data: ByteArray
     ) -> bool;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
@@ -77,18 +77,18 @@ mod Staking {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        global_index: u256,
-        min_stake: u256,
+        global_index: u128,
+        min_stake: u128,
         staker_address_to_staker_info: LegacyMap::<ContractAddress, StakerInfo>,
         operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
-        global_rev_share: u256,
-        max_leverage: u256,
+        global_rev_share: u128,
+        max_leverage: u128,
     }
 
     #[derive(Drop, starknet::Event)]
     struct BalanceChanged {
         staker_address: ContractAddress,
-        amount: u256
+        amount: u128
     }
 
     #[derive(Drop, starknet::Event)]
@@ -114,19 +114,19 @@ mod Staking {
             ref self: ContractState,
             reward_address: ContractAddress,
             operational_address: ContractAddress,
-            amount: u256,
+            amount: u128,
             pooling_enabled: bool
         ) -> bool {
             true
         }
 
         fn increase_stake(
-            ref self: ContractState, staker_address: ContractAddress, amount: u256
-        ) -> u256 {
+            ref self: ContractState, staker_address: ContractAddress, amount: u128
+        ) -> u128 {
             0
         }
 
-        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u256 {
+        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
             0
         }
 
@@ -134,25 +134,25 @@ mod Staking {
             0
         }
 
-        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u256 {
+        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
             0
         }
 
         fn add_to_pool(
-            ref self: ContractState, staker_address: ContractAddress, amount: u256
-        ) -> u256 {
+            ref self: ContractState, staker_address: ContractAddress, amount: u128
+        ) -> u128 {
             0
         }
 
         fn remove_from_pool_intent(
-            ref self: ContractState, staker_address: ContractAddress, amount: u256
+            ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> felt252 {
             0
         }
 
         fn remove_from_pool_action(
             ref self: ContractState, staker_address: ContractAddress
-        ) -> u256 {
+        ) -> u128 {
             0
         }
 
@@ -161,7 +161,7 @@ mod Staking {
             from_staker_address: ContractAddress,
             to_staker_address: ContractAddress,
             pool_address: ContractAddress,
-            amount: u256,
+            amount: u128,
             data: ByteArray
         ) -> bool {
             true
