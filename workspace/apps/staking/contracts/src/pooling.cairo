@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait IPooling<TContractState> {
+pub trait IPooling<TContractState> {
     fn pool(ref self: TContractState, amount: u128, reward_address: ContractAddress) -> bool;
     fn increase_pool(ref self: TContractState, amount: u128) -> u128;
     fn unpool_intent(ref self: TContractState) -> u128;
@@ -12,7 +12,7 @@ trait IPooling<TContractState> {
 }
 
 #[starknet::contract]
-mod pooling {
+pub mod pooling {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::ContractAddress;
@@ -48,12 +48,12 @@ mod pooling {
     fn constructor(ref self: ContractState) {}
 
     #[derive(Drop, Serde, starknet::Store)]
-    struct PoolerInfo {
-        reward_address: ContractAddress,
-        amount: u128,
-        index: u128,
-        unclaimed_rewards: u128,
-        unpool_time: Option<felt252>,
+    pub struct PoolerInfo {
+        pub reward_address: ContractAddress,
+        pub amount: u128,
+        pub index: u128,
+        pub unclaimed_rewards: u128,
+        pub unpool_time: Option<felt252>,
     }
 
     #[abi(embed_v0)]

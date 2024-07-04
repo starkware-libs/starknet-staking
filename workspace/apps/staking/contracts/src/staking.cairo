@@ -2,24 +2,24 @@ use starknet::ContractAddress;
 
 
 #[derive(Drop, Serde, starknet::Store)]
-struct StakerInfo {
-    reward_address: ContractAddress,
-    operational_address: ContractAddress,
-    unstake_time: Option<felt252>,
-    amount: u128,
-    index: u128,
-    unclaimed_rewards: u128,
+pub struct StakerInfo {
+    pub reward_address: ContractAddress,
+    pub operational_address: ContractAddress,
+    pub unstake_time: Option<felt252>,
+    pub amount: u128,
+    pub index: u128,
+    pub unclaimed_rewards: u128,
 }
 
 
 #[derive(Drop, Serde)]
-struct StakingContractInfo {
-    max_leverage: u128,
-    min_stake: u128,
+pub struct StakingContractInfo {
+    pub max_leverage: u128,
+    pub min_stake: u128,
 }
 
 #[starknet::interface]
-trait IStaking<TContractState> {
+pub trait IStaking<TContractState> {
     fn stake(
         ref self: TContractState,
         reward_address: ContractAddress,
@@ -53,7 +53,7 @@ trait IStaking<TContractState> {
 }
 
 #[starknet::contract]
-mod Staking {
+pub mod Staking {
     use starknet::{ContractAddress, get_block_timestamp, contract_address_const};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
