@@ -22,7 +22,6 @@ struct StakingContractInfo {
 trait IStaking<TContractState> {
     fn stake(
         ref self: TContractState,
-        staker_address: ContractAddress,
         reward_address: ContractAddress,
         operational_address: ContractAddress,
         amount: u256,
@@ -113,7 +112,6 @@ mod Staking {
     impl StakingImpl of super::IStaking<ContractState> {
         fn stake(
             ref self: ContractState,
-            staker_address: ContractAddress,
             reward_address: ContractAddress,
             operational_address: ContractAddress,
             amount: u256,
