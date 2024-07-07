@@ -3,7 +3,7 @@ pub mod Staking {
     use starknet::{ContractAddress, get_block_timestamp, contract_address_const};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use contracts::staking::{ IStaking, StakerInfo, StakingContractInfo };
+    use contracts::staking::{IStaking, StakerInfo, StakingContractInfo};
 
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);

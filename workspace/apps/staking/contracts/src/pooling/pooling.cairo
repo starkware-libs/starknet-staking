@@ -3,7 +3,7 @@ pub mod Pooling {
     use starknet::ContractAddress;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use contracts::pooling::{ IPooling, PoolerInfo };
+    use contracts::pooling::{IPooling, PoolerInfo};
 
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);

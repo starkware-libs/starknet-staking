@@ -4,4 +4,4 @@ mod pooling;
 
 //convenient reference
 use pooling::Pooling;
-use interface::{ IPooling, PoolerInfo };
+use interface::{IPooling, PoolerInfo};
