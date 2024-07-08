@@ -1,9 +1,10 @@
-mod interface;
+pub mod interface;
 
-mod staking;
+pub mod staking;
 
-use staking::Staking;
-use interface::{IStaking, StakerInfo, StakingContractInfo};
+//convenient reference
+pub use staking::Staking;
+pub use interface::{IStaking, StakerInfo, StakingContractInfo};
 
 #[cfg(test)]
 mod test;

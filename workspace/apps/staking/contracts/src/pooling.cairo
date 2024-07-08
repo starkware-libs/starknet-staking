@@ -1,10 +1,10 @@
-mod interface;
+pub mod interface;
 
-mod pooling;
+pub mod pooling;
 
 //convenient reference
-use pooling::Pooling;
-use interface::{IPooling, PoolerInfo};
+pub use pooling::Pooling;
+pub use interface::{IPooling, PoolerInfo};
 
 #[cfg(test)]
 mod test;
