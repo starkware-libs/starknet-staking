@@ -1,5 +1,9 @@
 #[starknet::contract]
 pub mod Staking {
+    // TODO(Nir, 01/08/2024): Add the correct value and type for the global rev share
+    use core::traits::Into;
+    pub const GLOBAL_REV_SHARE: u8 = 0;
+    pub const BASE_VALUE: u128 = 100000000000;
     use starknet::ContractAddress;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -28,8 +32,9 @@ pub mod Staking {
         min_stake: u64,
         staker_address_to_staker_info: LegacyMap::<ContractAddress, StakerInfo>,
         operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
-        global_rev_share: u64,
+        global_rev_share: u8,
         max_leverage: u64,
+        token_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -52,16 +57,19 @@ pub mod Staking {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, min_stake: u64, max_leverage: u64) {
+    pub fn constructor(
+        ref self: ContractState, token_address: ContractAddress, min_stake: u64, max_leverage: u64
+    ) {
+        self.token_address.write(token_address);
         self.min_stake.write(min_stake);
         self.max_leverage.write(max_leverage);
+        self.global_index.write(BASE_VALUE);
     }
 
     #[abi(embed_v0)]
     impl StakingImpl of IStaking<ContractState> {
         fn stake(
             ref self: ContractState,
-            staker_address: ContractAddress,
             reward_address: ContractAddress,
             operational_address: ContractAddress,
             amount: u64,
@@ -135,27 +143,30 @@ pub mod Staking {
 
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
             StakingContractInfo {
-                min_stake: self.min_stake.read(), max_leverage: self.max_leverage.read()
+                min_stake: self.min_stake.read(),
+                max_leverage: self.max_leverage.read(),
+                token_address: self.token_address.read(),
+                global_index: self.global_index.read(),
+                global_rev_share: GLOBAL_REV_SHARE
             }
         }
     }
 
-
-    /// Calculates the rewards for a given staker
-    /// 
-    /// The caller for this function should validate that the staker exists in the storage.
-    /// 
-    /// rewards formula:
-    /// $$ interest = (global\_index-self\_index) $$
-    /// 
-    /// single staker:
-    /// $$ rewards = staker\_amount\_own * interest $$
-    /// 
-    /// staker with pool:
-    /// $$ rewards = staker\_amount\_own * interest + staker\_amount\_pool * interest * global\_rev\_share $$
-    /// 
     #[generate_trait]
     impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+        /// Calculates the rewards for a given staker
+        /// 
+        /// The caller for this function should validate that the staker exists in the storage.
+        /// 
+        /// rewards formula:
+        /// $$ interest = (global\_index-self\_index) $$
+        /// 
+        /// single staker:
+        /// $$ rewards = staker\_amount\_own * interest $$
+        /// 
+        /// staker with pool:
+        /// $$ rewards = staker\_amount\_own * interest + staker\_amount\_pool * interest * global\_rev\_share $$
+        /// 
         fn calculate_rewards(
             ref self: ContractState, staker_address: ContractAddress, ref staker_info: StakerInfo
         ) -> () {
@@ -168,7 +179,7 @@ pub mod Staking {
                 let mut own_rewards = staker_info.amount_own * interest;
                 if (staker_info.pooling_contract.is_some()) {
                     let mut pooled_rewards = staker_info.amount_pool * interest;
-                    let rev_share = pooled_rewards * self.global_rev_share.read();
+                    let rev_share = pooled_rewards * GLOBAL_REV_SHARE.into();
                     own_rewards += rev_share;
                     pooled_rewards -= rev_share;
                     staker_info.unclaimed_rewards_pool += pooled_rewards;
