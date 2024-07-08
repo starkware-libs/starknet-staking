@@ -1,12 +1,29 @@
-pub mod StakerErrors {
-    // TODO(Nir, 14/07/2024) fix message error to be useful for the user e.g. 'Staker already exists, use increase_stake instead'
-    pub const STAKER_EXISTS: felt252 = 'Staker already exists';
-    pub const STAKER_DOES_NOT_EXISTS: felt252 = 'Staker does not exists';
-    pub const OPERATIONAL_EXISTS: felt252 = 'Operational already exists';
-    // TODO(Nir, 14/07/2024) fix message error to be useful for the user e.g. 'Amount is less than min stake - try again with enough funds'
-    pub const AMOUNT_LESS_THAN_MIN_STAKE: felt252 = 'Amount is less than min stake';
+use core::traits::Into;
+
+pub enum Error {
+    // Generic errors
+    INTEREST_ISNT_U64,
+    // Shared errors
+    STAKER_EXISTS,
+    STAKER_DOES_NOT_EXIST,
+    OPERATIONAL_EXISTS,
+    // Staking contract errors
+    AMOUNT_LESS_THAN_MIN_STAKE,
+    // Pooling contract errors
+    POOL_MEMBER_DOES_NOT_EXIST,
 }
 
-pub mod PoolerErrors {
-    pub const POOL_MEMBER_DOES_NOT_EXISTS: felt252 = 'Pool member does not exists';
+
+#[inline(always)]
+pub fn panic_by_err(error: Error) {
+    match error {
+        Error::INTEREST_ISNT_U64 => panic!("Interest is too large, expected to fit in u64."),
+        Error::STAKER_EXISTS => panic!("Staker already exists, use increase_stake instead."),
+        Error::STAKER_DOES_NOT_EXIST => panic!("Staker does not exist."),
+        Error::OPERATIONAL_EXISTS => panic!("Operational already exists."),
+        Error::AMOUNT_LESS_THAN_MIN_STAKE => panic!(
+            "Amount is less than min stake - try again with enough funds."
+        ),
+        Error::POOL_MEMBER_DOES_NOT_EXIST => panic!("Pool member does not exist."),
+    }
 }

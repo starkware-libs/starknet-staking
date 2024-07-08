@@ -4,7 +4,7 @@ pub mod Staking {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use contracts::staking::{IStaking, StakerInfo, StakingContractInfo};
-    use contracts::errors::StakerErrors;
+    use contracts::errors::{Error, panic_by_err};
     use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 
 
@@ -127,7 +127,9 @@ pub mod Staking {
 
         fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let staker_info = self.staker_address_to_staker_info.read(staker_address);
-            assert(staker_info != Default::default(), StakerErrors::STAKER_DOES_NOT_EXISTS);
+            if (staker_info == Default::default()) {
+                panic_by_err(Error::STAKER_DOES_NOT_EXIST)
+            }
             staker_info
         }
 
@@ -160,18 +162,22 @@ pub mod Staking {
             if (staker_info.unstake_time.is_some()) {
                 return ();
             }
-            let interest: u64 = (self.global_index.read() - staker_info.index).try_into().unwrap();
-            let mut own_rewards = staker_info.amount_own * interest;
-            if (staker_info.pooling_contract.is_some()) {
-                let mut pooled_rewards = staker_info.amount_pool * interest;
-                let rev_share = pooled_rewards * self.global_rev_share.read();
-                own_rewards += rev_share;
-                pooled_rewards -= rev_share;
-                staker_info.unclaimed_rewards_pool += pooled_rewards;
+            let interest_option: Option<u64> = (self.global_index.read() - staker_info.index)
+                .try_into();
+            if let Option::Some(interest) = interest_option {
+                let mut own_rewards = staker_info.amount_own * interest;
+                if (staker_info.pooling_contract.is_some()) {
+                    let mut pooled_rewards = staker_info.amount_pool * interest;
+                    let rev_share = pooled_rewards * self.global_rev_share.read();
+                    own_rewards += rev_share;
+                    pooled_rewards -= rev_share;
+                    staker_info.unclaimed_rewards_pool += pooled_rewards;
+                }
+                staker_info.unclaimed_rewards_own += own_rewards;
+                staker_info.index = self.global_index.read();
+                self.staker_address_to_staker_info.write(staker_address, staker_info);
             }
-            staker_info.unclaimed_rewards_own += own_rewards;
-            staker_info.index = self.global_index.read();
-            self.staker_address_to_staker_info.write(staker_address, staker_info);
+            panic_by_err(Error::INTEREST_ISNT_U64);
         }
     }
 }
