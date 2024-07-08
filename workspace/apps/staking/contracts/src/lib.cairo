@@ -2,5 +2,5 @@
 mod staking;
 mod pooling;
 
-//staking and pooling errors
+// Consts and other non-component utilities
 mod errors;

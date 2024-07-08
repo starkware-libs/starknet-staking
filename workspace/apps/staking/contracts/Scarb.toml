@@ -10,5 +10,7 @@ starknet.workspace = true
 openzeppelin.workspace = true
 contracts_commons = { path = "../../../packages/contracts" }
 
+[dev-dependencies]
+snforge_std.workspace = true
 
 [[target.starknet-contract]]
