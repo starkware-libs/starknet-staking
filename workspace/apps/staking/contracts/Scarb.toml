@@ -13,4 +13,8 @@ contracts_commons = { path = "../../../packages/contracts" }
 [dev-dependencies]
 snforge_std.workspace = true
 
+[scripts]
+test = "snforge test"
+
 [[target.starknet-contract]]
+
