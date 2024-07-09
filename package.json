@@ -1,0 +1,42 @@
+{
+  "private": true,
+  "workspaces": [
+    "workspace/apps/**/*",
+    "workspace/packages/*",
+    "workspace/tools/*",
+    "workspace/pipeline/*"
+  ],
+  "scripts": {
+    "prebuild": "turbo run prebuild",
+    "build": "turbo run build",
+    "clean": "turbo run clean",
+    "dev": "turbo run dev --parallel",
+    "dev:apps": "node ./scripts/dev-apps.js",
+    "format": "sort-package-json && prettier --write \"**.+(js|json|md|yaml)\" && turbo run format --parallel",
+    "postinstall": "pnpm manypkg:check",
+    "lint": "turbo run lint",
+    "manypkg:check": "manypkg check || exit 0",
+    "npkill": "npkill",
+    "pack": "turbo run pack",
+    "pipeline": "pipeline"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.26.0",
+    "@manypkg/cli": "^0.21.4",
+    "@trivago/prettier-plugin-sort-imports": "^4.1.1",
+    "eslint-config-base": "workspace:*",
+    "npkill": "^0.10.0",
+    "prettier": "^2.8.4",
+    "sort-package-json": "^2.10.0",
+    "turbo": "1.13.3"
+  },
+  "packageManager": "pnpm@8.15.8",
+  "engines": {
+    "node": ">=20.14.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "ethereumjs-abi": "https://registry.npmjs.org/ethereumjs-abi/-/ethereumjs-abi-0.6.8.tgz"
+    }
+  }
+}

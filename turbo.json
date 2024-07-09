@@ -1,0 +1,35 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "ts-declarations": {
+      "dependsOn": ["prebuild", "^ts-declarations", "^build"]
+    },
+    "build": {
+      "dependsOn": ["prebuild", "ts-declarations", "^build"],
+      "outputs": ["dist/**"]
+    },
+    "test": {
+      "dependsOn": ["build"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "pack": {
+      "dependsOn": ["lint", "build", "test"]
+    },
+    "format": {},
+    "clean": {},
+    "prebuild": {},
+    "publish-package": {
+      "dependsOn": ["build"]
+    },
+    "publish": {
+      "dependsOn": ["publish-package"]
+    }
+  },
+  "globalEnv": ["npm_package_version", "npm_package_name"]
+}

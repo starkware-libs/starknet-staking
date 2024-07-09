@@ -1,0 +1,6 @@
+packages:
+  - 'workspace/apps/**/*'
+  - 'workspace/packages/*'
+  - 'workspace/tools/*'
+  - 'workspace/pipeline/*'
+  - '!**/dist/**'
