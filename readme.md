@@ -61,7 +61,7 @@ function info template:
 
 # About
 This repo holds the implementation of Staknet's staking mechanism.  
-Following [Starknet SNIP 17]().
+Following [Starknet SNIP 18](https://community.starknet.io/t/snip-18-staking-s-first-stage-on-starknet/114334).
 
 ## Disclaimer
 Staking is a work in progress.
@@ -183,10 +183,9 @@ Only the staker address for which the operation is requested for.
 Executes the intent to exit the stake if enough time have passed.
 Transfers the funds back to the staker.
 #### parameters <!-- omit from toc -->
-| name          | type    |
-| ------------- | ------- |
-| staker        | address |
-| claim_rewards | boolean |
+| name   | type    |
+| ------ | ------- |
+| staker | address |
 #### return <!-- omit from toc -->
 amount: u128 - amount of tokens transferred back to the staker.
 #### emits <!-- omit from toc -->
@@ -199,7 +198,7 @@ amount: u128 - amount of tokens transferred back to the staker.
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. Validate enough time have passed from the unstake intent.
-2. if claim_rewards is true then claim rewards.
+2. claim rewards.
 3. remove funds and transfer to staker.
 4. delete staker record.
 
@@ -250,10 +249,11 @@ Only pooling contract for the given staker can execute.
 #### description <!-- omit from toc -->
 Inform the staker that an amount will be reduced from the delegation pool.
 #### parameters <!-- omit from toc -->
-| name       | type    |
-| ---------- | ------- |
-| identifier | felt252 |
-| amount     | u128    |
+| name       | type            |
+| ---------- | --------------- |
+| staker     | address         |
+| identifier | Span\<felt252\> |
+| amount     | u128            |
 #### return <!-- omit from toc -->
 unstake_time: time - when will the pool member be able to exit.
 index: u64 - updated index
@@ -274,9 +274,10 @@ Only pooling contract for the given staker can execute.
 Execute the intent to remove funds from pool if enough time have passed.
 Transfers the funds to the pooling contract.
 #### parameters <!-- omit from toc -->
-| name       | type    |
-| ---------- | ------- |
-| identifier | felt252 |
+| name       | type            |
+| ---------- | --------------- |
+| staker     | address         |
+| identifier | Span\<felt252\> |
 #### return <!-- omit from toc -->
 amount: felt252 - amount being transferred to the pooling contract.
 #### emits <!-- omit from toc -->
@@ -296,13 +297,13 @@ Any address can execute.
 #### description <!-- omit from toc -->
 Execute a pool member request to move from one staker's delegation pool to another staker's delegation pool.
 #### parameters <!-- omit from toc -->
-| name        | type          |
-| ----------- | ------------- |
-| from_staker | address       |
-| to_staker   | address       |
-| to_pool     | address       |
-| amount      | u128          |
-| data        | Span<felt252> |
+| name        | type            |
+| ----------- | --------------- |
+| from_staker | address         |
+| to_staker   | address         |
+| to_pool     | address         |
+| amount      | u128            |
+| data        | Span\<felt252\> |
 #### return <!-- omit from toc -->
 success: bool
 #### emits <!-- omit from toc -->
@@ -536,10 +537,9 @@ Only the pool member address for which the operation is requested for.
 #### description <!-- omit from toc -->
 Executes the intent to exit the stake if enough time have passed. Transfers the funds back to the pool member.
 #### parameters <!-- omit from toc -->
-| name          | type    |
-| ------------- | ------- |
-| pool_member   | address |
-| claim_rewards | bool    |
+| name        | type    |
+| ----------- | ------- |
+| pool_member | address |
 #### return <!-- omit from toc -->
 amount: u128 - amount of tokens transferred back to the pool member.
 #### emits <!-- omit from toc -->
@@ -553,7 +553,7 @@ amount: u128 - amount of tokens transferred back to the pool member.
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. Validate enough time have passed from the exit intent.
-2. if claim_rewards is true then [claim rewards](#claim_rewards--1).
+2. [claim rewards](#claim_rewards--1).
 3. [Remove from delegation pool action](#remove_from_delegation_pool_action-).
 4. Transfer funds to pool member.
 

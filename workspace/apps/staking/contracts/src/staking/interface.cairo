@@ -39,23 +39,30 @@ pub trait IStaking<TContractState> {
         ref self: TContractState, staker_address: ContractAddress, amount: u128
     ) -> u128;
     fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> u128;
-    fn unstake_intent(ref self: TContractState, staker_address: ContractAddress) -> felt252;
+    fn unstake_intent(ref self: TContractState) -> felt252;
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> u128;
-    fn add_to_pool(ref self: TContractState, staker_address: ContractAddress, amount: u128) -> u128;
-    fn remove_from_pool_intent(
-        ref self: TContractState, staker_address: ContractAddress, amount: u128
+    fn add_to_delegation_pool(
+        ref self: TContractState, pooled_staker: ContractAddress, amount: u128
+    ) -> u128;
+    fn remove_from_delegation_pool_intent(
+        ref self: TContractState,
+        staker_address: ContractAddress,
+        amount: u128,
+        identifier: Span<felt252>
     ) -> felt252;
-    fn remove_from_pool_action(ref self: TContractState, staker_address: ContractAddress) -> u128;
-    fn switch_pool(
+    fn remove_from_delegation_pool_action(
+        ref self: TContractState, staker_address: ContractAddress, identifier: Span<felt252>
+    ) -> u128;
+    fn switch_staking_delegation_pool(
         ref self: TContractState,
         from_staker_address: ContractAddress,
         to_staker_address: ContractAddress,
-        pool_address: ContractAddress,
+        to_pool_address: ContractAddress,
         amount: u128,
-        data: ByteArray
+        data: Span<felt252>
     ) -> bool;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
-    fn set_open_for_pooling(ref self: TContractState) -> ContractAddress;
+    fn set_open_for_delegation(ref self: TContractState) -> ContractAddress;
     fn state_of(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
 }
