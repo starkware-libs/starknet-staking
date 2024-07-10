@@ -59,3 +59,6 @@ tsconfig.buildtests.json
 
 #scarb
 target
+
+#foundry
+.snfoundry_cache
