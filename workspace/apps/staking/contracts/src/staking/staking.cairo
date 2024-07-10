@@ -89,7 +89,7 @@ pub mod Staking {
             0
         }
 
-        fn unstake_intent(ref self: ContractState, staker_address: ContractAddress) -> felt252 {
+        fn unstake_intent(ref self: ContractState) -> felt252 {
             0
         }
 
@@ -97,31 +97,34 @@ pub mod Staking {
             0
         }
 
-        fn add_to_pool(
-            ref self: ContractState, staker_address: ContractAddress, amount: u128
+        fn add_to_delegation_pool(
+            ref self: ContractState, pooled_staker: ContractAddress, amount: u128
         ) -> u128 {
             0
         }
 
-        fn remove_from_pool_intent(
-            ref self: ContractState, staker_address: ContractAddress, amount: u128
+        fn remove_from_delegation_pool_intent(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            amount: u128,
+            identifier: Span<felt252>
         ) -> felt252 {
             0
         }
 
-        fn remove_from_pool_action(
-            ref self: ContractState, staker_address: ContractAddress
+        fn remove_from_delegation_pool_action(
+            ref self: ContractState, staker_address: ContractAddress, identifier: Span<felt252>
         ) -> u128 {
             0
         }
 
-        fn switch_pool(
+        fn switch_staking_delegation_pool(
             ref self: ContractState,
             from_staker_address: ContractAddress,
             to_staker_address: ContractAddress,
-            pool_address: ContractAddress,
+            to_pool_address: ContractAddress,
             amount: u128,
-            data: ByteArray
+            data: Span<felt252>
         ) -> bool {
             true
         }
@@ -130,7 +133,7 @@ pub mod Staking {
             true
         }
 
-        fn set_open_for_pooling(ref self: ContractState) -> ContractAddress {
+        fn set_open_for_delegation(ref self: ContractState) -> ContractAddress {
             Default::default()
         }
 

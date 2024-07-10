@@ -46,20 +46,35 @@ pub mod Pooling {
 
     #[abi(embed_v0)]
     impl PoolingImpl of IPooling<ContractState> {
-        fn pool(ref self: ContractState, amount: u128, reward_address: ContractAddress) -> bool {
+        fn enter_delegation_pool(
+            ref self: ContractState, amount: u128, reward_address: ContractAddress
+        ) -> bool {
             true
         }
-        fn increase_pool(ref self: ContractState, amount: u128) -> u128 {
+        fn add_to_delegation_pool(ref self: ContractState, amount: u128) -> u128 {
             0
         }
-        fn unpool_intent(ref self: ContractState) -> u128 {
+        fn exit_delegation_pool_intent(ref self: ContractState) -> u128 {
             0
         }
-        fn unpool_action(ref self: ContractState) -> u128 {
+        fn exit_delegation_pool_action(ref self: ContractState) -> u128 {
             0
         }
         fn claim_rewards(ref self: ContractState, pool_member_address: ContractAddress) -> u128 {
             0
+        }
+        fn switch_delegation_pool(
+            ref self: ContractState,
+            to_staker_address: ContractAddress,
+            to_pool_address: ContractAddress,
+            amount: u128
+        ) -> u128 {
+            0
+        }
+        fn enter_from_staking_contract(
+            ref self: ContractState, amount: u128, index: u64, data: Span<felt252>
+        ) -> bool {
+            true
         }
     }
 
