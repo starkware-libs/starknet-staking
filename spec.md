@@ -1,28 +1,24 @@
-# Table of Contents <!-- omit from toc -->
-- [About](#about)
-  - [Disclaimer](#disclaimer)
-  - [Dependencies](#dependencies)
-  - [Getting help](#getting-help)
-  - [Help make Staking better!](#help-make-staking-better)
-  - [Contributing](#contributing)
-  - [Security](#security)
+# Spec
+<details>
+    <summary><strong style="font-size: 1.5em;">Table of contents</strong></summary>
+
 - [Contracts block diagram](#contracts-block-diagram)
 - [Staking contract](#staking-contract)
   - [Functions](#functions)
-    - [stake 💰](#stake-)
-    - [increase\_stake 💰](#increase_stake-)
+    - [stake 💰](#stake-💰)
+    - [increase\_stake 💰](#increase_stake-💰)
     - [unstake\_intent](#unstake_intent)
-    - [unstake\_action 💰](#unstake_action-)
-    - [claim\_rewards 💰](#claim_rewards-)
-    - [add\_to\_delegation\_pool 💰](#add_to_delegation_pool-)
+    - [unstake\_action 💰](#unstake_action-💰)
+    - [claim\_rewards 💰](#claim_rewards-💰)
+    - [add\_to\_delegation\_pool 💰](#add_to_delegation_pool-💰)
     - [remove\_from\_delegation\_pool\_intent](#remove_from_delegation_pool_intent)
-    - [remove\_from\_delegation\_pool\_action 💰](#remove_from_delegation_pool_action-)
+    - [remove\_from\_delegation\_pool\_action 💰](#remove_from_delegation_pool_action-💰)
     - [switch\_staking\_delegation\_pool](#switch_staking_delegation_pool)
     - [change\_reward\_address](#change_reward_address)
     - [set\_open\_for\_delegation](#set_open_for_delegation)
-    - [claim\_delegation\_pool\_rewards 💰](#claim_delegation_pool_rewards-)
-    - [state\_of 👁](#state_of-)
-    - [contract\_parameters 👁](#contract_parameters-)
+    - [claim\_delegation\_pool\_rewards 💰](#claim_delegation_pool_rewards-💰)
+    - [state\_of 👁](#state_of-👁)
+    - [contract\_parameters 👁](#contract_parameters-👁)
     - [calculate\_rewards](#calculate_rewards)
   - [Events](#events)
     - [Balance Changed](#balance-changed)
@@ -30,11 +26,11 @@
     - [Staker Exit intent](#staker-exit-intent)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
-    - [enter\_delegation\_pool 💰](#enter_delegation_pool-)
-    - [add\_to\_delegation\_pool 💰](#add_to_delegation_pool--1)
+    - [enter\_delegation\_pool 💰](#enter_delegation_pool-💰)
+    - [add\_to\_delegation\_pool 💰](#add_to_delegation_pool-💰)
     - [exit\_delegation\_pool\_intent](#exit_delegation_pool_intent)
-    - [exit\_delegaition\_pool\_action 💰](#exit_delegaition_pool_action-)
-    - [claim\_rewards 💰](#claim_rewards--1)
+    - [exit\_delegaition\_pool\_action 💰](#exit_delegaition_pool_action-💰)
+    - [claim\_rewards 💰](#claim_rewards-💰)
     - [switch\_delegation\_pool](#switch_delegation_pool)
     - [enter\_from\_staking\_contract](#enter_from_staking_contract)
     - [calculate\_rewards](#calculate_rewards-1)
@@ -42,6 +38,8 @@
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
     - [Balance Changed](#balance-changed-1)
     - [Delegation Pool Member Exit intent](#delegation-pool-member-exit-intent)
+
+</details>
 
 <!--
 function info template:
@@ -56,7 +54,7 @@ function info template:
 #### access control
 #### logic
 -->
-# Contracts block diagram
+## Contracts block diagram
 ![alt text](assets/Staking_diagram.png)
 
 
@@ -309,7 +307,7 @@ Creates a staking delegation pool for a staker that doesn't have one.
 #### return <!-- omit from toc -->
 pool: address
 #### emits <!-- omit from toc -->
-[New Pool](#new-pool)
+[New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.
@@ -619,9 +617,9 @@ internal function.
 ### New Staking Delegation Pool Member
 | data        | type    | keyed |
 | ----------- | ------- | ----- |
-| staker      | address |       |
-| pool_member | address |       |
-| amount      | u128    |       |
+| staker      | address | ✅    |
+| pool_member | address | ✅    |
+| amount      | u128    | ❌    |
 
 ### Balance Changed
 | data        | type    | keyed |
