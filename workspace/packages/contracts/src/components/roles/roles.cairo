@@ -43,7 +43,7 @@ pub mod RolesComponent {
 
     use openzeppelin::access::accesscontrol::interface::IAccessControl;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
-    use openzeppelin::access::accesscontrol::AccessControlComponent::AccessControl;
+    use openzeppelin::access::accesscontrol::AccessControlComponent::AccessControlImpl;
     use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessInternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
 
@@ -307,16 +307,16 @@ pub mod RolesComponent {
             let un_initialized = access_comp.get_role_admin(role: GOVERNANCE_ADMIN) == 0;
             assert(un_initialized, ALREADY_INITIALIZED);
             access_comp._grant_role(role: GOVERNANCE_ADMIN, account: governance_admin);
-            access_comp._set_role_admin(role: APP_GOVERNOR, admin_role: APP_ROLE_ADMIN);
-            access_comp._set_role_admin(role: APP_ROLE_ADMIN, admin_role: GOVERNANCE_ADMIN);
-            access_comp._set_role_admin(role: GOVERNANCE_ADMIN, admin_role: GOVERNANCE_ADMIN);
-            access_comp._set_role_admin(role: OPERATOR, admin_role: APP_ROLE_ADMIN);
-            access_comp._set_role_admin(role: TOKEN_ADMIN, admin_role: APP_ROLE_ADMIN);
-            access_comp._set_role_admin(role: UPGRADE_GOVERNOR, admin_role: GOVERNANCE_ADMIN);
+            access_comp.set_role_admin(role: APP_GOVERNOR, admin_role: APP_ROLE_ADMIN);
+            access_comp.set_role_admin(role: APP_ROLE_ADMIN, admin_role: GOVERNANCE_ADMIN);
+            access_comp.set_role_admin(role: GOVERNANCE_ADMIN, admin_role: GOVERNANCE_ADMIN);
+            access_comp.set_role_admin(role: OPERATOR, admin_role: APP_ROLE_ADMIN);
+            access_comp.set_role_admin(role: TOKEN_ADMIN, admin_role: APP_ROLE_ADMIN);
+            access_comp.set_role_admin(role: UPGRADE_GOVERNOR, admin_role: GOVERNANCE_ADMIN);
 
             access_comp._grant_role(role: SECURITY_ADMIN, account: governance_admin);
-            access_comp._set_role_admin(role: SECURITY_ADMIN, admin_role: SECURITY_ADMIN);
-            access_comp._set_role_admin(role: SECURITY_AGENT, admin_role: SECURITY_ADMIN);
+            access_comp.set_role_admin(role: SECURITY_ADMIN, admin_role: SECURITY_ADMIN);
+            access_comp.set_role_admin(role: SECURITY_AGENT, admin_role: SECURITY_ADMIN);
         }
 
         fn only_app_governor(self: @ComponentState<TContractState>) {
