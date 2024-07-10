@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod Staking {
     use contracts::BASE_VALUE;
-    // TODO(Nir, 01/08/2024): Add the correct value and type for the global rev share
+    // TODO(Nir, 01/08/2024): Add the correct value and type for the global rev share.
     pub const GLOBAL_REV_SHARE: u8 = 0;
     pub const GLOBAL_REV_SHARE_DENOMINATOR: u8 = 100;
     use starknet::ContractAddress;
