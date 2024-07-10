@@ -5,20 +5,20 @@
 - [Contracts block diagram](#contracts-block-diagram)
 - [Staking contract](#staking-contract)
   - [Functions](#functions)
-    - [stake 💰](#stake-💰)
-    - [increase\_stake 💰](#increase_stake-💰)
+    - [stake](#stake)
+    - [increase\_stake](#increase_stake)
     - [unstake\_intent](#unstake_intent)
-    - [unstake\_action 💰](#unstake_action-💰)
-    - [claim\_rewards 💰](#claim_rewards-💰)
-    - [add\_to\_delegation\_pool 💰](#add_to_delegation_pool-💰)
+    - [unstake\_action](#unstake_action)
+    - [claim\_rewards](#claim_rewards)
+    - [add\_to\_delegation\_pool](#add_to_delegation_pool)
     - [remove\_from\_delegation\_pool\_intent](#remove_from_delegation_pool_intent)
-    - [remove\_from\_delegation\_pool\_action 💰](#remove_from_delegation_pool_action-💰)
+    - [remove\_from\_delegation\_pool\_action](#remove_from_delegation_pool_action)
     - [switch\_staking\_delegation\_pool](#switch_staking_delegation_pool)
     - [change\_reward\_address](#change_reward_address)
     - [set\_open\_for\_delegation](#set_open_for_delegation)
-    - [claim\_delegation\_pool\_rewards 💰](#claim_delegation_pool_rewards-💰)
-    - [state\_of 👁](#state_of-👁)
-    - [contract\_parameters 👁](#contract_parameters-👁)
+    - [claim\_delegation\_pool\_rewards](#claim_delegation_pool_rewards)
+    - [state\_of](#state_of)
+    - [contract\_parameters](#contract_parameters)
     - [calculate\_rewards](#calculate_rewards)
   - [Events](#events)
     - [Balance Changed](#balance-changed)
@@ -26,11 +26,11 @@
     - [Staker Exit intent](#staker-exit-intent)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
-    - [enter\_delegation\_pool 💰](#enter_delegation_pool-💰)
-    - [add\_to\_delegation\_pool 💰](#add_to_delegation_pool-💰)
+    - [enter\_delegation\_pool](#enter_delegation_pool)
+    - [add\_to\_delegation\_pool](#add_to_delegation_pool)
     - [exit\_delegation\_pool\_intent](#exit_delegation_pool_intent)
-    - [exit\_delegaition\_pool\_action 💰](#exit_delegaition_pool_action-💰)
-    - [claim\_rewards 💰](#claim_rewards-💰)
+    - [exit\_delegaition\_pool\_action](#exit_delegaition_pool_action)
+    - [claim\_rewards](#claim_rewards)
     - [switch\_delegation\_pool](#switch_delegation_pool)
     - [enter\_from\_staking\_contract](#enter_from_staking_contract)
     - [calculate\_rewards](#calculate_rewards-1)
@@ -60,7 +60,7 @@ function info template:
 
 # Staking contract
 ## Functions
-### stake 💰
+### stake
 #### description <!-- omit from toc -->
 Add a new staker to the stake.
 #### parameters <!-- omit from toc -->
@@ -90,7 +90,7 @@ success: bool
 5. if pooling_enabled then deploy a pooling contract instance.
 
 // todo: consider if only staker can do this or maybe other addresses as well. 
-### increase_stake 💰
+### increase_stake
 #### description <!-- omit from toc -->
 Increase the amount staked for an existing staker.
 #### parameters <!-- omit from toc -->
@@ -138,7 +138,7 @@ Only the staker address for which the operation is requested for.
 2. [Claim delegation pool rewards](#claim_delegation_pool_rewards-) - performs calculate rewards and transfer to pool contract.
 3. Set unstake_time.
 
-### unstake_action 💰
+### unstake_action
 #### description <!-- omit from toc -->
 Executes the intent to exit the stake if enough time have passed.
 Transfers the funds back to the staker.
@@ -162,7 +162,7 @@ Any address can execute.
 3. remove funds and transfer to staker.
 4. delete staker record.
 
-### claim_rewards 💰
+### claim_rewards
 #### description <!-- omit from toc -->
 Calculate rewards and transfer them to the reward address.
 #### parameters <!-- omit from toc -->
@@ -180,7 +180,7 @@ Only staking address or reward address can execute.
 2. Transfer unclaimed_rewards
 3. Set unclaimed_rewards = 0.
 
-### add_to_delegation_pool 💰
+### add_to_delegation_pool
 #### description <!-- omit from toc -->
 Delegation pooling contract's way to add funds to the staking pool.
 #### parameters <!-- omit from toc -->
@@ -229,7 +229,7 @@ Only pooling contract for the given staker can execute.
 3. Remove amount from staker's pooled amount.
 4. Register intent with given identifier, amount and unstake_time.
 
-### remove_from_delegation_pool_action 💰
+### remove_from_delegation_pool_action
 #### description <!-- omit from toc -->
 Execute the intent to remove funds from pool if enough time have passed.
 Transfers the funds to the pooling contract.
@@ -318,7 +318,7 @@ Only staking address.
 1. generate pooling contract for staker.
 2. register pool.
 
-### claim_delegation_pool_rewards 💰
+### claim_delegation_pool_rewards
 #### description <!-- omit from toc -->
 Calculate rewards and transfer the delegation pool rewards to the delegation pool contract.
 #### parameters <!-- omit from toc -->
@@ -338,7 +338,7 @@ Staker or delegation pool contract for this staker.
 1. [Calculate rewards](#calculate_rewards)
 2. Transfer rewards to pool contract.
 
-### state_of 👁
+### state_of
 #### description <!-- omit from toc -->
 return the state of a staker
 #### parameters <!-- omit from toc -->
@@ -359,7 +359,7 @@ pool_unclaimed_rewards
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 
-### contract_parameters 👁
+### contract_parameters
 #### description <!-- omit from toc -->
 Return general parameters of the contract.
 #### parameters <!-- omit from toc -->
@@ -418,7 +418,7 @@ internal function.
 # Delegation pooling contract
 
 ## Functions
-### enter_delegation_pool 💰
+### enter_delegation_pool
 #### description <!-- omit from toc -->
 Add a new pool member to the delegation pool.
 #### parameters <!-- omit from toc -->
@@ -442,7 +442,7 @@ success: bool
 5. Get current index from staking contract.
 6. Create entry for pool member.
 
-### add_to_delegation_pool 💰
+### add_to_delegation_pool
 #### description <!-- omit from toc -->
 Increase the funds for an existing pool member.
 #### parameters <!-- omit from toc -->
@@ -493,7 +493,7 @@ Only the pool member address for which the operation is requested for.
 4. Else set exit_pool_time to the configured value.
 5. [Inform staking contract](#remove_from_delegation_pool_intent)
 
-### exit_delegaition_pool_action 💰
+### exit_delegaition_pool_action
 #### description <!-- omit from toc -->
 Executes the intent to exit the stake if enough time have passed. Transfers the funds back to the pool member.
 #### parameters <!-- omit from toc -->
@@ -518,7 +518,7 @@ Any address can execute.
 4. Transfer funds to pool member.
 
 
-### claim_rewards 💰
+### claim_rewards
 #### description <!-- omit from toc -->
 Calculate rewards and transfer them to the reward address.
 #### parameters <!-- omit from toc -->
