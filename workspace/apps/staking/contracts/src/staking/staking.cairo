@@ -9,7 +9,7 @@ pub mod Staking {
     use openzeppelin::introspection::src5::SRC5Component;
     use contracts::staking::{IStaking, StakerInfo, StakingContractInfo};
     use contracts::errors::{Error, panic_by_err};
-    use contracts::utils::{u64_mul_wide_and_div_unsafe};
+    use contracts::utils::{u128_mul_wide_and_div_unsafe};
     use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 
 
@@ -30,7 +30,7 @@ pub mod Staking {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         global_index: u64,
-        min_stake: u64,
+        min_stake: u128,
         staker_address_to_info: LegacyMap::<ContractAddress, StakerInfo>,
         operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
         global_rev_share: u8,
@@ -41,7 +41,7 @@ pub mod Staking {
     #[derive(Drop, starknet::Event)]
     struct BalanceChanged {
         staker_address: ContractAddress,
-        amount: u64
+        amount: u128
     }
 
     #[derive(Drop, starknet::Event)]
@@ -59,7 +59,7 @@ pub mod Staking {
 
     #[constructor]
     pub fn constructor(
-        ref self: ContractState, token_address: ContractAddress, min_stake: u64, max_leverage: u64
+        ref self: ContractState, token_address: ContractAddress, min_stake: u128, max_leverage: u64
     ) {
         self.token_address.write(token_address);
         self.min_stake.write(min_stake);
@@ -73,19 +73,19 @@ pub mod Staking {
             ref self: ContractState,
             reward_address: ContractAddress,
             operational_address: ContractAddress,
-            amount: u64,
+            amount: u128,
             pooling_enabled: bool
         ) -> bool {
             true
         }
 
         fn increase_stake(
-            ref self: ContractState, staker_address: ContractAddress, amount: u64
-        ) -> u64 {
+            ref self: ContractState, staker_address: ContractAddress, amount: u128
+        ) -> u128 {
             0
         }
 
-        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u64 {
+        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
             0
         }
 
@@ -93,25 +93,25 @@ pub mod Staking {
             0
         }
 
-        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u64 {
+        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
             0
         }
 
         fn add_to_pool(
-            ref self: ContractState, staker_address: ContractAddress, amount: u64
-        ) -> u64 {
+            ref self: ContractState, staker_address: ContractAddress, amount: u128
+        ) -> u128 {
             0
         }
 
         fn remove_from_pool_intent(
-            ref self: ContractState, staker_address: ContractAddress, amount: u64
+            ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> felt252 {
             0
         }
 
         fn remove_from_pool_action(
             ref self: ContractState, staker_address: ContractAddress
-        ) -> u64 {
+        ) -> u128 {
             0
         }
 
@@ -120,7 +120,7 @@ pub mod Staking {
             from_staker_address: ContractAddress,
             to_staker_address: ContractAddress,
             pool_address: ContractAddress,
-            amount: u64,
+            amount: u128,
             data: ByteArray
         ) -> bool {
             true
@@ -175,14 +175,18 @@ pub mod Staking {
             }
             let global_index = self.global_index.read();
             let interest: u64 = global_index - staker_info.index;
-            let mut own_rewards = u64_mul_wide_and_div_unsafe(
-                staker_info.amount_own, interest, BASE_VALUE, Error::REWARDS_ISNT_U64
+            let mut own_rewards = u128_mul_wide_and_div_unsafe(
+                staker_info.amount_own, interest.into(), BASE_VALUE.into(), Error::REWARDS_ISNT_U128
             );
             if (staker_info.pooling_contract.is_some()) {
-                let mut pooled_rewards = u64_mul_wide_and_div_unsafe(
-                    staker_info.amount_pool, interest, BASE_VALUE, Error::POOLED_REWARDS_ISNT_U64
+                // todo: see if we can do without the special mul
+                let mut pooled_rewards = u128_mul_wide_and_div_unsafe(
+                    staker_info.amount_pool,
+                    interest.into(),
+                    BASE_VALUE.into(),
+                    Error::POOLED_REWARDS_ISNT_U128
                 );
-                let rev_share = u64_mul_wide_and_div_unsafe(
+                let rev_share = u128_mul_wide_and_div_unsafe(
                     pooled_rewards,
                     GLOBAL_REV_SHARE.into(),
                     GLOBAL_REV_SHARE_DENOMINATOR.into(),

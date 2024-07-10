@@ -19,11 +19,11 @@ fn test_constructor() {
         0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
     >();
     let dummy_address: ContractAddress = contract_address_const::<0xdeadbeef>();
-    let min_stake: u64 = 100000;
+    let min_stake: u128 = 100000;
     let max_leverage: u64 = 100;
     Staking::constructor(ref state, token_address, min_stake, max_leverage);
 
-    let contract_min_stake: u64 = state.min_stake.read();
+    let contract_min_stake: u128 = state.min_stake.read();
     assert_eq!(min_stake, contract_min_stake);
     let contract_token_address: ContractAddress = state.token_address.read();
     assert_eq!(token_address, contract_token_address);

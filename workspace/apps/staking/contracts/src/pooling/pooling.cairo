@@ -8,7 +8,7 @@ pub mod Pooling {
     use contracts::pooling::{IPooling, PoolMemberInfo};
     use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use contracts::errors::{Error, panic_by_err};
-    use contracts::utils::{u64_mul_wide_and_div_unsafe};
+    use contracts::utils::{u128_mul_wide_and_div_unsafe};
 
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
@@ -46,19 +46,19 @@ pub mod Pooling {
 
     #[abi(embed_v0)]
     impl PoolingImpl of IPooling<ContractState> {
-        fn pool(ref self: ContractState, amount: u64, reward_address: ContractAddress) -> bool {
+        fn pool(ref self: ContractState, amount: u128, reward_address: ContractAddress) -> bool {
             true
         }
-        fn increase_pool(ref self: ContractState, amount: u64) -> u64 {
+        fn increase_pool(ref self: ContractState, amount: u128) -> u128 {
             0
         }
-        fn unpool_intent(ref self: ContractState) -> u64 {
+        fn unpool_intent(ref self: ContractState) -> u128 {
             0
         }
-        fn unpool_action(ref self: ContractState) -> u64 {
+        fn unpool_action(ref self: ContractState) -> u128 {
             0
         }
-        fn claim_rewards(ref self: ContractState, pool_member_address: ContractAddress) -> u64 {
+        fn claim_rewards(ref self: ContractState, pool_member_address: ContractAddress) -> u128 {
             0
         }
     }
@@ -80,10 +80,14 @@ pub mod Pooling {
             updated_index: u64
         ) -> () {
             let interest: u64 = updated_index - pool_member_info.index;
+            //todo: see if we can do without the special mul
             pool_member_info
                 .unclaimed_rewards +=
-                    u64_mul_wide_and_div_unsafe(
-                        pool_member_info.amount, interest, BASE_VALUE, Error::REWARDS_ISNT_U64
+                    u128_mul_wide_and_div_unsafe(
+                        pool_member_info.amount,
+                        interest.into(),
+                        BASE_VALUE.into(),
+                        Error::REWARDS_ISNT_U128
                     );
             pool_member_info.index = updated_index;
             self.pool_member_address_to_info.write(pool_member_address, pool_member_info);
