@@ -43,7 +43,11 @@ git clone https://github.com/starkware-libs/starknet-staking
 
 Then, you will need to install
 - [Node](https://nodejs.org/en)
-- [Turbo repo](https://turbo.build/)
+  - `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash`
+  - `nvm install 20`
 - [Pnpm](https://pnpm.io/)
+  - `curl -fsSL https://get.pnpm.io/install.sh | sh -`
+- [Turbo repo](https://turbo.build/)
+  - `pnpm install turbo --global`
 
 And run `pnpm install`

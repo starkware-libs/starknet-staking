@@ -1,9 +1,10 @@
 # Starknet Staking <!-- omit from toc -->
-## Table of contents
+## Table of contents <!-- omit from toc -->
 
 <div align="center">
-
 ![starkgate](starknet.png)
+</div>
+<div align="center">
 [![License: Apache2.0](https://img.shields.io/badge/License-Apache2.0-green.svg)](LICENSE)
 </div>
 
