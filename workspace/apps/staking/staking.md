@@ -1,12 +1,21 @@
-# Starknet Staking <!-- omit from toc -->
-## Table of contents <!-- omit from toc -->
 
 <div align="center">
-![starkgate](starknet.png)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="starknet-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="starknet-light.png">
+  <img alt="Your logo" src="starknet-light.png">
+</picture>
 </div>
+
 <div align="center">
+
 [![License: Apache2.0](https://img.shields.io/badge/License-Apache2.0-green.svg)](LICENSE)
 </div>
+
+# Starknet Staking <!-- omit from toc -->
+
+## Table of contents <!-- omit from toc -->
 
  <!-- omit from toc -->
 - [About](#about)

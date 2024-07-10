@@ -158,7 +158,7 @@ pub mod Staking {
 
     #[generate_trait]
     pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
-        /// Calculates the rewards for a given staker
+        /// Calculates the rewards for a given staker.
         /// 
         /// The caller for this function should validate that the staker exists in the storage
         /// 
