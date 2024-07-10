@@ -160,7 +160,7 @@ pub mod Staking {
     pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         /// Calculates the rewards for a given staker.
         /// 
-        /// The caller for this function should validate that the staker exists in the storage.
+        /// The caller for this function should validate that the staker exists in the storage
         /// 
         /// rewards formula:
         /// $$ interest = (global\_index-self\_index) $$
