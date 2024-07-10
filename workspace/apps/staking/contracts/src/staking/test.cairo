@@ -17,6 +17,7 @@ fn test_constructor() {
     let token_address: ContractAddress = contract_address_const::<
         0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
     >();
+    let dummy_address: ContractAddress = contract_address_const::<0xdeadbeef>();
     let min_stake: u64 = 100000;
     let max_leverage: u64 = 100;
     Staking::constructor(ref state, token_address, min_stake, max_leverage);
@@ -29,10 +30,10 @@ fn test_constructor() {
     assert_eq!(Staking::BASE_VALUE, contract_global_index);
     let contract_operational_address_to_staker_address: ContractAddress = state
         .operational_address_to_staker_address
-        .read(token_address);
+        .read(dummy_address);
     assert_eq!(contract_operational_address_to_staker_address, Default::default());
     let contract_staker_address_to_operational_address: StakerInfo = state
         .staker_address_to_staker_info
-        .read(token_address);
+        .read(dummy_address);
     assert_eq!(contract_staker_address_to_operational_address, Default::default());
 }
