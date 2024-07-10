@@ -1,10 +1,10 @@
 use starknet::ContractAddress;
 
 #[derive(Default, Drop, PartialEq, Serde, Copy, starknet::Store)]
-pub struct PoolerInfo {
+pub struct PoolMemberInfo {
     pub reward_address: ContractAddress,
     pub amount: u64,
-    pub index: u128,
+    pub index: u64,
     pub unclaimed_rewards: u64,
     pub unpool_time: Option<felt252>,
 }

@@ -1,14 +1,15 @@
 #[starknet::contract]
 pub mod Staking {
+    use contracts::BASE_VALUE;
     // TODO(Nir, 01/08/2024): Add the correct value and type for the global rev share
-    use core::traits::Into;
     pub const GLOBAL_REV_SHARE: u8 = 0;
-    pub const BASE_VALUE: u128 = 100000000000;
+    pub const GLOBAL_REV_SHARE_DENOMINATOR: u8 = 100;
     use starknet::ContractAddress;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use contracts::staking::{IStaking, StakerInfo, StakingContractInfo};
     use contracts::errors::{Error, panic_by_err};
+    use contracts::utils::{u64_mul_wide_and_div_unsafe};
     use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 
 
@@ -28,9 +29,9 @@ pub mod Staking {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        global_index: u128,
+        global_index: u64,
         min_stake: u64,
-        staker_address_to_staker_info: LegacyMap::<ContractAddress, StakerInfo>,
+        staker_address_to_info: LegacyMap::<ContractAddress, StakerInfo>,
         operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
         global_rev_share: u8,
         max_leverage: u64,
@@ -134,7 +135,7 @@ pub mod Staking {
         }
 
         fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
-            let staker_info = self.staker_address_to_staker_info.read(staker_address);
+            let staker_info = self.staker_address_to_info.read(staker_address);
             if (staker_info == Default::default()) {
                 panic_by_err(Error::STAKER_DOES_NOT_EXIST)
             }
@@ -153,7 +154,7 @@ pub mod Staking {
     }
 
     #[generate_trait]
-    impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+    pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         /// Calculates the rewards for a given staker
         /// 
         /// The caller for this function should validate that the staker exists in the storage.
@@ -166,29 +167,34 @@ pub mod Staking {
         /// 
         /// staker with pool:
         /// $$ rewards = staker\_amount\_own * interest + staker\_amount\_pool * interest * global\_rev\_share $$
-        /// 
         fn calculate_rewards(
             ref self: ContractState, staker_address: ContractAddress, ref staker_info: StakerInfo
         ) -> () {
             if (staker_info.unstake_time.is_some()) {
                 return ();
             }
-            let interest_option: Option<u64> = (self.global_index.read() - staker_info.index)
-                .try_into();
-            if let Option::Some(interest) = interest_option {
-                let mut own_rewards = staker_info.amount_own * interest;
-                if (staker_info.pooling_contract.is_some()) {
-                    let mut pooled_rewards = staker_info.amount_pool * interest;
-                    let rev_share = pooled_rewards * GLOBAL_REV_SHARE.into();
-                    own_rewards += rev_share;
-                    pooled_rewards -= rev_share;
-                    staker_info.unclaimed_rewards_pool += pooled_rewards;
-                }
-                staker_info.unclaimed_rewards_own += own_rewards;
-                staker_info.index = self.global_index.read();
-                self.staker_address_to_staker_info.write(staker_address, staker_info);
+            let global_index = self.global_index.read();
+            let interest: u64 = global_index - staker_info.index;
+            let mut own_rewards = u64_mul_wide_and_div_unsafe(
+                staker_info.amount_own, interest, BASE_VALUE, Error::REWARDS_ISNT_U64
+            );
+            if (staker_info.pooling_contract.is_some()) {
+                let mut pooled_rewards = u64_mul_wide_and_div_unsafe(
+                    staker_info.amount_pool, interest, BASE_VALUE, Error::POOLED_REWARDS_ISNT_U64
+                );
+                let rev_share = u64_mul_wide_and_div_unsafe(
+                    pooled_rewards,
+                    GLOBAL_REV_SHARE.into(),
+                    GLOBAL_REV_SHARE_DENOMINATOR.into(),
+                    Error::REV_SHARE_ISNT_U64
+                );
+                own_rewards += rev_share;
+                pooled_rewards -= rev_share;
+                staker_info.unclaimed_rewards_pool += pooled_rewards;
             }
-            panic_by_err(Error::INTEREST_ISNT_U64);
+            staker_info.unclaimed_rewards_own += own_rewards;
+            staker_info.index = global_index;
+            self.staker_address_to_info.write(staker_address, staker_info);
         }
     }
 }

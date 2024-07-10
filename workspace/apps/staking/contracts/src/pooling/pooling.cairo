@@ -1,12 +1,14 @@
 #[starknet::contract]
 pub mod Pooling {
+    use contracts::BASE_VALUE;
     use core::option::OptionTrait;
     use starknet::ContractAddress;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use contracts::pooling::{IPooling, PoolerInfo};
+    use contracts::pooling::{IPooling, PoolMemberInfo};
     use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use contracts::errors::{Error, panic_by_err};
+    use contracts::utils::{u64_mul_wide_and_div_unsafe};
 
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
@@ -26,7 +28,7 @@ pub mod Pooling {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staker_address: ContractAddress,
-        pool_member_address_to_pool_member_info: LegacyMap::<ContractAddress, PoolerInfo>,
+        pool_member_address_to_info: LegacyMap::<ContractAddress, PoolMemberInfo>,
         final_staker_index: Option<u128>,
     }
 
@@ -74,18 +76,17 @@ pub mod Pooling {
         fn calculate_rewards(
             ref self: ContractState,
             pool_member_address: ContractAddress,
-            ref pooler_info: PoolerInfo,
-            updated_index: u128
+            ref pool_member_info: PoolMemberInfo,
+            updated_index: u64
         ) -> () {
-            let interest_option: Option<u64> = (updated_index - pooler_info.index).try_into();
-            if let Option::Some(interest) = interest_option {
-                pooler_info.unclaimed_rewards += pooler_info.amount * interest;
-                pooler_info.index = updated_index;
-                self
-                    .pool_member_address_to_pool_member_info
-                    .write(pool_member_address, pooler_info);
-            }
-            panic_by_err(Error::INTEREST_ISNT_U64);
+            let interest: u64 = updated_index - pool_member_info.index;
+            pool_member_info
+                .unclaimed_rewards +=
+                    u64_mul_wide_and_div_unsafe(
+                        pool_member_info.amount, interest, BASE_VALUE, Error::REWARDS_ISNT_U64
+                    );
+            pool_member_info.index = updated_index;
+            self.pool_member_address_to_info.write(pool_member_address, pool_member_info);
         }
     }
 }

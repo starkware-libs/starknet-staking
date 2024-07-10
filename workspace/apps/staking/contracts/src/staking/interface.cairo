@@ -11,7 +11,7 @@ pub struct StakerInfo {
     pub unstake_time: Option<felt252>,
     pub amount_own: u64,
     pub amount_pool: u64,
-    pub index: u128,
+    pub index: u64,
     pub unclaimed_rewards_own: u64,
     pub unclaimed_rewards_pool: u64,
 }
@@ -22,7 +22,7 @@ pub struct StakingContractInfo {
     pub max_leverage: u64,
     pub min_stake: u64,
     pub token_address: ContractAddress,
-    pub global_index: u128,
+    pub global_index: u64,
     pub global_rev_share: u8,
 }
 

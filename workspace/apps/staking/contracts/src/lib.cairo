@@ -1,6 +1,9 @@
+pub mod utils;
+
+pub const BASE_VALUE: u64 = 100000000000;
 // Contracts
-mod staking;
-mod pooling;
+pub mod staking;
+pub mod pooling;
 
 // Consts and other non-component utilities
-mod errors;
+pub mod errors;
