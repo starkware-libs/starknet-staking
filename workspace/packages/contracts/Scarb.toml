@@ -16,3 +16,5 @@ snforge_std.workspace = true
 test = "snforge test"
 
 [lib]
+
+[[target.starknet-contract]]
