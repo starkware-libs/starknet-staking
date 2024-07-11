@@ -1,7 +1,6 @@
 // Install Scarb (Linux and macOS only)
 const { exec } = require('node:child_process');
 
-
 exec("curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.6.5", (error, stdout, stderr) => {
     console.log(stdout);
     console.log('Finished installing scarb')

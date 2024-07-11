@@ -2,9 +2,9 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="starknet-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="starknet-light.png">
-  <img alt="Your logo" src="starknet-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/starknet-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/starknet-light.png">
+  <img alt="Your logo" src="assets/starknet-light.png">
 </picture>
 </div>
 
@@ -21,6 +21,8 @@
 - [About](#about)
 - [Disclaimer](#disclaimer)
 - [Dependencies](#dependencies)
+- [Installation](#installation)
+- [Implementation specification](#implementation-specification)
 - [Getting help](#getting-help)
 - [Help make Staking better!](#help-make-staking-better)
 - [Contributing](#contributing)
@@ -37,6 +39,20 @@ Staking is a work in progress.
 ## Dependencies
 The project is build with [Turbo repo](https://turbo.build/) and [pnpm](https://pnpm.io/).  
 Turbo's installation process will also install the cairo dependencies such as [Scarb](https://docs.swmansion.com/scarb/) and [Starknet foundry](https://foundry-rs.github.io/starknet-foundry/index.html).
+
+## Installation
+Clone the repo and from within the projects root folder run:
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+nvm install 20
+curl -fsSL https://get.pnpm.io/install.sh | sh -
+pnpm install turbo --global
+pnpm install
+```
+
+## Implementation specification
+Specs document found [here](docs/spec.md)
+
 
 ## Getting help
 
