@@ -36,3 +36,10 @@ pub fn panic_by_err(error: Error) {
         Error::POOL_MEMBER_DOES_NOT_EXIST => panic!("Pool member does not exist."),
     }
 }
+
+#[inline(always)]
+pub fn assert_with_err(condition: bool, error: Error) {
+    if !condition {
+        panic_by_err(error);
+    }
+}
