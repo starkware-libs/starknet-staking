@@ -1,15 +1,14 @@
 #[starknet::contract]
 pub mod Pooling {
-    use contracts::BASE_VALUE;
+    use contracts::{
+        BASE_VALUE, errors::Error, pooling::{IPooling, PoolMemberInfo},
+        utils::u128_mul_wide_and_div_unsafe,
+    };
     use core::option::OptionTrait;
     use starknet::ContractAddress;
-    use openzeppelin::access::accesscontrol::AccessControlComponent;
-    use openzeppelin::introspection::src5::SRC5Component;
-    use contracts::pooling::{IPooling, PoolMemberInfo};
-    use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
-    use contracts::errors::{Error, panic_by_err};
-    use contracts::utils::{u128_mul_wide_and_div_unsafe};
-
+    use openzeppelin::{
+        access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
+    };
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -40,7 +39,7 @@ pub mod Pooling {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, staker_address: ContractAddress) {
+    pub fn constructor(ref self: ContractState, staker_address: ContractAddress) {
         self.staker_address.write(staker_address);
     }
 
@@ -79,15 +78,13 @@ pub mod Pooling {
     }
 
     #[generate_trait]
-    impl InternalPoolingFunctions of InternalPoolingFunctionsTrait {
+    pub(crate) impl InternalPoolingFunctions of InternalPoolingFunctionsTrait {
         /// Calculates the rewards for a pool member
         /// 
         /// The caller for this function should validate that the staker exists in the storage.
         /// 
         /// rewards formula:
         /// $$ rewards = (staker\_index-pooler\_index) * pooler\_amount $$
-        /// 
-        // TODO(Ishay, 14/07/2024): add test for calculate_rewards function
         fn calculate_rewards(
             ref self: ContractState,
             pool_member_address: ContractAddress,

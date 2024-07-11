@@ -1,16 +1,18 @@
 #[starknet::contract]
 pub mod Staking {
-    use contracts::BASE_VALUE;
+    use contracts::{
+        BASE_VALUE, errors::{Error, panic_by_err},
+        staking::{IStaking, StakerInfo, StakingContractInfo}, utils::{u128_mul_wide_and_div_unsafe},
+    };
+    use starknet::ContractAddress;
+    use openzeppelin::{
+        access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
+    };
+    use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
+
     // TODO(Nir, 01/08/2024): Add the correct value and type for the global rev share
     pub const GLOBAL_REV_SHARE: u8 = 0;
     pub const GLOBAL_REV_SHARE_DENOMINATOR: u8 = 100;
-    use starknet::ContractAddress;
-    use openzeppelin::access::accesscontrol::AccessControlComponent;
-    use openzeppelin::introspection::src5::SRC5Component;
-    use contracts::staking::{IStaking, StakerInfo, StakingContractInfo};
-    use contracts::errors::{Error, panic_by_err};
-    use contracts::utils::{u128_mul_wide_and_div_unsafe};
-    use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
