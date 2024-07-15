@@ -13,7 +13,7 @@ use contracts::{
         }
     },
     test_utils::{
-        initalize_staking_state, 
+        initalize_staking_state,
         constants::{TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_ADDRESS, MAX_LEVERAGE, MIN_STAKE,}
     }
 };
