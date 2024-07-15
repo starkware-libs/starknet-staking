@@ -14,6 +14,7 @@ pub struct StakerInfo {
     pub index: u64,
     pub unclaimed_rewards_own: u128,
     pub unclaimed_rewards_pool: u128,
+    pub rev_share: u8,
 }
 
 
@@ -23,7 +24,6 @@ pub struct StakingContractInfo {
     pub min_stake: u128,
     pub token_address: ContractAddress,
     pub global_index: u64,
-    pub global_rev_share: u8,
 }
 
 #[starknet::interface]
@@ -33,7 +33,8 @@ pub trait IStaking<TContractState> {
         reward_address: ContractAddress,
         operational_address: ContractAddress,
         amount: u128,
-        pooling_enabled: bool
+        pooling_enabled: bool,
+        rev_share: u8,
     ) -> bool;
     fn increase_stake(
         ref self: TContractState, staker_address: ContractAddress, amount: u128

@@ -10,9 +10,7 @@ pub mod Staking {
     };
     use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 
-    // TODO(Nir, 01/08/2024): Add the correct value and type for the global rev share
-    pub const GLOBAL_REV_SHARE: u8 = 0;
-    pub const GLOBAL_REV_SHARE_DENOMINATOR: u8 = 100;
+    pub const REV_SHARE_DENOMINATOR: u8 = 100;
 
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
@@ -35,7 +33,6 @@ pub mod Staking {
         min_stake: u128,
         staker_address_to_info: LegacyMap::<ContractAddress, StakerInfo>,
         operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
-        global_rev_share: u8,
         max_leverage: u64,
         token_address: ContractAddress,
     }
@@ -76,7 +73,8 @@ pub mod Staking {
             reward_address: ContractAddress,
             operational_address: ContractAddress,
             amount: u128,
-            pooling_enabled: bool
+            pooling_enabled: bool,
+            rev_share: u8,
         ) -> bool {
             true
         }
@@ -153,7 +151,6 @@ pub mod Staking {
                 max_leverage: self.max_leverage.read(),
                 token_address: self.token_address.read(),
                 global_index: self.global_index.read(),
-                global_rev_share: GLOBAL_REV_SHARE
             }
         }
     }
@@ -193,9 +190,9 @@ pub mod Staking {
                 );
                 let rev_share = u128_mul_wide_and_div_unsafe(
                     pooled_rewards,
-                    GLOBAL_REV_SHARE.into(),
-                    GLOBAL_REV_SHARE_DENOMINATOR.into(),
-                    Error::REV_SHARE_ISNT_U64
+                    staker_info.rev_share.into(),
+                    REV_SHARE_DENOMINATOR.into(),
+                    Error::REV_SHARE_ISNT_U128
                 );
                 own_rewards += rev_share;
                 pooled_rewards -= rev_share;
