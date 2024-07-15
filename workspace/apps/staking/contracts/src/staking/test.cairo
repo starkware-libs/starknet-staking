@@ -1,30 +1,34 @@
-use contracts::staking::Staking;
-// TODO(Nir, 15/07/2024): Remove member module use's when 2.7.0-rc.1 is released
-use contracts::staking::Staking::__member_module_min_stake::InternalContractMemberStateTrait as MinStakeMemberModule;
-use contracts::staking::Staking::__member_module_staker_address_to_info::InternalContractMemberStateTrait as StakerAddressToStakerInfoMemberModule;
-use contracts::staking::Staking::__member_module_operational_address_to_staker_address::InternalContractMemberStateTrait as OperationalAddressToStakerAddressMemberModule;
-use contracts::staking::Staking::__member_module_token_address::InternalContractMemberStateTrait as TokenAddressMemberModule;
-use contracts::staking::Staking::__member_module_max_leverage::InternalContractMemberStateTrait as MaxLeverageMemberModule;
-use contracts::staking::Staking::__member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule;
-
+use contracts::{
+    BASE_VALUE,
+    staking::{
+        StakerInfo, Staking,
+        Staking::{
+            // TODO(Nir, 15/07/2024): Remove member module use's when possible
+            __member_module_min_stake::InternalContractMemberStateTrait as MinStakeMemberModule,
+            __member_module_staker_address_to_info::InternalContractMemberStateTrait as StakerAddressToStakerInfoMemberModule,
+            __member_module_operational_address_to_staker_address::InternalContractMemberStateTrait as OperationalAddressToStakerAddressMemberModule,
+            __member_module_token_address::InternalContractMemberStateTrait as TokenAddressMemberModule,
+            __member_module_max_leverage::InternalContractMemberStateTrait as MaxLeverageMemberModule,
+            __member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
+        }
+    },
+    test_utils::{
+        initalize_staking_state,
+        constants::{TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_ADDRESS, MAX_LEVERAGE, MIN_STAKE,}
+    }
+};
 use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
-use contracts::staking::StakerInfo;
 use starknet::{ContractAddress, contract_address_const};
-use contracts::BASE_VALUE;
 
 #[test]
 fn test_constructor() {
+    let token_address: ContractAddress = TOKEN_ADDRESS();
+    let dummy_address: ContractAddress = DUMMY_ADDRESS();
     let mut state = Staking::contract_state_for_testing();
-    let token_address: ContractAddress = contract_address_const::<
-        0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
-    >();
-    let dummy_address: ContractAddress = contract_address_const::<0xdeadbeef>();
-    let min_stake: u128 = 100000;
-    let max_leverage: u64 = 100;
-    Staking::constructor(ref state, token_address, min_stake, max_leverage);
+    Staking::constructor(ref state, token_address, MIN_STAKE, MAX_LEVERAGE);
 
     let contract_min_stake: u128 = state.min_stake.read();
-    assert_eq!(min_stake, contract_min_stake);
+    assert_eq!(MIN_STAKE, contract_min_stake);
     let contract_token_address: ContractAddress = state.token_address.read();
     assert_eq!(token_address, contract_token_address);
     let contract_global_index: u64 = state.global_index.read();
@@ -37,4 +41,26 @@ fn test_constructor() {
         .staker_address_to_info
         .read(dummy_address);
     assert_eq!(contract_staker_address_to_operational_address, Default::default());
+}
+
+#[test]
+fn test_calculate_rewards() {
+    let mut state = initalize_staking_state();
+
+    let dummy_address: ContractAddress = DUMMY_ADDRESS();
+
+    let mut staker_info = StakerInfo {
+        amount_own: BASE_VALUE.into(),
+        amount_pool: BASE_VALUE.into(),
+        pooling_contract: Option::Some(POOLING_ADDRESS()),
+        ..Default::default()
+    };
+
+    Staking::InternalStakingFunctionsTrait::calculate_rewards(
+        ref state, dummy_address, ref staker_info
+    );
+    let new_staker_info = state.staker_address_to_info.read(dummy_address);
+    assert_eq!(new_staker_info.unclaimed_rewards_own, BASE_VALUE.into());
+    assert_eq!(new_staker_info.index, BASE_VALUE);
+    assert_eq!(new_staker_info.unclaimed_rewards_pool, BASE_VALUE.into());
 }
