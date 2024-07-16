@@ -1,19 +1,23 @@
 #[starknet::component]
 pub mod ReplaceabilityComponent {
-    use contracts_commons::components::replaceability::interface::{
-        ImplementationData, IReplaceable, EIC_INITIALIZE_SELECTOR, IMPLEMENTATION_EXPIRATION,
-        ImplementationAdded, ImplementationRemoved, ImplementationReplaced, ImplementationFinalized
-    };
-    use starknet::{
-        syscalls::library_call_syscall, get_block_timestamp, syscalls::replace_class_syscall
-    };
+    use contracts_commons::components::replaceability::interface::EIC_INITIALIZE_SELECTOR;
+    use contracts_commons::components::replaceability::interface::IMPLEMENTATION_EXPIRATION;
+    use contracts_commons::components::replaceability::interface::ImplementationAdded;
+    use contracts_commons::components::replaceability::interface::ImplementationData;
+    use contracts_commons::components::replaceability::interface::ImplementationFinalized;
+    use contracts_commons::components::replaceability::interface::ImplementationRemoved;
+    use contracts_commons::components::replaceability::interface::ImplementationReplaced;
+    use contracts_commons::components::replaceability::interface::IReplaceable;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::components::roles::RolesComponent::InternalTrait;
     use contracts_commons::errors::ReplaceErrors;
-    use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::access::accesscontrol::AccessControlComponent;
-    use core::poseidon;
     use core::num::traits::Zero;
+    use core::poseidon;
+    use openzeppelin::access::accesscontrol::AccessControlComponent;
+    use openzeppelin::introspection::src5::SRC5Component;
+    use starknet::get_block_timestamp;
+    use starknet::syscalls::{library_call_syscall, replace_class_syscall};
+
 
     #[storage]
     struct Storage {

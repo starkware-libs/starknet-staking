@@ -1,9 +1,11 @@
 #[starknet::contract]
-pub mod ReplaceabilityMock {
+pub(crate) mod ReplaceabilityMock {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::{RolesComponent, interface::UPGRADE_GOVERNOR};
-    use openzeppelin::introspection::src5::SRC5Component;
+    use RolesComponent::InternalTrait as RolesInternalTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
+    use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
+    use openzeppelin::introspection::src5::SRC5Component;
     use starknet::ContractAddress;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
@@ -25,7 +27,7 @@ pub mod ReplaceabilityMock {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub(crate) enum Event {
         ReplaceabilityEvent: ReplaceabilityComponent::Event,
         RolesEvent: RolesComponent::Event,
         AccessControlEvent: AccessControlComponent::Event,
@@ -34,10 +36,15 @@ pub mod ReplaceabilityMock {
 
     #[constructor]
     fn constructor(ref self: ContractState, upgrade_delay: u64,) {
+        self.accesscontrol.initializer();
+        self.roles.initializer();
         self.replaceability.upgrade_delay.write(upgrade_delay);
     }
 
     #[abi(embed_v0)]
     impl ReplaceabilityImpl =
         ReplaceabilityComponent::ReplaceabilityImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
 }

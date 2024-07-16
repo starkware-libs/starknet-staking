@@ -6,10 +6,10 @@ pub mod replaceability;
 pub use replaceability::ReplaceabilityComponent;
 
 // Due to an issue in snforge, it won't recognize the mock under #[cfg(test)].
-pub mod mock;
+pub(crate) mod mock;
 
 #[cfg(test)]
-pub mod test_utils;
+pub(crate) mod test_utils;
 
 #[cfg(test)]
-pub mod test;
+mod test;
