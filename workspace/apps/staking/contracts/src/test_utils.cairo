@@ -31,6 +31,9 @@ pub(crate) mod constants {
     pub fn STAKER_ADDRESS() -> ContractAddress {
         contract_address_const::<'STAKER_ADDRESS'>()
     }
+    pub fn OTHER_STAKER_ADDRESS() -> ContractAddress {
+        contract_address_const::<'OTHER_STAKER_ADDRESS'>()
+    }
     pub fn OPERATIONAL_ADDRESS() -> ContractAddress {
         contract_address_const::<'OPERATIONAL_ADDRESS'>()
     }
@@ -125,6 +128,7 @@ pub(crate) fn init_stake(
             cfg.pooling_enabled,
             cfg.rev_share
         );
+    snforge_std::stop_cheat_caller_address(test_address); // STOP CALLER CHEAT
     assert_eq!(result, true);
     (state, erc20_dispatcher)
 }

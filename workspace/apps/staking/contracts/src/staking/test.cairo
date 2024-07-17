@@ -17,7 +17,7 @@ use contracts::{
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_ADDRESS, MAX_LEVERAGE, MIN_STAKE, OWNER_ADDRESS,
             INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS, STAKE_AMOUNT,
-            STAKER_INITIAL_BALANCE, REV_SHARE,
+            STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
         }
     }
 };
@@ -121,6 +121,32 @@ fn test_stake_from_same_staker_address() {
     let (mut state, _) = init_stake(:token_address, :cfg);
 
     // Second stake from cfg.staker_address.
+    snforge_std::cheat_caller_address_global(caller_address: cfg.staker_address);
+    state
+        .stake(
+            reward_address: cfg.reward_address,
+            operational_address: cfg.operational_address,
+            amount: cfg.stake_amount,
+            pooling_enabled: false,
+            rev_share: cfg.rev_share
+        );
+}
+
+#[test]
+#[should_panic(expected: "Operational address already exists.")]
+fn test_stake_with_same_operational_address() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    // In init_stake function the caller_address is cheated to be cfg.staker_address.
+    // First stake from cfg.staker_address.
+    let (mut state, _) = init_stake(:token_address, :cfg);
+
+    // Change staker address.
+    snforge_std::cheat_caller_address_global(caller_address: OTHER_STAKER_ADDRESS());
+    assert!(cfg.staker_address != OTHER_STAKER_ADDRESS());
+    // Second stake with the same operational address.
     state
         .stake(
             reward_address: cfg.reward_address,
