@@ -1,11 +1,5 @@
 {
   "private": true,
-  "workspaces": [
-    "workspace/apps/**/*",
-    "workspace/packages/*",
-    "workspace/tools/*",
-    "workspace/pipeline/*"
-  ],
   "scripts": {
     "prebuild": "turbo run prebuild",
     "build": "turbo run build",
