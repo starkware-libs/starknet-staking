@@ -108,3 +108,25 @@ fn test_calculate_rewards() {
     assert_eq!(new_staker_info.index, BASE_VALUE);
     assert_eq!(new_staker_info.unclaimed_rewards_pool, BASE_VALUE.into());
 }
+
+#[test]
+#[should_panic(expected: "Staker already exists, use increase_stake instead.")]
+fn test_stake_from_same_staker_address() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    // In init_stake function the caller_address is cheated to be cfg.staker_address.
+    // First stake from cfg.staker_address.
+    let (mut state, _) = init_stake(:token_address, :cfg);
+
+    // Second stake from cfg.staker_address.
+    state
+        .stake(
+            reward_address: cfg.reward_address,
+            operational_address: cfg.operational_address,
+            amount: cfg.stake_amount,
+            pooling_enabled: false,
+            rev_share: cfg.rev_share
+        );
+}
