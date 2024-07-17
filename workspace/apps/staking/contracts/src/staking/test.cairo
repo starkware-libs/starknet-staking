@@ -13,10 +13,14 @@ use contracts::{
         }
     },
     test_utils::{
-        initalize_staking_state,
-        constants::{TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_ADDRESS, MAX_LEVERAGE, MIN_STAKE,}
+        initalize_staking_state, init_stake, deploy_mock_erc20_contract, StakingInitConfig,
+        constants::{
+            TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_ADDRESS, MAX_LEVERAGE, MIN_STAKE, OWNER_ADDRESS,
+            INITIAL_SUPPLY
+        }
     }
 };
+use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 use starknet::{ContractAddress, contract_address_const};
 
@@ -63,4 +67,12 @@ fn test_calculate_rewards() {
     assert_eq!(new_staker_info.unclaimed_rewards_own, BASE_VALUE.into());
     assert_eq!(new_staker_info.index, BASE_VALUE);
     assert_eq!(new_staker_info.unclaimed_rewards_pool, BASE_VALUE.into());
+}
+
+// TODO: Remove this test when test_stake is merged.
+#[test]
+fn test_staking_test_utils() {
+    let owner_address = OWNER_ADDRESS();
+    let token_address = deploy_mock_erc20_contract(INITIAL_SUPPLY, owner_address);
+    let (_, _) = init_stake(token_address, Default::default());
 }

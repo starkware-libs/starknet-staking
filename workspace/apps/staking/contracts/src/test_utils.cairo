@@ -81,47 +81,81 @@ pub(crate) fn initalize_pooling_state() -> Pooling::ContractState {
     state
 }
 
-pub(crate) fn deploy_mock_erc20_contract() -> ContractAddress {
+pub(crate) fn deploy_mock_erc20_contract(
+    initial_supply: u256, owner_address: ContractAddress
+) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     NAME().serialize(ref calldata);
     SYMBOL().serialize(ref calldata);
-    INITIAL_SUPPLY.serialize(ref calldata);
-    OWNER_ADDRESS().serialize(ref calldata);
-
+    initial_supply.serialize(ref calldata);
+    owner_address.serialize(ref calldata);
     let erc20_contract = snforge_std::declare("DualCaseERC20Mock").unwrap();
     let (token_address, _) = erc20_contract.deploy(@calldata).unwrap();
     token_address
 }
 
-pub(crate) fn init_default_stake(
-    token_address: ContractAddress, pooling_enabled: bool
+pub(crate) fn init_stake(
+    token_address: ContractAddress, cfg: StakingInitConfig
 ) -> (ContractState, IERC20Dispatcher) {
     // Use state for the Staking contract (the contract we are testing)
     // The address of this contract will always be `test_address` which is a constant.
     let mut state = Staking::contract_state_for_testing();
     let test_address: ContractAddress = snforge_std::test_address();
-
     // Initialize Staking contract.
-    Staking::constructor(ref state, token_address, MIN_STAKE, MAX_LEVERAGE);
-
+    Staking::constructor(ref state, token_address, cfg.min_stake, cfg.max_leverage);
     // Transfer amount from initial_owner to staker.
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    snforge_std::cheat_caller_address_global(OWNER_ADDRESS());
-    erc20_dispatcher.transfer(recipient: STAKER_ADDRESS(), amount: AMOUNT_TO_STAKER.into());
-
+    snforge_std::cheat_caller_address_global(cfg.owner_address);
+    erc20_dispatcher.transfer(recipient: cfg.staker_address, amount: cfg.amount_to_staker.into());
     // Approve the Staking contract to spend the staker's tokens.
-    snforge_std::cheat_caller_address_global(STAKER_ADDRESS());
-    erc20_dispatcher.approve(spender: test_address, amount: AMOUNT_TO_STAKER.into());
+    snforge_std::cheat_caller_address_global(cfg.staker_address);
+    erc20_dispatcher.approve(spender: test_address, amount: cfg.amount_to_staker.into());
     snforge_std::stop_cheat_caller_address_global(); // STOP GLOBAL CALLER CHEAT
-
-    // Cheat the caller address only for the Staking contract (which is test_address), to be the 
+    // Cheat the caller address only for the Staking contract (which is test_address), to be the
     // staker, and then stake.
     snforge_std::cheat_caller_address(
-        test_address, STAKER_ADDRESS(), snforge_std::CheatSpan::Indefinite
+        test_address, cfg.staker_address, snforge_std::CheatSpan::Indefinite
     );
     let result = state
-        .stake(REWARD_ADDRESS(), OPERATIONAL_ADDRESS(), STAKE_AMOUNT, pooling_enabled, REV_SHARE);
+        .stake(
+            cfg.reward_address,
+            cfg.operational_address,
+            cfg.stake_amount,
+            cfg.pooling_enabled,
+            cfg.rev_share
+        );
     assert_eq!(result, true);
     (state, erc20_dispatcher)
+}
+
+#[derive(Drop, Copy)]
+pub(crate) struct StakingInitConfig {
+    pub staker_address: ContractAddress,
+    pub owner_address: ContractAddress,
+    pub reward_address: ContractAddress,
+    pub operational_address: ContractAddress,
+    pub min_stake: u128,
+    pub max_leverage: u64,
+    pub amount_to_staker: u128,
+    pub stake_amount: u128,
+    pub rev_share: u8,
+    pub pooling_enabled: bool,
+}
+
+impl StakingInitConfigDefault of Default<StakingInitConfig> {
+    fn default() -> StakingInitConfig {
+        StakingInitConfig {
+            staker_address: STAKER_ADDRESS(),
+            owner_address: OWNER_ADDRESS(),
+            reward_address: REWARD_ADDRESS(),
+            operational_address: OPERATIONAL_ADDRESS(),
+            min_stake: MIN_STAKE,
+            max_leverage: MAX_LEVERAGE,
+            amount_to_staker: AMOUNT_TO_STAKER,
+            stake_amount: STAKE_AMOUNT,
+            rev_share: REV_SHARE,
+            pooling_enabled: false,
+        }
+    }
 }
 
