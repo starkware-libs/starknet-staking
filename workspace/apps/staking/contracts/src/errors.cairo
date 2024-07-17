@@ -16,6 +16,7 @@ pub enum Error {
     REV_SHARE_OUT_OF_RANGE,
     // Pooling contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
+    STAKER_IS_INACTIVE,
 }
 
 
@@ -36,6 +37,7 @@ pub fn panic_by_err(error: Error) {
             "Pool rewards is too large, expected to fit in u128."
         ),
         Error::POOL_MEMBER_DOES_NOT_EXIST => panic!("Pool member does not exist."),
+        Error::STAKER_IS_INACTIVE => panic!("Staker is inactive."),
     }
 }
 

@@ -1,8 +1,8 @@
 #[starknet::contract]
 pub mod Pooling {
     use contracts::{
-        BASE_VALUE, errors::Error, pooling::{IPooling, PoolMemberInfo},
-        utils::u128_mul_wide_and_div_unsafe,
+        BASE_VALUE, errors::{Error, panic_by_err}, pooling::{IPooling, PoolMemberInfo},
+        utils::u128_mul_wide_and_div_unsafe
     };
     use core::option::OptionTrait;
     use starknet::ContractAddress;
@@ -48,6 +48,7 @@ pub mod Pooling {
         fn enter_delegation_pool(
             ref self: ContractState, amount: u128, reward_address: ContractAddress
         ) -> bool {
+            self.assert_staker_is_active();
             true
         }
         fn add_to_delegation_pool(ref self: ContractState, amount: u128) -> u128 {
@@ -103,6 +104,12 @@ pub mod Pooling {
                     );
             pool_member_info.index = updated_index;
             self.pool_member_address_to_info.write(pool_member_address, pool_member_info);
+        }
+
+        fn assert_staker_is_active(self: @ContractState) {
+            if let Option::Some(_) = self.final_staker_index.read() {
+                panic_by_err(Error::STAKER_IS_INACTIVE);
+            }
         }
     }
 }
