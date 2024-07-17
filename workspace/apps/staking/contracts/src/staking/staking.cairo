@@ -1,7 +1,8 @@
 #[starknet::contract]
 pub mod Staking {
+    use core::num::traits::zero::Zero;
     use contracts::{
-        BASE_VALUE, errors::{Error, panic_by_err},
+        BASE_VALUE, errors::{Error, assert_with_err},
         staking::{IStaking, StakerInfo, StakingContractInfo}, utils::{u128_mul_wide_and_div_unsafe},
     };
     use starknet::ContractAddress;
@@ -138,11 +139,9 @@ pub mod Staking {
         }
 
         fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
-            let staker_info = self.staker_address_to_info.read(staker_address);
-            if (staker_info == Default::default()) {
-                panic_by_err(Error::STAKER_DOES_NOT_EXIST)
-            }
-            staker_info
+            let staker_info = self.get_staker(staker_address);
+            assert_with_err(staker_info.is_some(), Error::STAKER_DOES_NOT_EXIST);
+            staker_info.unwrap()
         }
 
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
@@ -157,6 +156,16 @@ pub mod Staking {
 
     #[generate_trait]
     pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+        fn get_staker(self: @ContractState, staker_address: ContractAddress) -> Option<StakerInfo> {
+            let staker_info = self.staker_address_to_info.read(staker_address);
+            // Reward address isn't zero if staker is initialized.
+            if staker_info.reward_address.is_zero() {
+                Option::None
+            } else {
+                Option::Some(staker_info)
+            }
+        }
+
         /// Calculates the rewards for a given staker.
         /// 
         /// The caller for this function should validate that the staker exists in the storage

@@ -17,7 +17,6 @@ pub struct StakerInfo {
     pub rev_share: u8,
 }
 
-
 #[derive(Default, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
     pub max_leverage: u64,
