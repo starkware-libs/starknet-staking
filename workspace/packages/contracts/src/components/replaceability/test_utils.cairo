@@ -6,14 +6,21 @@ use starknet::{ContractAddress, contract_address_const};
 use starknet::class_hash::{class_hash_const, ClassHash};
 
 pub(crate) mod Constants {
+    use super::{ContractAddress, ImplementationData, contract_address_const};
+    use super::dummy_implementation_data;
+
     pub(crate) const DEFAULT_UPGRADE_DELAY: u64 = 12345;
 
-    pub(crate) fn CALLER_ADDRESS() -> starknet::ContractAddress {
-        starknet::contract_address_const::<'CALLER_ADDRESS'>()
+    pub(crate) fn CALLER_ADDRESS() -> ContractAddress {
+        contract_address_const::<'CALLER_ADDRESS'>()
     }
 
-    pub(crate) fn GET_DUMMY_NONFINAL_IMPLEMENTATION_DATA() -> super::ImplementationData {
-        super::dummy_implementation_data(final: false)
+    pub(crate) fn DUMMY_NONFINAL_IMPLEMENTATION_DATA() -> ImplementationData {
+        dummy_implementation_data(final: false)
+    }
+
+    pub(crate) fn NOT_UPGRADE_GOVERNOR_ACCOUNT() -> ContractAddress {
+        contract_address_const::<'NOT_UPGRADE_GOVERNOR_ACCOUNT'>()
     }
 }
 
