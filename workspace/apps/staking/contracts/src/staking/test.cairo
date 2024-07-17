@@ -13,16 +13,21 @@ use contracts::{
         }
     },
     test_utils::{
-        initalize_staking_state, init_stake, deploy_mock_erc20_contract, StakingInitConfig,
+        initalize_staking_state, deploy_mock_erc20_contract, init_stake, StakingInitConfig,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_ADDRESS, MAX_LEVERAGE, MIN_STAKE, OWNER_ADDRESS,
-            INITIAL_SUPPLY
+            INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS, STAKE_AMOUNT,
+            STAKER_INITIAL_BALANCE, REV_SHARE,
         }
     }
 };
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
-use starknet::{ContractAddress, contract_address_const};
+use contracts::staking::interface::IStaking;
+use starknet::{ContractAddress, contract_address_const, get_caller_address};
+use starknet::syscalls::deploy_syscall;
+use snforge_std::{declare, ContractClassTrait};
+use contracts::staking::staking::Staking::ContractState;
 
 #[test]
 fn test_constructor() {
@@ -48,6 +53,41 @@ fn test_constructor() {
 }
 
 #[test]
+fn test_stake() {
+    // TODO(Nir, 01/08/2024): add initial supply and owner address to StakingInitConfig.
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    let (mut state, erc20_dispatcher) = init_stake(:token_address, :cfg);
+
+    // Check that the staker info was updated correctly.
+    let expected_staker_info = StakerInfo {
+        reward_address: cfg.reward_address,
+        operational_address: cfg.operational_address,
+        amount_own: cfg.stake_amount,
+        index: BASE_VALUE,
+        rev_share: cfg.rev_share,
+        ..Default::default()
+    };
+    assert_eq!(expected_staker_info, state.staker_address_to_info.read(cfg.staker_address));
+
+    // Check that the operational address to staker address mapping was updated correctly.
+    assert_eq!(
+        cfg.staker_address,
+        state.operational_address_to_staker_address.read(cfg.operational_address)
+    );
+
+    // Check that the staker's tokens were transferred to the Staking contract.
+    assert_eq!(
+        erc20_dispatcher.balance_of(cfg.staker_address),
+        (cfg.staker_initial_balance - cfg.stake_amount).into()
+    );
+    let staking_contract_address = snforge_std::test_address();
+    assert_eq!(erc20_dispatcher.balance_of(staking_contract_address), cfg.stake_amount.into());
+}
+
+#[test]
 fn test_calculate_rewards() {
     let mut state = initalize_staking_state();
 
@@ -67,12 +107,4 @@ fn test_calculate_rewards() {
     assert_eq!(new_staker_info.unclaimed_rewards_own, BASE_VALUE.into());
     assert_eq!(new_staker_info.index, BASE_VALUE);
     assert_eq!(new_staker_info.unclaimed_rewards_pool, BASE_VALUE.into());
-}
-
-// TODO: Remove this test when test_stake is merged.
-#[test]
-fn test_staking_test_utils() {
-    let owner_address = OWNER_ADDRESS();
-    let token_address = deploy_mock_erc20_contract(INITIAL_SUPPLY, owner_address);
-    let (_, _) = init_stake(token_address, Default::default());
 }

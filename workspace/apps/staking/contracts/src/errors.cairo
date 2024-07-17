@@ -13,6 +13,7 @@ pub enum Error {
     POOLED_REWARDS_ISNT_U128,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
+    REV_SHARE_OUT_OF_RANGE,
     // Pooling contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
 }
@@ -30,6 +31,7 @@ pub fn panic_by_err(error: Error) {
         Error::AMOUNT_LESS_THAN_MIN_STAKE => panic!(
             "Amount is less than min stake - try again with enough funds."
         ),
+        Error::REV_SHARE_OUT_OF_RANGE => panic!("Rev share is out of range, expected to be 0-100."),
         Error::POOLED_REWARDS_ISNT_U128 => panic!(
             "Pool rewards is too large, expected to fit in u128."
         ),
