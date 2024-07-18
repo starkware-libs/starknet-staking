@@ -31,6 +31,9 @@ pub(crate) mod constants {
     pub fn STAKER_ADDRESS() -> ContractAddress {
         contract_address_const::<'STAKER_ADDRESS'>()
     }
+    pub fn POOL_MEMBER_ADDRESS() -> ContractAddress {
+        contract_address_const::<'POOL_MEMBER_ADDRESS'>()
+    }
     pub fn OTHER_STAKER_ADDRESS() -> ContractAddress {
         contract_address_const::<'OTHER_STAKER_ADDRESS'>()
     }

@@ -12,7 +12,6 @@ pub mod Staking {
     use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 
-
     pub const REV_SHARE_DENOMINATOR: u8 = 100;
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
