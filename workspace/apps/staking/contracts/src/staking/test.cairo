@@ -10,6 +10,7 @@ use contracts::{
             __member_module_token_address::InternalContractMemberStateTrait as TokenAddressMemberModule,
             __member_module_max_leverage::InternalContractMemberStateTrait as MaxLeverageMemberModule,
             __member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
+            InternalStakingFunctionsTrait
         }
     },
     test_utils::{
@@ -101,9 +102,7 @@ fn test_calculate_rewards() {
         ..Default::default()
     };
 
-    Staking::InternalStakingFunctionsTrait::calculate_rewards(
-        ref state, dummy_address, ref staker_info
-    );
+    assert!(state.calculate_rewards(dummy_address, ref staker_info));
     let new_staker_info = state.staker_address_to_info.read(dummy_address);
     assert_eq!(new_staker_info.unclaimed_rewards_own, BASE_VALUE.into());
     assert_eq!(new_staker_info.index, BASE_VALUE);
