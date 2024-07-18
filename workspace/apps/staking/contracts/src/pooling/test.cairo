@@ -10,7 +10,7 @@ use contracts::{
             InternalPoolingFunctionsTrait
         }
     },
-    test_utils::initalize_pooling_state,
+    test_utils::initialize_pooling_state,
     test_utils::constants::{DUMMY_ADDRESS, REWARD_ADDRESS, STAKE_AMOUNT}
 };
 use contracts::pooling::interface::IPooling;
@@ -19,7 +19,7 @@ use starknet::{ContractAddress, contract_address_const};
 
 #[test]
 fn test_calculate_rewards() {
-    let mut state = initalize_pooling_state();
+    let mut state = initialize_pooling_state();
     let dummy_address: ContractAddress = DUMMY_ADDRESS();
 
     let updated_index: u64 = BASE_VALUE * 2;
@@ -35,13 +35,13 @@ fn test_calculate_rewards() {
 // TODO(alon, 24/07/2024): Complete this function.
 #[test]
 fn test_enter_delegation_pool() {
-    let mut state = initalize_pooling_state();
+    let mut state = initialize_pooling_state();
     assert!(state.enter_delegation_pool(amount: STAKE_AMOUNT, reward_address: REWARD_ADDRESS()));
 }
 
 #[test]
 fn test_assert_staker_is_active() {
-    let mut state = initalize_pooling_state();
+    let mut state = initialize_pooling_state();
     assert!(state.final_staker_index.read().is_none());
     state.assert_staker_is_active();
 }
@@ -49,7 +49,7 @@ fn test_assert_staker_is_active() {
 #[test]
 #[should_panic(expected: ("Staker is inactive.",))]
 fn test_assert_staker_is_active_panic() {
-    let mut state = initalize_pooling_state();
+    let mut state = initialize_pooling_state();
     state.final_staker_index.write(Option::Some(5));
     state.assert_staker_is_active();
 }

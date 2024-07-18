@@ -69,7 +69,7 @@ pub(crate) mod constants {
     }
 }
 
-pub(crate) fn initalize_staking_state() -> Staking::ContractState {
+pub(crate) fn initialize_staking_state() -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     let token_address: ContractAddress = constants::TOKEN_ADDRESS();
     Staking::constructor(ref state, token_address, constants::MIN_STAKE, constants::MAX_LEVERAGE);
@@ -77,7 +77,7 @@ pub(crate) fn initalize_staking_state() -> Staking::ContractState {
 }
 
 
-pub(crate) fn initalize_pooling_state() -> Pooling::ContractState {
+pub(crate) fn initialize_pooling_state() -> Pooling::ContractState {
     let staker_address: ContractAddress = constants::STAKER_ADDRESS();
     let mut state = Pooling::contract_state_for_testing();
     Pooling::constructor(ref state, staker_address);

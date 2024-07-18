@@ -13,7 +13,7 @@ use contracts::{
         }
     },
     test_utils::{
-        initalize_staking_state, deploy_mock_erc20_contract, init_stake, StakingInitConfig,
+        initialize_staking_state, deploy_mock_erc20_contract, init_stake, StakingInitConfig,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_ADDRESS, MAX_LEVERAGE, MIN_STAKE, OWNER_ADDRESS,
             INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS, STAKE_AMOUNT,
@@ -89,7 +89,7 @@ fn test_stake() {
 
 #[test]
 fn test_calculate_rewards() {
-    let mut state = initalize_staking_state();
+    let mut state = initialize_staking_state();
 
     let dummy_address: ContractAddress = DUMMY_ADDRESS();
 
