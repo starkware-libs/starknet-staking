@@ -218,9 +218,9 @@ pub mod Staking {
         /// $$ rewards = staker\_amount\_own * interest + staker\_amount\_pool * interest * global\_rev\_share $$
         fn calculate_rewards(
             ref self: ContractState, staker_address: ContractAddress, ref staker_info: StakerInfo
-        ) -> () {
+        ) -> bool {
             if (staker_info.unstake_time.is_some()) {
-                return ();
+                return false;
             }
             let global_index = self.global_index.read();
             let interest: u64 = global_index - staker_info.index;
@@ -248,6 +248,7 @@ pub mod Staking {
             staker_info.unclaimed_rewards_own += own_rewards;
             staker_info.index = global_index;
             self.staker_address_to_info.write(staker_address, staker_info);
+            true
         }
     }
 }

@@ -91,7 +91,7 @@ pub mod Pooling {
             pool_member_address: ContractAddress,
             ref pool_member_info: PoolMemberInfo,
             updated_index: u64
-        ) -> () {
+        ) -> bool {
             let interest: u64 = updated_index - pool_member_info.index;
             //todo: see if we can do without the special mul
             pool_member_info
@@ -104,6 +104,7 @@ pub mod Pooling {
                     );
             pool_member_info.index = updated_index;
             self.pool_member_address_to_info.write(pool_member_address, pool_member_info);
+            true
         }
 
         fn assert_staker_is_active(self: @ContractState) {

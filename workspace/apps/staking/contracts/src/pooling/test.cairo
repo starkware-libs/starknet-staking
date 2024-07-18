@@ -26,7 +26,7 @@ fn test_calculate_rewards() {
     let mut pool_member_info = PoolMemberInfo {
         amount: BASE_VALUE.into(), index: BASE_VALUE, ..Default::default()
     };
-    state.calculate_rewards(dummy_address, ref pool_member_info, updated_index);
+    assert!(state.calculate_rewards(dummy_address, ref pool_member_info, updated_index));
     let new_pool_member_info = state.pool_member_address_to_info.read(dummy_address);
     assert_eq!(new_pool_member_info.unclaimed_rewards, BASE_VALUE.into());
     assert_eq!(new_pool_member_info.index, BASE_VALUE * 2)
