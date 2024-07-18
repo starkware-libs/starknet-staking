@@ -11,7 +11,7 @@ use contracts::{
         }
     },
     test_utils::initialize_pooling_state,
-    test_utils::constants::{DUMMY_ADDRESS, REWARD_ADDRESS, STAKE_AMOUNT}
+    test_utils::constants::{POOL_MEMBER_ADDRESS, REWARD_ADDRESS, STAKE_AMOUNT}
 };
 use contracts::pooling::interface::IPooling;
 use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
@@ -20,14 +20,14 @@ use starknet::{ContractAddress, contract_address_const};
 #[test]
 fn test_calculate_rewards() {
     let mut state = initialize_pooling_state();
-    let dummy_address: ContractAddress = DUMMY_ADDRESS();
+    let pool_member_address: ContractAddress = POOL_MEMBER_ADDRESS();
 
     let updated_index: u64 = BASE_VALUE * 2;
     let mut pool_member_info = PoolMemberInfo {
         amount: BASE_VALUE.into(), index: BASE_VALUE, ..Default::default()
     };
-    assert!(state.calculate_rewards(dummy_address, ref pool_member_info, updated_index));
-    let new_pool_member_info = state.pool_member_address_to_info.read(dummy_address);
+    assert!(state.calculate_rewards(:pool_member_address, ref :pool_member_info, :updated_index));
+    let new_pool_member_info = state.pool_member_address_to_info.read(pool_member_address);
     assert_eq!(new_pool_member_info.unclaimed_rewards, BASE_VALUE.into());
     assert_eq!(new_pool_member_info.index, BASE_VALUE * 2)
 }

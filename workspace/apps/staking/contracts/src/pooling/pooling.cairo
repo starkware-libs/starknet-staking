@@ -92,6 +92,9 @@ pub mod Pooling {
             ref pool_member_info: PoolMemberInfo,
             updated_index: u64
         ) -> bool {
+            if (pool_member_info.unpool_time.is_some()) {
+                return false;
+            }
             let interest: u64 = updated_index - pool_member_info.index;
             //todo: see if we can do without the special mul
             pool_member_info

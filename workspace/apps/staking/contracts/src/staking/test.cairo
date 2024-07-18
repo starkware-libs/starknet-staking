@@ -93,7 +93,7 @@ fn test_stake() {
 fn test_calculate_rewards() {
     let mut state = initialize_staking_state();
 
-    let dummy_address: ContractAddress = DUMMY_ADDRESS();
+    let staker_address: ContractAddress = STAKER_ADDRESS();
 
     let mut staker_info = StakerInfo {
         amount_own: BASE_VALUE.into(),
@@ -101,9 +101,8 @@ fn test_calculate_rewards() {
         pooling_contract: Option::Some(POOLING_ADDRESS()),
         ..Default::default()
     };
-
-    assert!(state.calculate_rewards(dummy_address, ref staker_info));
-    let new_staker_info = state.staker_address_to_info.read(dummy_address);
+    assert!(state.calculate_rewards(:staker_address, ref :staker_info));
+    let new_staker_info = state.staker_address_to_info.read(staker_address);
     assert_eq!(new_staker_info.unclaimed_rewards_own, BASE_VALUE.into());
     assert_eq!(new_staker_info.index, BASE_VALUE);
     assert_eq!(new_staker_info.unclaimed_rewards_pool, BASE_VALUE.into());
