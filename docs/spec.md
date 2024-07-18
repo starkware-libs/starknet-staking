@@ -70,6 +70,7 @@ Add a new staker to the stake.
 | operational     | address |
 | amount          | u128    |
 | pooling_enabled | boolean |
+| rev_share       | u8      |
 #### return <!-- omit from toc -->
 success: bool
 #### emits <!-- omit from toc -->

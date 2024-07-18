@@ -13,8 +13,10 @@ pub enum Error {
     POOLED_REWARDS_ISNT_U128,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
+    REV_SHARE_OUT_OF_RANGE,
     // Pooling contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
+    STAKER_IS_INACTIVE,
 }
 
 
@@ -26,14 +28,16 @@ pub fn panic_by_err(error: Error) {
         Error::REV_SHARE_ISNT_U128 => panic!("Rev share is too large, expected to fit in u128."),
         Error::STAKER_EXISTS => panic!("Staker already exists, use increase_stake instead."),
         Error::STAKER_DOES_NOT_EXIST => panic!("Staker does not exist."),
-        Error::OPERATIONAL_EXISTS => panic!("Operational already exists."),
+        Error::OPERATIONAL_EXISTS => panic!("Operational address already exists."),
         Error::AMOUNT_LESS_THAN_MIN_STAKE => panic!(
             "Amount is less than min stake - try again with enough funds."
         ),
+        Error::REV_SHARE_OUT_OF_RANGE => panic!("Rev share is out of range, expected to be 0-100."),
         Error::POOLED_REWARDS_ISNT_U128 => panic!(
             "Pool rewards is too large, expected to fit in u128."
         ),
         Error::POOL_MEMBER_DOES_NOT_EXIST => panic!("Pool member does not exist."),
+        Error::STAKER_IS_INACTIVE => panic!("Staker is inactive."),
     }
 }
 

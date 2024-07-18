@@ -8,14 +8,14 @@ use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::staking::Staking::ContractState;
 use constants::{
-    NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, MAX_LEVERAGE, AMOUNT_TO_STAKER,
+    NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, MAX_LEVERAGE, STAKER_INITIAL_BALANCE,
     STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
 };
 
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
 
-    pub const AMOUNT_TO_STAKER: u128 = 10000000000;
+    pub const STAKER_INITIAL_BALANCE: u128 = 10000000000;
     pub const INITIAL_SUPPLY: u256 = 10000000000000000;
     pub const MAX_LEVERAGE: u64 = 100;
     pub const MIN_STAKE: u128 = 100000;
@@ -30,6 +30,9 @@ pub(crate) mod constants {
     }
     pub fn STAKER_ADDRESS() -> ContractAddress {
         contract_address_const::<'STAKER_ADDRESS'>()
+    }
+    pub fn OTHER_STAKER_ADDRESS() -> ContractAddress {
+        contract_address_const::<'OTHER_STAKER_ADDRESS'>()
     }
     pub fn OPERATIONAL_ADDRESS() -> ContractAddress {
         contract_address_const::<'OPERATIONAL_ADDRESS'>()
@@ -66,7 +69,7 @@ pub(crate) mod constants {
     }
 }
 
-pub(crate) fn initalize_staking_state() -> Staking::ContractState {
+pub(crate) fn initialize_staking_state() -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     let token_address: ContractAddress = constants::TOKEN_ADDRESS();
     Staking::constructor(ref state, token_address, constants::MIN_STAKE, constants::MAX_LEVERAGE);
@@ -74,7 +77,7 @@ pub(crate) fn initalize_staking_state() -> Staking::ContractState {
 }
 
 
-pub(crate) fn initalize_pooling_state() -> Pooling::ContractState {
+pub(crate) fn initialize_pooling_state() -> Pooling::ContractState {
     let staker_address: ContractAddress = constants::STAKER_ADDRESS();
     let mut state = Pooling::contract_state_for_testing();
     Pooling::constructor(ref state, staker_address);
@@ -106,10 +109,11 @@ pub(crate) fn init_stake(
     // Transfer amount from initial_owner to staker.
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     snforge_std::cheat_caller_address_global(cfg.owner_address);
-    erc20_dispatcher.transfer(recipient: cfg.staker_address, amount: cfg.amount_to_staker.into());
+    erc20_dispatcher
+        .transfer(recipient: cfg.staker_address, amount: cfg.staker_initial_balance.into());
     // Approve the Staking contract to spend the staker's tokens.
     snforge_std::cheat_caller_address_global(cfg.staker_address);
-    erc20_dispatcher.approve(spender: test_address, amount: cfg.amount_to_staker.into());
+    erc20_dispatcher.approve(spender: test_address, amount: cfg.staker_initial_balance.into());
     snforge_std::stop_cheat_caller_address_global(); // STOP GLOBAL CALLER CHEAT
     // Cheat the caller address only for the Staking contract (which is test_address), to be the
     // staker, and then stake.
@@ -124,6 +128,7 @@ pub(crate) fn init_stake(
             cfg.pooling_enabled,
             cfg.rev_share
         );
+    snforge_std::stop_cheat_caller_address(test_address); // STOP CALLER CHEAT
     assert_eq!(result, true);
     (state, erc20_dispatcher)
 }
@@ -136,7 +141,7 @@ pub(crate) struct StakingInitConfig {
     pub operational_address: ContractAddress,
     pub min_stake: u128,
     pub max_leverage: u64,
-    pub amount_to_staker: u128,
+    pub staker_initial_balance: u128,
     pub stake_amount: u128,
     pub rev_share: u8,
     pub pooling_enabled: bool,
@@ -151,7 +156,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             operational_address: OPERATIONAL_ADDRESS(),
             min_stake: MIN_STAKE,
             max_leverage: MAX_LEVERAGE,
-            amount_to_staker: AMOUNT_TO_STAKER,
+            staker_initial_balance: STAKER_INITIAL_BALANCE,
             stake_amount: STAKE_AMOUNT,
             rev_share: REV_SHARE,
             pooling_enabled: false,

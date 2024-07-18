@@ -2,17 +2,18 @@
 pub mod Staking {
     use core::num::traits::zero::Zero;
     use contracts::{
-        BASE_VALUE, errors::{Error, assert_with_err},
+        BASE_VALUE, errors::{Error, panic_by_err, assert_with_err},
         staking::{IStaking, StakerInfo, StakingContractInfo}, utils::{u128_mul_wide_and_div_unsafe},
     };
-    use starknet::ContractAddress;
+    use starknet::{ContractAddress, get_contract_address, get_caller_address};
     use openzeppelin::{
         access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
     };
     use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
+    use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
+
 
     pub const REV_SHARE_DENOMINATOR: u8 = 100;
-
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -77,6 +78,43 @@ pub mod Staking {
             pooling_enabled: bool,
             rev_share: u8,
         ) -> bool {
+            let staker_address = get_caller_address();
+            assert_with_err(
+                self.staker_address_to_info.read(staker_address).reward_address.is_zero(),
+                Error::STAKER_EXISTS
+            );
+            assert_with_err(
+                self.operational_address_to_staker_address.read(operational_address).is_zero(),
+                Error::OPERATIONAL_EXISTS
+            );
+            assert_with_err(amount >= self.min_stake.read(), Error::AMOUNT_LESS_THAN_MIN_STAKE);
+            assert_with_err(rev_share <= REV_SHARE_DENOMINATOR, Error::REV_SHARE_OUT_OF_RANGE);
+            let staking_contract_address = get_contract_address();
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            erc20_dispatcher
+                .transfer_from(
+                    sender: staker_address,
+                    recipient: staking_contract_address,
+                    amount: amount.into()
+                );
+            // TODO(Nir, 01/08/2024): Deploy pooling contract if pooling_enabled is true.
+            if pooling_enabled {
+                panic!("Pooling is not implemented.")
+            }
+            self
+                .staker_address_to_info
+                .write(
+                    staker_address,
+                    StakerInfo {
+                        reward_address: reward_address,
+                        operational_address: operational_address,
+                        amount_own: amount,
+                        index: self.global_index.read(),
+                        rev_share: rev_share,
+                        ..Default::default()
+                    }
+                );
+            self.operational_address_to_staker_address.write(operational_address, staker_address);
             true
         }
 
