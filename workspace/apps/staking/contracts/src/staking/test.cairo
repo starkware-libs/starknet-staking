@@ -28,6 +28,7 @@ use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::staking::Staking::ContractState;
+use contracts::staking::Staking::REV_SHARE_DENOMINATOR;
 
 #[test]
 fn test_constructor() {
@@ -166,5 +167,17 @@ fn test_stake_with_less_than_min_stake() {
     );
     // Stake with stake_amount < min_stake.
     cfg.stake_amount = cfg.min_stake - 1;
+    init_stake(:token_address, :cfg);
+}
+
+#[test]
+#[should_panic(expected: "Rev share is out of range, expected to be 0-100.")]
+fn test_stake_with_rev_share_out_of_range() {
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    // Stake with rev_share > REV_SHARE_DENOMINATOR.
+    cfg.rev_share = REV_SHARE_DENOMINATOR + 1;
     init_stake(:token_address, :cfg);
 }
