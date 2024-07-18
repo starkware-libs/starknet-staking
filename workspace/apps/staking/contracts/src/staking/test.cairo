@@ -165,7 +165,6 @@ fn test_stake_with_less_than_min_stake() {
     let token_address = deploy_mock_erc20_contract(
         initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
     );
-    // Stake with stake_amount < min_stake.
     cfg.stake_amount = cfg.min_stake - 1;
     init_stake(:token_address, :cfg);
 }
@@ -177,7 +176,18 @@ fn test_stake_with_rev_share_out_of_range() {
     let token_address = deploy_mock_erc20_contract(
         initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
     );
-    // Stake with rev_share > REV_SHARE_DENOMINATOR.
     cfg.rev_share = REV_SHARE_DENOMINATOR + 1;
+    init_stake(:token_address, :cfg);
+}
+
+// TODO: when pooling enabled = true is supported, change this test.
+#[test]
+#[should_panic(expected: "Pooling is not implemented.")]
+fn test_stake_with_pooling_enabled() {
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    cfg.pooling_enabled = true;
     init_stake(:token_address, :cfg);
 }
