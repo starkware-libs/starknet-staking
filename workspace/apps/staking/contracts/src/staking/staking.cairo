@@ -137,8 +137,8 @@ pub mod Staking {
 
         fn add_to_delegation_pool(
             ref self: ContractState, pooled_staker: ContractAddress, amount: u128
-        ) -> u128 {
-            0
+        ) -> (u128, u64) {
+            (0, self.global_index.read())
         }
 
         fn remove_from_delegation_pool_intent(

@@ -17,6 +17,7 @@ pub enum Error {
     // Pooling contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_IS_INACTIVE,
+    POOL_MEMBER_EXISTS,
 }
 
 
@@ -38,6 +39,9 @@ pub fn panic_by_err(error: Error) {
         ),
         Error::POOL_MEMBER_DOES_NOT_EXIST => panic!("Pool member does not exist."),
         Error::STAKER_IS_INACTIVE => panic!("Staker is inactive."),
+        Error::POOL_MEMBER_EXISTS => panic!(
+            "Pool member exists, use add_to_delegation_pool instead."
+        ),
     }
 }
 

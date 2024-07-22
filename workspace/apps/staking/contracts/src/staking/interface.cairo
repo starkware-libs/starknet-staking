@@ -43,7 +43,7 @@ pub trait IStaking<TContractState> {
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> u128;
     fn add_to_delegation_pool(
         ref self: TContractState, pooled_staker: ContractAddress, amount: u128
-    ) -> u128;
+    ) -> (u128, u64);
     fn remove_from_delegation_pool_intent(
         ref self: TContractState,
         staker_address: ContractAddress,

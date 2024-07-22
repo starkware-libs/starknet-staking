@@ -1,14 +1,17 @@
 #[starknet::contract]
 pub mod Pooling {
+    use core::num::traits::zero::Zero;
     use contracts::{
-        BASE_VALUE, errors::{Error, panic_by_err}, pooling::{IPooling, PoolMemberInfo},
-        utils::u128_mul_wide_and_div_unsafe
+        BASE_VALUE, errors::{Error, panic_by_err, assert_with_err},
+        pooling::{IPooling, PoolMemberInfo}, utils::u128_mul_wide_and_div_unsafe
     };
     use core::option::OptionTrait;
-    use starknet::ContractAddress;
+    use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use openzeppelin::{
         access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
     };
+    use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
+    use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -59,8 +62,40 @@ pub mod Pooling {
             ref self: ContractState, amount: u128, reward_address: ContractAddress
         ) -> bool {
             self.assert_staker_is_active();
+            let pool_member = get_caller_address();
+            assert_with_err(
+                self.pool_member_address_to_info.read(pool_member).reward_address.is_zero(),
+                Error::POOL_MEMBER_EXISTS
+            );
+            let pooled_staker = self.staker_address.read();
+            let staking_contract = self.staking_contract.read();
+            let staking_contract_dispatcher = IStakingDispatcher {
+                contract_address: staking_contract,
+            };
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let self_contract = get_contract_address();
+            erc20_dispatcher
+                .transfer_from(
+                    sender: pool_member, recipient: self_contract, amount: amount.into()
+                );
+            erc20_dispatcher.approve(spender: staking_contract, amount: amount.into());
+            let (_, updated_index) = staking_contract_dispatcher
+                .add_to_delegation_pool(:pooled_staker, :amount);
+            self
+                .pool_member_address_to_info
+                .write(
+                    pool_member,
+                    PoolMemberInfo {
+                        reward_address: reward_address,
+                        amount: amount,
+                        index: updated_index,
+                        unclaimed_rewards: 0,
+                        unpool_time: Option::None,
+                    }
+                );
             true
         }
+
         fn add_to_delegation_pool(ref self: ContractState, amount: u128) -> u128 {
             0
         }

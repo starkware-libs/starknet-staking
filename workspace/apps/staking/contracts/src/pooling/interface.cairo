@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 
-#[derive(Default, Drop, PartialEq, Serde, Copy, starknet::Store)]
+#[derive(Default, Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub struct PoolMemberInfo {
     pub reward_address: ContractAddress,
     pub amount: u128,
