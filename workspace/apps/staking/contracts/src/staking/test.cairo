@@ -16,9 +16,9 @@ use contracts::{
     test_utils::{
         initialize_staking_state, deploy_mock_erc20_contract, init_stake, StakingInitConfig,
         constants::{
-            TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_ADDRESS, MAX_LEVERAGE, MIN_STAKE, OWNER_ADDRESS,
-            INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS, STAKE_AMOUNT,
-            STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
+            TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
+            OWNER_ADDRESS, INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
+            STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
         }
     }
 };
@@ -98,7 +98,7 @@ fn test_calculate_rewards() {
     let mut staker_info = StakerInfo {
         amount_own: BASE_VALUE.into(),
         amount_pool: BASE_VALUE.into(),
-        pooling_contract: Option::Some(POOLING_ADDRESS()),
+        pooling_contract: Option::Some(POOLING_CONTRACT_ADDRESS()),
         ..Default::default()
     };
     assert!(state.calculate_rewards(:staker_address, ref :staker_info));

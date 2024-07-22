@@ -29,6 +29,8 @@ pub mod Pooling {
         staker_address: ContractAddress,
         pool_member_address_to_info: LegacyMap::<ContractAddress, PoolMemberInfo>,
         final_staker_index: Option<u128>,
+        staking_contract: ContractAddress,
+        token_address: ContractAddress,
     }
 
     #[event]
@@ -38,9 +40,17 @@ pub mod Pooling {
         src5Event: SRC5Component::Event
     }
 
+
     #[constructor]
-    pub fn constructor(ref self: ContractState, staker_address: ContractAddress) {
+    pub fn constructor(
+        ref self: ContractState,
+        staker_address: ContractAddress,
+        staking_contract: ContractAddress,
+        token_address: ContractAddress
+    ) {
         self.staker_address.write(staker_address);
+        self.staking_contract.write(staking_contract);
+        self.token_address.write(token_address);
     }
 
     #[abi(embed_v0)]

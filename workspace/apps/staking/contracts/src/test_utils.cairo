@@ -43,8 +43,11 @@ pub(crate) mod constants {
     pub fn OWNER_ADDRESS() -> ContractAddress {
         contract_address_const::<'OWNER_ADDRESS'>()
     }
-    pub fn POOLING_ADDRESS() -> ContractAddress {
-        contract_address_const::<'POOLING_ADDRESS'>()
+    pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress {
+        contract_address_const::<'STAKING_CONTRACT_ADDRESS'>()
+    }
+    pub fn POOLING_CONTRACT_ADDRESS() -> ContractAddress {
+        contract_address_const::<'POOLING_CONTRACT_ADDRESS'>()
     }
     pub fn RECIPIENT_ADDRESS() -> ContractAddress {
         contract_address_const::<'RECIPIENT_ADDRESS'>()
@@ -80,10 +83,13 @@ pub(crate) fn initialize_staking_state() -> Staking::ContractState {
 }
 
 
-pub(crate) fn initialize_pooling_state() -> Pooling::ContractState {
-    let staker_address: ContractAddress = constants::STAKER_ADDRESS();
+pub(crate) fn initialize_pooling_state(
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    token_address: ContractAddress
+) -> Pooling::ContractState {
     let mut state = Pooling::contract_state_for_testing();
-    Pooling::constructor(ref state, staker_address);
+    Pooling::constructor(ref state, :staker_address, :staking_contract, :token_address);
     state
 }
 
