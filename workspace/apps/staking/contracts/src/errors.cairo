@@ -11,9 +11,12 @@ pub enum Error {
     STAKER_DOES_NOT_EXIST,
     OPERATIONAL_EXISTS,
     POOLED_REWARDS_ISNT_U128,
+    CALLER_CANNOT_INCREASE_STAKE,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     REV_SHARE_OUT_OF_RANGE,
+    AMOUNT_LESS_THAN_MIN_INCREASE_STAKE,
+    UNSTAKE_IN_PROGRESS,
     // Pooling contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_IS_INACTIVE,
@@ -29,13 +32,22 @@ pub fn panic_by_err(error: Error) {
         Error::REV_SHARE_ISNT_U128 => panic!("Rev share is too large, expected to fit in u128."),
         Error::STAKER_EXISTS => panic!("Staker already exists, use increase_stake instead."),
         Error::STAKER_DOES_NOT_EXIST => panic!("Staker does not exist."),
+        Error::CALLER_CANNOT_INCREASE_STAKE => panic!(
+            "Caller address should be staker address or reward address."
+        ),
         Error::OPERATIONAL_EXISTS => panic!("Operational address already exists."),
         Error::AMOUNT_LESS_THAN_MIN_STAKE => panic!(
             "Amount is less than min stake - try again with enough funds."
         ),
         Error::REV_SHARE_OUT_OF_RANGE => panic!("Rev share is out of range, expected to be 0-100."),
+        Error::AMOUNT_LESS_THAN_MIN_INCREASE_STAKE => panic!(
+            "Amount is less than min increase stake - try again with enough funds."
+        ),
         Error::POOLED_REWARDS_ISNT_U128 => panic!(
             "Pool rewards is too large, expected to fit in u128."
+        ),
+        Error::UNSTAKE_IN_PROGRESS => panic!(
+            "Unstake is in progress, staker is in an exit window."
         ),
         Error::POOL_MEMBER_DOES_NOT_EXIST => panic!("Pool member does not exist."),
         Error::STAKER_IS_INACTIVE => panic!("Staker is inactive."),

@@ -189,3 +189,59 @@ fn test_stake_with_pooling_enabled() {
     cfg.pooling_enabled = true;
     init_stake(:token_address, :cfg);
 }
+
+#[test]
+fn test_increase_stake_from_staker_address() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    // In init_stake function the caller_address is cheated to be cfg.staker_address.
+    // First stake from cfg.staker_address
+    let (mut state, _) = init_stake(:token_address, :cfg);
+
+    // Set the same staker address.
+    snforge_std::start_cheat_caller_address(
+        contract_address: snforge_std::test_address(), caller_address: cfg.staker_address
+    );
+    let staker_info_before = state.staker_address_to_info.read(cfg.staker_address);
+    let increase_amount = cfg.stake_amount;
+    let expected_staker_info = StakerInfo {
+        amount_own: staker_info_before.amount_own + increase_amount, ..staker_info_before
+    };
+    // Increase stake from the same staker address.
+    state.increase_stake(staker_address: cfg.staker_address, amount: increase_amount,);
+
+    let updated_staker_info = state.staker_address_to_info.read(cfg.staker_address);
+    assert_eq!(expected_staker_info, updated_staker_info);
+}
+
+// TODO: Implement.
+#[test]
+fn test_increase_stake_from_reward_address() {
+    assert!(true);
+}
+
+// TODO: Implement.
+#[test]
+fn test_increase_stake_staker_address_not_exist() {
+    assert!(true);
+}
+
+// TODO: Implement.
+#[test]
+fn test_increase_stake_unstake_in_progress() {
+    assert!(true);
+}
+
+// TODO: Implement.
+#[test]
+fn test_increase_stake_amount_less_than_min_increase_stake() {
+    assert!(true);
+}
+
+// TODO: Implement.
+#[test]
+fn test_increase_stake_caller_is_not_staker_or_rewarder() {
+    assert!(true);
+}
