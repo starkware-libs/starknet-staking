@@ -91,7 +91,7 @@ fn test_stake() {
 
 #[test]
 fn test_calculate_rewards() {
-    let mut state = initialize_staking_state();
+    let mut state = initialize_staking_state(TOKEN_ADDRESS(), MIN_STAKE, MAX_LEVERAGE);
 
     let staker_address: ContractAddress = STAKER_ADDRESS();
 

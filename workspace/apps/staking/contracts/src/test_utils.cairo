@@ -75,10 +75,11 @@ pub(crate) mod constants {
     }
 }
 
-pub(crate) fn initialize_staking_state() -> Staking::ContractState {
+pub(crate) fn initialize_staking_state(
+    token_address: ContractAddress, min_stake: u128, max_leverage: u64
+) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
-    let token_address: ContractAddress = constants::TOKEN_ADDRESS();
-    Staking::constructor(ref state, token_address, constants::MIN_STAKE, constants::MAX_LEVERAGE);
+    Staking::constructor(ref state, token_address, min_stake, max_leverage);
     state
 }
 
