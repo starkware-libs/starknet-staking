@@ -6,7 +6,7 @@ use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatc
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
-use contracts::staking::staking::Staking::ContractState;
+use contracts::staking::Staking::ContractState;
 use constants::{
     NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, MAX_LEVERAGE, STAKER_INITIAL_BALANCE,
     STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
@@ -105,6 +105,18 @@ pub(crate) fn deploy_mock_erc20_contract(
     let erc20_contract = snforge_std::declare("DualCaseERC20Mock").unwrap();
     let (token_address, _) = erc20_contract.deploy(@calldata).unwrap();
     token_address
+}
+
+pub(crate) fn deploy_staking_contract(
+    token_address: ContractAddress, cfg: StakingInitConfig
+) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    token_address.serialize(ref calldata);
+    cfg.min_stake.serialize(ref calldata);
+    cfg.max_leverage.serialize(ref calldata);
+    let staking_contract = snforge_std::declare("Staking").unwrap();
+    let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
+    staking_contract_address
 }
 
 pub(crate) fn init_stake(

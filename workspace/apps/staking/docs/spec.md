@@ -436,12 +436,11 @@ success: bool
 #### pre-condition <!-- omit from toc -->
 1. caller address (pool member) is not listed in the contract.
 #### logic <!-- omit from toc -->
-1. Check that staker for this pool instance is not in exit window.
-2. Verify leverage after this amount addition is valid.
-3. Transfer funds from caller to the contract.
-4. Call staking contract's [add_to_delegation_pool](#add_to_delegation_pool-).
-5. Get current index from staking contract.
-6. Create entry for pool member.
+1. Transfer funds from pool member to pooling contract.
+2. Approve transferal from pooling contract to staking contract.
+3. Call staking contract's [add_to_delegation_pool](#add_to_delegation_pool-).
+4. Get current index from staking contract.
+5. Create entry for pool member.
 
 ### add_to_delegation_pool
 #### description <!-- omit from toc -->
