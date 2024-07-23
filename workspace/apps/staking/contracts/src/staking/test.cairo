@@ -5,7 +5,7 @@ use contracts::{
         Staking::{
             // TODO(Nir, 15/07/2024): Remove member module use's when possible
             __member_module_min_stake::InternalContractMemberStateTrait as MinStakeMemberModule,
-            __member_module_staker_address_to_info::InternalContractMemberStateTrait as StakerAddressToStakerInfoMemberModule,
+            __member_module_staker_info::InternalContractMemberStateTrait as StakerAddressToStakerInfoMemberModule,
             __member_module_operational_address_to_staker_address::InternalContractMemberStateTrait as OperationalAddressToStakerAddressMemberModule,
             __member_module_token_address::InternalContractMemberStateTrait as TokenAddressMemberModule,
             __member_module_max_leverage::InternalContractMemberStateTrait as MaxLeverageMemberModule,
@@ -49,7 +49,7 @@ fn test_constructor() {
         .read(dummy_address);
     assert_eq!(contract_operational_address_to_staker_address, Default::default());
     let contract_staker_address_to_operational_address: StakerInfo = state
-        .staker_address_to_info
+        .staker_info
         .read(dummy_address);
     assert_eq!(contract_staker_address_to_operational_address, Default::default());
 }
@@ -72,7 +72,7 @@ fn test_stake() {
         rev_share: cfg.rev_share,
         ..Default::default()
     };
-    assert_eq!(expected_staker_info, state.staker_address_to_info.read(cfg.staker_address));
+    assert_eq!(expected_staker_info, state.staker_info.read(cfg.staker_address));
 
     // Check that the operational address to staker address mapping was updated correctly.
     assert_eq!(
@@ -102,7 +102,7 @@ fn test_calculate_rewards() {
         ..Default::default()
     };
     assert!(state.calculate_rewards(:staker_address, ref :staker_info));
-    let new_staker_info = state.staker_address_to_info.read(staker_address);
+    let new_staker_info = state.staker_info.read(staker_address);
     assert_eq!(new_staker_info.unclaimed_rewards_own, BASE_VALUE.into());
     assert_eq!(new_staker_info.index, BASE_VALUE);
     assert_eq!(new_staker_info.unclaimed_rewards_pool, BASE_VALUE.into());
@@ -204,7 +204,7 @@ fn test_increase_stake_from_staker_address() {
     snforge_std::start_cheat_caller_address(
         contract_address: snforge_std::test_address(), caller_address: cfg.staker_address
     );
-    let staker_info_before = state.staker_address_to_info.read(cfg.staker_address);
+    let staker_info_before = state.staker_info.read(cfg.staker_address);
     let increase_amount = cfg.stake_amount;
     let expected_staker_info = StakerInfo {
         amount_own: staker_info_before.amount_own + increase_amount, ..staker_info_before
@@ -212,7 +212,7 @@ fn test_increase_stake_from_staker_address() {
     // Increase stake from the same staker address.
     state.increase_stake(staker_address: cfg.staker_address, amount: increase_amount,);
 
-    let updated_staker_info = state.staker_address_to_info.read(cfg.staker_address);
+    let updated_staker_info = state.staker_info.read(cfg.staker_address);
     assert_eq!(expected_staker_info, updated_staker_info);
 }
 
