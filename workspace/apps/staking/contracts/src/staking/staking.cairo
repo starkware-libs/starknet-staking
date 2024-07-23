@@ -151,7 +151,23 @@ pub mod Staking {
         }
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
-            0
+            let mut staker_info = self.staker_info.read(staker_address);
+            // Reward address isn't zero if staker is initialized.
+            assert_with_err(staker_info.reward_address.is_non_zero(), Error::STAKER_DOES_NOT_EXIST);
+            let caller_address = get_caller_address();
+            assert_with_err(
+                caller_address == staker_address || caller_address == staker_info.reward_address,
+                Error::CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
+            );
+            self.calculate_rewards(staker_address, ref staker_info);
+            let amount = staker_info.unclaimed_rewards_own;
+
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            erc20_dispatcher.transfer(recipient: staker_info.reward_address, amount: amount.into());
+
+            staker_info.unclaimed_rewards_own = 0;
+            self.staker_info.write(staker_address, staker_info);
+            amount
         }
 
         fn unstake_intent(ref self: ContractState) -> felt252 {
