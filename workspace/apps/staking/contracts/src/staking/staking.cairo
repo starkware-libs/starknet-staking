@@ -34,7 +34,7 @@ pub mod Staking {
         src5: SRC5Component::Storage,
         global_index: u64,
         min_stake: u128,
-        staker_address_to_info: LegacyMap::<ContractAddress, StakerInfo>,
+        staker_info: LegacyMap::<ContractAddress, StakerInfo>,
         operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
         max_leverage: u64,
         token_address: ContractAddress,
@@ -81,8 +81,7 @@ pub mod Staking {
         ) -> bool {
             let staker_address = get_caller_address();
             assert_with_err(
-                self.staker_address_to_info.read(staker_address).reward_address.is_zero(),
-                Error::STAKER_EXISTS
+                self.staker_info.read(staker_address).reward_address.is_zero(), Error::STAKER_EXISTS
             );
             assert_with_err(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
@@ -103,7 +102,7 @@ pub mod Staking {
                 panic!("Pooling is not implemented.")
             }
             self
-                .staker_address_to_info
+                .staker_info
                 .write(
                     staker_address,
                     StakerInfo {
@@ -126,7 +125,7 @@ pub mod Staking {
         fn increase_stake(
             ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> u128 {
-            let mut staker_info = self.staker_address_to_info.read(staker_address);
+            let mut staker_info = self.staker_info.read(staker_address);
             let reward_address = staker_info.reward_address;
             assert_with_err(reward_address.is_non_zero(), Error::STAKER_DOES_NOT_EXIST);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -148,7 +147,7 @@ pub mod Staking {
                 );
             self.calculate_rewards(staker_address, ref staker_info);
             staker_info.amount_own += amount;
-            self.staker_address_to_info.write(staker_address, staker_info);
+            self.staker_info.write(staker_address, staker_info);
             staker_info.amount_own
         }
 
@@ -223,7 +222,7 @@ pub mod Staking {
     #[generate_trait]
     pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         fn get_staker(self: @ContractState, staker_address: ContractAddress) -> Option<StakerInfo> {
-            let staker_info = self.staker_address_to_info.read(staker_address);
+            let staker_info = self.staker_info.read(staker_address);
             // Reward address isn't zero if staker is initialized.
             if staker_info.reward_address.is_zero() {
                 Option::None
@@ -275,7 +274,7 @@ pub mod Staking {
             }
             staker_info.unclaimed_rewards_own += own_rewards;
             staker_info.index = global_index;
-            self.staker_address_to_info.write(staker_address, staker_info);
+            self.staker_info.write(staker_address, staker_info);
             true
         }
     }
