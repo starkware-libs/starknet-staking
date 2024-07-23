@@ -25,6 +25,7 @@ pub enum Error {
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_IS_INACTIVE,
     POOL_MEMBER_EXISTS,
+    AMOUNT_IS_ZERO,
 }
 
 
@@ -66,6 +67,7 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::POOL_MEMBER_EXISTS => panic!(
             "Pool member exists, use add_to_delegation_pool instead."
         ),
+        Error::AMOUNT_IS_ZERO => panic!("Amount must be positive."),
     }
 }
 
