@@ -416,3 +416,28 @@ fn test_claim_rewards() {
     assert_eq!(balance, reward.into());
 }
 
+#[test]
+#[should_panic(expected: ("Claim rewards must be called from staker address or reward address.",))]
+fn test_claim_rewards_panic_unauthorized() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    let (mut state, _) = init_stake(:token_address, :cfg);
+    snforge_std::cheat_caller_address(
+        snforge_std::test_address(), DUMMY_ADDRESS(), snforge_std::CheatSpan::Indefinite
+    );
+    state.claim_rewards(cfg.staker_address);
+}
+
+
+#[test]
+#[should_panic(expected: ("Staker does not exist.",))]
+fn test_claim_rewards_panic_staker_doesnt_exist() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    let (mut state, _) = init_stake(:token_address, :cfg);
+    state.claim_rewards(DUMMY_ADDRESS());
+}
