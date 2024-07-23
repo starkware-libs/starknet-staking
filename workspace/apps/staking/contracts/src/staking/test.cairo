@@ -19,7 +19,7 @@ use contracts::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
             OWNER_ADDRESS, INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
             STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
-            OTHER_REWARD_ADDRESS
+            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS
         }
     }
 };
@@ -31,6 +31,7 @@ use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::staking::Staking::ContractState;
 use contracts::staking::Staking::REV_SHARE_DENOMINATOR;
+use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
 
 #[test]
@@ -378,16 +379,20 @@ fn test_change_reward_address() {
     assert_eq!(staker_info_after_change, staker_info_expected);
 }
 
-// TODO: Implement.
-#[test]
-fn test_change_reward_address_invalid_caller_address() {
-    assert!(true);
-}
 
-// TODO: Implement.
 #[test]
-fn test_change_reward_address_invalid_reward_address() {
-    assert!(true);
+#[should_panic(expected: "Staker does not exist.")]
+fn test_change_reward_address_staker_not_exist() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    let (mut state, _) = init_stake(:token_address, :cfg);
+    snforge_std::cheat_caller_address(
+        snforge_std::test_address(), NON_STAKER_ADDRESS(), snforge_std::CheatSpan::TargetCalls(1)
+    );
+    // Reward address is arbitrary because it should fail because of the caller.
+    state.change_reward_address(reward_address: DUMMY_ADDRESS());
 }
 
 

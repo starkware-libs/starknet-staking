@@ -126,7 +126,7 @@ pub mod Staking {
         ) -> u128 {
             let mut staker_info = self.staker_info.read(staker_address);
             let reward_address = staker_info.reward_address;
-            assert_with_err(reward_address.is_non_zero(), Error::STAKER_DOES_NOT_EXIST);
+            assert_with_err(reward_address.is_non_zero(), Error::STAKER_NOT_EXISTS);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             assert_with_err(
                 amount >= MIN_INCREASE_STAKE, Error::AMOUNT_LESS_THAN_MIN_INCREASE_STAKE
@@ -153,7 +153,7 @@ pub mod Staking {
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
             let mut staker_info = self.staker_info.read(staker_address);
             // Reward address isn't zero if staker is initialized.
-            assert_with_err(staker_info.reward_address.is_non_zero(), Error::STAKER_DOES_NOT_EXIST);
+            assert_with_err(staker_info.reward_address.is_non_zero(), Error::STAKER_NOT_EXISTS);
             let caller_address = get_caller_address();
             assert_with_err(
                 caller_address == staker_address || caller_address == staker_info.reward_address,
@@ -215,7 +215,7 @@ pub mod Staking {
             assert_with_err(reward_address.is_non_zero(), Error::INVALID_REWARD_ADDRESS);
             assert_with_err(
                 self.staker_info.read(staker_address).reward_address.is_non_zero(),
-                Error::STAKER_DOES_NOT_EXIST
+                Error::STAKER_NOT_EXISTS
             );
 
             let mut staker_info = self.staker_info.read(staker_address);
@@ -230,7 +230,7 @@ pub mod Staking {
 
         fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let staker_info = self.get_staker(staker_address);
-            assert_with_err(staker_info.is_some(), Error::STAKER_DOES_NOT_EXIST);
+            assert_with_err(staker_info.is_some(), Error::STAKER_NOT_EXISTS);
             staker_info.unwrap()
         }
 
@@ -248,7 +248,7 @@ pub mod Staking {
         ) -> u64 {
             let mut staker_info = self.staker_info.read(staker_address);
             // Reward address isn't zero if staker is initialized.
-            assert_with_err(staker_info.reward_address.is_non_zero(), Error::STAKER_DOES_NOT_EXIST);
+            assert_with_err(staker_info.reward_address.is_non_zero(), Error::STAKER_NOT_EXISTS);
             let pool_address = expect_with_err(
                 staker_info.pooling_contract, Error::POOL_ADDRESS_DOES_NOT_EXIST
             );

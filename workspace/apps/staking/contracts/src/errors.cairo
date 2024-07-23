@@ -8,7 +8,7 @@ pub enum Error {
     REV_SHARE_ISNT_U128,
     // Shared errors
     STAKER_EXISTS,
-    STAKER_DOES_NOT_EXIST,
+    STAKER_NOT_EXISTS,
     OPERATIONAL_EXISTS,
     POOLED_REWARDS_ISNT_U128,
     CALLER_CANNOT_INCREASE_STAKE,
@@ -35,7 +35,7 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::REWARDS_ISNT_U128 => panic!("Staker rewards is too large, expected to fit in u128."),
         Error::REV_SHARE_ISNT_U128 => panic!("Rev share is too large, expected to fit in u128."),
         Error::STAKER_EXISTS => panic!("Staker already exists, use increase_stake instead."),
-        Error::STAKER_DOES_NOT_EXIST => panic!("Staker does not exist."),
+        Error::STAKER_NOT_EXISTS => panic!("Staker does not exist."),
         Error::CALLER_CANNOT_INCREASE_STAKE => panic!(
             "Caller address should be staker address or reward address."
         ),
