@@ -109,10 +109,14 @@ pub mod Staking {
                     StakerInfo {
                         reward_address: reward_address,
                         operational_address: operational_address,
+                        pooling_contract: Option::None,
+                        unstake_time: Option::None,
                         amount_own: amount,
+                        amount_pool: 0,
                         index: self.global_index.read(),
+                        unclaimed_rewards_own: 0,
+                        unclaimed_rewards_pool: 0,
                         rev_share: rev_share,
-                        ..Default::default()
                     }
                 );
             self.operational_address_to_staker_address.write(operational_address, staker_address);
