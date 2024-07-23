@@ -196,6 +196,16 @@ pub mod Staking {
         }
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
+            let staker_address = get_caller_address();
+            assert_with_err(reward_address.is_non_zero(), Error::INVALID_REWARD_ADDRESS);
+            assert_with_err(
+                self.staker_info.read(staker_address).reward_address.is_non_zero(),
+                Error::STAKER_DOES_NOT_EXIST
+            );
+
+            let mut staker_info = self.staker_info.read(staker_address);
+            staker_info.reward_address = reward_address;
+            self.staker_info.write(staker_address, staker_info);
             true
         }
 

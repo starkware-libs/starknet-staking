@@ -55,6 +55,9 @@ pub(crate) mod constants {
     pub fn REWARD_ADDRESS() -> ContractAddress {
         contract_address_const::<'REWARD_ADDRESS'>()
     }
+    pub fn OTHER_REWARD_ADDRESS() -> ContractAddress {
+        contract_address_const::<'OTHER_REWARD_ADDRESS'>()
+    }
     pub fn SPENDER_ADDRESS() -> ContractAddress {
         contract_address_const::<'SPENDER_ADDRESS'>()
     }
