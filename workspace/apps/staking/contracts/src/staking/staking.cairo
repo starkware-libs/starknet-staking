@@ -12,6 +12,8 @@ pub mod Staking {
     use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 
+    // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value). 
+    pub const MIN_INCREASE_STAKE: u128 = 10;
     pub const REV_SHARE_DENOMINATOR: u8 = 100;
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
@@ -107,10 +109,14 @@ pub mod Staking {
                     StakerInfo {
                         reward_address: reward_address,
                         operational_address: operational_address,
+                        pooling_contract: Option::None,
+                        unstake_time: Option::None,
                         amount_own: amount,
+                        amount_pool: 0,
                         index: self.global_index.read(),
+                        unclaimed_rewards_own: 0,
+                        unclaimed_rewards_pool: 0,
                         rev_share: rev_share,
-                        ..Default::default()
                     }
                 );
             self.operational_address_to_staker_address.write(operational_address, staker_address);
@@ -120,7 +126,30 @@ pub mod Staking {
         fn increase_stake(
             ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> u128 {
-            0
+            let mut staker_info = self.staker_address_to_info.read(staker_address);
+            let reward_address = staker_info.reward_address;
+            assert_with_err(reward_address.is_non_zero(), Error::STAKER_DOES_NOT_EXIST);
+            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
+            assert_with_err(
+                amount >= MIN_INCREASE_STAKE, Error::AMOUNT_LESS_THAN_MIN_INCREASE_STAKE
+            );
+            let caller_address = get_caller_address();
+            assert_with_err(
+                caller_address == staker_address || caller_address == reward_address,
+                Error::CALLER_CANNOT_INCREASE_STAKE
+            );
+            let staking_contract_address = get_contract_address();
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            erc20_dispatcher
+                .transfer_from(
+                    sender: caller_address,
+                    recipient: staking_contract_address,
+                    amount: amount.into()
+                );
+            self.calculate_rewards(staker_address, ref staker_info);
+            staker_info.amount_own += amount;
+            self.staker_address_to_info.write(staker_address, staker_info);
+            staker_info.amount_own
         }
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
