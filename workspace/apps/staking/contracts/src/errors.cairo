@@ -12,6 +12,7 @@ pub enum Error {
     OPERATIONAL_EXISTS,
     POOLED_REWARDS_ISNT_U128,
     CALLER_CANNOT_INCREASE_STAKE,
+    INVALID_REWARD_ADDRESS,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     REV_SHARE_OUT_OF_RANGE,
@@ -35,6 +36,7 @@ pub fn panic_by_err(error: Error) {
         Error::CALLER_CANNOT_INCREASE_STAKE => panic!(
             "Caller address should be staker address or reward address."
         ),
+        Error::INVALID_REWARD_ADDRESS => panic!("Invalid reward address."),
         Error::OPERATIONAL_EXISTS => panic!("Operational address already exists."),
         Error::AMOUNT_LESS_THAN_MIN_STAKE => panic!(
             "Amount is less than min stake - try again with enough funds."

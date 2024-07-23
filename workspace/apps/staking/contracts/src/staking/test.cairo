@@ -19,6 +19,7 @@ use contracts::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
             OWNER_ADDRESS, INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
             STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
+            OTHER_REWARD_ADDRESS
         }
     }
 };
@@ -260,5 +261,38 @@ fn test_increase_stake_amount_less_than_min_increase_stake() {
 // TODO: Implement.
 #[test]
 fn test_increase_stake_caller_is_not_staker_or_rewarder() {
+    assert!(true);
+}
+
+#[test]
+fn test_change_reward_address() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    let (mut state, _) = init_stake(:token_address, :cfg);
+    let staker_info_before_change = state.staker_info.read(cfg.staker_address);
+    let other_reward_address = OTHER_REWARD_ADDRESS();
+    // Set the same staker address.
+    snforge_std::start_cheat_caller_address(
+        contract_address: snforge_std::test_address(), caller_address: cfg.staker_address
+    );
+    state.change_reward_address(other_reward_address);
+    let staker_info_after_change = state.staker_info.read(cfg.staker_address);
+    let staker_info_expected = StakerInfo {
+        reward_address: other_reward_address, ..staker_info_before_change
+    };
+    assert_eq!(staker_info_after_change, staker_info_expected);
+}
+
+// TODO: Implement.
+#[test]
+fn test_change_reward_address_invalid_caller_address() {
+    assert!(true);
+}
+
+// TODO: Implement.
+#[test]
+fn test_change_reward_address_invalid_reward_address() {
     assert!(true);
 }
