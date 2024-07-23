@@ -30,6 +30,7 @@ use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::staking::Staking::ContractState;
 use contracts::staking::Staking::REV_SHARE_DENOMINATOR;
+use contracts::staking::interface::StakingContractInfo;
 
 #[test]
 fn test_constructor() {
@@ -188,6 +189,22 @@ fn test_stake_with_pooling_enabled() {
     );
     cfg.pooling_enabled = true;
     init_stake(:token_address, :cfg);
+}
+
+#[test]
+fn test_contract_parameters() {
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    let (mut state, _) = init_stake(:token_address, :cfg);
+    let expected_staking_contract_info = StakingContractInfo {
+        max_leverage: cfg.max_leverage,
+        min_stake: cfg.min_stake,
+        token_address: token_address,
+        global_index: BASE_VALUE,
+    };
+    assert_eq!(state.contract_parameters(), expected_staking_contract_info);
 }
 
 #[test]
