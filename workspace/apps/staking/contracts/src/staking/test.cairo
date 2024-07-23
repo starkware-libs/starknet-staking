@@ -271,6 +271,62 @@ fn test_increase_stake_from_staker_address() {
     assert_eq!(expected_staker_info, updated_staker_info);
 }
 
+#[test]
+#[should_panic(expected: "Pool address does not exist.")]
+fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
+    let mut cfg = StakingInitConfig {
+        pooling_enabled: true,
+        pooling_address: Option::Some(POOLING_CONTRACT_ADDRESS()),
+        ..Default::default()
+    };
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    // In init_stake function the caller_address is cheated to be cfg.staker_address.
+    // First stake from cfg.staker_address.
+    let (mut state, _) = init_stake(:token_address, :cfg);
+    snforge_std::cheat_caller_address(
+        snforge_std::test_address(), cfg.staker_address, snforge_std::CheatSpan::TargetCalls(1)
+    );
+    state.claim_delegation_pool_rewards(cfg.staker_address);
+}
+
+
+#[test]
+#[should_panic(
+    expected: "Claim delegation pool rewards must be called from delegation pooling contract."
+)]
+fn test_claim_delegation_pool_rewards_unauthorized_address() {
+    let mut cfg = StakingInitConfig {
+        pooling_enabled: true,
+        pooling_address: Option::Some(POOLING_CONTRACT_ADDRESS()),
+        ..Default::default()
+    };
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    // In init_stake function the caller_address is cheated to be cfg.staker_address.
+    // First stake from cfg.staker_address.
+    let (mut state, _) = init_stake(:token_address, :cfg);
+
+    // Update staker info for the test.
+    let staker_info = StakerInfo {
+        reward_address: cfg.reward_address,
+        operational_address: cfg.operational_address,
+        amount_own: cfg.stake_amount,
+        amount_pool: cfg.stake_amount,
+        index: 0,
+        rev_share: cfg.rev_share,
+        pooling_contract: cfg.pooling_address,
+        ..Default::default()
+    };
+    state.staker_info.write(cfg.staker_address, staker_info);
+    snforge_std::cheat_caller_address(
+        snforge_std::test_address(), cfg.staker_address, snforge_std::CheatSpan::TargetCalls(1)
+    );
+    state.claim_delegation_pool_rewards(cfg.staker_address);
+}
+
 // TODO: Implement.
 #[test]
 fn test_increase_stake_from_reward_address() {
