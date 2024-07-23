@@ -181,15 +181,52 @@ fn test_stake_with_rev_share_out_of_range() {
 }
 
 // TODO: when pooling enabled = true is supported, change this test.
+// #[test]
+// #[should_panic(expected: "Pooling is not implemented.")]
+// fn test_stake_with_pooling_enabled() {
+//     let mut cfg: StakingInitConfig = Default::default();
+//     let token_address = deploy_mock_erc20_contract(
+//         initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+//     );
+//     cfg.pooling_enabled = true;
+//     init_stake(:token_address, :cfg);
+// }
+
 #[test]
-#[should_panic(expected: "Pooling is not implemented.")]
-fn test_stake_with_pooling_enabled() {
-    let mut cfg: StakingInitConfig = Default::default();
+fn test_claim_delegation_pool_rewards() {
+    let pooling_address = POOLING_CONTRACT_ADDRESS();
+    let mut cfg = StakingInitConfig {
+        pooling_enabled: true, pooling_address: Option::Some(pooling_address), ..Default::default()
+    };
     let token_address = deploy_mock_erc20_contract(
         initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
     );
-    cfg.pooling_enabled = true;
-    init_stake(:token_address, :cfg);
+    // In init_stake function the caller_address is cheated to be cfg.staker_address.
+    // First stake from cfg.staker_address.
+    let (mut state, erc20_dispatcher) = init_stake(:token_address, :cfg);
+
+    // Update staker info for the test.
+    let staker_info = StakerInfo {
+        reward_address: cfg.reward_address,
+        operational_address: cfg.operational_address,
+        amount_own: cfg.stake_amount,
+        amount_pool: cfg.stake_amount,
+        index: 0,
+        rev_share: cfg.rev_share,
+        pooling_contract: cfg.pooling_address,
+        ..Default::default()
+    };
+    state.staker_info.write(cfg.staker_address, staker_info);
+
+    snforge_std::cheat_caller_address(
+        snforge_std::test_address(), pooling_address, snforge_std::CheatSpan::TargetCalls(1)
+    );
+    state.claim_delegation_pool_rewards(cfg.staker_address);
+
+    assert_eq!(
+        erc20_dispatcher.balance_of(pooling_address),
+        cfg.stake_amount.into() * (100 - cfg.rev_share.into()) / 100
+    );
 }
 
 #[test]

@@ -18,7 +18,9 @@ pub enum Error {
     REV_SHARE_OUT_OF_RANGE,
     AMOUNT_LESS_THAN_MIN_INCREASE_STAKE,
     UNSTAKE_IN_PROGRESS,
+    POOL_ADDRESS_DOES_NOT_EXIST,
     // Pooling contract errors
+    CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_IS_INACTIVE,
     POOL_MEMBER_EXISTS,
@@ -26,7 +28,7 @@ pub enum Error {
 
 
 #[inline(always)]
-pub fn panic_by_err(error: Error) {
+pub fn panic_by_err(error: Error) -> core::never {
     match error {
         Error::INTEREST_ISNT_U64 => panic!("Interest is too large, expected to fit in u64."),
         Error::REWARDS_ISNT_U128 => panic!("Staker rewards is too large, expected to fit in u128."),
@@ -45,8 +47,12 @@ pub fn panic_by_err(error: Error) {
         Error::AMOUNT_LESS_THAN_MIN_INCREASE_STAKE => panic!(
             "Amount is less than min increase stake - try again with enough funds."
         ),
+        Error::POOL_ADDRESS_DOES_NOT_EXIST => panic!("Pool address does not exist."),
         Error::POOLED_REWARDS_ISNT_U128 => panic!(
             "Pool rewards is too large, expected to fit in u128."
+        ),
+        Error::CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS => panic!(
+            "Claim delegation pool rewards must be called from delegation pooling contract."
         ),
         Error::UNSTAKE_IN_PROGRESS => panic!(
             "Unstake is in progress, staker is in an exit window."
@@ -63,5 +69,13 @@ pub fn panic_by_err(error: Error) {
 pub fn assert_with_err(condition: bool, error: Error) {
     if !condition {
         panic_by_err(error);
+    }
+}
+
+#[inline(always)]
+pub fn expect_with_err<T>(optional: Option<T>, error: Error) -> T {
+    match optional {
+        Option::Some(x) => x,
+        Option::None => panic_by_err(error),
     }
 }
