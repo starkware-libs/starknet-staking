@@ -64,9 +64,10 @@ pub mod Pooling {
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
             assert_with_err(
-                self.pool_member_address_to_info.read(pool_member).reward_address.is_zero(),
+                self.pool_member_address_to_info.read(pool_member).amount.is_zero(),
                 Error::POOL_MEMBER_EXISTS
             );
+            assert_with_err(amount > 0, Error::AMOUNT_IS_ZERO);
             let pooled_staker = self.staker_address.read();
             let staking_contract = self.staking_contract.read();
             let staking_contract_dispatcher = IStakingDispatcher {
