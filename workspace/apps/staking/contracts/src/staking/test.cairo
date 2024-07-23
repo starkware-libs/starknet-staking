@@ -389,3 +389,30 @@ fn test_change_reward_address_invalid_caller_address() {
 fn test_change_reward_address_invalid_reward_address() {
     assert!(true);
 }
+
+
+#[test]
+fn test_claim_rewards() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
+    );
+    let (mut state, erc20_dispatcher) = init_stake(:token_address, :cfg);
+
+    // update index
+    state.global_index.write(BASE_VALUE.into() * 2);
+
+    snforge_std::cheat_caller_address(
+        snforge_std::test_address(), cfg.staker_address, snforge_std::CheatSpan::Indefinite
+    );
+    let reward: u128 = state.claim_rewards(cfg.staker_address);
+    assert_eq!(reward, cfg.stake_amount);
+
+    let new_staker_info = state.state_of(cfg.staker_address);
+    assert_eq!(new_staker_info.unclaimed_rewards_own, 0);
+    assert_eq!(new_staker_info.index, 2 * BASE_VALUE);
+
+    let balance = erc20_dispatcher.balance_of(cfg.reward_address);
+    assert_eq!(balance, reward.into());
+}
+

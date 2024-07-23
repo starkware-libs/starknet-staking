@@ -19,6 +19,7 @@ pub enum Error {
     AMOUNT_LESS_THAN_MIN_INCREASE_STAKE,
     UNSTAKE_IN_PROGRESS,
     POOL_ADDRESS_DOES_NOT_EXIST,
+    CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     // Pooling contract errors
     CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     POOL_MEMBER_DOES_NOT_EXIST,
@@ -56,6 +57,9 @@ pub fn panic_by_err(error: Error) -> core::never {
         ),
         Error::UNSTAKE_IN_PROGRESS => panic!(
             "Unstake is in progress, staker is in an exit window."
+        ),
+        Error::CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS => panic!(
+            "Claim rewards must be called from staker address or reward address."
         ),
         Error::POOL_MEMBER_DOES_NOT_EXIST => panic!("Pool member does not exist."),
         Error::STAKER_IS_INACTIVE => panic!("Staker is inactive."),
