@@ -10,6 +10,7 @@ use contracts::staking::Staking::ContractState;
 use constants::{
     NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, MAX_LEVERAGE, STAKER_INITIAL_BALANCE,
     STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
+    POOLING_CONTRACT_ADDRESS
 };
 
 pub(crate) mod constants {
@@ -170,6 +171,7 @@ pub(crate) struct StakingInitConfig {
     pub stake_amount: u128,
     pub rev_share: u8,
     pub pooling_enabled: bool,
+    pub pooling_address: Option<ContractAddress>,
 }
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
@@ -185,6 +187,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             stake_amount: STAKE_AMOUNT,
             rev_share: REV_SHARE,
             pooling_enabled: false,
+            pooling_address: Option::None
         }
     }
 }

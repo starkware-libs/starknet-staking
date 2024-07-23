@@ -65,4 +65,7 @@ pub trait IStaking<TContractState> {
     fn set_open_for_delegation(ref self: TContractState) -> ContractAddress;
     fn state_of(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
+    fn claim_delegation_pool_rewards(
+        ref self: TContractState, staker_address: ContractAddress
+    ) -> u64;
 }

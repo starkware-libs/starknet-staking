@@ -1,8 +1,9 @@
 #[starknet::contract]
 pub mod Staking {
+    use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
     use contracts::{
-        BASE_VALUE, errors::{Error, panic_by_err, assert_with_err},
+        BASE_VALUE, errors::{Error, panic_by_err, assert_with_err, expect_with_err},
         staking::{IStaking, StakerInfo, StakingContractInfo}, utils::{u128_mul_wide_and_div_unsafe},
     };
     use starknet::{ContractAddress, get_contract_address, get_caller_address};
@@ -98,9 +99,7 @@ pub mod Staking {
                     amount: amount.into()
                 );
             // TODO(Nir, 01/08/2024): Deploy pooling contract if pooling_enabled is true.
-            if pooling_enabled {
-                panic!("Pooling is not implemented.")
-            }
+            if pooling_enabled {}
             self
                 .staker_info
                 .write(
@@ -226,6 +225,33 @@ pub mod Staking {
                 token_address: self.token_address.read(),
                 global_index: self.global_index.read(),
             }
+        }
+
+        fn claim_delegation_pool_rewards(
+            ref self: ContractState, staker_address: ContractAddress
+        ) -> u64 {
+            let mut staker_info = self.staker_info.read(staker_address);
+            // Reward address isn't zero if staker is initialized.
+            assert_with_err(staker_info.reward_address.is_non_zero(), Error::STAKER_DOES_NOT_EXIST);
+            let pool_address = expect_with_err(
+                staker_info.pooling_contract, Error::POOL_ADDRESS_DOES_NOT_EXIST
+            );
+            assert_with_err(
+                pool_address == get_caller_address(),
+                Error::CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS
+            );
+            self.calculate_rewards(staker_address, ref staker_info);
+            // Calculate rewards updated the index in staker_info.
+            let updated_index = staker_info.index;
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            erc20_dispatcher
+                .transfer(
+                    recipient: pool_address, amount: staker_info.unclaimed_rewards_pool.into()
+                );
+
+            staker_info.unclaimed_rewards_pool = 0;
+            self.staker_info.write(staker_address, staker_info);
+            updated_index
         }
     }
 
