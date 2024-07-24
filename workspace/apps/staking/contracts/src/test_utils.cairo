@@ -128,26 +128,43 @@ pub(crate) fn deploy_staking_contract(
     staking_contract_address
 }
 
-pub(crate) fn init_stake(
-    token_address: ContractAddress, cfg: StakingInitConfig
-) -> (ContractState, IERC20Dispatcher) {
-    // Use state for the Staking contract (the contract we are testing)
-    // The address of this contract will always be `test_address` which is a constant.
-    let mut state = Staking::contract_state_for_testing();
-    // Initialize Staking contract.
-    Staking::constructor(ref state, token_address, cfg.min_stake, cfg.max_leverage);
-    // Transfer amount from initial_owner to staker.
+pub(crate) fn fund(
+    sender: ContractAddress,
+    recipient: ContractAddress,
+    amount: u128,
+    token_address: ContractAddress
+) {
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    cheat_caller_address(token_address, cfg.owner_address, CheatSpan::TargetCalls(1));
-    erc20_dispatcher
-        .transfer(recipient: cfg.staker_address, amount: cfg.staker_initial_balance.into());
-    // Approve the Staking contract to spend the staker's tokens.
-    cheat_caller_address(token_address, cfg.staker_address, CheatSpan::TargetCalls(1));
-    erc20_dispatcher.approve(spender: test_address(), amount: cfg.staker_initial_balance.into());
-    // Cheat the caller address only for the Staking contract (which is test_address), to be the
-    // staker, and then stake.
+    cheat_caller_address(token_address, sender, CheatSpan::TargetCalls(1));
+    erc20_dispatcher.transfer(:recipient, amount: amount.into());
+}
+
+pub(crate) fn approve(
+    owner: ContractAddress, spender: ContractAddress, amount: u128, token_address: ContractAddress
+) {
+    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    cheat_caller_address(token_address, owner, CheatSpan::TargetCalls(1));
+    erc20_dispatcher.approve(:spender, amount: amount.into());
+}
+
+// Stake according to the given configuration, the staker is cfg.staker_address.
+pub(crate) fn stake_for_testing(
+    ref state: ContractState, cfg: StakingInitConfig, token_address: ContractAddress
+) {
+    fund(
+        sender: cfg.owner_address,
+        recipient: cfg.staker_address,
+        amount: cfg.staker_initial_balance,
+        :token_address
+    );
+    approve(
+        owner: cfg.staker_address,
+        spender: test_address(),
+        amount: cfg.staker_initial_balance,
+        :token_address
+    );
     cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
-    let result = state
+    state
         .stake(
             cfg.reward_address,
             cfg.operational_address,
@@ -155,8 +172,6 @@ pub(crate) fn init_stake(
             cfg.pooling_enabled,
             cfg.rev_share
         );
-    assert_eq!(result, true);
-    (state, erc20_dispatcher)
 }
 
 #[derive(Drop, Copy)]
