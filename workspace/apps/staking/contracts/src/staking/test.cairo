@@ -33,6 +33,8 @@ use contracts::staking::staking::Staking::ContractState;
 use contracts::staking::Staking::REV_SHARE_DENOMINATOR;
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
+use snforge_std::{cheat_caller_address, CheatSpan, test_address};
+
 
 #[test]
 fn test_constructor() {
@@ -88,7 +90,7 @@ fn test_stake() {
         erc20_dispatcher.balance_of(cfg.staker_address),
         (cfg.staker_initial_balance - cfg.stake_amount).into()
     );
-    let staking_contract_address = snforge_std::test_address();
+    let staking_contract_address = test_address();
     assert_eq!(erc20_dispatcher.balance_of(staking_contract_address), cfg.stake_amount.into());
 }
 
@@ -123,7 +125,7 @@ fn test_stake_from_same_staker_address() {
     let (mut state, _) = init_stake(:token_address, :cfg);
 
     // Second stake from cfg.staker_address.
-    snforge_std::cheat_caller_address_global(caller_address: cfg.staker_address);
+    cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
     state
         .stake(
             reward_address: cfg.reward_address,
@@ -146,7 +148,7 @@ fn test_stake_with_same_operational_address() {
     let (mut state, _) = init_stake(:token_address, :cfg);
 
     // Change staker address.
-    snforge_std::cheat_caller_address_global(caller_address: OTHER_STAKER_ADDRESS());
+    cheat_caller_address(test_address(), OTHER_STAKER_ADDRESS(), CheatSpan::TargetCalls(1));
     assert!(cfg.staker_address != OTHER_STAKER_ADDRESS());
     // Second stake with the same operational address.
     state
@@ -219,9 +221,7 @@ fn test_claim_delegation_pool_rewards() {
     };
     state.staker_info.write(cfg.staker_address, staker_info);
 
-    snforge_std::cheat_caller_address(
-        snforge_std::test_address(), pooling_address, snforge_std::CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address(test_address(), pooling_address, CheatSpan::TargetCalls(1));
     state.claim_delegation_pool_rewards(cfg.staker_address);
 
     assert_eq!(
@@ -257,9 +257,7 @@ fn test_increase_stake_from_staker_address() {
     let (mut state, _) = init_stake(:token_address, :cfg);
 
     // Set the same staker address.
-    snforge_std::start_cheat_caller_address(
-        contract_address: snforge_std::test_address(), caller_address: cfg.staker_address
-    );
+    cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
     let staker_info_before = state.staker_info.read(cfg.staker_address);
     let increase_amount = cfg.stake_amount;
     let expected_staker_info = StakerInfo {
@@ -286,9 +284,7 @@ fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
     // In init_stake function the caller_address is cheated to be cfg.staker_address.
     // First stake from cfg.staker_address.
     let (mut state, _) = init_stake(:token_address, :cfg);
-    snforge_std::cheat_caller_address(
-        snforge_std::test_address(), cfg.staker_address, snforge_std::CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
     state.claim_delegation_pool_rewards(cfg.staker_address);
 }
 
@@ -322,9 +318,7 @@ fn test_claim_delegation_pool_rewards_unauthorized_address() {
         ..Default::default()
     };
     state.staker_info.write(cfg.staker_address, staker_info);
-    snforge_std::cheat_caller_address(
-        snforge_std::test_address(), cfg.staker_address, snforge_std::CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
     state.claim_delegation_pool_rewards(cfg.staker_address);
 }
 
@@ -368,9 +362,7 @@ fn test_change_reward_address() {
     let staker_info_before_change = state.staker_info.read(cfg.staker_address);
     let other_reward_address = OTHER_REWARD_ADDRESS();
     // Set the same staker address.
-    snforge_std::start_cheat_caller_address(
-        contract_address: snforge_std::test_address(), caller_address: cfg.staker_address
-    );
+    cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
     state.change_reward_address(other_reward_address);
     let staker_info_after_change = state.staker_info.read(cfg.staker_address);
     let staker_info_expected = StakerInfo {
@@ -388,9 +380,7 @@ fn test_change_reward_address_staker_not_exist() {
         initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
     );
     let (mut state, _) = init_stake(:token_address, :cfg);
-    snforge_std::cheat_caller_address(
-        snforge_std::test_address(), NON_STAKER_ADDRESS(), snforge_std::CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address(test_address(), NON_STAKER_ADDRESS(), CheatSpan::TargetCalls(1));
     // Reward address is arbitrary because it should fail because of the caller.
     state.change_reward_address(reward_address: DUMMY_ADDRESS());
 }
@@ -407,9 +397,7 @@ fn test_claim_rewards() {
     // update index
     state.global_index.write(BASE_VALUE.into() * 2);
 
-    snforge_std::cheat_caller_address(
-        snforge_std::test_address(), cfg.staker_address, snforge_std::CheatSpan::Indefinite
-    );
+    cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
     let reward: u128 = state.claim_rewards(cfg.staker_address);
     assert_eq!(reward, cfg.stake_amount);
 
@@ -429,9 +417,7 @@ fn test_claim_rewards_panic_unauthorized() {
         initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
     );
     let (mut state, _) = init_stake(:token_address, :cfg);
-    snforge_std::cheat_caller_address(
-        snforge_std::test_address(), DUMMY_ADDRESS(), snforge_std::CheatSpan::Indefinite
-    );
+    cheat_caller_address(test_address(), DUMMY_ADDRESS(), CheatSpan::TargetCalls(1));
     state.claim_rewards(cfg.staker_address);
 }
 

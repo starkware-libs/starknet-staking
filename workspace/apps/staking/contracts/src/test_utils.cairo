@@ -12,6 +12,7 @@ use constants::{
     STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
     POOLING_CONTRACT_ADDRESS
 };
+use snforge_std::{cheat_caller_address, CheatSpan, test_address};
 
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
@@ -132,23 +133,19 @@ pub(crate) fn init_stake(
     // Use state for the Staking contract (the contract we are testing)
     // The address of this contract will always be `test_address` which is a constant.
     let mut state = Staking::contract_state_for_testing();
-    let test_address: ContractAddress = snforge_std::test_address();
     // Initialize Staking contract.
     Staking::constructor(ref state, token_address, cfg.min_stake, cfg.max_leverage);
     // Transfer amount from initial_owner to staker.
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    snforge_std::cheat_caller_address_global(cfg.owner_address);
+    cheat_caller_address(token_address, cfg.owner_address, CheatSpan::TargetCalls(1));
     erc20_dispatcher
         .transfer(recipient: cfg.staker_address, amount: cfg.staker_initial_balance.into());
     // Approve the Staking contract to spend the staker's tokens.
-    snforge_std::cheat_caller_address_global(cfg.staker_address);
-    erc20_dispatcher.approve(spender: test_address, amount: cfg.staker_initial_balance.into());
-    snforge_std::stop_cheat_caller_address_global(); // STOP GLOBAL CALLER CHEAT
+    cheat_caller_address(token_address, cfg.staker_address, CheatSpan::TargetCalls(1));
+    erc20_dispatcher.approve(spender: test_address(), amount: cfg.staker_initial_balance.into());
     // Cheat the caller address only for the Staking contract (which is test_address), to be the
     // staker, and then stake.
-    snforge_std::cheat_caller_address(
-        test_address, cfg.staker_address, snforge_std::CheatSpan::Indefinite
-    );
+    cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
     let result = state
         .stake(
             cfg.reward_address,
@@ -157,7 +154,6 @@ pub(crate) fn init_stake(
             cfg.pooling_enabled,
             cfg.rev_share
         );
-    snforge_std::stop_cheat_caller_address(test_address); // STOP CALLER CHEAT
     assert_eq!(result, true);
     (state, erc20_dispatcher)
 }
