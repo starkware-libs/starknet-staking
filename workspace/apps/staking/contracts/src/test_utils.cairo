@@ -10,7 +10,7 @@ use contracts::staking::Staking::ContractState;
 use constants::{
     NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, MAX_LEVERAGE, STAKER_INITIAL_BALANCE,
     STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
-    POOLING_CONTRACT_ADDRESS
+    POOLING_CONTRACT_ADDRESS, POOL_AMOUNT,
 };
 use snforge_std::{cheat_caller_address, CheatSpan, test_address};
 
@@ -22,6 +22,7 @@ pub(crate) mod constants {
     pub const MAX_LEVERAGE: u64 = 100;
     pub const MIN_STAKE: u128 = 100000;
     pub const STAKE_AMOUNT: u128 = 200000;
+    pub const POOL_AMOUNT: u128 = 0;
     pub const REV_SHARE: u8 = 5;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
@@ -164,13 +165,19 @@ pub(crate) struct StakingInitConfig {
     pub owner_address: ContractAddress,
     pub reward_address: ContractAddress,
     pub operational_address: ContractAddress,
+    pub unstake_time: Option<u64>,
     pub min_stake: u128,
     pub max_leverage: u64,
+    pub initial_supply: u256,
     pub staker_initial_balance: u128,
     pub stake_amount: u128,
     pub rev_share: u8,
     pub pooling_enabled: bool,
-    pub pooling_address: Option<ContractAddress>,
+    pub pooling_contract: Option<ContractAddress>,
+    pub initial_index: u64,
+    pub pool_amount: u128,
+    pub staker_unclaimed_rewards: u128,
+    pub pool_unclaimed_rewards: u128,
 }
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
@@ -180,14 +187,19 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             owner_address: OWNER_ADDRESS(),
             reward_address: REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
+            unstake_time: Option::None,
             min_stake: MIN_STAKE,
             max_leverage: MAX_LEVERAGE,
+            initial_supply: INITIAL_SUPPLY,
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             stake_amount: STAKE_AMOUNT,
             rev_share: REV_SHARE,
             pooling_enabled: false,
-            pooling_address: Option::None
+            pooling_contract: Option::None,
+            initial_index: BASE_VALUE,
+            pool_amount: POOL_AMOUNT,
+            staker_unclaimed_rewards: 0,
+            pool_unclaimed_rewards: 0,
         }
     }
 }
-

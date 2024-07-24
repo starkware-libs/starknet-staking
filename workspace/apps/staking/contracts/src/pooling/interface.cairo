@@ -6,7 +6,7 @@ pub struct PoolMemberInfo {
     pub amount: u128,
     pub index: u64,
     pub unclaimed_rewards: u128,
-    pub unpool_time: Option<felt252>,
+    pub unpool_time: Option<u64>,
 }
 
 use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
