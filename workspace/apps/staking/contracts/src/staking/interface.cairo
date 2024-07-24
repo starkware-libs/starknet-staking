@@ -8,7 +8,7 @@ pub struct StakerInfo {
     pub reward_address: ContractAddress,
     pub operational_address: ContractAddress,
     pub pooling_contract: Option<ContractAddress>,
-    pub unstake_time: Option<felt252>,
+    pub unstake_time: Option<u64>,
     pub amount_own: u128,
     pub amount_pool: u128,
     pub index: u64,

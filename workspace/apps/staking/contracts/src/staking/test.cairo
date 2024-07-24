@@ -63,19 +63,21 @@ fn test_constructor() {
 fn test_stake() {
     // TODO(Nir, 01/08/2024): add initial supply and owner address to StakingInitConfig.
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     let (mut state, erc20_dispatcher) = init_stake(:token_address, :cfg);
 
     // Check that the staker info was updated correctly.
     let expected_staker_info = StakerInfo {
         reward_address: cfg.reward_address,
         operational_address: cfg.operational_address,
+        pooling_contract: cfg.pooling_contract,
+        unstake_time: cfg.unstake_time,
         amount_own: cfg.stake_amount,
-        index: BASE_VALUE,
-        rev_share: cfg.rev_share,
-        ..Default::default()
+        amount_pool: cfg.pool_amount,
+        index: cfg.initial_index,
+        unclaimed_rewards_own: cfg.staker_unclaimed_rewards,
+        unclaimed_rewards_pool: cfg.pool_unclaimed_rewards,
+        rev_share: cfg.rev_share
     };
     assert_eq!(expected_staker_info, state.staker_info.read(cfg.staker_address));
 
@@ -96,30 +98,34 @@ fn test_stake() {
 
 #[test]
 fn test_calculate_rewards() {
-    let mut state = initialize_staking_state(TOKEN_ADDRESS(), MIN_STAKE, MAX_LEVERAGE);
-
-    let staker_address: ContractAddress = STAKER_ADDRESS();
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
+    let mut state = initialize_staking_state(token_address, cfg.min_stake, cfg.max_leverage);
 
     let mut staker_info = StakerInfo {
-        amount_own: BASE_VALUE.into(),
-        amount_pool: BASE_VALUE.into(),
+        reward_address: cfg.reward_address,
+        operational_address: cfg.operational_address,
         pooling_contract: Option::Some(POOLING_CONTRACT_ADDRESS()),
-        ..Default::default()
+        unstake_time: cfg.unstake_time,
+        amount_own: cfg.stake_amount,
+        amount_pool: cfg.stake_amount,
+        index: 0,
+        unclaimed_rewards_own: cfg.staker_unclaimed_rewards,
+        unclaimed_rewards_pool: cfg.pool_unclaimed_rewards,
+        rev_share: 0,
     };
-    assert!(state.calculate_rewards(:staker_address, ref :staker_info));
-    let new_staker_info = state.staker_info.read(staker_address);
-    assert_eq!(new_staker_info.unclaimed_rewards_own, BASE_VALUE.into());
-    assert_eq!(new_staker_info.index, BASE_VALUE);
-    assert_eq!(new_staker_info.unclaimed_rewards_pool, BASE_VALUE.into());
+    assert!(state.calculate_rewards(cfg.staker_address, ref :staker_info));
+    let new_staker_info = state.staker_info.read(cfg.staker_address);
+    assert_eq!(new_staker_info.unclaimed_rewards_own, cfg.stake_amount);
+    assert_eq!(new_staker_info.index, cfg.initial_index);
+    assert_eq!(new_staker_info.unclaimed_rewards_pool, cfg.stake_amount);
 }
 
 #[test]
 #[should_panic(expected: "Staker already exists, use increase_stake instead.")]
 fn test_stake_from_same_staker_address() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     // In init_stake function the caller_address is cheated to be cfg.staker_address.
     // First stake from cfg.staker_address.
     let (mut state, _) = init_stake(:token_address, :cfg);
@@ -131,7 +137,7 @@ fn test_stake_from_same_staker_address() {
             reward_address: cfg.reward_address,
             operational_address: cfg.operational_address,
             amount: cfg.stake_amount,
-            pooling_enabled: false,
+            pooling_enabled: cfg.pooling_enabled,
             rev_share: cfg.rev_share
         );
 }
@@ -140,9 +146,7 @@ fn test_stake_from_same_staker_address() {
 #[should_panic(expected: "Operational address already exists.")]
 fn test_stake_with_same_operational_address() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     // In init_stake function the caller_address is cheated to be cfg.staker_address.
     // First stake from cfg.staker_address.
     let (mut state, _) = init_stake(:token_address, :cfg);
@@ -156,7 +160,7 @@ fn test_stake_with_same_operational_address() {
             reward_address: cfg.reward_address,
             operational_address: cfg.operational_address,
             amount: cfg.stake_amount,
-            pooling_enabled: false,
+            pooling_enabled: cfg.pooling_enabled,
             rev_share: cfg.rev_share
         );
 }
@@ -165,9 +169,7 @@ fn test_stake_with_same_operational_address() {
 #[should_panic(expected: "Amount is less than min stake - try again with enough funds.")]
 fn test_stake_with_less_than_min_stake() {
     let mut cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     cfg.stake_amount = cfg.min_stake - 1;
     init_stake(:token_address, :cfg);
 }
@@ -176,9 +178,7 @@ fn test_stake_with_less_than_min_stake() {
 #[should_panic(expected: "Rev share is out of range, expected to be 0-100.")]
 fn test_stake_with_rev_share_out_of_range() {
     let mut cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     cfg.rev_share = REV_SHARE_DENOMINATOR + 1;
     init_stake(:token_address, :cfg);
 }
@@ -197,13 +197,13 @@ fn test_stake_with_rev_share_out_of_range() {
 
 #[test]
 fn test_claim_delegation_pool_rewards() {
-    let pooling_address = POOLING_CONTRACT_ADDRESS();
+    let pooling_contract = POOLING_CONTRACT_ADDRESS();
     let mut cfg = StakingInitConfig {
-        pooling_enabled: true, pooling_address: Option::Some(pooling_address), ..Default::default()
+        pooling_enabled: true,
+        pooling_contract: Option::Some(pooling_contract),
+        ..Default::default()
     };
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     // In init_stake function the caller_address is cheated to be cfg.staker_address.
     // First stake from cfg.staker_address.
     let (mut state, erc20_dispatcher) = init_stake(:token_address, :cfg);
@@ -212,20 +212,22 @@ fn test_claim_delegation_pool_rewards() {
     let staker_info = StakerInfo {
         reward_address: cfg.reward_address,
         operational_address: cfg.operational_address,
+        pooling_contract: cfg.pooling_contract,
+        unstake_time: cfg.unstake_time,
         amount_own: cfg.stake_amount,
         amount_pool: cfg.stake_amount,
         index: 0,
+        unclaimed_rewards_own: cfg.staker_unclaimed_rewards,
+        unclaimed_rewards_pool: cfg.pool_unclaimed_rewards,
         rev_share: cfg.rev_share,
-        pooling_contract: cfg.pooling_address,
-        ..Default::default()
     };
     state.staker_info.write(cfg.staker_address, staker_info);
 
-    cheat_caller_address(test_address(), pooling_address, CheatSpan::TargetCalls(1));
+    cheat_caller_address(test_address(), pooling_contract, CheatSpan::TargetCalls(1));
     state.claim_delegation_pool_rewards(cfg.staker_address);
 
     assert_eq!(
-        erc20_dispatcher.balance_of(pooling_address),
+        erc20_dispatcher.balance_of(pooling_contract),
         cfg.stake_amount.into() * (100 - cfg.rev_share.into()) / 100
     );
 }
@@ -233,15 +235,13 @@ fn test_claim_delegation_pool_rewards() {
 #[test]
 fn test_contract_parameters() {
     let mut cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     let (mut state, _) = init_stake(:token_address, :cfg);
     let expected_staking_contract_info = StakingContractInfo {
         max_leverage: cfg.max_leverage,
         min_stake: cfg.min_stake,
         token_address: token_address,
-        global_index: BASE_VALUE,
+        global_index: cfg.initial_index,
     };
     assert_eq!(state.contract_parameters(), expected_staking_contract_info);
 }
@@ -249,9 +249,7 @@ fn test_contract_parameters() {
 #[test]
 fn test_increase_stake_from_staker_address() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     // In init_stake function the caller_address is cheated to be cfg.staker_address.
     // First stake from cfg.staker_address
     let (mut state, _) = init_stake(:token_address, :cfg);
@@ -275,12 +273,10 @@ fn test_increase_stake_from_staker_address() {
 fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
     let mut cfg = StakingInitConfig {
         pooling_enabled: true,
-        pooling_address: Option::Some(POOLING_CONTRACT_ADDRESS()),
+        pooling_contract: Option::Some(POOLING_CONTRACT_ADDRESS()),
         ..Default::default()
     };
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     // In init_stake function the caller_address is cheated to be cfg.staker_address.
     // First stake from cfg.staker_address.
     let (mut state, _) = init_stake(:token_address, :cfg);
@@ -296,12 +292,10 @@ fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
 fn test_claim_delegation_pool_rewards_unauthorized_address() {
     let mut cfg = StakingInitConfig {
         pooling_enabled: true,
-        pooling_address: Option::Some(POOLING_CONTRACT_ADDRESS()),
+        pooling_contract: Option::Some(POOLING_CONTRACT_ADDRESS()),
         ..Default::default()
     };
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     // In init_stake function the caller_address is cheated to be cfg.staker_address.
     // First stake from cfg.staker_address.
     let (mut state, _) = init_stake(:token_address, :cfg);
@@ -310,12 +304,14 @@ fn test_claim_delegation_pool_rewards_unauthorized_address() {
     let staker_info = StakerInfo {
         reward_address: cfg.reward_address,
         operational_address: cfg.operational_address,
+        pooling_contract: cfg.pooling_contract,
+        unstake_time: cfg.unstake_time,
         amount_own: cfg.stake_amount,
         amount_pool: cfg.stake_amount,
         index: 0,
-        rev_share: cfg.rev_share,
-        pooling_contract: cfg.pooling_address,
-        ..Default::default()
+        unclaimed_rewards_own: cfg.staker_unclaimed_rewards,
+        unclaimed_rewards_pool: cfg.pool_unclaimed_rewards,
+        rev_share: cfg.rev_share
     };
     state.staker_info.write(cfg.staker_address, staker_info);
     cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
@@ -355,9 +351,7 @@ fn test_increase_stake_caller_is_not_staker_or_rewarder() {
 #[test]
 fn test_change_reward_address() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     let (mut state, _) = init_stake(:token_address, :cfg);
     let staker_info_before_change = state.staker_info.read(cfg.staker_address);
     let other_reward_address = OTHER_REWARD_ADDRESS();
@@ -376,9 +370,7 @@ fn test_change_reward_address() {
 #[should_panic(expected: "Staker does not exist.")]
 fn test_change_reward_address_staker_not_exist() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     let (mut state, _) = init_stake(:token_address, :cfg);
     cheat_caller_address(test_address(), NON_STAKER_ADDRESS(), CheatSpan::TargetCalls(1));
     // Reward address is arbitrary because it should fail because of the caller.
@@ -389,13 +381,11 @@ fn test_change_reward_address_staker_not_exist() {
 #[test]
 fn test_claim_rewards() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     let (mut state, erc20_dispatcher) = init_stake(:token_address, :cfg);
 
     // update index
-    state.global_index.write(BASE_VALUE.into() * 2);
+    state.global_index.write((cfg.initial_index).into() * 2);
 
     cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
     let reward: u128 = state.claim_rewards(cfg.staker_address);
@@ -403,7 +393,7 @@ fn test_claim_rewards() {
 
     let new_staker_info = state.state_of(cfg.staker_address);
     assert_eq!(new_staker_info.unclaimed_rewards_own, 0);
-    assert_eq!(new_staker_info.index, 2 * BASE_VALUE);
+    assert_eq!(new_staker_info.index, 2 * cfg.initial_index);
 
     let balance = erc20_dispatcher.balance_of(cfg.reward_address);
     assert_eq!(balance, reward.into());
@@ -413,9 +403,7 @@ fn test_claim_rewards() {
 #[should_panic(expected: ("Claim rewards must be called from staker address or reward address.",))]
 fn test_claim_rewards_panic_unauthorized() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     let (mut state, _) = init_stake(:token_address, :cfg);
     cheat_caller_address(test_address(), DUMMY_ADDRESS(), CheatSpan::TargetCalls(1));
     state.claim_rewards(cfg.staker_address);
@@ -426,9 +414,7 @@ fn test_claim_rewards_panic_unauthorized() {
 #[should_panic(expected: ("Staker does not exist.",))]
 fn test_claim_rewards_panic_staker_doesnt_exist() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: INITIAL_SUPPLY, owner_address: OWNER_ADDRESS()
-    );
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
     let (mut state, _) = init_stake(:token_address, :cfg);
     state.claim_rewards(DUMMY_ADDRESS());
 }
