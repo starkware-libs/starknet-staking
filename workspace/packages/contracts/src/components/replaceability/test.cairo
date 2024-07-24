@@ -12,7 +12,7 @@ mod ReplaceabilityTests {
     use contracts_commons::components::replaceability::test_utils::Constants::NOT_UPGRADE_GOVERNOR_ACCOUNT;
     use contracts_commons::components::replaceability::test_utils::Errors::INCORRECT_ACTIVATION_TIME_ERROR;
     use contracts_commons::components::replaceability::test_utils::Errors::UPGRADE_DELAY_ERROR;
-    use snforge_std::{spy_events, EventSpyAssertionsTrait, start_cheat_caller_address};
+    use snforge_std::{spy_events, EventSpyAssertionsTrait, cheat_caller_address, CheatSpan};
 
     #[test]
     fn test_get_upgrade_delay() {
@@ -33,10 +33,10 @@ mod ReplaceabilityTests {
             replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0,
             INCORRECT_ACTIVATION_TIME_ERROR
         );
-
-        start_cheat_caller_address(
-            contract_address: contract_address,
-            caller_address: get_upgrade_governor_account(:contract_address)
+        cheat_caller_address(
+            contract_address,
+            get_upgrade_governor_account(:contract_address),
+            CheatSpan::TargetCalls(1)
         );
         let mut spy = spy_events();
         replaceable_dispatcher.add_new_implementation(:implementation_data);
@@ -71,8 +71,8 @@ mod ReplaceabilityTests {
         let implementation_data = DUMMY_NONFINAL_IMPLEMENTATION_DATA();
 
         // Invoke not as an Upgrade Governor.
-        start_cheat_caller_address(
-            contract_address: contract_address, caller_address: NOT_UPGRADE_GOVERNOR_ACCOUNT()
+        cheat_caller_address(
+            contract_address, NOT_UPGRADE_GOVERNOR_ACCOUNT(), CheatSpan::TargetCalls(1)
         );
         replaceable_dispatcher.add_new_implementation(:implementation_data);
     }

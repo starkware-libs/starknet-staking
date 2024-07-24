@@ -23,6 +23,8 @@ use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatc
 use contracts::pooling::interface::IPooling;
 use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 use starknet::{ContractAddress, contract_address_const};
+use snforge_std::{cheat_caller_address, CheatSpan, test_address};
+
 
 #[test]
 fn test_calculate_rewards() {
@@ -51,22 +53,16 @@ fn test_enter_delegation_pool() {
     );
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     // Transfer the stake amount to the pool member.
-    snforge_std::cheat_caller_address(
-        token_address, OWNER_ADDRESS(), snforge_std::CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address(token_address, OWNER_ADDRESS(), CheatSpan::TargetCalls(1));
     erc20_dispatcher.transfer(recipient: POOL_MEMBER_ADDRESS(), amount: cfg.stake_amount.into());
     // Deploy the staking contract and initialize the pooling state.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let mut state = initialize_pooling_state(cfg.staker_address, staking_contract, token_address);
     // Approve the pooling contract to transfer the pool member's funds.
-    snforge_std::cheat_caller_address(
-        token_address, POOL_MEMBER_ADDRESS(), snforge_std::CheatSpan::TargetCalls(1)
-    );
-    erc20_dispatcher.approve(spender: snforge_std::test_address(), amount: cfg.stake_amount.into());
+    cheat_caller_address(token_address, POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
+    erc20_dispatcher.approve(spender: test_address(), amount: cfg.stake_amount.into());
     // Enter the delegation pool.
-    snforge_std::cheat_caller_address(
-        snforge_std::test_address(), POOL_MEMBER_ADDRESS(), snforge_std::CheatSpan::Indefinite
-    );
+    cheat_caller_address(test_address(), POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
     assert!(
         state.enter_delegation_pool(amount: cfg.stake_amount, reward_address: cfg.reward_address)
     );
