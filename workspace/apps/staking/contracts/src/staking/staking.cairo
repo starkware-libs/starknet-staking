@@ -228,8 +228,7 @@ pub mod Staking {
 
         fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let staker_info = self.get_staker(staker_address);
-            assert_with_err(staker_info.is_some(), Error::STAKER_NOT_EXISTS);
-            staker_info.unwrap()
+            expect_with_err(staker_info, Error::STAKER_NOT_EXISTS)
         }
 
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
