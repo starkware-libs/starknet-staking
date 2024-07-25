@@ -12,10 +12,12 @@ pub mod Staking {
     };
     use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
+    use starknet::get_block_timestamp;
 
     // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value). 
     pub const MIN_INCREASE_STAKE: u128 = 10;
     pub const REV_SHARE_DENOMINATOR: u8 = 100;
+    pub const EXIT_WAITING_WINDOW: u64 = 60 * 60 * 24 * 7 * 3; // 3 weeks
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -172,8 +174,17 @@ pub mod Staking {
             amount
         }
 
-        fn unstake_intent(ref self: ContractState) -> felt252 {
-            0
+        fn unstake_intent(ref self: ContractState) -> u64 {
+            let staker_address = get_caller_address();
+            let mut staker_info = self.staker_info.read(staker_address);
+            assert_with_err(staker_info.amount_own.is_non_zero(), Error::STAKER_NOT_EXISTS);
+            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
+            self.calculate_rewards(staker_address, ref :staker_info);
+            let current_time = get_block_timestamp();
+            let unstake_time = current_time + EXIT_WAITING_WINDOW;
+            staker_info.unstake_time = Option::Some(unstake_time);
+            self.staker_info.write(staker_address, staker_info);
+            unstake_time
         }
 
         fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {

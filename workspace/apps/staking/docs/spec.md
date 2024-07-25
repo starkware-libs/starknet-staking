@@ -137,7 +137,7 @@ unstake_time: time - when will the staker be able to unstake.
 Only the staker address for which the operation is requested for.
 #### logic <!-- omit from toc -->
 1. Validate staker is not in an exit window.
-2. [Claim delegation pool rewards](#claim_delegation_pool_rewards-) - performs calculate rewards and transfer to pool contract.
+2. performs [Calculate rewards](#calculate_rewards).
 3. Set unstake_time.
 
 ### unstake_action
