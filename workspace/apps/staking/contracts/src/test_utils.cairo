@@ -1,7 +1,7 @@
 use contracts::{BASE_VALUE, staking::Staking, pooling::Pooling};
 use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 use core::traits::Into;
-use contracts::staking::interface::IStaking;
+use contracts::staking::interface::{IStaking, StakerInfo, StakingContractInfo};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
@@ -121,8 +121,8 @@ pub(crate) fn deploy_staking_contract(
 ) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     token_address.serialize(ref calldata);
-    cfg.min_stake.serialize(ref calldata);
-    cfg.max_leverage.serialize(ref calldata);
+    cfg.staking_contract_info.min_stake.serialize(ref calldata);
+    cfg.staking_contract_info.max_leverage.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     staking_contract_address
@@ -147,74 +147,76 @@ pub(crate) fn approve(
     erc20_dispatcher.approve(:spender, amount: amount.into());
 }
 
-// Stake according to the given configuration, the staker is cfg.staker_address.
+// Stake according to the given configuration, the staker is cfg.test_info.staker_address.
 pub(crate) fn stake_for_testing(
     ref state: ContractState, cfg: StakingInitConfig, token_address: ContractAddress
 ) {
     fund(
-        sender: cfg.owner_address,
-        recipient: cfg.staker_address,
-        amount: cfg.staker_initial_balance,
+        sender: cfg.test_info.owner_address,
+        recipient: cfg.test_info.staker_address,
+        amount: cfg.test_info.staker_initial_balance,
         :token_address
     );
     approve(
-        owner: cfg.staker_address,
+        owner: cfg.test_info.staker_address,
         spender: test_address(),
-        amount: cfg.staker_initial_balance,
+        amount: cfg.test_info.staker_initial_balance,
         :token_address
     );
-    cheat_caller_address(test_address(), cfg.staker_address, CheatSpan::TargetCalls(1));
+    cheat_caller_address(test_address(), cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
     state
         .stake(
-            cfg.reward_address,
-            cfg.operational_address,
-            cfg.stake_amount,
-            cfg.pooling_enabled,
-            cfg.rev_share
+            cfg.staker_info.reward_address,
+            cfg.staker_info.operational_address,
+            cfg.staker_info.amount_own,
+            cfg.test_info.pooling_enabled,
+            cfg.staker_info.rev_share
         );
 }
 
 #[derive(Drop, Copy)]
-pub(crate) struct StakingInitConfig {
+pub(crate) struct TestInfo {
     pub staker_address: ContractAddress,
     pub owner_address: ContractAddress,
-    pub reward_address: ContractAddress,
-    pub operational_address: ContractAddress,
-    pub unstake_time: Option<u64>,
-    pub min_stake: u128,
-    pub max_leverage: u64,
     pub initial_supply: u256,
     pub staker_initial_balance: u128,
-    pub stake_amount: u128,
-    pub rev_share: u8,
     pub pooling_enabled: bool,
-    pub pooling_contract: Option<ContractAddress>,
-    pub initial_index: u64,
-    pub pool_amount: u128,
-    pub staker_unclaimed_rewards: u128,
-    pub pool_unclaimed_rewards: u128,
+}
+
+#[derive(Drop, Copy)]
+pub(crate) struct StakingInitConfig {
+    pub staker_info: StakerInfo,
+    pub staking_contract_info: StakingContractInfo,
+    pub test_info: TestInfo,
 }
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
     fn default() -> StakingInitConfig {
-        StakingInitConfig {
-            staker_address: STAKER_ADDRESS(),
-            owner_address: OWNER_ADDRESS(),
+        let staker_info = StakerInfo {
             reward_address: REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
+            pooling_contract: Option::None,
             unstake_time: Option::None,
-            min_stake: MIN_STAKE,
+            amount_own: STAKE_AMOUNT,
+            amount_pool: POOL_AMOUNT,
+            index: BASE_VALUE,
+            unclaimed_rewards_own: 0,
+            unclaimed_rewards_pool: 0,
+            rev_share: REV_SHARE,
+        };
+        let staking_contract_info = StakingContractInfo {
             max_leverage: MAX_LEVERAGE,
+            min_stake: MIN_STAKE,
+            token_address: TOKEN_ADDRESS(),
+            global_index: BASE_VALUE,
+        };
+        let test_info = TestInfo {
+            staker_address: STAKER_ADDRESS(),
+            owner_address: OWNER_ADDRESS(),
             initial_supply: INITIAL_SUPPLY,
             staker_initial_balance: STAKER_INITIAL_BALANCE,
-            stake_amount: STAKE_AMOUNT,
-            rev_share: REV_SHARE,
             pooling_enabled: false,
-            pooling_contract: Option::None,
-            initial_index: BASE_VALUE,
-            pool_amount: POOL_AMOUNT,
-            staker_unclaimed_rewards: 0,
-            pool_unclaimed_rewards: 0,
-        }
+        };
+        StakingInitConfig { staker_info, staking_contract_info, test_info, }
     }
 }

@@ -29,53 +29,63 @@ use snforge_std::{cheat_caller_address, CheatSpan, test_address};
 #[test]
 fn test_calculate_rewards() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
     let mut state = initialize_pooling_state(
-        cfg.staker_address, STAKING_CONTRACT_ADDRESS(), token_address
+        cfg.test_info.staker_address, STAKING_CONTRACT_ADDRESS(), token_address
     );
 
     let pool_member_address: ContractAddress = POOL_MEMBER_ADDRESS();
-    let updated_index: u64 = cfg.initial_index * 2;
+    let updated_index: u64 = cfg.staker_info.index * 2;
     let mut pool_member_info = PoolMemberInfo {
-        reward_address: cfg.reward_address,
-        amount: cfg.stake_amount,
-        index: cfg.initial_index,
-        unclaimed_rewards: cfg.pool_unclaimed_rewards,
+        reward_address: cfg.staker_info.reward_address,
+        amount: cfg.staker_info.amount_own,
+        index: cfg.staker_info.index,
+        unclaimed_rewards: cfg.staker_info.unclaimed_rewards_pool,
         unpool_time: Option::None,
     };
     assert!(state.calculate_rewards(:pool_member_address, ref :pool_member_info, :updated_index));
     let new_pool_member_info = state.pool_member_address_to_info.read(pool_member_address);
-    assert_eq!(new_pool_member_info.unclaimed_rewards, cfg.stake_amount);
-    assert_eq!(new_pool_member_info.index, cfg.initial_index * 2)
+    assert_eq!(new_pool_member_info.unclaimed_rewards, cfg.staker_info.amount_own);
+    assert_eq!(new_pool_member_info.index, cfg.staker_info.index * 2)
 }
 
 // TODO(alon, 24/07/2024): Complete this function.
 #[test]
 fn test_enter_delegation_pool() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     // Transfer the stake amount to the pool member.
-    cheat_caller_address(token_address, cfg.owner_address, CheatSpan::TargetCalls(1));
-    erc20_dispatcher.transfer(recipient: POOL_MEMBER_ADDRESS(), amount: cfg.stake_amount.into());
+    cheat_caller_address(token_address, cfg.test_info.owner_address, CheatSpan::TargetCalls(1));
+    erc20_dispatcher
+        .transfer(recipient: POOL_MEMBER_ADDRESS(), amount: cfg.staker_info.amount_own.into());
     // Deploy the staking contract and initialize the pooling state.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    let mut state = initialize_pooling_state(cfg.staker_address, staking_contract, token_address);
+    let mut state = initialize_pooling_state(
+        cfg.test_info.staker_address, staking_contract, token_address
+    );
     // Approve the pooling contract to transfer the pool member's funds.
     cheat_caller_address(token_address, POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
-    erc20_dispatcher.approve(spender: test_address(), amount: cfg.stake_amount.into());
+    erc20_dispatcher.approve(spender: test_address(), amount: cfg.staker_info.amount_own.into());
     // Enter the delegation pool.
     cheat_caller_address(test_address(), POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
     assert!(
-        state.enter_delegation_pool(amount: cfg.stake_amount, reward_address: cfg.reward_address)
+        state
+            .enter_delegation_pool(
+                amount: cfg.staker_info.amount_own, reward_address: cfg.staker_info.reward_address
+            )
     );
     // Check that the pool member info was updated correctly.
     let expected_pool_member_info: PoolMemberInfo = PoolMemberInfo {
-        amount: cfg.stake_amount,
-        index: cfg.initial_index,
+        amount: cfg.staker_info.amount_own,
+        index: cfg.staker_info.index,
         unpool_time: Option::None,
-        reward_address: cfg.reward_address,
-        unclaimed_rewards: cfg.pool_unclaimed_rewards,
+        reward_address: cfg.staker_info.reward_address,
+        unclaimed_rewards: cfg.staker_info.unclaimed_rewards_pool,
     };
     assert_eq!(
         state.pool_member_address_to_info.read(POOL_MEMBER_ADDRESS()), expected_pool_member_info
