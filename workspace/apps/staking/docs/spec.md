@@ -19,6 +19,7 @@
     - [claim\_delegation\_pool\_rewards](#claim_delegation_pool_rewards)
     - [state\_of](#state_of)
     - [contract\_parameters](#contract_parameters)
+    - [total\_staked\_tokens](#total_staked_tokens)
     - [calculate\_rewards](#calculate_rewards)
   - [Events](#events)
     - [Balance Changed](#balance-changed)
@@ -374,6 +375,21 @@ minimum_stake
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
+
+### total_staked_tokens
+#### description <!-- omit from toc -->
+Returns the total amount of staked tokens.
+#### parameters <!-- omit from toc -->
+| name | type |
+| ---- | ---- |
+#### return <!-- omit from toc -->
+total_staked: u128
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+
 
 ### calculate_rewards
 >**note:** internal logic
