@@ -19,7 +19,7 @@ use contracts::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
             OWNER_ADDRESS, INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
             STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
-            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS
+            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS,
         }
     }
 };
@@ -30,7 +30,7 @@ use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::staking::Staking::ContractState;
-use contracts::staking::Staking::REV_SHARE_DENOMINATOR;
+use contracts::staking::Staking::{REV_SHARE_DENOMINATOR, EXIT_WAITING_WINDOW};
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
 use snforge_std::{cheat_caller_address, CheatSpan, test_address};
@@ -447,6 +447,33 @@ fn test_claim_rewards_panic_staker_doesnt_exist() {
     );
     stake_for_testing(ref state, :cfg, :token_address);
     state.claim_rewards(DUMMY_ADDRESS());
+}
+
+#[test]
+fn test_unstake_intent() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let mut state = initialize_staking_state(
+        token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
+    );
+    stake_for_testing(ref state, :cfg, :token_address);
+    let unstake_time = state.unstake_intent();
+    let staker_info = state.staker_info.read(cfg.test_info.staker_address);
+    let expected_time = EXIT_WAITING_WINDOW; // 3 weeks
+    assert_eq!((staker_info.unstake_time).unwrap(), unstake_time);
+    assert_eq!(unstake_time, expected_time);
+}
+
+#[test]
+fn test_unstake_intent_staker_doesnt_exist() {
+    assert!(true);
+}
+
+#[test]
+fn test_unstake_action_unstake_in_progress() {
+    assert!(true);
 }
 
 #[test]
