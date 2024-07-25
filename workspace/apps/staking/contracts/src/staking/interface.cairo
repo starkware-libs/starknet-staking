@@ -68,4 +68,5 @@ pub trait IStaking<TContractState> {
     fn claim_delegation_pool_rewards(
         ref self: TContractState, staker_address: ContractAddress
     ) -> u64;
+    fn get_total_stake(self: @TContractState) -> u128;
 }

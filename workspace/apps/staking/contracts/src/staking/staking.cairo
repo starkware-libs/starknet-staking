@@ -39,6 +39,7 @@ pub mod Staking {
         operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
         max_leverage: u64,
         token_address: ContractAddress,
+        total_stake: u128,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -118,6 +119,7 @@ pub mod Staking {
                     }
                 );
             self.operational_address_to_staker_address.write(operational_address, staker_address);
+            self.total_stake.write(self.get_total_stake() + amount);
             true
         }
 
@@ -146,6 +148,7 @@ pub mod Staking {
             self.calculate_rewards(staker_address, ref staker_info);
             staker_info.amount_own += amount;
             self.staker_info.write(staker_address, staker_info);
+            self.total_stake.write(self.get_total_stake() + amount);
             staker_info.amount_own
         }
 
@@ -265,6 +268,10 @@ pub mod Staking {
             staker_info.unclaimed_rewards_pool = 0;
             self.staker_info.write(staker_address, staker_info);
             updated_index
+        }
+
+        fn get_total_stake(self: @ContractState) -> u128 {
+            self.total_stake.read()
         }
     }
 

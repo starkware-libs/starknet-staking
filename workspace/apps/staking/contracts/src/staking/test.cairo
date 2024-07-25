@@ -424,3 +424,13 @@ fn test_claim_rewards_panic_staker_doesnt_exist() {
     stake_for_testing(ref state, :cfg, :token_address);
     state.claim_rewards(DUMMY_ADDRESS());
 }
+
+#[test]
+fn test_get_total_stake() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(cfg.initial_supply, cfg.owner_address);
+    let mut state = initialize_staking_state(token_address, cfg.min_stake, cfg.max_leverage);
+    assert_eq!(state.get_total_stake(), 0);
+    stake_for_testing(ref state, :cfg, :token_address);
+    assert_eq!(state.get_total_stake(), cfg.stake_amount);
+}
