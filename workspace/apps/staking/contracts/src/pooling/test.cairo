@@ -61,6 +61,32 @@ fn test_calculate_rewards() {
     assert_eq!(pool_member_info, expected_pool_member_info);
 }
 
+#[test]
+fn test_calculate_rewards_after_unpool_intent() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let mut state = initialize_pooling_state(
+        staker_address: cfg.test_info.staker_address,
+        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        :token_address,
+        rev_share: cfg.staker_info.rev_share
+    );
+
+    let pool_member_address: ContractAddress = POOL_MEMBER_ADDRESS();
+    let updated_index: u64 = cfg.staker_info.index * 2;
+
+    let mut pool_member_info = PoolMemberInfo {
+        reward_address: cfg.staker_info.reward_address,
+        amount: cfg.staker_info.amount_pool,
+        index: cfg.staker_info.index,
+        unclaimed_rewards: cfg.staker_info.unclaimed_rewards_pool,
+        unpool_time: Option::Some(1)
+    };
+    assert!(!state.calculate_rewards(:pool_member_address, ref :pool_member_info, :updated_index));
+}
+
 // TODO(alon, 24/07/2024): Complete this function.
 #[test]
 fn test_enter_delegation_pool() {
