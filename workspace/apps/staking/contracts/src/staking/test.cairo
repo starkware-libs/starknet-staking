@@ -15,6 +15,7 @@ use contracts::{
     },
     test_utils::{
         initialize_staking_state, deploy_mock_erc20_contract, StakingInitConfig, stake_for_testing,
+        fund, approve,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
             OWNER_ADDRESS, INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
@@ -30,7 +31,7 @@ use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::staking::Staking::ContractState;
-use contracts::staking::Staking::{REV_SHARE_DENOMINATOR, EXIT_WAITING_WINDOW};
+use contracts::staking::Staking::{REV_SHARE_DENOMINATOR, EXIT_WAITING_WINDOW, MIN_INCREASE_STAKE};
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
 use snforge_std::{cheat_caller_address, CheatSpan, test_address};
@@ -321,34 +322,109 @@ fn test_claim_delegation_pool_rewards_unauthorized_address() {
     state.claim_delegation_pool_rewards(cfg.test_info.staker_address);
 }
 
-// TODO: Implement.
 #[test]
 fn test_increase_stake_from_reward_address() {
-    assert!(true);
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let mut state = initialize_staking_state(
+        token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
+    );
+    stake_for_testing(ref state, :cfg, :token_address);
+
+    // Transfer amount from initial_owner to reward_address.
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: cfg.staker_info.reward_address,
+        amount: cfg.test_info.staker_initial_balance,
+        :token_address
+    );
+    // Approve the Staking contract to spend the reward's tokens.
+    approve(
+        owner: cfg.staker_info.reward_address,
+        spender: test_address(),
+        amount: cfg.test_info.staker_initial_balance,
+        :token_address
+    );
+
+    cheat_caller_address(test_address(), cfg.staker_info.reward_address, CheatSpan::TargetCalls(1));
+    let staker_info_before = state.staker_info.read(cfg.test_info.staker_address);
+    let increase_amount = cfg.staker_info.amount_own;
+    let mut expected_staker_info = staker_info_before;
+    expected_staker_info.amount_own += increase_amount;
+    state.increase_stake(staker_address: cfg.test_info.staker_address, amount: increase_amount,);
+    let updated_staker_info = state.staker_info.read(cfg.test_info.staker_address);
+    assert_eq!(expected_staker_info, updated_staker_info);
 }
 
-// TODO: Implement.
 #[test]
+#[should_panic(expected: "Staker does not exist.")]
 fn test_increase_stake_staker_address_not_exist() {
-    assert!(true);
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let mut state = initialize_staking_state(
+        token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
+    );
+    stake_for_testing(ref state, :cfg, :token_address);
+    state.increase_stake(staker_address: NON_STAKER_ADDRESS(), amount: cfg.staker_info.amount_own);
 }
 
-// TODO: Implement.
 #[test]
+#[should_panic(expected: "Unstake is in progress, staker is in an exit window.")]
 fn test_increase_stake_unstake_in_progress() {
-    assert!(true);
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let mut state = initialize_staking_state(
+        token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
+    );
+    stake_for_testing(ref state, :cfg, :token_address);
+    cheat_caller_address(test_address(), cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
+    state.unstake_intent();
+    state
+        .increase_stake(
+            staker_address: cfg.test_info.staker_address, amount: cfg.staker_info.amount_own
+        );
 }
 
-// TODO: Implement.
 #[test]
+#[should_panic(expected: "Amount is less than min increase stake - try again with enough funds.")]
 fn test_increase_stake_amount_less_than_min_increase_stake() {
-    assert!(true);
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let mut state = initialize_staking_state(
+        token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
+    );
+    stake_for_testing(ref state, :cfg, :token_address);
+    cheat_caller_address(test_address(), cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
+    state
+        .increase_stake(
+            staker_address: cfg.test_info.staker_address, amount: MIN_INCREASE_STAKE - 1
+        );
 }
 
-// TODO: Implement.
 #[test]
-fn test_increase_stake_caller_is_not_staker_or_rewarder() {
-    assert!(true);
+#[should_panic(expected: "Caller address should be staker address or reward address.")]
+fn test_increase_stake_caller_cannot_increase() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let mut state = initialize_staking_state(
+        token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
+    );
+    stake_for_testing(ref state, :cfg, :token_address);
+    cheat_caller_address(test_address(), NON_STAKER_ADDRESS(), CheatSpan::TargetCalls(1));
+    state
+        .increase_stake(
+            staker_address: cfg.test_info.staker_address, amount: cfg.staker_info.amount_own
+        );
 }
 
 #[test]
