@@ -4,7 +4,8 @@ pub mod Staking {
     use core::num::traits::zero::Zero;
     use contracts::{
         BASE_VALUE, errors::{Error, panic_by_err, assert_with_err, expect_with_err},
-        staking::{IStaking, StakerInfo, StakingContractInfo}, utils::{u128_mul_wide_and_div_unsafe},
+        staking::{IStaking, StakerInfo, StakingContractInfo},
+        utils::{compute_commission, compute_rewards},
     };
     use starknet::{ContractAddress, get_contract_address, get_caller_address};
     use openzeppelin::{
@@ -254,7 +255,6 @@ pub mod Staking {
             ref self: ContractState, staker_address: ContractAddress
         ) -> u64 {
             let mut staker_info = self.staker_info.read(staker_address);
-            // Reward address isn't zero if staker is initialized.
             assert_with_err(staker_info.amount_own.is_non_zero(), Error::STAKER_NOT_EXISTS);
             let pool_address = expect_with_err(
                 staker_info.pooling_contract, Error::POOL_ADDRESS_DOES_NOT_EXIST
@@ -294,9 +294,21 @@ pub mod Staking {
             }
         }
 
+        fn calculate_and_update_pool_rewards(
+            ref self: ContractState, interest: u64, ref staker_info: StakerInfo
+        ) {
+            if (staker_info.amount_pool > 0) {
+                let mut rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
+                let commission = compute_commission(:rewards, rev_share: staker_info.rev_share);
+                staker_info.unclaimed_rewards_own += commission;
+                rewards -= commission;
+                staker_info.unclaimed_rewards_pool += rewards;
+            }
+        }
+
         /// Calculates the rewards for a given staker.
         /// 
-        /// The caller for this function should validate that the staker exists in the storage
+        /// The caller for this function should validate that the staker exists.
         /// 
         /// rewards formula:
         /// $$ interest = (global\_index-self\_index) $$
@@ -305,7 +317,12 @@ pub mod Staking {
         /// $$ rewards = staker\_amount\_own * interest $$
         /// 
         /// staker with pool:
-        /// $$ rewards = staker\_amount\_own * interest + staker\_amount\_pool * interest * global\_rev\_share $$
+        /// $$ rewards = interest * (staker\_amount\_own + staker\_amount\_pool * rev\_share) $$
+        /// 
+        /// Fields that are changed in staker_info:
+        /// - unclaimed_rewards_own
+        /// - unclaimed_rewards_pool
+        /// - index
         fn calculate_rewards(
             ref self: ContractState, staker_address: ContractAddress, ref staker_info: StakerInfo
         ) -> bool {
@@ -313,31 +330,12 @@ pub mod Staking {
                 return false;
             }
             let global_index = self.global_index.read();
-            let interest: u64 = global_index - staker_info.index;
-            let mut own_rewards = u128_mul_wide_and_div_unsafe(
-                staker_info.amount_own, interest.into(), BASE_VALUE.into(), Error::REWARDS_ISNT_U128
-            );
-            if (staker_info.pooling_contract.is_some()) {
-                // todo: see if we can do without the special mul
-                let mut pooled_rewards = u128_mul_wide_and_div_unsafe(
-                    staker_info.amount_pool,
-                    interest.into(),
-                    BASE_VALUE.into(),
-                    Error::POOLED_REWARDS_ISNT_U128
-                );
-                let rev_share = u128_mul_wide_and_div_unsafe(
-                    pooled_rewards,
-                    staker_info.rev_share.into(),
-                    REV_SHARE_DENOMINATOR.into(),
-                    Error::REV_SHARE_ISNT_U128
-                );
-                own_rewards += rev_share;
-                pooled_rewards -= rev_share;
-                staker_info.unclaimed_rewards_pool += pooled_rewards;
-            }
-            staker_info.unclaimed_rewards_own += own_rewards;
+            let interest = global_index - staker_info.index;
             staker_info.index = global_index;
-            self.staker_info.write(staker_address, staker_info);
+
+            let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
+            staker_info.unclaimed_rewards_own += staker_rewards;
+            self.calculate_and_update_pool_rewards(:interest, ref :staker_info);
             true
         }
     }

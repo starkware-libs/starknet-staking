@@ -3,7 +3,8 @@ pub mod Pooling {
     use core::num::traits::zero::Zero;
     use contracts::{
         BASE_VALUE, errors::{Error, panic_by_err, assert_with_err},
-        pooling::{IPooling, PoolMemberInfo}, utils::u128_mul_wide_and_div_unsafe
+        pooling::{IPooling, PoolMemberInfo},
+        utils::{u128_mul_wide_and_div_unsafe, compute_rewards, compute_commission}
     };
     use core::option::OptionTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
@@ -34,6 +35,7 @@ pub mod Pooling {
         final_staker_index: Option<u128>,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
+        rev_share: u16,
     }
 
     #[event]
@@ -49,11 +51,13 @@ pub mod Pooling {
         ref self: ContractState,
         staker_address: ContractAddress,
         staking_contract: ContractAddress,
-        token_address: ContractAddress
+        token_address: ContractAddress,
+        rev_share: u16
     ) {
         self.staker_address.write(staker_address);
         self.staking_contract.write(staking_contract);
         self.token_address.write(token_address);
+        self.rev_share.write(rev_share);
     }
 
     #[abi(embed_v0)]
@@ -137,12 +141,16 @@ pub mod Pooling {
 
     #[generate_trait]
     pub(crate) impl InternalPoolingFunctions of InternalPoolingFunctionsTrait {
-        /// Calculates the rewards for a pool member
+        /// Calculates the rewards for a pool member.
         /// 
-        /// The caller for this function should validate that the staker exists in the storage.
+        /// The caller for this function should validate that the pool member exists.
         /// 
         /// rewards formula:
         /// $$ rewards = (staker\_index-pooler\_index) * pooler\_amount $$
+        /// 
+        /// Fields that are changed in pool_member_info:
+        /// - unclaimed_rewards
+        /// - index
         fn calculate_rewards(
             ref self: ContractState,
             pool_member_address: ContractAddress,
@@ -153,17 +161,11 @@ pub mod Pooling {
                 return false;
             }
             let interest: u64 = updated_index - pool_member_info.index;
-            //todo: see if we can do without the special mul
-            pool_member_info
-                .unclaimed_rewards +=
-                    u128_mul_wide_and_div_unsafe(
-                        pool_member_info.amount,
-                        interest.into(),
-                        BASE_VALUE.into(),
-                        Error::REWARDS_ISNT_U128
-                    );
             pool_member_info.index = updated_index;
-            self.pool_member_address_to_info.write(pool_member_address, pool_member_info);
+            let mut rewards = compute_rewards(amount: pool_member_info.amount, :interest);
+            let commission = compute_commission(:rewards, rev_share: self.rev_share.read());
+            rewards -= commission;
+            pool_member_info.unclaimed_rewards += rewards;
             true
         }
 
