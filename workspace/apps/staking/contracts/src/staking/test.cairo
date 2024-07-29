@@ -535,6 +535,7 @@ fn test_unstake_intent() {
         token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
     );
     stake_for_testing(ref state, :cfg, :token_address);
+    cheat_caller_address(test_address(), cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
     let unstake_time = state.unstake_intent();
     let staker_info = state.staker_info.read(cfg.test_info.staker_address);
     let expected_time = EXIT_WAITING_WINDOW; // 3 weeks
@@ -543,13 +544,33 @@ fn test_unstake_intent() {
 }
 
 #[test]
+#[should_panic(expected: ("Staker does not exist.",))]
 fn test_unstake_intent_staker_doesnt_exist() {
-    assert!(true);
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let mut state = initialize_staking_state(
+        token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
+    );
+    cheat_caller_address(test_address(), NON_STAKER_ADDRESS(), CheatSpan::TargetCalls(1));
+    state.unstake_intent();
 }
 
 #[test]
-fn test_unstake_action_unstake_in_progress() {
-    assert!(true);
+#[should_panic(expected: "Unstake is in progress, staker is in an exit window.")]
+fn test_unstake_intent_unstake_in_progress() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let mut state = initialize_staking_state(
+        token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
+    );
+    stake_for_testing(ref state, :cfg, :token_address);
+    cheat_caller_address(test_address(), cfg.test_info.staker_address, CheatSpan::TargetCalls(2));
+    state.unstake_intent();
+    state.unstake_intent();
 }
 
 #[test]
