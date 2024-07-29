@@ -1,9 +1,7 @@
 use starknet::ContractAddress;
 
-use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
-
 // TODO create a different struct for not exposing internal implemenation
-#[derive(Debug, Default, PartialEq, Drop, Serde, Copy, starknet::Store)]
+#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerInfo {
     pub reward_address: ContractAddress,
     pub operational_address: ContractAddress,
@@ -17,7 +15,7 @@ pub struct StakerInfo {
     pub rev_share: u16,
 }
 
-#[derive(Copy, Debug, Default, Drop, PartialEq, Serde)]
+#[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
     pub max_leverage: u64,
     pub min_stake: u128,

@@ -11,7 +11,6 @@ pub mod Staking {
     use openzeppelin::{
         access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
     };
-    use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use starknet::get_block_timestamp;
 
@@ -234,7 +233,7 @@ pub mod Staking {
         }
 
         fn set_open_for_delegation(ref self: ContractState) -> ContractAddress {
-            Default::default()
+            Zero::zero()
         }
 
         fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
