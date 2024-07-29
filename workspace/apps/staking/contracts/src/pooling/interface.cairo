@@ -29,4 +29,5 @@ pub trait IPooling<TContractState> {
     fn enter_from_staking_contract(
         ref self: TContractState, amount: u128, index: u64, data: Span<felt252>
     ) -> bool;
+    fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
 }
