@@ -23,7 +23,7 @@ pub(crate) mod constants {
     pub const MIN_STAKE: u128 = 100000;
     pub const STAKE_AMOUNT: u128 = 200000;
     pub const POOL_AMOUNT: u128 = 0;
-    pub const REV_SHARE: u8 = 5;
+    pub const REV_SHARE: u16 = 500;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         contract_address_const::<'CALLER_ADDRESS'>()

@@ -16,7 +16,7 @@ pub mod Staking {
 
     // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value). 
     pub const MIN_INCREASE_STAKE: u128 = 10;
-    pub const REV_SHARE_DENOMINATOR: u8 = 100;
+    pub const REV_SHARE_DENOMINATOR: u16 = 10000;
     pub const EXIT_WAITING_WINDOW: u64 = 60 * 60 * 24 * 7 * 3; // 3 weeks
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
@@ -81,7 +81,7 @@ pub mod Staking {
             operational_address: ContractAddress,
             amount: u128,
             pooling_enabled: bool,
-            rev_share: u8,
+            rev_share: u16,
         ) -> bool {
             let staker_address = get_caller_address();
             assert_with_err(
