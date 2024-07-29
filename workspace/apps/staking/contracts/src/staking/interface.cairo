@@ -14,7 +14,7 @@ pub struct StakerInfo {
     pub index: u64,
     pub unclaimed_rewards_own: u128,
     pub unclaimed_rewards_pool: u128,
-    pub rev_share: u8,
+    pub rev_share: u16,
 }
 
 #[derive(Copy, Debug, Default, Drop, PartialEq, Serde)]
@@ -33,7 +33,7 @@ pub trait IStaking<TContractState> {
         operational_address: ContractAddress,
         amount: u128,
         pooling_enabled: bool,
-        rev_share: u8,
+        rev_share: u16,
     ) -> bool;
     fn increase_stake(
         ref self: TContractState, staker_address: ContractAddress, amount: u128

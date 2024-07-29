@@ -183,7 +183,7 @@ fn test_stake_with_less_than_min_stake() {
 }
 
 #[test]
-#[should_panic(expected: "Rev share is out of range, expected to be 0-100.")]
+#[should_panic(expected: "Rev share is out of range, expected to be 0-10000.")]
 fn test_stake_with_rev_share_out_of_range() {
     let mut cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -233,7 +233,9 @@ fn test_claim_delegation_pool_rewards() {
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     assert_eq!(
         erc20_dispatcher.balance_of(pooling_contract),
-        cfg.staker_info.amount_own.into() * (100 - cfg.staker_info.rev_share.into()) / 100
+        (cfg.staker_info.amount_own.into()
+            * (REV_SHARE_DENOMINATOR - cfg.staker_info.rev_share).into())
+            / REV_SHARE_DENOMINATOR.into()
     );
 }
 
