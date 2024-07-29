@@ -143,6 +143,22 @@ fn test_calculate_rewards() {
 }
 
 #[test]
+fn test_calculate_rewards_unstake_intent() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let mut state = initialize_staking_state(
+        :token_address,
+        min_stake: cfg.staking_contract_info.min_stake,
+        max_leverage: cfg.staking_contract_info.max_leverage
+    );
+
+    let mut staker_info = StakerInfo { unstake_time: Option::Some(1), ..cfg.staker_info };
+    assert!(!state.calculate_rewards(cfg.test_info.staker_address, ref :staker_info));
+}
+
+#[test]
 #[should_panic(expected: "Staker already exists, use increase_stake instead.")]
 fn test_stake_from_same_staker_address() {
     let cfg: StakingInitConfig = Default::default();
