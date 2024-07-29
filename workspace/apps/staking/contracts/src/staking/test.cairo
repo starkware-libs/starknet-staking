@@ -587,4 +587,12 @@ fn test_get_total_stake() {
     assert_eq!(state.get_total_stake(), 0);
     stake_for_testing(ref state, :cfg, :token_address);
     assert_eq!(state.get_total_stake(), cfg.staker_info.amount_own);
+
+    // Set the same staker address.
+    cheat_caller_address(test_address(), cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
+    let amount = cfg.staker_info.amount_own;
+    state.increase_stake(staker_address: cfg.test_info.staker_address, :amount,);
+    assert_eq!(
+        state.get_total_stake(), state.staker_info.read(cfg.test_info.staker_address).amount_own
+    );
 }
