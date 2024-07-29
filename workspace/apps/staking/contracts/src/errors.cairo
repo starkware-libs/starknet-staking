@@ -6,12 +6,11 @@ pub enum Error {
     // Generic errors
     INTEREST_ISNT_U64,
     REWARDS_ISNT_U128,
-    REV_SHARE_ISNT_U128,
+    COMMISSION_ISNT_U128,
     // Shared errors
     STAKER_EXISTS,
     STAKER_NOT_EXISTS,
     OPERATIONAL_EXISTS,
-    POOLED_REWARDS_ISNT_U128,
     CALLER_CANNOT_INCREASE_STAKE,
     INVALID_REWARD_ADDRESS,
     // Staking contract errors
@@ -36,8 +35,8 @@ pub enum Error {
 pub fn panic_by_err(error: Error) -> core::never {
     match error {
         Error::INTEREST_ISNT_U64 => panic!("Interest is too large, expected to fit in u64."),
-        Error::REWARDS_ISNT_U128 => panic!("Staker rewards is too large, expected to fit in u128."),
-        Error::REV_SHARE_ISNT_U128 => panic!("Rev share is too large, expected to fit in u128."),
+        Error::REWARDS_ISNT_U128 => panic!("Rewards is too large, expected to fit in u128."),
+        Error::COMMISSION_ISNT_U128 => panic!("Commission is too large, expected to fit in u128."),
         Error::STAKER_EXISTS => panic!("Staker already exists, use increase_stake instead."),
         Error::STAKER_NOT_EXISTS => panic!("Staker does not exist."),
         Error::CALLER_CANNOT_INCREASE_STAKE => panic!(
@@ -55,9 +54,6 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Amount is less than min increase stake - try again with enough funds."
         ),
         Error::POOL_ADDRESS_DOES_NOT_EXIST => panic!("Pool address does not exist."),
-        Error::POOLED_REWARDS_ISNT_U128 => panic!(
-            "Pool rewards is too large, expected to fit in u128."
-        ),
         Error::CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS => panic!(
             "Claim delegation pool rewards must be called from delegation pooling contract."
         ),

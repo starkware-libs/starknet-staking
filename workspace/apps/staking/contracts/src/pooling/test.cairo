@@ -10,6 +10,7 @@ use contracts::{
             InternalPoolingFunctionsTrait
         }
     },
+    utils::{compute_rewards, compute_commission},
     test_utils::{
         initialize_pooling_state, deploy_mock_erc20_contract, StakingInitConfig,
         deploy_staking_contract, fund, approve,
@@ -17,7 +18,7 @@ use contracts::{
     test_utils::constants::{
         OWNER_ADDRESS, STAKER_ADDRESS, REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
         STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, INITIAL_SUPPLY, DUMMY_ADDRESS,
-        OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS,
+        OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, REV_SHARE
     }
 };
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
@@ -34,7 +35,10 @@ fn test_calculate_rewards() {
         cfg.test_info.initial_supply, cfg.test_info.owner_address
     );
     let mut state = initialize_pooling_state(
-        cfg.test_info.staker_address, STAKING_CONTRACT_ADDRESS(), token_address
+        staker_address: cfg.test_info.staker_address,
+        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        :token_address,
+        rev_share: cfg.staker_info.rev_share
     );
 
     let pool_member_address: ContractAddress = POOL_MEMBER_ADDRESS();
@@ -46,10 +50,16 @@ fn test_calculate_rewards() {
         unclaimed_rewards: cfg.staker_info.unclaimed_rewards_pool,
         unpool_time: Option::None,
     };
+    let interest = updated_index - pool_member_info.index;
+    let rewards = compute_rewards(amount: pool_member_info.amount, :interest);
+    let commission = compute_commission(:rewards, rev_share: cfg.staker_info.rev_share);
+    let unclaimed_rewards = rewards - commission;
     assert!(state.calculate_rewards(:pool_member_address, ref :pool_member_info, :updated_index));
-    let new_pool_member_info = state.pool_member_address_to_info.read(pool_member_address);
-    assert_eq!(new_pool_member_info.unclaimed_rewards, cfg.staker_info.amount_own);
-    assert_eq!(new_pool_member_info.index, cfg.staker_info.index * 2)
+
+    let mut expected_pool_member_info = PoolMemberInfo {
+        index: cfg.staker_info.index * 2, unclaimed_rewards, ..pool_member_info
+    };
+    assert_eq!(pool_member_info, expected_pool_member_info);
 }
 
 // TODO(alon, 24/07/2024): Complete this function.
@@ -67,7 +77,10 @@ fn test_enter_delegation_pool() {
     // Deploy the staking contract and initialize the pooling state.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let mut state = initialize_pooling_state(
-        cfg.test_info.staker_address, staking_contract, token_address
+        staker_address: cfg.test_info.staker_address,
+        :staking_contract,
+        :token_address,
+        rev_share: cfg.staker_info.rev_share
     );
     // Approve the pooling contract to transfer the pool member's funds.
     cheat_caller_address(token_address, POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
@@ -98,7 +111,10 @@ fn test_enter_delegation_pool() {
 #[test]
 fn test_assert_staker_is_active() {
     let mut state = initialize_pooling_state(
-        STAKER_ADDRESS(), STAKING_CONTRACT_ADDRESS(), TOKEN_ADDRESS()
+        staker_address: STAKER_ADDRESS(),
+        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        token_address: TOKEN_ADDRESS(),
+        rev_share: REV_SHARE
     );
     assert!(state.final_staker_index.read().is_none());
     state.assert_staker_is_active();
@@ -108,7 +124,10 @@ fn test_assert_staker_is_active() {
 #[should_panic(expected: ("Staker is inactive.",))]
 fn test_assert_staker_is_active_panic() {
     let mut state = initialize_pooling_state(
-        STAKER_ADDRESS(), STAKING_CONTRACT_ADDRESS(), TOKEN_ADDRESS()
+        staker_address: STAKER_ADDRESS(),
+        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        token_address: TOKEN_ADDRESS(),
+        rev_share: REV_SHARE
     );
     state.final_staker_index.write(Option::Some(5));
     state.assert_staker_is_active();
@@ -122,7 +141,10 @@ fn test_change_reward_address() {
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let mut state = initialize_pooling_state(
-        cfg.test_info.staker_address, staking_contract, token_address
+        staker_address: cfg.test_info.staker_address,
+        :staking_contract,
+        :token_address,
+        rev_share: cfg.staker_info.rev_share
     );
     fund(
         sender: cfg.test_info.owner_address,
@@ -168,7 +190,10 @@ fn test_change_reward_address_pool_member_not_exist() {
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let mut state = initialize_pooling_state(
-        cfg.test_info.staker_address, staking_contract, token_address
+        staker_address: cfg.test_info.staker_address,
+        :staking_contract,
+        :token_address,
+        rev_share: cfg.staker_info.rev_share
     );
     cheat_caller_address(test_address(), NON_POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
     // Reward address is arbitrary because it should fail because of the caller.

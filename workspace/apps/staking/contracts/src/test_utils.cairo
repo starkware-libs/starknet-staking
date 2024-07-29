@@ -22,7 +22,7 @@ pub(crate) mod constants {
     pub const MAX_LEVERAGE: u64 = 100;
     pub const MIN_STAKE: u128 = 100000;
     pub const STAKE_AMOUNT: u128 = 200000;
-    pub const POOL_AMOUNT: u128 = 0;
+    pub const POOL_AMOUNT: u128 = 100000;
     pub const REV_SHARE: u16 = 500;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
@@ -99,10 +99,11 @@ pub(crate) fn initialize_staking_state(
 pub(crate) fn initialize_pooling_state(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
-    token_address: ContractAddress
+    token_address: ContractAddress,
+    rev_share: u16
 ) -> Pooling::ContractState {
     let mut state = Pooling::contract_state_for_testing();
-    Pooling::constructor(ref state, :staker_address, :staking_contract, :token_address);
+    Pooling::constructor(ref state, :staker_address, :staking_contract, :token_address, :rev_share);
     state
 }
 
@@ -210,7 +211,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pooling_contract: Option::None,
             unstake_time: Option::None,
             amount_own: STAKE_AMOUNT,
-            amount_pool: POOL_AMOUNT,
+            amount_pool: 0,
             index: BASE_VALUE,
             unclaimed_rewards_own: 0,
             unclaimed_rewards_pool: 0,

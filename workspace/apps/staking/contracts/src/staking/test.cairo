@@ -13,6 +13,7 @@ use contracts::{
             InternalStakingFunctionsTrait
         }
     },
+    utils::{compute_rewards, compute_commission},
     test_utils::{
         initialize_staking_state, deploy_mock_erc20_contract, StakingInitConfig, stake_for_testing,
         fund, approve,
@@ -20,7 +21,7 @@ use contracts::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
             OWNER_ADDRESS, INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
             STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
-            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS,
+            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, POOL_AMOUNT
         }
     }
 };
@@ -96,26 +97,37 @@ fn test_stake() {
 
 #[test]
 fn test_calculate_rewards() {
-    let cfg: StakingInitConfig = Default::default();
+    let cfg: StakingInitConfig = StakingInitConfig {
+        staker_info: StakerInfo {
+            pooling_contract: Option::Some(POOLING_CONTRACT_ADDRESS()),
+            amount_pool: POOL_AMOUNT,
+            index: 0,
+            ..Default::default()
+        },
+        ..Default::default(),
+    };
     let token_address = deploy_mock_erc20_contract(
         cfg.test_info.initial_supply, cfg.test_info.owner_address
     );
     let mut state = initialize_staking_state(
         token_address, cfg.staking_contract_info.min_stake, cfg.staking_contract_info.max_leverage
     );
-
-    let mut staker_info = StakerInfo {
-        pooling_contract: Option::Some(POOLING_CONTRACT_ADDRESS()),
-        index: 0,
-        rev_share: 0,
-        amount_pool: cfg.staker_info.amount_own,
-        ..cfg.staker_info
+    let mut staker_info = cfg.staker_info;
+    let interest = state.global_index.read() - staker_info.index;
+    assert!(
+        state.calculate_rewards(staker_address: cfg.test_info.staker_address, ref :staker_info)
+    );
+    let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
+    let pool_rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
+    let commission = compute_commission(
+        rewards: pool_rewards, rev_share: cfg.staker_info.rev_share
+    );
+    let unclaimed_rewards_own: u128 = staker_rewards + commission;
+    let unclaimed_rewards_pool: u128 = pool_rewards - commission;
+    let expected_staker_info = StakerInfo {
+        index: staker_info.index, unclaimed_rewards_own, unclaimed_rewards_pool, ..staker_info
     };
-    assert!(state.calculate_rewards(cfg.test_info.staker_address, ref :staker_info));
-    let new_staker_info = state.staker_info.read(cfg.test_info.staker_address);
-    assert_eq!(new_staker_info.unclaimed_rewards_own, cfg.staker_info.amount_own);
-    assert_eq!(new_staker_info.index, cfg.staker_info.index);
-    assert_eq!(new_staker_info.unclaimed_rewards_pool, cfg.staker_info.amount_own);
+    assert_eq!(staker_info, expected_staker_info);
 }
 
 #[test]

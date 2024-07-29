@@ -1,5 +1,7 @@
+use contracts::BASE_VALUE;
 use core::{traits::Destruct, integer::{u64_wide_mul, u128_wide_mul}};
 use contracts::errors::{panic_by_err, Error};
+use contracts::staking::Staking::REV_SHARE_DENOMINATOR;
 
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
@@ -21,6 +23,28 @@ pub fn u128_mul_wide_and_div_unsafe(lhs: u128, rhs: u128, div: u128, error: Erro
     panic_by_err(error);
     0
 }
+
+// Compute the commission of the staker from the pool rewards.
+//
+// $$ commission = rewards * rev_share / REV_SHARE_DENOMINATOR $$
+pub fn compute_commission(rewards: u128, rev_share: u16) -> u128 {
+    u128_mul_wide_and_div_unsafe(
+        lhs: rewards,
+        rhs: rev_share.into(),
+        div: REV_SHARE_DENOMINATOR.into(),
+        error: Error::COMMISSION_ISNT_U128
+    )
+}
+
+// Compute the rewards from the amount and interest.
+//
+// $$ rewards = amount * interest / BASE_VALUE $$
+pub fn compute_rewards(amount: u128, interest: u64) -> u128 {
+    u128_mul_wide_and_div_unsafe(
+        lhs: amount, rhs: interest.into(), div: BASE_VALUE.into(), error: Error::REWARDS_ISNT_U128
+    )
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -49,7 +73,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: ("Staker rewards is too large, expected to fit in u128.",))]
+    #[should_panic(expected: ("Rewards is too large, expected to fit in u128.",))]
     fn u128_mul_wide_and_div_unsafe_test_panic() {
         u128_mul_wide_and_div_unsafe(MAX_U128, MAX_U128, 1, Error::REWARDS_ISNT_U128);
     }
