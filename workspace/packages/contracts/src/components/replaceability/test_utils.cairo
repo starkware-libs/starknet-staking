@@ -24,11 +24,6 @@ pub(crate) mod Constants {
     }
 }
 
-pub(crate) mod Errors {
-    pub(crate) const UPGRADE_DELAY_ERROR: felt252 = 'upgrade delay error';
-    pub(crate) const INCORRECT_ACTIVATION_TIME_ERROR: felt252 = 'incorrect activation time error';
-}
-
 pub(crate) fn deploy_replaceability_mock() -> IReplaceableDispatcher {
     let replaceable_contract = declare("ReplaceabilityMock").unwrap();
     let (contract_address, _) = replaceable_contract
