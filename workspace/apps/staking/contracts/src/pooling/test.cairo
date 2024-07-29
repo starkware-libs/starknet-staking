@@ -23,7 +23,6 @@ use contracts::{
 };
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::pooling::interface::IPooling;
-use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 use starknet::{ContractAddress, contract_address_const};
 use snforge_std::{cheat_caller_address, CheatSpan, test_address};
 

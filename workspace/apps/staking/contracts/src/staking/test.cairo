@@ -26,7 +26,6 @@ use contracts::{
     }
 };
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 use contracts::staking::interface::IStaking;
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
@@ -54,11 +53,23 @@ fn test_constructor() {
     let contract_operational_address_to_staker_address: ContractAddress = state
         .operational_address_to_staker_address
         .read(dummy_address);
-    assert_eq!(contract_operational_address_to_staker_address, Default::default());
+    assert_eq!(contract_operational_address_to_staker_address, Zero::zero());
     let contract_staker_address_to_operational_address: StakerInfo = state
         .staker_info
         .read(dummy_address);
-    assert_eq!(contract_staker_address_to_operational_address, Default::default());
+    let expected_staker_info = StakerInfo {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        pooling_contract: Option::None,
+        unstake_time: Option::None,
+        amount_own: 0,
+        amount_pool: 0,
+        index: 0,
+        unclaimed_rewards_own: 0,
+        unclaimed_rewards_pool: 0,
+        rev_share: 0,
+    };
+    assert_eq!(contract_staker_address_to_operational_address, expected_staker_info);
 }
 
 #[test]
@@ -97,12 +108,13 @@ fn test_stake() {
 
 #[test]
 fn test_calculate_rewards() {
+    let default_cfg: StakingInitConfig = Default::default();
     let cfg: StakingInitConfig = StakingInitConfig {
         staker_info: StakerInfo {
             pooling_contract: Option::Some(POOLING_CONTRACT_ADDRESS()),
             amount_pool: POOL_AMOUNT,
             index: 0,
-            ..Default::default()
+            ..default_cfg.staker_info
         },
         ..Default::default(),
     };

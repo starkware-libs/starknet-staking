@@ -1,5 +1,4 @@
 use contracts::{BASE_VALUE, staking::Staking, pooling::Pooling, minting_curve::MintingCurve};
-use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 use core::traits::Into;
 use contracts::staking::interface::{IStaking, StakerInfo, StakingContractInfo};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};

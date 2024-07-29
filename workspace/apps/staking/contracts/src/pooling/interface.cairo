@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 
-#[derive(Default, Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
+#[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub struct PoolMemberInfo {
     pub reward_address: ContractAddress,
     pub amount: u128,
@@ -8,8 +8,6 @@ pub struct PoolMemberInfo {
     pub unclaimed_rewards: u128,
     pub unpool_time: Option<u64>,
 }
-
-use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 
 #[starknet::interface]
 pub trait IPooling<TContractState> {
