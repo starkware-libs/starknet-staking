@@ -122,6 +122,17 @@ pub mod Pooling {
         ) -> bool {
             true
         }
+
+        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
+            let pool_member = get_caller_address();
+            let mut pool_member_info = self.pool_member_address_to_info.read(pool_member);
+            assert_with_err(
+                pool_member_info.amount.is_non_zero(), Error::POOL_MEMBER_DOES_NOT_EXIST
+            );
+            pool_member_info.reward_address = reward_address;
+            self.pool_member_address_to_info.write(pool_member, pool_member_info);
+            true
+        }
     }
 
     #[generate_trait]

@@ -12,11 +12,12 @@ use contracts::{
     },
     test_utils::{
         initialize_pooling_state, deploy_mock_erc20_contract, StakingInitConfig,
-        deploy_staking_contract
+        deploy_staking_contract, fund, approve,
     },
     test_utils::constants::{
         OWNER_ADDRESS, STAKER_ADDRESS, REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
         STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, INITIAL_SUPPLY, DUMMY_ADDRESS,
+        OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS,
     }
 };
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
@@ -113,3 +114,63 @@ fn test_assert_staker_is_active_panic() {
     state.assert_staker_is_active();
 }
 
+#[test]
+fn test_change_reward_address() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let mut state = initialize_pooling_state(
+        cfg.test_info.staker_address, staking_contract, token_address
+    );
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: POOL_MEMBER_ADDRESS(),
+        amount: cfg.test_info.staker_initial_balance,
+        :token_address
+    );
+    approve(
+        owner: POOL_MEMBER_ADDRESS(),
+        spender: test_address(),
+        amount: cfg.test_info.staker_initial_balance,
+        :token_address
+    );
+    cheat_caller_address(test_address(), POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
+    state
+        .enter_delegation_pool(
+            amount: cfg.test_info.staker_initial_balance,
+            reward_address: cfg.staker_info.reward_address
+        );
+    let pool_member_info_before_change = state
+        .pool_member_address_to_info
+        .read(POOL_MEMBER_ADDRESS());
+    let other_reward_address = OTHER_REWARD_ADDRESS();
+
+    cheat_caller_address(test_address(), POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
+    state.change_reward_address(other_reward_address);
+    let pool_member_info_after_change = state
+        .pool_member_address_to_info
+        .read(POOL_MEMBER_ADDRESS());
+    let pool_member_info_expected = PoolMemberInfo {
+        reward_address: other_reward_address, ..pool_member_info_before_change
+    };
+    assert_eq!(pool_member_info_after_change, pool_member_info_expected);
+}
+
+
+#[test]
+#[should_panic(expected: "Pool member does not exist.")]
+fn test_change_reward_address_pool_member_not_exist() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let mut state = initialize_pooling_state(
+        cfg.test_info.staker_address, staking_contract, token_address
+    );
+    cheat_caller_address(test_address(), NON_POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
+    // Reward address is arbitrary because it should fail because of the caller.
+    state.change_reward_address(reward_address: DUMMY_ADDRESS());
+}
