@@ -26,6 +26,8 @@ pub enum Error {
     STAKER_IS_INACTIVE,
     POOL_MEMBER_EXISTS,
     AMOUNT_IS_ZERO,
+    // Minting contract errors
+    TOTAL_SUPPLY_NOT_U128,
 }
 
 
@@ -68,6 +70,7 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Pool member exists, use add_to_delegation_pool instead."
         ),
         Error::AMOUNT_IS_ZERO => panic!("Amount must be positive."),
+        Error::TOTAL_SUPPLY_NOT_U128 => panic!("Total supply does not fit in u128."),
     }
 }
 

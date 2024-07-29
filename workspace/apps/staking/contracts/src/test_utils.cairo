@@ -1,4 +1,4 @@
-use contracts::{BASE_VALUE, staking::Staking, pooling::Pooling};
+use contracts::{BASE_VALUE, staking::Staking, pooling::Pooling, minting_curve::MintingCurve};
 use contracts_commons::custom_defaults::{ContractAddressDefault, OptionDefault};
 use core::traits::Into;
 use contracts::staking::interface::{IStaking, StakerInfo, StakingContractInfo};
@@ -102,6 +102,15 @@ pub(crate) fn initialize_pooling_state(
     Pooling::constructor(ref state, :staker_address, :staking_contract, :token_address);
     state
 }
+
+pub(crate) fn initialize_minting_curve_state(
+    staking_contract: ContractAddress, total_supply: u128
+) -> MintingCurve::ContractState {
+    let mut state = MintingCurve::contract_state_for_testing();
+    MintingCurve::constructor(ref state, staking_contract, total_supply);
+    state
+}
+
 
 pub(crate) fn deploy_mock_erc20_contract(
     initial_supply: u256, owner_address: ContractAddress
