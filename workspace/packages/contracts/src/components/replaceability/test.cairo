@@ -1,23 +1,28 @@
 mod ReplaceabilityTests {
-    use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
-    use contracts_commons::components::replaceability::interface::IReplaceableDispatcherTrait;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::replaceability::interface::ImplementationData;
     use contracts_commons::components::replaceability::interface::ImplementationAdded;
     use contracts_commons::components::replaceability::interface::ImplementationRemoved;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::replaceability::interface::ImplementationReplaced;
+    use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
+    use contracts_commons::components::replaceability::interface::IReplaceableDispatcherTrait;
     use contracts_commons::components::replaceability::mock::ReplaceabilityMock;
     use contracts_commons::components::replaceability::test_utils::deploy_replaceability_mock;
+    use contracts_commons::components::replaceability::test_utils::dummy_nonfinal_eic_implementation_data_with_class_hash;
+    use contracts_commons::components::replaceability::test_utils::dummy_nonfinal_implementation_data_with_class_hash;
     use contracts_commons::components::replaceability::test_utils::get_upgrade_governor_account;
     use contracts_commons::components::replaceability::test_utils::Constants::DEFAULT_UPGRADE_DELAY;
+    use contracts_commons::components::replaceability::test_utils::Constants::DUMMY_FINAL_IMPLEMENTATION_DATA;
     use contracts_commons::components::replaceability::test_utils::Constants::DUMMY_NONFINAL_IMPLEMENTATION_DATA;
+    use contracts_commons::components::replaceability::test_utils::Constants::EIC_UPGRADE_DELAY_ADDITION;
     use contracts_commons::components::replaceability::test_utils::Constants::NOT_UPGRADE_GOVERNOR_ACCOUNT;
-    use snforge_std::{spy_events, EventSpyAssertionsTrait, EventsFilterTrait, EventSpyTrait};
-    use snforge_std::{cheat_caller_address, CheatSpan};
+    use snforge_std::{EventSpyAssertionsTrait, EventsFilterTrait, EventSpyTrait, CheatSpan};
+    use snforge_std::{cheat_block_timestamp, cheat_caller_address, get_class_hash, spy_events};
 
     #[test]
     fn test_get_upgrade_delay() {
         let replaceable_dispatcher = deploy_replaceability_mock();
-        assert_eq!(replaceable_dispatcher.get_upgrade_delay(), DEFAULT_UPGRADE_DELAY);
+        assert!(replaceable_dispatcher.get_upgrade_delay() == DEFAULT_UPGRADE_DELAY);
     }
 
     #[test]
@@ -27,7 +32,7 @@ mod ReplaceabilityTests {
         let implementation_data = DUMMY_NONFINAL_IMPLEMENTATION_DATA();
 
         // Check implementation time pre addition.
-        assert_eq!(replaceable_dispatcher.get_impl_activation_time(:implementation_data), 0);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
 
         cheat_caller_address(
             contract_address,
@@ -36,9 +41,9 @@ mod ReplaceabilityTests {
         );
         let mut spy = spy_events();
         replaceable_dispatcher.add_new_implementation(:implementation_data);
-        assert_eq!(
-            replaceable_dispatcher.get_impl_activation_time(:implementation_data),
-            DEFAULT_UPGRADE_DELAY
+        assert!(
+            replaceable_dispatcher
+                .get_impl_activation_time(:implementation_data) == DEFAULT_UPGRADE_DELAY
         );
 
         // Validate event emission.
@@ -86,14 +91,14 @@ mod ReplaceabilityTests {
 
         // Remove implementation that was not previously added.
         replaceable_dispatcher.remove_implementation(:implementation_data);
-        assert_eq!(replaceable_dispatcher.get_impl_activation_time(:implementation_data), 0);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
         let emitted_events = spy.get_events().emitted_by(:contract_address);
         // The following should NOT emit an event.
-        assert_eq!(emitted_events.events.len(), 0);
+        assert!(emitted_events.events.len() == 0);
 
         replaceable_dispatcher.add_new_implementation(:implementation_data);
         replaceable_dispatcher.remove_implementation(:implementation_data);
-        assert_eq!(replaceable_dispatcher.get_impl_activation_time(:implementation_data), 0);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
 
         // Validate event emission.
         spy
@@ -123,5 +128,214 @@ mod ReplaceabilityTests {
             contract_address, NOT_UPGRADE_GOVERNOR_ACCOUNT(), CheatSpan::TargetCalls(1)
         );
         replaceable_dispatcher.remove_implementation(:implementation_data);
+    }
+
+    #[test]
+    #[should_panic(expected: ('IMPLEMENTATION_EXPIRED',))]
+    fn test_replace_to_expire_impl() {
+        // Tests that impl class-hash cannot be replaced to after expiration.
+        let replaceable_dispatcher = deploy_replaceability_mock();
+        let contract_address = replaceable_dispatcher.contract_address;
+
+        // Prepare implementation data with the same class hash (repalce to self).
+        let implementation_data = dummy_nonfinal_implementation_data_with_class_hash(
+            class_hash: get_class_hash(contract_address)
+        );
+
+        // Invoke as an Upgrade Governor.
+        cheat_caller_address(
+            contract_address,
+            get_upgrade_governor_account(:contract_address),
+            CheatSpan::TargetCalls(6)
+        );
+
+        // Add implementation.
+        replaceable_dispatcher.add_new_implementation(:implementation_data);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) != 0);
+
+        // Advance time to enable implementation.
+        cheat_block_timestamp(contract_address, DEFAULT_UPGRADE_DELAY + 1, CheatSpan::Indefinite);
+        replaceable_dispatcher.replace_to(:implementation_data);
+
+        // Check enabled timestamp zeroed for replaced to impl, and non-zero for other.
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
+
+        // Add implementation for 2nd time.
+        replaceable_dispatcher.add_new_implementation(:implementation_data);
+
+        cheat_block_timestamp(
+            contract_address,
+            DEFAULT_UPGRADE_DELAY + 1 + DEFAULT_UPGRADE_DELAY + 14 * 3600 * 24 + 2,
+            CheatSpan::Indefinite
+        );
+
+        // Should revert on expired_impl.
+        replaceable_dispatcher.replace_to(:implementation_data);
+    }
+
+    #[test]
+    fn test_replace_to_nonfinal_impl() {
+        // Tests replacing an implementation to a non-final implementation, as follows:
+        // 1. deploys a replaceable contract
+        // 2. generates a non-final dummy implementation replacement
+        // 3. adds it to the replaceable contract
+        // 4. advances time until the new implementation is ready
+        // 5. replaces to the new implemenation
+        // 6. checks the implemenation is not final
+        let replaceable_dispatcher = deploy_replaceability_mock();
+        let contract_address = replaceable_dispatcher.contract_address;
+        let implementation_data = dummy_nonfinal_implementation_data_with_class_hash(
+            class_hash: get_class_hash(contract_address)
+        );
+
+        // Invoke as an Upgrade Governor.
+        cheat_caller_address(
+            contract_address,
+            get_upgrade_governor_account(:contract_address),
+            CheatSpan::TargetCalls(2)
+        );
+        let mut spy = spy_events();
+
+        // Add implementation and advance time to enable it.
+        replaceable_dispatcher.add_new_implementation(:implementation_data);
+        cheat_block_timestamp(contract_address, DEFAULT_UPGRADE_DELAY + 1, CheatSpan::Indefinite);
+
+        replaceable_dispatcher.replace_to(:implementation_data);
+
+        // Validate event emission.
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        contract_address,
+                        ReplaceabilityMock::Event::ReplaceabilityEvent(
+                            ReplaceabilityComponent::Event::ImplementationReplaced(
+                                ImplementationReplaced { implementation_data: implementation_data }
+                            )
+                        )
+                    )
+                ]
+            );
+    // TODO: Check the new impl hash.
+    // TODO: Check the new impl is not final.
+    // TODO: Check that ImplementationFinalized is NOT emitted.
+    }
+
+    #[test]
+    fn test_replace_to_with_eic() {
+        // Tests replacing an implementation to a non-final implementation using EIC, as follows:
+        // 1. deploys a replaceable contract
+        // 2. generates a dummy implementation replacement with eic
+        // 3. adds it to the replaceable contract
+        // 4. advances time until the new implementation is ready
+        // 5. replaces to the new implemenation
+        // 6. checks the eic effect
+        let replaceable_dispatcher = deploy_replaceability_mock();
+        let contract_address = replaceable_dispatcher.contract_address;
+        let implementation_data = dummy_nonfinal_eic_implementation_data_with_class_hash(
+            get_class_hash(contract_address)
+        );
+
+        // Invoke as an Upgrade Governor.
+        cheat_caller_address(
+            contract_address,
+            get_upgrade_governor_account(:contract_address),
+            CheatSpan::TargetCalls(2)
+        );
+
+        // Add implementation and advance time to enable it.
+        replaceable_dispatcher.add_new_implementation(:implementation_data);
+        cheat_block_timestamp(contract_address, DEFAULT_UPGRADE_DELAY + 1, CheatSpan::Indefinite);
+
+        replaceable_dispatcher.replace_to(:implementation_data);
+        assert!(
+            replaceable_dispatcher.get_upgrade_delay() == DEFAULT_UPGRADE_DELAY
+                + EIC_UPGRADE_DELAY_ADDITION
+        );
+    }
+
+    #[test]
+    #[should_panic(expected: ('ONLY_UPGRADE_GOVERNOR',))]
+    fn test_replace_to_not_upgrade_governor() {
+        let replaceable_dispatcher = deploy_replaceability_mock();
+        let contract_address = replaceable_dispatcher.contract_address;
+        let implementation_data = DUMMY_NONFINAL_IMPLEMENTATION_DATA();
+
+        // Invoke not as an Upgrade Governor.
+        cheat_caller_address(
+            contract_address, NOT_UPGRADE_GOVERNOR_ACCOUNT(), CheatSpan::TargetCalls(1)
+        );
+        replaceable_dispatcher.replace_to(:implementation_data);
+    }
+
+    #[test]
+    #[should_panic(expected: ('UNKNOWN_IMPLEMENTATION',))]
+    fn test_replace_to_unknown_implementation() {
+        let replaceable_dispatcher = deploy_replaceability_mock();
+        let contract_address = replaceable_dispatcher.contract_address;
+
+        // Invoke as an Upgrade Governor.
+        cheat_caller_address(
+            contract_address,
+            get_upgrade_governor_account(:contract_address),
+            CheatSpan::TargetCalls(1)
+        );
+        let implementation_data = DUMMY_NONFINAL_IMPLEMENTATION_DATA();
+
+        // Calling replace_to without previously adding the implementation.
+        replaceable_dispatcher.replace_to(:implementation_data);
+    }
+
+    #[test]
+    #[should_panic(expected: ('UNKNOWN_IMPLEMENTATION',))]
+    fn test_replace_to_remove_impl_on_replace() {
+        // Tests that when replacing class-hash, the impl time is reset to zero.
+        // 1. deploys a replaceable contract
+        // 2. generates implementation replacement to the same classhash.
+        // 3. adds it to the replaceable contract
+        // 4. advances time until the new implementation is ready
+        // 5. replaces to the new implemenation
+        // 6. checks the impl time is now zero.
+        // 7. Fails to replace to this impl.
+        let replaceable_dispatcher = deploy_replaceability_mock();
+        let contract_address = replaceable_dispatcher.contract_address;
+
+        // Prepare implementation data with the same class hash (repalce to self).
+        let implementation_data = dummy_nonfinal_implementation_data_with_class_hash(
+            class_hash: get_class_hash(contract_address)
+        );
+        let other_implementation_data = DUMMY_FINAL_IMPLEMENTATION_DATA();
+
+        // Invoke as an Upgrade Governor.
+        cheat_caller_address(
+            contract_address,
+            get_upgrade_governor_account(:contract_address),
+            CheatSpan::TargetCalls(8)
+        );
+
+        // Add implementations.
+        replaceable_dispatcher.add_new_implementation(:implementation_data);
+        replaceable_dispatcher
+            .add_new_implementation(implementation_data: other_implementation_data);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) != 0);
+        assert!(
+            replaceable_dispatcher
+                .get_impl_activation_time(implementation_data: other_implementation_data) != 0
+        );
+
+        // Advance time to enable implementation.
+        cheat_block_timestamp(contract_address, DEFAULT_UPGRADE_DELAY + 1, CheatSpan::Indefinite);
+
+        replaceable_dispatcher.replace_to(:implementation_data);
+
+        // Check enabled timestamp zeroed for replaced to impl, and non-zero for other.
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
+        assert!(
+            replaceable_dispatcher
+                .get_impl_activation_time(implementation_data: other_implementation_data) != 0
+        );
+
+        // Should revert with UNKNOWN_IMPLEMENTATION as replace_to removes the implementation.
+        replaceable_dispatcher.replace_to(:implementation_data);
     }
 }
