@@ -1,5 +1,20 @@
 use starknet::ContractAddress;
 
+pub mod Events {
+    use starknet::ContractAddress;
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct BalanceChanged {
+        staker_address: ContractAddress,
+        amount: u128
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct NewDelegationPool {
+        staker_address: ContractAddress,
+        pooling_contract_address: ContractAddress
+    }
+}
+
 // TODO create a different struct for not exposing internal implemenation
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerInfo {

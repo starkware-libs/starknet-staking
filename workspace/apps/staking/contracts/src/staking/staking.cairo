@@ -7,6 +7,7 @@ pub mod Staking {
         staking::{IStaking, StakerInfo, StakingContractInfo},
         utils::{compute_commission, compute_rewards},
     };
+    use contracts::staking::Events;
     use starknet::{ContractAddress, get_contract_address, get_caller_address};
     use openzeppelin::{
         access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
@@ -44,23 +45,13 @@ pub mod Staking {
         total_stake: u128,
     }
 
-    #[derive(Drop, starknet::Event)]
-    struct BalanceChanged {
-        staker_address: ContractAddress,
-        amount: u128
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct NewPool {
-        staker_address: ContractAddress,
-        pooling_contract_address: ContractAddress
-    }
-
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         accesscontrolEvent: AccessControlComponent::Event,
         src5Event: SRC5Component::Event,
+        balance_changed: Events::BalanceChanged,
+        new_delegation_pool: Events::NewDelegationPool
     }
 
     #[constructor]
