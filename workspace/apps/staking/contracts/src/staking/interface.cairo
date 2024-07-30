@@ -1,4 +1,4 @@
-use starknet::ContractAddress;
+use starknet::{ContractAddress, ClassHash};
 
 pub mod Events {
     use starknet::ContractAddress;

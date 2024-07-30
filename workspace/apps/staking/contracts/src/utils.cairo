@@ -1,6 +1,8 @@
 use contracts::BASE_VALUE;
 use core::{traits::Destruct, integer::{u64_wide_mul, u128_wide_mul}};
 use contracts::errors::{panic_by_err, Error};
+use starknet::{ContractAddress, ClassHash, SyscallResultTrait};
+use starknet::syscalls::deploy_syscall;
 use contracts::staking::Staking::REV_SHARE_DENOMINATOR;
 
 pub const MAX_U64: u64 = 18446744073709551615;
@@ -22,6 +24,26 @@ pub fn u128_mul_wide_and_div_unsafe(lhs: u128, rhs: u128, div: u128, error: Erro
     }
     panic_by_err(error);
     0
+}
+
+pub fn deploy_delegation_pool_contract(
+    class_hash: ClassHash,
+    contract_address_salt: felt252,
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    token_address: ContractAddress,
+    rev_share: u16
+) -> Option<ContractAddress> {
+    let mut calldata = ArrayTrait::new();
+    staker_address.serialize(ref calldata);
+    staking_contract.serialize(ref calldata);
+    token_address.serialize(ref calldata);
+    rev_share.serialize(ref calldata);
+    let (pool_address, _) = deploy_syscall(
+        :class_hash, :contract_address_salt, calldata: calldata.span(), deploy_from_zero: false
+    )
+        .unwrap_syscall();
+    Option::Some(pool_address)
 }
 
 // Compute the commission of the staker from the pool rewards.

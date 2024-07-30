@@ -5,7 +5,10 @@ pub mod Staking {
     use contracts::{
         BASE_VALUE, errors::{Error, panic_by_err, assert_with_err, expect_with_err},
         staking::{IStaking, StakerInfo, StakingContractInfo},
-        utils::{compute_commission, compute_rewards},
+        utils::{
+            u128_mul_wide_and_div_unsafe, deploy_delegation_pool_contract, compute_commission,
+            compute_rewards
+        },
     };
     use contracts::staking::Events;
     use starknet::{ContractAddress, get_contract_address, get_caller_address};
@@ -14,7 +17,8 @@ pub mod Staking {
     };
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use starknet::get_block_timestamp;
-
+    use starknet::class_hash::ClassHash;
+    use starknet::syscalls::deploy_syscall;
     // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value). 
     pub const MIN_INCREASE_STAKE: u128 = 10;
     pub const REV_SHARE_DENOMINATOR: u16 = 10000;
@@ -43,6 +47,7 @@ pub mod Staking {
         max_leverage: u64,
         token_address: ContractAddress,
         total_stake: u128,
+        pool_contract_class_hash: ClassHash,
     }
 
     #[event]
@@ -56,12 +61,17 @@ pub mod Staking {
 
     #[constructor]
     pub fn constructor(
-        ref self: ContractState, token_address: ContractAddress, min_stake: u128, max_leverage: u64
+        ref self: ContractState,
+        token_address: ContractAddress,
+        min_stake: u128,
+        max_leverage: u64,
+        pool_contract_class_hash: ClassHash,
     ) {
         self.token_address.write(token_address);
         self.min_stake.write(min_stake);
         self.max_leverage.write(max_leverage);
         self.global_index.write(BASE_VALUE);
+        self.pool_contract_class_hash.write(pool_contract_class_hash);
     }
 
     #[abi(embed_v0)]
@@ -84,31 +94,32 @@ pub mod Staking {
             );
             assert_with_err(amount >= self.min_stake.read(), Error::AMOUNT_LESS_THAN_MIN_STAKE);
             assert_with_err(rev_share <= REV_SHARE_DENOMINATOR, Error::REV_SHARE_OUT_OF_RANGE);
-            let staking_contract_address = get_contract_address();
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let staking_contract = get_contract_address();
+            let token_address = self.token_address.read();
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
             erc20_dispatcher
                 .transfer_from(
-                    sender: staker_address,
-                    recipient: staking_contract_address,
-                    amount: amount.into()
+                    sender: staker_address, recipient: staking_contract, amount: amount.into()
                 );
-            // TODO(Nir, 01/08/2024): Deploy pooling contract if pooling_enabled is true.
-            if pooling_enabled {}
+            let pooling_contract = self
+                .deploy_delegation_pool_contract_if_needed(
+                    :staker_address, :staking_contract, :token_address, :pooling_enabled, :rev_share
+                );
             self
                 .staker_info
                 .write(
                     staker_address,
                     StakerInfo {
-                        reward_address: reward_address,
-                        operational_address: operational_address,
-                        pooling_contract: Option::None,
+                        reward_address,
+                        operational_address,
+                        pooling_contract,
                         unstake_time: Option::None,
                         amount_own: amount,
                         amount_pool: 0,
                         index: self.global_index.read(),
                         unclaimed_rewards_own: 0,
                         unclaimed_rewards_pool: 0,
-                        rev_share: rev_share,
+                        rev_share,
                     }
                 );
             self.operational_address_to_staker_address.write(operational_address, staker_address);
@@ -147,7 +158,6 @@ pub mod Staking {
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
             let mut staker_info = self.staker_info.read(staker_address);
-            // Reward address isn't zero if staker is initialized.
             assert_with_err(staker_info.amount_own.is_non_zero(), Error::STAKER_NOT_EXISTS);
             let caller_address = get_caller_address();
             assert_with_err(
@@ -327,6 +337,29 @@ pub mod Staking {
             staker_info.unclaimed_rewards_own += staker_rewards;
             self.calculate_and_update_pool_rewards(:interest, ref :staker_info);
             true
+        }
+
+        fn deploy_delegation_pool_contract_if_needed(
+            self: @ContractState,
+            staker_address: ContractAddress,
+            staking_contract: ContractAddress,
+            token_address: ContractAddress,
+            pooling_enabled: bool,
+            rev_share: u16,
+        ) -> Option<ContractAddress> {
+            if !pooling_enabled {
+                return Option::None;
+            }
+            let class_hash = self.pool_contract_class_hash.read();
+            let contract_address_salt: felt252 = get_block_timestamp().into();
+            deploy_delegation_pool_contract(
+                :class_hash,
+                :contract_address_salt,
+                :staker_address,
+                :staking_contract,
+                :token_address,
+                :rev_share
+            )
         }
     }
 }

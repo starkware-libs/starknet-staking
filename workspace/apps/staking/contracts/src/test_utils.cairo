@@ -4,17 +4,18 @@ use contracts::staking::interface::{IStaking, StakerInfo, StakingContractInfo};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
+use starknet::ClassHash;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::Staking::ContractState;
 use constants::{
     NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, MAX_LEVERAGE, STAKER_INITIAL_BALANCE,
     STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
-    POOLING_CONTRACT_ADDRESS, POOL_AMOUNT,
+    POOLING_CONTRACT_ADDRESS, POOL_AMOUNT, DUMMY_CLASS_HASH
 };
-use snforge_std::{cheat_caller_address, CheatSpan, test_address};
-
+use snforge_std::{ContractClass, CheatSpan, cheat_caller_address, test_address};
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
+    use starknet::class_hash::{ClassHash, class_hash_const};
 
     pub const STAKER_INITIAL_BALANCE: u128 = 10000000000;
     pub const INITIAL_SUPPLY: u256 = 10000000000000000;
@@ -84,13 +85,31 @@ pub(crate) mod constants {
     pub fn SYMBOL() -> ByteArray {
         "SYMBOL"
     }
-}
 
+    pub fn DUMMY_CLASS_HASH() -> ClassHash {
+        class_hash_const::<'DUMMY'>()
+    }
+}
+pub(crate) fn initialize_staking_state_from_cfg(
+    token_address: ContractAddress, cfg: StakingInitConfig
+) -> Staking::ContractState {
+    initialize_staking_state(
+        :token_address,
+        min_stake: cfg.staking_contract_info.min_stake,
+        max_leverage: cfg.staking_contract_info.max_leverage,
+        pool_contract_class_hash: cfg.test_info.pool_contract_class_hash
+    )
+}
 pub(crate) fn initialize_staking_state(
-    token_address: ContractAddress, min_stake: u128, max_leverage: u64
+    token_address: ContractAddress,
+    min_stake: u128,
+    max_leverage: u64,
+    pool_contract_class_hash: ClassHash
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
-    Staking::constructor(ref state, token_address, min_stake, max_leverage);
+    Staking::constructor(
+        ref state, token_address, min_stake, max_leverage, pool_contract_class_hash
+    );
     state
 }
 
@@ -135,9 +154,14 @@ pub(crate) fn deploy_staking_contract(
     token_address.serialize(ref calldata);
     cfg.staking_contract_info.min_stake.serialize(ref calldata);
     cfg.staking_contract_info.max_leverage.serialize(ref calldata);
+    cfg.test_info.pool_contract_class_hash.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     staking_contract_address
+}
+
+pub(crate) fn declare_pool_contract() -> ClassHash {
+    snforge_std::declare("Pooling").unwrap().class_hash
 }
 
 pub(crate) fn fund(
@@ -193,6 +217,7 @@ pub(crate) struct TestInfo {
     pub initial_supply: u256,
     pub staker_initial_balance: u128,
     pub pooling_enabled: bool,
+    pub pool_contract_class_hash: ClassHash,
 }
 
 #[derive(Drop, Copy)]
@@ -228,6 +253,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             initial_supply: INITIAL_SUPPLY,
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pooling_enabled: false,
+            pool_contract_class_hash: DUMMY_CLASS_HASH(),
         };
         StakingInitConfig { staker_info, staking_contract_info, test_info, }
     }
