@@ -31,6 +31,25 @@ pub fn assert_staker_exit_intent_event(
     }
 }
 
+pub fn assert_staker_balance_changed_event(
+    spied_event: @(ContractAddress, Event), staker_address: ContractAddress, amount: u128,
+) {
+    let expected_event = @contracts::staking::Staking::Event::balance_changed(
+        StakingEvents::BalanceChanged { staker_address, amount }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "StakingEvents::BalanceChanged{{staker_address: {:?}, amount: {}}}",
+            staker_address,
+            amount
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn debug_dump_spied_events(ref spy: EventSpy) {
     let mut serialized = array![];
     Serde::<

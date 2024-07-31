@@ -126,6 +126,7 @@ pub mod Staking {
                 );
             self.operational_address_to_staker_address.write(operational_address, staker_address);
             self.total_stake.write(self.get_total_stake() + amount);
+            self.emit(Events::BalanceChanged { staker_address, amount });
             true
         }
 
@@ -155,6 +156,9 @@ pub mod Staking {
             staker_info.amount_own += amount;
             self.staker_info.write(staker_address, staker_info);
             self.total_stake.write(self.get_total_stake() + amount);
+            // TODO: It is not clear from spec, but amount in the event may also include pooling.
+            //       If so, this should be updated.
+            self.emit(Events::BalanceChanged { staker_address, amount: staker_info.amount_own });
             staker_info.amount_own
         }
 
@@ -192,12 +196,19 @@ pub mod Staking {
         }
 
         fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
+            // TODO: It is not clear from spec, but amount in the event may also include pooling.
+            //       If so, should this be 0 or pooling?
+            // self.emit(Events::BalanceChanged { staker_address, 0 });
             0
         }
 
         fn add_to_delegation_pool(
             ref self: ContractState, pooled_staker: ContractAddress, amount: u128
         ) -> (u128, u64) {
+            // TODO: It is not clear from spec, but amount in the event may also include pooling.
+            //       Actually, Spec says a balance changed event is needed here and therefore I
+            //       suspect it should include pooling.
+            // self.emit(Events::BalanceChanged { staker_address, amount+pool });
             (0, self.global_index.read())
         }
 
@@ -213,6 +224,10 @@ pub mod Staking {
         fn remove_from_delegation_pool_action(
             ref self: ContractState, staker_address: ContractAddress, identifier: Span<felt252>
         ) -> u128 {
+            // TODO: It is not clear from spec, but amount in the event may also include pooling.
+            //       Actually, Spec says a balance changed event is needed here and therefore I
+            //       suspect it should include pooling.
+            // self.emit(Events::BalanceChanged { staker_address, amount+poll });
             0
         }
 
@@ -224,6 +239,9 @@ pub mod Staking {
             amount: u128,
             data: Span<felt252>
         ) -> bool {
+            // TODO: The following emits are not in spec, but should be.
+            // self.emit(Events::BalanceChanged { from_staker_address, amount+pool });
+            // self.emit(Events::BalanceChanged { to_staker_address, amount+pool });
             true
         }
 
