@@ -25,6 +25,7 @@ use contracts::{
         }
     }
 };
+use contracts::event_test_utils::{assert_number_of_events, assert_staker_exit_intent_event,};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::staking::interface::IStaking;
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
@@ -35,7 +36,9 @@ use contracts::staking::Staking::{REV_SHARE_DENOMINATOR, EXIT_WAITING_WINDOW, MI
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
 use snforge_std::{cheat_caller_address, CheatSpan, test_address};
-
+use snforge_std::cheatcodes::events::{
+    Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
+};
 
 #[test]
 fn test_constructor() {
@@ -521,11 +524,18 @@ fn test_unstake_intent() {
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
     cheat_caller_address(test_address(), cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
+    let mut spy = snforge_std::spy_events();
     let unstake_time = state.unstake_intent();
     let staker_info = state.staker_info.read(cfg.test_info.staker_address);
     let expected_time = EXIT_WAITING_WINDOW; // 3 weeks
     assert_eq!((staker_info.unstake_time).unwrap(), unstake_time);
     assert_eq!(unstake_time, expected_time);
+    // Validate the single StakerExitIntent event.
+    let events = spy.get_events().emitted_by(test_address()).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "unstake_intent");
+    assert_staker_exit_intent_event(
+        spied_event: events[0], staker_address: cfg.test_info.staker_address, exit_at: expected_time
+    );
 }
 
 #[test]

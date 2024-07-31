@@ -4,14 +4,20 @@ pub mod Events {
     use starknet::ContractAddress;
     #[derive(Drop, starknet::Event)]
     pub(crate) struct BalanceChanged {
-        staker_address: ContractAddress,
-        amount: u128
+        pub staker_address: ContractAddress,
+        pub amount: u128
     }
 
     #[derive(Drop, starknet::Event)]
     pub(crate) struct NewDelegationPool {
-        staker_address: ContractAddress,
-        pooling_contract_address: ContractAddress
+        pub staker_address: ContractAddress,
+        pub pooling_contract_address: ContractAddress
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct StakerExitIntent {
+        pub staker_address: ContractAddress,
+        pub exit_at: u64
     }
 }
 
