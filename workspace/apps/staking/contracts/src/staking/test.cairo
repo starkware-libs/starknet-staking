@@ -25,7 +25,9 @@ use contracts::{
         }
     }
 };
-use contracts::event_test_utils::{assert_number_of_events, assert_staker_exit_intent_event,};
+use contracts::event_test_utils::{
+    assert_number_of_events, assert_staker_exit_intent_event, assert_staker_balance_changed_event
+};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::staking::interface::IStaking;
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
@@ -83,6 +85,7 @@ fn test_stake() {
         cfg.test_info.initial_supply, cfg.test_info.owner_address
     );
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
+    let mut spy = snforge_std::spy_events();
     stake_for_testing(ref state, :cfg, :token_address);
 
     // Check that the staker info was updated correctly.
@@ -104,6 +107,15 @@ fn test_stake() {
     let staking_contract_address = test_address();
     assert_eq!(
         erc20_dispatcher.balance_of(staking_contract_address), cfg.staker_info.amount_own.into()
+    );
+
+    // Validate the single BalanceChanged event.
+    let events = spy.get_events().emitted_by(test_address()).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "stake");
+    assert_staker_balance_changed_event(
+        spied_event: events[0],
+        staker_address: cfg.test_info.staker_address,
+        amount: cfg.staker_info.amount_own
     );
 }
 
@@ -287,11 +299,21 @@ fn test_increase_stake_from_staker_address() {
     let expected_staker_info = StakerInfo {
         amount_own: staker_info_before.amount_own + increase_amount, ..staker_info_before
     };
+    let mut spy = snforge_std::spy_events();
     // Increase stake from the same staker address.
     state.increase_stake(staker_address: cfg.test_info.staker_address, amount: increase_amount,);
 
     let updated_staker_info = state.staker_info.read(cfg.test_info.staker_address);
     assert_eq!(expected_staker_info, updated_staker_info);
+
+    // Validate the single BalanceChanged event.
+    let events = spy.get_events().emitted_by(test_address()).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
+    assert_staker_balance_changed_event(
+        spied_event: events[0],
+        staker_address: cfg.test_info.staker_address,
+        amount: expected_staker_info.amount_own
+    );
 }
 
 #[test]
