@@ -1,5 +1,6 @@
 #[starknet::contract]
 pub mod Staking {
+    use core::starknet::event::EventEmitter;
     use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
     use contracts::{
@@ -52,11 +53,12 @@ pub mod Staking {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         accesscontrolEvent: AccessControlComponent::Event,
         src5Event: SRC5Component::Event,
         balance_changed: Events::BalanceChanged,
-        new_delegation_pool: Events::NewDelegationPool
+        new_delegation_pool: Events::NewDelegationPool,
+        staker_exit_intent: Events::StakerExitIntent,
     }
 
     #[constructor]
@@ -185,6 +187,7 @@ pub mod Staking {
             let unstake_time = current_time + EXIT_WAITING_WINDOW;
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, staker_info);
+            self.emit(Events::StakerExitIntent { staker_address, exit_at: unstake_time });
             unstake_time
         }
 
