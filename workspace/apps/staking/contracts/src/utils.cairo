@@ -67,6 +67,10 @@ pub fn compute_rewards(amount: u128, interest: u64) -> u128 {
     )
 }
 
+pub fn ceil_of_division(dividend: u128, divisor: u128) -> u128 {
+    (dividend + divisor - 1) / divisor
+}
+
 
 #[cfg(test)]
 mod tests {

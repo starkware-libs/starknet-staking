@@ -246,6 +246,20 @@ pub(crate) fn stake_for_testing_using_dispatcher(
         );
 }
 
+pub(crate) fn stake_with_pooling_enabled(
+    mut cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress
+) -> ContractAddress {
+    cfg.test_info.pooling_enabled = true;
+
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+
+    staking_dispatcher
+        .state_of(cfg.test_info.staker_address)
+        .pooling_contract
+        .expect('Pool contract is none')
+}
+
 pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
     pooling_contract: ContractAddress, cfg: StakingInitConfig, token_address: ContractAddress
 ) {
@@ -335,7 +349,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pooling_enabled: false,
-            pool_contract_class_hash: DUMMY_CLASS_HASH(),
+            pool_contract_class_hash: declare_pool_contract(),
         };
         StakingInitConfig { staker_info, pool_member_info, staking_contract_info, test_info, }
     }

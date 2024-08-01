@@ -8,7 +8,7 @@ pub mod Staking {
         staking::{IStaking, StakerInfo, StakingContractInfo},
         utils::{
             u128_mul_wide_and_div_unsafe, deploy_delegation_pool_contract, compute_commission,
-            compute_rewards
+            compute_rewards, ceil_of_division
         },
     };
     use contracts::staking::Events;
@@ -205,11 +205,31 @@ pub mod Staking {
         fn add_to_delegation_pool(
             ref self: ContractState, pooled_staker: ContractAddress, amount: u128
         ) -> (u128, u64) {
-            // TODO: It is not clear from spec, but amount in the event may also include pooling.
-            //       Actually, Spec says a balance changed event is needed here and therefore I
-            //       suspect it should include pooling.
-            // self.emit(Events::BalanceChanged { staker_address, amount+pool });
-            (0, self.global_index.read())
+            let mut staker_info = self.staker_info.read(pooled_staker);
+            assert_with_err(staker_info.amount_own.is_non_zero(), Error::STAKER_NOT_EXISTS);
+            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
+            let pool_contract = expect_with_err(
+                staker_info.pooling_contract, Error::POOL_ADDRESS_DOES_NOT_EXIST
+            );
+            assert_with_err(
+                pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
+            );
+
+            self
+                .assert_leverage_is_valid(
+                    amount_staker: staker_info.amount_own,
+                    amount_pool: staker_info.amount_pool + amount
+                );
+            self.calculate_rewards(ref :staker_info);
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            erc20_dispatcher
+                .transfer_from(
+                    sender: pool_contract, recipient: get_contract_address(), amount: amount.into()
+                );
+            staker_info.amount_pool += amount;
+            self.staker_info.write(pooled_staker, staker_info);
+            self.add_to_total_stake(:amount);
+            (staker_info.amount_pool, staker_info.index)
         }
 
         fn remove_from_delegation_pool_intent(
@@ -379,6 +399,20 @@ pub mod Staking {
                 :token_address,
                 :rev_share
             )
+        }
+
+        fn assert_leverage_is_valid(self: @ContractState, amount_staker: u128, amount_pool: u128) {
+            let max_leverage = self.max_leverage.read();
+            // Note: leverage is defined by amount_pool / amount_staker.
+            assert_with_err(
+                max_leverage
+                    .into() >= ceil_of_division(dividend: amount_pool, divisor: amount_staker),
+                Error::LEVERAGE_EXCEEDED
+            );
+        }
+
+        fn add_to_total_stake(ref self: ContractState, amount: u128) {
+            self.total_stake.write(self.total_stake.read() + amount);
         }
     }
 }

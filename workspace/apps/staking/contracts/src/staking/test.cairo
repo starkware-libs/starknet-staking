@@ -16,7 +16,7 @@ use contracts::{
     utils::{compute_rewards, compute_commission},
     test_utils::{
         initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig,
-        stake_for_testing, fund, approve, declare_pool_contract,
+        stake_for_testing, fund, approve,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
             OWNER_ADDRESS, INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS,
@@ -239,7 +239,6 @@ fn test_claim_delegation_pool_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg.staker_info.pooling_contract = Option::Some(pooling_contract);
     // TODO: Set the contract address to the actual pool contract address.
-    cfg.test_info.pool_contract_class_hash = declare_pool_contract();
     cfg.test_info.pooling_enabled = true;
     let token_address = deploy_mock_erc20_contract(
         cfg.test_info.initial_supply, cfg.test_info.owner_address
@@ -337,7 +336,6 @@ fn test_claim_delegation_pool_rewards_unauthorized_address() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg.staker_info.pooling_contract = Option::Some(POOLING_CONTRACT_ADDRESS());
     // TODO: Set the contract address to the actual pool contract address.
-    cfg.test_info.pool_contract_class_hash = declare_pool_contract();
     cfg.test_info.pooling_enabled = true;
     let token_address = deploy_mock_erc20_contract(
         cfg.test_info.initial_supply, cfg.test_info.owner_address
@@ -611,8 +609,6 @@ fn test_stake_pooling_enabled() {
         cfg.test_info.initial_supply, cfg.test_info.owner_address
     );
 
-    // Declare pool contract and initialize Staking contract state.
-    cfg.test_info.pool_contract_class_hash = declare_pool_contract();
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
 
     // Stake with pooling enabled.
@@ -630,4 +626,13 @@ fn test_stake_pooling_enabled() {
     let expected_staker_info = cfg.staker_info;
     // Check that the staker info was updated correctly.
     assert_eq!(expected_staker_info, state.staker_info.read(cfg.test_info.staker_address));
+}
+
+// TODO: Create tests that cover all panic scenarios for add_to_delegation_pool.
+// TODO: Implement the following test.
+//       Note: The happy flow is also tested in test_enter_delegation_pool.
+//       in pooling/test.cairo.      
+#[test]
+fn test_add_to_delegation_pool() {
+    assert!(true);
 }

@@ -20,6 +20,8 @@ pub enum Error {
     UNSTAKE_IN_PROGRESS,
     POOL_ADDRESS_DOES_NOT_EXIST,
     CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
+    LEVERAGE_EXCEEDED,
+    CALLER_IS_NOT_POOL_CONTRACT,
     // Pooling contract errors
     CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     POOL_MEMBER_DOES_NOT_EXIST,
@@ -74,6 +76,8 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS => panic!(
             "Claim rewards must be called from pool member address or reward address."
         ),
+        Error::LEVERAGE_EXCEEDED => panic!("Cannot exceed max leverage."),
+        Error::CALLER_IS_NOT_POOL_CONTRACT => panic!("Caller is not pool contract."),
     }
 }
 
