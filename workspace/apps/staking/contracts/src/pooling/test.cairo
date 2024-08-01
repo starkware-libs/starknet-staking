@@ -13,13 +13,14 @@ use contracts::{
             InternalPoolingFunctionsTrait
         }
     },
+    staking::interface::StakerInfo,
     staking::Staking::__member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
     utils::{compute_rewards, compute_commission},
     test_utils::{
         initialize_pooling_state, deploy_mock_erc20_contract, StakingInitConfig,
-        deploy_staking_contract, fund, approve, declare_pool_contract,
-        initialize_staking_state_from_cfg, stake_for_testing_using_dispatcher,
-        enter_delegation_pool_for_testing_using_dispatcher,
+        deploy_staking_contract, fund, approve, initialize_staking_state_from_cfg,
+        stake_for_testing_using_dispatcher, enter_delegation_pool_for_testing_using_dispatcher,
+        stake_with_pooling_enabled
     },
     test_utils::constants::{
         OWNER_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
@@ -94,46 +95,48 @@ fn test_calculate_rewards_after_unpool_intent() {
 #[test]
 fn test_enter_delegation_pool() {
     let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    // Transfer the stake amount to the pool member.
-    cheat_caller_address(token_address, cfg.test_info.owner_address, CheatSpan::TargetCalls(1));
-    erc20_dispatcher
-        .transfer(recipient: POOL_MEMBER_ADDRESS(), amount: cfg.staker_info.amount_own.into());
-    // Deploy the staking contract and initialize the pooling state.
+    // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    let mut state = initialize_pooling_state(
-        staker_address: cfg.test_info.staker_address,
-        :staking_contract,
-        :token_address,
-        rev_share: cfg.staker_info.rev_share
-    );
-    // Approve the pooling contract to transfer the pool member's funds.
-    cheat_caller_address(token_address, POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
-    erc20_dispatcher.approve(spender: test_address(), amount: cfg.staker_info.amount_own.into());
-    // Enter the delegation pool.
-    cheat_caller_address(test_address(), POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
-    assert!(
-        state
-            .enter_delegation_pool(
-                amount: cfg.staker_info.amount_own, reward_address: cfg.staker_info.reward_address
-            )
-    );
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+
     // Check that the pool member info was updated correctly.
     let expected_pool_member_info: PoolMemberInfo = PoolMemberInfo {
-        amount: cfg.staker_info.amount_own,
-        index: cfg.staker_info.index,
+        amount: cfg.pool_member_info.amount,
+        index: cfg.pool_member_info.index,
         unpool_time: Option::None,
-        reward_address: cfg.staker_info.reward_address,
-        unclaimed_rewards: cfg.staker_info.unclaimed_rewards_pool,
+        reward_address: cfg.pool_member_info.reward_address,
+        unclaimed_rewards: cfg.pool_member_info.unclaimed_rewards,
     };
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     assert_eq!(
-        state.pool_member_address_to_info.read(POOL_MEMBER_ADDRESS()), expected_pool_member_info
+        pooling_dispatcher.state_of(cfg.test_info.pool_member_address), expected_pool_member_info
     );
-// TODO: Check that the index was updated correctly.
-// TODO: Check that the funds were transferred correctly.
+    // Check that all the pool amount was transferred to the staking contract.
+    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let balance = erc20_dispatcher.balance_of(staking_contract);
+    assert_eq!(balance, cfg.staker_info.amount_own.into() + cfg.pool_member_info.amount.into());
+    let balance = erc20_dispatcher.balance_of(pooling_contract);
+    assert_eq!(balance, 0);
+    // Check that the staker info was updated correctly. 
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let expected_staker_info = StakerInfo {
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        pooling_contract: Option::Some(pooling_contract),
+        unstake_time: Option::None,
+        amount_own: cfg.staker_info.amount_own,
+        amount_pool: cfg.pool_member_info.amount,
+        index: cfg.staker_info.index,
+        unclaimed_rewards_own: 0,
+        unclaimed_rewards_pool: 0,
+        rev_share: cfg.staker_info.rev_share,
+    };
+    assert_eq!(staking_dispatcher.state_of(cfg.test_info.staker_address), expected_staker_info);
 }
 
 #[test]
@@ -164,44 +167,26 @@ fn test_assert_staker_is_active_panic() {
 #[test]
 fn test_change_reward_address() {
     let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
+    // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    let mut state = initialize_pooling_state(
-        staker_address: cfg.test_info.staker_address,
-        :staking_contract,
-        :token_address,
-        rev_share: cfg.staker_info.rev_share
-    );
-    fund(
-        sender: cfg.test_info.owner_address,
-        recipient: POOL_MEMBER_ADDRESS(),
-        amount: cfg.test_info.staker_initial_balance,
-        :token_address
-    );
-    approve(
-        owner: POOL_MEMBER_ADDRESS(),
-        spender: test_address(),
-        amount: cfg.test_info.staker_initial_balance,
-        :token_address
-    );
-    cheat_caller_address(test_address(), POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
-    state
-        .enter_delegation_pool(
-            amount: cfg.test_info.staker_initial_balance,
-            reward_address: cfg.staker_info.reward_address
-        );
-    let pool_member_info_before_change = state
-        .pool_member_address_to_info
-        .read(POOL_MEMBER_ADDRESS());
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    let pool_member_info_before_change = pooling_dispatcher
+        .state_of(cfg.test_info.pool_member_address);
     let other_reward_address = OTHER_REWARD_ADDRESS();
 
-    cheat_caller_address(test_address(), POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
-    state.change_reward_address(other_reward_address);
-    let pool_member_info_after_change = state
-        .pool_member_address_to_info
-        .read(POOL_MEMBER_ADDRESS());
+    cheat_caller_address(
+        pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(1)
+    );
+    pooling_dispatcher.change_reward_address(other_reward_address);
+    let pool_member_info_after_change = pooling_dispatcher
+        .state_of(cfg.test_info.pool_member_address);
     let pool_member_info_expected = PoolMemberInfo {
         reward_address: other_reward_address, ..pool_member_info_before_change
     };
@@ -230,26 +215,16 @@ fn test_change_reward_address_pool_member_not_exist() {
 
 #[test]
 fn test_claim_rewards() {
-    let mut cfg: StakingInitConfig = Default::default();
-    cfg.test_info.pooling_enabled = true;
-    cfg.test_info.pool_contract_class_hash = declare_pool_contract();
-
+    let cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
-
-    // Deploy the staking contract.
+    // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-
-    let pooling_contract = staking_dispatcher
-        .state_of(cfg.test_info.staker_address)
-        .pooling_contract
-        .expect('Pool contract is none');
-
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     // Check that the pool member info was updated correctly.
     assert_eq!(
@@ -263,6 +238,7 @@ fn test_claim_rewards() {
         staking_contract, selector!("global_index"), array![updated_index.into()].span()
     );
 
+    // Claim rewards, and validate the results.
     cheat_caller_address(
         pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(1)
     );
