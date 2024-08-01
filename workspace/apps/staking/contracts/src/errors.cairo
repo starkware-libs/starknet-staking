@@ -28,6 +28,7 @@ pub enum Error {
     AMOUNT_IS_ZERO,
     // Minting contract errors
     TOTAL_SUPPLY_NOT_U128,
+    POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
 }
 
 
@@ -70,6 +71,9 @@ pub fn panic_by_err(error: Error) -> core::never {
         ),
         Error::AMOUNT_IS_ZERO => panic!("Amount must be positive."),
         Error::TOTAL_SUPPLY_NOT_U128 => panic!("Total supply does not fit in u128."),
+        Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS => panic!(
+            "Claim rewards must be called from pool member address or reward address."
+        ),
     }
 }
 
