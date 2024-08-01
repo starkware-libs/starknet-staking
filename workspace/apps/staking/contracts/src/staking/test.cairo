@@ -137,9 +137,7 @@ fn test_calculate_rewards() {
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     let mut staker_info = cfg.staker_info;
     let interest = state.global_index.read() - staker_info.index;
-    assert!(
-        state.calculate_rewards(staker_address: cfg.test_info.staker_address, ref :staker_info)
-    );
+    assert!(state.calculate_rewards(ref :staker_info));
     let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
     let pool_rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
     let commission = compute_commission(
@@ -162,7 +160,7 @@ fn test_calculate_rewards_unstake_intent() {
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
 
     let mut staker_info = StakerInfo { unstake_time: Option::Some(1), ..cfg.staker_info };
-    assert!(!state.calculate_rewards(cfg.test_info.staker_address, ref :staker_info));
+    assert!(!state.calculate_rewards(ref :staker_info));
 }
 
 #[test]

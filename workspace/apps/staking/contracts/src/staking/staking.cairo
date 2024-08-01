@@ -152,7 +152,7 @@ pub mod Staking {
                     recipient: staking_contract_address,
                     amount: amount.into()
                 );
-            self.calculate_rewards(staker_address, ref staker_info);
+            self.calculate_rewards(ref :staker_info);
             staker_info.amount_own += amount;
             self.staker_info.write(staker_address, staker_info);
             self.total_stake.write(self.get_total_stake() + amount);
@@ -170,7 +170,7 @@ pub mod Staking {
                 caller_address == staker_address || caller_address == staker_info.reward_address,
                 Error::CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
             );
-            self.calculate_rewards(staker_address, ref staker_info);
+            self.calculate_rewards(ref :staker_info);
             let amount = staker_info.unclaimed_rewards_own;
 
             let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
@@ -186,7 +186,7 @@ pub mod Staking {
             let mut staker_info = self.staker_info.read(staker_address);
             assert_with_err(staker_info.amount_own.is_non_zero(), Error::STAKER_NOT_EXISTS);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            self.calculate_rewards(staker_address, ref :staker_info);
+            self.calculate_rewards(ref :staker_info);
             let current_time = get_block_timestamp();
             let unstake_time = current_time + EXIT_WAITING_WINDOW;
             staker_info.unstake_time = Option::Some(unstake_time);
@@ -284,7 +284,7 @@ pub mod Staking {
                 pool_address == get_caller_address(),
                 Error::CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS
             );
-            self.calculate_rewards(staker_address, ref staker_info);
+            self.calculate_rewards(ref :staker_info);
             // Calculate rewards updated the index in staker_info.
             let updated_index = staker_info.index;
             let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
@@ -344,9 +344,7 @@ pub mod Staking {
         /// - unclaimed_rewards_own
         /// - unclaimed_rewards_pool
         /// - index
-        fn calculate_rewards(
-            ref self: ContractState, staker_address: ContractAddress, ref staker_info: StakerInfo
-        ) -> bool {
+        fn calculate_rewards(ref self: ContractState, ref staker_info: StakerInfo) -> bool {
             if (staker_info.unstake_time.is_some()) {
                 return false;
             }
