@@ -1,6 +1,11 @@
 use contracts::{BASE_VALUE, staking::Staking, pooling::Pooling, minting_curve::MintingCurve};
 use core::traits::Into;
-use contracts::staking::interface::{IStaking, StakerInfo, StakingContractInfo};
+use contracts::staking::interface::{
+    IStaking, StakerInfo, StakingContractInfo, IStakingDispatcher, IStakingDispatcherTrait
+};
+use contracts::pooling::interface::{
+    IPooling, PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait
+};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
@@ -9,8 +14,9 @@ use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::Staking::ContractState;
 use constants::{
     NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, MAX_LEVERAGE, STAKER_INITIAL_BALANCE,
-    STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
-    POOLING_CONTRACT_ADDRESS, POOL_AMOUNT, DUMMY_CLASS_HASH
+    STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS, TOKEN_ADDRESS,
+    REV_SHARE, POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH,
+    POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
 };
 use snforge_std::{ContractClass, CheatSpan, cheat_caller_address, test_address};
 pub(crate) mod constants {
@@ -18,11 +24,12 @@ pub(crate) mod constants {
     use starknet::class_hash::{ClassHash, class_hash_const};
 
     pub const STAKER_INITIAL_BALANCE: u128 = 10000000000;
+    pub const POOL_MEMBER_INITIAL_BALANCE: u128 = 10000000000;
     pub const INITIAL_SUPPLY: u256 = 10000000000000000;
     pub const MAX_LEVERAGE: u64 = 100;
     pub const MIN_STAKE: u128 = 100000;
     pub const STAKE_AMOUNT: u128 = 200000;
-    pub const POOL_AMOUNT: u128 = 100000;
+    pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
     pub const REV_SHARE: u16 = 500;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
@@ -61,8 +68,14 @@ pub(crate) mod constants {
     pub fn RECIPIENT_ADDRESS() -> ContractAddress {
         contract_address_const::<'RECIPIENT_ADDRESS'>()
     }
-    pub fn REWARD_ADDRESS() -> ContractAddress {
-        contract_address_const::<'REWARD_ADDRESS'>()
+    pub fn STAKER_REWARD_ADDRESS() -> ContractAddress {
+        contract_address_const::<'STAKER_REWARD_ADDRESS'>()
+    }
+    pub fn POOL_MEMBER_REWARD_ADDRESS() -> ContractAddress {
+        contract_address_const::<'POOL_MEMBER_REWARD_ADDRESS'>()
+    }
+    pub fn POOLING_REWARD_ADDRESS() -> ContractAddress {
+        contract_address_const::<'POOLING_REWARD_ADDRESS'>()
     }
     pub fn OTHER_REWARD_ADDRESS() -> ContractAddress {
         contract_address_const::<'OTHER_REWARD_ADDRESS'>()
@@ -183,9 +196,8 @@ pub(crate) fn approve(
     erc20_dispatcher.approve(:spender, amount: amount.into());
 }
 
-// Stake according to the given configuration, the staker is cfg.test_info.staker_address.
-pub(crate) fn stake_for_testing(
-    ref state: ContractState, cfg: StakingInitConfig, token_address: ContractAddress
+pub(crate) fn fund_and_approve_for_stake(
+    cfg: StakingInitConfig, staking_contract: ContractAddress, token_address: ContractAddress
 ) {
     fund(
         sender: cfg.test_info.owner_address,
@@ -195,11 +207,19 @@ pub(crate) fn stake_for_testing(
     );
     approve(
         owner: cfg.test_info.staker_address,
-        spender: test_address(),
+        spender: staking_contract,
         amount: cfg.test_info.staker_initial_balance,
         :token_address
     );
-    cheat_caller_address(test_address(), cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
+}
+
+// Stake according to the given configuration, the staker is cfg.test_info.staker_address.
+pub(crate) fn stake_for_testing(
+    ref state: ContractState, cfg: StakingInitConfig, token_address: ContractAddress
+) {
+    let staking_contract = test_address();
+    fund_and_approve_for_stake(:cfg, :staking_contract, :token_address);
+    cheat_caller_address(staking_contract, cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
     state
         .stake(
             cfg.staker_info.reward_address,
@@ -210,12 +230,64 @@ pub(crate) fn stake_for_testing(
         );
 }
 
+pub(crate) fn stake_for_testing_using_dispatcher(
+    cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress
+) {
+    fund_and_approve_for_stake(:cfg, :staking_contract, :token_address);
+    cheat_caller_address(staking_contract, cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher
+        .stake(
+            cfg.staker_info.reward_address,
+            cfg.staker_info.operational_address,
+            cfg.staker_info.amount_own,
+            cfg.test_info.pooling_enabled,
+            cfg.staker_info.rev_share
+        );
+}
+
+pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
+    pooling_contract: ContractAddress, cfg: StakingInitConfig, token_address: ContractAddress
+) {
+    // Transfer the stake amount to the pool member.
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: cfg.test_info.pool_member_address,
+        amount: cfg.test_info.pool_member_initial_balance,
+        :token_address
+    );
+
+    // Approve the pooling contract to transfer the pool member's funds.
+    approve(
+        owner: cfg.test_info.pool_member_address,
+        spender: pooling_contract,
+        amount: cfg.pool_member_info.amount,
+        :token_address
+    );
+
+    // Enter the delegation pool.
+    cheat_caller_address(
+        pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(1)
+    );
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    assert!(
+        pooling_dispatcher
+            .enter_delegation_pool(
+                amount: cfg.pool_member_info.amount,
+                reward_address: cfg.pool_member_info.reward_address
+            )
+    );
+}
+
+
 #[derive(Drop, Copy)]
 pub(crate) struct TestInfo {
     pub staker_address: ContractAddress,
+    pub pool_member_address: ContractAddress,
     pub owner_address: ContractAddress,
     pub initial_supply: u256,
     pub staker_initial_balance: u128,
+    pub pool_member_initial_balance: u128,
     pub pooling_enabled: bool,
     pub pool_contract_class_hash: ClassHash,
 }
@@ -223,6 +295,7 @@ pub(crate) struct TestInfo {
 #[derive(Drop, Copy)]
 pub(crate) struct StakingInitConfig {
     pub staker_info: StakerInfo,
+    pub pool_member_info: PoolMemberInfo,
     pub staking_contract_info: StakingContractInfo,
     pub test_info: TestInfo,
 }
@@ -230,7 +303,7 @@ pub(crate) struct StakingInitConfig {
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
     fn default() -> StakingInitConfig {
         let staker_info = StakerInfo {
-            reward_address: REWARD_ADDRESS(),
+            reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             pooling_contract: Option::None,
             unstake_time: Option::None,
@@ -241,6 +314,13 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             unclaimed_rewards_pool: 0,
             rev_share: REV_SHARE,
         };
+        let pool_member_info = PoolMemberInfo {
+            reward_address: POOL_MEMBER_REWARD_ADDRESS(),
+            amount: POOL_MEMBER_STAKE_AMOUNT,
+            index: BASE_VALUE,
+            unclaimed_rewards: 0,
+            unpool_time: Option::None,
+        };
         let staking_contract_info = StakingContractInfo {
             max_leverage: MAX_LEVERAGE,
             min_stake: MIN_STAKE,
@@ -249,12 +329,14 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         };
         let test_info = TestInfo {
             staker_address: STAKER_ADDRESS(),
+            pool_member_address: POOL_MEMBER_ADDRESS(),
             owner_address: OWNER_ADDRESS(),
             initial_supply: INITIAL_SUPPLY,
             staker_initial_balance: STAKER_INITIAL_BALANCE,
+            pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pooling_enabled: false,
             pool_contract_class_hash: DUMMY_CLASS_HASH(),
         };
-        StakingInitConfig { staker_info, staking_contract_info, test_info, }
+        StakingInitConfig { staker_info, pool_member_info, staking_contract_info, test_info, }
     }
 }

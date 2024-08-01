@@ -19,9 +19,9 @@ use contracts::{
         stake_for_testing, fund, approve, declare_pool_contract,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
-            OWNER_ADDRESS, INITIAL_SUPPLY, REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
-            STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
-            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_AMOUNT
+            OWNER_ADDRESS, INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS,
+            STAKER_ADDRESS, STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
+            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT
         }
     }
 };
@@ -126,7 +126,7 @@ fn test_calculate_rewards() {
         .staker_info =
             StakerInfo {
                 pooling_contract: Option::Some(POOLING_CONTRACT_ADDRESS()),
-                amount_pool: POOL_AMOUNT,
+                amount_pool: POOL_MEMBER_STAKE_AMOUNT,
                 index: 0,
                 ..cfg.staker_info
             };
