@@ -1,8 +1,7 @@
-use core::traits::TryInto;
-use contracts::minting_curve::interface::IMintingCurve;
-use contracts::staking::Staking;
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+use contracts::minting_curve::interface::IMintingCurve;
 use contracts::minting_curve::MintingCurve;
+use contracts::minting_curve::MintingCurve::compute_yearly_mint;
 use contracts::test_utils::{
     initialize_minting_curve_state, deploy_staking_contract, deploy_mock_erc20_contract, fund,
     approve, StakingInitConfig,
@@ -43,10 +42,9 @@ fn test_yearly_mint() {
             rev_share: cfg.staker_info.rev_share
         );
 
-    // Maximal theoretical inflation
-    let C: u8 = 2;
-    let expected_minted_tokens: u128 = C.into()
-        * u256_sqrt(total_supply.into() * cfg.staker_info.amount_own.into());
+    let expected_minted_tokens: u128 = compute_yearly_mint(
+        total_stake: cfg.staker_info.amount_own, :total_supply
+    );
     let minted_tokens = state.yearly_mint();
     assert_eq!(minted_tokens, expected_minted_tokens);
 }
