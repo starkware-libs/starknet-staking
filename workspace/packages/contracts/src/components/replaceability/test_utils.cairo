@@ -1,8 +1,13 @@
+use contracts_commons::components::replaceability::ReplaceabilityComponent;
 use contracts_commons::components::replaceability::interface::EICData;
 use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
 use contracts_commons::components::replaceability::interface::ImplementationData;
+use contracts_commons::components::replaceability::interface::ImplementationFinalized;
+use contracts_commons::components::replaceability::interface::ImplementationReplaced;
+use contracts_commons::components::replaceability::mock::ReplaceabilityMock;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use snforge_std::{ContractClassTrait, declare, get_class_hash};
+use snforge_std::{ContractClassTrait, declare, get_class_hash, load};
+use snforge_std::cheatcodes::events::{Event, Events, is_emitted};
 use starknet::ContractAddress;
 use starknet::class_hash::ClassHash;
 
@@ -54,6 +59,12 @@ fn set_caller_as_upgrade_governor(contract_address: ContractAddress, caller: Con
     roles_dispatcher.register_upgrade_governor(account: caller);
 }
 
+pub fn dummy_final_implementation_data_with_class_hash(
+    class_hash: ClassHash
+) -> ImplementationData {
+    ImplementationData { impl_hash: class_hash, eic_data: Option::None(()), final: true }
+}
+
 pub(crate) fn dummy_nonfinal_implementation_data_with_class_hash(
     class_hash: ClassHash
 ) -> ImplementationData {
@@ -70,4 +81,48 @@ pub(crate) fn dummy_nonfinal_eic_implementation_data_with_class_hash(
     let eic_data = EICData { eic_hash: eic_contract.class_hash, eic_init_data: calldata.span() };
 
     ImplementationData { impl_hash: class_hash, eic_data: Option::Some(eic_data), final: false }
+}
+
+pub(crate) fn assert_implementation_replaced_event_emitted(
+    mut spied_event: @(ContractAddress, Event), implementation_data: ImplementationData
+) {
+    let expected_event = @ReplaceabilityMock::Event::ReplaceabilityEvent(
+        ReplaceabilityComponent::Event::ImplementationReplaced(
+            ImplementationReplaced { implementation_data: implementation_data }
+        )
+    );
+    assert_expected_event_emitted(:spied_event, :expected_event);
+}
+
+pub(crate) fn assert_implementation_finalized_event_emitted(
+    mut spied_event: @(ContractAddress, Event), implementation_data: ImplementationData
+) {
+    let expected_event = @ReplaceabilityMock::Event::ReplaceabilityEvent(
+        ReplaceabilityComponent::Event::ImplementationFinalized(
+            ImplementationFinalized { impl_hash: implementation_data.impl_hash }
+        )
+    );
+    assert_expected_event_emitted(:spied_event, :expected_event);
+}
+
+fn assert_expected_event_emitted(
+    mut spied_event: @(ContractAddress, Event), expected_event: @ReplaceabilityMock::Event
+) {
+    let (event_address, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*event_address, raw_event.clone())] };
+    if (!is_emitted(
+        self: @wrapped_spied_event, expected_emitted_by: event_address, :expected_event
+    )) {
+        let event_from: felt252 = (*event_address).into();
+        panic!("Could not match expected event from {}", event_from);
+    }
+}
+
+pub(crate) fn assert_finalized_status(expected: bool, contract_address: ContractAddress) {
+    // load the finalized attribute from the storage of the given contract.
+    let finalized = *load(
+        target: contract_address, storage_address: selector!("finalized"), size: 1
+    )
+        .at(0);
+    assert!(finalized == expected.into());
 }

@@ -6,8 +6,14 @@ mod ReplaceabilityTests {
     use contracts_commons::components::replaceability::interface::ImplementationReplaced;
     use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
     use contracts_commons::components::replaceability::interface::IReplaceableDispatcherTrait;
+    use contracts_commons::components::replaceability::interface::IReplaceableSafeDispatcher;
+    use contracts_commons::components::replaceability::interface::IReplaceableSafeDispatcherTrait;
     use contracts_commons::components::replaceability::mock::ReplaceabilityMock;
+    use contracts_commons::components::replaceability::test_utils::assert_finalized_status;
+    use contracts_commons::components::replaceability::test_utils::assert_implementation_finalized_event_emitted;
+    use contracts_commons::components::replaceability::test_utils::assert_implementation_replaced_event_emitted;
     use contracts_commons::components::replaceability::test_utils::deploy_replaceability_mock;
+    use contracts_commons::components::replaceability::test_utils::dummy_final_implementation_data_with_class_hash;
     use contracts_commons::components::replaceability::test_utils::dummy_nonfinal_eic_implementation_data_with_class_hash;
     use contracts_commons::components::replaceability::test_utils::dummy_nonfinal_implementation_data_with_class_hash;
     use contracts_commons::components::replaceability::test_utils::get_upgrade_governor_account;
@@ -336,6 +342,78 @@ mod ReplaceabilityTests {
         );
 
         // Should revert with UNKNOWN_IMPLEMENTATION as replace_to removes the implementation.
+        replaceable_dispatcher.replace_to(:implementation_data);
+    }
+
+    #[test]
+    fn test_replace_to_final() {
+        // Tests replacing an implementation to a final implementation, as follows:
+        // 1. deploys a replaceable contract
+        // 2. generates a final dummy implementation replacement
+        // 3. adds it to the replaceable contract
+        // 4. advances time until the new implementation is ready
+        // 5. replaces to the new implemenation
+        // 6. checks the implementation is final
+        let replaceable_dispatcher = deploy_replaceability_mock();
+        let contract_address = replaceable_dispatcher.contract_address;
+        let implementation_data = dummy_final_implementation_data_with_class_hash(
+            get_class_hash(contract_address)
+        );
+
+        // Invoke as an Upgrade Governor.
+        cheat_caller_address(
+            contract_address,
+            get_upgrade_governor_account(:contract_address),
+            CheatSpan::TargetCalls(2)
+        );
+        let mut spy = spy_events();
+        replaceable_dispatcher.add_new_implementation(:implementation_data);
+
+        // Advance time to enable implementation.
+        cheat_block_timestamp(contract_address, DEFAULT_UPGRADE_DELAY + 1, CheatSpan::Indefinite);
+        replaceable_dispatcher.replace_to(:implementation_data);
+
+        // Validate event emissions -- replacement and finalization of the implementation.
+        let events = spy.get_events().emitted_by(contract_address).events;
+        // Should emit 3 events: ImplementationAdded, ImplementationReplaced, ImplementationFinalized.
+        assert!(events.len() == 3);
+        assert_implementation_replaced_event_emitted(events.at(1), implementation_data);
+        assert_implementation_finalized_event_emitted(events.at(2), implementation_data);
+
+        // Validate finalized status.
+        assert_finalized_status(expected: true, :contract_address);
+    // TODO: Check the new impl hash.
+    }
+
+    #[test]
+    #[feature("safe_dispatcher")]
+    #[should_panic(expected: ('FINALIZED',))]
+    fn test_replace_to_already_final() {
+        let replaceable_dispatcher = deploy_replaceability_mock();
+        let contract_address = replaceable_dispatcher.contract_address;
+        let replaceable_safe_dispatcher = IReplaceableSafeDispatcher { contract_address };
+        let implementation_data = dummy_final_implementation_data_with_class_hash(
+            get_class_hash(contract_address)
+        );
+
+        // Invoke as an Upgrade Governor.
+        cheat_caller_address(
+            contract_address,
+            get_upgrade_governor_account(:contract_address),
+            CheatSpan::TargetCalls(3)
+        );
+        replaceable_dispatcher.add_new_implementation(:implementation_data);
+
+        // Advance time to enable implementation.
+        cheat_block_timestamp(contract_address, DEFAULT_UPGRADE_DELAY + 1, CheatSpan::Indefinite);
+
+        // Should NOT revert with FINALIZED as there is no finalized implementation yet.
+        match replaceable_safe_dispatcher.replace_to(:implementation_data) {
+            Result::Ok(_) => (),
+            Result::Err(_) => panic!("First replace should NOT result an error."),
+        };
+
+        // Should revert with FINALIZED as the implementation is already finalized.
         replaceable_dispatcher.replace_to(:implementation_data);
     }
 }
