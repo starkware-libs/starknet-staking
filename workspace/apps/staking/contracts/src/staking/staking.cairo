@@ -4,8 +4,9 @@ pub mod Staking {
     use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
     use contracts::{
-        BASE_VALUE, errors::{Error, panic_by_err, assert_with_err, expect_with_err},
-        staking::{IStaking, StakerInfo, StakingContractInfo},
+        constants::{BASE_VALUE, EXIT_WAITING_WINDOW},
+        errors::{Error, panic_by_err, assert_with_err, expect_with_err},
+        staking::{IStaking, StakerInfo, StakerInfoTrait, StakingContractInfo},
         utils::{
             u128_mul_wide_and_div_unsafe, deploy_delegation_pool_contract, compute_commission,
             compute_rewards, ceil_of_division
@@ -23,7 +24,6 @@ pub mod Staking {
     // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value). 
     pub const MIN_INCREASE_STAKE: u128 = 10;
     pub const REV_SHARE_DENOMINATOR: u16 = 10000;
-    pub const EXIT_WAITING_WINDOW: u64 = 60 * 60 * 24 * 7 * 3; // 3 weeks
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -34,6 +34,18 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+
+    #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
+    pub struct UndelegateIntentKey {
+        pub pool_contract: ContractAddress,
+        pub identifier: ContractAddress
+    }
+
+    #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+    pub struct UndelegateIntentValue {
+        pub unpool_time: u64,
+        pub amount: u128
+    }
 
     #[storage]
     struct Storage {
@@ -49,6 +61,7 @@ pub mod Staking {
         token_address: ContractAddress,
         total_stake: u128,
         pool_contract_class_hash: ClassHash,
+        pool_exit_intents: LegacyMap::<UndelegateIntentKey, UndelegateIntentValue>,
     }
 
     #[event]
@@ -235,10 +248,28 @@ pub mod Staking {
         fn remove_from_delegation_pool_intent(
             ref self: ContractState,
             staker_address: ContractAddress,
+            identifier: ContractAddress,
             amount: u128,
-            identifier: Span<felt252>
-        ) -> felt252 {
-            0
+        ) -> u64 {
+            let mut staker_info = expect_with_err(
+                self.get_staker(staker_address), Error::STAKER_NOT_EXISTS
+            );
+            let pool_contract = expect_with_err(
+                staker_info.pooling_contract, Error::MISSING_POOL_CONTRACT
+            );
+            assert_with_err(
+                pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
+            );
+            assert_with_err(staker_info.amount_pool >= amount, Error::INSUFFICIENT_POOL_BALANCE);
+            self.calculate_rewards(ref :staker_info);
+            staker_info.amount_pool -= amount;
+            self.remove_from_total_stake(:amount);
+            self.staker_info.write(staker_address, staker_info);
+            let unpool_time = staker_info.compute_unpool_time();
+            let pool_exit_key = UndelegateIntentKey { pool_contract, identifier };
+            let pool_exit_entry = UndelegateIntentValue { unpool_time, amount };
+            self.pool_exit_intents.write(pool_exit_key, pool_exit_entry);
+            unpool_time
         }
 
         fn remove_from_delegation_pool_action(
@@ -301,8 +332,7 @@ pub mod Staking {
                 staker_info.pooling_contract, Error::POOL_ADDRESS_DOES_NOT_EXIST
             );
             assert_with_err(
-                pool_address == get_caller_address(),
-                Error::CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS
+                pool_address == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
             self.calculate_rewards(ref :staker_info);
             // Calculate rewards updated the index in staker_info.
@@ -413,6 +443,10 @@ pub mod Staking {
 
         fn add_to_total_stake(ref self: ContractState, amount: u128) {
             self.total_stake.write(self.total_stake.read() + amount);
+        }
+
+        fn remove_from_total_stake(ref self: ContractState, amount: u128) {
+            self.total_stake.write(self.total_stake.read() - amount);
         }
     }
 }

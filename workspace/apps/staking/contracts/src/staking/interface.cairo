@@ -1,4 +1,6 @@
-use starknet::{ContractAddress, ClassHash};
+use starknet::{ContractAddress, ClassHash, get_block_timestamp};
+use contracts::constants::EXIT_WAITING_WINDOW;
+use core::cmp::max;
 
 pub mod Events {
     use starknet::ContractAddress;
@@ -36,6 +38,16 @@ pub struct StakerInfo {
     pub rev_share: u16,
 }
 
+#[generate_trait]
+pub impl StakerInfoImpl of StakerInfoTrait {
+    fn compute_unpool_time(self: @StakerInfo) -> u64 {
+        if let Option::Some(unstake_time) = *self.unstake_time {
+            return max(unstake_time, get_block_timestamp());
+        }
+        get_block_timestamp() + EXIT_WAITING_WINDOW
+    }
+}
+
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
     pub max_leverage: u64,
@@ -66,9 +78,9 @@ pub trait IStaking<TContractState> {
     fn remove_from_delegation_pool_intent(
         ref self: TContractState,
         staker_address: ContractAddress,
+        identifier: ContractAddress,
         amount: u128,
-        identifier: Span<felt252>
-    ) -> felt252;
+    ) -> u64;
     fn remove_from_delegation_pool_action(
         ref self: TContractState, staker_address: ContractAddress, identifier: Span<felt252>
     ) -> u128;

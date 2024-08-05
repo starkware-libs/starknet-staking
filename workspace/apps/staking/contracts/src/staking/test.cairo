@@ -1,5 +1,5 @@
 use contracts::{
-    BASE_VALUE,
+    constants::{BASE_VALUE, EXIT_WAITING_WINDOW},
     staking::{
         StakerInfo, Staking,
         Staking::{
@@ -34,7 +34,7 @@ use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::staking::Staking::ContractState;
-use contracts::staking::Staking::{REV_SHARE_DENOMINATOR, EXIT_WAITING_WINDOW, MIN_INCREASE_STAKE};
+use contracts::staking::Staking::{REV_SHARE_DENOMINATOR, MIN_INCREASE_STAKE};
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
 use snforge_std::{cheat_caller_address, CheatSpan, test_address};
@@ -329,9 +329,7 @@ fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
 
 
 #[test]
-#[should_panic(
-    expected: "Claim delegation pool rewards must be called from delegation pooling contract."
-)]
+#[should_panic(expected: "Caller is not pool contract.")]
 fn test_claim_delegation_pool_rewards_unauthorized_address() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg.staker_info.pooling_contract = Option::Some(POOLING_CONTRACT_ADDRESS());
@@ -634,5 +632,14 @@ fn test_stake_pooling_enabled() {
 //       in pooling/test.cairo.      
 #[test]
 fn test_add_to_delegation_pool() {
+    assert!(true);
+}
+
+// TODO: Create tests that cover all panic scenarios for remove_from_delegation_pool_intent.
+// TODO: Implement the following test.
+//       Note: The happy flow is also tested in test_exit_delegation_pool_intent.
+//       in pooling/test.cairo.      
+#[test]
+fn test_remove_from_delegation_pool_intent() {
     assert!(true);
 }

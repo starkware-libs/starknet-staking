@@ -214,7 +214,7 @@ Inform the staker that an amount will be reduced from the delegation pool.
 | name       | type            |
 | ---------- | --------------- |
 | staker     | address         |
-| identifier | Span\<felt252\> |
+| identifier | felt252         |
 | amount     | u128            |
 #### return <!-- omit from toc -->
 unstake_time: time - when will the pool member be able to exit.

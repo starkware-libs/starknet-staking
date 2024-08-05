@@ -1,5 +1,15 @@
 use starknet::ContractAddress;
 
+pub mod Events {
+    use starknet::ContractAddress;
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct PoolMemberExitIntent {
+        pub pool_member: ContractAddress,
+        pub exit_at: u64
+    }
+}
+
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub struct PoolMemberInfo {
     pub reward_address: ContractAddress,
@@ -15,7 +25,7 @@ pub trait IPooling<TContractState> {
         ref self: TContractState, amount: u128, reward_address: ContractAddress
     ) -> bool;
     fn add_to_delegation_pool(ref self: TContractState, amount: u128) -> u128;
-    fn exit_delegation_pool_intent(ref self: TContractState) -> u128;
+    fn exit_delegation_pool_intent(ref self: TContractState);
     fn exit_delegation_pool_action(ref self: TContractState) -> u128;
     fn claim_rewards(ref self: TContractState, pool_member: ContractAddress) -> u128;
     fn switch_delegation_pool(
