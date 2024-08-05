@@ -296,6 +296,19 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
 }
 
 
+pub(crate) fn load_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<V>>(
+    map_selector: felt252, key: K, contract: ContractAddress
+) -> V {
+    let mut keys = array![];
+    key.serialize(ref keys);
+    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
+    let serialized_value = snforge_std::load(
+        target: contract, :storage_address, size: Store::<V>::size().into()
+    );
+    let mut span = serialized_value.span();
+    Serde::<V>::deserialize(ref span).expect('Failed deserialize')
+}
+
 #[derive(Drop, Copy)]
 pub(crate) struct TestInfo {
     pub staker_address: ContractAddress,
@@ -357,15 +370,3 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
     }
 }
 
-pub(crate) fn load_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<V>>(
-    map_selector: felt252, key: K, contract: ContractAddress
-) -> V {
-    let mut keys = array![];
-    key.serialize(ref keys);
-    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
-    let intents_map = snforge_std::load(
-        target: contract, :storage_address, size: Store::<V>::size().into()
-    );
-    let mut span = intents_map.span();
-    Serde::<V>::deserialize(ref span).expect('Failed deserialize')
-}
