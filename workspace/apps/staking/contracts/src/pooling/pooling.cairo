@@ -219,8 +219,8 @@ pub mod Pooling {
         }
 
         fn assert_staker_is_active(self: @ContractState) {
-            if let Option::Some(_) = self.final_staker_index.read() {
-                panic_by_err(Error::STAKER_IS_INACTIVE);
+            if self.final_staker_index.read().is_some() {
+                panic_by_err(Error::STAKER_INACTIVE);
             }
         }
     }

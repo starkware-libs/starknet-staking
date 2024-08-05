@@ -25,7 +25,7 @@ pub enum Error {
     // Pooling contract errors
     CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     POOL_MEMBER_DOES_NOT_EXIST,
-    STAKER_IS_INACTIVE,
+    STAKER_INACTIVE,
     POOL_MEMBER_EXISTS,
     AMOUNT_IS_ZERO,
     // Minting contract errors
@@ -67,7 +67,7 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Claim rewards must be called from staker address or reward address."
         ),
         Error::POOL_MEMBER_DOES_NOT_EXIST => panic!("Pool member does not exist."),
-        Error::STAKER_IS_INACTIVE => panic!("Staker is inactive."),
+        Error::STAKER_INACTIVE => panic!("Staker inactive."),
         Error::POOL_MEMBER_EXISTS => panic!(
             "Pool member exists, use add_to_delegation_pool instead."
         ),
