@@ -152,7 +152,7 @@ fn test_assert_staker_is_active() {
 }
 
 #[test]
-#[should_panic(expected: ("Staker is inactive.",))]
+#[should_panic(expected: ("Staker inactive.",))]
 fn test_assert_staker_is_active_panic() {
     let mut state = initialize_pooling_state(
         staker_address: STAKER_ADDRESS(),
