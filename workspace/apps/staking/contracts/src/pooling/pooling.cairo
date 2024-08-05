@@ -2,12 +2,12 @@
 pub mod Pooling {
     use core::num::traits::zero::Zero;
     use contracts::{
-        BASE_VALUE, errors::{Error, panic_by_err, assert_with_err, expect_with_err},
-        pooling::{IPooling, PoolMemberInfo},
+        constants::{BASE_VALUE}, errors::{Error, panic_by_err, assert_with_err, expect_with_err},
+        pooling::{IPooling, PoolMemberInfo, Events},
         utils::{u128_mul_wide_and_div_unsafe, compute_rewards, compute_commission}
     };
     use core::option::OptionTrait;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp};
     use openzeppelin::{
         access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
     };
@@ -40,9 +40,10 @@ pub mod Pooling {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         accesscontrolEvent: AccessControlComponent::Event,
-        src5Event: SRC5Component::Event
+        src5Event: SRC5Component::Event,
+        pool_member_exit_intent: Events::PoolMemberExitIntent,
     }
 
 
@@ -105,8 +106,22 @@ pub mod Pooling {
             0
         }
 
-        fn exit_delegation_pool_intent(ref self: ContractState) -> u128 {
-            0
+        fn exit_delegation_pool_intent(ref self: ContractState) {
+            let pool_member = get_caller_address();
+            let mut pool_member_info = self.pool_member_address_to_info.read(pool_member);
+            assert_with_err(
+                pool_member_info.amount.is_non_zero(), Error::POOL_MEMBER_DOES_NOT_EXIST
+            );
+            assert_with_err(pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS);
+            let updated_index = self.receive_index_and_funds_from_staker();
+            self.calculate_rewards(ref :pool_member_info, :updated_index);
+            let unpool_time = self
+                .undelegate_from_staking_contract_intent(
+                    :pool_member, amount: pool_member_info.amount
+                );
+            pool_member_info.unpool_time = Option::Some(unpool_time);
+            self.pool_member_address_to_info.write(pool_member, pool_member_info);
+            self.emit(Events::PoolMemberExitIntent { pool_member, exit_at: unpool_time });
         }
 
         fn exit_delegation_pool_action(ref self: ContractState) -> u128 {
@@ -219,9 +234,27 @@ pub mod Pooling {
         }
 
         fn assert_staker_is_active(self: @ContractState) {
-            if self.final_staker_index.read().is_some() {
-                panic_by_err(Error::STAKER_INACTIVE);
+            assert_with_err(self.final_staker_index.read().is_none(), Error::STAKER_INACTIVE);
+        }
+
+        fn is_staker_active(self: @ContractState) -> bool {
+            self.final_staker_index.read().is_none()
+        }
+
+        fn undelegate_from_staking_contract_intent(
+            self: @ContractState, pool_member: ContractAddress, amount: u128
+        ) -> u64 {
+            if !self.is_staker_active() {
+                return get_block_timestamp();
             }
+            let staking_dispatcher = IStakingDispatcher {
+                contract_address: self.staking_contract.read()
+            };
+            let staker_address = self.staker_address.read();
+            staking_dispatcher
+                .remove_from_delegation_pool_intent(
+                    :staker_address, identifier: pool_member, :amount
+                )
         }
     }
 }

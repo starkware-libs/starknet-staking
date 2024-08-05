@@ -1,4 +1,5 @@
-use contracts::{BASE_VALUE, staking::Staking, pooling::Pooling, minting_curve::MintingCurve};
+use contracts::{staking::Staking, pooling::Pooling, minting_curve::MintingCurve};
+use contracts::constants::BASE_VALUE;
 use core::traits::Into;
 use contracts::staking::interface::{
     IStaking, StakerInfo, StakingContractInfo, IStakingDispatcher, IStakingDispatcherTrait
@@ -10,6 +11,7 @@ use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatc
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
 use starknet::ClassHash;
+use starknet::Store;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::Staking::ContractState;
 use constants::{
@@ -353,4 +355,17 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         };
         StakingInitConfig { staker_info, pool_member_info, staking_contract_info, test_info, }
     }
+}
+
+pub(crate) fn load_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<V>>(
+    map_selector: felt252, key: K, contract: ContractAddress
+) -> V {
+    let mut keys = array![];
+    key.serialize(ref keys);
+    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
+    let intents_map = snforge_std::load(
+        target: contract, :storage_address, size: Store::<V>::size().into()
+    );
+    let mut span = intents_map.span();
+    Serde::<V>::deserialize(ref span).expect('Failed deserialize')
 }

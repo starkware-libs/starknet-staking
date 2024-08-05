@@ -1,8 +1,9 @@
+use core::serde::Serde;
 use core::option::OptionTrait;
 use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispatcherTrait};
 use contracts::{
-    BASE_VALUE,
+    constants::{BASE_VALUE, EXIT_WAITING_WINDOW},
     pooling::{
         Pooling, PoolMemberInfo,
         Pooling::{
@@ -14,13 +15,16 @@ use contracts::{
         }
     },
     staking::interface::StakerInfo,
-    staking::Staking::__member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
+    staking::Staking::{
+        __member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
+        UndelegateIntentKey, UndelegateIntentValue
+    },
     utils::{compute_rewards, compute_commission},
     test_utils::{
         initialize_pooling_state, deploy_mock_erc20_contract, StakingInitConfig,
         deploy_staking_contract, fund, approve, initialize_staking_state_from_cfg,
         stake_for_testing_using_dispatcher, enter_delegation_pool_for_testing_using_dispatcher,
-        stake_with_pooling_enabled
+        stake_with_pooling_enabled, load_from_map,
     },
     test_utils::constants::{
         OWNER_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
@@ -28,9 +32,13 @@ use contracts::{
         OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, REV_SHARE, POOL_MEMBER_REWARD_ADDRESS,
     }
 };
+use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_exit_intent_event,};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use starknet::{ContractAddress, contract_address_const};
+use starknet::{ContractAddress, contract_address_const, get_block_timestamp, Store};
 use snforge_std::{cheat_caller_address, CheatSpan, test_address};
+use snforge_std::cheatcodes::events::{
+    Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
+};
 
 
 #[test]
@@ -250,4 +258,66 @@ fn test_claim_rewards() {
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = erc20_dispatcher.balance_of(cfg.pool_member_info.reward_address);
     assert_eq!(balance, actual_reward.into());
+}
+
+#[test]
+fn test_exit_delegation_pool_intent() {
+    let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Deploy the staking contract, stake, and enter delegation pool.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+
+    // Exit delegation pool intent, and validate the results.
+    let mut spy = snforge_std::spy_events();
+    cheat_caller_address(
+        pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(1)
+    );
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    pooling_dispatcher.exit_delegation_pool_intent();
+    // Validate the expected pool member info and staker info.
+    let expected_time = get_block_timestamp() + EXIT_WAITING_WINDOW;
+    let expected_pool_member_info = PoolMemberInfo {
+        unpool_time: Option::Some(expected_time), ..cfg.pool_member_info
+    };
+    assert_eq!(
+        pooling_dispatcher.state_of(cfg.test_info.pool_member_address), expected_pool_member_info
+    );
+    let expected_staker_info = StakerInfo {
+        amount_pool: 0,
+        amount_own: cfg.staker_info.amount_own,
+        pooling_contract: Option::Some(pooling_contract),
+        ..cfg.staker_info
+    };
+    assert_eq!(staking_dispatcher.state_of(cfg.test_info.staker_address), expected_staker_info);
+    // Validate that the data is written in the exit intents map in staking contract.
+    let undelegate_intent_key = UndelegateIntentKey {
+        pool_contract: pooling_contract, identifier: cfg.test_info.pool_member_address
+    };
+    let actual_undelegate_intent_value = load_from_map(
+        map_selector: selector!("pool_exit_intents"),
+        key: undelegate_intent_key,
+        contract: staking_contract
+    );
+    let expected_undelegate_intent_value = UndelegateIntentValue {
+        unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
+        amount: expected_pool_member_info.amount.into()
+    };
+    assert_eq!(actual_undelegate_intent_value, expected_undelegate_intent_value);
+
+    // Validate the single PoolMemberExitIntent event.
+    let events = spy.get_events().emitted_by(pooling_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "exit_delegation_pool_intent"
+    );
+    assert_pool_member_exit_intent_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        exit_at: expected_time
+    );
 }

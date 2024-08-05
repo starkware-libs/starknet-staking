@@ -22,12 +22,14 @@ pub enum Error {
     CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     LEVERAGE_EXCEEDED,
     CALLER_IS_NOT_POOL_CONTRACT,
+    MISSING_POOL_CONTRACT,
     // Pooling contract errors
-    CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
     POOL_MEMBER_EXISTS,
     AMOUNT_IS_ZERO,
+    UNDELEGATE_IN_PROGRESS,
+    INSUFFICIENT_POOL_BALANCE,
     // Minting contract errors
     TOTAL_SUPPLY_NOT_U128,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
@@ -57,9 +59,6 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Amount is less than min increase stake - try again with enough funds."
         ),
         Error::POOL_ADDRESS_DOES_NOT_EXIST => panic!("Pool address does not exist."),
-        Error::CLAIM_DELEGATION_POOL_REWARDS_FROM_UNAUTHORIZED_ADDRESS => panic!(
-            "Claim delegation pool rewards must be called from delegation pooling contract."
-        ),
         Error::UNSTAKE_IN_PROGRESS => panic!(
             "Unstake is in progress, staker is in an exit window."
         ),
@@ -72,12 +71,17 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Pool member exists, use add_to_delegation_pool instead."
         ),
         Error::AMOUNT_IS_ZERO => panic!("Amount must be positive."),
+        Error::UNDELEGATE_IN_PROGRESS => panic!(
+            "Undelegate from pool in progress, pool member is in an exit window."
+        ),
+        Error::INSUFFICIENT_POOL_BALANCE => panic!("Insufficient pool balance."),
         Error::TOTAL_SUPPLY_NOT_U128 => panic!("Total supply does not fit in u128."),
         Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS => panic!(
             "Claim rewards must be called from pool member address or reward address."
         ),
         Error::LEVERAGE_EXCEEDED => panic!("Cannot exceed max leverage."),
         Error::CALLER_IS_NOT_POOL_CONTRACT => panic!("Caller is not pool contract."),
+        Error::MISSING_POOL_CONTRACT => panic!("Staker does not have pool contract."),
     }
 }
 

@@ -1,4 +1,4 @@
-use contracts::BASE_VALUE;
+use contracts::constants::BASE_VALUE;
 use core::{traits::Destruct, integer::{u64_wide_mul, u128_wide_mul}};
 use contracts::errors::{panic_by_err, Error};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait};
