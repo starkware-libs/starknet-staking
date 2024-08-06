@@ -130,7 +130,7 @@ fn test_enter_delegation_pool() {
     assert_eq!(balance, cfg.staker_info.amount_own.into() + cfg.pool_member_info.amount.into());
     let balance = erc20_dispatcher.balance_of(pooling_contract);
     assert_eq!(balance, 0);
-    // Check that the staker info was updated correctly. 
+    // Check that the staker info was updated correctly.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let expected_staker_info = StakerInfo {
         reward_address: cfg.staker_info.reward_address,
