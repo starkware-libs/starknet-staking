@@ -24,7 +24,7 @@ use contracts::{
         initialize_pooling_state, deploy_mock_erc20_contract, StakingInitConfig,
         deploy_staking_contract, fund, approve, initialize_staking_state_from_cfg,
         stake_for_testing_using_dispatcher, enter_delegation_pool_for_testing_using_dispatcher,
-        stake_with_pooling_enabled, load_from_map,
+        stake_with_pooling_enabled, load_from_simple_map,
     },
     test_utils::constants::{
         OWNER_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
@@ -299,7 +299,7 @@ fn test_exit_delegation_pool_intent() {
     let undelegate_intent_key = UndelegateIntentKey {
         pool_contract: pooling_contract, identifier: cfg.test_info.pool_member_address
     };
-    let actual_undelegate_intent_value = load_from_map(
+    let actual_undelegate_intent_value = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),
         key: undelegate_intent_key,
         contract: staking_contract
