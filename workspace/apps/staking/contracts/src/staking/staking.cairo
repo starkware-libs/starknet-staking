@@ -5,7 +5,7 @@ pub mod Staking {
     use core::num::traits::zero::Zero;
     use contracts::{
         constants::{BASE_VALUE, EXIT_WAITING_WINDOW},
-        errors::{Error, panic_by_err, assert_with_err, expect_with_err},
+        errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
         staking::{IStaking, StakerInfo, StakerInfoTrait, StakingContractInfo},
         utils::{
             u128_mul_wide_and_div_unsafe, deploy_delegation_pool_contract, compute_commission,
@@ -221,9 +221,9 @@ pub mod Staking {
             let mut staker_info = self.staker_info.read(pooled_staker);
             assert_with_err(staker_info.amount_own.is_non_zero(), Error::STAKER_NOT_EXISTS);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            let pool_contract = expect_with_err(
-                staker_info.pooling_contract, Error::POOL_ADDRESS_DOES_NOT_EXIST
-            );
+            let pool_contract = staker_info
+                .pooling_contract
+                .expect_with_err(Error::POOL_ADDRESS_DOES_NOT_EXIST);
             assert_with_err(
                 pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
@@ -251,12 +251,12 @@ pub mod Staking {
             identifier: ContractAddress,
             amount: u128,
         ) -> u64 {
-            let mut staker_info = expect_with_err(
-                self.get_staker(staker_address), Error::STAKER_NOT_EXISTS
-            );
-            let pool_contract = expect_with_err(
-                staker_info.pooling_contract, Error::MISSING_POOL_CONTRACT
-            );
+            let mut staker_info = self
+                .get_staker(staker_address)
+                .expect_with_err(Error::STAKER_NOT_EXISTS);
+            let pool_contract = staker_info
+                .pooling_contract
+                .expect_with_err(Error::MISSING_POOL_CONTRACT);
             assert_with_err(
                 pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
@@ -311,7 +311,7 @@ pub mod Staking {
 
         fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let staker_info = self.get_staker(staker_address);
-            expect_with_err(staker_info, Error::STAKER_NOT_EXISTS)
+            staker_info.expect_with_err(Error::STAKER_NOT_EXISTS)
         }
 
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
@@ -328,9 +328,9 @@ pub mod Staking {
         ) -> u64 {
             let mut staker_info = self.staker_info.read(staker_address);
             assert_with_err(staker_info.amount_own.is_non_zero(), Error::STAKER_NOT_EXISTS);
-            let pool_address = expect_with_err(
-                staker_info.pooling_contract, Error::POOL_ADDRESS_DOES_NOT_EXIST
-            );
+            let pool_address = staker_info
+                .pooling_contract
+                .expect_with_err(Error::POOL_ADDRESS_DOES_NOT_EXIST);
             assert_with_err(
                 pool_address == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );

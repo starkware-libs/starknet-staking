@@ -1,6 +1,6 @@
 use contracts::constants::BASE_VALUE;
 use core::{traits::Destruct, integer::{u64_wide_mul, u128_wide_mul}};
-use contracts::errors::{panic_by_err, Error};
+use contracts::errors::{panic_by_err, Error, OptionAuxTrait};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait};
 use starknet::syscalls::deploy_syscall;
 use contracts::staking::Staking::REV_SHARE_DENOMINATOR;
@@ -9,21 +9,15 @@ pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
 pub fn u64_mul_wide_and_div_unsafe(lhs: u64, rhs: u64, div: u64, error: Error) -> u64 {
-    if let Option::Some(res) = (u64_wide_mul(lhs, rhs) / div.into()).try_into() {
-        return res;
-    }
-    panic_by_err(error);
-    0
+    let res = (u64_wide_mul(lhs, rhs) / div.into()).try_into().expect_with_err(error);
+    res
 }
 
 pub fn u128_mul_wide_and_div_unsafe(lhs: u128, rhs: u128, div: u128, error: Error) -> u128 {
     let (high, low) = u128_wide_mul(lhs, rhs);
     let x = u256 { low, high };
-    if let Option::Some(res) = (x / div.into()).try_into() {
-        return res;
-    }
-    panic_by_err(error);
-    0
+    let res = (x / div.into()).try_into().expect_with_err(error);
+    res
 }
 
 pub fn deploy_delegation_pool_contract(

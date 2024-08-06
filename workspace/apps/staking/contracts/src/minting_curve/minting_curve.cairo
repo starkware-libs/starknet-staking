@@ -2,7 +2,7 @@
 pub mod MintingCurve {
     use contracts::minting_curve::interface::IMintingCurve;
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
-    use contracts::errors::{Error, expect_with_err};
+    use contracts::errors::{Error, OptionAuxTrait};
     use starknet::{ContractAddress, contract_address_const};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -42,9 +42,9 @@ pub mod MintingCurve {
 
     #[l1_handler]
     fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: felt252) {
-        let total_supply: u128 = expect_with_err(
-            total_supply.try_into(), Error::TOTAL_SUPPLY_NOT_U128
-        );
+        let total_supply: u128 = total_supply
+            .try_into()
+            .expect_with_err(Error::TOTAL_SUPPLY_NOT_U128);
         self.total_supply.write(total_supply);
     }
 

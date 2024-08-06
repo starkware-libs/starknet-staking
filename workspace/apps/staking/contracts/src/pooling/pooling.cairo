@@ -2,7 +2,7 @@
 pub mod Pooling {
     use core::num::traits::zero::Zero;
     use contracts::{
-        constants::{BASE_VALUE}, errors::{Error, panic_by_err, assert_with_err, expect_with_err},
+        constants::{BASE_VALUE}, errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
         pooling::{IPooling, PoolMemberInfo, Events},
         utils::{u128_mul_wide_and_div_unsafe, compute_rewards, compute_commission}
     };
@@ -178,8 +178,7 @@ pub mod Pooling {
         }
 
         fn state_of(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
-            let pool_member_info = self.get_pool_member(pool_member);
-            expect_with_err(pool_member_info, Error::POOL_MEMBER_DOES_NOT_EXIST)
+            self.get_pool_member(pool_member).expect_with_err(Error::POOL_MEMBER_DOES_NOT_EXIST)
         }
     }
 
