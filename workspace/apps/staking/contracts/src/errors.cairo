@@ -92,10 +92,13 @@ pub fn assert_with_err(condition: bool, error: Error) {
     }
 }
 
-#[inline(always)]
-pub fn expect_with_err<T>(optional: Option<T>, error: Error) -> T {
-    match optional {
-        Option::Some(x) => x,
-        Option::None => panic_by_err(error),
+#[generate_trait]
+pub impl OptionAuxImpl<T> of OptionAuxTrait<T> {
+    #[inline(always)]
+    fn expect_with_err(self: Option<T>, err: Error) -> T {
+        match self {
+            Option::Some(x) => x,
+            Option::None => panic_by_err(err),
+        }
     }
 }
