@@ -31,7 +31,7 @@ pub mod Pooling {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staker_address: ContractAddress,
-        pool_member_address_to_info: LegacyMap::<ContractAddress, PoolMemberInfo>,
+        pool_member_address_to_info: LegacyMap::<ContractAddress, Option<PoolMemberInfo>>,
         final_staker_index: Option<u64>,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
@@ -69,7 +69,7 @@ pub mod Pooling {
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
             assert_with_err(
-                self.pool_member_address_to_info.read(pool_member).amount.is_zero(),
+                self.pool_member_address_to_info.read(pool_member).is_none(),
                 Error::POOL_MEMBER_EXISTS
             );
             assert_with_err(amount > 0, Error::AMOUNT_IS_ZERO);
@@ -91,13 +91,15 @@ pub mod Pooling {
                 .pool_member_address_to_info
                 .write(
                     pool_member,
-                    PoolMemberInfo {
-                        reward_address: reward_address,
-                        amount: amount,
-                        index: updated_index,
-                        unclaimed_rewards: 0,
-                        unpool_time: Option::None,
-                    }
+                    Option::Some(
+                        PoolMemberInfo {
+                            reward_address: reward_address,
+                            amount: amount,
+                            index: updated_index,
+                            unclaimed_rewards: 0,
+                            unpool_time: Option::None,
+                        }
+                    )
                 );
             true
         }
@@ -108,10 +110,7 @@ pub mod Pooling {
 
         fn exit_delegation_pool_intent(ref self: ContractState) {
             let pool_member = get_caller_address();
-            let mut pool_member_info = self.pool_member_address_to_info.read(pool_member);
-            assert_with_err(
-                pool_member_info.amount.is_non_zero(), Error::POOL_MEMBER_DOES_NOT_EXIST
-            );
+            let mut pool_member_info = self.get_pool_member_info(:pool_member);
             assert_with_err(pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS);
             let updated_index = self.receive_index_and_funds_from_staker();
             self.calculate_rewards(ref :pool_member_info, :updated_index);
@@ -120,7 +119,7 @@ pub mod Pooling {
                     :pool_member, amount: pool_member_info.amount
                 );
             pool_member_info.unpool_time = Option::Some(unpool_time);
-            self.pool_member_address_to_info.write(pool_member, pool_member_info);
+            self.pool_member_address_to_info.write(pool_member, Option::Some(pool_member_info));
             self.emit(Events::PoolMemberExitIntent { pool_member, exit_at: unpool_time });
         }
 
@@ -129,10 +128,7 @@ pub mod Pooling {
         }
 
         fn claim_rewards(ref self: ContractState, pool_member: ContractAddress) -> u128 {
-            let mut pool_member_info = self.pool_member_address_to_info.read(pool_member);
-            assert_with_err(
-                pool_member_info.amount.is_non_zero(), Error::POOL_MEMBER_DOES_NOT_EXIST
-            );
+            let mut pool_member_info = self.get_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
             assert_with_err(
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
@@ -147,7 +143,7 @@ pub mod Pooling {
                 .transfer(recipient: pool_member_info.reward_address, amount: rewards.into());
 
             pool_member_info.unclaimed_rewards = 0;
-            self.pool_member_address_to_info.write(pool_member, pool_member_info);
+            self.pool_member_address_to_info.write(pool_member, Option::Some(pool_member_info));
             rewards
         }
 
@@ -168,32 +164,26 @@ pub mod Pooling {
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
             let pool_member = get_caller_address();
-            let mut pool_member_info = self.pool_member_address_to_info.read(pool_member);
-            assert_with_err(
-                pool_member_info.amount.is_non_zero(), Error::POOL_MEMBER_DOES_NOT_EXIST
-            );
+            let mut pool_member_info = self.get_pool_member_info(:pool_member);
             pool_member_info.reward_address = reward_address;
-            self.pool_member_address_to_info.write(pool_member, pool_member_info);
+            self.pool_member_address_to_info.write(pool_member, Option::Some(pool_member_info));
             true
         }
 
         fn state_of(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
-            self.get_pool_member(pool_member).expect_with_err(Error::POOL_MEMBER_DOES_NOT_EXIST)
+            self.get_pool_member_info(:pool_member)
         }
     }
 
     #[generate_trait]
     pub(crate) impl InternalPoolingFunctions of InternalPoolingFunctionsTrait {
-        fn get_pool_member(
+        fn get_pool_member_info(
             self: @ContractState, pool_member: ContractAddress
-        ) -> Option<PoolMemberInfo> {
-            let pool_member_info = self.pool_member_address_to_info.read(pool_member);
-            // Reward address isn't zero if staker is initialized.
-            if pool_member_info.amount.is_zero() {
-                Option::None
-            } else {
-                Option::Some(pool_member_info)
-            }
+        ) -> PoolMemberInfo {
+            self
+                .pool_member_address_to_info
+                .read(pool_member)
+                .expect_with_err(Error::POOL_MEMBER_DOES_NOT_EXIST)
         }
 
         fn receive_index_and_funds_from_staker(self: @ContractState) -> u64 {
