@@ -295,8 +295,15 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
     );
 }
 
-
-pub(crate) fn load_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<V>>(
+/// *****WARNING*****
+/// This function only works on simple data types or structs that have no special implementations
+/// for Hash, Store, or Serde traits. And won't work on any standard enum.
+/// This statement applies to both key and value.
+/// The trait used to serialize and deserialize the key for the address calculation is Hash trait.
+/// The trait used to serialize and deserialize the value for the storage is Store trait.
+/// The trait used to serialize and deserialize the key and value in this function is Serde trait.
+/// Note: It could work for non-simple types that implement Hash, Store and Serde the same way.
+pub(crate) fn load_from_simple_map<K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<V>>(
     map_selector: felt252, key: K, contract: ContractAddress
 ) -> V {
     let mut keys = array![];
