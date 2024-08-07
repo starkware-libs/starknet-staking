@@ -1,4 +1,6 @@
-use contracts::{staking::Staking, pooling::Pooling, minting_curve::MintingCurve};
+use contracts::{
+    staking::Staking, pooling::Pooling, minting_curve::MintingCurve, reward_supplier::RewardSupplier
+};
 use contracts::constants::BASE_VALUE;
 use core::traits::Into;
 use contracts::staking::interface::{
@@ -18,7 +20,8 @@ use constants::{
     NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_INITIAL_BALANCE, STAKE_AMOUNT,
     STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
     POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH, POOL_MEMBER_ADDRESS,
-    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, L1_STAKING_MINTER_ADDRESS,
+    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, BASE_MINT_AMOUNT, BUFFER,
+    L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG, STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS
 };
 use snforge_std::{ContractClass, CheatSpan, cheat_caller_address, test_address};
 pub(crate) mod constants {
@@ -33,8 +36,11 @@ pub(crate) mod constants {
     pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
     pub const REV_SHARE: u16 = 500;
     pub const STAKER_FINAL_INDEX: u64 = 10;
-
+    pub const BASE_MINT_AMOUNT: u128 = 800000000000;
+    pub const BUFFER: u128 = 1000000000000;
     pub const L1_STAKING_MINTER_ADDRESS: felt252 = 'L1_STAKING_MINTER_ADDRESS';
+    pub const BASE_MINT_MSG: felt252 = 'base_mint_msg';
+
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         contract_address_const::<'CALLER_ADDRESS'>()
@@ -71,6 +77,12 @@ pub(crate) mod constants {
     }
     pub fn POOLING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'POOLING_CONTRACT_ADDRESS'>()
+    }
+    pub fn MINTING_CONTRACT_ADDRESS() -> ContractAddress {
+        contract_address_const::<'MINTING_CONTRACT_ADDRESS'>()
+    }
+    pub fn REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress {
+        contract_address_const::<'REWARD_SUPPLIER_ADDRESS'>()
     }
     pub fn RECIPIENT_ADDRESS() -> ContractAddress {
         contract_address_const::<'RECIPIENT_ADDRESS'>()
@@ -149,6 +161,38 @@ pub(crate) fn initialize_minting_curve_state(
     state
 }
 
+pub(crate) fn initialize_reward_supplier_state_from_cfg(
+    cfg: StakingInitConfig
+) -> RewardSupplier::ContractState {
+    initialize_reward_supplier_state(
+        base_mint_amount: cfg.reward_supplier.base_mint_amount,
+        base_mint_msg: cfg.reward_supplier.base_mint_msg,
+        minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
+        staking_contract: cfg.test_info.staking_contract,
+        l1_staking_minter: cfg.reward_supplier.l1_staking_minter,
+        buffer: cfg.reward_supplier.buffer
+    )
+}
+pub(crate) fn initialize_reward_supplier_state(
+    base_mint_amount: u128,
+    base_mint_msg: felt252,
+    minting_curve_contract: ContractAddress,
+    staking_contract: ContractAddress,
+    l1_staking_minter: felt252,
+    buffer: u128
+) -> RewardSupplier::ContractState {
+    let mut state = RewardSupplier::contract_state_for_testing();
+    RewardSupplier::constructor(
+        ref state,
+        :base_mint_amount,
+        :base_mint_msg,
+        :minting_curve_contract,
+        :staking_contract,
+        :l1_staking_minter,
+        :buffer
+    );
+    state
+}
 
 pub(crate) fn deploy_mock_erc20_contract(
     initial_supply: u256, owner_address: ContractAddress
@@ -347,6 +391,16 @@ pub(crate) struct TestInfo {
     pub pool_member_initial_balance: u128,
     pub pooling_enabled: bool,
     pub pool_contract_class_hash: ClassHash,
+    pub staking_contract: ContractAddress,
+}
+
+#[derive(Drop, Copy)]
+struct RewardSupplierInfo {
+    pub base_mint_amount: u128,
+    pub base_mint_msg: felt252,
+    pub minting_curve_contract: ContractAddress,
+    pub l1_staking_minter: felt252,
+    pub buffer: u128,
 }
 
 #[derive(Drop, Copy)]
@@ -355,6 +409,7 @@ pub(crate) struct StakingInitConfig {
     pub pool_member_info: PoolMemberInfo,
     pub staking_contract_info: StakingContractInfo,
     pub test_info: TestInfo,
+    pub reward_supplier: RewardSupplierInfo,
 }
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
@@ -390,8 +445,18 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pooling_enabled: false,
             pool_contract_class_hash: declare_pool_contract(),
+            staking_contract: STAKING_CONTRACT_ADDRESS(),
         };
-        StakingInitConfig { staker_info, pool_member_info, staking_contract_info, test_info, }
+        let reward_supplier = RewardSupplierInfo {
+            base_mint_amount: BASE_MINT_AMOUNT,
+            base_mint_msg: BASE_MINT_MSG,
+            minting_curve_contract: MINTING_CONTRACT_ADDRESS(),
+            l1_staking_minter: L1_STAKING_MINTER_ADDRESS,
+            buffer: BUFFER,
+        };
+        StakingInitConfig {
+            staker_info, pool_member_info, staking_contract_info, test_info, reward_supplier
+        }
     }
 }
 
