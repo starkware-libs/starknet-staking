@@ -31,7 +31,7 @@ pub mod Pooling {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staker_address: ContractAddress,
-        pool_member_address_to_info: LegacyMap::<ContractAddress, Option<PoolMemberInfo>>,
+        pool_member_info: LegacyMap::<ContractAddress, Option<PoolMemberInfo>>,
         final_staker_index: Option<u64>,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
@@ -69,8 +69,7 @@ pub mod Pooling {
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
             assert_with_err(
-                self.pool_member_address_to_info.read(pool_member).is_none(),
-                Error::POOL_MEMBER_EXISTS
+                self.pool_member_info.read(pool_member).is_none(), Error::POOL_MEMBER_EXISTS
             );
             assert_with_err(amount > 0, Error::AMOUNT_IS_ZERO);
             let pooled_staker = self.staker_address.read();
@@ -88,7 +87,7 @@ pub mod Pooling {
             let (_, updated_index) = staking_contract_dispatcher
                 .add_to_delegation_pool(:pooled_staker, :amount);
             self
-                .pool_member_address_to_info
+                .pool_member_info
                 .write(
                     pool_member,
                     Option::Some(
@@ -119,7 +118,7 @@ pub mod Pooling {
                     :pool_member, amount: pool_member_info.amount
                 );
             pool_member_info.unpool_time = Option::Some(unpool_time);
-            self.pool_member_address_to_info.write(pool_member, Option::Some(pool_member_info));
+            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             self.emit(Events::PoolMemberExitIntent { pool_member, exit_at: unpool_time });
         }
 
@@ -143,7 +142,7 @@ pub mod Pooling {
                 .transfer(recipient: pool_member_info.reward_address, amount: rewards.into());
 
             pool_member_info.unclaimed_rewards = 0;
-            self.pool_member_address_to_info.write(pool_member, Option::Some(pool_member_info));
+            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             rewards
         }
 
@@ -178,7 +177,7 @@ pub mod Pooling {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             pool_member_info.reward_address = reward_address;
-            self.pool_member_address_to_info.write(pool_member, Option::Some(pool_member_info));
+            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             true
         }
 
@@ -193,7 +192,7 @@ pub mod Pooling {
             self: @ContractState, pool_member: ContractAddress
         ) -> PoolMemberInfo {
             self
-                .pool_member_address_to_info
+                .pool_member_info
                 .read(pool_member)
                 .expect_with_err(Error::POOL_MEMBER_DOES_NOT_EXIST)
         }

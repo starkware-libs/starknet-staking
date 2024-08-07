@@ -1,8 +1,13 @@
-# Spec
+# Spec <!-- omit from toc -->
 <details>
     <summary><strong style="font-size: 1.5em;">Table of contents</strong></summary>
 
-- [Contracts block diagram](#contracts-block-diagram)
+- [Diagrams](#diagrams)
+  - [Contracts block diagram](#contracts-block-diagram)
+  - [Enter protocol flow diagram](#enter-protocol-flow-diagram)
+  - [Exit protocol flow diagram](#exit-protocol-flow-diagram)
+  - [Rewards claim flow diagram](#rewards-claim-flow-diagram)
+  - [Delegation pool switching flow diagram](#delegation-pool-switching-flow-diagram)
 - [Staking contract](#staking-contract)
   - [Functions](#functions)
     - [stake](#stake)
@@ -28,12 +33,13 @@
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
-    - [add\_to\_delegation\_pool](#add_to_delegation_pool)
+    - [add\_to\_delegation\_pool](#add_to_delegation_pool-1)
     - [exit\_delegation\_pool\_intent](#exit_delegation_pool_intent)
     - [exit\_delegaition\_pool\_action](#exit_delegaition_pool_action)
-    - [claim\_rewards](#claim_rewards)
+    - [claim\_rewards](#claim_rewards-1)
     - [switch\_delegation\_pool](#switch_delegation_pool)
     - [enter\_from\_staking\_contract](#enter_from_staking_contract)
+    - [staker\_left](#staker_left)
     - [calculate\_rewards](#calculate_rewards-1)
   - [Events](#events-1)
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
@@ -55,8 +61,155 @@ function info template:
 #### access control
 #### logic
 -->
+# Diagrams
 ## Contracts block diagram
-![alt text](../assets/Staking_diagram.png)
+```mermaid
+classDiagram
+  class StakingContract{
+    map < staker_address, StakerInfo >
+    map < operational_address, StakerInfo >
+    global_index
+    max_leverage
+    min_stake
+    stake()
+    increase_stake()
+    unstake_intent()
+    unstake_action()
+    claim_rewards()
+    add_to_delegation_pool()
+    remove_from_delegation_pool_intent()
+    remove_from_delegation_pool_action()
+    switch_staking_delegation_pool()
+    change_reward_address()
+    set_open_for_delegation()
+    claim_delegation_pool_rewards()
+    state_of()
+    contract_parameters()
+    calsulate_rewards()
+
+  }
+  class DelegationPoolingContract{
+    map < pool_member_address, PoolMemberInfo >
+    staker_address
+    staker_final_index
+    enter_delegation_pool()
+    add_to_delegation_pool()
+    exit_delegation_pool_intent()
+    exit_delegation_pool_action()
+    claim_rewards()
+    switch_delegation_pool()
+    enter_from_stakin_contract()
+    calculate_rewards()
+  }
+  class StakerInfo{
+    own_amount
+    pooled_amount
+    index
+    own_unclaimed_rewards
+    pooled_unclaimed_rewards
+    exit_pooled_amnt: Map < felt, (amnt, time) >
+    reward_address
+    option < unstake_time >
+    operational_address
+    option < PoollingContract >
+    rev_share
+  }
+  class PoolMemberInfo{
+    amount
+    index
+    unclaimed_rewards
+    reward_address
+    option < unpool_time >
+  }
+  StakingContract o-- StakerInfo
+  DelegationPoolingContract o-- PoolMemberInfo
+```
+
+## Enter protocol flow diagram
+```mermaid
+sequenceDiagram
+  actor staker
+  participant StakingContract
+  participant DelegationPoolingContract
+  actor pool member
+  staker ->>+ StakingContract: stake<br/>(pooling enabled = true)
+  StakingContract -->> DelegationPoolingContract: deploy delegation pool contract
+  par
+    loop
+      staker ->> StakingContract: increase_stake
+    end
+  and
+    loop
+      pool member ->>+ DelegationPoolingContract: enter_delegation_pool
+      DelegationPoolingContract ->>- StakingContract: add_to_delegation_pool
+      loop
+        pool member ->>+ DelegationPoolingContract: add_to_delegation_pool
+        DelegationPoolingContract ->>- StakingContract: add_to_delegation_pool
+      end
+    end
+  end
+```
+
+## Exit protocol flow diagram
+```mermaid
+sequenceDiagram
+  actor staker
+  participant StakingContract
+  participant DelegationPoolingContract
+  actor pool member
+  opt Loop
+    pool member ->>+ DelegationPoolingContract: exit_delegation_pool_intent
+    DelegationPoolingContract ->>- StakingContract: remove_from_delegation_pool_intent
+    pool member ->>+ DelegationPoolingContract: exit_delegation_pool_action
+    DelegationPoolingContract ->>- StakingContract: remove_from_delegation_pool_action
+  end
+  staker ->> StakingContract: unstake_intent
+  staker ->> StakingContract: unstake_action
+  opt Loop
+    pool member ->>+ DelegationPoolingContract: exit_delegation_pool_intent
+    DelegationPoolingContract ->>- StakingContract: remove_from_delegation_pool_intent
+    pool member ->>+ DelegationPoolingContract: exit_delegation_pool_action
+    DelegationPoolingContract ->>- StakingContract: remove_from_delegation_pool_action
+  end
+```
+
+## Rewards claim flow diagram
+```mermaid
+sequenceDiagram
+  actor staker
+  participant StakingContract
+  participant DelegationPoolingContract
+  actor pool memberopt 
+  Loop
+    staker ->> StakingContract: claim_rewards
+  end
+  opt Loop
+    pool member ->>+ DelegationPoolingContract: claim_rewards
+    DelegationPoolingContract ->>- StakingContract: claim_delegation_pool_rewards
+  end
+```
+
+## Delegation pool switching flow diagram
+```mermaid
+sequenceDiagram
+  participant DelegationPoolingContract B
+  participant StakingContract
+  participant DelegationPoolingContract A
+  actor pool member
+  pool member ->>+ DelegationPoolingContract A: exit_delegation_pool_intent
+  DelegationPoolingContract A ->>- StakingContract: remove_from_delegation_pool_intent
+  pool member ->>+ DelegationPoolingContract A: switch_delegation_pool
+  DelegationPoolingContract A ->>+ StakingContract: switch_staking_delegation_pool
+  StakingContract ->>- DelegationPoolingContract B: enter_from_staking_contract
+  deactivate DelegationPoolingContract A
+  loop 
+    Note left of StakingContract:  optional for switching some<br/> of the funds but keeping the rest<br/> with the original stakeror splitting<br/> between multiple stakers
+    pool member ->>+ DelegationPoolingContract A: switch_delegation_pool
+    DelegationPoolingContract A ->> StakingContract: switch_staking_delegation_pool
+    StakingContract ->> DelegationPoolingContract B: enter_from_staking_contract
+    deactivate DelegationPoolingContract A
+  end
+```
 
 
 # Staking contract
@@ -65,13 +218,13 @@ function info template:
 #### description <!-- omit from toc -->
 Add a new staker to the stake.
 #### parameters <!-- omit from toc -->
-| name            | type    |
-| --------------- | ------- |
-| reward          | address |
-| operational     | address |
-| amount          | u128    |
-| pooling_enabled | boolean |
-| rev_share       | u8      |
+| name            | type       |
+| --------------- | ---------- |
+| reward          | address    |
+| operational     | address    |
+| amount          | u128       |
+| pooling_enabled | boolean    |
+| rev_share       | Option<u8> |
 #### return <!-- omit from toc -->
 success: bool
 #### emits <!-- omit from toc -->
@@ -91,7 +244,6 @@ success: bool
    3. amount = given amount.
 5. if pooling_enabled then deploy a pooling contract instance.
 
-// todo: consider if only staker can do this or maybe other addresses as well. 
 ### increase_stake
 #### description <!-- omit from toc -->
 Increase the amount staked for an existing staker.
@@ -109,7 +261,7 @@ amount: u128 - updated total amount
 1. Staker is listed in the contract.
 2. Staker is not in an exit window.
 #### access control <!-- omit from toc -->
-Only the staker address for which the change is requested for.
+Only the staker address or rewards address for which the change is requested for.
 #### logic <!-- omit from toc -->
 1. Validate amount is above the minimum set threshold.
 2. Validate staker is not in an exit window.
@@ -162,7 +314,9 @@ Any address can execute.
 1. Validate enough time have passed from the unstake intent.
 2. claim rewards.
 3. remove funds and transfer to staker.
-4. delete staker record.
+4. transfer pool unclaimed rewards and stake to delegation pool contract.
+5. call [staker_left](#staker-left) on the delegation_pool_contract.
+6. delete staker record.
 
 ### claim_rewards
 #### description <!-- omit from toc -->
@@ -272,7 +426,7 @@ success: bool
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. Enough funds are available in `from_staker` pool.
-2. `to_staker` exist in the contract.
+2. `to_staker` exist in the contract and is not in exit window.
 3. `to_pool` is the delegation pool contract for `to_staker`.
 #### access control <!-- omit from toc -->
 Only pooling contract for the given staker can execute.
@@ -280,7 +434,7 @@ Only pooling contract for the given staker can execute.
 1. Remove requested amount from `from_staker`'s pool amount.
 2. Add requested amount to `to_staker`'s pool with pool contract address `to_pool`.
 3. move amount balance from original pool to new pool's behalf.
-4. Call new pool's `enter_from_staking_contract` function.
+4. Call new pool's [enter_from_staking_contract](#enter_from_staking_contract) function.
 
 ### change_reward_address
 #### description <!-- omit from toc -->
@@ -480,7 +634,7 @@ only a listed pool member address.
 2. Verify leverage after this amount addition is valid.
 3. [Calculate rewards](#calculate_rewards-1)
 4. Transfer funds from caller to the contract.
-5. Call staking contract's [add_to_delegation_pool](#add_to_delegation_pool-).
+5. Call staking contract's [add_to_delegation_pool](#add_to_delegation_pool).
 6. Get current index from staking contract.
 7. Update pool memeber entry with
    1. index
@@ -530,7 +684,7 @@ Any address can execute.
 #### logic <!-- omit from toc -->
 1. Validate enough time have passed from the exit intent.
 2. [claim rewards](#claim_rewards--1).
-3. [Remove from delegation pool action](#remove_from_delegation_pool_action-).
+3. [Remove from delegation pool action](#remove_from_delegation_pool_action).
 4. Transfer funds to pool member.
 
 
@@ -599,18 +753,36 @@ Only staking contract can call.
 2. Verify leverage after this amount addition is valid.
 3. Deserialize data, get pool_member and rewrad addresses.
 4. If pool member is listed in the contract:
-   1. [Calculate rewards](#calculate_rewards-1)
-   2. Update pool member entry
+   1. validate that pool member is not in exit window.
+   2. [Calculate rewards](#calculate_rewards-1)
+   3. Update pool member entry
 5. Else
    1. Create an entry for the pool member.
+
+### staker_left
+#### description <!-- omit from toc -->
+Informs the delegation pool contract that the staker has left and the contract is now detached from the staking contract.
+#### parameters <!-- omit from toc -->
+| name  | type |
+| ----- | ---- |
+| index | u64  |
+#### return <!-- omit from toc -->
+sucess: bool
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+only staking contract can call
+#### logic <!-- omit from toc -->
+1. set staker final index to the provided index.
 
 ### calculate_rewards
 >**note:** internal logic
 #### description <!-- omit from toc -->
 Calculate rewards, add amount to unclaimed_rewards, update index.
 Assumes this function call is after an one of the interactions with the staking contract:
-1. [add to delegation pool](#add_to_delegation_pool-)
-2. [claim delegation pool rewards](#claim_delegation_pool_rewards-)
+1. [add to delegation pool](#add_to_delegation_pool)
+2. [claim delegation pool rewards](#claim_delegation_pool_rewards)
 3. [exit delegation pool intent](#exit_delegation_pool_intent)
 that perform rewards calculation and index update on the staker and returns the updated index.
 #### parameters <!-- omit from toc -->

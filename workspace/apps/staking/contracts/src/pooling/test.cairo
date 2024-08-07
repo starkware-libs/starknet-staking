@@ -9,7 +9,7 @@ use contracts::{
         Pooling::{
             // TODO(Nir, 15/07/2024): Remove member module use's when possible
             __member_module_staker_address::InternalContractMemberStateTrait as StakerAddressMemberModule,
-            __member_module_pool_member_address_to_info::InternalContractMemberStateTrait as PoolMemberToInfoModule,
+            __member_module_pool_member_info::InternalContractMemberStateTrait as PoolMemberToInfoModule,
             __member_module_final_staker_index::InternalContractMemberStateTrait as StakerFinalIndexModule,
             InternalPoolingFunctionsTrait
         }
