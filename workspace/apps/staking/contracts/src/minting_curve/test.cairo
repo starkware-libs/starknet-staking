@@ -4,7 +4,7 @@ use contracts::minting_curve::MintingCurve;
 use contracts::minting_curve::MintingCurve::compute_yearly_mint;
 use contracts::test_utils::{
     initialize_minting_curve_state, deploy_staking_contract, deploy_mock_erc20_contract, fund,
-    approve, StakingInitConfig,
+    approve, StakingInitConfig, constants::{L1_STAKING_MINTER_ADDRESS},
 };
 use snforge_std::{cheat_caller_address, CheatSpan, test_address};
 use core::integer::u256_sqrt;
@@ -19,7 +19,9 @@ fn test_yearly_mint() {
     let staking_contract = deploy_staking_contract(token_address, cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let total_supply: u128 = 10000000000;
-    let mut state = initialize_minting_curve_state(staking_contract, total_supply);
+    let mut state = initialize_minting_curve_state(
+        :staking_contract, :total_supply, l1_staking_minter_address: L1_STAKING_MINTER_ADDRESS
+    );
     fund(
         sender: cfg.test_info.owner_address,
         recipient: cfg.test_info.staker_address,
