@@ -17,7 +17,8 @@ use contracts::{
     utils::{compute_rewards, compute_commission},
     test_utils::{
         initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig,
-        stake_for_testing, fund, approve,
+        stake_for_testing, fund, approve, deploy_staking_contract, stake_with_pooling_enabled,
+        enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
             OWNER_ADDRESS, INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS,
@@ -30,15 +31,15 @@ use contracts::event_test_utils::{
     assert_number_of_events, assert_staker_exit_intent_event, assert_staker_balance_changed_event
 };
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use contracts::staking::interface::IStaking;
 use starknet::{ContractAddress, contract_address_const, get_caller_address, get_block_timestamp};
 use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::staking::Staking::ContractState;
+use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::staking::Staking::{REV_SHARE_DENOMINATOR, MIN_INCREASE_STAKE};
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
-use snforge_std::{cheat_caller_address, CheatSpan, test_address};
+use snforge_std::{cheat_caller_address, CheatSpan, test_address, cheat_block_timestamp};
 use snforge_std::cheatcodes::events::{
     Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
 };
@@ -595,6 +596,47 @@ fn test_unstake_intent_unstake_in_progress() {
     state.unstake_intent();
     state.unstake_intent();
 }
+
+// TODO: test event.
+#[test]
+fn test_unstake_action() {
+    let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Deploy the staking contract, stake, and enter delegation pool.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+
+    let staker_address = cfg.test_info.staker_address;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(1)
+    );
+    let unstake_time = staking_dispatcher.unstake_intent();
+    // Advance time to enable unstake_action.
+    cheat_block_timestamp(
+        contract_address: staking_contract,
+        block_timestamp: unstake_time + 1,
+        span: CheatSpan::Indefinite
+    );
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: NON_STAKER_ADDRESS(),
+        span: CheatSpan::TargetCalls(1)
+    );
+    let staker_amount = staking_dispatcher.unstake_action(:staker_address);
+    assert_eq!(staker_amount, cfg.staker_info.amount_own);
+    let actual_staker_info: Option<StakerInfo> = load_option_from_simple_map(
+        map_selector: selector!("staker_info"), key: staker_address, contract: staking_contract
+    );
+    assert!(actual_staker_info.is_none());
+}
+
+// TODO: test unstake_action.
 
 #[test]
 fn test_get_total_stake() {

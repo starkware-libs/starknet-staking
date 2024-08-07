@@ -37,6 +37,7 @@ pub trait IPooling<TContractState> {
     fn enter_from_staking_contract(
         ref self: TContractState, amount: u128, index: u64, data: Span<felt252>
     ) -> bool;
+    fn set_final_staker_index(ref self: TContractState, final_staker_index: u64);
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
     fn state_of(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
 }
