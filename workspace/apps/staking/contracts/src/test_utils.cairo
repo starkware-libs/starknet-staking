@@ -19,6 +19,7 @@ use constants::{
     STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS, TOKEN_ADDRESS,
     REV_SHARE, POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH,
     POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
+    L1_STAKING_MINTER_ADDRESS,
 };
 use snforge_std::{ContractClass, CheatSpan, cheat_caller_address, test_address};
 pub(crate) mod constants {
@@ -34,6 +35,8 @@ pub(crate) mod constants {
     pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
     pub const REV_SHARE: u16 = 500;
     pub const STAKER_FINAL_INDEX: u64 = 10;
+
+    pub const L1_STAKING_MINTER_ADDRESS: felt252 = 'L1_STAKING_MINTER_ADDRESS';
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         contract_address_const::<'CALLER_ADDRESS'>()
@@ -145,10 +148,12 @@ pub(crate) fn initialize_pooling_state(
 }
 
 pub(crate) fn initialize_minting_curve_state(
-    staking_contract: ContractAddress, total_supply: u128
+    staking_contract: ContractAddress, total_supply: u128, l1_staking_minter_address: felt252
 ) -> MintingCurve::ContractState {
     let mut state = MintingCurve::contract_state_for_testing();
-    MintingCurve::constructor(ref state, staking_contract, total_supply);
+    MintingCurve::constructor(
+        ref state, :staking_contract, :total_supply, :l1_staking_minter_address
+    );
     state
 }
 

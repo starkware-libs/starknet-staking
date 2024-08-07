@@ -37,6 +37,7 @@ pub enum Error {
     // Minting contract errors
     TOTAL_SUPPLY_NOT_U128,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
+    UNAUTHORIZED_MESSAGE_SENDER,
 }
 
 
@@ -90,6 +91,7 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::CALLER_IS_NOT_STAKING_CONTRACT => panic!("Caller is not staking contract."),
         Error::FINAL_STAKER_INDEX_ALREADY_SET => panic!("Final staker index already set."),
         Error::MISSING_POOL_CONTRACT => panic!("Staker does not have pool contract."),
+        Error::UNAUTHORIZED_MESSAGE_SENDER => panic!("Unauthorized message sender."),
     }
 }
 
