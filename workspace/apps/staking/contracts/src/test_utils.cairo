@@ -15,11 +15,10 @@ use starknet::Store;
 use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::Staking::ContractState;
 use constants::{
-    NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, MAX_LEVERAGE, STAKER_INITIAL_BALANCE,
-    STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS, TOKEN_ADDRESS,
-    REV_SHARE, POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH,
-    POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
-    L1_STAKING_MINTER_ADDRESS,
+    NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_INITIAL_BALANCE, STAKE_AMOUNT,
+    STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
+    POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH, POOL_MEMBER_ADDRESS,
+    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, L1_STAKING_MINTER_ADDRESS,
 };
 use snforge_std::{ContractClass, CheatSpan, cheat_caller_address, test_address};
 pub(crate) mod constants {
@@ -29,7 +28,6 @@ pub(crate) mod constants {
     pub const STAKER_INITIAL_BALANCE: u128 = 10000000000;
     pub const POOL_MEMBER_INITIAL_BALANCE: u128 = 10000000000;
     pub const INITIAL_SUPPLY: u256 = 10000000000000000;
-    pub const MAX_LEVERAGE: u64 = 100;
     pub const MIN_STAKE: u128 = 100000;
     pub const STAKE_AMOUNT: u128 = 200000;
     pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
@@ -118,20 +116,14 @@ pub(crate) fn initialize_staking_state_from_cfg(
     initialize_staking_state(
         :token_address,
         min_stake: cfg.staking_contract_info.min_stake,
-        max_leverage: cfg.staking_contract_info.max_leverage,
         pool_contract_class_hash: cfg.test_info.pool_contract_class_hash
     )
 }
 pub(crate) fn initialize_staking_state(
-    token_address: ContractAddress,
-    min_stake: u128,
-    max_leverage: u64,
-    pool_contract_class_hash: ClassHash
+    token_address: ContractAddress, min_stake: u128, pool_contract_class_hash: ClassHash
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
-    Staking::constructor(
-        ref state, token_address, min_stake, max_leverage, pool_contract_class_hash
-    );
+    Staking::constructor(ref state, token_address, min_stake, pool_contract_class_hash);
     state
 }
 
@@ -177,7 +169,6 @@ pub(crate) fn deploy_staking_contract(
     let mut calldata = ArrayTrait::new();
     token_address.serialize(ref calldata);
     cfg.staking_contract_info.min_stake.serialize(ref calldata);
-    cfg.staking_contract_info.max_leverage.serialize(ref calldata);
     cfg.test_info.pool_contract_class_hash.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
@@ -388,10 +379,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             unpool_time: Option::None,
         };
         let staking_contract_info = StakingContractInfo {
-            max_leverage: MAX_LEVERAGE,
-            min_stake: MIN_STAKE,
-            token_address: TOKEN_ADDRESS(),
-            global_index: BASE_VALUE,
+            min_stake: MIN_STAKE, token_address: TOKEN_ADDRESS(), global_index: BASE_VALUE,
         };
         let test_info = TestInfo {
             staker_address: STAKER_ADDRESS(),
