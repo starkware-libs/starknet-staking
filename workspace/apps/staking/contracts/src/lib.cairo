@@ -9,6 +9,7 @@ pub mod event_test_utils;
 pub mod staking;
 pub mod pooling;
 pub mod minting_curve;
+pub mod reward_supplier;
 
 // Consts and other non-component utilities
 pub mod errors;
