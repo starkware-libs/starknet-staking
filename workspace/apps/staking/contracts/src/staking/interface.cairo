@@ -50,7 +50,6 @@ pub impl StakerInfoImpl of StakerInfoTrait {
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
-    pub max_leverage: u64,
     pub min_stake: u128,
     pub token_address: ContractAddress,
     pub global_index: u64,

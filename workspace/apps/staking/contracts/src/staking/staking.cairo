@@ -59,7 +59,6 @@ pub mod Staking {
         min_stake: u128,
         staker_info: LegacyMap::<ContractAddress, Option<StakerInfo>>,
         operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
-        max_leverage: u64,
         token_address: ContractAddress,
         total_stake: u128,
         pool_contract_class_hash: ClassHash,
@@ -81,12 +80,10 @@ pub mod Staking {
         ref self: ContractState,
         token_address: ContractAddress,
         min_stake: u128,
-        max_leverage: u64,
         pool_contract_class_hash: ClassHash,
     ) {
         self.token_address.write(token_address);
         self.min_stake.write(min_stake);
-        self.max_leverage.write(max_leverage);
         self.global_index.write(BASE_VALUE);
         self.pool_contract_class_hash.write(pool_contract_class_hash);
     }
@@ -246,11 +243,6 @@ pub mod Staking {
                 pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
 
-            self
-                .assert_leverage_is_valid(
-                    amount_staker: staker_info.amount_own,
-                    amount_pool: staker_info.amount_pool + amount
-                );
             self.calculate_rewards(ref :staker_info);
             let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
             erc20_dispatcher
@@ -331,7 +323,6 @@ pub mod Staking {
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
             StakingContractInfo {
                 min_stake: self.min_stake.read(),
-                max_leverage: self.max_leverage.read(),
                 token_address: self.token_address.read(),
                 global_index: self.global_index.read(),
             }
@@ -457,16 +448,6 @@ pub mod Staking {
                 :token_address,
                 :rev_share
             )
-        }
-
-        fn assert_leverage_is_valid(self: @ContractState, amount_staker: u128, amount_pool: u128) {
-            let max_leverage = self.max_leverage.read();
-            // Note: leverage is defined by amount_pool / amount_staker.
-            assert_with_err(
-                max_leverage
-                    .into() >= ceil_of_division(dividend: amount_pool, divisor: amount_staker),
-                Error::LEVERAGE_EXCEEDED
-            );
         }
 
         fn add_to_total_stake(ref self: ContractState, amount: u128) {

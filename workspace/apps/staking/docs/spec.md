@@ -69,7 +69,6 @@ classDiagram
     map < staker_address, StakerInfo >
     map < operational_address, StakerInfo >
     global_index
-    max_leverage
     min_stake
     stake()
     increase_stake()
@@ -356,10 +355,9 @@ index: u64 - updated index
 #### access control <!-- omit from toc -->
 Only pooling contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. Verify pooled amount after the increase will not exceed leverage limit.
-2. [Calculate rewards](#calculate_rewards)
-3. transfer funds from pooling contract to staking contract.
-4. Add amount to staker's pooled amount
+1. [Calculate rewards](#calculate_rewards)
+2. transfer funds from pooling contract to staking contract.
+3. Add amount to staker's pooled amount
 
 ### remove_from_delegation_pool_intent
 #### description <!-- omit from toc -->
@@ -522,7 +520,6 @@ Return general parameters of the contract.
 | name | type |
 | ---- | ---- |
 #### return <!-- omit from toc -->
-leverage_limit
 minimum_stake
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
@@ -631,12 +628,11 @@ amount: u128 - updated total amount for the caller.
 only a listed pool member address.
 #### logic <!-- omit from toc -->
 1. Check that staker for this pool instance is not in exit window.
-2. Verify leverage after this amount addition is valid.
-3. [Calculate rewards](#calculate_rewards-1)
-4. Transfer funds from caller to the contract.
-5. Call staking contract's [add_to_delegation_pool](#add_to_delegation_pool).
-6. Get current index from staking contract.
-7. Update pool memeber entry with
+2. [Calculate rewards](#calculate_rewards-1)
+3. Transfer funds from caller to the contract.
+4. Call staking contract's [add_to_delegation_pool](#add_to_delegation_pool).
+5. Get current index from staking contract.
+6. Update pool memeber entry with
    1. index
    2. amount
    3. unclaimed rewards
@@ -750,13 +746,12 @@ success: bool
 Only staking contract can call.
 #### logic <!-- omit from toc -->
 1. Check that staker for this pool instance is not in exit window.
-2. Verify leverage after this amount addition is valid.
-3. Deserialize data, get pool_member and rewrad addresses.
-4. If pool member is listed in the contract:
+2. Deserialize data, get pool_member and rewrad addresses.
+3. If pool member is listed in the contract:
    1. validate that pool member is not in exit window.
    2. [Calculate rewards](#calculate_rewards-1)
    3. Update pool member entry
-5. Else
+4. Else
    1. Create an entry for the pool member.
 
 ### staker_left

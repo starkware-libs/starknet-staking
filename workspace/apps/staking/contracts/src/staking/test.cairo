@@ -9,7 +9,6 @@ use contracts::{
             __member_module_staker_info::InternalContractMemberStateTrait as StakerAddressToStakerInfoMemberModule,
             __member_module_operational_address_to_staker_address::InternalContractMemberStateTrait as OperationalAddressToStakerAddressMemberModule,
             __member_module_token_address::InternalContractMemberStateTrait as TokenAddressMemberModule,
-            __member_module_max_leverage::InternalContractMemberStateTrait as MaxLeverageMemberModule,
             __member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
             InternalStakingFunctionsTrait
         }
@@ -20,9 +19,9 @@ use contracts::{
         stake_for_testing, fund, approve, deploy_staking_contract, stake_with_pooling_enabled,
         enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
         constants::{
-            TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MAX_LEVERAGE, MIN_STAKE,
-            OWNER_ADDRESS, INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS,
-            STAKER_ADDRESS, STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
+            TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OWNER_ADDRESS,
+            INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
+            STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
             OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT
         }
     }
@@ -49,7 +48,7 @@ fn test_constructor() {
     let token_address: ContractAddress = TOKEN_ADDRESS();
     let dummy_address: ContractAddress = DUMMY_ADDRESS();
     let mut state = Staking::contract_state_for_testing();
-    Staking::constructor(ref state, token_address, MIN_STAKE, MAX_LEVERAGE, DUMMY_CLASS_HASH());
+    Staking::constructor(ref state, token_address, MIN_STAKE, DUMMY_CLASS_HASH());
     let contract_min_stake: u128 = state.min_stake.read();
     assert_eq!(MIN_STAKE, contract_min_stake);
     let contract_token_address: ContractAddress = state.token_address.read();
@@ -260,7 +259,6 @@ fn test_contract_parameters() {
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
     let expected_staking_contract_info = StakingContractInfo {
-        max_leverage: cfg.staking_contract_info.max_leverage,
         min_stake: cfg.staking_contract_info.min_stake,
         token_address: token_address,
         global_index: cfg.staker_info.index,
