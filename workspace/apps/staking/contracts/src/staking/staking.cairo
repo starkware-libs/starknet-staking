@@ -21,6 +21,8 @@ pub mod Staking {
     use starknet::get_block_timestamp;
     use starknet::class_hash::ClassHash;
     use starknet::syscalls::deploy_syscall;
+    use contracts::pooling::interface::{IPoolingDispatcherTrait, IPoolingDispatcher};
+
     // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value). 
     pub const MIN_INCREASE_STAKE: u128 = 10;
     pub const REV_SHARE_DENOMINATOR: u16 = 10000;
@@ -206,11 +208,31 @@ pub mod Staking {
         }
 
         fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
-            // TODO: It is not clear from spec, but amount in the event may also include pooling.
-            //       If so, should this be 0 or pooling?
-            // self.emit(Events::BalanceChanged { staker_address, 0 });
-            0
+            let staker_info = self.get_staker_info(:staker_address);
+            let unstake_time = staker_info
+                .unstake_time
+                .expect_with_err(Error::MISSING_UNSTAKE_INTENT);
+            assert_with_err(
+                get_block_timestamp() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED
+            );
+            // Claim rewards.
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            erc20_dispatcher
+                .transfer(
+                    recipient: staker_info.reward_address,
+                    amount: staker_info.unclaimed_rewards_own.into()
+                );
+            // Transfer to staker.
+            let staker_amount = staker_info.amount_own;
+            erc20_dispatcher.transfer(recipient: staker_address, amount: staker_amount.into());
+
+            self.transfer_to_pool_when_unstake(:staker_info);
+            self.remove_staker(:staker_address, :staker_info);
+            staker_amount
         }
+        // TODO: It is not clear from spec, but amount in the event may also include pooling.
+        //       If so, should this be 0 or pooling?
+        // self.emit(Events::BalanceChanged { staker_address, 0 });
 
         fn add_to_delegation_pool(
             ref self: ContractState, pooled_staker: ContractAddress, amount: u128
@@ -360,6 +382,27 @@ pub mod Staking {
                 rewards -= commission;
                 staker_info.unclaimed_rewards_pool += rewards;
             }
+        }
+
+        fn transfer_to_pool_when_unstake(ref self: ContractState, staker_info: StakerInfo) {
+            if let Option::Some(pooling_contract) = staker_info.pooling_contract {
+                let erc20_dispatcher = IERC20Dispatcher {
+                    contract_address: self.token_address.read()
+                };
+                let pool_amount = staker_info.amount_pool + staker_info.unclaimed_rewards_pool;
+                erc20_dispatcher.transfer(recipient: pooling_contract, amount: pool_amount.into());
+                let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+                pooling_dispatcher.set_final_staker_index(final_staker_index: staker_info.index);
+            }
+        }
+
+        fn remove_staker(
+            ref self: ContractState, staker_address: ContractAddress, staker_info: StakerInfo
+        ) {
+            self.staker_info.write(staker_address, Option::None);
+            self
+                .operational_address_to_staker_address
+                .write(staker_info.operational_address, Zero::zero());
         }
 
         /// Calculates the rewards for a given staker.

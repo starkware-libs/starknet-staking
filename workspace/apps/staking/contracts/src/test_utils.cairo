@@ -33,6 +33,7 @@ pub(crate) mod constants {
     pub const STAKE_AMOUNT: u128 = 200000;
     pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
     pub const REV_SHARE: u16 = 500;
+    pub const STAKER_FINAL_INDEX: u64 = 10;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         contract_address_const::<'CALLER_ADDRESS'>()
@@ -63,6 +64,9 @@ pub(crate) mod constants {
     }
     pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'STAKING_CONTRACT_ADDRESS'>()
+    }
+    pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress {
+        contract_address_const::<'NOT_STAKING_CONTRACT_ADDRESS'>()
     }
     pub fn POOLING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'POOLING_CONTRACT_ADDRESS'>()
@@ -314,6 +318,27 @@ pub(crate) fn load_from_simple_map<K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V
     );
     let mut span = serialized_value.span();
     Serde::<V>::deserialize(ref span).expect('Failed deserialize')
+}
+
+// This only works for shallow Option. i.e. if within V there is an Option, this will fail.
+pub(crate) fn load_option_from_simple_map<
+    K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<Option<V>>
+>(
+    map_selector: felt252, key: K, contract: ContractAddress
+) -> Option<V> {
+    let mut keys = array![];
+    key.serialize(ref keys);
+    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
+    let mut raw_serialized_value = snforge_std::load(
+        target: contract, :storage_address, size: Store::<Option<V>>::size().into()
+    );
+    let idx = raw_serialized_value.pop_front().expect('Failed pop_front');
+    let mut span = raw_serialized_value.span();
+    match idx {
+        0 => Option::None,
+        1 => Option::Some(Serde::<V>::deserialize(ref span).expect('Failed deserialize')),
+        _ => panic!("Invalid Option loaded from map"),
+    }
 }
 
 #[derive(Drop, Copy)]

@@ -13,6 +13,7 @@ pub enum Error {
     OPERATIONAL_EXISTS,
     CALLER_CANNOT_INCREASE_STAKE,
     INVALID_REWARD_ADDRESS,
+    INTENT_WINDOW_NOT_FINISHED,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     REV_SHARE_OUT_OF_RANGE,
@@ -20,6 +21,7 @@ pub enum Error {
     UNSTAKE_IN_PROGRESS,
     POOL_ADDRESS_DOES_NOT_EXIST,
     CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
+    MISSING_UNSTAKE_INTENT,
     LEVERAGE_EXCEEDED,
     CALLER_IS_NOT_POOL_CONTRACT,
     MISSING_POOL_CONTRACT,
@@ -30,6 +32,8 @@ pub enum Error {
     AMOUNT_IS_ZERO,
     UNDELEGATE_IN_PROGRESS,
     INSUFFICIENT_POOL_BALANCE,
+    CALLER_IS_NOT_STAKING_CONTRACT,
+    FINAL_STAKER_INDEX_ALREADY_SET,
     // Minting contract errors
     TOTAL_SUPPLY_NOT_U128,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
@@ -48,6 +52,7 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Caller address should be staker address or reward address."
         ),
         Error::INVALID_REWARD_ADDRESS => panic!("Invalid reward address."),
+        Error::INTENT_WINDOW_NOT_FINISHED => panic!("Intent window is not finished."),
         Error::OPERATIONAL_EXISTS => panic!("Operational address already exists."),
         Error::AMOUNT_LESS_THAN_MIN_STAKE => panic!(
             "Amount is less than min stake - try again with enough funds."
@@ -59,6 +64,7 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Amount is less than min increase stake - try again with enough funds."
         ),
         Error::POOL_ADDRESS_DOES_NOT_EXIST => panic!("Pool address does not exist."),
+        Error::MISSING_UNSTAKE_INTENT => panic!("Unstake intent is missing"),
         Error::UNSTAKE_IN_PROGRESS => panic!(
             "Unstake is in progress, staker is in an exit window."
         ),
@@ -81,6 +87,8 @@ pub fn panic_by_err(error: Error) -> core::never {
         ),
         Error::LEVERAGE_EXCEEDED => panic!("Cannot exceed max leverage."),
         Error::CALLER_IS_NOT_POOL_CONTRACT => panic!("Caller is not pool contract."),
+        Error::CALLER_IS_NOT_STAKING_CONTRACT => panic!("Caller is not staking contract."),
+        Error::FINAL_STAKER_INDEX_ALREADY_SET => panic!("Final staker index already set."),
         Error::MISSING_POOL_CONTRACT => panic!("Staker does not have pool contract."),
     }
 }

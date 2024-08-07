@@ -30,6 +30,7 @@ use contracts::{
         OWNER_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
         STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, INITIAL_SUPPLY, DUMMY_ADDRESS,
         OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, REV_SHARE, POOL_MEMBER_REWARD_ADDRESS,
+        STAKER_FINAL_INDEX, NOT_STAKING_CONTRACT_ADDRESS,
     }
 };
 use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_exit_intent_event,};
@@ -170,6 +171,62 @@ fn test_assert_staker_is_active_panic() {
     );
     state.final_staker_index.write(Option::Some(5));
     state.assert_staker_is_active();
+}
+
+#[test]
+fn test_set_final_staker_index() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut state = initialize_pooling_state(
+        staker_address: cfg.test_info.staker_address,
+        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        token_address: cfg.staking_contract_info.token_address,
+        rev_share: cfg.staker_info.rev_share
+    );
+    cheat_caller_address(
+        contract_address: test_address(),
+        caller_address: STAKING_CONTRACT_ADDRESS(),
+        span: CheatSpan::TargetCalls(1)
+    );
+    assert!(state.final_staker_index.read().is_none());
+    state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
+    assert_eq!(state.final_staker_index.read().unwrap(), STAKER_FINAL_INDEX);
+}
+
+#[test]
+#[should_panic(expected: "Caller is not staking contract.")]
+fn test_set_final_staker_index_caller_is_not_staking_contract() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut state = initialize_pooling_state(
+        staker_address: cfg.test_info.staker_address,
+        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        token_address: cfg.staking_contract_info.token_address,
+        rev_share: cfg.staker_info.rev_share
+    );
+    cheat_caller_address(
+        contract_address: test_address(),
+        caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
+        span: CheatSpan::TargetCalls(1)
+    );
+    state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
+}
+
+#[test]
+#[should_panic(expected: "Final staker index already set.")]
+fn test_set_final_staker_index_already_set() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut state = initialize_pooling_state(
+        staker_address: cfg.test_info.staker_address,
+        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        token_address: cfg.staking_contract_info.token_address,
+        rev_share: cfg.staker_info.rev_share
+    );
+    cheat_caller_address(
+        contract_address: test_address(),
+        caller_address: STAKING_CONTRACT_ADDRESS(),
+        span: CheatSpan::TargetCalls(2)
+    );
+    state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
+    state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
 }
 
 #[test]

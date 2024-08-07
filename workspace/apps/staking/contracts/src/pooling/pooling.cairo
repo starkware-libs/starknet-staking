@@ -162,6 +162,18 @@ pub mod Pooling {
             true
         }
 
+        fn set_final_staker_index(ref self: ContractState, final_staker_index: u64) {
+            let staking_contract = get_caller_address();
+            assert_with_err(
+                staking_contract == self.staking_contract.read(),
+                Error::CALLER_IS_NOT_STAKING_CONTRACT
+            );
+            assert_with_err(
+                self.final_staker_index.read().is_none(), Error::FINAL_STAKER_INDEX_ALREADY_SET
+            );
+            self.final_staker_index.write(Option::Some(final_staker_index));
+        }
+
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
