@@ -301,7 +301,7 @@ pub mod Pooling {
             let staker_address = self.staker_address.read();
             staking_dispatcher
                 .remove_from_delegation_pool_intent(
-                    :staker_address, identifier: pool_member, :amount
+                    :staker_address, identifier: pool_member.into(), :amount
                 )
         }
     }
