@@ -355,7 +355,7 @@ fn test_exit_delegation_pool_intent() {
     assert_eq!(staking_dispatcher.state_of(cfg.test_info.staker_address), expected_staker_info);
     // Validate that the data is written in the exit intents map in staking contract.
     let undelegate_intent_key = UndelegateIntentKey {
-        pool_contract: pooling_contract, identifier: cfg.test_info.pool_member_address
+        pool_contract: pooling_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
     let actual_undelegate_intent_value = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),

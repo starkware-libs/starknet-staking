@@ -77,7 +77,7 @@ pub trait IStaking<TContractState> {
     fn remove_from_delegation_pool_intent(
         ref self: TContractState,
         staker_address: ContractAddress,
-        identifier: ContractAddress,
+        identifier: felt252,
         amount: u128,
     ) -> u64;
     fn remove_from_delegation_pool_action(

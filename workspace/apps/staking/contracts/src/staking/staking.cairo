@@ -40,7 +40,7 @@ pub mod Staking {
     #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
     pub struct UndelegateIntentKey {
         pub pool_contract: ContractAddress,
-        pub identifier: ContractAddress
+        pub identifier: felt252
     }
 
     #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
@@ -258,7 +258,7 @@ pub mod Staking {
         fn remove_from_delegation_pool_intent(
             ref self: ContractState,
             staker_address: ContractAddress,
-            identifier: ContractAddress,
+            identifier: felt252,
             amount: u128,
         ) -> u64 {
             let mut staker_info = self.get_staker_info(:staker_address);
