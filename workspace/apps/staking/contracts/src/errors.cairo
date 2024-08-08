@@ -14,6 +14,7 @@ pub enum Error {
     CALLER_CANNOT_INCREASE_STAKE,
     INVALID_REWARD_ADDRESS,
     INTENT_WINDOW_NOT_FINISHED,
+    AMOUNT_TOO_HIGH,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     REV_SHARE_OUT_OF_RANGE,
@@ -33,6 +34,7 @@ pub enum Error {
     INSUFFICIENT_POOL_BALANCE,
     CALLER_IS_NOT_STAKING_CONTRACT,
     FINAL_STAKER_INDEX_ALREADY_SET,
+    MISSING_UNDELEGATE_INTENT,
     // Minting contract errors
     TOTAL_SUPPLY_NOT_U128,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
@@ -52,6 +54,7 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Caller address should be staker address or reward address."
         ),
         Error::INVALID_REWARD_ADDRESS => panic!("Invalid reward address."),
+        Error::AMOUNT_TOO_HIGH => panic!("Amount is too high."),
         Error::INTENT_WINDOW_NOT_FINISHED => panic!("Intent window is not finished."),
         Error::OPERATIONAL_EXISTS => panic!("Operational address already exists."),
         Error::AMOUNT_LESS_THAN_MIN_STAKE => panic!(
@@ -64,7 +67,7 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Amount is less than min increase stake - try again with enough funds."
         ),
         Error::POOL_ADDRESS_DOES_NOT_EXIST => panic!("Pool address does not exist."),
-        Error::MISSING_UNSTAKE_INTENT => panic!("Unstake intent is missing"),
+        Error::MISSING_UNSTAKE_INTENT => panic!("Unstake intent is missing."),
         Error::UNSTAKE_IN_PROGRESS => panic!(
             "Unstake is in progress, staker is in an exit window."
         ),
@@ -88,6 +91,7 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::CALLER_IS_NOT_POOL_CONTRACT => panic!("Caller is not pool contract."),
         Error::CALLER_IS_NOT_STAKING_CONTRACT => panic!("Caller is not staking contract."),
         Error::FINAL_STAKER_INDEX_ALREADY_SET => panic!("Final staker index already set."),
+        Error::MISSING_UNDELEGATE_INTENT => panic!("Undelegate intent is missing."),
         Error::MISSING_POOL_CONTRACT => panic!("Staker does not have pool contract."),
         Error::UNAUTHORIZED_MESSAGE_SENDER => panic!("Unauthorized message sender."),
     }

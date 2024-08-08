@@ -1,5 +1,6 @@
 #[starknet::contract]
 pub mod Pooling {
+    use core::serde::Serde;
     use core::num::traits::zero::Zero;
     use contracts::{
         constants::{BASE_VALUE}, errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
@@ -23,6 +24,12 @@ pub mod Pooling {
 
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+
+    #[derive(Debug, Drop, Serde, Copy)]
+    pub struct SwitchPoolData {
+        pub pool_member: ContractAddress,
+        pub reward_address: ContractAddress,
+    }
 
     #[storage]
     struct Storage {
@@ -148,11 +155,38 @@ pub mod Pooling {
 
         fn switch_delegation_pool(
             ref self: ContractState,
-            to_staker_address: ContractAddress,
-            to_pool_address: ContractAddress,
+            to_staker: ContractAddress,
+            to_pool: ContractAddress,
             amount: u128
         ) -> u128 {
-            0
+            assert_with_err(amount > 0, Error::AMOUNT_IS_ZERO);
+            let pool_member = get_caller_address();
+            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            assert_with_err(
+                pool_member_info.unpool_time.is_some(), Error::MISSING_UNDELEGATE_INTENT
+            );
+            assert_with_err(pool_member_info.amount >= amount, Error::AMOUNT_TOO_HIGH);
+            let span_data = self.get_serialized_switch_pool_data(:pool_member, :pool_member_info);
+            let staking_dispatcher = IStakingDispatcher {
+                contract_address: self.staking_contract.read()
+            };
+            let amount_left = pool_member_info.amount - amount;
+            if amount_left == 0 {
+                self.remove_pool_member(:pool_member);
+            } else {
+                pool_member_info.amount = amount_left;
+                self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            };
+            // TODO: emit event
+            staking_dispatcher
+                .switch_staking_delegation_pool(
+                    from_staker: self.staker_address.read(),
+                    :to_staker,
+                    :to_pool,
+                    :amount,
+                    data: span_data
+                );
+            amount_left
         }
 
         fn enter_from_staking_contract(
@@ -197,6 +231,10 @@ pub mod Pooling {
                 .expect_with_err(Error::POOL_MEMBER_DOES_NOT_EXIST)
         }
 
+        fn remove_pool_member(ref self: ContractState, pool_member: ContractAddress) {
+            self.pool_member_info.write(pool_member, Option::None);
+        }
+
         fn receive_index_and_funds_from_staker(self: @ContractState) -> u64 {
             if let Option::Some(final_index) = self.final_staker_index.read() {
                 // If the staker is inactive, the staker already pushed index and funds.
@@ -206,6 +244,16 @@ pub mod Pooling {
                 contract_address: self.staking_contract.read()
             };
             staking_dispatcher.claim_delegation_pool_rewards(self.staker_address.read())
+        }
+
+        fn get_serialized_switch_pool_data(
+            self: @ContractState, pool_member: ContractAddress, pool_member_info: PoolMemberInfo
+        ) -> Span<felt252> {
+            let reward_address = pool_member_info.reward_address;
+            let switch_pool_data = SwitchPoolData { pool_member, reward_address };
+            let mut data = array![];
+            switch_pool_data.serialize(ref data);
+            data.span()
         }
 
         /// Calculates the rewards for a pool member.
