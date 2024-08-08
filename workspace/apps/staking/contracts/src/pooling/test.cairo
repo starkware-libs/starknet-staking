@@ -24,13 +24,14 @@ use contracts::{
         initialize_pooling_state, deploy_mock_erc20_contract, StakingInitConfig,
         deploy_staking_contract, fund, approve, initialize_staking_state_from_cfg,
         stake_for_testing_using_dispatcher, enter_delegation_pool_for_testing_using_dispatcher,
-        stake_with_pooling_enabled, load_from_simple_map,
+        stake_with_pooling_enabled, load_from_simple_map, load_option_from_simple_map,
     },
     test_utils::constants::{
         OWNER_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
         STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, INITIAL_SUPPLY, DUMMY_ADDRESS,
         OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, REV_SHARE, POOL_MEMBER_REWARD_ADDRESS,
-        STAKER_FINAL_INDEX, NOT_STAKING_CONTRACT_ADDRESS,
+        STAKER_FINAL_INDEX, NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
+        OTHER_POOL_CONTRACT_ADDRESS,
     }
 };
 use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_exit_intent_event,};
@@ -377,4 +378,55 @@ fn test_exit_delegation_pool_intent() {
         pool_member: cfg.test_info.pool_member_address,
         exit_at: expected_time
     );
+}
+
+// TODO: add event test.
+#[test]
+fn test_switch_delegation_pool() {
+    let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Deploy the staking contract, stake, and enter delegation pool.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+
+    cheat_caller_address(
+        pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(3)
+    );
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    pooling_dispatcher.exit_delegation_pool_intent();
+    let switch_amount = cfg.pool_member_info.amount / 2;
+    let amount_left = pooling_dispatcher
+        .switch_delegation_pool(
+            to_staker: OTHER_STAKER_ADDRESS(),
+            to_pool: OTHER_POOL_CONTRACT_ADDRESS(),
+            amount: switch_amount
+        );
+    let actual_pool_member_info: Option<PoolMemberInfo> = load_option_from_simple_map(
+        map_selector: selector!("pool_member_info"),
+        key: cfg.test_info.pool_member_address,
+        contract: pooling_contract
+    );
+    let expected_pool_member_info = PoolMemberInfo {
+        amount: cfg.pool_member_info.amount - switch_amount, ..cfg.pool_member_info
+    };
+    assert_eq!(amount_left, cfg.pool_member_info.amount - switch_amount);
+    assert_eq!(actual_pool_member_info, Option::Some(expected_pool_member_info));
+
+    let amount_left = pooling_dispatcher
+        .switch_delegation_pool(
+            to_staker: OTHER_STAKER_ADDRESS(),
+            to_pool: OTHER_POOL_CONTRACT_ADDRESS(),
+            amount: switch_amount
+        );
+    let actual_pool_member_info: Option<PoolMemberInfo> = load_option_from_simple_map(
+        map_selector: selector!("pool_member_info"),
+        key: cfg.test_info.pool_member_address,
+        contract: pooling_contract
+    );
+    assert_eq!(amount_left, 0);
+    assert!(actual_pool_member_info.is_none());
 }

@@ -78,6 +78,9 @@ pub(crate) mod constants {
     pub fn POOLING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'POOLING_CONTRACT_ADDRESS'>()
     }
+    pub fn OTHER_POOL_CONTRACT_ADDRESS() -> ContractAddress {
+        contract_address_const::<'OTHER_POOL_CONTRACT_ADDRESS'>()
+    }
     pub fn MINTING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'MINTING_CONTRACT_ADDRESS'>()
     }

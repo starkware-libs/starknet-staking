@@ -292,9 +292,9 @@ pub mod Staking {
 
         fn switch_staking_delegation_pool(
             ref self: ContractState,
-            from_staker_address: ContractAddress,
-            to_staker_address: ContractAddress,
-            to_pool_address: ContractAddress,
+            from_staker: ContractAddress,
+            to_staker: ContractAddress,
+            to_pool: ContractAddress,
             amount: u128,
             data: Span<felt252>
         ) -> bool {
