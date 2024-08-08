@@ -430,3 +430,44 @@ fn test_switch_delegation_pool() {
     assert_eq!(amount_left, 0);
     assert!(actual_pool_member_info.is_none());
 }
+
+#[test]
+#[should_panic(expected: ("Pool member does not exist.",))]
+fn test_claim_rewards_pool_member_not_exist() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let mut state = initialize_pooling_state(
+        staker_address: cfg.test_info.staker_address,
+        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        :token_address,
+        rev_share: cfg.staker_info.rev_share
+    );
+    state.claim_rewards(pool_member: NON_POOL_MEMBER_ADDRESS());
+}
+
+#[test]
+#[should_panic(
+    expected: ("Claim rewards must be called from pool member address or reward address.",)
+)]
+fn test_claim_rewards_unauthorized_address() {
+    let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Deploy the staking contract, stake, and enter delegation pool.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    cheat_caller_address(
+        contract_address: pooling_contract,
+        caller_address: NON_POOL_MEMBER_ADDRESS(),
+        span: CheatSpan::TargetCalls(1)
+    );
+    pooling_dispatcher.claim_rewards(cfg.test_info.pool_member_address);
+}
+
