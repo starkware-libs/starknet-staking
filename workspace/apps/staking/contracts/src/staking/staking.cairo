@@ -12,6 +12,9 @@ pub mod Staking {
             compute_rewards, ceil_of_division
         },
     };
+    use contracts::staking::objects::{
+        UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
+    };
     use contracts::staking::Events;
     use starknet::{ContractAddress, get_contract_address, get_caller_address};
     use openzeppelin::{
@@ -36,18 +39,6 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
-
-    #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
-    pub struct UndelegateIntentKey {
-        pub pool_contract: ContractAddress,
-        pub identifier: felt252
-    }
-
-    #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-    pub struct UndelegateIntentValue {
-        pub unpool_time: u64,
-        pub amount: u128
-    }
 
     #[storage]
     struct Storage {
@@ -274,20 +265,32 @@ pub mod Staking {
             self.remove_from_total_stake(:amount);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             let unpool_time = staker_info.compute_unpool_time();
-            let pool_exit_key = UndelegateIntentKey { pool_contract, identifier };
+            let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let pool_exit_entry = UndelegateIntentValue { unpool_time, amount };
-            self.pool_exit_intents.write(pool_exit_key, pool_exit_entry);
+            self.pool_exit_intents.write(undelegate_intent_key, pool_exit_entry);
             unpool_time
         }
 
         fn remove_from_delegation_pool_action(
-            ref self: ContractState, staker_address: ContractAddress, identifier: Span<felt252>
+            ref self: ContractState, identifier: felt252
         ) -> u128 {
-            // TODO: It is not clear from spec, but amount in the event may also include pooling.
-            //       Actually, Spec says a balance changed event is needed here and therefore I
-            //       suspect it should include pooling.
-            // self.emit(Events::BalanceChanged { staker_address, amount+poll });
-            0
+            let pool_contract = get_caller_address();
+            let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
+            let undelegate_intent = self.pool_exit_intents.read(undelegate_intent_key);
+            assert_with_err(
+                get_block_timestamp() >= undelegate_intent.unpool_time,
+                Error::INTENT_WINDOW_NOT_FINISHED
+            );
+            if undelegate_intent.amount > 0 {
+                let erc20_dispatcher = IERC20Dispatcher {
+                    contract_address: self.token_address.read()
+                };
+                erc20_dispatcher
+                    .transfer(recipient: pool_contract, amount: undelegate_intent.amount.into());
+            // TODO: Emit event.
+            }
+            self.clear_undelegate_intent(:undelegate_intent_key);
+            undelegate_intent.amount
         }
 
         fn switch_staking_delegation_pool(
@@ -359,6 +362,12 @@ pub mod Staking {
 
     #[generate_trait]
     pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+        fn clear_undelegate_intent(
+            ref self: ContractState, undelegate_intent_key: UndelegateIntentKey
+        ) {
+            self.pool_exit_intents.write(undelegate_intent_key, Zero::zero());
+        }
+
         fn get_staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             self.staker_info.read(staker_address).expect_with_err(Error::STAKER_NOT_EXISTS)
         }

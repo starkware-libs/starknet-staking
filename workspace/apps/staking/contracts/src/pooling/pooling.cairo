@@ -160,8 +160,35 @@ pub mod Pooling {
             self.emit(Events::PoolMemberExitIntent { pool_member, exit_at: unpool_time });
         }
 
-        fn exit_delegation_pool_action(ref self: ContractState) -> u128 {
-            0
+        fn exit_delegation_pool_action(
+            ref self: ContractState, pool_member: ContractAddress
+        ) -> u128 {
+            let pool_member_info = self.get_pool_member_info(:pool_member);
+            let unpool_time = pool_member_info
+                .unpool_time
+                .expect_with_err(Error::MISSING_UNDELEGATE_INTENT);
+            assert_with_err(
+                get_block_timestamp() >= unpool_time, Error::INTENT_WINDOW_NOT_FINISHED
+            );
+            // Clear intent and receive funds from staking contract if needed.
+            let staking_dispatcher = IStakingDispatcher {
+                contract_address: self.staking_contract.read()
+            };
+            staking_dispatcher.remove_from_delegation_pool_action(identifier: pool_member.into());
+
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            // Claim rewards.
+            erc20_dispatcher
+                .transfer(
+                    recipient: pool_member_info.reward_address,
+                    amount: pool_member_info.unclaimed_rewards.into()
+                );
+            // Transfer delegated amount to the pool member.
+            let delegated_amount = pool_member_info.amount;
+            erc20_dispatcher.transfer(recipient: pool_member, amount: delegated_amount.into());
+            self.remove_pool_member(:pool_member);
+            // TODO: Emit event.
+            delegated_amount
         }
 
         fn claim_rewards(ref self: ContractState, pool_member: ContractAddress) -> u128 {

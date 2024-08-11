@@ -1,3 +1,4 @@
+use core::num::traits::zero::Zero;
 use core::serde::Serde;
 use core::option::OptionTrait;
 use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
@@ -17,7 +18,6 @@ use contracts::{
     staking::interface::StakerInfo,
     staking::Staking::{
         __member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
-        UndelegateIntentKey, UndelegateIntentValue
     },
     utils::{compute_rewards, compute_commission},
     test_utils::{
@@ -34,10 +34,13 @@ use contracts::{
         OTHER_POOL_CONTRACT_ADDRESS, OTHER_POOL_MEMBER_ADDRESS,
     }
 };
+use contracts::staking::objects::{
+    UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
+};
 use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_exit_intent_event,};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, Store};
-use snforge_std::{cheat_caller_address, CheatSpan, test_address};
+use snforge_std::{cheat_caller_address, CheatSpan, test_address, cheat_block_timestamp_global};
 use snforge_std::cheatcodes::events::{
     Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
 };
@@ -492,6 +495,70 @@ fn test_exit_delegation_pool_intent() {
         pool_member: cfg.test_info.pool_member_address,
         exit_at: expected_time
     );
+}
+
+#[test]
+fn test_exit_delegation_pool_action() {
+    let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Deploy the staking contract, stake, and enter delegation pool.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    // Exit delegation pool intent.
+    cheat_caller_address(
+        contract_address: pooling_contract,
+        caller_address: cfg.test_info.pool_member_address,
+        span: CheatSpan::TargetCalls(1)
+    );
+    // Change global index and exit delegation pool intent.
+    let index_before = cfg.pool_member_info.index;
+    let updated_index = cfg.pool_member_info.index * 2;
+    snforge_std::store(
+        target: staking_contract,
+        storage_address: selector!("global_index"),
+        serialized_value: array![updated_index.into()].span()
+    );
+    pooling_dispatcher.exit_delegation_pool_intent();
+    // Calculate the expected rewards and commission.
+    let delegate_amount = cfg.pool_member_info.amount;
+    let rewards = compute_rewards(amount: delegate_amount, interest: updated_index - index_before);
+    let commission = compute_commission(:rewards, rev_share: cfg.staker_info.rev_share);
+    let unclaimed_rewards_pool_member = rewards - commission;
+
+    let balance_before_action = erc20_dispatcher.balance_of(cfg.test_info.pool_member_address);
+    let reward_account_balance_before = erc20_dispatcher
+        .balance_of(cfg.pool_member_info.reward_address);
+    cheat_block_timestamp_global(block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW);
+    // Exit delegation pool action and check that:
+    // 1. The returned value is correct.
+    // 2. The pool member is erased from the pool member info map.
+    // 3. The pool amount was transferred back to the pool member.
+    // 4. The unclaimed rewards were transferred to the reward account.
+    let returned_amount = pooling_dispatcher
+        .exit_delegation_pool_action(cfg.test_info.pool_member_address);
+    assert_eq!(returned_amount, cfg.pool_member_info.amount);
+    let pool_member: Option<PoolMemberInfo> = load_option_from_simple_map(
+        map_selector: selector!("pool_member_info"),
+        key: cfg.test_info.pool_member_address,
+        contract: pooling_contract
+    );
+    assert!(pool_member.is_none());
+    let balance_after_action = erc20_dispatcher.balance_of(cfg.test_info.pool_member_address);
+    let reward_account_balance_after = erc20_dispatcher
+        .balance_of(cfg.pool_member_info.reward_address);
+    assert_eq!(balance_after_action, balance_before_action + cfg.pool_member_info.amount.into());
+    assert_eq!(
+        reward_account_balance_after,
+        reward_account_balance_before + unclaimed_rewards_pool_member.into()
+    )
+// TODO: Test events.
 }
 
 // TODO: add event test.
