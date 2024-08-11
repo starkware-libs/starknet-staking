@@ -168,13 +168,14 @@ pub(crate) fn initialize_minting_curve_state(
 }
 
 pub(crate) fn initialize_reward_supplier_state_from_cfg(
-    cfg: StakingInitConfig
+    token_address: ContractAddress, cfg: StakingInitConfig
 ) -> RewardSupplier::ContractState {
     initialize_reward_supplier_state(
         base_mint_amount: cfg.reward_supplier.base_mint_amount,
         base_mint_msg: cfg.reward_supplier.base_mint_msg,
         minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
         staking_contract: cfg.test_info.staking_contract,
+        :token_address,
         l1_staking_minter: cfg.reward_supplier.l1_staking_minter,
         buffer: cfg.reward_supplier.buffer
     )
@@ -184,6 +185,7 @@ pub(crate) fn initialize_reward_supplier_state(
     base_mint_msg: felt252,
     minting_curve_contract: ContractAddress,
     staking_contract: ContractAddress,
+    token_address: ContractAddress,
     l1_staking_minter: felt252,
     buffer: u128
 ) -> RewardSupplier::ContractState {
@@ -194,6 +196,7 @@ pub(crate) fn initialize_reward_supplier_state(
         :base_mint_msg,
         :minting_curve_contract,
         :staking_contract,
+        :token_address,
         :l1_staking_minter,
         :buffer
     );

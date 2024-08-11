@@ -13,6 +13,7 @@ use contracts::reward_supplier::RewardSupplier::{
     __member_module_base_mint_msg::InternalContractMemberStateTrait as MintMsgMemberModule,
     __member_module_minting_curve_contract::InternalContractMemberStateTrait as CurveMemberModule,
     __member_module_staking_contract::InternalContractMemberStateTrait as StakingMemberModule,
+    __member_module_token_address::InternalContractMemberStateTrait as TokenMemberModule,
     __member_module_l1_staking_minter::InternalContractMemberStateTrait as L1MinterMemberModule,
 };
 
@@ -27,8 +28,9 @@ fn test_reward_supplier_constructor() {
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let state = initialize_reward_supplier_state_from_cfg(:cfg);
+    let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     assert_eq!(state.staking_contract.read(), cfg.test_info.staking_contract);
+    assert_eq!(state.token_address.read(), token_address);
     assert_eq!(state.buffer.read(), cfg.reward_supplier.buffer);
     assert_eq!(state.base_mint_amount.read(), cfg.reward_supplier.base_mint_amount);
     assert_eq!(state.base_mint_msg.read(), cfg.reward_supplier.base_mint_msg);

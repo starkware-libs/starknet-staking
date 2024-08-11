@@ -23,6 +23,7 @@ pub mod RewardSupplier {
         base_mint_msg: felt252,
         minting_curve_contract: ContractAddress,
         staking_contract: ContractAddress,
+        token_address: ContractAddress,
         l1_staking_minter: felt252,
     }
 
@@ -40,10 +41,12 @@ pub mod RewardSupplier {
         base_mint_msg: felt252,
         minting_curve_contract: ContractAddress,
         staking_contract: ContractAddress,
+        token_address: ContractAddress,
         l1_staking_minter: felt252,
         buffer: u128,
     ) {
         self.staking_contract.write(staking_contract);
+        self.token_address.write(token_address);
         self.last_timestamp.write(get_block_timestamp());
         self.unclaimed_rewards.write(0);
         self.buffer.write(buffer);
