@@ -29,12 +29,13 @@ pub enum Error {
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
     POOL_MEMBER_EXISTS,
-    AMOUNT_IS_ZERO,
     UNDELEGATE_IN_PROGRESS,
     INSUFFICIENT_POOL_BALANCE,
     CALLER_IS_NOT_STAKING_CONTRACT,
     FINAL_STAKER_INDEX_ALREADY_SET,
     MISSING_UNDELEGATE_INTENT,
+    CALLER_CANNOT_ADD_TO_POOL,
+    MIN_DELEGATION_AMOUNT,
     // Minting contract errors
     TOTAL_SUPPLY_NOT_U128,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
@@ -79,7 +80,6 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::POOL_MEMBER_EXISTS => panic!(
             "Pool member exists, use add_to_delegation_pool instead."
         ),
-        Error::AMOUNT_IS_ZERO => panic!("Amount must be positive."),
         Error::UNDELEGATE_IN_PROGRESS => panic!(
             "Undelegate from pool in progress, pool member is in an exit window."
         ),
@@ -92,6 +92,10 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::CALLER_IS_NOT_STAKING_CONTRACT => panic!("Caller is not staking contract."),
         Error::FINAL_STAKER_INDEX_ALREADY_SET => panic!("Final staker index already set."),
         Error::MISSING_UNDELEGATE_INTENT => panic!("Undelegate intent is missing."),
+        Error::CALLER_CANNOT_ADD_TO_POOL => panic!(
+            "Caller address should be pool member address or reward address."
+        ),
+        Error::MIN_DELEGATION_AMOUNT => panic!("Amount is less than min delegation amount."),
         Error::MISSING_POOL_CONTRACT => panic!("Staker does not have pool contract."),
         Error::UNAUTHORIZED_MESSAGE_SENDER => panic!("Unauthorized message sender."),
     }
