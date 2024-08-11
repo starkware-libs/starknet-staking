@@ -28,7 +28,7 @@ pub trait IPooling<TContractState> {
         ref self: TContractState, pool_member: ContractAddress, amount: u128
     ) -> u128;
     fn exit_delegation_pool_intent(ref self: TContractState);
-    fn exit_delegation_pool_action(ref self: TContractState) -> u128;
+    fn exit_delegation_pool_action(ref self: TContractState, pool_member: ContractAddress) -> u128;
     fn claim_rewards(ref self: TContractState, pool_member: ContractAddress) -> u128;
     fn switch_delegation_pool(
         ref self: TContractState, to_staker: ContractAddress, to_pool: ContractAddress, amount: u128

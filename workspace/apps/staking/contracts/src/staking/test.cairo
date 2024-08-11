@@ -10,7 +10,7 @@ use contracts::{
             __member_module_operational_address_to_staker_address::InternalContractMemberStateTrait as OperationalAddressToStakerAddressMemberModule,
             __member_module_token_address::InternalContractMemberStateTrait as TokenAddressMemberModule,
             __member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
-            InternalStakingFunctionsTrait
+            InternalStakingFunctionsTrait,
         }
     },
     utils::{compute_rewards, compute_commission},
@@ -18,11 +18,13 @@ use contracts::{
         initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig,
         stake_for_testing, fund, approve, deploy_staking_contract, stake_with_pooling_enabled,
         enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
+        load_from_simple_map,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OWNER_ADDRESS,
             INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
             STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
-            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT
+            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT,
+            CALLER_ADDRESS, DUMMY_IDENTIFIER
         }
     }
 };
@@ -33,12 +35,18 @@ use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatc
 use starknet::{ContractAddress, contract_address_const, get_caller_address, get_block_timestamp};
 use starknet::syscalls::deploy_syscall;
 use snforge_std::{declare, ContractClassTrait};
+use contracts::staking::objects::{
+    UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
+};
 use contracts::staking::staking::Staking::ContractState;
 use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::staking::Staking::{REV_SHARE_DENOMINATOR, MIN_INCREASE_STAKE};
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
-use snforge_std::{cheat_caller_address, CheatSpan, test_address, cheat_block_timestamp};
+use snforge_std::{
+    cheat_caller_address, CheatSpan, test_address, cheat_block_timestamp,
+    cheat_block_timestamp_global
+};
 use snforge_std::cheatcodes::events::{
     Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
 };
@@ -695,4 +703,85 @@ fn test_add_to_delegation_pool() {
 #[test]
 fn test_remove_from_delegation_pool_intent() {
     assert!(true);
+}
+
+#[test]
+fn test_remove_from_delegation_pool_action() {
+    let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Deploy the staking contract, stake, and enter delegation pool.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+    // Remove from delegation pool intent, and then check that the intent was added correctly.
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: pooling_contract,
+        span: CheatSpan::TargetCalls(1)
+    );
+    staking_dispatcher
+        .remove_from_delegation_pool_intent(
+            staker_address: cfg.test_info.staker_address,
+            identifier: cfg.test_info.pool_member_address.into(),
+            amount: cfg.pool_member_info.amount
+        );
+    // Remove from delegation pool action, and then check that the intent was removed correctly.
+    cheat_block_timestamp_global(block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW);
+    let pool_balance_before_action = erc20_dispatcher.balance_of(pooling_contract);
+
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: pooling_contract,
+        span: CheatSpan::TargetCalls(1)
+    );
+    let returned_amount = staking_dispatcher
+        .remove_from_delegation_pool_action(identifier: cfg.test_info.pool_member_address.into());
+    assert_eq!(returned_amount, cfg.pool_member_info.amount);
+    let undelegate_intent_key = UndelegateIntentKey {
+        pool_contract: pooling_contract, identifier: cfg.test_info.pool_member_address.into(),
+    };
+    let actual_undelegate_intent_value_after_action: UndelegateIntentValue = load_from_simple_map(
+        map_selector: selector!("pool_exit_intents"),
+        key: undelegate_intent_key,
+        contract: staking_contract
+    );
+    assert_eq!(actual_undelegate_intent_value_after_action, Zero::zero());
+    // Check that the amount was transferred correctly.
+    let pool_balance_after_action = erc20_dispatcher.balance_of(pooling_contract);
+    assert_eq!(
+        pool_balance_after_action, pool_balance_before_action + cfg.pool_member_info.amount.into()
+    );
+// TODO: Test event emitted.
+}
+
+// The following test checks that the remove_from_delegation_pool_action function works when there
+// is no intent, but simply returns 0 and does not transfer any funds.
+#[test]
+fn test_remove_from_delegation_pool_action_intent_not_exist() {
+    let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Deploy staking contract.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let caller = CALLER_ADDRESS();
+    let staking_balance_before_action = erc20_dispatcher.balance_of(staking_contract);
+    // Remove from delegation pool action, and check it returns 0 and does not change balance.
+    cheat_caller_address(
+        contract_address: staking_contract, caller_address: caller, span: CheatSpan::TargetCalls(1)
+    );
+    let returned_amount = staking_dispatcher
+        .remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
+    assert_eq!(returned_amount, Zero::zero());
+    let staking_balance_after_action = erc20_dispatcher.balance_of(staking_contract);
+    assert_eq!(staking_balance_after_action, staking_balance_before_action);
+// TODO: Test event emitted.
 }
