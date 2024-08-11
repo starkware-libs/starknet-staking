@@ -118,8 +118,7 @@ pub mod Pooling {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             assert_with_err(pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS);
-            let updated_index = self.receive_index_and_funds_from_staker();
-            self.calculate_rewards(ref :pool_member_info, :updated_index);
+            self.update_index_and_calculate_rewards(ref :pool_member_info);
             let unpool_time = self
                 .undelegate_from_staking_contract_intent(
                     :pool_member, amount: pool_member_info.amount
@@ -140,8 +139,7 @@ pub mod Pooling {
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
                 Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
             );
-            let updated_index = self.receive_index_and_funds_from_staker();
-            self.calculate_rewards(ref :pool_member_info, :updated_index);
+            self.update_index_and_calculate_rewards(ref :pool_member_info);
 
             let rewards = pool_member_info.unclaimed_rewards;
             let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
@@ -279,6 +277,13 @@ pub mod Pooling {
             rewards -= commission;
             pool_member_info.unclaimed_rewards += rewards;
             true
+        }
+
+        fn update_index_and_calculate_rewards(
+            ref self: ContractState, ref pool_member_info: PoolMemberInfo
+        ) -> bool {
+            let updated_index = self.receive_index_and_funds_from_staker();
+            self.calculate_rewards(ref :pool_member_info, :updated_index)
         }
 
         fn assert_staker_is_active(self: @ContractState) {
