@@ -15,6 +15,10 @@ pub mod Pooling {
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
 
+    // TODO: Decide if MIN_DELEGATION_AMOUNT is needed (if needed then decide on a value). 
+    // Right now, there is no minimum delegation amount.
+    pub const MIN_DELEGATION_AMOUNT: u128 = 1;
+
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
 
@@ -78,7 +82,7 @@ pub mod Pooling {
             assert_with_err(
                 self.pool_member_info.read(pool_member).is_none(), Error::POOL_MEMBER_EXISTS
             );
-            assert_with_err(amount > 0, Error::AMOUNT_IS_ZERO);
+            assert_with_err(amount >= MIN_DELEGATION_AMOUNT, Error::MIN_DELEGATION_AMOUNT);
             let pooled_staker = self.staker_address.read();
             let staking_contract = self.staking_contract.read();
             let staking_contract_dispatcher = IStakingDispatcher {
@@ -110,8 +114,36 @@ pub mod Pooling {
             true
         }
 
-        fn add_to_delegation_pool(ref self: ContractState, amount: u128) -> u128 {
-            0
+        fn add_to_delegation_pool(
+            ref self: ContractState, pool_member: ContractAddress, amount: u128
+        ) -> u128 {
+            self.assert_staker_is_active();
+            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            assert_with_err(pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS);
+            assert_with_err(amount >= MIN_DELEGATION_AMOUNT, Error::MIN_DELEGATION_AMOUNT);
+            let caller_address = get_caller_address();
+            assert_with_err(
+                caller_address == pool_member || caller_address == pool_member_info.reward_address,
+                Error::CALLER_CANNOT_ADD_TO_POOL
+            );
+            let staking_contract = self.staking_contract.read();
+            let staking_contract_dispatcher = IStakingDispatcher {
+                contract_address: staking_contract,
+            };
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let self_contract = get_contract_address();
+            erc20_dispatcher
+                .transfer_from(
+                    sender: pool_member, recipient: self_contract, amount: amount.into()
+                );
+            erc20_dispatcher.approve(spender: staking_contract, amount: amount.into());
+            let (_, updated_index) = staking_contract_dispatcher
+                .add_to_delegation_pool(pooled_staker: self.staker_address.read(), :amount);
+            self.calculate_rewards(ref :pool_member_info, :updated_index);
+            pool_member_info.amount += amount;
+            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            // TODO: emit event
+            pool_member_info.amount
         }
 
         fn exit_delegation_pool_intent(ref self: ContractState) {
@@ -157,7 +189,7 @@ pub mod Pooling {
             to_pool: ContractAddress,
             amount: u128
         ) -> u128 {
-            assert_with_err(amount > 0, Error::AMOUNT_IS_ZERO);
+            assert_with_err(amount >= MIN_DELEGATION_AMOUNT, Error::MIN_DELEGATION_AMOUNT);
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             assert_with_err(
