@@ -45,7 +45,7 @@ use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
 use snforge_std::{
     cheat_caller_address, CheatSpan, test_address, cheat_block_timestamp,
-    cheat_block_timestamp_global
+    start_cheat_block_timestamp_global
 };
 use snforge_std::cheatcodes::events::{
     Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
@@ -731,7 +731,9 @@ fn test_remove_from_delegation_pool_action() {
             amount: cfg.pool_member_info.amount
         );
     // Remove from delegation pool action, and then check that the intent was removed correctly.
-    cheat_block_timestamp_global(block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW);
+    start_cheat_block_timestamp_global(
+        block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW
+    );
     let pool_balance_before_action = erc20_dispatcher.balance_of(pooling_contract);
 
     cheat_caller_address(

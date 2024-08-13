@@ -42,7 +42,9 @@ use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_ex
 use contracts::event_test_utils::assert_pool_balance_changed_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, Store};
-use snforge_std::{cheat_caller_address, CheatSpan, test_address, cheat_block_timestamp_global};
+use snforge_std::{
+    cheat_caller_address, CheatSpan, test_address, start_cheat_block_timestamp_global
+};
 use snforge_std::cheatcodes::events::{
     Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
 };
@@ -537,7 +539,9 @@ fn test_exit_delegation_pool_action() {
     let balance_before_action = erc20_dispatcher.balance_of(cfg.test_info.pool_member_address);
     let reward_account_balance_before = erc20_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
-    cheat_block_timestamp_global(block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW);
+    start_cheat_block_timestamp_global(
+        block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW
+    );
     // Exit delegation pool action and check that:
     // 1. The returned value is correct.
     // 2. The pool member is erased from the pool member info map.
