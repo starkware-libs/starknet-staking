@@ -5,6 +5,7 @@ pub mod Events {
 
     #[derive(Drop, starknet::Event)]
     pub(crate) struct PoolMemberExitIntent {
+        #[key]
         pub pool_member: ContractAddress,
         pub exit_at: u64
     }
