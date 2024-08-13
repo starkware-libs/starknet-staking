@@ -68,6 +68,23 @@ pub fn assert_pool_member_exit_intent_event(
     }
 }
 
+pub fn assert_pool_balance_changed_event(
+    mut spied_event: @(ContractAddress, Event), pool_member: ContractAddress, amount: u128,
+) {
+    let expected_event = @contracts::pooling::Pooling::Event::balance_changed(
+        PoolEvents::BalanceChanged { pool_member, amount }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "PoolEvents::BalanceChanged{{pool_member: {:?}, amount: {}}}", pool_member, amount
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn debug_dump_spied_events(ref spy: EventSpy) {
     let mut serialized = array![];
     Serde::<

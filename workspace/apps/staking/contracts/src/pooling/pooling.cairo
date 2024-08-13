@@ -55,6 +55,7 @@ pub mod Pooling {
         accesscontrolEvent: AccessControlComponent::Event,
         src5Event: SRC5Component::Event,
         pool_member_exit_intent: Events::PoolMemberExitIntent,
+        balance_changed: Events::BalanceChanged,
     }
 
 
@@ -223,7 +224,11 @@ pub mod Pooling {
                 pool_member_info.unpool_time.is_some(), Error::MISSING_UNDELEGATE_INTENT
             );
             assert_with_err(pool_member_info.amount >= amount, Error::AMOUNT_TOO_HIGH);
-            let span_data = self.get_serialized_switch_pool_data(:pool_member, :pool_member_info);
+            let switch_pool_data = SwitchPoolData {
+                pool_member, reward_address: pool_member_info.reward_address
+            };
+            let mut serialized_data = array![];
+            switch_pool_data.serialize(ref output: serialized_data);
             let staking_dispatcher = IStakingDispatcher {
                 contract_address: self.staking_contract.read()
             };
@@ -241,14 +246,43 @@ pub mod Pooling {
                     :to_staker,
                     :to_pool,
                     :amount,
-                    data: span_data
+                    data: serialized_data.span()
                 );
             amount_left
         }
 
-        fn enter_from_staking_contract(
+        fn enter_delegation_pool_from_staking_contract(
             ref self: ContractState, amount: u128, index: u64, data: Span<felt252>
         ) -> bool {
+            assert_with_err(
+                get_caller_address() == self.staking_contract.read(),
+                Error::CALLER_IS_NOT_STAKING_CONTRACT
+            );
+            let mut serialized = data;
+            let switch_pool_data: SwitchPoolData = Serde::deserialize(ref :serialized)
+                .expect_with_err(Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED);
+            let pool_member = switch_pool_data.pool_member;
+            let pool_member_info = match self.pool_member_info.read(pool_member) {
+                Option::Some(mut pool_member_info) => {
+                    assert_with_err(
+                        pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS
+                    );
+                    self.calculate_rewards(ref :pool_member_info, updated_index: index);
+                    pool_member_info.amount += amount;
+                    pool_member_info
+                },
+                Option::None => {
+                    PoolMemberInfo {
+                        reward_address: switch_pool_data.reward_address,
+                        amount,
+                        index,
+                        unclaimed_rewards: 0,
+                        unpool_time: Option::None,
+                    }
+                }
+            };
+            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            self.emit(Events::BalanceChanged { pool_member, amount: pool_member_info.amount });
             true
         }
 
@@ -301,16 +335,6 @@ pub mod Pooling {
                 contract_address: self.staking_contract.read()
             };
             staking_dispatcher.claim_delegation_pool_rewards(self.staker_address.read())
-        }
-
-        fn get_serialized_switch_pool_data(
-            self: @ContractState, pool_member: ContractAddress, pool_member_info: PoolMemberInfo
-        ) -> Span<felt252> {
-            let reward_address = pool_member_info.reward_address;
-            let switch_pool_data = SwitchPoolData { pool_member, reward_address };
-            let mut data = array![];
-            switch_pool_data.serialize(ref data);
-            data.span()
         }
 
         /// Calculates the rewards for a pool member.

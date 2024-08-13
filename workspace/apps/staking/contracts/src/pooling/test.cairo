@@ -8,6 +8,7 @@ use contracts::{
     pooling::{
         Pooling, PoolMemberInfo,
         Pooling::{
+            SwitchPoolData,
             // TODO(Nir, 15/07/2024): Remove member module use's when possible
             __member_module_staker_address::InternalContractMemberStateTrait as StakerAddressMemberModule,
             __member_module_pool_member_info::InternalContractMemberStateTrait as PoolMemberToInfoModule,
@@ -38,6 +39,7 @@ use contracts::staking::objects::{
     UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
 };
 use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_exit_intent_event,};
+use contracts::event_test_utils::assert_pool_balance_changed_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, Store};
 use snforge_std::{cheat_caller_address, CheatSpan, test_address, cheat_block_timestamp_global};
@@ -652,3 +654,71 @@ fn test_claim_rewards_unauthorized_address() {
     pooling_dispatcher.claim_rewards(cfg.test_info.pool_member_address);
 }
 
+#[test]
+fn test_enter_delegation_pool_from_staking_contract() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    let mut spy = snforge_std::spy_events();
+    let pool_member = cfg.test_info.pool_member_address;
+    let reward_address = cfg.pool_member_info.reward_address;
+
+    // Serialize the switch pool data.
+    let switch_pool_data = SwitchPoolData { pool_member, reward_address };
+    let mut data = array![];
+    switch_pool_data.serialize(ref data);
+    let data = data.span();
+
+    // Enter with a new pool member.
+    let amount = cfg.pool_member_info.amount;
+    let index = cfg.pool_member_info.index;
+    cheat_caller_address(
+        contract_address: pooling_contract,
+        caller_address: staking_contract,
+        span: CheatSpan::TargetCalls(1)
+    );
+    assert!(pooling_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :index, :data));
+
+    let pool_member_info = pooling_dispatcher.state_of(:pool_member);
+    let expected_pool_member_info = PoolMemberInfo {
+        reward_address, amount, index, unclaimed_rewards: 0, unpool_time: Option::None,
+    };
+    assert_eq!(pool_member_info, expected_pool_member_info);
+
+    // Enter with an existing pool member.
+    let updated_index = index * 2;
+    cheat_caller_address(
+        contract_address: pooling_contract,
+        caller_address: staking_contract,
+        span: CheatSpan::TargetCalls(1)
+    );
+    assert!(
+        pooling_dispatcher
+            .enter_delegation_pool_from_staking_contract(:amount, index: updated_index, :data)
+    );
+    let pool_member_info = pooling_dispatcher.state_of(:pool_member);
+    let updated_amount = amount * 2;
+    let interest = updated_index - index;
+    let rewards = compute_rewards(:amount, :interest);
+    let commission = compute_commission(:rewards, rev_share: cfg.staker_info.rev_share);
+    let expected_pool_member_info = PoolMemberInfo {
+        reward_address,
+        amount: updated_amount,
+        index: updated_index,
+        unclaimed_rewards: rewards - commission,
+        unpool_time: Option::None,
+    };
+    assert_eq!(pool_member_info, expected_pool_member_info);
+
+    // Validate the BalanceChanged events.
+    let events = spy.get_events().emitted_by(pooling_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 2, message: "enter_delegation_pool_from_staking_contract"
+    );
+    assert_pool_balance_changed_event(spied_event: events[0], :pool_member, :amount);
+    assert_pool_balance_changed_event(spied_event: events[1], :pool_member, amount: updated_amount);
+}

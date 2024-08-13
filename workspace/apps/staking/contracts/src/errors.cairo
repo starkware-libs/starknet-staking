@@ -32,6 +32,7 @@ pub enum Error {
     UNDELEGATE_IN_PROGRESS,
     INSUFFICIENT_POOL_BALANCE,
     CALLER_IS_NOT_STAKING_CONTRACT,
+    SWITCH_POOL_DATA_DESERIALIZATION_FAILED,
     FINAL_STAKER_INDEX_ALREADY_SET,
     MISSING_UNDELEGATE_INTENT,
     CALLER_CANNOT_ADD_TO_POOL,
@@ -98,6 +99,9 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::MIN_DELEGATION_AMOUNT => panic!("Amount is less than min delegation amount."),
         Error::MISSING_POOL_CONTRACT => panic!("Staker does not have pool contract."),
         Error::UNAUTHORIZED_MESSAGE_SENDER => panic!("Unauthorized message sender."),
+        Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED => panic!(
+            "Switch pool data deserialization failed."
+        ),
     }
 }
 
