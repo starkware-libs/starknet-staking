@@ -8,6 +8,13 @@ pub mod Events {
         pub pool_member: ContractAddress,
         pub exit_at: u64
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct BalanceChanged {
+        #[key]
+        pub pool_member: ContractAddress,
+        pub amount: u128
+    }
 }
 
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
@@ -33,7 +40,7 @@ pub trait IPooling<TContractState> {
     fn switch_delegation_pool(
         ref self: TContractState, to_staker: ContractAddress, to_pool: ContractAddress, amount: u128
     ) -> u128;
-    fn enter_from_staking_contract(
+    fn enter_delegation_pool_from_staking_contract(
         ref self: TContractState, amount: u128, index: u64, data: Span<felt252>
     ) -> bool;
     fn set_final_staker_index(ref self: TContractState, final_staker_index: u64);
