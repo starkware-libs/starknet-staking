@@ -4,7 +4,9 @@ pub mod RewardSupplier {
     use starknet::{ContractAddress, EthAddress};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use starknet::get_block_timestamp;
+    use starknet::{get_block_timestamp, get_caller_address};
+    use contracts::errors::{Error, assert_with_err};
+    use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -62,7 +64,17 @@ pub mod RewardSupplier {
             0_u128
         }
 
-        fn claim_rewards(ref self: ContractState, amount: u128) {}
+        fn claim_rewards(ref self: ContractState, amount: u128) {
+            let staking_contract = self.staking_contract.read();
+            assert_with_err(
+                get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT
+            );
+            let unclaimed_rewards = self.unclaimed_rewards.read();
+            assert_with_err(unclaimed_rewards >= amount, Error::AMOUNT_TOO_HIGH);
+            self.unclaimed_rewards.write(unclaimed_rewards - amount);
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            erc20_dispatcher.transfer(recipient: staking_contract, amount: amount.into());
+        }
 
         fn on_receive(
             self: @ContractState,

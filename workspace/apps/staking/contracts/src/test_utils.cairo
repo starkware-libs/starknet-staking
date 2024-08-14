@@ -231,6 +231,23 @@ pub(crate) fn deploy_staking_contract(
     staking_contract_address
 }
 
+pub(crate) fn deploy_minting_curve_contract(
+    staking_contract: ContractAddress, cfg: StakingInitConfig
+) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    let initial_supply: u128 = cfg
+        .test_info
+        .initial_supply
+        .try_into()
+        .expect('initial supply does not fit');
+    staking_contract.serialize(ref calldata);
+    initial_supply.serialize(ref calldata);
+    cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
+    let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap();
+    let (minting_curve_contract_address, _) = minting_curve_contract.deploy(@calldata).unwrap();
+    minting_curve_contract_address
+}
+
 pub(crate) fn declare_pool_contract() -> ClassHash {
     snforge_std::declare("Pooling").unwrap().class_hash
 }
