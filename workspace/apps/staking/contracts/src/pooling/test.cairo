@@ -48,6 +48,7 @@ use snforge_std::{
 use snforge_std::cheatcodes::events::{
     Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
 };
+use contracts_commons::test_utils::cheat_caller_address_once;
 
 
 #[test]
@@ -199,10 +200,8 @@ fn test_add_to_delegation_pool() {
     approve(
         owner: first_pool_member, spender: pooling_contract, amount: delegate_amount, :token_address
     );
-    cheat_caller_address(
-        contract_address: pooling_contract,
-        caller_address: first_pool_member,
-        span: CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: first_pool_member
     );
     pooling_dispatcher
         .add_to_delegation_pool(pool_member: first_pool_member, amount: delegate_amount);
@@ -243,10 +242,8 @@ fn test_add_to_delegation_pool() {
         amount: delegate_amount,
         :token_address
     );
-    cheat_caller_address(
-        contract_address: pooling_contract,
-        caller_address: second_pool_member,
-        span: CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: second_pool_member
     );
     pooling_dispatcher
         .add_to_delegation_pool(pool_member: second_pool_member, amount: delegate_amount);
@@ -304,10 +301,8 @@ fn test_set_final_staker_index() {
         token_address: cfg.staking_contract_info.token_address,
         rev_share: cfg.staker_info.rev_share
     );
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: STAKING_CONTRACT_ADDRESS(),
-        span: CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: test_address(), caller_address: STAKING_CONTRACT_ADDRESS()
     );
     assert!(state.final_staker_index.read().is_none());
     state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
@@ -324,10 +319,8 @@ fn test_set_final_staker_index_caller_is_not_staking_contract() {
         token_address: cfg.staking_contract_info.token_address,
         rev_share: cfg.staker_info.rev_share
     );
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
-        span: CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: test_address(), caller_address: NOT_STAKING_CONTRACT_ADDRESS()
     );
     state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
 }
@@ -368,8 +361,8 @@ fn test_change_reward_address() {
         .state_of(cfg.test_info.pool_member_address);
     let other_reward_address = OTHER_REWARD_ADDRESS();
 
-    cheat_caller_address(
-        pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
     );
     pooling_dispatcher.change_reward_address(other_reward_address);
     let pool_member_info_after_change = pooling_dispatcher
@@ -395,7 +388,9 @@ fn test_change_reward_address_pool_member_not_exist() {
         :token_address,
         rev_share: cfg.staker_info.rev_share
     );
-    cheat_caller_address(test_address(), NON_POOL_MEMBER_ADDRESS(), CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(
+        contract_address: test_address(), caller_address: NON_POOL_MEMBER_ADDRESS()
+    );
     // Reward address is arbitrary because it should fail because of the caller.
     state.change_reward_address(reward_address: DUMMY_ADDRESS());
 }
@@ -426,8 +421,8 @@ fn test_claim_rewards() {
     );
 
     // Claim rewards, and validate the results.
-    cheat_caller_address(
-        pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
     );
     let actual_reward: u128 = pooling_dispatcher.claim_rewards(cfg.test_info.pool_member_address);
     let interest: u64 = updated_index - cfg.staker_info.index;
@@ -453,8 +448,8 @@ fn test_exit_delegation_pool_intent() {
 
     // Exit delegation pool intent, and validate the results.
     let mut spy = snforge_std::spy_events();
-    cheat_caller_address(
-        pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
     );
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
@@ -516,10 +511,8 @@ fn test_exit_delegation_pool_action() {
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     // Exit delegation pool intent.
-    cheat_caller_address(
-        contract_address: pooling_contract,
-        caller_address: cfg.test_info.pool_member_address,
-        span: CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
     );
     // Change global index and exit delegation pool intent.
     let index_before = cfg.pool_member_info.index;
@@ -581,7 +574,9 @@ fn test_switch_delegation_pool() {
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
 
     cheat_caller_address(
-        pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(3)
+        contract_address: pooling_contract,
+        caller_address: cfg.test_info.pool_member_address,
+        span: CheatSpan::TargetCalls(3)
     );
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     pooling_dispatcher.exit_delegation_pool_intent();
@@ -650,10 +645,8 @@ fn test_claim_rewards_unauthorized_address() {
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
 
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
-    cheat_caller_address(
-        contract_address: pooling_contract,
-        caller_address: NON_POOL_MEMBER_ADDRESS(),
-        span: CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: NON_POOL_MEMBER_ADDRESS()
     );
     pooling_dispatcher.claim_rewards(cfg.test_info.pool_member_address);
 }
@@ -680,11 +673,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
     // Enter with a new pool member.
     let amount = cfg.pool_member_info.amount;
     let index = cfg.pool_member_info.index;
-    cheat_caller_address(
-        contract_address: pooling_contract,
-        caller_address: staking_contract,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: pooling_contract, caller_address: staking_contract);
     assert!(pooling_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :index, :data));
 
     let pool_member_info = pooling_dispatcher.state_of(:pool_member);
@@ -695,11 +684,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
 
     // Enter with an existing pool member.
     let updated_index = index * 2;
-    cheat_caller_address(
-        contract_address: pooling_contract,
-        caller_address: staking_contract,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: pooling_contract, caller_address: staking_contract);
     assert!(
         pooling_dispatcher
             .enter_delegation_pool_from_staking_contract(:amount, index: updated_index, :data)
