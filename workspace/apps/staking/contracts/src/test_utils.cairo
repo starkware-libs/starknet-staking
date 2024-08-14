@@ -1,11 +1,10 @@
-use contracts::{
-    staking::Staking, pooling::Pooling, minting_curve::MintingCurve, reward_supplier::RewardSupplier
-};
+use contracts::{staking::Staking, minting_curve::MintingCurve, reward_supplier::RewardSupplier};
 use contracts::constants::BASE_VALUE;
 use core::traits::Into;
 use contracts::staking::interface::{
     IStaking, StakerInfo, StakingContractInfo, IStakingDispatcher, IStakingDispatcherTrait
 };
+use contracts::pooling::{Pooling, Pooling::SwitchPoolData};
 use contracts::pooling::interface::{
     IPooling, PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait
 };
@@ -71,6 +70,9 @@ pub(crate) mod constants {
     }
     pub fn OPERATIONAL_ADDRESS() -> ContractAddress {
         contract_address_const::<'OPERATIONAL_ADDRESS'>()
+    }
+    pub fn OTHER_OPERATIONAL_ADDRESS() -> ContractAddress {
+        contract_address_const::<'OTHER_OPERATIONAL_ADDRESS'>()
     }
     pub fn OWNER_ADDRESS() -> ContractAddress {
         contract_address_const::<'OWNER_ADDRESS'>()

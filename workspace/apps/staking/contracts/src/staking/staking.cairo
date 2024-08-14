@@ -295,15 +295,43 @@ pub mod Staking {
 
         fn switch_staking_delegation_pool(
             ref self: ContractState,
-            from_staker: ContractAddress,
             to_staker: ContractAddress,
             to_pool: ContractAddress,
             amount: u128,
-            data: Span<felt252>
+            data: Span<felt252>,
+            identifier: felt252
         ) -> bool {
-            // TODO: The following emits are not in spec, but should be.
-            // self.emit(Events::BalanceChanged { from_staker_address, amount+pool });
-            // self.emit(Events::BalanceChanged { to_staker_address, amount+pool });
+            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
+            let pool_contract = get_caller_address();
+            let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
+            let mut undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
+            assert_with_err(
+                undelegate_intent_value.is_non_zero(), Error::MISSING_UNDELEGATE_INTENT
+            );
+            assert_with_err(undelegate_intent_value.amount >= amount, Error::AMOUNT_TOO_HIGH);
+            let mut to_staker_info = self.get_staker_info(staker_address: to_staker);
+            assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
+            let to_staker_pool_contract = to_staker_info
+                .pooling_contract
+                .expect_with_err(Error::MISSING_POOL_CONTRACT);
+            assert_with_err(to_pool == to_staker_pool_contract, Error::MISSMATCHED_DELEGATION_POOL);
+
+            self.calculate_rewards(ref staker_info: to_staker_info);
+            to_staker_info.amount_pool += amount;
+            self.staker_info.write(to_staker, Option::Some(to_staker_info));
+            self.add_to_total_stake(:amount);
+
+            undelegate_intent_value.amount -= amount;
+            if undelegate_intent_value.amount.is_zero() {
+                self.clear_undelegate_intent(:undelegate_intent_key);
+            } else {
+                self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
+            }
+            let to_pool_dispatcher = IPoolingDispatcher { contract_address: to_pool };
+            to_pool_dispatcher
+                .enter_delegation_pool_from_staking_contract(
+                    :amount, index: to_staker_info.index, :data
+                );
             true
         }
 

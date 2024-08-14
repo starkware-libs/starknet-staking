@@ -15,6 +15,7 @@ pub enum Error {
     INVALID_REWARD_ADDRESS,
     INTENT_WINDOW_NOT_FINISHED,
     AMOUNT_TOO_HIGH,
+    AMOUNT_IS_ZERO,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     REV_SHARE_OUT_OF_RANGE,
@@ -25,6 +26,7 @@ pub enum Error {
     MISSING_UNSTAKE_INTENT,
     CALLER_IS_NOT_POOL_CONTRACT,
     MISSING_POOL_CONTRACT,
+    MISSMATCHED_DELEGATION_POOL,
     // Pooling contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
@@ -57,6 +59,7 @@ pub fn panic_by_err(error: Error) -> core::never {
         ),
         Error::INVALID_REWARD_ADDRESS => panic!("Invalid reward address."),
         Error::AMOUNT_TOO_HIGH => panic!("Amount is too high."),
+        Error::AMOUNT_IS_ZERO => panic!("Amount is zero."),
         Error::INTENT_WINDOW_NOT_FINISHED => panic!("Intent window is not finished."),
         Error::OPERATIONAL_EXISTS => panic!("Operational address already exists."),
         Error::AMOUNT_LESS_THAN_MIN_STAKE => panic!(
@@ -101,6 +104,9 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::UNAUTHORIZED_MESSAGE_SENDER => panic!("Unauthorized message sender."),
         Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED => panic!(
             "Switch pool data deserialization failed."
+        ),
+        Error::MISSMATCHED_DELEGATION_POOL => panic!(
+            "to_pool is not the delegation pool contract for to_staker."
         ),
     }
 }

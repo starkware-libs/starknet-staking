@@ -24,7 +24,7 @@ use contracts::{
             INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
             STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
             OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT,
-            CALLER_ADDRESS, DUMMY_IDENTIFIER
+            CALLER_ADDRESS, DUMMY_IDENTIFIER, OTHER_OPERATIONAL_ADDRESS,
         }
     }
 };
@@ -51,6 +51,8 @@ use snforge_std::cheatcodes::events::{
     Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
 };
 use contracts_commons::test_utils::cheat_caller_address_once;
+use contracts::pooling::Pooling::SwitchPoolData;
+use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispatcherTrait};
 
 #[test]
 fn test_constructor() {
@@ -746,4 +748,111 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     let staking_balance_after_action = erc20_dispatcher.balance_of(staking_contract);
     assert_eq!(staking_balance_after_action, staking_balance_before_action);
 // TODO: Test event emitted.
+}
+
+#[test]
+fn test_switch_staking_delegation_pool() {
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    // Initialize from_staker.
+    let from_pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let from_pool_dispatcher = IPoolingDispatcher { contract_address: from_pool_contract };
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pooling_contract: from_pool_contract, :cfg, :token_address
+    );
+    // Initialize to_staker.
+    let to_staker = OTHER_STAKER_ADDRESS();
+    cfg.test_info.staker_address = to_staker;
+    cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
+    let to_pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let to_pool_dispatcher = IPoolingDispatcher { contract_address: to_pool_contract };
+    let to_staker_info = staking_dispatcher.state_of(staker_address: to_staker);
+    // Pool member remove_from_delegation_pool_intent.
+    let pool_member = cfg.test_info.pool_member_address;
+    cheat_caller_address_once(contract_address: from_pool_contract, caller_address: pool_member);
+    from_pool_dispatcher.exit_delegation_pool_intent();
+    let total_stake_before_switching = staking_dispatcher.get_total_stake();
+    // Initialize SwitchPoolData.
+    let switch_pool_data = SwitchPoolData {
+        pool_member, reward_address: cfg.pool_member_info.reward_address
+    };
+    let mut serialized_data = array![];
+    switch_pool_data.serialize(ref output: serialized_data);
+
+    let switch_amount = cfg.pool_member_info.amount / 2;
+    let updated_index: u64 = cfg.staker_info.index * 2;
+    snforge_std::store(
+        staking_contract, selector!("global_index"), array![updated_index.into()].span()
+    );
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: from_pool_contract
+    );
+    staking_dispatcher
+        .switch_staking_delegation_pool(
+            :to_staker,
+            to_pool: to_pool_contract,
+            amount: switch_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into()
+        );
+
+    let interest = updated_index - cfg.staker_info.index;
+    let staker_rewards = compute_rewards(amount: cfg.staker_info.amount_own, :interest);
+    let pool_rewards = compute_rewards(amount: cfg.staker_info.amount_pool, :interest);
+    let commission = compute_commission(
+        rewards: pool_rewards, rev_share: cfg.staker_info.rev_share
+    );
+    let unclaimed_rewards_own = staker_rewards + commission;
+    let unclaimed_rewards_pool = pool_rewards - commission;
+    let amount_pool = cfg.staker_info.amount_pool + switch_amount;
+    let expected_staker_info = StakerInfo {
+        index: updated_index,
+        unclaimed_rewards_own,
+        unclaimed_rewards_pool,
+        amount_pool,
+        ..to_staker_info
+    };
+    let actual_staker_info = staking_dispatcher.state_of(staker_address: to_staker);
+    assert_eq!(actual_staker_info, expected_staker_info);
+    // Check total_stake was updated.
+    let expected_total_stake = total_stake_before_switching + switch_amount;
+    let actual_total_stake = staking_dispatcher.get_total_stake();
+    assert_eq!(actual_total_stake, expected_total_stake);
+    // Check that the pool member's intent amount was decreased.
+    let expected_undelegate_intent_value_amount = cfg.pool_member_info.amount - switch_amount;
+    let undelegate_intent_key = UndelegateIntentKey {
+        pool_contract: from_pool_contract, identifier: pool_member.into()
+    };
+    let actual_undelegate_intent_value: UndelegateIntentValue = load_from_simple_map(
+        map_selector: selector!("pool_exit_intents"),
+        key: undelegate_intent_key,
+        contract: staking_contract
+    );
+    assert_eq!(actual_undelegate_intent_value.amount, expected_undelegate_intent_value_amount);
+    assert!(actual_undelegate_intent_value.unpool_time.is_non_zero());
+    assert_eq!(to_pool_dispatcher.state_of(:pool_member).amount, switch_amount);
+    // Switch again with the rest of the amount, and verify the intent is removed.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: from_pool_contract
+    );
+    staking_dispatcher
+        .switch_staking_delegation_pool(
+            :to_staker,
+            to_pool: to_pool_contract,
+            amount: switch_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into()
+        );
+
+    let actual_undelegate_intent_value_after_switching: UndelegateIntentValue =
+        load_from_simple_map(
+        map_selector: selector!("pool_exit_intents"),
+        key: undelegate_intent_key,
+        contract: staking_contract
+    );
+    assert_eq!(actual_undelegate_intent_value_after_switching, Zero::zero());
 }

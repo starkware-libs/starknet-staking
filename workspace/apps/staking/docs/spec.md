@@ -418,6 +418,7 @@ Execute a pool member request to move from one staker's delegation pool to anoth
 | to_pool     | address         |
 | amount      | u128            |
 | data        | Span\<felt252\> |
+| identifier  | felt252         |
 #### return <!-- omit from toc -->
 success: bool
 #### emits <!-- omit from toc -->
