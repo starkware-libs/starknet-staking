@@ -1,5 +1,5 @@
 use core::traits::Into;
-use contracts::staking::Staking::REV_SHARE_DENOMINATOR;
+use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 
 #[derive(Drop)]
 pub enum Error {
@@ -18,7 +18,7 @@ pub enum Error {
     AMOUNT_IS_ZERO,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
-    REV_SHARE_OUT_OF_RANGE,
+    COMMISSION_OUT_OF_RANGE,
     AMOUNT_LESS_THAN_MIN_INCREASE_STAKE,
     UNSTAKE_IN_PROGRESS,
     POOL_ADDRESS_DOES_NOT_EXIST,
@@ -65,8 +65,8 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::AMOUNT_LESS_THAN_MIN_STAKE => panic!(
             "Amount is less than min stake - try again with enough funds."
         ),
-        Error::REV_SHARE_OUT_OF_RANGE => panic!(
-            "Rev share is out of range, expected to be 0-{}.", REV_SHARE_DENOMINATOR
+        Error::COMMISSION_OUT_OF_RANGE => panic!(
+            "Commission is out of range, expected to be 0-{}.", COMMISSION_DENOMINATOR
         ),
         Error::AMOUNT_LESS_THAN_MIN_INCREASE_STAKE => panic!(
             "Amount is less than min increase stake - try again with enough funds."

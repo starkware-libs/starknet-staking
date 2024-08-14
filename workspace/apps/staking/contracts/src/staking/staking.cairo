@@ -8,8 +8,8 @@ pub mod Staking {
         errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
         staking::{IStaking, StakerInfo, StakerInfoTrait, StakingContractInfo},
         utils::{
-            u128_mul_wide_and_div_unsafe, deploy_delegation_pool_contract, compute_commission,
-            compute_rewards, ceil_of_division
+            u128_mul_wide_and_div_unsafe, deploy_delegation_pool_contract,
+            compute_commission_amount, compute_rewards, ceil_of_division
         },
     };
     use contracts::staking::objects::{
@@ -28,7 +28,7 @@ pub mod Staking {
 
     // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value). 
     pub const MIN_INCREASE_STAKE: u128 = 10;
-    pub const REV_SHARE_DENOMINATOR: u16 = 10000;
+    pub const COMMISSION_DENOMINATOR: u16 = 10000;
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -87,7 +87,7 @@ pub mod Staking {
             operational_address: ContractAddress,
             amount: u128,
             pooling_enabled: bool,
-            rev_share: u16,
+            commission: u16,
         ) -> bool {
             let staker_address = get_caller_address();
             assert_with_err(self.staker_info.read(staker_address).is_none(), Error::STAKER_EXISTS);
@@ -96,7 +96,7 @@ pub mod Staking {
                 Error::OPERATIONAL_EXISTS
             );
             assert_with_err(amount >= self.min_stake.read(), Error::AMOUNT_LESS_THAN_MIN_STAKE);
-            assert_with_err(rev_share <= REV_SHARE_DENOMINATOR, Error::REV_SHARE_OUT_OF_RANGE);
+            assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
             let staking_contract = get_contract_address();
             let token_address = self.token_address.read();
             let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
@@ -106,7 +106,11 @@ pub mod Staking {
                 );
             let pooling_contract = self
                 .deploy_delegation_pool_contract_if_needed(
-                    :staker_address, :staking_contract, :token_address, :pooling_enabled, :rev_share
+                    :staker_address,
+                    :staking_contract,
+                    :token_address,
+                    :pooling_enabled,
+                    :commission
                 );
             self
                 .staker_info
@@ -123,7 +127,7 @@ pub mod Staking {
                             index: self.global_index.read(),
                             unclaimed_rewards_own: 0,
                             unclaimed_rewards_pool: 0,
-                            rev_share,
+                            commission,
                         }
                     )
                 );
@@ -405,9 +409,11 @@ pub mod Staking {
         ) {
             if (staker_info.amount_pool > 0) {
                 let mut rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
-                let commission = compute_commission(:rewards, rev_share: staker_info.rev_share);
-                staker_info.unclaimed_rewards_own += commission;
-                rewards -= commission;
+                let commission_amount = compute_commission_amount(
+                    :rewards, commission: staker_info.commission
+                );
+                staker_info.unclaimed_rewards_own += commission_amount;
+                rewards -= commission_amount;
                 staker_info.unclaimed_rewards_pool += rewards;
             }
         }
@@ -470,7 +476,7 @@ pub mod Staking {
             staking_contract: ContractAddress,
             token_address: ContractAddress,
             pooling_enabled: bool,
-            rev_share: u16,
+            commission: u16,
         ) -> Option<ContractAddress> {
             if !pooling_enabled {
                 return Option::None;
@@ -483,7 +489,7 @@ pub mod Staking {
                 :staker_address,
                 :staking_contract,
                 :token_address,
-                :rev_share
+                :commission
             )
         }
 

@@ -13,7 +13,7 @@ use contracts::{
             InternalStakingFunctionsTrait,
         }
     },
-    utils::{compute_rewards, compute_commission},
+    utils::{compute_rewards, compute_commission_amount},
     test_utils::{
         initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig,
         stake_for_testing, fund, approve, deploy_staking_contract, stake_with_pooling_enabled,
@@ -22,7 +22,7 @@ use contracts::{
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OWNER_ADDRESS,
             INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
-            STAKE_AMOUNT, STAKER_INITIAL_BALANCE, REV_SHARE, OTHER_STAKER_ADDRESS,
+            STAKE_AMOUNT, STAKER_INITIAL_BALANCE, COMMISSION, OTHER_STAKER_ADDRESS,
             OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT,
             CALLER_ADDRESS, DUMMY_IDENTIFIER, OTHER_OPERATIONAL_ADDRESS,
         }
@@ -40,7 +40,7 @@ use contracts::staking::objects::{
 };
 use contracts::staking::staking::Staking::ContractState;
 use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
-use contracts::staking::Staking::{REV_SHARE_DENOMINATOR, MIN_INCREASE_STAKE};
+use contracts::staking::Staking::{COMMISSION_DENOMINATOR, MIN_INCREASE_STAKE};
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
 use snforge_std::{
@@ -134,11 +134,11 @@ fn test_calculate_rewards() {
     assert!(state.calculate_rewards(ref :staker_info));
     let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
     let pool_rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
-    let commission = compute_commission(
-        rewards: pool_rewards, rev_share: cfg.staker_info.rev_share
+    let commission_amount = compute_commission_amount(
+        rewards: pool_rewards, commission: cfg.staker_info.commission
     );
-    let unclaimed_rewards_own: u128 = staker_rewards + commission;
-    let unclaimed_rewards_pool: u128 = pool_rewards - commission;
+    let unclaimed_rewards_own: u128 = staker_rewards + commission_amount;
+    let unclaimed_rewards_pool: u128 = pool_rewards - commission_amount;
     let expected_staker_info = StakerInfo {
         index: staker_info.index, unclaimed_rewards_own, unclaimed_rewards_pool, ..staker_info
     };
@@ -177,7 +177,7 @@ fn test_stake_from_same_staker_address() {
             operational_address: cfg.staker_info.operational_address,
             amount: cfg.staker_info.amount_own,
             pooling_enabled: cfg.test_info.pooling_enabled,
-            rev_share: cfg.staker_info.rev_share,
+            commission: cfg.staker_info.commission,
         );
 }
 
@@ -203,7 +203,7 @@ fn test_stake_with_same_operational_address() {
             operational_address: cfg.staker_info.operational_address,
             amount: cfg.staker_info.amount_own,
             pooling_enabled: cfg.test_info.pooling_enabled,
-            rev_share: cfg.staker_info.rev_share,
+            commission: cfg.staker_info.commission,
         );
 }
 
@@ -220,14 +220,14 @@ fn test_stake_with_less_than_min_stake() {
 }
 
 #[test]
-#[should_panic(expected: "Rev share is out of range, expected to be 0-10000.")]
-fn test_stake_with_rev_share_out_of_range() {
+#[should_panic(expected: "Commission is out of range, expected to be 0-10000.")]
+fn test_stake_with_commission_out_of_range() {
     let mut cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         cfg.test_info.initial_supply, cfg.test_info.owner_address
     );
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
-    cfg.staker_info.rev_share = REV_SHARE_DENOMINATOR + 1;
+    cfg.staker_info.commission = COMMISSION_DENOMINATOR + 1;
     stake_for_testing(ref state, :cfg, :token_address);
 }
 
@@ -256,8 +256,8 @@ fn test_claim_delegation_pool_rewards() {
     assert_eq!(
         erc20_dispatcher.balance_of(pooling_contract),
         (cfg.staker_info.amount_own.into()
-            * (REV_SHARE_DENOMINATOR - cfg.staker_info.rev_share).into())
-            / REV_SHARE_DENOMINATOR.into()
+            * (COMMISSION_DENOMINATOR - cfg.staker_info.commission).into())
+            / COMMISSION_DENOMINATOR.into()
     );
 }
 
@@ -803,11 +803,11 @@ fn test_switch_staking_delegation_pool() {
     let interest = updated_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards(amount: cfg.staker_info.amount_own, :interest);
     let pool_rewards = compute_rewards(amount: cfg.staker_info.amount_pool, :interest);
-    let commission = compute_commission(
-        rewards: pool_rewards, rev_share: cfg.staker_info.rev_share
+    let commission_amount = compute_commission_amount(
+        rewards: pool_rewards, commission: cfg.staker_info.commission
     );
-    let unclaimed_rewards_own = staker_rewards + commission;
-    let unclaimed_rewards_pool = pool_rewards - commission;
+    let unclaimed_rewards_own = staker_rewards + commission_amount;
+    let unclaimed_rewards_pool = pool_rewards - commission_amount;
     let amount_pool = cfg.staker_info.amount_pool + switch_amount;
     let expected_staker_info = StakerInfo {
         index: updated_index,

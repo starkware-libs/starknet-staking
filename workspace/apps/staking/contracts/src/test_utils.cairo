@@ -17,7 +17,7 @@ use snforge_std::{declare, ContractClassTrait};
 use contracts::staking::Staking::ContractState;
 use constants::{
     NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_INITIAL_BALANCE, STAKE_AMOUNT,
-    STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS, TOKEN_ADDRESS, REV_SHARE,
+    STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS, TOKEN_ADDRESS, COMMISSION,
     POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH, POOL_MEMBER_ADDRESS,
     POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, BASE_MINT_AMOUNT, BUFFER,
     L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG, STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS,
@@ -35,7 +35,7 @@ pub(crate) mod constants {
     pub const MIN_STAKE: u128 = 100000;
     pub const STAKE_AMOUNT: u128 = 200000;
     pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
-    pub const REV_SHARE: u16 = 500;
+    pub const COMMISSION: u16 = 500;
     pub const STAKER_FINAL_INDEX: u64 = 10;
     pub const BASE_MINT_AMOUNT: u128 = 800000000000;
     pub const BUFFER: u128 = 1000000000000;
@@ -155,10 +155,12 @@ pub(crate) fn initialize_pooling_state(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
-    rev_share: u16
+    commission: u16
 ) -> Pooling::ContractState {
     let mut state = Pooling::contract_state_for_testing();
-    Pooling::constructor(ref state, :staker_address, :staking_contract, :token_address, :rev_share);
+    Pooling::constructor(
+        ref state, :staker_address, :staking_contract, :token_address, :commission
+    );
     state
 }
 
@@ -305,7 +307,7 @@ pub(crate) fn stake_for_testing(
             cfg.staker_info.operational_address,
             cfg.staker_info.amount_own,
             cfg.test_info.pooling_enabled,
-            cfg.staker_info.rev_share
+            cfg.staker_info.commission
         );
 }
 
@@ -323,7 +325,7 @@ pub(crate) fn stake_for_testing_using_dispatcher(
             cfg.staker_info.operational_address,
             cfg.staker_info.amount_own,
             cfg.test_info.pooling_enabled,
-            cfg.staker_info.rev_share
+            cfg.staker_info.commission
         );
 }
 
@@ -459,7 +461,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             index: BASE_VALUE,
             unclaimed_rewards_own: 0,
             unclaimed_rewards_pool: 0,
-            rev_share: REV_SHARE,
+            commission: COMMISSION,
         };
         let pool_member_info = PoolMemberInfo {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
