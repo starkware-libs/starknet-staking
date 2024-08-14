@@ -3,7 +3,7 @@ use core::{traits::Destruct, integer::{u64_wide_mul, u128_wide_mul}};
 use contracts::errors::{panic_by_err, Error, OptionAuxTrait};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait};
 use starknet::syscalls::deploy_syscall;
-use contracts::staking::Staking::{REV_SHARE_DENOMINATOR};
+use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
 
 pub const MAX_U64: u64 = 18446744073709551615;
@@ -25,13 +25,13 @@ pub fn deploy_delegation_pool_contract(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
-    rev_share: u16
+    commission: u16
 ) -> Option<ContractAddress> {
     let mut calldata = ArrayTrait::new();
     staker_address.serialize(ref calldata);
     staking_contract.serialize(ref calldata);
     token_address.serialize(ref calldata);
-    rev_share.serialize(ref calldata);
+    commission.serialize(ref calldata);
     let (pool_address, _) = deploy_syscall(
         :class_hash, :contract_address_salt, calldata: calldata.span(), deploy_from_zero: false
     )
@@ -39,14 +39,14 @@ pub fn deploy_delegation_pool_contract(
     Option::Some(pool_address)
 }
 
-// Compute the commission of the staker from the pool rewards.
+// Compute the commission amount of the staker from the pool rewards.
 //
-// $$ commission = rewards * rev_share / REV_SHARE_DENOMINATOR $$
-pub fn compute_commission(rewards: u128, rev_share: u16) -> u128 {
+// $$ commission_amount = rewards * commission / COMMISSION_DENOMINATOR $$
+pub fn compute_commission_amount(rewards: u128, commission: u16) -> u128 {
     u128_mul_wide_and_div_unsafe(
         lhs: rewards,
-        rhs: rev_share.into(),
-        div: REV_SHARE_DENOMINATOR.into(),
+        rhs: commission.into(),
+        div: COMMISSION_DENOMINATOR.into(),
         error: Error::COMMISSION_ISNT_U128
     )
 }

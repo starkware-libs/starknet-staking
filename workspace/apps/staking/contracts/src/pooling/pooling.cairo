@@ -5,7 +5,7 @@ pub mod Pooling {
     use contracts::{
         constants::{BASE_VALUE}, errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
         pooling::{IPooling, PoolMemberInfo, Events},
-        utils::{u128_mul_wide_and_div_unsafe, compute_rewards, compute_commission}
+        utils::{u128_mul_wide_and_div_unsafe, compute_rewards, compute_commission_amount}
     };
     use core::option::OptionTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp};
@@ -46,7 +46,7 @@ pub mod Pooling {
         final_staker_index: Option<u64>,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
-        rev_share: u16,
+        commission: u16,
     }
 
     #[event]
@@ -65,12 +65,12 @@ pub mod Pooling {
         staker_address: ContractAddress,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
-        rev_share: u16
+        commission: u16
     ) {
         self.staker_address.write(staker_address);
         self.staking_contract.write(staking_contract);
         self.token_address.write(token_address);
-        self.rev_share.write(rev_share);
+        self.commission.write(commission);
     }
 
     #[abi(embed_v0)]
@@ -357,8 +357,10 @@ pub mod Pooling {
             let interest: u64 = updated_index - pool_member_info.index;
             pool_member_info.index = updated_index;
             let mut rewards = compute_rewards(amount: pool_member_info.amount, :interest);
-            let commission = compute_commission(:rewards, rev_share: self.rev_share.read());
-            rewards -= commission;
+            let commission_amount = compute_commission_amount(
+                :rewards, commission: self.commission.read()
+            );
+            rewards -= commission_amount;
             pool_member_info.unclaimed_rewards += rewards;
             true
         }

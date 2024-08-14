@@ -111,7 +111,7 @@ classDiagram
     option < unstake_time >
     operational_address
     option < PoollingContract >
-    rev_share
+    commission
   }
   class PoolMemberInfo{
     amount
@@ -223,7 +223,7 @@ Add a new staker to the stake.
 | operational     | address    |
 | amount          | u128       |
 | pooling_enabled | boolean    |
-| rev_share       | Option<u8> |
+| commission      | Option<u8> |
 #### return <!-- omit from toc -->
 success: bool
 #### emits <!-- omit from toc -->
@@ -561,8 +561,8 @@ internal function.
 #### logic <!-- omit from toc -->
 1. Calculate rewards for `own_amount`.
 2. Calculate rewards for `pooled_amount`.
-3. Update `own_unclaimed_rewards` with own rewards + pooled rewards rev share.
-4. Update `pooled_unclaimed_rewards` with pooled rewards without rev share. 
+3. Update `own_unclaimed_rewards` with own rewards + pooled rewards commission.
+4. Update `pooled_unclaimed_rewards` with pooled rewards without commission. 
 5. Update index.
 
 ## Events

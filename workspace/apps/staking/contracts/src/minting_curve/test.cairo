@@ -43,7 +43,7 @@ fn test_yearly_mint() {
             operational_address: cfg.staker_info.operational_address,
             amount: cfg.staker_info.amount_own,
             pooling_enabled: cfg.test_info.pooling_enabled,
-            rev_share: cfg.staker_info.rev_share
+            commission: cfg.staker_info.commission
         );
 
     let expected_minted_tokens: u128 = compute_yearly_mint(
