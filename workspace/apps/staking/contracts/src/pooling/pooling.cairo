@@ -242,11 +242,11 @@ pub mod Pooling {
             // TODO: emit event
             staking_dispatcher
                 .switch_staking_delegation_pool(
-                    from_staker: self.staker_address.read(),
                     :to_staker,
                     :to_pool,
                     :amount,
-                    data: serialized_data.span()
+                    data: serialized_data.span(),
+                    identifier: pool_member.into()
                 );
             amount_left
         }
@@ -254,6 +254,7 @@ pub mod Pooling {
         fn enter_delegation_pool_from_staking_contract(
             ref self: ContractState, amount: u128, index: u64, data: Span<felt252>
         ) -> bool {
+            assert_with_err(amount >= MIN_DELEGATION_AMOUNT, Error::MIN_DELEGATION_AMOUNT);
             assert_with_err(
                 get_caller_address() == self.staking_contract.read(),
                 Error::CALLER_IS_NOT_STAKING_CONTRACT

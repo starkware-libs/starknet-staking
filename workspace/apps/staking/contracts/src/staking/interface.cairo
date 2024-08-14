@@ -87,11 +87,11 @@ pub trait IStaking<TContractState> {
     fn remove_from_delegation_pool_action(ref self: TContractState, identifier: felt252) -> u128;
     fn switch_staking_delegation_pool(
         ref self: TContractState,
-        from_staker: ContractAddress,
         to_staker: ContractAddress,
         to_pool: ContractAddress,
         amount: u128,
-        data: Span<felt252>
+        data: Span<felt252>,
+        identifier: felt252
     ) -> bool;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
     fn set_open_for_delegation(ref self: TContractState) -> ContractAddress;

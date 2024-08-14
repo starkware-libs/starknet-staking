@@ -32,7 +32,7 @@ use contracts::{
         STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, INITIAL_SUPPLY, DUMMY_ADDRESS,
         OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, REV_SHARE, POOL_MEMBER_REWARD_ADDRESS,
         STAKER_FINAL_INDEX, NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
-        OTHER_POOL_CONTRACT_ADDRESS, OTHER_POOL_MEMBER_ADDRESS,
+        OTHER_POOL_CONTRACT_ADDRESS, OTHER_POOL_MEMBER_ADDRESS, OTHER_OPERATIONAL_ADDRESS,
     }
 };
 use contracts::staking::objects::{
@@ -563,7 +563,7 @@ fn test_exit_delegation_pool_action() {
 // TODO: add event test.
 #[test]
 fn test_switch_delegation_pool() {
-    let cfg: StakingInitConfig = Default::default();
+    let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
@@ -573,6 +573,14 @@ fn test_switch_delegation_pool() {
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
 
+    // Create other staker with pool.
+    let switch_amount = cfg.pool_member_info.amount / 2;
+    cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
+    cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
+    let to_staker_pool_contract = stake_with_pooling_enabled(
+        :cfg, :token_address, :staking_contract
+    );
+
     cheat_caller_address(
         contract_address: pooling_contract,
         caller_address: cfg.test_info.pool_member_address,
@@ -580,11 +588,10 @@ fn test_switch_delegation_pool() {
     );
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     pooling_dispatcher.exit_delegation_pool_intent();
-    let switch_amount = cfg.pool_member_info.amount / 2;
     let amount_left = pooling_dispatcher
         .switch_delegation_pool(
             to_staker: OTHER_STAKER_ADDRESS(),
-            to_pool: OTHER_POOL_CONTRACT_ADDRESS(),
+            to_pool: to_staker_pool_contract,
             amount: switch_amount
         );
     let actual_pool_member_info: Option<PoolMemberInfo> = load_option_from_simple_map(
@@ -601,7 +608,7 @@ fn test_switch_delegation_pool() {
     let amount_left = pooling_dispatcher
         .switch_delegation_pool(
             to_staker: OTHER_STAKER_ADDRESS(),
-            to_pool: OTHER_POOL_CONTRACT_ADDRESS(),
+            to_pool: to_staker_pool_contract,
             amount: switch_amount
         );
     let actual_pool_member_info: Option<PoolMemberInfo> = load_option_from_simple_map(
