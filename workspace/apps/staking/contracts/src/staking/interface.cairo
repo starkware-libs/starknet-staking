@@ -16,7 +16,8 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         #[key]
-        pub pooling_contract_address: ContractAddress
+        pub pool_contract: ContractAddress,
+        pub commission: u16
     }
 
     #[derive(Drop, starknet::Event)]

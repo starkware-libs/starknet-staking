@@ -28,7 +28,7 @@
     - [calculate\_rewards](#calculate_rewards)
   - [Events](#events)
     - [Balance Changed](#balance-changed)
-    - [New Staking DelegationPool](#new-staking-delegationpool)
+    - [New Delegation Pool](#new-delegation-pool)
     - [Staker Exit intent](#staker-exit-intent)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
@@ -572,11 +572,13 @@ internal function.
 | staker | address | ✅     |
 | amount | u128    | ❌     |
 
-### New Staking DelegationPool
-| data     | type    | keyed |
-| -------- | ------- | ----- |
-| staker   | address | ✅     |
-| contract | address | ✅     |
+### New Delegation Pool
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| staker_address | address | ✅    |
+| pool_contract  | address | ✅    |
+| commission     | u16     | ❌    |
+
 
 ### Staker Exit intent
 | data    | type    | keyed |
