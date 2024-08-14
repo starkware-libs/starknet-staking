@@ -6,3 +6,6 @@ pub mod components;
 
 // Due to an issue in snforge, it won't recognize the mock under #[cfg(test)].
 pub(crate) mod erc20_mocks;
+
+// Due to an issue in snforge, it won't recognize the mock under #[cfg(test)].
+pub mod test_utils;

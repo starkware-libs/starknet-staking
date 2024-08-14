@@ -24,7 +24,8 @@ use constants::{
     L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG, STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS,
     DUMMY_IDENTIFIER
 };
-use snforge_std::{ContractClass, CheatSpan, cheat_caller_address, test_address};
+use contracts_commons::test_utils::cheat_caller_address_once;
+use snforge_std::test_address;
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
     use starknet::class_hash::{ClassHash, class_hash_const};
@@ -241,7 +242,7 @@ pub(crate) fn fund(
     token_address: ContractAddress
 ) {
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    cheat_caller_address(token_address, sender, CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(contract_address: token_address, caller_address: sender);
     erc20_dispatcher.transfer(:recipient, amount: amount.into());
 }
 
@@ -249,7 +250,7 @@ pub(crate) fn approve(
     owner: ContractAddress, spender: ContractAddress, amount: u128, token_address: ContractAddress
 ) {
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    cheat_caller_address(token_address, owner, CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(contract_address: token_address, caller_address: owner);
     erc20_dispatcher.approve(:spender, amount: amount.into());
 }
 
@@ -276,7 +277,9 @@ pub(crate) fn stake_for_testing(
 ) {
     let staking_contract = test_address();
     fund_and_approve_for_stake(:cfg, :staking_contract, :token_address);
-    cheat_caller_address(staking_contract, cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
     state
         .stake(
             cfg.staker_info.reward_address,
@@ -291,7 +294,9 @@ pub(crate) fn stake_for_testing_using_dispatcher(
     cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress
 ) {
     fund_and_approve_for_stake(:cfg, :staking_contract, :token_address);
-    cheat_caller_address(staking_contract, cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
         .stake(
@@ -337,8 +342,8 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
     );
 
     // Enter the delegation pool.
-    cheat_caller_address(
-        pooling_contract, cfg.test_info.pool_member_address, CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
     );
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     assert!(

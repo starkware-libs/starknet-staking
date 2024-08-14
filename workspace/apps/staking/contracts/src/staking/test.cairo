@@ -50,6 +50,7 @@ use snforge_std::{
 use snforge_std::cheatcodes::events::{
     Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
 };
+use contracts_commons::test_utils::cheat_caller_address_once;
 
 #[test]
 fn test_constructor() {
@@ -165,10 +166,8 @@ fn test_stake_from_same_staker_address() {
     stake_for_testing(ref state, :cfg, :token_address);
 
     // Second stake from cfg.test_info.staker_address.
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: cfg.test_info.staker_address,
-        span: CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: test_address(), caller_address: cfg.test_info.staker_address
     );
     state
         .stake(
@@ -191,7 +190,9 @@ fn test_stake_with_same_operational_address() {
     stake_for_testing(ref state, :cfg, :token_address);
 
     // Change staker address.
-    cheat_caller_address(test_address(), OTHER_STAKER_ADDRESS(), CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(
+        contract_address: test_address(), caller_address: OTHER_STAKER_ADDRESS()
+    );
     assert!(cfg.test_info.staker_address != OTHER_STAKER_ADDRESS());
     // Second stake with the same operational address.
     state
@@ -247,7 +248,7 @@ fn test_claim_delegation_pool_rewards() {
     };
     state.staker_info.write(cfg.test_info.staker_address, Option::Some(staker_info));
 
-    cheat_caller_address(test_address(), pooling_contract, CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(contract_address: test_address(), caller_address: pooling_contract);
     state.claim_delegation_pool_rewards(cfg.test_info.staker_address);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     assert_eq!(
@@ -284,11 +285,7 @@ fn test_increase_stake_from_staker_address() {
     stake_for_testing(ref state, :cfg, :token_address);
     let staker_address = cfg.test_info.staker_address;
     // Set the same staker address.
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
     let staker_info_before = state.get_staker_info(:staker_address);
     let increase_amount = cfg.staker_info.amount_own;
     let expected_staker_info = StakerInfo {
@@ -320,11 +317,7 @@ fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
     let staker_address = cfg.test_info.staker_address;
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
     state.claim_delegation_pool_rewards(:staker_address);
 }
 
@@ -345,11 +338,7 @@ fn test_claim_delegation_pool_rewards_unauthorized_address() {
     // Update staker info for the test.
     let staker_info = StakerInfo { index: 0, ..cfg.staker_info };
     state.staker_info.write(staker_address, Option::Some(staker_info));
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
     state.claim_delegation_pool_rewards(:staker_address);
 }
 
@@ -377,7 +366,9 @@ fn test_increase_stake_from_reward_address() {
         :token_address
     );
     let staker_address = cfg.test_info.staker_address;
-    cheat_caller_address(test_address(), cfg.staker_info.reward_address, CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(
+        contract_address: test_address(), caller_address: cfg.staker_info.reward_address
+    );
     let staker_info_before = state.get_staker_info(:staker_address);
     let increase_amount = cfg.staker_info.amount_own;
     let mut expected_staker_info = staker_info_before;
@@ -409,11 +400,7 @@ fn test_increase_stake_unstake_in_progress() {
     let staker_address = cfg.test_info.staker_address;
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
     state.unstake_intent();
     state.increase_stake(:staker_address, amount: cfg.staker_info.amount_own);
 }
@@ -428,11 +415,7 @@ fn test_increase_stake_amount_less_than_min_increase_stake() {
     let staker_address = cfg.test_info.staker_address;
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
     state.increase_stake(:staker_address, amount: MIN_INCREASE_STAKE - 1);
 }
 
@@ -445,7 +428,9 @@ fn test_increase_stake_caller_cannot_increase() {
     );
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
-    cheat_caller_address(test_address(), NON_STAKER_ADDRESS(), CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(
+        contract_address: test_address(), caller_address: NON_STAKER_ADDRESS()
+    );
     state
         .increase_stake(
             staker_address: cfg.test_info.staker_address, amount: cfg.staker_info.amount_own
@@ -465,11 +450,7 @@ fn test_change_reward_address() {
     let other_reward_address = OTHER_REWARD_ADDRESS();
 
     // Set the same staker address.
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
     state.change_reward_address(other_reward_address);
     let staker_info_after_change = state.get_staker_info(:staker_address);
     let staker_info_expected = StakerInfo {
@@ -488,7 +469,9 @@ fn test_change_reward_address_staker_not_exist() {
     );
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
-    cheat_caller_address(test_address(), NON_STAKER_ADDRESS(), CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(
+        contract_address: test_address(), caller_address: NON_STAKER_ADDRESS()
+    );
     // Reward address is arbitrary because it should fail because of the caller.
     state.change_reward_address(reward_address: DUMMY_ADDRESS());
 }
@@ -506,11 +489,7 @@ fn test_claim_rewards() {
     // update index
     state.global_index.write((cfg.staker_info.index).into() * 2);
     let staker_address = cfg.test_info.staker_address;
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
     let reward: u128 = state.claim_rewards(:staker_address);
     assert_eq!(reward, cfg.staker_info.amount_own);
 
@@ -532,7 +511,7 @@ fn test_claim_rewards_panic_unauthorized() {
     );
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
-    cheat_caller_address(test_address(), DUMMY_ADDRESS(), CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(contract_address: test_address(), caller_address: DUMMY_ADDRESS());
     state.claim_rewards(cfg.test_info.staker_address);
 }
 
@@ -558,11 +537,7 @@ fn test_unstake_intent() {
     let staker_address = cfg.test_info.staker_address;
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
     let mut spy = snforge_std::spy_events();
     let unstake_time = state.unstake_intent();
     let staker_info = state.get_staker_info(:staker_address);
@@ -585,7 +560,9 @@ fn test_unstake_intent_staker_doesnt_exist() {
         cfg.test_info.initial_supply, cfg.test_info.owner_address
     );
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
-    cheat_caller_address(test_address(), NON_STAKER_ADDRESS(), CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(
+        contract_address: test_address(), caller_address: NON_STAKER_ADDRESS()
+    );
     state.unstake_intent();
 }
 
@@ -598,7 +575,11 @@ fn test_unstake_intent_unstake_in_progress() {
     );
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
-    cheat_caller_address(test_address(), cfg.test_info.staker_address, CheatSpan::TargetCalls(2));
+    cheat_caller_address(
+        contract_address: test_address(),
+        caller_address: cfg.test_info.staker_address,
+        span: CheatSpan::TargetCalls(2)
+    );
     state.unstake_intent();
     state.unstake_intent();
 }
@@ -617,11 +598,7 @@ fn test_unstake_action() {
 
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    cheat_caller_address(
-        contract_address: staking_contract,
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let unstake_time = staking_dispatcher.unstake_intent();
     // Advance time to enable unstake_action.
     cheat_block_timestamp(
@@ -629,10 +606,8 @@ fn test_unstake_action() {
         block_timestamp: unstake_time + 1,
         span: CheatSpan::Indefinite
     );
-    cheat_caller_address(
-        contract_address: staking_contract,
-        caller_address: NON_STAKER_ADDRESS(),
-        span: CheatSpan::TargetCalls(1)
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
     );
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
     assert_eq!(staker_amount, cfg.staker_info.amount_own);
@@ -656,11 +631,7 @@ fn test_get_total_stake() {
     assert_eq!(state.get_total_stake(), cfg.staker_info.amount_own);
     // Set the same staker address.
     let staker_address = cfg.test_info.staker_address;
-    cheat_caller_address(
-        contract_address: test_address(),
-        caller_address: staker_address,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
     let amount = cfg.staker_info.amount_own;
     state.increase_stake(:staker_address, :amount,);
     assert_eq!(state.get_total_stake(), state.get_staker_info(:staker_address).amount_own);
@@ -719,11 +690,7 @@ fn test_remove_from_delegation_pool_action() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
     // Remove from delegation pool intent, and then check that the intent was added correctly.
-    cheat_caller_address(
-        contract_address: staking_contract,
-        caller_address: pooling_contract,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pooling_contract);
     staking_dispatcher
         .remove_from_delegation_pool_intent(
             staker_address: cfg.test_info.staker_address,
@@ -736,11 +703,7 @@ fn test_remove_from_delegation_pool_action() {
     );
     let pool_balance_before_action = erc20_dispatcher.balance_of(pooling_contract);
 
-    cheat_caller_address(
-        contract_address: staking_contract,
-        caller_address: pooling_contract,
-        span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pooling_contract);
     let returned_amount = staking_dispatcher
         .remove_from_delegation_pool_action(identifier: cfg.test_info.pool_member_address.into());
     assert_eq!(returned_amount, cfg.pool_member_info.amount);
@@ -774,12 +737,9 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let caller = CALLER_ADDRESS();
     let staking_balance_before_action = erc20_dispatcher.balance_of(staking_contract);
     // Remove from delegation pool action, and check it returns 0 and does not change balance.
-    cheat_caller_address(
-        contract_address: staking_contract, caller_address: caller, span: CheatSpan::TargetCalls(1)
-    );
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: CALLER_ADDRESS());
     let returned_amount = staking_dispatcher
         .remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
     assert_eq!(returned_amount, Zero::zero());

@@ -6,8 +6,8 @@ use contracts::test_utils::{
     initialize_minting_curve_state, deploy_staking_contract, deploy_mock_erc20_contract, fund,
     approve, StakingInitConfig, constants::{L1_STAKING_MINTER_ADDRESS},
 };
-use snforge_std::{cheat_caller_address, CheatSpan, test_address};
 use core::integer::u256_sqrt;
+use contracts_commons::test_utils::cheat_caller_address_once;
 
 #[test]
 fn test_yearly_mint() {
@@ -34,7 +34,9 @@ fn test_yearly_mint() {
         amount: cfg.test_info.staker_initial_balance,
         :token_address
     );
-    cheat_caller_address(staking_contract, cfg.test_info.staker_address, CheatSpan::TargetCalls(1));
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
     staking_dispatcher
         .stake(
             reward_address: cfg.staker_info.reward_address,
