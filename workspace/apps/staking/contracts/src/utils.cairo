@@ -64,6 +64,11 @@ pub fn ceil_of_division(dividend: u128, divisor: u128) -> u128 {
     (dividend + divisor - 1) / divisor
 }
 
+// Compute the threshold for requesting funds from L1 Staking Minter.
+pub fn compute_threshold(base_mint_amount: u128) -> u128 {
+    base_mint_amount / 2
+}
+
 
 #[cfg(test)]
 mod tests {
