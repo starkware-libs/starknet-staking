@@ -184,7 +184,6 @@ pub(crate) fn initialize_reward_supplier_state_from_cfg(
         staking_contract: cfg.test_info.staking_contract,
         :token_address,
         l1_staking_minter: cfg.reward_supplier.l1_staking_minter,
-        buffer: cfg.reward_supplier.buffer
     )
 }
 pub(crate) fn initialize_reward_supplier_state(
@@ -194,7 +193,6 @@ pub(crate) fn initialize_reward_supplier_state(
     staking_contract: ContractAddress,
     token_address: ContractAddress,
     l1_staking_minter: felt252,
-    buffer: u128
 ) -> RewardSupplier::ContractState {
     let mut state = RewardSupplier::contract_state_for_testing();
     RewardSupplier::constructor(
@@ -205,7 +203,6 @@ pub(crate) fn initialize_reward_supplier_state(
         :staking_contract,
         :token_address,
         :l1_staking_minter,
-        :buffer
     );
     state
 }

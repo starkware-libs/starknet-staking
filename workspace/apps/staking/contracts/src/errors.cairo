@@ -6,6 +6,7 @@ pub enum Error {
     // Generic errors
     INTEREST_ISNT_U64,
     REWARDS_ISNT_U128,
+    BALANCE_ISNT_U128,
     COMMISSION_ISNT_U128,
     // Shared errors
     STAKER_EXISTS,
@@ -51,6 +52,7 @@ pub fn panic_by_err(error: Error) -> core::never {
     match error {
         Error::INTEREST_ISNT_U64 => panic!("Interest is too large, expected to fit in u64."),
         Error::REWARDS_ISNT_U128 => panic!("Rewards is too large, expected to fit in u128."),
+        Error::BALANCE_ISNT_U128 => panic!("Balance is too large, expected to fit in u128."),
         Error::COMMISSION_ISNT_U128 => panic!("Commission is too large, expected to fit in u128."),
         Error::STAKER_EXISTS => panic!("Staker already exists, use increase_stake instead."),
         Error::STAKER_NOT_EXISTS => panic!("Staker does not exist."),
