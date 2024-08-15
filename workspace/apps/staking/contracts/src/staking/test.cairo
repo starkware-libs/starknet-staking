@@ -1,6 +1,6 @@
 use core::option::OptionTrait;
 use contracts::{
-    constants::{BASE_VALUE, EXIT_WAITING_WINDOW},
+    constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES, SECONDS_IN_DAY},
     staking::{
         StakerInfo, Staking,
         Staking::{
@@ -18,16 +18,19 @@ use contracts::{
         initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig,
         stake_for_testing, fund, approve, deploy_staking_contract, stake_with_pooling_enabled,
         enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
-        load_from_simple_map,
+        load_from_simple_map, deploy_reward_supplier_contract, deploy_minting_curve_contract,
+        load_one_felt,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OWNER_ADDRESS,
             INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
             STAKE_AMOUNT, STAKER_INITIAL_BALANCE, COMMISSION, OTHER_STAKER_ADDRESS,
             OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT,
             CALLER_ADDRESS, DUMMY_IDENTIFIER, OTHER_OPERATIONAL_ADDRESS,
+            REWARD_SUPPLIER_CONTRACT_ADDRESS,
         }
     }
 };
+use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use contracts::event_test_utils::{
     assert_number_of_events, assert_staker_exit_intent_event, assert_staker_balance_changed_event
 };
@@ -59,7 +62,9 @@ fn test_constructor() {
     let token_address: ContractAddress = TOKEN_ADDRESS();
     let dummy_address: ContractAddress = DUMMY_ADDRESS();
     let mut state = Staking::contract_state_for_testing();
-    Staking::constructor(ref state, token_address, MIN_STAKE, DUMMY_CLASS_HASH());
+    Staking::constructor(
+        ref state, token_address, MIN_STAKE, DUMMY_CLASS_HASH(), REWARD_SUPPLIER_CONTRACT_ADDRESS()
+    );
     let contract_min_stake: u128 = state.min_stake.read();
     assert_eq!(MIN_STAKE, contract_min_stake);
     let contract_token_address: ContractAddress = state.token_address.read();
@@ -589,13 +594,31 @@ fn test_unstake_intent_unstake_in_progress() {
 // TODO: test event.
 #[test]
 fn test_unstake_action() {
-    let cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
+    let mut cfg: StakingInitConfig = Default::default();
+    // Deploy contracts: ERC20, MintingCurve, RewardSupplier, Staking.
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
-    // Deploy the staking contract, stake, and enter delegation pool.
+    let minting_curve = deploy_minting_curve_contract(
+        staking_contract: cfg.test_info.staking_contract, :cfg
+    );
+    cfg.reward_supplier.minting_curve_contract = minting_curve;
+    let reward_supplier = deploy_reward_supplier_contract(:token_address, :cfg);
+    cfg.test_info.reward_supplier = reward_supplier;
+    // Deploy the staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    // There are circular dependecies between the contracts, so we override the fake addresses.
+    snforge_std::store(
+        target: reward_supplier,
+        storage_address: selector!("staking_contract"),
+        serialized_value: array![staking_contract.into()].span()
+    );
+    snforge_std::store(
+        target: minting_curve,
+        storage_address: selector!("staking_contract"),
+        serialized_value: array![staking_contract.into()].span()
+    );
+    // Stake.
     stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
 
     let staker_address = cfg.test_info.staker_address;
@@ -680,13 +703,31 @@ fn test_remove_from_delegation_pool_intent() {
 
 #[test]
 fn test_remove_from_delegation_pool_action() {
-    let cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
+    let mut cfg: StakingInitConfig = Default::default();
+    // Deploy contracts: ERC20, MintingCurve, RewardSupplier, Staking.
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
-    // Deploy the staking contract, stake, and enter delegation pool.
+    let minting_curve = deploy_minting_curve_contract(
+        staking_contract: cfg.test_info.staking_contract, :cfg
+    );
+    cfg.reward_supplier.minting_curve_contract = minting_curve;
+    let reward_supplier = deploy_reward_supplier_contract(:token_address, :cfg);
+    cfg.test_info.reward_supplier = reward_supplier;
+    // Deploy the staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    // There are circular dependecies between the contracts, so we override the fake addresses.
+    snforge_std::store(
+        target: reward_supplier,
+        storage_address: selector!("staking_contract"),
+        serialized_value: array![staking_contract.into()].span()
+    );
+    snforge_std::store(
+        target: minting_curve,
+        storage_address: selector!("staking_contract"),
+        serialized_value: array![staking_contract.into()].span()
+    );
+    // Stake and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -786,7 +827,9 @@ fn test_switch_staking_delegation_pool() {
     let switch_amount = cfg.pool_member_info.amount / 2;
     let updated_index: u64 = cfg.staker_info.index * 2;
     snforge_std::store(
-        staking_contract, selector!("global_index"), array![updated_index.into()].span()
+        target: staking_contract,
+        storage_address: selector!("global_index"),
+        serialized_value: array![updated_index.into()].span()
     );
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: from_pool_contract
@@ -856,3 +899,74 @@ fn test_switch_staking_delegation_pool() {
     );
     assert_eq!(actual_undelegate_intent_value_after_switching, Zero::zero());
 }
+
+
+#[test]
+fn test_update_global_index_if_needed() {
+    let mut cfg: StakingInitConfig = Default::default();
+    // Deploy contracts: ERC20, MintingCurve, RewardSupplier, Staking.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let minting_curve = deploy_minting_curve_contract(
+        staking_contract: cfg.test_info.staking_contract, :cfg
+    );
+    cfg.reward_supplier.minting_curve_contract = minting_curve;
+    let reward_supplier = deploy_reward_supplier_contract(:token_address, :cfg);
+    cfg.test_info.reward_supplier = reward_supplier;
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    // There are circular dependecies between the contracts, so we override the fake addresses.
+    snforge_std::store(
+        target: reward_supplier,
+        storage_address: selector!("staking_contract"),
+        serialized_value: array![staking_contract.into()].span()
+    );
+    snforge_std::store(
+        target: minting_curve,
+        storage_address: selector!("staking_contract"),
+        serialized_value: array![staking_contract.into()].span()
+    );
+
+    // Get the initial global index.
+    let global_index_before_first_update: u64 = load_one_felt(
+        target: staking_contract, storage_address: selector!("global_index")
+    )
+        .try_into()
+        .expect('global index not fit in u64');
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    // Try to update global index. This shouldn't update the index because a day hasn't passed.
+    staking_dispatcher.update_global_index_if_needed();
+    let global_index_after_first_update: u64 = load_one_felt(
+        target: staking_contract, storage_address: selector!("global_index")
+    )
+        .try_into()
+        .expect('global index not fit in u64');
+    assert_eq!(global_index_before_first_update, global_index_after_first_update);
+    // Advance time by a year, update total_stake to be total_supply (which is equal to initial
+    // supply), which means that max_inflation * BASE_VALUE will be added to global_index.
+    start_cheat_block_timestamp_global(
+        block_timestamp: get_block_timestamp() + SECONDS_IN_DAY * 365
+    );
+    snforge_std::store(
+        target: staking_contract,
+        storage_address: selector!("total_stake"),
+        serialized_value: array![
+            cfg.test_info.initial_supply.try_into().expect('intial_supply not fit in felt')
+        ]
+            .span()
+    );
+    staking_dispatcher.update_global_index_if_needed();
+    let global_index_after_second_update: u64 = load_one_felt(
+        target: staking_contract, storage_address: selector!("global_index")
+    )
+        .try_into()
+        .expect('global index not fit in u64');
+    assert_eq!(
+        global_index_after_second_update,
+        global_index_after_first_update
+            + multiply_by_max_inflation(BASE_VALUE.into())
+                .try_into()
+                .expect('inflation not fit in u64')
+    );
+}
+

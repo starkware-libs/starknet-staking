@@ -4,12 +4,13 @@ pub mod Staking {
     use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
     use contracts::{
-        constants::{BASE_VALUE, EXIT_WAITING_WINDOW},
+        constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES},
         errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
         staking::{IStaking, StakerInfo, StakerInfoTrait, StakingContractInfo},
         utils::{
             u128_mul_wide_and_div_unsafe, deploy_delegation_pool_contract,
-            compute_commission_amount, compute_rewards, ceil_of_division
+            compute_commission_amount, compute_rewards, ceil_of_division, day_of,
+            compute_global_index_diff
         },
     };
     use contracts::staking::objects::{
@@ -25,6 +26,9 @@ pub mod Staking {
     use starknet::class_hash::ClassHash;
     use starknet::syscalls::deploy_syscall;
     use contracts::pooling::interface::{IPoolingDispatcherTrait, IPoolingDispatcher};
+    use contracts::reward_supplier::interface::{
+        IRewardSupplierDispatcherTrait, IRewardSupplierDispatcher
+    };
 
     // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value). 
     pub const MIN_INCREASE_STAKE: u128 = 10;
@@ -54,6 +58,8 @@ pub mod Staking {
         total_stake: u128,
         pool_contract_class_hash: ClassHash,
         pool_exit_intents: LegacyMap::<UndelegateIntentKey, UndelegateIntentValue>,
+        last_index_update_timestamp: u64,
+        reward_supplier: ContractAddress,
     }
 
     #[event]
@@ -72,11 +78,14 @@ pub mod Staking {
         token_address: ContractAddress,
         min_stake: u128,
         pool_contract_class_hash: ClassHash,
+        reward_supplier: ContractAddress,
     ) {
         self.token_address.write(token_address);
         self.min_stake.write(min_stake);
         self.global_index.write(BASE_VALUE);
         self.pool_contract_class_hash.write(pool_contract_class_hash);
+        self.last_index_update_timestamp.write(get_block_timestamp());
+        self.reward_supplier.write(reward_supplier);
     }
 
     #[abi(embed_v0)]
@@ -89,6 +98,7 @@ pub mod Staking {
             pooling_enabled: bool,
             commission: u16,
         ) -> bool {
+            self.update_global_index_if_needed();
             let staker_address = get_caller_address();
             assert_with_err(self.staker_info.read(staker_address).is_none(), Error::STAKER_EXISTS);
             assert_with_err(
@@ -140,6 +150,7 @@ pub mod Staking {
         fn increase_stake(
             ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> u128 {
+            self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             assert_with_err(
@@ -169,6 +180,7 @@ pub mod Staking {
         }
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
+            self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             let caller_address = get_caller_address();
             assert_with_err(
@@ -187,6 +199,7 @@ pub mod Staking {
         }
 
         fn unstake_intent(ref self: ContractState) -> u64 {
+            self.update_global_index_if_needed();
             let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -200,6 +213,7 @@ pub mod Staking {
         }
 
         fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
+            self.update_global_index_if_needed();
             let staker_info = self.get_staker_info(:staker_address);
             let unstake_time = staker_info
                 .unstake_time
@@ -229,6 +243,7 @@ pub mod Staking {
         fn add_to_delegation_pool(
             ref self: ContractState, pooled_staker: ContractAddress, amount: u128
         ) -> (u128, u64) {
+            self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(staker_address: pooled_staker);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let pool_contract = staker_info
@@ -256,6 +271,7 @@ pub mod Staking {
             identifier: felt252,
             amount: u128,
         ) -> u64 {
+            self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             let pool_contract = staker_info
                 .pooling_contract
@@ -278,6 +294,7 @@ pub mod Staking {
         fn remove_from_delegation_pool_action(
             ref self: ContractState, identifier: felt252
         ) -> u128 {
+            self.update_global_index_if_needed();
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let undelegate_intent = self.pool_exit_intents.read(undelegate_intent_key);
@@ -305,6 +322,7 @@ pub mod Staking {
             data: Span<felt252>,
             identifier: felt252
         ) -> bool {
+            self.update_global_index_if_needed();
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
@@ -340,6 +358,7 @@ pub mod Staking {
         }
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
+            self.update_global_index_if_needed();
             let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             staker_info.reward_address = reward_address;
@@ -348,6 +367,7 @@ pub mod Staking {
         }
 
         fn set_open_for_delegation(ref self: ContractState) -> ContractAddress {
+            self.update_global_index_if_needed();
             Zero::zero()
         }
 
@@ -366,6 +386,7 @@ pub mod Staking {
         fn claim_delegation_pool_rewards(
             ref self: ContractState, staker_address: ContractAddress
         ) -> u64 {
+            self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             let pool_address = staker_info
                 .pooling_contract
@@ -389,6 +410,16 @@ pub mod Staking {
 
         fn get_total_stake(self: @ContractState) -> u128 {
             self.total_stake.read()
+        }
+
+        fn update_global_index_if_needed(ref self: ContractState) -> bool {
+            let current_timestmap = get_block_timestamp();
+            if day_of(current_timestmap)
+                - day_of(self.last_index_update_timestamp.read()) > MIN_DAYS_BETWEEN_INDEX_UPDATES {
+                self.update_global_index();
+                return true;
+            }
+            false
         }
     }
 
@@ -499,6 +530,17 @@ pub mod Staking {
 
         fn remove_from_total_stake(ref self: ContractState, amount: u128) {
             self.total_stake.write(self.total_stake.read() - amount);
+        }
+
+        fn update_global_index(ref self: ContractState) {
+            let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+                contract_address: self.reward_supplier.read()
+            };
+            let staking_rewards = reward_supplier_dispatcher.calculate_staking_rewards();
+            let total_stake = self.get_total_stake();
+            let global_index_diff = compute_global_index_diff(:staking_rewards, :total_stake);
+            self.global_index.write(self.global_index.read() + global_index_diff);
+            self.last_index_update_timestamp.write(get_block_timestamp());
         }
     }
 }

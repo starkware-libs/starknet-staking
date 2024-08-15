@@ -1,4 +1,4 @@
-use contracts::constants::BASE_VALUE;
+use contracts::constants::{BASE_VALUE, SECONDS_IN_DAY};
 use core::{traits::Destruct, integer::{u64_wide_mul, u128_wide_mul}};
 use contracts::errors::{panic_by_err, Error, OptionAuxTrait};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait};
@@ -51,6 +51,16 @@ pub fn compute_commission_amount(rewards: u128, commission: u16) -> u128 {
     )
 }
 
+pub fn compute_global_index_diff(staking_rewards: u128, total_stake: u128) -> u64 {
+    let diff = u128_mul_wide_and_div_unsafe(
+        lhs: staking_rewards,
+        rhs: BASE_VALUE.into(),
+        div: total_stake,
+        error: Error::GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW,
+    );
+    diff.try_into().expect_with_err(Error::GLOBAL_INDEX_DIFF_NOT_U64)
+}
+
 // Compute the rewards from the amount and interest.
 //
 // $$ rewards = amount * interest / BASE_VALUE $$
@@ -67,6 +77,10 @@ pub fn ceil_of_division(dividend: u128, divisor: u128) -> u128 {
 // Compute the threshold for requesting funds from L1 Staking Minter.
 pub fn compute_threshold(base_mint_amount: u128) -> u128 {
     base_mint_amount / 2
+}
+
+pub fn day_of(timestamp: u64) -> u64 {
+    timestamp / SECONDS_IN_DAY
 }
 
 

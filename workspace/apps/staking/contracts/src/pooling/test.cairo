@@ -26,6 +26,7 @@ use contracts::{
         deploy_staking_contract, fund, approve, initialize_staking_state_from_cfg,
         stake_for_testing_using_dispatcher, enter_delegation_pool_for_testing_using_dispatcher,
         stake_with_pooling_enabled, load_from_simple_map, load_option_from_simple_map,
+        deploy_minting_curve_contract, deploy_reward_supplier_contract,
     },
     test_utils::constants::{
         OWNER_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
@@ -506,13 +507,27 @@ fn test_exit_delegation_pool_intent() {
 
 #[test]
 fn test_exit_delegation_pool_action() {
-    let cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
+    let mut cfg: StakingInitConfig = Default::default();
+    // Deploy contracts: ERC20, MintingCurve, RewardSupplier, Staking.
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
-    // Deploy the staking contract, stake, and enter delegation pool.
+    let minting_curve = deploy_minting_curve_contract(
+        staking_contract: cfg.test_info.staking_contract, :cfg
+    );
+    cfg.reward_supplier.minting_curve_contract = minting_curve;
+    let reward_supplier = deploy_reward_supplier_contract(:token_address, :cfg);
+    cfg.test_info.reward_supplier = reward_supplier;
+    // Deploy the staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    // There are circular dependecies between the contracts, so we override the fake addresses.
+    snforge_std::store(
+        reward_supplier, selector!("staking_contract"), array![staking_contract.into()].span()
+    );
+    snforge_std::store(
+        minting_curve, selector!("staking_contract"), array![staking_contract.into()].span()
+    );
+    // Stake and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
 
