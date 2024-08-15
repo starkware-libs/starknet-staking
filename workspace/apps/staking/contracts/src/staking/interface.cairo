@@ -102,4 +102,5 @@ pub trait IStaking<TContractState> {
         ref self: TContractState, staker_address: ContractAddress
     ) -> u64;
     fn get_total_stake(self: @TContractState) -> u128;
+    fn update_global_index_if_needed(ref self: TContractState) -> bool;
 }

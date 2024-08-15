@@ -21,7 +21,7 @@ use constants::{
     POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH, POOL_MEMBER_ADDRESS,
     POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, BASE_MINT_AMOUNT, BUFFER,
     L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG, STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS,
-    DUMMY_IDENTIFIER
+    DUMMY_IDENTIFIER, REWARD_SUPPLIER_CONTRACT_ADDRESS
 };
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
@@ -139,14 +139,20 @@ pub(crate) fn initialize_staking_state_from_cfg(
     initialize_staking_state(
         :token_address,
         min_stake: cfg.staking_contract_info.min_stake,
-        pool_contract_class_hash: cfg.test_info.pool_contract_class_hash
+        pool_contract_class_hash: cfg.test_info.pool_contract_class_hash,
+        reward_supplier: cfg.test_info.reward_supplier,
     )
 }
 pub(crate) fn initialize_staking_state(
-    token_address: ContractAddress, min_stake: u128, pool_contract_class_hash: ClassHash
+    token_address: ContractAddress,
+    min_stake: u128,
+    pool_contract_class_hash: ClassHash,
+    reward_supplier: ContractAddress
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
-    Staking::constructor(ref state, token_address, min_stake, pool_contract_class_hash);
+    Staking::constructor(
+        ref state, token_address, min_stake, pool_contract_class_hash, reward_supplier
+    );
     state
 }
 
@@ -227,6 +233,7 @@ pub(crate) fn deploy_staking_contract(
     token_address.serialize(ref calldata);
     cfg.staking_contract_info.min_stake.serialize(ref calldata);
     cfg.test_info.pool_contract_class_hash.serialize(ref calldata);
+    cfg.test_info.reward_supplier.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     staking_contract_address
@@ -247,6 +254,21 @@ pub(crate) fn deploy_minting_curve_contract(
     let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap();
     let (minting_curve_contract_address, _) = minting_curve_contract.deploy(@calldata).unwrap();
     minting_curve_contract_address
+}
+
+pub(crate) fn deploy_reward_supplier_contract(
+    token_address: ContractAddress, cfg: StakingInitConfig
+) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    cfg.reward_supplier.base_mint_amount.serialize(ref calldata);
+    cfg.reward_supplier.base_mint_msg.serialize(ref calldata);
+    cfg.reward_supplier.minting_curve_contract.serialize(ref calldata);
+    cfg.test_info.staking_contract.serialize(ref calldata);
+    token_address.serialize(ref calldata);
+    cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
+    let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap();
+    let (reward_supplier_contract_address, _) = reward_supplier_contract.deploy(@calldata).unwrap();
+    reward_supplier_contract_address
 }
 
 pub(crate) fn declare_pool_contract() -> ClassHash {
@@ -415,6 +437,12 @@ pub(crate) fn load_option_from_simple_map<
     }
 }
 
+pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -> felt252 {
+    let value = snforge_std::load(:target, :storage_address, size: 1);
+    *value[0]
+}
+
+
 #[derive(Drop, Copy)]
 pub(crate) struct TestInfo {
     pub staker_address: ContractAddress,
@@ -426,6 +454,7 @@ pub(crate) struct TestInfo {
     pub pooling_enabled: bool,
     pub pool_contract_class_hash: ClassHash,
     pub staking_contract: ContractAddress,
+    pub reward_supplier: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -480,6 +509,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pooling_enabled: false,
             pool_contract_class_hash: declare_pool_contract(),
             staking_contract: STAKING_CONTRACT_ADDRESS(),
+            reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,

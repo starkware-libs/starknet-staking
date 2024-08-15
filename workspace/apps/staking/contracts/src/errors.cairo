@@ -28,6 +28,8 @@ pub enum Error {
     CALLER_IS_NOT_POOL_CONTRACT,
     MISSING_POOL_CONTRACT,
     MISSMATCHED_DELEGATION_POOL,
+    GLOBAL_INDEX_DIFF_NOT_U64,
+    GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW,
     // Pooling contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
@@ -109,6 +111,10 @@ pub fn panic_by_err(error: Error) -> core::never {
         ),
         Error::MISSMATCHED_DELEGATION_POOL => panic!(
             "to_pool is not the delegation pool contract for to_staker."
+        ),
+        Error::GLOBAL_INDEX_DIFF_NOT_U64 => panic!("Global index diff does not fit in u64."),
+        Error::GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW => panic!(
+            "Overflow during computation global index diff."
         ),
     }
 }
