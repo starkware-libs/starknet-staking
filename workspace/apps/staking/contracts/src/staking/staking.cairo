@@ -441,6 +441,21 @@ pub mod Staking {
             }
             false
         }
+
+        fn change_operational_address(
+            ref self: ContractState, operational_address: ContractAddress
+        ) -> bool {
+            self.update_global_index_if_needed();
+            let staker_address = get_caller_address();
+            let mut staker_info = self.get_staker_info(:staker_address);
+            self
+                .operational_address_to_staker_address
+                .write(staker_info.operational_address, Zero::zero());
+            staker_info.operational_address = operational_address;
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self.operational_address_to_staker_address.write(operational_address, staker_address);
+            true
+        }
     }
 
     #[generate_trait]

@@ -8,7 +8,7 @@ use contracts::{
         stake_for_testing, fund, approve, deploy_staking_contract, stake_with_pooling_enabled,
         enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
         load_from_simple_map, deploy_reward_supplier_contract, deploy_minting_curve_contract,
-        load_one_felt,
+        load_one_felt, stake_for_testing_using_dispatcher,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OWNER_ADDRESS,
             INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
@@ -959,3 +959,34 @@ fn test_update_global_index_if_needed() {
     );
 }
 
+#[test]
+fn test_change_operational_address() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info = staking_dispatcher.state_of(:staker_address);
+    let operational_address = OTHER_OPERATIONAL_ADDRESS();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.change_operational_address(:operational_address);
+    let updated_staker_info = staking_dispatcher.state_of(:staker_address);
+    let expected_staker_info = StakerInfo { operational_address, ..staker_info };
+    assert_eq!(updated_staker_info, expected_staker_info);
+}
+
+#[test]
+#[should_panic(expected: ("Staker does not exist.",))]
+fn test_change_operational_address_staker_doesnt_exist() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let operational_address = OTHER_OPERATIONAL_ADDRESS();
+    staking_dispatcher.change_operational_address(:operational_address);
+}
