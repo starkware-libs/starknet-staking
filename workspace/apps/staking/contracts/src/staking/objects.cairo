@@ -20,7 +20,7 @@ pub impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentVa
     }
     #[inline(always)]
     fn is_zero(self: @UndelegateIntentValue) -> bool {
-        *self == UndelegateIntentValueZero::zero()
+        *self == Self::zero()
     }
     #[inline(always)]
     fn is_non_zero(self: @UndelegateIntentValue) -> bool {

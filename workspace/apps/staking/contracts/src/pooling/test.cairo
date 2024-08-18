@@ -5,22 +5,8 @@ use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispat
 use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispatcherTrait};
 use contracts::{
     constants::{BASE_VALUE, EXIT_WAITING_WINDOW},
-    pooling::{
-        Pooling, PoolMemberInfo,
-        Pooling::{
-            SwitchPoolData,
-            // TODO(Nir, 15/07/2024): Remove member module use's when possible
-            __member_module_staker_address::InternalContractMemberStateTrait as StakerAddressMemberModule,
-            __member_module_pool_member_info::InternalContractMemberStateTrait as PoolMemberToInfoModule,
-            __member_module_final_staker_index::InternalContractMemberStateTrait as StakerFinalIndexModule,
-            InternalPoolingFunctionsTrait
-        }
-    },
-    staking::interface::StakerInfo,
-    staking::Staking::{
-        __member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
-    },
-    utils::{compute_rewards, compute_commission_amount},
+    pooling::{Pooling, PoolMemberInfo, Pooling::{SwitchPoolData, InternalPoolingFunctionsTrait}},
+    staking::interface::StakerInfo, utils::{compute_rewards, compute_commission_amount},
     test_utils::{
         initialize_pooling_state, deploy_mock_erc20_contract, StakingInitConfig,
         deploy_staking_contract, fund, approve, initialize_staking_state_from_cfg,
@@ -582,7 +568,7 @@ fn test_exit_delegation_pool_action() {
         reward_account_balance_after,
         reward_account_balance_before + unclaimed_rewards_pool_member.into()
     )
-// TODO: Test events.
+    // TODO: Test events.
 }
 
 // TODO: add event test.

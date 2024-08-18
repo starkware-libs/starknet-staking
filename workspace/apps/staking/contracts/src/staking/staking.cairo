@@ -29,8 +29,9 @@ pub mod Staking {
     use contracts::reward_supplier::interface::{
         IRewardSupplierDispatcherTrait, IRewardSupplierDispatcher
     };
+    use starknet::storage::Map;
 
-    // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value). 
+    // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value).
     pub const MIN_INCREASE_STAKE: u128 = 10;
     pub const COMMISSION_DENOMINATOR: u16 = 10000;
 
@@ -52,12 +53,12 @@ pub mod Staking {
         src5: SRC5Component::Storage,
         global_index: u64,
         min_stake: u128,
-        staker_info: LegacyMap::<ContractAddress, Option<StakerInfo>>,
-        operational_address_to_staker_address: LegacyMap::<ContractAddress, ContractAddress>,
+        staker_info: Map::<ContractAddress, Option<StakerInfo>>,
+        operational_address_to_staker_address: Map::<ContractAddress, ContractAddress>,
         token_address: ContractAddress,
         total_stake: u128,
         pool_contract_class_hash: ClassHash,
-        pool_exit_intents: LegacyMap::<UndelegateIntentKey, UndelegateIntentValue>,
+        pool_exit_intents: Map::<UndelegateIntentKey, UndelegateIntentValue>,
         last_index_update_timestamp: u64,
         reward_supplier: ContractAddress,
     }
@@ -308,7 +309,7 @@ pub mod Staking {
                 };
                 erc20_dispatcher
                     .transfer(recipient: pool_contract, amount: undelegate_intent.amount.into());
-            // TODO: Emit event.
+                // TODO: Emit event.
             }
             self.clear_undelegate_intent(:undelegate_intent_key);
             undelegate_intent.amount
@@ -471,18 +472,18 @@ pub mod Staking {
         }
 
         /// Calculates the rewards for a given staker.
-        /// 
+        ///
         /// The caller for this function should validate that the staker exists.
-        /// 
+        ///
         /// rewards formula:
         /// $$ interest = (global\_index-self\_index) $$
-        /// 
+        ///
         /// single staker:
         /// $$ rewards = staker\_amount\_own * interest $$
-        /// 
+        ///
         /// staker with pool:
         /// $$ rewards = interest * (staker\_amount\_own + staker\_amount\_pool * rev\_share) $$
-        /// 
+        ///
         /// Fields that are changed in staker_info:
         /// - unclaimed_rewards_own
         /// - unclaimed_rewards_pool

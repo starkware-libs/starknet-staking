@@ -10,22 +10,10 @@ use contracts::test_utils::{
 };
 use contracts::reward_supplier::RewardSupplier::SECONDS_IN_YEAR;
 use contracts::reward_supplier::RewardSupplier;
-use contracts::reward_supplier::RewardSupplier::{
-    __member_module_staking_contract::InternalContractMemberStateTrait as MinStakeMemberModule,
-    __member_module_last_timestamp::InternalContractMemberStateTrait as LastTSMemberModule,
-    __member_module_unclaimed_rewards::InternalContractMemberStateTrait as UnclaimedMemberModule,
-    __member_module_l1_pending_requested_amount::InternalContractMemberStateTrait as L1PendingRequestedAmountMemberModule,
-    __member_module_base_mint_amount::InternalContractMemberStateTrait as MintAmountMemberModule,
-    __member_module_base_mint_msg::InternalContractMemberStateTrait as MintMsgMemberModule,
-    __member_module_minting_curve_contract::InternalContractMemberStateTrait as CurveMemberModule,
-    __member_module_staking_contract::InternalContractMemberStateTrait as StakingMemberModule,
-    __member_module_token_address::InternalContractMemberStateTrait as TokenMemberModule,
-    __member_module_l1_staking_minter::InternalContractMemberStateTrait as L1MinterMemberModule,
-};
 use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use snforge_std::{start_cheat_block_timestamp_global, CheatSpan, test_address};
-use core::integer::u256_sqrt;
 use core::num::traits::Zero;
+use core::num::traits::Sqrt;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::utils::{ceil_of_division, compute_threshold};
 
@@ -39,7 +27,7 @@ fn test_reward_supplier_constructor() {
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
+    let state = @initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     assert_eq!(state.staking_contract.read(), cfg.test_info.staking_contract);
     assert_eq!(state.token_address.read(), token_address);
     assert_eq!(state.l1_pending_requested_amount.read(), Zero::zero());
@@ -120,7 +108,7 @@ fn test_calculate_staking_rewards() {
     cheat_caller_address_once(contract_address: test_address(), caller_address: staking_contract);
     let rewards = state.calculate_staking_rewards();
     // Validate the rewards, unclaimed rewards and l1_pending_requested_amount.
-    let unadjusted_expected_rewards = u256_sqrt(cfg.test_info.initial_supply * amount.into());
+    let unadjusted_expected_rewards: u128 = (cfg.test_info.initial_supply * amount.into()).sqrt();
     let expected_rewards = multiply_by_max_inflation(unadjusted_expected_rewards);
     assert_eq!(rewards, expected_rewards);
     let expected_unclaimed_rewards = rewards;
