@@ -1,18 +1,7 @@
 use core::option::OptionTrait;
 use contracts::{
     constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES, SECONDS_IN_DAY},
-    staking::{
-        StakerInfo, Staking,
-        Staking::{
-            // TODO(Nir, 15/07/2024): Remove member module use's when possible
-            __member_module_min_stake::InternalContractMemberStateTrait as MinStakeMemberModule,
-            __member_module_staker_info::InternalContractMemberStateTrait as StakerAddressToStakerInfoMemberModule,
-            __member_module_operational_address_to_staker_address::InternalContractMemberStateTrait as OperationalAddressToStakerAddressMemberModule,
-            __member_module_token_address::InternalContractMemberStateTrait as TokenAddressMemberModule,
-            __member_module_global_index::InternalContractMemberStateTrait as GlobalIndexMemberModule,
-            InternalStakingFunctionsTrait,
-        }
-    },
+    staking::{StakerInfo, Staking, Staking::InternalStakingFunctionsTrait,},
     utils::{compute_rewards, compute_commission_amount},
     test_utils::{
         initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig,
@@ -686,7 +675,7 @@ fn test_stake_pooling_enabled() {
 // TODO: Create tests that cover all panic scenarios for add_to_delegation_pool.
 // TODO: Implement the following test.
 //       Note: The happy flow is also tested in test_enter_delegation_pool.
-//       in pooling/test.cairo.      
+//       in pooling/test.cairo.
 #[test]
 fn test_add_to_delegation_pool() {
     assert!(true);
@@ -695,7 +684,7 @@ fn test_add_to_delegation_pool() {
 // TODO: Create tests that cover all panic scenarios for remove_from_delegation_pool_intent.
 // TODO: Implement the following test.
 //       Note: The happy flow is also tested in test_exit_delegation_pool_intent.
-//       in pooling/test.cairo.      
+//       in pooling/test.cairo.
 #[test]
 fn test_remove_from_delegation_pool_intent() {
     assert!(true);
@@ -764,7 +753,7 @@ fn test_remove_from_delegation_pool_action() {
     assert_eq!(
         pool_balance_after_action, pool_balance_before_action + cfg.pool_member_info.amount.into()
     );
-// TODO: Test event emitted.
+    // TODO: Test event emitted.
 }
 
 // The following test checks that the remove_from_delegation_pool_action function works when there
@@ -788,7 +777,7 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     assert_eq!(returned_amount, Zero::zero());
     let staking_balance_after_action = erc20_dispatcher.balance_of(staking_contract);
     assert_eq!(staking_balance_after_action, staking_balance_before_action);
-// TODO: Test event emitted.
+    // TODO: Test event emitted.
 }
 
 #[test]

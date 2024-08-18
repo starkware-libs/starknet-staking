@@ -6,7 +6,6 @@ use contracts::test_utils::{
     initialize_minting_curve_state, deploy_staking_contract, deploy_mock_erc20_contract, fund,
     approve, StakingInitConfig, constants::{L1_STAKING_MINTER_ADDRESS},
 };
-use core::integer::u256_sqrt;
 use contracts_commons::test_utils::cheat_caller_address_once;
 
 #[test]

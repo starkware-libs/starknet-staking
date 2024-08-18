@@ -254,7 +254,7 @@ pub mod RolesComponent {
             assert(role != GOVERNANCE_ADMIN, GOV_ADMIN_CANNOT_RENOUNCE);
             let mut access_comp = get_dep_component_mut!(ref self, Access);
             access_comp.renounce_role(:role, account: get_caller_address())
-        // TODO add another event? Currently there are two events when a role is removed but
+            // TODO add another event? Currently there are two events when a role is removed but
         // only one if it was renounced.
         }
     }
@@ -298,7 +298,7 @@ pub mod RolesComponent {
         }
 
         // WARNING
-        // The following internal method is unprotected and should only be used from the containing 
+        // The following internal method is unprotected and should only be used from the containing
         // contract's constructor (or, in context of tests, from the setup method).
         // It should be called after the initialization of the access_control component.
         fn initializer(ref self: ComponentState<TContractState>) {

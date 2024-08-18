@@ -3,8 +3,8 @@ members = ["workspace/apps/staking/contracts", "workspace/packages/contracts"]
 
 
 [workspace.dependencies]
-starknet = ">=2.6.4"
-openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.14.0" }
+starknet = "2.7.1"
+openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.15.1" }
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.27.0" }
 
 [scripts]

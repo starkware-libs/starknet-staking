@@ -6,7 +6,7 @@ pub mod MintingCurve {
     use starknet::{ContractAddress, contract_address_const};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use core::integer::u256_sqrt;
+    use core::num::traits::Sqrt;
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -59,9 +59,10 @@ pub mod MintingCurve {
 
     /// yearly_mint = (M / 100) * total_supply
     /// Equivalent to: C / 100 * sqrt(total_stake * total_supply)
-    /// Note: Differences are negligible at this scale.        
+    /// Note: Differences are negligible at this scale.
     pub(crate) fn compute_yearly_mint(total_stake: u128, total_supply: u128) -> u128 {
-        let unadjusted_mint_amount = u256_sqrt(total_stake.into() * total_supply.into());
+        let product: u256 = total_stake.into() * total_supply.into();
+        let unadjusted_mint_amount: u128 = product.sqrt();
         multiply_by_max_inflation(amount: unadjusted_mint_amount)
     }
 

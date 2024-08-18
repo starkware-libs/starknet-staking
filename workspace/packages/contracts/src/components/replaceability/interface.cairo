@@ -1,6 +1,6 @@
 use starknet::class_hash::ClassHash;
 
-/// Holds EIC data. 
+/// Holds EIC data.
 /// * eic_hash is the EIC class hash.
 /// * eic_init_data is a span of the EIC init args.
 #[derive(Copy, Drop, Serde, PartialEq)]
@@ -9,7 +9,7 @@ pub struct EICData {
     pub eic_init_data: Span<felt252>
 }
 
-/// Holds implementation data. 
+/// Holds implementation data.
 /// * impl_hash is the implementation class hash.
 /// * eic_data is the EIC data when applicable, and empty otherwise.
 /// * final indicates whether the implementation is finalized.

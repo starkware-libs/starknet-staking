@@ -4,7 +4,7 @@ pub mod Pooling {
     use core::num::traits::zero::Zero;
     use contracts::{
         constants::{BASE_VALUE}, errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
-        pooling::{IPooling, PoolMemberInfo, Events},
+        pooling::{interface::PoolingContractInfo, IPooling, PoolMemberInfo, Events},
         utils::{u128_mul_wide_and_div_unsafe, compute_rewards, compute_commission_amount}
     };
     use core::option::OptionTrait;
@@ -14,8 +14,9 @@ pub mod Pooling {
     };
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
+    use starknet::storage::Map;
 
-    // TODO: Decide if MIN_DELEGATION_AMOUNT is needed (if needed then decide on a value). 
+    // TODO: Decide if MIN_DELEGATION_AMOUNT is needed (if needed then decide on a value).
     // Right now, there is no minimum delegation amount.
     pub const MIN_DELEGATION_AMOUNT: u128 = 1;
 
@@ -42,7 +43,7 @@ pub mod Pooling {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staker_address: ContractAddress,
-        pool_member_info: LegacyMap::<ContractAddress, Option<PoolMemberInfo>>,
+        pool_member_info: Map::<ContractAddress, Option<PoolMemberInfo>>,
         final_staker_index: Option<u64>,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
@@ -78,6 +79,7 @@ pub mod Pooling {
         fn enter_delegation_pool(
             ref self: ContractState, amount: u128, reward_address: ContractAddress
         ) -> bool {
+            core::internal::revoke_ap_tracking();
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
             assert_with_err(
@@ -310,6 +312,16 @@ pub mod Pooling {
         fn state_of(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
             self.get_pool_member_info(:pool_member)
         }
+
+        fn contract_parameters(self: @ContractState) -> PoolingContractInfo {
+            PoolingContractInfo {
+                staker_address: self.staker_address.read(),
+                final_staker_index: self.final_staker_index.read(),
+                staking_contract: self.staking_contract.read(),
+                token_address: self.token_address.read(),
+                commission: self.commission.read(),
+            }
+        }
     }
 
     #[generate_trait]
@@ -339,12 +351,12 @@ pub mod Pooling {
         }
 
         /// Calculates the rewards for a pool member.
-        /// 
+        ///
         /// The caller for this function should validate that the pool member exists.
-        /// 
+        ///
         /// rewards formula:
         /// $$ rewards = (staker\_index-pooler\_index) * pooler\_amount $$
-        /// 
+        ///
         /// Fields that are changed in pool_member_info:
         /// - unclaimed_rewards
         /// - index

@@ -1,21 +1,20 @@
 use contracts::constants::{BASE_VALUE, SECONDS_IN_DAY};
-use core::{traits::Destruct, integer::{u64_wide_mul, u128_wide_mul}};
 use contracts::errors::{panic_by_err, Error, OptionAuxTrait};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait};
 use starknet::syscalls::deploy_syscall;
 use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
+use core::num::traits::WideMul;
 
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
 pub fn u64_mul_wide_and_div_unsafe(lhs: u64, rhs: u64, div: u64, error: Error) -> u64 {
-    (u64_wide_mul(lhs, rhs) / div.into()).try_into().expect_with_err(error)
+    (lhs.wide_mul(other: rhs) / div.into()).try_into().expect_with_err(error)
 }
 
 pub fn u128_mul_wide_and_div_unsafe(lhs: u128, rhs: u128, div: u128, error: Error) -> u128 {
-    let (high, low) = u128_wide_mul(lhs, rhs);
-    let x = u256 { low, high };
+    let x = lhs.wide_mul(other: rhs);
     (x / div.into()).try_into().expect_with_err(error)
 }
 
@@ -52,6 +51,9 @@ pub fn compute_commission_amount(rewards: u128, commission: u16) -> u128 {
 }
 
 pub fn compute_global_index_diff(staking_rewards: u128, total_stake: u128) -> u64 {
+    if total_stake.is_zero() {
+        return 0;
+    }
     let diff = u128_mul_wide_and_div_unsafe(
         lhs: staking_rewards,
         rhs: BASE_VALUE.into(),

@@ -221,7 +221,7 @@ mod ReplaceabilityTests {
                     )
                 ]
             );
-    // TODO: Check the new impl hash.
+        // TODO: Check the new impl hash.
     // TODO: Check the new impl is not final.
     // TODO: Check that ImplementationFinalized is NOT emitted.
     }
@@ -372,14 +372,15 @@ mod ReplaceabilityTests {
 
         // Validate event emissions -- replacement and finalization of the implementation.
         let events = spy.get_events().emitted_by(contract_address).events;
-        // Should emit 3 events: ImplementationAdded, ImplementationReplaced, ImplementationFinalized.
+        // Should emit 3 events: ImplementationAdded, ImplementationReplaced,
+        // ImplementationFinalized.
         assert!(events.len() == 3);
         assert_implementation_replaced_event_emitted(events.at(1), implementation_data);
         assert_implementation_finalized_event_emitted(events.at(2), implementation_data);
 
         // Validate finalized status.
         assert_finalized_status(expected: true, :contract_address);
-    // TODO: Check the new impl hash.
+        // TODO: Check the new impl hash.
     }
 
     #[test]

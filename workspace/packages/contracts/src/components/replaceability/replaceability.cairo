@@ -17,6 +17,7 @@ pub mod ReplaceabilityComponent {
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::get_block_timestamp;
     use starknet::syscalls::{library_call_syscall, replace_class_syscall};
+    use starknet::storage::Map;
 
 
     #[storage]
@@ -24,9 +25,9 @@ pub mod ReplaceabilityComponent {
         // Delay in seconds before performing an upgrade.
         upgrade_delay: u64,
         // Timestamp by which implementation can be activated.
-        impl_activation_time: LegacyMap<felt252, u64>,
+        impl_activation_time: Map<felt252, u64>,
         // Timestamp until which implementation can be activated.
-        impl_expiration_time: LegacyMap<felt252, u64>,
+        impl_expiration_time: Map<felt252, u64>,
         // Is the implementation finalized.
         finalized: bool,
     }
@@ -77,7 +78,8 @@ pub mod ReplaceabilityComponent {
 
             let activation_time = get_block_timestamp() + self.get_upgrade_delay();
             let expiration_time = activation_time + IMPLEMENTATION_EXPIRATION;
-            // TODO(Yaniv, 01/08/2024) -  add an assertion that the `implementation_data.impl_hash` is declared.
+            // TODO(Yaniv, 01/08/2024) -  add an assertion that the `implementation_data.impl_hash`
+            // is declared.
             self.set_impl_activation_time(:implementation_data, :activation_time);
             self.set_impl_expiration_time(:implementation_data, :expiration_time);
             self.emit(ImplementationAdded { implementation_data });

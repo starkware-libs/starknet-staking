@@ -2,10 +2,10 @@
   "$schema": "https://turbo.build/schema.json",
   "pipeline": {
     "ts-declarations": {
-      "dependsOn": ["prebuild", "^ts-declarations", "^build"]
+      "dependsOn": ["^ts-declarations", "^build"]
     },
     "build": {
-      "dependsOn": ["prebuild", "ts-declarations", "^build"],
+      "dependsOn": ["ts-declarations", "^build"],
       "outputs": ["dist/**"]
     },
     "test": {
@@ -23,7 +23,6 @@
     },
     "format": {},
     "clean": {},
-    "prebuild": {},
     "publish-package": {
       "dependsOn": ["build"]
     },
