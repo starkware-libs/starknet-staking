@@ -18,7 +18,7 @@ pub fn panic_with_event_details(expected_emitted_by: @ContractAddress, details: 
 pub fn assert_staker_exit_intent_event(
     spied_event: @(ContractAddress, Event), staker_address: ContractAddress, exit_at: u64,
 ) {
-    let expected_event = @contracts::staking::Staking::Event::staker_exit_intent(
+    let expected_event = @contracts::staking::Staking::Event::StakerExitIntent(
         StakingEvents::StakerExitIntent { staker_address, exit_at }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -35,7 +35,7 @@ pub fn assert_staker_exit_intent_event(
 pub fn assert_staker_balance_changed_event(
     spied_event: @(ContractAddress, Event), staker_address: ContractAddress, amount: u128,
 ) {
-    let expected_event = @contracts::staking::Staking::Event::balance_changed(
+    let expected_event = @contracts::staking::Staking::Event::BalanceChanged(
         StakingEvents::BalanceChanged { staker_address, amount }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -54,7 +54,7 @@ pub fn assert_staker_balance_changed_event(
 pub fn assert_pool_member_exit_intent_event(
     spied_event: @(ContractAddress, Event), pool_member: ContractAddress, exit_at: u64,
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::pool_member_exit_intent(
+    let expected_event = @contracts::pooling::Pooling::Event::PoolMemberExitIntent(
         PoolEvents::PoolMemberExitIntent { pool_member, exit_at }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -71,7 +71,7 @@ pub fn assert_pool_member_exit_intent_event(
 pub fn assert_pool_balance_changed_event(
     mut spied_event: @(ContractAddress, Event), pool_member: ContractAddress, amount: u128,
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::balance_changed(
+    let expected_event = @contracts::pooling::Pooling::Event::BalanceChanged(
         PoolEvents::BalanceChanged { pool_member, amount }
     );
     let (expected_emitted_by, raw_event) = spied_event;
