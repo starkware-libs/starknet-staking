@@ -10,11 +10,11 @@ pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
 pub fn u64_mul_wide_and_div_unsafe(lhs: u64, rhs: u64, div: u64, error: Error) -> u64 {
-    (WideMul::<u64, u64>::wide_mul(:lhs, :rhs) / div.into()).try_into().expect_with_err(error)
+    (lhs.wide_mul(other: rhs) / div.into()).try_into().expect_with_err(error)
 }
 
 pub fn u128_mul_wide_and_div_unsafe(lhs: u128, rhs: u128, div: u128, error: Error) -> u128 {
-    let x = WideMul::<u128, u128>::wide_mul(:lhs, :rhs);
+    let x = lhs.wide_mul(other: rhs);
     (x / div.into()).try_into().expect_with_err(error)
 }
 
