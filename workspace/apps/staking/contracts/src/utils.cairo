@@ -51,6 +51,9 @@ pub fn compute_commission_amount(rewards: u128, commission: u16) -> u128 {
 }
 
 pub fn compute_global_index_diff(staking_rewards: u128, total_stake: u128) -> u64 {
+    if total_stake.is_zero() {
+        return 0;
+    }
     let diff = u128_mul_wide_and_div_unsafe(
         lhs: staking_rewards,
         rhs: BASE_VALUE.into(),

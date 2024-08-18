@@ -209,6 +209,7 @@ pub mod Staking {
             let unstake_time = current_time + EXIT_WAITING_WINDOW;
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, Option::Some(staker_info));
+            self.remove_from_total_stake(amount: staker_info.amount_own + staker_info.amount_pool);
             self.emit(Events::StakerExitIntent { staker_address, exit_at: unstake_time });
             unstake_time
         }
@@ -283,7 +284,10 @@ pub mod Staking {
             assert_with_err(staker_info.amount_pool >= amount, Error::INSUFFICIENT_POOL_BALANCE);
             self.calculate_rewards(ref :staker_info);
             staker_info.amount_pool -= amount;
-            self.remove_from_total_stake(:amount);
+            if (staker_info.unstake_time.is_none()) {
+                // Remove from total stake only if the staker is not in the unstake process.
+                self.remove_from_total_stake(:amount);
+            }
             self.staker_info.write(staker_address, Option::Some(staker_info));
             let unpool_time = staker_info.compute_unpool_time();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
