@@ -4,7 +4,7 @@ pub mod Pooling {
     use core::num::traits::zero::Zero;
     use contracts::{
         constants::{BASE_VALUE}, errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
-        pooling::{IPooling, PoolMemberInfo, Events},
+        pooling::{interface::PoolingContractInfo, IPooling, PoolMemberInfo, Events},
         utils::{u128_mul_wide_and_div_unsafe, compute_rewards, compute_commission_amount}
     };
     use core::option::OptionTrait;
@@ -311,6 +311,16 @@ pub mod Pooling {
 
         fn state_of(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
             self.get_pool_member_info(:pool_member)
+        }
+
+        fn contract_parameters(self: @ContractState) -> PoolingContractInfo {
+            PoolingContractInfo {
+                staker_address: self.staker_address.read(),
+                final_staker_index: self.final_staker_index.read(),
+                staking_contract: self.staking_contract.read(),
+                token_address: self.token_address.read(),
+                commission: self.commission.read(),
+            }
         }
     }
 

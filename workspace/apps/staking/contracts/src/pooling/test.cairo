@@ -6,7 +6,8 @@ use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispat
 use contracts::{
     constants::{BASE_VALUE, EXIT_WAITING_WINDOW},
     pooling::{Pooling, PoolMemberInfo, Pooling::{SwitchPoolData, InternalPoolingFunctionsTrait}},
-    staking::interface::StakerInfo, utils::{compute_rewards, compute_commission_amount},
+    pooling::interface::PoolingContractInfo, staking::interface::StakerInfo,
+    utils::{compute_rewards, compute_commission_amount},
     test_utils::{
         initialize_pooling_state, deploy_mock_erc20_contract, StakingInitConfig,
         deploy_staking_contract, fund, approve, initialize_staking_state_from_cfg,
@@ -730,4 +731,23 @@ fn test_enter_delegation_pool_from_staking_contract() {
     );
     assert_pool_balance_changed_event(spied_event: events[0], :pool_member, :amount);
     assert_pool_balance_changed_event(spied_event: events[1], :pool_member, amount: updated_amount);
+}
+
+#[test]
+fn test_contract_parameters() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    let expected_pooling_contract_info = PoolingContractInfo {
+        staker_address: cfg.test_info.staker_address,
+        final_staker_index: Option::None,
+        staking_contract,
+        token_address,
+        commission: cfg.staker_info.commission,
+    };
+    assert_eq!(pooling_dispatcher.contract_parameters(), expected_pooling_contract_info);
 }
