@@ -79,6 +79,7 @@ pub mod Pooling {
         fn enter_delegation_pool(
             ref self: ContractState, amount: u128, reward_address: ContractAddress
         ) -> bool {
+            // This line was added to prevent the compiler from doing certain optimizations.
             core::internal::revoke_ap_tracking();
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
