@@ -30,13 +30,19 @@ pub mod Staking {
         IRewardSupplierDispatcherTrait, IRewardSupplierDispatcher
     };
     use starknet::storage::Map;
+    use contracts_commons::components::roles::RolesComponent;
+    use RolesComponent::InternalTrait as RolesInternalTrait;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
 
     // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value).
     pub const MIN_INCREASE_STAKE: u128 = 10;
     pub const COMMISSION_DENOMINATOR: u16 = 10000;
 
-    component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
-    component!(path: SRC5Component, storage: src5, event: src5Event);
+    component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
+    component!(path: RolesComponent, storage: roles, event: RolesEvent);
+    component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
+    component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
     impl AccessControlImpl =
@@ -47,6 +53,10 @@ pub mod Staking {
 
     #[storage]
     struct Storage {
+        #[substorage(v0)]
+        replaceability: ReplaceabilityComponent::Storage,
+        #[substorage(v0)]
+        roles: RolesComponent::Storage,
         #[substorage(v0)]
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
@@ -66,11 +76,13 @@ pub mod Staking {
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
-        accesscontrolEvent: AccessControlComponent::Event,
-        src5Event: SRC5Component::Event,
-        balance_changed: Events::BalanceChanged,
-        new_delegation_pool: Events::NewDelegationPool,
-        staker_exit_intent: Events::StakerExitIntent,
+        ReplaceabilityEvent: ReplaceabilityComponent::Event,
+        RolesEvent: RolesComponent::Event,
+        AccessControlEvent: AccessControlComponent::Event,
+        SRC5Event: SRC5Component::Event,
+        BalanceChanged: Events::BalanceChanged,
+        NewDelegationPool: Events::NewDelegationPool,
+        StakerExitIntent: Events::StakerExitIntent,
     }
 
     #[constructor]
@@ -81,6 +93,9 @@ pub mod Staking {
         pool_contract_class_hash: ClassHash,
         reward_supplier: ContractAddress,
     ) {
+        self.accesscontrol.initializer();
+        self.roles.initializer();
+        self.replaceability.upgrade_delay.write(Zero::zero());
         self.token_address.write(token_address);
         self.min_stake.write(min_stake);
         self.global_index.write(BASE_VALUE);

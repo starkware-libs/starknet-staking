@@ -15,13 +15,19 @@ pub mod Pooling {
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
     use starknet::storage::Map;
+    use contracts_commons::components::roles::RolesComponent;
+    use RolesComponent::InternalTrait as RolesInternalTrait;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
 
     // TODO: Decide if MIN_DELEGATION_AMOUNT is needed (if needed then decide on a value).
     // Right now, there is no minimum delegation amount.
     pub const MIN_DELEGATION_AMOUNT: u128 = 1;
 
-    component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
-    component!(path: SRC5Component, storage: src5, event: src5Event);
+    component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
+    component!(path: RolesComponent, storage: roles, event: RolesEvent);
+    component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
+    component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
     impl AccessControlImpl =
@@ -39,9 +45,13 @@ pub mod Pooling {
     #[storage]
     struct Storage {
         #[substorage(v0)]
+        replaceability: ReplaceabilityComponent::Storage,
+        #[substorage(v0)]
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        #[substorage(v0)]
+        roles: RolesComponent::Storage,
         staker_address: ContractAddress,
         pool_member_info: Map::<ContractAddress, Option<PoolMemberInfo>>,
         final_staker_index: Option<u64>,
@@ -53,10 +63,12 @@ pub mod Pooling {
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
-        accesscontrolEvent: AccessControlComponent::Event,
-        src5Event: SRC5Component::Event,
-        pool_member_exit_intent: Events::PoolMemberExitIntent,
-        balance_changed: Events::BalanceChanged,
+        ReplaceabilityEvent: ReplaceabilityComponent::Event,
+        AccessControlEvent: AccessControlComponent::Event,
+        SRC5Event: SRC5Component::Event,
+        RolesEvent: RolesComponent::Event,
+        PoolMemberExitIntent: Events::PoolMemberExitIntent,
+        BalanceChanged: Events::BalanceChanged,
     }
 
 
@@ -68,6 +80,9 @@ pub mod Pooling {
         token_address: ContractAddress,
         commission: u16
     ) {
+        self.accesscontrol.initializer();
+        self.roles.initializer();
+        self.replaceability.upgrade_delay.write(Zero::zero());
         self.staker_address.write(staker_address);
         self.staking_contract.write(staking_contract);
         self.token_address.write(token_address);
