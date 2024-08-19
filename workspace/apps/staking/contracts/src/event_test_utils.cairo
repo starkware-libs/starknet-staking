@@ -85,6 +85,29 @@ pub fn assert_pool_balance_changed_event(
     }
 }
 
+pub fn assert_change_operational_address_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    new_address: ContractAddress,
+    old_address: ContractAddress,
+) {
+    let expected_event = @contracts::staking::Staking::Event::OperationalAddressChanged(
+        StakingEvents::OperationalAddressChanged { staker_address, new_address, old_address }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "OperationalAddressChanged{{staker_address: {:?}, new_address: {:?}, old_address: {:?}}}",
+            staker_address,
+            new_address,
+            old_address
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn debug_dump_spied_events(ref spy: EventSpy) {
     let mut serialized = array![];
     Serde::<

@@ -8,14 +8,14 @@ use contracts::{
         stake_for_testing, fund, approve, deploy_staking_contract, stake_with_pooling_enabled,
         enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
         load_from_simple_map, deploy_reward_supplier_contract, deploy_minting_curve_contract,
-        load_one_felt,
+        load_one_felt, stake_for_testing_using_dispatcher,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OWNER_ADDRESS,
             INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
             STAKE_AMOUNT, STAKER_INITIAL_BALANCE, COMMISSION, OTHER_STAKER_ADDRESS,
             OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT,
             CALLER_ADDRESS, DUMMY_IDENTIFIER, OTHER_OPERATIONAL_ADDRESS,
-            REWARD_SUPPLIER_CONTRACT_ADDRESS,
+            REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN
         }
     }
 };
@@ -23,6 +23,7 @@ use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use contracts::event_test_utils::{
     assert_number_of_events, assert_staker_exit_intent_event, assert_staker_balance_changed_event
 };
+use contracts::event_test_utils::assert_change_operational_address_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address, get_block_timestamp};
 use starknet::syscalls::deploy_syscall;
@@ -45,25 +46,37 @@ use snforge_std::cheatcodes::events::{
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::pooling::Pooling::SwitchPoolData;
 use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispatcherTrait};
+use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+
 
 #[test]
 fn test_constructor() {
-    let token_address: ContractAddress = TOKEN_ADDRESS();
-    let dummy_address: ContractAddress = DUMMY_ADDRESS();
+    let token_address = TOKEN_ADDRESS();
+    let dummy_address = DUMMY_ADDRESS();
+    let pool_contract_admin = POOL_CONTRACT_ADMIN();
+    let pool_contract_class_hash = DUMMY_CLASS_HASH();
+    let reward_supplier = REWARD_SUPPLIER_CONTRACT_ADDRESS();
+    let min_stake = MIN_STAKE;
     let mut state = Staking::contract_state_for_testing();
     Staking::constructor(
-        ref state, token_address, MIN_STAKE, DUMMY_CLASS_HASH(), REWARD_SUPPLIER_CONTRACT_ADDRESS()
+        ref state,
+        :token_address,
+        :min_stake,
+        :pool_contract_class_hash,
+        :reward_supplier,
+        :pool_contract_admin
     );
-    let contract_min_stake: u128 = state.min_stake.read();
-    assert_eq!(MIN_STAKE, contract_min_stake);
-    let contract_token_address: ContractAddress = state.token_address.read();
-    assert_eq!(token_address, contract_token_address);
+    assert_eq!(state.min_stake.read(), min_stake);
+    assert_eq!(state.token_address.read(), token_address);
     let contract_global_index: u64 = state.global_index.read();
     assert_eq!(BASE_VALUE, contract_global_index);
     let staker_address = state.operational_address_to_staker_address.read(dummy_address);
     assert_eq!(staker_address, Zero::zero());
     let staker_info = state.staker_info.read(dummy_address);
     assert!(staker_info.is_none());
+    assert_eq!(state.pool_contract_class_hash.read(), pool_contract_class_hash);
+    assert_eq!(state.reward_supplier.read(), reward_supplier);
+    assert_eq!(state.pool_contract_admin.read(), pool_contract_admin);
 }
 
 #[test]
@@ -959,3 +972,65 @@ fn test_update_global_index_if_needed() {
     );
 }
 
+#[test]
+fn test_pool_contract_admin_role() {
+    let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Deploy the staking contract and stake with pooling enabled.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    // Assert the correct governance admins are set.
+    let pool_contract_roles_dispatcher = IRolesDispatcher { contract_address: pooling_contract };
+    assert!(
+        pool_contract_roles_dispatcher
+            .is_governance_admin(account: cfg.test_info.pool_contract_admin)
+    );
+    assert!(pool_contract_roles_dispatcher.is_governance_admin(account: staking_contract));
+    assert!(!pool_contract_roles_dispatcher.is_governance_admin(account: DUMMY_ADDRESS()));
+}
+
+fn test_change_operational_address() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info = staking_dispatcher.state_of(:staker_address);
+    let operational_address = OTHER_OPERATIONAL_ADDRESS();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let mut spy = snforge_std::spy_events();
+    staking_dispatcher.change_operational_address(:operational_address);
+    let updated_staker_info = staking_dispatcher.state_of(:staker_address);
+    let expected_staker_info = StakerInfo { operational_address, ..staker_info };
+    assert_eq!(updated_staker_info, expected_staker_info);
+    // Validate the single OperationalAddressChanged event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "change_operational_address"
+    );
+    assert_change_operational_address_event(
+        spied_event: events[0],
+        :staker_address,
+        new_address: operational_address,
+        old_address: cfg.staker_info.operational_address
+    );
+}
+
+#[test]
+#[should_panic(expected: ("Staker does not exist.",))]
+fn test_change_operational_address_staker_doesnt_exist() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let operational_address = OTHER_OPERATIONAL_ADDRESS();
+    staking_dispatcher.change_operational_address(:operational_address);
+}

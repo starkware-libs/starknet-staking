@@ -36,6 +36,13 @@ pub mod Pooling {
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
 
+    #[abi(embed_v0)]
+    impl ReplaceabilityImpl =
+        ReplaceabilityComponent::ReplaceabilityImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
+
     #[derive(Debug, Drop, Serde, Copy)]
     pub struct SwitchPoolData {
         pub pool_member: ContractAddress,

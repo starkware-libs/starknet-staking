@@ -26,6 +26,7 @@
     - [contract\_parameters](#contract_parameters)
     - [total\_staked\_tokens](#total_staked_tokens)
     - [calculate\_rewards](#calculate_rewards)
+    - [change\_operational\_address](#change_operational_address)
   - [Events](#events)
     - [Balance Changed](#balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
@@ -564,6 +565,24 @@ internal function.
 3. Update `own_unclaimed_rewards` with own rewards + pooled rewards commission.
 4. Update `pooled_unclaimed_rewards` with pooled rewards without commission. 
 5. Update index.
+
+### change_operational_address
+#### description <!-- omit from toc -->
+Change the operational address for a staker.
+#### parameters <!-- omit from toc -->
+| name                | type    |
+| ------------------- | ------- |
+| operational_address | address |
+#### return <!-- omit from toc -->
+success: bool
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+1. Staker exist in the contract.
+#### access control <!-- omit from toc -->
+Only staking address.
+#### logic <!-- omit from toc -->
+1. change registered `operational_address` for the staker.
 
 ## Events
 ### Balance Changed

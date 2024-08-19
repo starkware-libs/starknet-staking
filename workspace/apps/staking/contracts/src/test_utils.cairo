@@ -21,7 +21,7 @@ use constants::{
     POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH, POOL_MEMBER_ADDRESS,
     POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, BASE_MINT_AMOUNT, BUFFER,
     L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG, STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS,
-    DUMMY_IDENTIFIER, REWARD_SUPPLIER_CONTRACT_ADDRESS
+    DUMMY_IDENTIFIER, REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN
 };
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
@@ -128,9 +128,11 @@ pub(crate) mod constants {
     pub fn SYMBOL() -> ByteArray {
         "SYMBOL"
     }
-
     pub fn DUMMY_CLASS_HASH() -> ClassHash {
         class_hash_const::<'DUMMY'>()
+    }
+    pub fn POOL_CONTRACT_ADMIN() -> ContractAddress {
+        contract_address_const::<'POOL_CONTRACT_ADMIN'>()
     }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
@@ -141,17 +143,24 @@ pub(crate) fn initialize_staking_state_from_cfg(
         min_stake: cfg.staking_contract_info.min_stake,
         pool_contract_class_hash: cfg.test_info.pool_contract_class_hash,
         reward_supplier: cfg.test_info.reward_supplier,
+        pool_contract_admin: cfg.test_info.pool_contract_admin,
     )
 }
 pub(crate) fn initialize_staking_state(
     token_address: ContractAddress,
     min_stake: u128,
     pool_contract_class_hash: ClassHash,
-    reward_supplier: ContractAddress
+    reward_supplier: ContractAddress,
+    pool_contract_admin: ContractAddress,
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     Staking::constructor(
-        ref state, token_address, min_stake, pool_contract_class_hash, reward_supplier
+        ref state,
+        :token_address,
+        :min_stake,
+        :pool_contract_class_hash,
+        :reward_supplier,
+        :pool_contract_admin
     );
     state
 }
@@ -234,6 +243,7 @@ pub(crate) fn deploy_staking_contract(
     cfg.staking_contract_info.min_stake.serialize(ref calldata);
     cfg.test_info.pool_contract_class_hash.serialize(ref calldata);
     cfg.test_info.reward_supplier.serialize(ref calldata);
+    cfg.test_info.pool_contract_admin.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     staking_contract_address
@@ -455,6 +465,7 @@ pub(crate) struct TestInfo {
     pub pool_contract_class_hash: ClassHash,
     pub staking_contract: ContractAddress,
     pub reward_supplier: ContractAddress,
+    pub pool_contract_admin: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -510,6 +521,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pool_contract_class_hash: declare_pool_contract(),
             staking_contract: STAKING_CONTRACT_ADDRESS(),
             reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
+            pool_contract_admin: POOL_CONTRACT_ADMIN(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,

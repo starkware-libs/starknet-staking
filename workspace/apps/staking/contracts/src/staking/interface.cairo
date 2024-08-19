@@ -26,6 +26,14 @@ pub mod Events {
         pub staker_address: ContractAddress,
         pub exit_at: u64
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct OperationalAddressChanged {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub new_address: ContractAddress,
+        pub old_address: ContractAddress,
+    }
 }
 
 // TODO create a different struct for not exposing internal implemenation
@@ -103,4 +111,7 @@ pub trait IStaking<TContractState> {
     ) -> u64;
     fn get_total_stake(self: @TContractState) -> u128;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
+    fn change_operational_address(
+        ref self: TContractState, operational_address: ContractAddress
+    ) -> bool;
 }

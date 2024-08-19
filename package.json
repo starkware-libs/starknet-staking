@@ -1,4 +1,6 @@
 {
+  "name": "StarkWare WebApps Monorepo",
+  "version": "0.0.0",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -21,7 +23,7 @@
     "npkill": "^0.10.0",
     "prettier": "^3.3.3",
     "sort-package-json": "^2.10.0",
-    "turbo": "1.13.3"
+    "turbo": "2.0.14"
   },
   "packageManager": "pnpm@9.7.0",
   "engines": {

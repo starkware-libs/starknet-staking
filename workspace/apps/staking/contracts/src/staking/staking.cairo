@@ -51,6 +51,13 @@ pub mod Staking {
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
 
+    #[abi(embed_v0)]
+    impl ReplaceabilityImpl =
+        ReplaceabilityComponent::ReplaceabilityImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
+
     #[storage]
     struct Storage {
         #[substorage(v0)]
@@ -71,6 +78,7 @@ pub mod Staking {
         pool_exit_intents: Map::<UndelegateIntentKey, UndelegateIntentValue>,
         last_index_update_timestamp: u64,
         reward_supplier: ContractAddress,
+        pool_contract_admin: ContractAddress
     }
 
     #[event]
@@ -83,6 +91,7 @@ pub mod Staking {
         BalanceChanged: Events::BalanceChanged,
         NewDelegationPool: Events::NewDelegationPool,
         StakerExitIntent: Events::StakerExitIntent,
+        OperationalAddressChanged: Events::OperationalAddressChanged,
     }
 
     #[constructor]
@@ -92,6 +101,7 @@ pub mod Staking {
         min_stake: u128,
         pool_contract_class_hash: ClassHash,
         reward_supplier: ContractAddress,
+        pool_contract_admin: ContractAddress,
     ) {
         self.accesscontrol.initializer();
         self.roles.initializer();
@@ -102,6 +112,7 @@ pub mod Staking {
         self.pool_contract_class_hash.write(pool_contract_class_hash);
         self.last_index_update_timestamp.write(get_block_timestamp());
         self.reward_supplier.write(reward_supplier);
+        self.pool_contract_admin.write(pool_contract_admin);
     }
 
     #[abi(embed_v0)]
@@ -441,6 +452,28 @@ pub mod Staking {
             }
             false
         }
+
+        fn change_operational_address(
+            ref self: ContractState, operational_address: ContractAddress
+        ) -> bool {
+            self.update_global_index_if_needed();
+            let staker_address = get_caller_address();
+            let mut staker_info = self.get_staker_info(:staker_address);
+            self
+                .operational_address_to_staker_address
+                .write(staker_info.operational_address, Zero::zero());
+            let old_address = staker_info.operational_address;
+            staker_info.operational_address = operational_address;
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self.operational_address_to_staker_address.write(operational_address, staker_address);
+            self
+                .emit(
+                    Events::OperationalAddressChanged {
+                        staker_address, new_address: operational_address, old_address
+                    }
+                );
+            true
+        }
     }
 
     #[generate_trait]
@@ -534,13 +567,17 @@ pub mod Staking {
             }
             let class_hash = self.pool_contract_class_hash.read();
             let contract_address_salt: felt252 = get_block_timestamp().into();
-            deploy_delegation_pool_contract(
-                :class_hash,
-                :contract_address_salt,
-                :staker_address,
-                :staking_contract,
-                :token_address,
-                :commission
+            let admin = self.pool_contract_admin.read();
+            Option::Some(
+                deploy_delegation_pool_contract(
+                    :class_hash,
+                    :contract_address_salt,
+                    :staker_address,
+                    :staking_contract,
+                    :token_address,
+                    :commission,
+                    :admin
+                )
             )
         }
 
