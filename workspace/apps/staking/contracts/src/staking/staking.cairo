@@ -91,6 +91,7 @@ pub mod Staking {
         BalanceChanged: Events::BalanceChanged,
         NewDelegationPool: Events::NewDelegationPool,
         StakerExitIntent: Events::StakerExitIntent,
+        OperationalAddressChanged: Events::OperationalAddressChanged,
     }
 
     #[constructor]
@@ -461,9 +462,16 @@ pub mod Staking {
             self
                 .operational_address_to_staker_address
                 .write(staker_info.operational_address, Zero::zero());
+            let old_address = staker_info.operational_address;
             staker_info.operational_address = operational_address;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             self.operational_address_to_staker_address.write(operational_address, staker_address);
+            self
+                .emit(
+                    Events::OperationalAddressChanged {
+                        staker_address, new_address: operational_address, old_address
+                    }
+                );
             true
         }
     }

@@ -23,6 +23,7 @@ use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use contracts::event_test_utils::{
     assert_number_of_events, assert_staker_exit_intent_event, assert_staker_balance_changed_event
 };
+use contracts::event_test_utils::assert_change_operational_address_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address, get_block_timestamp};
 use starknet::syscalls::deploy_syscall;
@@ -1003,10 +1004,22 @@ fn test_change_operational_address() {
     let staker_info = staking_dispatcher.state_of(:staker_address);
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let mut spy = snforge_std::spy_events();
     staking_dispatcher.change_operational_address(:operational_address);
     let updated_staker_info = staking_dispatcher.state_of(:staker_address);
     let expected_staker_info = StakerInfo { operational_address, ..staker_info };
     assert_eq!(updated_staker_info, expected_staker_info);
+    // Validate the single OperationalAddressChanged event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "change_operational_address"
+    );
+    assert_change_operational_address_event(
+        spied_event: events[0],
+        :staker_address,
+        new_address: operational_address,
+        old_address: cfg.staker_info.operational_address
+    );
 }
 
 #[test]
