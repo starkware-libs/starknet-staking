@@ -5,7 +5,10 @@ use starknet::syscalls::deploy_syscall;
 use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
 use core::num::traits::WideMul;
-
+use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+use contracts::pooling::interface::{
+    IPooling, PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait
+};
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
@@ -24,8 +27,9 @@ pub fn deploy_delegation_pool_contract(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
-    commission: u16
-) -> Option<ContractAddress> {
+    commission: u16,
+    admin: ContractAddress,
+) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     staker_address.serialize(ref calldata);
     staking_contract.serialize(ref calldata);
@@ -35,7 +39,9 @@ pub fn deploy_delegation_pool_contract(
         :class_hash, :contract_address_salt, calldata: calldata.span(), deploy_from_zero: false
     )
         .unwrap_syscall();
-    Option::Some(pool_address)
+    let roles_dispatcher = IRolesDispatcher { contract_address: pool_address };
+    roles_dispatcher.register_governance_admin(account: admin);
+    pool_address
 }
 
 // Compute the commission amount of the staker from the pool rewards.

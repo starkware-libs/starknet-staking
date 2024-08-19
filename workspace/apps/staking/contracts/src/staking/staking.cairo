@@ -51,6 +51,13 @@ pub mod Staking {
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
 
+    #[abi(embed_v0)]
+    impl ReplaceabilityImpl =
+        ReplaceabilityComponent::ReplaceabilityImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
+
     #[storage]
     struct Storage {
         #[substorage(v0)]
@@ -71,6 +78,7 @@ pub mod Staking {
         pool_exit_intents: Map::<UndelegateIntentKey, UndelegateIntentValue>,
         last_index_update_timestamp: u64,
         reward_supplier: ContractAddress,
+        pool_contract_admin: ContractAddress
     }
 
     #[event]
@@ -92,6 +100,7 @@ pub mod Staking {
         min_stake: u128,
         pool_contract_class_hash: ClassHash,
         reward_supplier: ContractAddress,
+        pool_contract_admin: ContractAddress,
     ) {
         self.accesscontrol.initializer();
         self.roles.initializer();
@@ -102,6 +111,7 @@ pub mod Staking {
         self.pool_contract_class_hash.write(pool_contract_class_hash);
         self.last_index_update_timestamp.write(get_block_timestamp());
         self.reward_supplier.write(reward_supplier);
+        self.pool_contract_admin.write(pool_contract_admin);
     }
 
     #[abi(embed_v0)]
@@ -549,13 +559,17 @@ pub mod Staking {
             }
             let class_hash = self.pool_contract_class_hash.read();
             let contract_address_salt: felt252 = get_block_timestamp().into();
-            deploy_delegation_pool_contract(
-                :class_hash,
-                :contract_address_salt,
-                :staker_address,
-                :staking_contract,
-                :token_address,
-                :commission
+            let admin = self.pool_contract_admin.read();
+            Option::Some(
+                deploy_delegation_pool_contract(
+                    :class_hash,
+                    :contract_address_salt,
+                    :staker_address,
+                    :staking_contract,
+                    :token_address,
+                    :commission,
+                    :admin
+                )
             )
         }
 
