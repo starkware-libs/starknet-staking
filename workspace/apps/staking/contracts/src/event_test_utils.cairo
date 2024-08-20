@@ -85,6 +85,30 @@ pub fn assert_pool_balance_changed_event(
     }
 }
 
+pub fn assert_new_delegation_pool_event(
+    mut spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    pool_contract: ContractAddress,
+    commission: u16
+) {
+    let expected_event = @contracts::staking::Staking::Event::NewDelegationPool(
+        StakingEvents::NewDelegationPool { staker_address, pool_contract, commission }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "StakingEvents::NewDelegationPool{{staker_address: {:?}, pool_contract: {:?}, commission: {}}}",
+            staker_address,
+            pool_contract,
+            commission
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+
 pub fn assert_change_operational_address_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,

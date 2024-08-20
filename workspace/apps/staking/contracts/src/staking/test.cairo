@@ -23,6 +23,7 @@ use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use contracts::event_test_utils::{
     assert_number_of_events, assert_staker_exit_intent_event, assert_staker_balance_changed_event
 };
+use contracts::event_test_utils::assert_new_delegation_pool_event;
 use contracts::event_test_utils::assert_change_operational_address_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address, get_block_timestamp};
@@ -672,7 +673,7 @@ fn test_stake_pooling_enabled() {
     );
 
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
-
+    let mut spy = snforge_std::spy_events();
     // Stake with pooling enabled.
     cfg.test_info.pooling_enabled = true;
     stake_for_testing(ref state, :cfg, :token_address);
@@ -683,6 +684,18 @@ fn test_stake_pooling_enabled() {
     let expected_staker_info = cfg.staker_info;
     // Check that the staker info was updated correctly.
     assert_eq!(expected_staker_info, state.get_staker_info(:staker_address));
+    // Validate events.
+    let events = spy.get_events().emitted_by(test_address()).events;
+    assert_number_of_events(actual: events.len(), expected: 2, message: "stake_pooling_enabled");
+    assert_new_delegation_pool_event(
+        spied_event: events[0],
+        :staker_address,
+        pool_contract: cfg.staker_info.pooling_contract.unwrap(),
+        commission: cfg.staker_info.commission
+    );
+    assert_staker_balance_changed_event(
+        spied_event: events[1], :staker_address, amount: cfg.staker_info.amount_own
+    );
 }
 
 // TODO: Create tests that cover all panic scenarios for add_to_delegation_pool.
