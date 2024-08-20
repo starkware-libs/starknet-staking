@@ -555,7 +555,7 @@ pub mod Staking {
         }
 
         fn deploy_delegation_pool_contract_if_needed(
-            self: @ContractState,
+            ref self: ContractState,
             staker_address: ContractAddress,
             staking_contract: ContractAddress,
             token_address: ContractAddress,
@@ -568,17 +568,17 @@ pub mod Staking {
             let class_hash = self.pool_contract_class_hash.read();
             let contract_address_salt: felt252 = get_block_timestamp().into();
             let admin = self.pool_contract_admin.read();
-            Option::Some(
-                deploy_delegation_pool_contract(
-                    :class_hash,
-                    :contract_address_salt,
-                    :staker_address,
-                    :staking_contract,
-                    :token_address,
-                    :commission,
-                    :admin
-                )
-            )
+            let pool_contract = deploy_delegation_pool_contract(
+                :class_hash,
+                :contract_address_salt,
+                :staker_address,
+                :staking_contract,
+                :token_address,
+                :commission,
+                :admin
+            );
+            self.emit(Events::NewDelegationPool { staker_address, pool_contract, commission });
+            Option::Some(pool_contract)
         }
 
         fn add_to_total_stake(ref self: ContractState, amount: u128) {
