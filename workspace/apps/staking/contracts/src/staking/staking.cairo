@@ -91,6 +91,7 @@ pub mod Staking {
         BalanceChanged: Events::BalanceChanged,
         NewDelegationPool: Events::NewDelegationPool,
         StakerExitIntent: Events::StakerExitIntent,
+        StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
         OperationalAddressChanged: Events::OperationalAddressChanged,
     }
 
@@ -392,8 +393,15 @@ pub mod Staking {
             self.update_global_index_if_needed();
             let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
+            let old_address = staker_info.reward_address;
             staker_info.reward_address = reward_address;
             self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .emit(
+                    Events::StakerRewardAddressChanged {
+                        staker_address, new_address: reward_address, old_address
+                    }
+                );
             true
         }
 

@@ -23,6 +23,7 @@ use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use contracts::event_test_utils::{
     assert_number_of_events, assert_staker_exit_intent_event, assert_staker_balance_changed_event
 };
+use contracts::event_test_utils::assert_staker_reward_address_change_event;
 use contracts::event_test_utils::assert_new_delegation_pool_event;
 use contracts::event_test_utils::assert_change_operational_address_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
@@ -461,12 +462,22 @@ fn test_change_reward_address() {
 
     // Set the same staker address.
     cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
-    state.change_reward_address(other_reward_address);
+    let mut spy = snforge_std::spy_events();
+    state.change_reward_address(reward_address: other_reward_address);
     let staker_info_after_change = state.get_staker_info(:staker_address);
     let staker_info_expected = StakerInfo {
         reward_address: other_reward_address, ..staker_info_before_change
     };
     assert_eq!(staker_info_after_change, staker_info_expected);
+    // Validate the single StakerRewardAddressChanged event.
+    let events = spy.get_events().emitted_by(contract_address: test_address()).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "change_reward_address");
+    assert_staker_reward_address_change_event(
+        spied_event: events[0],
+        :staker_address,
+        new_address: other_reward_address,
+        old_address: cfg.staker_info.reward_address
+    );
 }
 
 
