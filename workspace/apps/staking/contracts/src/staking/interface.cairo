@@ -28,6 +28,14 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
+    pub(crate) struct StakerRewardAddressChanged {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub new_address: ContractAddress,
+        pub old_address: ContractAddress
+    }
+
+    #[derive(Drop, starknet::Event)]
     pub(crate) struct OperationalAddressChanged {
         #[key]
         pub staker_address: ContractAddress,

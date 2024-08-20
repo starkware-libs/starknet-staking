@@ -28,6 +28,7 @@ use contracts::staking::objects::{
 };
 use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_exit_intent_event,};
 use contracts::event_test_utils::assert_pool_balance_changed_event;
+use contracts::event_test_utils::assert_pool_member_reward_address_change_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, Store};
 use snforge_std::{
@@ -358,6 +359,7 @@ fn test_change_reward_address() {
     cheat_caller_address_once(
         contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
     );
+    let mut spy = snforge_std::spy_events();
     pooling_dispatcher.change_reward_address(other_reward_address);
     let pool_member_info_after_change = pooling_dispatcher
         .state_of(cfg.test_info.pool_member_address);
@@ -365,6 +367,15 @@ fn test_change_reward_address() {
         reward_address: other_reward_address, ..pool_member_info_before_change
     };
     assert_eq!(pool_member_info_after_change, pool_member_info_expected);
+    // Validate the single PoolMemberRewardAddressChanged event.
+    let events = spy.get_events().emitted_by(contract_address: pooling_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "change_reward_address");
+    assert_pool_member_reward_address_change_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        new_address: other_reward_address,
+        old_address: cfg.pool_member_info.reward_address
+    );
 }
 
 

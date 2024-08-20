@@ -76,6 +76,7 @@ pub mod Pooling {
         RolesEvent: RolesComponent::Event,
         PoolMemberExitIntent: Events::PoolMemberExitIntent,
         BalanceChanged: Events::BalanceChanged,
+        PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
     }
 
 
@@ -327,8 +328,15 @@ pub mod Pooling {
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            let old_address = pool_member_info.reward_address;
             pool_member_info.reward_address = reward_address;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            self
+                .emit(
+                    Events::PoolMemberRewardAddressChanged {
+                        pool_member, new_address: reward_address, old_address
+                    }
+                );
             true
         }
 
