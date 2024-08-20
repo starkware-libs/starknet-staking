@@ -20,10 +20,6 @@ pub mod Pooling {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
 
-    // TODO: Decide if MIN_DELEGATION_AMOUNT is needed (if needed then decide on a value).
-    // Right now, there is no minimum delegation amount.
-    pub const MIN_DELEGATION_AMOUNT: u128 = 1;
-
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
@@ -109,7 +105,7 @@ pub mod Pooling {
             assert_with_err(
                 self.pool_member_info.read(pool_member).is_none(), Error::POOL_MEMBER_EXISTS
             );
-            assert_with_err(amount >= MIN_DELEGATION_AMOUNT, Error::MIN_DELEGATION_AMOUNT);
+            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             let pooled_staker = self.staker_address.read();
             let staking_contract = self.staking_contract.read();
             let staking_contract_dispatcher = IStakingDispatcher {
@@ -147,7 +143,8 @@ pub mod Pooling {
             self.assert_staker_is_active();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             assert_with_err(pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS);
-            assert_with_err(amount >= MIN_DELEGATION_AMOUNT, Error::MIN_DELEGATION_AMOUNT);
+            // This line was added to prevent the compiler from doing certain optimizations.
+            core::internal::revoke_ap_tracking();
             let caller_address = get_caller_address();
             assert_with_err(
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
@@ -243,7 +240,7 @@ pub mod Pooling {
             to_pool: ContractAddress,
             amount: u128
         ) -> u128 {
-            assert_with_err(amount >= MIN_DELEGATION_AMOUNT, Error::MIN_DELEGATION_AMOUNT);
+            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             assert_with_err(
@@ -280,7 +277,7 @@ pub mod Pooling {
         fn enter_delegation_pool_from_staking_contract(
             ref self: ContractState, amount: u128, index: u64, data: Span<felt252>
         ) -> bool {
-            assert_with_err(amount >= MIN_DELEGATION_AMOUNT, Error::MIN_DELEGATION_AMOUNT);
+            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             assert_with_err(
                 get_caller_address() == self.staking_contract.read(),
                 Error::CALLER_IS_NOT_STAKING_CONTRACT

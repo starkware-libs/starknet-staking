@@ -20,7 +20,6 @@ pub enum Error {
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     COMMISSION_OUT_OF_RANGE,
-    AMOUNT_LESS_THAN_MIN_INCREASE_STAKE,
     UNSTAKE_IN_PROGRESS,
     POOL_ADDRESS_DOES_NOT_EXIST,
     CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
@@ -41,7 +40,6 @@ pub enum Error {
     FINAL_STAKER_INDEX_ALREADY_SET,
     MISSING_UNDELEGATE_INTENT,
     CALLER_CANNOT_ADD_TO_POOL,
-    MIN_DELEGATION_AMOUNT,
     // Minting contract errors
     TOTAL_SUPPLY_NOT_U128,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
@@ -72,9 +70,6 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::COMMISSION_OUT_OF_RANGE => panic!(
             "Commission is out of range, expected to be 0-{}.", COMMISSION_DENOMINATOR
         ),
-        Error::AMOUNT_LESS_THAN_MIN_INCREASE_STAKE => panic!(
-            "Amount is less than min increase stake - try again with enough funds."
-        ),
         Error::POOL_ADDRESS_DOES_NOT_EXIST => panic!("Pool address does not exist."),
         Error::MISSING_UNSTAKE_INTENT => panic!("Unstake intent is missing."),
         Error::UNSTAKE_IN_PROGRESS => panic!(
@@ -103,7 +98,6 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::CALLER_CANNOT_ADD_TO_POOL => panic!(
             "Caller address should be pool member address or reward address."
         ),
-        Error::MIN_DELEGATION_AMOUNT => panic!("Amount is less than min delegation amount."),
         Error::MISSING_POOL_CONTRACT => panic!("Staker does not have pool contract."),
         Error::UNAUTHORIZED_MESSAGE_SENDER => panic!("Unauthorized message sender."),
         Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED => panic!(
