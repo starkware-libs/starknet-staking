@@ -35,8 +35,6 @@ pub mod Staking {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
 
-    // TODO: Decide if MIN_INCREASE_STAKE is needed (if needed then decide on a value).
-    pub const MIN_INCREASE_STAKE: u128 = 10;
     pub const COMMISSION_DENOMINATOR: u16 = 10000;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
@@ -181,9 +179,6 @@ pub mod Staking {
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            assert_with_err(
-                amount >= MIN_INCREASE_STAKE, Error::AMOUNT_LESS_THAN_MIN_INCREASE_STAKE
-            );
             let caller_address = get_caller_address();
             assert_with_err(
                 caller_address == staker_address || caller_address == staker_info.reward_address,
@@ -334,7 +329,7 @@ pub mod Staking {
                 get_block_timestamp() >= undelegate_intent.unpool_time,
                 Error::INTENT_WINDOW_NOT_FINISHED
             );
-            if undelegate_intent.amount > 0 {
+            if undelegate_intent.amount.is_non_zero() {
                 let erc20_dispatcher = IERC20Dispatcher {
                     contract_address: self.token_address.read()
                 };

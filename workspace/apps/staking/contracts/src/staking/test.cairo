@@ -35,7 +35,7 @@ use contracts::staking::objects::{
 };
 use contracts::staking::staking::Staking::ContractState;
 use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
-use contracts::staking::Staking::{COMMISSION_DENOMINATOR, MIN_INCREASE_STAKE};
+use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
 use snforge_std::{
@@ -417,8 +417,7 @@ fn test_increase_stake_unstake_in_progress() {
 }
 
 #[test]
-#[should_panic(expected: "Amount is less than min increase stake - try again with enough funds.")]
-fn test_increase_stake_amount_less_than_min_increase_stake() {
+fn test_increase_stake_amount_is_zero() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         cfg.test_info.initial_supply, cfg.test_info.owner_address
@@ -426,8 +425,11 @@ fn test_increase_stake_amount_less_than_min_increase_stake() {
     let staker_address = cfg.test_info.staker_address;
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
+    let staker_info_before = state.get_staker_info(:staker_address);
     cheat_caller_address_once(contract_address: test_address(), caller_address: staker_address);
-    state.increase_stake(:staker_address, amount: MIN_INCREASE_STAKE - 1);
+    state.increase_stake(:staker_address, amount: 0);
+    let staker_info_after = state.get_staker_info(:staker_address);
+    assert_eq!(staker_info_before, staker_info_after);
 }
 
 #[test]
