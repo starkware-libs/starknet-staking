@@ -32,20 +32,38 @@ pub fn assert_staker_exit_intent_event(
     }
 }
 
-pub fn assert_staker_balance_changed_event(
-    spied_event: @(ContractAddress, Event), staker_address: ContractAddress, amount: u128,
+pub fn assert_stake_balance_change_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    old_self_stake: u128,
+    old_delegated_stake: u128,
+    new_self_stake: u128,
+    new_delegated_stake: u128,
+    time: u64
 ) {
-    let expected_event = @contracts::staking::Staking::Event::BalanceChanged(
-        StakingEvents::BalanceChanged { staker_address, amount }
+    let expected_event = @contracts::staking::Staking::Event::StakeBalanceChange(
+        StakingEvents::StakeBalanceChange {
+            staker_address,
+            old_self_stake,
+            old_delegated_stake,
+            new_self_stake,
+            new_delegated_stake,
+            time,
+        }
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
     let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
     if !emitted {
         let details = format!(
-            "StakingEvents::BalanceChanged{{staker_address: {:?}, amount: {}}}",
+            "StakingEvents::StakeBalanceChange{{staker_address: {:?}, old_self_stake: {}, 
+                old_delegated_stake: {}, new_self_stake: {}, new_delegated_stake: {}, time: {}}}",
             staker_address,
-            amount
+            old_self_stake,
+            old_delegated_stake,
+            new_self_stake,
+            new_delegated_stake,
+            time
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }

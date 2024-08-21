@@ -28,7 +28,7 @@
     - [calculate\_rewards](#calculate_rewards)
     - [change\_operational\_address](#change_operational_address)
   - [Events](#events)
-    - [Balance Changed](#balance-changed)
+    - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
     - [Staker Exit intent](#staker-exit-intent)
 - [Delegation pooling contract](#delegation-pooling-contract)
@@ -44,7 +44,7 @@
     - [calculate\_rewards](#calculate_rewards-1)
   - [Events](#events-1)
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
-    - [Balance Changed](#balance-changed-1)
+    - [Balance Changed](#balance-changed)
     - [Delegation Pool Member Exit intent](#delegation-pool-member-exit-intent)
 
 </details>
@@ -585,11 +585,15 @@ Only staking address.
 1. change registered `operational_address` for the staker.
 
 ## Events
-### Balance Changed
-| data   | type    | keyed |
-| ------ | ------- | ----- |
-| staker | address | ✅     |
-| amount | u128    | ❌     |
+### Stake Balance Changed
+| data                | type            | keyed  |
+| ------              | -------         | -----  |
+| staker_address      | address         | ✅     |
+| old_self_stake      | u128            | ❌     |
+| old_delegated_stake | u128            | ❌     |
+| new_self_stake      | u128            | ❌     |
+| new_delegated_stake | u128            | ❌     |
+| time                | u64             | ❌     |
 
 ### New Delegation Pool
 | data           | type    | keyed |
@@ -619,8 +623,8 @@ Add a new pool member to the delegation pool.
 #### return <!-- omit from toc -->
 success: bool
 #### emits <!-- omit from toc -->
-[Pool - Balance Changed](#balance-changed-1)
-[Stake - Balance Changed](#balance-changed)
+[Pool - Balance Changed](#balance-changed)
+[Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. caller address (pool member) is not listed in the contract.
@@ -641,8 +645,8 @@ Increase the funds for an existing pool member.
 #### return <!-- omit from toc -->
 amount: u128 - updated total amount for the caller.
 #### emits <!-- omit from toc -->
-[Pool - Balance Changed](#balance-changed-1)
-[Stake - Balance Changed](#balance-changed)
+[Pool - Balance Changed](#balance-changed)
+[Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. caller is a pool member listed in the contract.
@@ -691,8 +695,8 @@ Executes the intent to exit the stake if enough time have passed. Transfers the 
 #### return <!-- omit from toc -->
 amount: u128 - amount of tokens transferred back to the pool member.
 #### emits <!-- omit from toc -->
-[Pool - Balance Changed](#balance-changed-1)
-[Stake - Balance Changed](#balance-changed)
+[Pool - Balance Changed](#balance-changed)
+[Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. Pool member exist and requested to unstake.
@@ -737,7 +741,7 @@ Request the staking contract to move a pool member to another pool contract.
 #### return <!-- omit from toc -->
 amount: u128 - amount left in exit window for the pool member in this pool.
 #### emits <!-- omit from toc -->
-[Pool - Balance Changed](#balance-changed-1)
+[Pool - Balance Changed](#balance-changed)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. pool member (caller) is in exit window.
@@ -761,7 +765,7 @@ No funds need to be transferred since staking contract holds the pool funds.
 #### return <!-- omit from toc -->
 success: bool
 #### emits <!-- omit from toc -->
-[Pool - Balance Changed](#balance-changed-1)
+[Pool - Balance Changed](#balance-changed)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->

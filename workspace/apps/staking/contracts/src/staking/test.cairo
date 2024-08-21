@@ -21,7 +21,7 @@ use contracts::{
 };
 use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use contracts::event_test_utils::{
-    assert_number_of_events, assert_staker_exit_intent_event, assert_staker_balance_changed_event
+    assert_number_of_events, assert_staker_exit_intent_event, assert_stake_balance_change_event
 };
 use contracts::event_test_utils::assert_staker_reward_address_change_event;
 use contracts::event_test_utils::assert_new_delegation_pool_event;
@@ -114,11 +114,17 @@ fn test_stake() {
         erc20_dispatcher.balance_of(staking_contract_address), cfg.staker_info.amount_own.into()
     );
 
-    // Validate the single BalanceChanged event.
+    // Validate the single StakeBalanceChange event.
     let events = spy.get_events().emitted_by(test_address()).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "stake");
-    assert_staker_balance_changed_event(
-        spied_event: events[0], :staker_address, amount: cfg.staker_info.amount_own
+    assert_stake_balance_change_event(
+        spied_event: events[0],
+        :staker_address,
+        old_self_stake: Zero::zero(),
+        old_delegated_stake: Zero::zero(),
+        new_self_stake: cfg.staker_info.amount_own,
+        new_delegated_stake: Zero::zero(),
+        time: get_block_timestamp(),
     );
 }
 
@@ -309,11 +315,17 @@ fn test_increase_stake_from_staker_address() {
     let updated_staker_info = state.get_staker_info(:staker_address);
     assert_eq!(expected_staker_info, updated_staker_info);
 
-    // Validate the single BalanceChanged event.
+    // Validate the single StakeBalanceChange event.
     let events = spy.get_events().emitted_by(test_address()).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
-    assert_staker_balance_changed_event(
-        spied_event: events[0], :staker_address, amount: expected_staker_info.amount_own
+    assert_stake_balance_change_event(
+        spied_event: events[0],
+        :staker_address,
+        old_self_stake: staker_info_before.amount_own,
+        old_delegated_stake: staker_info_before.amount_pool,
+        new_self_stake: updated_staker_info.amount_own,
+        new_delegated_stake: updated_staker_info.amount_pool,
+        time: get_block_timestamp(),
     );
 }
 
@@ -706,8 +718,14 @@ fn test_stake_pooling_enabled() {
         pool_contract: cfg.staker_info.pooling_contract.unwrap(),
         commission: cfg.staker_info.commission
     );
-    assert_staker_balance_changed_event(
-        spied_event: events[1], :staker_address, amount: cfg.staker_info.amount_own
+    assert_stake_balance_change_event(
+        spied_event: events[1],
+        :staker_address,
+        old_self_stake: Zero::zero(),
+        old_delegated_stake: Zero::zero(),
+        new_self_stake: cfg.staker_info.amount_own,
+        new_delegated_stake: Zero::zero(),
+        time: get_block_timestamp(),
     );
 }
 
