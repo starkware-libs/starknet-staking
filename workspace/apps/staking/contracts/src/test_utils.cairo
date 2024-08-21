@@ -452,6 +452,52 @@ pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -
     *value[0]
 }
 
+pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
+    // Deploy contracts: ERC20, MintingCurve, RewardSupplier, Staking.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    cfg.staking_contract_info.token_address = token_address;
+    let minting_curve = deploy_minting_curve_contract(
+        staking_contract: cfg.test_info.staking_contract, :cfg
+    );
+    cfg.reward_supplier.minting_curve_contract = minting_curve;
+    let reward_supplier = deploy_reward_supplier_contract(:token_address, :cfg);
+    cfg.test_info.reward_supplier = reward_supplier;
+    // Deploy the staking contract.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    // There are circular dependecies between the contracts, so we override the fake addresses.
+    snforge_std::store(
+        target: reward_supplier,
+        storage_address: selector!("staking_contract"),
+        serialized_value: array![staking_contract.into()].span()
+    );
+    snforge_std::store(
+        target: minting_curve,
+        storage_address: selector!("staking_contract"),
+        serialized_value: array![staking_contract.into()].span()
+    );
+}
+
+pub fn cheat_reward_for_reward_supplier(
+    cfg: StakingInitConfig,
+    reward_supplier: ContractAddress,
+    expected_reward: u128,
+    token_address: ContractAddress
+) {
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: reward_supplier,
+        amount: expected_reward,
+        :token_address
+    );
+    snforge_std::store(
+        target: reward_supplier,
+        storage_address: selector!("unclaimed_rewards"),
+        serialized_value: array![expected_reward.into()].span()
+    );
+}
 
 #[derive(Drop, Copy)]
 pub(crate) struct TestInfo {

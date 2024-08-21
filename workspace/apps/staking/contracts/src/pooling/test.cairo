@@ -14,6 +14,7 @@ use contracts::{
         stake_for_testing_using_dispatcher, enter_delegation_pool_for_testing_using_dispatcher,
         stake_with_pooling_enabled, load_from_simple_map, load_option_from_simple_map,
         deploy_minting_curve_contract, deploy_reward_supplier_contract,
+        general_contract_system_deployment, cheat_reward_for_reward_supplier
     },
     test_utils::constants::{
         OWNER_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
@@ -402,40 +403,40 @@ fn test_change_reward_address_pool_member_not_exist() {
 
 #[test]
 fn test_claim_rewards() {
-    let cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
-    );
-    // Deploy the staking contract, stake, and enter delegation pool.
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let reward_supplier = cfg.test_info.reward_supplier;
+
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
-
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     // Check that the pool member info was updated correctly.
     assert_eq!(
         pooling_dispatcher.state_of(cfg.test_info.pool_member_address), cfg.pool_member_info
     );
-
     // Update index for testing.
     // TODO: Wrap in a function.
     let updated_index: u64 = cfg.staker_info.index * 2;
     snforge_std::store(
         staking_contract, selector!("global_index"), array![updated_index.into()].span()
     );
-
-    // Claim rewards, and validate the results.
-    cheat_caller_address_once(
-        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
-    );
-    let actual_reward: u128 = pooling_dispatcher.claim_rewards(cfg.test_info.pool_member_address);
+    // Compute expected rewards.
     let interest: u64 = updated_index - cfg.staker_info.index;
     let rewards = compute_rewards(amount: cfg.pool_member_info.amount, :interest);
     let commission_amount = compute_commission_amount(
         :rewards, commission: cfg.staker_info.commission
     );
-    assert_eq!(actual_reward, rewards - commission_amount);
+    let expected_reward = rewards - commission_amount;
+    cheat_reward_for_reward_supplier(:cfg, :reward_supplier, :expected_reward, :token_address);
+    // Claim rewards, and validate the results.
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
+    );
+    let actual_reward = pooling_dispatcher
+        .claim_rewards(pool_member: cfg.test_info.pool_member_address);
+    assert_eq!(actual_reward, expected_reward);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = erc20_dispatcher.balance_of(cfg.pool_member_info.reward_address);
     assert_eq!(balance, actual_reward.into());
@@ -443,13 +444,11 @@ fn test_claim_rewards() {
 
 #[test]
 fn test_exit_delegation_pool_intent() {
-    let cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
-    );
-    // Deploy the staking contract, stake, and enter delegation pool.
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    // Stake, and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
 
@@ -506,35 +505,15 @@ fn test_exit_delegation_pool_intent() {
 #[test]
 fn test_exit_delegation_pool_action() {
     let mut cfg: StakingInitConfig = Default::default();
-    // Deploy contracts: ERC20, MintingCurve, RewardSupplier, Staking.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
-    );
-    let minting_curve = deploy_minting_curve_contract(
-        staking_contract: cfg.test_info.staking_contract, :cfg
-    );
-    cfg.reward_supplier.minting_curve_contract = minting_curve;
-    let reward_supplier = deploy_reward_supplier_contract(:token_address, :cfg);
-    cfg.test_info.reward_supplier = reward_supplier;
-    // Deploy the staking contract.
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    // There are circular dependecies between the contracts, so we override the fake addresses.
-    snforge_std::store(
-        reward_supplier, selector!("staking_contract"), array![staking_contract.into()].span()
-    );
-    snforge_std::store(
-        minting_curve, selector!("staking_contract"), array![staking_contract.into()].span()
-    );
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let reward_supplier = cfg.test_info.reward_supplier;
     // Stake and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
-
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    // Exit delegation pool intent.
-    cheat_caller_address_once(
-        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
-    );
     // Change global index and exit delegation pool intent.
     let index_before = cfg.pool_member_info.index;
     let updated_index = cfg.pool_member_info.index * 2;
@@ -543,7 +522,6 @@ fn test_exit_delegation_pool_action() {
         storage_address: selector!("global_index"),
         serialized_value: array![updated_index.into()].span()
     );
-    pooling_dispatcher.exit_delegation_pool_intent();
     // Calculate the expected rewards and commission.
     let delegate_amount = cfg.pool_member_info.amount;
     let rewards = compute_rewards(amount: delegate_amount, interest: updated_index - index_before);
@@ -551,6 +529,14 @@ fn test_exit_delegation_pool_action() {
         :rewards, commission: cfg.staker_info.commission
     );
     let unclaimed_rewards_pool_member = rewards - commission_amount;
+    cheat_reward_for_reward_supplier(
+        :cfg, :reward_supplier, expected_reward: unclaimed_rewards_pool_member, :token_address
+    );
+    // Exit delegation pool intent.
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
+    );
+    pooling_dispatcher.exit_delegation_pool_intent();
 
     let balance_before_action = erc20_dispatcher.balance_of(cfg.test_info.pool_member_address);
     let reward_account_balance_before = erc20_dispatcher
@@ -587,12 +573,10 @@ fn test_exit_delegation_pool_action() {
 #[test]
 fn test_switch_delegation_pool() {
     let mut cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
-    );
-    // Deploy the staking contract, stake, and enter delegation pool.
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    // Stake, and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
 
