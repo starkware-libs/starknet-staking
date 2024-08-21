@@ -5,10 +5,14 @@ use core::cmp::max;
 pub mod Events {
     use starknet::ContractAddress;
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct BalanceChanged {
+    pub(crate) struct StakeBalanceChange {
         #[key]
         pub staker_address: ContractAddress,
-        pub amount: u128
+        pub old_self_stake: u128,
+        pub old_delegated_stake: u128,
+        pub new_self_stake: u128,
+        pub new_delegated_stake: u128,
+        pub time: u64
     }
 
     #[derive(Drop, starknet::Event)]

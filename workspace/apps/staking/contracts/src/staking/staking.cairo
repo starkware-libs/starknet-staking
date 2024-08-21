@@ -86,7 +86,7 @@ pub mod Staking {
         RolesEvent: RolesComponent::Event,
         AccessControlEvent: AccessControlComponent::Event,
         SRC5Event: SRC5Component::Event,
-        BalanceChanged: Events::BalanceChanged,
+        StakeBalanceChange: Events::StakeBalanceChange,
         NewDelegationPool: Events::NewDelegationPool,
         StakerExitIntent: Events::StakerExitIntent,
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
@@ -169,7 +169,17 @@ pub mod Staking {
                 );
             self.operational_address_to_staker_address.write(operational_address, staker_address);
             self.total_stake.write(self.get_total_stake() + amount);
-            self.emit(Events::BalanceChanged { staker_address, amount });
+            self
+                .emit(
+                    Events::StakeBalanceChange {
+                        staker_address,
+                        old_self_stake: Zero::zero(),
+                        old_delegated_stake: Zero::zero(),
+                        new_self_stake: amount,
+                        new_delegated_stake: Zero::zero(),
+                        time: get_block_timestamp(),
+                    }
+                );
             true
         }
 
@@ -184,6 +194,7 @@ pub mod Staking {
                 caller_address == staker_address || caller_address == staker_info.reward_address,
                 Error::CALLER_CANNOT_INCREASE_STAKE
             );
+            let old_self_stake = staker_info.amount_own;
             let staking_contract_address = get_contract_address();
             let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
             erc20_dispatcher
@@ -196,9 +207,17 @@ pub mod Staking {
             staker_info.amount_own += amount;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             self.total_stake.write(self.get_total_stake() + amount);
-            // TODO: It is not clear from spec, but amount in the event may also include pooling.
-            //       If so, this should be updated.
-            self.emit(Events::BalanceChanged { staker_address, amount: staker_info.amount_own });
+            self
+                .emit(
+                    Events::StakeBalanceChange {
+                        staker_address,
+                        old_self_stake,
+                        old_delegated_stake: staker_info.amount_pool,
+                        new_self_stake: staker_info.amount_own,
+                        new_delegated_stake: staker_info.amount_pool,
+                        time: get_block_timestamp(),
+                    }
+                );
             staker_info.amount_own
         }
 
