@@ -27,6 +27,7 @@ use contracts::event_test_utils::{
 use contracts::event_test_utils::assert_staker_reward_address_change_event;
 use contracts::event_test_utils::assert_new_delegation_pool_event;
 use contracts::event_test_utils::assert_change_operational_address_event;
+use contracts::event_test_utils::assert_global_index_updated_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address, get_block_timestamp};
 use starknet::syscalls::deploy_syscall;
@@ -937,6 +938,7 @@ fn test_update_global_index_if_needed() {
         .try_into()
         .expect('global index not fit in u64');
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let mut spy = snforge_std::spy_events();
     // Try to update global index. This shouldn't update the index because a day hasn't passed.
     staking_dispatcher.update_global_index_if_needed();
     let global_index_after_first_update: u64 = load_one_felt(
@@ -947,9 +949,9 @@ fn test_update_global_index_if_needed() {
     assert_eq!(global_index_before_first_update, global_index_after_first_update);
     // Advance time by a year, update total_stake to be total_supply (which is equal to initial
     // supply), which means that max_inflation * BASE_VALUE will be added to global_index.
-    start_cheat_block_timestamp_global(
-        block_timestamp: get_block_timestamp() + SECONDS_IN_DAY * 365
-    );
+    let last_index_update_timestamp = get_block_timestamp();
+    let current_index_update_timestamp = last_index_update_timestamp + SECONDS_IN_DAY * 365;
+    start_cheat_block_timestamp_global(block_timestamp: current_index_update_timestamp);
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("total_stake"),
@@ -970,6 +972,16 @@ fn test_update_global_index_if_needed() {
             + multiply_by_max_inflation(BASE_VALUE.into())
                 .try_into()
                 .expect('inflation not fit in u64')
+    );
+    // Validate events.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "update_global_index");
+    assert_global_index_updated_event(
+        spied_event: events[0],
+        old_index: global_index_before_first_update,
+        new_index: global_index_after_second_update,
+        :last_index_update_timestamp,
+        :current_index_update_timestamp
     );
 }
 

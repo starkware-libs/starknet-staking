@@ -45,6 +45,14 @@ pub mod Events {
         pub new_address: ContractAddress,
         pub old_address: ContractAddress,
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct GlobalIndexUpdated {
+        pub old_index: u64,
+        pub new_index: u64,
+        pub last_index_update_timestamp: u64,
+        pub current_index_update_timestamp: u64
+    }
 }
 
 // TODO create a different struct for not exposing internal implemenation

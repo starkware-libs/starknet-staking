@@ -91,6 +91,7 @@ pub mod Staking {
         StakerExitIntent: Events::StakerExitIntent,
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
         OperationalAddressChanged: Events::OperationalAddressChanged,
+        GlobalIndexUpdated: Events::GlobalIndexUpdated,
     }
 
     #[constructor]
@@ -642,8 +643,21 @@ pub mod Staking {
             let staking_rewards = reward_supplier_dispatcher.calculate_staking_rewards();
             let total_stake = self.get_total_stake();
             let global_index_diff = compute_global_index_diff(:staking_rewards, :total_stake);
-            self.global_index.write(self.global_index.read() + global_index_diff);
-            self.last_index_update_timestamp.write(get_block_timestamp());
+            let old_index = self.global_index.read();
+            let new_index = old_index + global_index_diff;
+            self.global_index.write(new_index);
+            let last_index_update_timestamp = self.last_index_update_timestamp.read();
+            let current_index_update_timestamp = get_block_timestamp();
+            self.last_index_update_timestamp.write(current_index_update_timestamp);
+            self
+                .emit(
+                    Events::GlobalIndexUpdated {
+                        old_index,
+                        new_index,
+                        last_index_update_timestamp,
+                        current_index_update_timestamp
+                    }
+                );
         }
     }
 }
