@@ -1,6 +1,6 @@
 #[starknet::contract]
 pub mod MintingCurve {
-    use contracts::minting_curve::interface::IMintingCurve;
+    use contracts::minting_curve::interface::{IMintingCurve, Events};
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
     use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
     use starknet::{ContractAddress, contract_address_const};
@@ -29,7 +29,8 @@ pub mod MintingCurve {
     #[derive(Drop, starknet::Event)]
     enum Event {
         accesscontrolEvent: AccessControlComponent::Event,
-        src5Event: SRC5Component::Event
+        src5Event: SRC5Component::Event,
+        TotalSupplyChanged: Events::TotalSupplyChanged
     }
 
 
@@ -54,7 +55,9 @@ pub mod MintingCurve {
         let total_supply: u128 = total_supply
             .try_into()
             .expect_with_err(Error::TOTAL_SUPPLY_NOT_U128);
+        let old_total_supply = self.total_supply.read();
         self.total_supply.write(total_supply);
+        self.emit(Events::TotalSupplyChanged { old_total_supply, new_total_supply: total_supply });
     }
 
     /// yearly_mint = (M / 100) * total_supply
