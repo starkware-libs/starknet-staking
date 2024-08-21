@@ -119,6 +119,33 @@ pub fn assert_staker_reward_address_change_event(
     }
 }
 
+pub fn assert_global_index_updated_event(
+    spied_event: @(ContractAddress, Event),
+    old_index: u64,
+    new_index: u64,
+    last_index_update_timestamp: u64,
+    current_index_update_timestamp: u64,
+) {
+    let expected_event = @contracts::staking::Staking::Event::GlobalIndexUpdated(
+        StakingEvents::GlobalIndexUpdated {
+            old_index, new_index, last_index_update_timestamp, current_index_update_timestamp
+        }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "GlobalIndexUpdated{{old_index: {}, new_index: {}, last_index_update_timestamp: {}, current_index_update_timestamp: {}}}",
+            old_index,
+            new_index,
+            last_index_update_timestamp,
+            current_index_update_timestamp
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn assert_new_delegation_pool_event(
     mut spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
