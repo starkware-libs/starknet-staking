@@ -231,10 +231,11 @@ pub mod Staking {
             );
             self.calculate_rewards(ref :staker_info);
             let amount = staker_info.unclaimed_rewards_own;
-
             let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
-            erc20_dispatcher.transfer(recipient: staker_info.reward_address, amount: amount.into());
-
+            self
+                .send_rewards(
+                    reward_address: staker_info.reward_address, :amount, :erc20_dispatcher
+                );
             staker_info.unclaimed_rewards_own = 0;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             amount
@@ -264,14 +265,15 @@ pub mod Staking {
             assert_with_err(
                 get_block_timestamp() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED
             );
-            // Claim rewards.
             let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
-            erc20_dispatcher
-                .transfer(
-                    recipient: staker_info.reward_address,
-                    amount: staker_info.unclaimed_rewards_own.into()
+            // Send rewards to staker.
+            self
+                .send_rewards(
+                    reward_address: staker_info.reward_address,
+                    amount: staker_info.unclaimed_rewards_own,
+                    :erc20_dispatcher
                 );
-            // Transfer to staker.
+            // Transfer stake to staker.
             let staker_amount = staker_info.amount_own;
             erc20_dispatcher.transfer(recipient: staker_address, amount: staker_amount.into());
 
@@ -451,11 +453,12 @@ pub mod Staking {
             // Calculate rewards updated the index in staker_info.
             let updated_index = staker_info.index;
             let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
-            erc20_dispatcher
-                .transfer(
-                    recipient: pool_address, amount: staker_info.unclaimed_rewards_pool.into()
+            self
+                .send_rewards(
+                    reward_address: pool_address,
+                    amount: staker_info.unclaimed_rewards_pool,
+                    :erc20_dispatcher
                 );
-
             staker_info.unclaimed_rewards_pool = 0;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             updated_index
@@ -500,6 +503,23 @@ pub mod Staking {
 
     #[generate_trait]
     pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+        fn send_rewards(
+            self: @ContractState,
+            reward_address: ContractAddress,
+            amount: u128,
+            erc20_dispatcher: IERC20Dispatcher
+        ) {
+            let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+                contract_address: self.reward_supplier.read()
+            };
+            let balance_before = erc20_dispatcher.balance_of(account: get_contract_address());
+            reward_supplier_dispatcher.claim_rewards(:amount);
+            let balance_after = erc20_dispatcher.balance_of(account: get_contract_address());
+            assert_with_err(
+                balance_after - balance_before == amount.into(), Error::UNEXPECTED_BALANCE
+            );
+            erc20_dispatcher.transfer(recipient: reward_address, amount: amount.into());
+        }
         fn clear_undelegate_intent(
             ref self: ContractState, undelegate_intent_key: UndelegateIntentKey
         ) {
@@ -529,8 +549,14 @@ pub mod Staking {
                 let erc20_dispatcher = IERC20Dispatcher {
                     contract_address: self.token_address.read()
                 };
-                let pool_amount = staker_info.amount_pool + staker_info.unclaimed_rewards_pool;
-                erc20_dispatcher.transfer(recipient: pooling_contract, amount: pool_amount.into());
+                self
+                    .send_rewards(
+                        reward_address: pooling_contract,
+                        amount: staker_info.unclaimed_rewards_pool,
+                        :erc20_dispatcher
+                    );
+                erc20_dispatcher
+                    .transfer(recipient: pooling_contract, amount: staker_info.amount_pool.into());
                 let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
                 pooling_dispatcher.set_final_staker_index(final_staker_index: staker_info.index);
             }
