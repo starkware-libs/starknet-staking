@@ -11,8 +11,7 @@ pub mod Events {
         pub old_self_stake: u128,
         pub old_delegated_stake: u128,
         pub new_self_stake: u128,
-        pub new_delegated_stake: u128,
-        pub time: u64
+        pub new_delegated_stake: u128
     }
 
     #[derive(Drop, starknet::Event)]

@@ -593,7 +593,6 @@ Only staking address.
 | old_delegated_stake | u128            | ❌     |
 | new_self_stake      | u128            | ❌     |
 | new_delegated_stake | u128            | ❌     |
-| time                | u64             | ❌     |
 
 ### New Delegation Pool
 | data           | type    | keyed |

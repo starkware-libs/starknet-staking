@@ -176,8 +176,7 @@ pub mod Staking {
                         old_self_stake: Zero::zero(),
                         old_delegated_stake: Zero::zero(),
                         new_self_stake: amount,
-                        new_delegated_stake: Zero::zero(),
-                        time: get_block_timestamp(),
+                        new_delegated_stake: Zero::zero()
                     }
                 );
             true
@@ -214,8 +213,7 @@ pub mod Staking {
                         old_self_stake,
                         old_delegated_stake: staker_info.amount_pool,
                         new_self_stake: staker_info.amount_own,
-                        new_delegated_stake: staker_info.amount_pool,
-                        time: get_block_timestamp(),
+                        new_delegated_stake: staker_info.amount_pool
                     }
                 );
             staker_info.amount_own

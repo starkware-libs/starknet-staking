@@ -38,17 +38,11 @@ pub fn assert_stake_balance_change_event(
     old_self_stake: u128,
     old_delegated_stake: u128,
     new_self_stake: u128,
-    new_delegated_stake: u128,
-    time: u64
+    new_delegated_stake: u128
 ) {
     let expected_event = @contracts::staking::Staking::Event::StakeBalanceChange(
         StakingEvents::StakeBalanceChange {
-            staker_address,
-            old_self_stake,
-            old_delegated_stake,
-            new_self_stake,
-            new_delegated_stake,
-            time,
+            staker_address, old_self_stake, old_delegated_stake, new_self_stake, new_delegated_stake
         }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -57,13 +51,12 @@ pub fn assert_stake_balance_change_event(
     if !emitted {
         let details = format!(
             "StakingEvents::StakeBalanceChange{{staker_address: {:?}, old_self_stake: {}, 
-                old_delegated_stake: {}, new_self_stake: {}, new_delegated_stake: {}, time: {}}}",
+                old_delegated_stake: {}, new_self_stake: {}, new_delegated_stake: {}}}",
             staker_address,
             old_self_stake,
             old_delegated_stake,
             new_self_stake,
-            new_delegated_stake,
-            time
+            new_delegated_stake
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
