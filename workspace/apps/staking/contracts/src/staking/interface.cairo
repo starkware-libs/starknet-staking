@@ -27,7 +27,8 @@ pub mod Events {
     pub(crate) struct StakerExitIntent {
         #[key]
         pub staker_address: ContractAddress,
-        pub exit_at: u64
+        pub exit_timestamp: u64,
+        pub amount: u128
     }
 
     #[derive(Drop, starknet::Event)]

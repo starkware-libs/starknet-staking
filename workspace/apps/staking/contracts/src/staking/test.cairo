@@ -593,11 +593,22 @@ fn test_unstake_intent() {
     let expected_time = get_block_timestamp() + EXIT_WAITING_WINDOW;
     assert_eq!((staker_info.unstake_time).unwrap(), unstake_time);
     assert_eq!(unstake_time, expected_time);
-    // Validate the single StakerExitIntent event.
+    // Validate StakerExitIntent and StakeBalanceChange events.
     let events = spy.get_events().emitted_by(test_address()).events;
-    assert_number_of_events(actual: events.len(), expected: 1, message: "unstake_intent");
+    assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_intent");
     assert_staker_exit_intent_event(
-        spied_event: events[0], :staker_address, exit_at: expected_time
+        spied_event: events[0],
+        :staker_address,
+        exit_timestamp: expected_time,
+        amount: cfg.staker_info.amount_own
+    );
+    assert_stake_balance_change_event(
+        spied_event: events[1],
+        :staker_address,
+        old_self_stake: cfg.staker_info.amount_own,
+        old_delegated_stake: 0,
+        new_self_stake: 0,
+        new_delegated_stake: 0
     );
 }
 
