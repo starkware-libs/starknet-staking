@@ -26,6 +26,13 @@ pub mod Events {
         pub new_address: ContractAddress,
         pub old_address: ContractAddress
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct FinalIndexSet {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub final_staker_index: u64
+    }
 }
 
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]

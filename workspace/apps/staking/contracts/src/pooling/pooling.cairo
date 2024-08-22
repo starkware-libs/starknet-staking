@@ -73,6 +73,7 @@ pub mod Pooling {
         PoolMemberExitIntent: Events::PoolMemberExitIntent,
         DelegationBalanceChange: Events::DelegationBalanceChange,
         PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
+        FinalIndexSet: Events::FinalIndexSet,
     }
 
 
@@ -330,6 +331,12 @@ pub mod Pooling {
                 self.final_staker_index.read().is_none(), Error::FINAL_STAKER_INDEX_ALREADY_SET
             );
             self.final_staker_index.write(Option::Some(final_staker_index));
+            self
+                .emit(
+                    Events::FinalIndexSet {
+                        staker_address: self.staker_address.read(), final_staker_index
+                    }
+                );
         }
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {

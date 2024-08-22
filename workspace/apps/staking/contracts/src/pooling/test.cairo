@@ -27,6 +27,7 @@ use contracts::{
 use contracts::staking::objects::{
     UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
 };
+use contracts::event_test_utils::assert_final_index_set_event;
 use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_exit_intent_event,};
 use contracts::event_test_utils::assert_delegation_balance_change_event;
 use contracts::event_test_utils::assert_pool_member_reward_address_change_event;
@@ -301,8 +302,17 @@ fn test_set_final_staker_index() {
         contract_address: test_address(), caller_address: STAKING_CONTRACT_ADDRESS()
     );
     assert!(state.final_staker_index.read().is_none());
+    let mut spy = snforge_std::spy_events();
     state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
     assert_eq!(state.final_staker_index.read().unwrap(), STAKER_FINAL_INDEX);
+    // Validate the single FinalIndexSet event.
+    let events = spy.get_events().emitted_by(contract_address: test_address()).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_final_staker_index");
+    assert_final_index_set_event(
+        spied_event: events[0],
+        staker_address: cfg.test_info.staker_address,
+        final_staker_index: STAKER_FINAL_INDEX
+    );
 }
 
 #[test]

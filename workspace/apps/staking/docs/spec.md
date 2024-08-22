@@ -46,6 +46,7 @@
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
     - [Delegation Balance Change](#delegation-balance-change)
     - [Delegation Pool Member Exit intent](#delegation-pool-member-exit-intent)
+    - [Final Index Set](#final-index-set)
 
 </details>
 
@@ -841,3 +842,9 @@ internal function.
 | ----------- | ------- | ----- |
 | pool_member | address | ✅     |
 | exit_at     | time    | ❌     |
+
+### Final Index Set
+| data               | type    | keyed |
+| ------------------ | ------- | ----- |
+| staker_address     | address | ✅    |
+| final_staker_index | u64     | ❌    |
