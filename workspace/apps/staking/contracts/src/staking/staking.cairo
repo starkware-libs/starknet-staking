@@ -250,8 +250,24 @@ pub mod Staking {
             let unstake_time = current_time + EXIT_WAITING_WINDOW;
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, Option::Some(staker_info));
-            self.remove_from_total_stake(amount: staker_info.amount_own + staker_info.amount_pool);
-            self.emit(Events::StakerExitIntent { staker_address, exit_at: unstake_time });
+            let amount = staker_info.amount_own + staker_info.amount_pool;
+            self.remove_from_total_stake(:amount);
+            self
+                .emit(
+                    Events::StakerExitIntent {
+                        staker_address, exit_timestamp: unstake_time, amount
+                    }
+                );
+            self
+                .emit(
+                    Events::StakeBalanceChange {
+                        staker_address,
+                        old_self_stake: staker_info.amount_own,
+                        old_delegated_stake: staker_info.amount_pool,
+                        new_self_stake: Zero::zero(),
+                        new_delegated_stake: Zero::zero()
+                    }
+                );
             unstake_time
         }
 

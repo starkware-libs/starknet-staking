@@ -16,17 +16,23 @@ pub fn panic_with_event_details(expected_emitted_by: @ContractAddress, details: 
 }
 
 pub fn assert_staker_exit_intent_event(
-    spied_event: @(ContractAddress, Event), staker_address: ContractAddress, exit_at: u64,
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    exit_timestamp: u64,
+    amount: u128
 ) {
     let expected_event = @contracts::staking::Staking::Event::StakerExitIntent(
-        StakingEvents::StakerExitIntent { staker_address, exit_at }
+        StakingEvents::StakerExitIntent { staker_address, exit_timestamp, amount }
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
     let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
     if !emitted {
         let details = format!(
-            "StakerExitIntent{{staker_address: {:?}, exit_at: {}}}", staker_address, exit_at
+            "StakerExitIntent{{staker_address: {:?}, exit_timestamp: {}, amount: {}}}",
+            staker_address,
+            exit_timestamp,
+            amount
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
