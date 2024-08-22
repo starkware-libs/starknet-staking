@@ -69,17 +69,23 @@ pub fn assert_stake_balance_change_event(
 }
 
 pub fn assert_pool_member_exit_intent_event(
-    spied_event: @(ContractAddress, Event), pool_member: ContractAddress, exit_at: u64,
+    spied_event: @(ContractAddress, Event),
+    pool_member: ContractAddress,
+    exit_timestamp: u64,
+    amount: u128,
 ) {
     let expected_event = @contracts::pooling::Pooling::Event::PoolMemberExitIntent(
-        PoolEvents::PoolMemberExitIntent { pool_member, exit_at }
+        PoolEvents::PoolMemberExitIntent { pool_member, exit_timestamp, amount }
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
     let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
     if !emitted {
         let details = format!(
-            "PoolMemberExitIntent{{pool_member: {:?}, exit_at: {}}}", pool_member, exit_at
+            "PoolMemberExitIntent{{pool_member: {:?}, exit_timestamp: {}, amount: {}}}",
+            pool_member,
+            exit_timestamp,
+            amount
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
