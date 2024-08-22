@@ -461,6 +461,8 @@ pub mod Staking {
                 min_stake: self.min_stake.read(),
                 token_address: self.token_address.read(),
                 global_index: self.global_index.read(),
+                pool_contract_class_hash: self.pool_contract_class_hash.read(),
+                reward_supplier: self.reward_supplier.read(),
             }
         }
 

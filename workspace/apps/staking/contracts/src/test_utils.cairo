@@ -1,5 +1,6 @@
 use contracts::{staking::Staking, minting_curve::MintingCurve, reward_supplier::RewardSupplier};
 use contracts::constants::BASE_VALUE;
+use core::num::traits::zero::Zero;
 use core::traits::Into;
 use contracts::staking::interface::{
     IStaking, StakerInfo, StakingContractInfo, IStakingDispatcher, IStakingDispatcherTrait
@@ -141,8 +142,8 @@ pub(crate) fn initialize_staking_state_from_cfg(
     initialize_staking_state(
         :token_address,
         min_stake: cfg.staking_contract_info.min_stake,
-        pool_contract_class_hash: cfg.test_info.pool_contract_class_hash,
-        reward_supplier: cfg.test_info.reward_supplier,
+        pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
+        reward_supplier: cfg.staking_contract_info.reward_supplier,
         pool_contract_admin: cfg.test_info.pool_contract_admin,
     )
 }
@@ -241,8 +242,8 @@ pub(crate) fn deploy_staking_contract(
     let mut calldata = ArrayTrait::new();
     token_address.serialize(ref calldata);
     cfg.staking_contract_info.min_stake.serialize(ref calldata);
-    cfg.test_info.pool_contract_class_hash.serialize(ref calldata);
-    cfg.test_info.reward_supplier.serialize(ref calldata);
+    cfg.staking_contract_info.pool_contract_class_hash.serialize(ref calldata);
+    cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
     cfg.test_info.pool_contract_admin.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
@@ -463,7 +464,7 @@ pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     );
     cfg.reward_supplier.minting_curve_contract = minting_curve;
     let reward_supplier = deploy_reward_supplier_contract(:token_address, :cfg);
-    cfg.test_info.reward_supplier = reward_supplier;
+    cfg.staking_contract_info.reward_supplier = reward_supplier;
     // Deploy the staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
@@ -508,9 +509,7 @@ pub(crate) struct TestInfo {
     pub staker_initial_balance: u128,
     pub pool_member_initial_balance: u128,
     pub pooling_enabled: bool,
-    pub pool_contract_class_hash: ClassHash,
     pub staking_contract: ContractAddress,
-    pub reward_supplier: ContractAddress,
     pub pool_contract_admin: ContractAddress,
 }
 
@@ -554,7 +553,11 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             unpool_time: Option::None,
         };
         let staking_contract_info = StakingContractInfo {
-            min_stake: MIN_STAKE, token_address: TOKEN_ADDRESS(), global_index: BASE_VALUE,
+            min_stake: MIN_STAKE,
+            token_address: TOKEN_ADDRESS(),
+            global_index: BASE_VALUE,
+            pool_contract_class_hash: declare_pool_contract(),
+            reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
         };
         let test_info = TestInfo {
             staker_address: STAKER_ADDRESS(),
@@ -564,9 +567,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pooling_enabled: false,
-            pool_contract_class_hash: declare_pool_contract(),
             staking_contract: STAKING_CONTRACT_ADDRESS(),
-            reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
         };
         let reward_supplier = RewardSupplierInfo {
