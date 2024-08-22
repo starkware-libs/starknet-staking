@@ -253,7 +253,7 @@ fn test_claim_delegation_pool_rewards() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let reward_supplier = cfg.test_info.reward_supplier;
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
     // Stake with pooling enabled.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     // Update index in staking contract.
@@ -291,9 +291,11 @@ fn test_contract_parameters() {
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
     stake_for_testing(ref state, :cfg, :token_address);
     let expected_staking_contract_info = StakingContractInfo {
-        min_stake: cfg.staking_contract_info.min_stake,
-        token_address: token_address,
-        global_index: cfg.staker_info.index,
+        min_stake: state.min_stake.read(),
+        token_address: state.token_address.read(),
+        global_index: state.global_index.read(),
+        pool_contract_class_hash: state.pool_contract_class_hash.read(),
+        reward_supplier: state.reward_supplier.read(),
     };
     assert_eq!(state.contract_parameters(), expected_staking_contract_info);
 }
@@ -523,7 +525,7 @@ fn test_claim_rewards() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let reward_supplier = cfg.test_info.reward_supplier;
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
 
     // Stake.
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -829,7 +831,7 @@ fn test_switch_staking_delegation_pool() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let reward_supplier = cfg.test_info.reward_supplier;
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
 
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     // Initialize from_staker.

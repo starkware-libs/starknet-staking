@@ -407,7 +407,7 @@ fn test_claim_rewards() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let reward_supplier = cfg.test_info.reward_supplier;
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
 
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
@@ -509,7 +509,7 @@ fn test_exit_delegation_pool_action() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let reward_supplier = cfg.test_info.reward_supplier;
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
     // Stake and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
