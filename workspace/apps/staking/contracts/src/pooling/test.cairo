@@ -498,7 +498,8 @@ fn test_exit_delegation_pool_intent() {
     assert_pool_member_exit_intent_event(
         spied_event: events[0],
         pool_member: cfg.test_info.pool_member_address,
-        exit_at: expected_time
+        exit_timestamp: expected_time,
+        amount: cfg.pool_member_info.amount
     );
 }
 

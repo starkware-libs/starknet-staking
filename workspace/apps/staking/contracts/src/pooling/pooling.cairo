@@ -175,13 +175,16 @@ pub mod Pooling {
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             assert_with_err(pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS);
             self.update_index_and_calculate_rewards(ref :pool_member_info);
-            let unpool_time = self
-                .undelegate_from_staking_contract_intent(
-                    :pool_member, amount: pool_member_info.amount
-                );
+            let amount = pool_member_info.amount;
+            let unpool_time = self.undelegate_from_staking_contract_intent(:pool_member, :amount);
             pool_member_info.unpool_time = Option::Some(unpool_time);
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
-            self.emit(Events::PoolMemberExitIntent { pool_member, exit_at: unpool_time });
+            self
+                .emit(
+                    Events::PoolMemberExitIntent {
+                        pool_member, exit_timestamp: unpool_time, amount
+                    }
+                );
         }
 
         fn exit_delegation_pool_action(
