@@ -28,7 +28,7 @@ use contracts::staking::objects::{
     UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
 };
 use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_exit_intent_event,};
-use contracts::event_test_utils::assert_pool_balance_changed_event;
+use contracts::event_test_utils::assert_delegation_balance_change_event;
 use contracts::event_test_utils::assert_pool_member_reward_address_change_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_block_timestamp, Store};
@@ -720,13 +720,23 @@ fn test_enter_delegation_pool_from_staking_contract() {
     };
     assert_eq!(pool_member_info, expected_pool_member_info);
 
-    // Validate the BalanceChanged events.
+    // Validate the DelegationBalanceChanged events.
     let events = spy.get_events().emitted_by(pooling_contract).events;
     assert_number_of_events(
         actual: events.len(), expected: 2, message: "enter_delegation_pool_from_staking_contract"
     );
-    assert_pool_balance_changed_event(spied_event: events[0], :pool_member, :amount);
-    assert_pool_balance_changed_event(spied_event: events[1], :pool_member, amount: updated_amount);
+    assert_delegation_balance_change_event(
+        spied_event: events[0],
+        :pool_member,
+        old_delegated_stake: Zero::zero(),
+        new_delegated_stake: amount
+    );
+    assert_delegation_balance_change_event(
+        spied_event: events[1],
+        :pool_member,
+        old_delegated_stake: amount,
+        new_delegated_stake: updated_amount
+    );
 }
 
 #[test]
