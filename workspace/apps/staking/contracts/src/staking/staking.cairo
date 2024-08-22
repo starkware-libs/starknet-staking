@@ -341,6 +341,7 @@ pub mod Staking {
             );
             assert_with_err(staker_info.amount_pool >= amount, Error::INSUFFICIENT_POOL_BALANCE);
             self.calculate_rewards(ref :staker_info);
+            let old_delegated_stake = staker_info.amount_pool;
             staker_info.amount_pool -= amount;
             if (staker_info.unstake_time.is_none()) {
                 // Remove from total stake only if the staker is not in the unstake process.
@@ -351,6 +352,16 @@ pub mod Staking {
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let pool_exit_entry = UndelegateIntentValue { unpool_time, amount };
             self.pool_exit_intents.write(undelegate_intent_key, pool_exit_entry);
+            self
+                .emit(
+                    Events::StakeBalanceChange {
+                        staker_address,
+                        old_self_stake: staker_info.amount_own,
+                        old_delegated_stake,
+                        new_self_stake: staker_info.amount_own,
+                        new_delegated_stake: staker_info.amount_pool
+                    }
+                );
             unpool_time
         }
 
