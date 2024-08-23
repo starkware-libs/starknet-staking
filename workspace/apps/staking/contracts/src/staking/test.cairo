@@ -50,6 +50,7 @@ use snforge_std::cheatcodes::events::{
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::pooling::Pooling::SwitchPoolData;
 use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispatcherTrait};
+use contracts::pooling::interface::PoolingContractInfo;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 
 
@@ -151,7 +152,7 @@ fn test_calculate_rewards() {
     let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
     let pool_rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
     let commission_amount = compute_commission_amount(
-        rewards: pool_rewards, commission: cfg.staker_info.commission
+        rewards: pool_rewards, commission: staker_info.commission
     );
     let unclaimed_rewards_own: u128 = staker_rewards + commission_amount;
     let unclaimed_rewards_pool: u128 = pool_rewards - commission_amount;
@@ -1059,4 +1060,95 @@ fn test_change_operational_address_staker_doesnt_exist() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
     staking_dispatcher.change_operational_address(:operational_address);
+}
+
+#[test]
+fn test_update_commission() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let interest = cfg.staking_contract_info.global_index - cfg.staker_info.index;
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info_before_update = staking_dispatcher.state_of(:staker_address);
+    assert_eq!(staker_info_before_update.commission, cfg.staker_info.commission);
+
+    // Update commission.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let commission = cfg.staker_info.commission - 1;
+    assert!(staking_dispatcher.update_commission(:commission));
+
+    // Assert rewards is updated.
+    let staker_info = staking_dispatcher.state_of(:staker_address);
+    let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
+    let pool_rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
+    let commission_amount = compute_commission_amount(
+        rewards: pool_rewards, commission: staker_info.commission
+    );
+    let unclaimed_rewards_own = staker_rewards + commission_amount;
+    let unclaimed_rewards_pool = pool_rewards - commission_amount;
+
+    // Assert rewards and commission are updated in the staker info.
+    let expected_staker_info = StakerInfo {
+        unclaimed_rewards_own, unclaimed_rewards_pool, commission, ..staker_info
+    };
+    assert_eq!(staker_info, expected_staker_info);
+
+    // Assert commission is updated in the pooling contract.
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    let pooling_contracts_parameters = pooling_dispatcher.contract_parameters();
+    let expected_pooling_contracts_parameters = PoolingContractInfo {
+        commission, ..pooling_contracts_parameters
+    };
+    assert_eq!(pooling_contracts_parameters, expected_pooling_contracts_parameters);
+}
+
+#[test]
+#[should_panic(expected: ("Staker does not exist.",))]
+fn test_update_commission_caller_not_staker() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
+    );
+    staking_dispatcher.update_commission(commission: cfg.staker_info.commission - 1);
+}
+
+#[test]
+#[should_panic(expected: ("Commission cannot be increased.",))]
+fn test_update_commission_with_higher_commission() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
+    staking_dispatcher.update_commission(commission: cfg.staker_info.commission + 1);
+}
+
+#[test]
+#[should_panic(expected: ("Staker does not have pool contract.",))]
+fn test_update_commission_with_no_pool() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher.update_commission(commission: cfg.staker_info.commission);
 }

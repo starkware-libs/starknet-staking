@@ -74,4 +74,5 @@ pub trait IPooling<TContractState> {
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
     fn state_of(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
     fn contract_parameters(self: @TContractState) -> PoolingContractInfo;
+    fn update_commission(ref self: TContractState, commission: u16) -> bool;
 }

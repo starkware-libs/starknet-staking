@@ -527,6 +527,22 @@ pub mod Staking {
                 );
             true
         }
+
+        fn update_commission(ref self: ContractState, commission: u16) -> bool {
+            let staker_address = get_caller_address();
+            let mut staker_info = self.get_staker_info(:staker_address);
+            let pooling_contract = staker_info
+                .pooling_contract
+                .expect_with_err(Error::MISSING_POOL_CONTRACT);
+            assert_with_err(
+                commission <= staker_info.commission, Error::CANNOT_INCREASE_COMMISSION
+            );
+            self.calculate_rewards(ref :staker_info);
+            staker_info.commission = commission;
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+            return pooling_dispatcher.update_commission(:commission);
+        }
     }
 
     #[generate_trait]

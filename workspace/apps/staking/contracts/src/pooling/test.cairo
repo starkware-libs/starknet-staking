@@ -767,3 +767,60 @@ fn test_contract_parameters() {
     };
     assert_eq!(pooling_dispatcher.contract_parameters(), expected_pooling_contract_info);
 }
+
+#[test]
+fn test_update_commission() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+
+    let parameters_before_update = pooling_dispatcher.contract_parameters();
+    let ecpected_parameters_before_update = PoolingContractInfo {
+        commission: cfg.staker_info.commission, ..parameters_before_update
+    };
+    assert_eq!(parameters_before_update, ecpected_parameters_before_update);
+
+    let commission = cfg.staker_info.commission - 1;
+    cheat_caller_address_once(contract_address: pooling_contract, caller_address: staking_contract);
+    assert!(pooling_dispatcher.update_commission(:commission));
+
+    let parameters_after_update = pooling_dispatcher.contract_parameters();
+    let expected_parameters_after_update = PoolingContractInfo {
+        commission, ..parameters_before_update
+    };
+    assert_eq!(parameters_after_update, expected_parameters_after_update);
+}
+
+#[test]
+#[should_panic(expected: ("Caller is not staking contract.",))]
+fn test_update_commission_caller_not_staking_contract() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    cheat_caller_address_once(
+        contract_address: pooling_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS()
+    );
+    pooling_dispatcher.update_commission(commission: cfg.staker_info.commission);
+}
+
+#[test]
+#[should_panic(expected: ("Commission cannot be increased.",))]
+fn test_update_commission_with_higher_commission() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    cheat_caller_address_once(contract_address: pooling_contract, caller_address: staking_contract);
+    pooling_dispatcher.update_commission(commission: cfg.staker_info.commission + 1);
+}

@@ -136,4 +136,5 @@ pub trait IStaking<TContractState> {
     fn change_operational_address(
         ref self: TContractState, operational_address: ContractAddress
     ) -> bool;
+    fn update_commission(ref self: TContractState, commission: u16) -> bool;
 }
