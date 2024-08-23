@@ -17,6 +17,7 @@ pub enum Error {
     INTENT_WINDOW_NOT_FINISHED,
     AMOUNT_TOO_HIGH,
     AMOUNT_IS_ZERO,
+    CANNOT_INCREASE_COMMISSION,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     COMMISSION_OUT_OF_RANGE,
@@ -112,6 +113,7 @@ pub fn panic_by_err(error: Error) -> core::never {
             "Overflow during computation global index diff."
         ),
         Error::UNEXPECTED_BALANCE => panic!("Unexpected balance."),
+        Error::CANNOT_INCREASE_COMMISSION => panic!("Commission cannot be increased."),
     }
 }
 

@@ -27,6 +27,7 @@
     - [total\_staked\_tokens](#total_staked_tokens)
     - [calculate\_rewards](#calculate_rewards)
     - [change\_operational\_address](#change_operational_address)
+    - [update\_commission](#update_commission)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
@@ -42,6 +43,7 @@
     - [enter\_from\_staking\_contract](#enter_from_staking_contract)
     - [staker\_left](#staker_left)
     - [calculate\_rewards](#calculate_rewards-1)
+    - [update\_commission](#update_commission-1)
   - [Events](#events-1)
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
     - [Delegation Balance Change](#delegation-balance-change)
@@ -585,6 +587,25 @@ Only staking address.
 #### logic <!-- omit from toc -->
 1. change registered `operational_address` for the staker.
 
+### update_commission
+#### description <!-- omit from toc -->
+Update commission. 
+#### parameters <!-- omit from toc -->
+| name           | type |
+| -----          | ---- |
+| commission     | u16  |
+#### return <!-- omit from toc -->
+success: bool
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+1. only staker can call.
+2. staker have pooling contract.
+3. given commission is lower or equal to staker current commission
+#### access control <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. Update staker's commission to be the given commission.
+
 ## Events
 ### Stake Balance Changed
 | data                | type            | keyed  |
@@ -821,6 +842,24 @@ internal function.
 1. Calculate rewards for pool member (caller).
 2. Update `unclaimed_rewards`.
 3. Update index.
+
+### update_commission
+#### description <!-- omit from toc -->
+Update commission. 
+#### parameters <!-- omit from toc -->
+| name           | type |
+| -----          | ---- |
+| commission     | u16  |
+#### return <!-- omit from toc -->
+success: bool
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+1. only staking contract can call.
+2. given commission is lower or equal to pool contract's commission.
+#### access control <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. Update `commission` to be the given commission.
 
 ## Events
 ### New Staking Delegation Pool Member

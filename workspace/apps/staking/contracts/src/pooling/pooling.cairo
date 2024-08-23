@@ -367,6 +367,18 @@ pub mod Pooling {
                 commission: self.commission.read(),
             }
         }
+
+        fn update_commission(ref self: ContractState, commission: u16) -> bool {
+            assert_with_err(
+                get_caller_address() == self.staking_contract.read(),
+                Error::CALLER_IS_NOT_STAKING_CONTRACT
+            );
+            assert_with_err(
+                commission <= self.commission.read(), Error::CANNOT_INCREASE_COMMISSION
+            );
+            self.commission.write(commission);
+            true
+        }
     }
 
     #[generate_trait]
