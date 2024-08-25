@@ -120,7 +120,7 @@ fn test_stake() {
     assert_eq!(
         erc20_dispatcher.balance_of(staking_contract_address), cfg.staker_info.amount_own.into()
     );
-
+    assert_eq!(state.get_total_stake(), cfg.staker_info.amount_own);
     // Validate the single StakeBalanceChange event.
     let events = spy.get_events().emitted_by(test_address()).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "stake");
@@ -343,7 +343,7 @@ fn test_increase_stake_from_staker_address() {
 
     let updated_staker_info = state.get_staker_info(:staker_address);
     assert_eq!(expected_staker_info, updated_staker_info);
-
+    assert_eq!(state.get_total_stake(), expected_staker_info.amount_own);
     // Validate the single StakeBalanceChange event.
     let events = spy.get_events().emitted_by(test_address()).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
@@ -431,9 +431,22 @@ fn test_increase_stake_from_reward_address() {
     let increase_amount = cfg.staker_info.amount_own;
     let mut expected_staker_info = staker_info_before;
     expected_staker_info.amount_own += increase_amount;
+    let mut spy = snforge_std::spy_events();
     state.increase_stake(:staker_address, amount: increase_amount,);
     let updated_staker_info = state.get_staker_info(:staker_address);
     assert_eq!(expected_staker_info, updated_staker_info);
+    assert_eq!(state.get_total_stake(), expected_staker_info.amount_own);
+    // Validate the single StakeBalanceChange event.
+    let events = spy.get_events().emitted_by(test_address()).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
+    assert_stake_balance_change_event(
+        spied_event: events[0],
+        :staker_address,
+        old_self_stake: staker_info_before.amount_own,
+        old_delegated_stake: Zero::zero(),
+        new_self_stake: expected_staker_info.amount_own,
+        new_delegated_stake: Zero::zero()
+    );
 }
 
 #[test]
@@ -623,6 +636,7 @@ fn test_unstake_intent() {
     let expected_time = get_block_timestamp() + EXIT_WAITING_WINDOW;
     assert_eq!((staker_info.unstake_time).unwrap(), unstake_time);
     assert_eq!(unstake_time, expected_time);
+    assert_eq!(state.get_total_stake(), Zero::zero());
     // Validate StakerExitIntent and StakeBalanceChange events.
     let events = spy.get_events().emitted_by(test_address()).events;
     assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_intent");

@@ -171,7 +171,7 @@ pub mod Staking {
                     )
                 );
             self.operational_address_to_staker_address.write(operational_address, staker_address);
-            self.total_stake.write(self.get_total_stake() + amount);
+            self.add_to_total_stake(:amount);
             self
                 .emit(
                     Events::StakeBalanceChange {
@@ -208,7 +208,7 @@ pub mod Staking {
             self.calculate_rewards(ref :staker_info);
             staker_info.amount_own += amount;
             self.staker_info.write(staker_address, Option::Some(staker_info));
-            self.total_stake.write(self.get_total_stake() + amount);
+            self.add_to_total_stake(:amount);
             let mut old_delegated_stake = 0;
             let mut new_delegated_stake = 0;
             if let Option::Some(pool_info) = staker_info.pool_info {
@@ -308,9 +308,6 @@ pub mod Staking {
             self.remove_staker(:staker_address, :staker_info);
             staker_amount
         }
-        // TODO: It is not clear from spec, but amount in the event may also include pooling.
-        //       If so, should this be 0 or pooling?
-        // self.emit(Events::BalanceChanged { staker_address, 0 });
 
         fn add_to_delegation_pool(
             ref self: ContractState, pooled_staker: ContractAddress, amount: u128
@@ -330,10 +327,21 @@ pub mod Staking {
                     sender: pool_contract, recipient: get_contract_address(), amount: amount.into()
                 );
             let mut pool_info = staker_info.get_pool_info_unchecked();
+            let old_delegated_stake = pool_info.amount;
             pool_info.amount += amount;
             staker_info.pool_info = Option::Some(pool_info);
             self.staker_info.write(pooled_staker, Option::Some(staker_info));
             self.add_to_total_stake(:amount);
+            self
+                .emit(
+                    Events::StakeBalanceChange {
+                        staker_address: pooled_staker,
+                        old_self_stake: staker_info.amount_own,
+                        old_delegated_stake,
+                        new_self_stake: staker_info.amount_own,
+                        new_delegated_stake: pool_info.amount
+                    }
+                );
             (pool_info.amount, staker_info.index)
         }
 
