@@ -6,7 +6,7 @@ pub mod Staking {
     use contracts::{
         constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES},
         errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
-        staking::{IStaking, StakerInfo, StakerInfoTrait, StakingContractInfo},
+        staking::{IStaking, StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo},
         utils::{
             u128_mul_wide_and_div_unsafe, deploy_delegation_pool_contract,
             compute_commission_amount, compute_rewards, ceil_of_division, day_of,
@@ -141,14 +141,19 @@ pub mod Staking {
                 .transfer_from(
                     sender: staker_address, recipient: staking_contract, amount: amount.into()
                 );
-            let pooling_contract = self
-                .deploy_delegation_pool_contract_if_needed(
-                    :staker_address,
-                    :staking_contract,
-                    :token_address,
-                    :pooling_enabled,
-                    :commission
-                );
+            let pool_info = if pooling_enabled {
+                let pooling_contract = self
+                    .deploy_delegation_pool_contract(
+                        :staker_address, :staking_contract, :token_address, :commission
+                    );
+                Option::Some(
+                    StakerPoolInfo {
+                        pooling_contract, amount: 0, unclaimed_rewards: 0, commission,
+                    }
+                )
+            } else {
+                Option::None
+            };
             self
                 .staker_info
                 .write(
@@ -157,14 +162,11 @@ pub mod Staking {
                         StakerInfo {
                             reward_address,
                             operational_address,
-                            pooling_contract,
                             unstake_time: Option::None,
                             amount_own: amount,
-                            amount_pool: 0,
                             index: self.global_index.read(),
                             unclaimed_rewards_own: 0,
-                            unclaimed_rewards_pool: 0,
-                            commission,
+                            pool_info,
                         }
                     )
                 );
@@ -207,14 +209,20 @@ pub mod Staking {
             staker_info.amount_own += amount;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             self.total_stake.write(self.get_total_stake() + amount);
+            let mut old_delegated_stake = 0;
+            let mut new_delegated_stake = 0;
+            if let Option::Some(pool_info) = staker_info.pool_info {
+                old_delegated_stake = pool_info.amount;
+                new_delegated_stake = pool_info.amount;
+            }
             self
                 .emit(
                     Events::StakeBalanceChange {
                         staker_address,
                         old_self_stake,
-                        old_delegated_stake: staker_info.amount_pool,
+                        old_delegated_stake,
                         new_self_stake: staker_info.amount_own,
-                        new_delegated_stake: staker_info.amount_pool
+                        new_delegated_stake
                     }
                 );
             staker_info.amount_own
@@ -250,7 +258,11 @@ pub mod Staking {
             let unstake_time = current_time + EXIT_WAITING_WINDOW;
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, Option::Some(staker_info));
-            let amount = staker_info.amount_own + staker_info.amount_pool;
+            let mut amount_pool = 0;
+            if let Option::Some(pool_info) = staker_info.pool_info {
+                amount_pool = pool_info.amount;
+            }
+            let amount = staker_info.amount_own + amount_pool;
             self.remove_from_total_stake(:amount);
             self
                 .emit(
@@ -263,7 +275,7 @@ pub mod Staking {
                     Events::StakeBalanceChange {
                         staker_address,
                         old_self_stake: staker_info.amount_own,
-                        old_delegated_stake: staker_info.amount_pool,
+                        old_delegated_stake: amount_pool,
                         new_self_stake: Zero::zero(),
                         new_delegated_stake: Zero::zero()
                     }
@@ -306,9 +318,7 @@ pub mod Staking {
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(staker_address: pooled_staker);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            let pool_contract = staker_info
-                .pooling_contract
-                .expect_with_err(Error::POOL_ADDRESS_DOES_NOT_EXIST);
+            let pool_contract = staker_info.get_pool_info_unchecked().pooling_contract;
             assert_with_err(
                 pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
@@ -319,10 +329,12 @@ pub mod Staking {
                 .transfer_from(
                     sender: pool_contract, recipient: get_contract_address(), amount: amount.into()
                 );
-            staker_info.amount_pool += amount;
+            let mut pool_info = staker_info.get_pool_info_unchecked();
+            pool_info.amount += amount;
+            staker_info.pool_info = Option::Some(pool_info);
             self.staker_info.write(pooled_staker, Option::Some(staker_info));
             self.add_to_total_stake(:amount);
-            (staker_info.amount_pool, staker_info.index)
+            (pool_info.amount, staker_info.index)
         }
 
         fn remove_from_delegation_pool_intent(
@@ -333,23 +345,26 @@ pub mod Staking {
         ) -> u64 {
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
-            let pool_contract = staker_info
-                .pooling_contract
-                .expect_with_err(Error::MISSING_POOL_CONTRACT);
+            let pool_info = staker_info.get_pool_info_unchecked();
             assert_with_err(
-                pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
+                pool_info.pooling_contract == get_caller_address(),
+                Error::CALLER_IS_NOT_POOL_CONTRACT
             );
-            assert_with_err(staker_info.amount_pool >= amount, Error::INSUFFICIENT_POOL_BALANCE);
+            assert_with_err(pool_info.amount >= amount, Error::INSUFFICIENT_POOL_BALANCE);
             self.calculate_rewards(ref :staker_info);
-            let old_delegated_stake = staker_info.amount_pool;
-            staker_info.amount_pool -= amount;
+            let mut updated_pool_info = staker_info.get_pool_info_unchecked();
+            let old_delegated_stake = updated_pool_info.amount;
+            updated_pool_info.amount -= amount;
+            staker_info.pool_info = Option::Some(updated_pool_info);
             if (staker_info.unstake_time.is_none()) {
                 // Remove from total stake only if the staker is not in the unstake process.
                 self.remove_from_total_stake(:amount);
             }
             self.staker_info.write(staker_address, Option::Some(staker_info));
             let unpool_time = staker_info.compute_unpool_time();
-            let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
+            let undelegate_intent_key = UndelegateIntentKey {
+                pool_contract: pool_info.pooling_contract, identifier
+            };
             let pool_exit_entry = UndelegateIntentValue { unpool_time, amount };
             self.pool_exit_intents.write(undelegate_intent_key, pool_exit_entry);
             self
@@ -359,7 +374,7 @@ pub mod Staking {
                         old_self_stake: staker_info.amount_own,
                         old_delegated_stake,
                         new_self_stake: staker_info.amount_own,
-                        new_delegated_stake: staker_info.amount_pool
+                        new_delegated_stake: pool_info.amount
                     }
                 );
             unpool_time
@@ -407,13 +422,12 @@ pub mod Staking {
             assert_with_err(undelegate_intent_value.amount >= amount, Error::AMOUNT_TOO_HIGH);
             let mut to_staker_info = self.get_staker_info(staker_address: to_staker);
             assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            let to_staker_pool_contract = to_staker_info
-                .pooling_contract
-                .expect_with_err(Error::MISSING_POOL_CONTRACT);
+            let mut to_staker_pool_info = to_staker_info.get_pool_info_unchecked();
+            let to_staker_pool_contract = to_staker_pool_info.pooling_contract;
             assert_with_err(to_pool == to_staker_pool_contract, Error::MISSMATCHED_DELEGATION_POOL);
 
             self.calculate_rewards(ref staker_info: to_staker_info);
-            to_staker_info.amount_pool += amount;
+            to_staker_pool_info.amount += amount;
             self.staker_info.write(to_staker, Option::Some(to_staker_info));
             self.add_to_total_stake(:amount);
 
@@ -471,23 +485,23 @@ pub mod Staking {
         ) -> u64 {
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
-            let pool_address = staker_info
-                .pooling_contract
-                .expect_with_err(Error::POOL_ADDRESS_DOES_NOT_EXIST);
+            let pool_address = staker_info.get_pool_info_unchecked().pooling_contract;
             assert_with_err(
                 pool_address == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
             self.calculate_rewards(ref :staker_info);
+            let mut updated_pool_info = staker_info.get_pool_info_unchecked();
             // Calculate rewards updated the index in staker_info.
             let updated_index = staker_info.index;
             let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
             self
                 .send_rewards(
                     reward_address: pool_address,
-                    amount: staker_info.unclaimed_rewards_pool,
+                    amount: updated_pool_info.unclaimed_rewards,
                     :erc20_dispatcher
                 );
-            staker_info.unclaimed_rewards_pool = 0;
+            updated_pool_info.unclaimed_rewards = 0;
+            staker_info.pool_info = Option::Some(updated_pool_info);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             updated_index
         }
@@ -531,14 +545,13 @@ pub mod Staking {
         fn update_commission(ref self: ContractState, commission: u16) -> bool {
             let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
-            let pooling_contract = staker_info
-                .pooling_contract
-                .expect_with_err(Error::MISSING_POOL_CONTRACT);
-            assert_with_err(
-                commission <= staker_info.commission, Error::CANNOT_INCREASE_COMMISSION
-            );
+            let pool_info = staker_info.get_pool_info_unchecked();
+            let pooling_contract = pool_info.pooling_contract;
+            assert_with_err(commission <= pool_info.commission, Error::CANNOT_INCREASE_COMMISSION);
             self.calculate_rewards(ref :staker_info);
-            staker_info.commission = commission;
+            let mut pool_info = staker_info.get_pool_info_unchecked();
+            pool_info.commission = commission;
+            staker_info.pool_info = Option::Some(pool_info);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
             return pooling_dispatcher.update_commission(:commission);
@@ -577,31 +590,38 @@ pub mod Staking {
         fn calculate_and_update_pool_rewards(
             ref self: ContractState, interest: u64, ref staker_info: StakerInfo
         ) {
-            if (staker_info.amount_pool > 0) {
-                let mut rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
-                let commission_amount = compute_commission_amount(
-                    :rewards, commission: staker_info.commission
-                );
-                staker_info.unclaimed_rewards_own += commission_amount;
-                rewards -= commission_amount;
-                staker_info.unclaimed_rewards_pool += rewards;
+            if let Option::Some(mut pool_info) = staker_info.pool_info {
+                if (pool_info.amount > 0) {
+                    let mut rewards = compute_rewards(amount: pool_info.amount, :interest);
+                    let commission_amount = compute_commission_amount(
+                        :rewards, commission: pool_info.commission
+                    );
+                    staker_info.unclaimed_rewards_own += commission_amount;
+                    rewards -= commission_amount;
+                    pool_info.unclaimed_rewards += rewards;
+                    staker_info.pool_info = Option::Some(pool_info);
+                }
             }
         }
 
         fn transfer_to_pool_when_unstake(ref self: ContractState, staker_info: StakerInfo) {
-            if let Option::Some(pooling_contract) = staker_info.pooling_contract {
+            if let Option::Some(pool_info) = staker_info.pool_info {
                 let erc20_dispatcher = IERC20Dispatcher {
                     contract_address: self.token_address.read()
                 };
                 self
                     .send_rewards(
-                        reward_address: pooling_contract,
-                        amount: staker_info.unclaimed_rewards_pool,
+                        reward_address: pool_info.pooling_contract,
+                        amount: pool_info.unclaimed_rewards,
                         :erc20_dispatcher
                     );
                 erc20_dispatcher
-                    .transfer(recipient: pooling_contract, amount: staker_info.amount_pool.into());
-                let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+                    .transfer(
+                        recipient: pool_info.pooling_contract, amount: pool_info.amount.into()
+                    );
+                let pooling_dispatcher = IPoolingDispatcher {
+                    contract_address: pool_info.pooling_contract
+                };
                 pooling_dispatcher.set_final_staker_index(final_staker_index: staker_info.index);
             }
         }
@@ -630,7 +650,7 @@ pub mod Staking {
         ///
         /// Fields that are changed in staker_info:
         /// - unclaimed_rewards_own
-        /// - unclaimed_rewards_pool
+        /// - unclaimed_rewards
         /// - index
         fn calculate_rewards(ref self: ContractState, ref staker_info: StakerInfo) -> bool {
             if (staker_info.unstake_time.is_some()) {
@@ -646,17 +666,13 @@ pub mod Staking {
             true
         }
 
-        fn deploy_delegation_pool_contract_if_needed(
+        fn deploy_delegation_pool_contract(
             ref self: ContractState,
             staker_address: ContractAddress,
             staking_contract: ContractAddress,
             token_address: ContractAddress,
-            pooling_enabled: bool,
             commission: u16,
-        ) -> Option<ContractAddress> {
-            if !pooling_enabled {
-                return Option::None;
-            }
+        ) -> ContractAddress {
             let class_hash = self.pool_contract_class_hash.read();
             let contract_address_salt: felt252 = get_block_timestamp().into();
             let admin = self.pool_contract_admin.read();
@@ -670,7 +686,7 @@ pub mod Staking {
                 :admin
             );
             self.emit(Events::NewDelegationPool { staker_address, pool_contract, commission });
-            Option::Some(pool_contract)
+            pool_contract
         }
 
         fn add_to_total_stake(ref self: ContractState, amount: u128) {

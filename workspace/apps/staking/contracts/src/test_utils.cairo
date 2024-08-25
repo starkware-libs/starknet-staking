@@ -3,7 +3,8 @@ use contracts::constants::BASE_VALUE;
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use contracts::staking::interface::{
-    IStaking, StakerInfo, StakingContractInfo, IStakingDispatcher, IStakingDispatcherTrait
+    IStaking, StakerInfo, StakerPoolInfo, StakingContractInfo, IStakingDispatcher,
+    IStakingDispatcherTrait, StakerInfoTrait
 };
 use contracts::pooling::{Pooling, Pooling::SwitchPoolData};
 use contracts::pooling::interface::{
@@ -337,7 +338,7 @@ pub(crate) fn stake_for_testing(
             cfg.staker_info.operational_address,
             cfg.staker_info.amount_own,
             cfg.test_info.pooling_enabled,
-            cfg.staker_info.commission
+            cfg.staker_info.get_pool_info_unchecked().commission
         );
 }
 
@@ -355,7 +356,7 @@ pub(crate) fn stake_for_testing_using_dispatcher(
             cfg.staker_info.operational_address,
             cfg.staker_info.amount_own,
             cfg.test_info.pooling_enabled,
-            cfg.staker_info.commission
+            cfg.staker_info.get_pool_info_unchecked().commission
         );
 }
 
@@ -369,8 +370,8 @@ pub(crate) fn stake_with_pooling_enabled(
 
     staking_dispatcher
         .state_of(cfg.test_info.staker_address)
+        .get_pool_info_unchecked()
         .pooling_contract
-        .expect('Pool contract is none')
 }
 
 pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
@@ -536,14 +537,18 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         let staker_info = StakerInfo {
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
-            pooling_contract: Option::None,
             unstake_time: Option::None,
             amount_own: STAKE_AMOUNT,
-            amount_pool: 0,
             index: BASE_VALUE,
             unclaimed_rewards_own: 0,
-            unclaimed_rewards_pool: 0,
-            commission: COMMISSION,
+            pool_info: Option::Some(
+                StakerPoolInfo {
+                    pooling_contract: POOLING_CONTRACT_ADDRESS(),
+                    amount: 0,
+                    unclaimed_rewards: 0,
+                    commission: COMMISSION,
+                }
+            )
         };
         let pool_member_info = PoolMemberInfo {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),

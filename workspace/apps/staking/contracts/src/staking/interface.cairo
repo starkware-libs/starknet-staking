@@ -1,6 +1,7 @@
 use starknet::{ContractAddress, ClassHash, get_block_timestamp};
 use contracts::constants::EXIT_WAITING_WINDOW;
 use core::cmp::max;
+use contracts::errors::{panic_by_err, Error, OptionAuxTrait};
 
 pub mod Events {
     use starknet::ContractAddress;
@@ -56,19 +57,24 @@ pub mod Events {
     }
 }
 
+#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+pub struct StakerPoolInfo {
+    pub pooling_contract: ContractAddress,
+    pub amount: u128,
+    pub unclaimed_rewards: u128,
+    pub commission: u16,
+}
+
 // TODO create a different struct for not exposing internal implemenation
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerInfo {
     pub reward_address: ContractAddress,
     pub operational_address: ContractAddress,
-    pub pooling_contract: Option<ContractAddress>,
     pub unstake_time: Option<u64>,
     pub amount_own: u128,
-    pub amount_pool: u128,
     pub index: u64,
     pub unclaimed_rewards_own: u128,
-    pub unclaimed_rewards_pool: u128,
-    pub commission: u16,
+    pub pool_info: Option<StakerPoolInfo>,
 }
 
 #[generate_trait]
@@ -78,6 +84,10 @@ pub impl StakerInfoImpl of StakerInfoTrait {
             return max(unstake_time, get_block_timestamp());
         }
         get_block_timestamp() + EXIT_WAITING_WINDOW
+    }
+
+    fn get_pool_info_unchecked(self: StakerInfo) -> StakerPoolInfo {
+        self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 }
 

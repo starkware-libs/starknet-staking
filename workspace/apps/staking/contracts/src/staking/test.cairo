@@ -1,7 +1,10 @@
 use core::option::OptionTrait;
 use contracts::{
     constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES, SECONDS_IN_DAY},
-    staking::{StakerInfo, Staking, Staking::InternalStakingFunctionsTrait,},
+    staking::{
+        StakerInfo, StakerInfoTrait, StakerPoolInfo, Staking,
+        Staking::InternalStakingFunctionsTrait,
+    },
     utils::{compute_rewards, compute_commission_amount},
     test_utils::{
         initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig,
@@ -97,7 +100,8 @@ fn test_stake() {
 
     let staker_address = cfg.test_info.staker_address;
     // Check that the staker info was updated correctly.
-    let expected_staker_info = cfg.staker_info;
+    let mut expected_staker_info = cfg.staker_info;
+    expected_staker_info.pool_info = Option::None;
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     assert_eq!(expected_staker_info, state.get_staker_info(:staker_address));
 
@@ -136,8 +140,13 @@ fn test_calculate_rewards() {
     cfg
         .staker_info =
             StakerInfo {
-                pooling_contract: Option::Some(POOLING_CONTRACT_ADDRESS()),
-                amount_pool: POOL_MEMBER_STAKE_AMOUNT,
+                pool_info: Option::Some(
+                    StakerPoolInfo {
+                        pooling_contract: POOLING_CONTRACT_ADDRESS(),
+                        amount: POOL_MEMBER_STAKE_AMOUNT,
+                        ..cfg.staker_info.get_pool_info_unchecked()
+                    }
+                ),
                 index: 0,
                 ..cfg.staker_info
             };
@@ -150,14 +159,21 @@ fn test_calculate_rewards() {
     let interest = state.global_index.read() - staker_info.index;
     assert!(state.calculate_rewards(ref :staker_info));
     let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
-    let pool_rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
+    let pool_rewards = compute_rewards(
+        amount: staker_info.get_pool_info_unchecked().amount, :interest
+    );
     let commission_amount = compute_commission_amount(
-        rewards: pool_rewards, commission: staker_info.commission
+        rewards: pool_rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
     let unclaimed_rewards_own: u128 = staker_rewards + commission_amount;
-    let unclaimed_rewards_pool: u128 = pool_rewards - commission_amount;
+    let unclaimed_rewards: u128 = pool_rewards - commission_amount;
     let expected_staker_info = StakerInfo {
-        index: staker_info.index, unclaimed_rewards_own, unclaimed_rewards_pool, ..staker_info
+        index: staker_info.index,
+        unclaimed_rewards_own,
+        pool_info: Option::Some(
+            StakerPoolInfo { unclaimed_rewards, ..staker_info.get_pool_info_unchecked() }
+        ),
+        ..staker_info
     };
     assert_eq!(staker_info, expected_staker_info);
 }
@@ -194,7 +210,7 @@ fn test_stake_from_same_staker_address() {
             operational_address: cfg.staker_info.operational_address,
             amount: cfg.staker_info.amount_own,
             pooling_enabled: cfg.test_info.pooling_enabled,
-            commission: cfg.staker_info.commission,
+            commission: cfg.staker_info.get_pool_info_unchecked().commission,
         );
 }
 
@@ -220,7 +236,7 @@ fn test_stake_with_same_operational_address() {
             operational_address: cfg.staker_info.operational_address,
             amount: cfg.staker_info.amount_own,
             pooling_enabled: cfg.test_info.pooling_enabled,
-            commission: cfg.staker_info.commission,
+            commission: cfg.staker_info.get_pool_info_unchecked().commission,
         );
 }
 
@@ -244,7 +260,9 @@ fn test_stake_with_commission_out_of_range() {
         cfg.test_info.initial_supply, cfg.test_info.owner_address
     );
     let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
-    cfg.staker_info.commission = COMMISSION_DENOMINATOR + 1;
+    let mut pool_info = cfg.staker_info.get_pool_info_unchecked();
+    pool_info.commission = COMMISSION_DENOMINATOR + 1;
+    cfg.staker_info.pool_info = Option::Some(pool_info);
     stake_for_testing(ref state, :cfg, :token_address);
 }
 
@@ -266,9 +284,11 @@ fn test_claim_delegation_pool_rewards() {
     );
     // Funds reward supplier and set his unclaimed rewards.
     let interest = updated_index - cfg.staker_info.index;
-    let pool_rewards = compute_rewards(amount: cfg.staker_info.amount_pool, :interest);
+    let pool_rewards = compute_rewards(
+        amount: cfg.staker_info.get_pool_info_unchecked().amount, :interest
+    );
     let commission_amount = compute_commission_amount(
-        rewards: pool_rewards, commission: cfg.staker_info.commission
+        rewards: pool_rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
     let unclaimed_rewards_pool = pool_rewards - commission_amount;
 
@@ -327,18 +347,22 @@ fn test_increase_stake_from_staker_address() {
     // Validate the single StakeBalanceChange event.
     let events = spy.get_events().emitted_by(test_address()).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
+    let mut new_delegated_stake = 0;
+    if let Option::Some(pool_info) = expected_staker_info.pool_info {
+        new_delegated_stake = pool_info.amount;
+    }
     assert_stake_balance_change_event(
         spied_event: events[0],
         :staker_address,
         old_self_stake: staker_info_before.amount_own,
-        old_delegated_stake: staker_info_before.amount_pool,
+        old_delegated_stake: 0,
         new_self_stake: updated_staker_info.amount_own,
-        new_delegated_stake: updated_staker_info.amount_pool
+        :new_delegated_stake
     );
 }
 
 #[test]
-#[should_panic(expected: "Pool address does not exist.")]
+#[should_panic(expected: "Staker does not have a pool contract.")]
 fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg.test_info.pooling_enabled = false;
@@ -357,7 +381,10 @@ fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
 #[should_panic(expected: "Caller is not pool contract.")]
 fn test_claim_delegation_pool_rewards_unauthorized_address() {
     let mut cfg: StakingInitConfig = Default::default();
-    cfg.staker_info.pooling_contract = Option::Some(POOLING_CONTRACT_ADDRESS());
+    if let Option::Some(mut pool_info) = cfg.staker_info.pool_info {
+        pool_info.pooling_contract = POOLING_CONTRACT_ADDRESS();
+        cfg.staker_info.pool_info = Option::Some(pool_info);
+    }
     // TODO: Set the contract address to the actual pool contract address.
     cfg.test_info.pooling_enabled = true;
     let token_address = deploy_mock_erc20_contract(
@@ -714,18 +741,27 @@ fn test_stake_pooling_enabled() {
     let staker_address = cfg.test_info.staker_address;
     // Read and set pool contract address.
     // TODO: If used again, add the following logic (at least partly) to a function.
-    cfg.staker_info.pooling_contract = state.get_staker_info(:staker_address).pooling_contract;
+    if let Option::Some(mut pool_info) = cfg.staker_info.pool_info {
+        pool_info
+            .pooling_contract = state
+            .get_staker_info(:staker_address)
+            .pool_info
+            .unwrap()
+            .pooling_contract;
+        cfg.staker_info.pool_info = Option::Some(pool_info);
+    };
     let expected_staker_info = cfg.staker_info;
     // Check that the staker info was updated correctly.
     assert_eq!(expected_staker_info, state.get_staker_info(:staker_address));
     // Validate events.
     let events = spy.get_events().emitted_by(test_address()).events;
     assert_number_of_events(actual: events.len(), expected: 2, message: "stake_pooling_enabled");
+    let pool_info = cfg.staker_info.get_pool_info_unchecked();
     assert_new_delegation_pool_event(
         spied_event: events[0],
         :staker_address,
-        pool_contract: cfg.staker_info.pooling_contract.unwrap(),
-        commission: cfg.staker_info.commission
+        pool_contract: pool_info.pooling_contract,
+        commission: pool_info.commission
     );
     assert_stake_balance_change_event(
         spied_event: events[1],
@@ -881,19 +917,21 @@ fn test_switch_staking_delegation_pool() {
 
     let interest = updated_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards(amount: cfg.staker_info.amount_own, :interest);
-    let pool_rewards = compute_rewards(amount: cfg.staker_info.amount_pool, :interest);
+    let pool_rewards = compute_rewards(
+        amount: cfg.staker_info.get_pool_info_unchecked().amount, :interest
+    );
     let commission_amount = compute_commission_amount(
-        rewards: pool_rewards, commission: cfg.staker_info.commission
+        rewards: pool_rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
     let unclaimed_rewards_own = staker_rewards + commission_amount;
     let unclaimed_rewards_pool = pool_rewards - commission_amount;
-    let amount_pool = cfg.staker_info.amount_pool + switch_amount;
-    let expected_staker_info = StakerInfo {
-        index: updated_index,
-        unclaimed_rewards_own,
-        unclaimed_rewards_pool,
-        amount_pool,
-        ..to_staker_info
+    let amount = cfg.staker_info.get_pool_info_unchecked().amount + switch_amount;
+    let mut expected_staker_info = StakerInfo {
+        index: updated_index, unclaimed_rewards_own, ..to_staker_info
+    };
+    if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
+        pool_info.amount = amount;
+        pool_info.unclaimed_rewards = unclaimed_rewards_pool;
     };
     let actual_staker_info = staking_dispatcher.state_of(staker_address: to_staker);
     assert_eq!(actual_staker_info, expected_staker_info);
@@ -1074,26 +1112,38 @@ fn test_update_commission() {
     let interest = cfg.staking_contract_info.global_index - cfg.staker_info.index;
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before_update = staking_dispatcher.state_of(:staker_address);
-    assert_eq!(staker_info_before_update.commission, cfg.staker_info.commission);
+    assert_eq!(
+        staker_info_before_update.get_pool_info_unchecked().commission,
+        cfg.staker_info.get_pool_info_unchecked().commission
+    );
 
     // Update commission.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let commission = cfg.staker_info.commission - 1;
+    let commission = cfg.staker_info.get_pool_info_unchecked().commission - 1;
     assert!(staking_dispatcher.update_commission(:commission));
 
     // Assert rewards is updated.
     let staker_info = staking_dispatcher.state_of(:staker_address);
     let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
-    let pool_rewards = compute_rewards(amount: staker_info.amount_pool, :interest);
+    let pool_info = staker_info.get_pool_info_unchecked();
+    let pool_rewards = compute_rewards(amount: pool_info.amount, :interest);
     let commission_amount = compute_commission_amount(
-        rewards: pool_rewards, commission: staker_info.commission
+        rewards: pool_rewards, commission: pool_info.commission
     );
     let unclaimed_rewards_own = staker_rewards + commission_amount;
     let unclaimed_rewards_pool = pool_rewards - commission_amount;
 
     // Assert rewards and commission are updated in the staker info.
     let expected_staker_info = StakerInfo {
-        unclaimed_rewards_own, unclaimed_rewards_pool, commission, ..staker_info
+        unclaimed_rewards_own,
+        pool_info: Option::Some(
+            StakerPoolInfo {
+                unclaimed_rewards: unclaimed_rewards_pool,
+                commission,
+                ..staker_info.get_pool_info_unchecked()
+            }
+        ),
+        ..staker_info
     };
     assert_eq!(staker_info, expected_staker_info);
 
@@ -1118,7 +1168,8 @@ fn test_update_commission_caller_not_staker() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
     );
-    staking_dispatcher.update_commission(commission: cfg.staker_info.commission - 1);
+    staking_dispatcher
+        .update_commission(commission: cfg.staker_info.get_pool_info_unchecked().commission - 1);
 }
 
 #[test]
@@ -1134,11 +1185,12 @@ fn test_update_commission_with_higher_commission() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address
     );
-    staking_dispatcher.update_commission(commission: cfg.staker_info.commission + 1);
+    staking_dispatcher
+        .update_commission(commission: cfg.staker_info.get_pool_info_unchecked().commission + 1);
 }
 
 #[test]
-#[should_panic(expected: ("Staker does not have pool contract.",))]
+#[should_panic(expected: ("Staker does not have a pool contract.",))]
 fn test_update_commission_with_no_pool() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -1150,5 +1202,6 @@ fn test_update_commission_with_no_pool() {
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address
     );
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    staking_dispatcher.update_commission(commission: cfg.staker_info.commission);
+    staking_dispatcher
+        .update_commission(commission: cfg.staker_info.get_pool_info_unchecked().commission);
 }
