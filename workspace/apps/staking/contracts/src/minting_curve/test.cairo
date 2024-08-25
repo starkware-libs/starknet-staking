@@ -1,4 +1,4 @@
-use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait, StakerInfoTrait};
 use contracts::minting_curve::interface::IMintingCurve;
 use contracts::minting_curve::MintingCurve;
 use contracts::minting_curve::MintingCurve::compute_yearly_mint;
@@ -42,7 +42,7 @@ fn test_yearly_mint() {
             operational_address: cfg.staker_info.operational_address,
             amount: cfg.staker_info.amount_own,
             pooling_enabled: cfg.test_info.pooling_enabled,
-            commission: cfg.staker_info.commission
+            commission: cfg.staker_info.get_pool_info_unchecked().commission
         );
 
     let expected_minted_tokens: u128 = compute_yearly_mint(

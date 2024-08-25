@@ -100,7 +100,7 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::CALLER_CANNOT_ADD_TO_POOL => panic!(
             "Caller address should be pool member address or reward address."
         ),
-        Error::MISSING_POOL_CONTRACT => panic!("Staker does not have pool contract."),
+        Error::MISSING_POOL_CONTRACT => panic!("Staker does not have a pool contract."),
         Error::UNAUTHORIZED_MESSAGE_SENDER => panic!("Unauthorized message sender."),
         Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED => panic!(
             "Switch pool data deserialization failed."
