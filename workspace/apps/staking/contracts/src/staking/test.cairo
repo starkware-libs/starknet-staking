@@ -1219,3 +1219,79 @@ fn test_update_commission_with_no_pool() {
     staking_dispatcher
         .update_commission(commission: cfg.staker_info.get_pool_info_unchecked().commission);
 }
+
+#[test]
+fn test_set_open_for_delegation() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let commission = cfg.staker_info.get_pool_info_unchecked().commission;
+    let mut spy = snforge_std::spy_events();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let pooling_contract = staking_dispatcher.set_open_for_delegation(:commission);
+    let pool_info = staking_dispatcher.state_of(:staker_address).get_pool_info_unchecked();
+    let expected_pool_info = StakerPoolInfo {
+        commission, pooling_contract, ..cfg.staker_info.get_pool_info_unchecked()
+    };
+    assert_eq!(pool_info, expected_pool_info);
+
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_open_for_delegation");
+    assert_new_delegation_pool_event(
+        spied_event: events[0], :staker_address, pool_contract: pooling_contract, :commission
+    );
+}
+
+#[test]
+#[should_panic(expected: ("Commission is out of range, expected to be 0-10000.",))]
+fn test_set_open_for_delegation_commission_out_of_range() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
+    staking_dispatcher.set_open_for_delegation(commission: COMMISSION_DENOMINATOR + 1);
+}
+
+#[test]
+#[should_panic(expected: ("Staker does not exist.",))]
+fn test_set_open_for_delegation_staker_not_exist() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
+    );
+    staking_dispatcher
+        .set_open_for_delegation(commission: cfg.staker_info.get_pool_info_unchecked().commission);
+}
+
+#[test]
+#[should_panic(expected: ("Staker already has a pool.",))]
+fn test_set_open_for_delegation_staker_has_pool() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
+    staking_dispatcher
+        .set_open_for_delegation(commission: cfg.staker_info.get_pool_info_unchecked().commission);
+}

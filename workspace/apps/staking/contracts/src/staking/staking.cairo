@@ -469,9 +469,31 @@ pub mod Staking {
             true
         }
 
-        fn set_open_for_delegation(ref self: ContractState) -> ContractAddress {
+        fn set_open_for_delegation(ref self: ContractState, commission: u16) -> ContractAddress {
             self.update_global_index_if_needed();
-            Zero::zero()
+            let staker_address = get_caller_address();
+            let mut staker_info = self.get_staker_info(:staker_address);
+            assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
+            assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
+            let pooling_contract = self
+                .deploy_delegation_pool_contract(
+                    :staker_address,
+                    staking_contract: get_contract_address(),
+                    token_address: self.token_address.read(),
+                    :commission
+                );
+            staker_info
+                .pool_info =
+                    Option::Some(
+                        StakerPoolInfo {
+                            pooling_contract,
+                            amount: Zero::zero(),
+                            unclaimed_rewards: Zero::zero(),
+                            commission
+                        }
+                    );
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            pooling_contract
         }
 
         fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
