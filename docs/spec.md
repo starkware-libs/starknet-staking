@@ -461,12 +461,13 @@ Only staking address.
 #### description <!-- omit from toc -->
 Creates a staking delegation pool for a staker that doesn't have one.
 #### parameters <!-- omit from toc -->
-| name | type |
-| ---- | ---- |
+| name       | type |
+| ---------- | ---- |
+| commission | u16  |
 #### return <!-- omit from toc -->
 pool: address
 #### emits <!-- omit from toc -->
-[New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
+[New Delegation Pool](#new-delegation-pool)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.

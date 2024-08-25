@@ -135,7 +135,7 @@ pub trait IStaking<TContractState> {
         identifier: felt252
     ) -> bool;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
-    fn set_open_for_delegation(ref self: TContractState) -> ContractAddress;
+    fn set_open_for_delegation(ref self: TContractState, commission: u16) -> ContractAddress;
     fn state_of(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn claim_delegation_pool_rewards(
