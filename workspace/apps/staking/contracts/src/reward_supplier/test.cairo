@@ -1,5 +1,5 @@
 use core::option::OptionTrait;
-use contracts::reward_supplier::interface::IRewardSupplier;
+use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierStatus};
 use starknet::get_block_timestamp;
 use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
@@ -120,3 +120,21 @@ fn test_calculate_staking_rewards() {
     assert_eq!(state.l1_pending_requested_amount.read(), expected_l1_pending_requested_amount);
 }
 
+#[test]
+fn test_state_of() {
+    let mut cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Change the block_timestamp so the state_of() won't return zero for all fields.
+    let block_timestamp = get_block_timestamp() + 1;
+    start_cheat_block_timestamp_global(:block_timestamp);
+    let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
+    let expected_status = RewardSupplierStatus {
+        last_timestamp: block_timestamp,
+        unclaimed_rewards: Zero::zero(),
+        l1_pending_requested_amount: Zero::zero(),
+    };
+    assert_eq!(state.state_of(), expected_status);
+}
