@@ -22,3 +22,11 @@ pub struct RewardSupplierStatus {
     pub unclaimed_rewards: u128,
     pub l1_pending_requested_amount: u128,
 }
+
+pub mod Events {
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct MintRequest {
+        pub total_amount: u128,
+        pub num_msgs: u128,
+    }
+}

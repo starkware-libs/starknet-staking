@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod RewardSupplier {
     use core::traits::TryInto;
-    use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierStatus};
+    use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierStatus, Events};
     use starknet::{ContractAddress, EthAddress};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -38,9 +38,10 @@ pub mod RewardSupplier {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         accesscontrolEvent: AccessControlComponent::Event,
-        src5Event: SRC5Component::Event
+        src5Event: SRC5Component::Event,
+        mintRequest: Events::MintRequest,
     }
 
     #[constructor]
@@ -143,8 +144,10 @@ pub mod RewardSupplier {
             if credit < debit + threshold {
                 let diff = debit + threshold - credit;
                 let num_msgs = ceil_of_division(dividend: diff, divisor: base_mint_amount);
+                let total_amount = num_msgs * base_mint_amount;
                 // TODO: Request funds from L1 Staking Minter.
-                l1_pending_requested_amount += num_msgs * base_mint_amount;
+                self.emit(Events::MintRequest { total_amount, num_msgs });
+                l1_pending_requested_amount += total_amount;
             }
             self.l1_pending_requested_amount.write(l1_pending_requested_amount);
         }
