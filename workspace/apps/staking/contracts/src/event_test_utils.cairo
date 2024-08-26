@@ -2,6 +2,7 @@ use starknet::{ContractAddress};
 use contracts::staking::interface;
 use contracts::staking::Events as StakingEvents;
 use contracts::pooling::Events as PoolEvents;
+use contracts::reward_supplier::Events as RewardSupplierEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
@@ -249,6 +250,23 @@ pub(crate) fn assert_final_index_set_event(
             "FinalIndexSet{{staker_address: {:?}, final_staker_index: {}}}",
             staker_address,
             final_staker_index
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+pub(crate) fn assert_mint_request_event(
+    spied_event: @(ContractAddress, Event), total_amount: u128, num_msgs: u128
+) {
+    let expected_event = @contracts::reward_supplier::RewardSupplier::Event::mintRequest(
+        RewardSupplierEvents::MintRequest { total_amount, num_msgs }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "MintRequest{{total_amount: {:?}, num_msgs: {}}}", total_amount, num_msgs
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }

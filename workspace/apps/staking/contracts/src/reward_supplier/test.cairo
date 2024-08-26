@@ -16,6 +16,8 @@ use core::num::traits::Zero;
 use core::num::traits::Sqrt;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::utils::{ceil_of_division, compute_threshold};
+use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event,};
+use snforge_std::cheatcodes::events::{Events, EventSpy, EventSpyTrait, EventsFilterTrait};
 
 #[test]
 fn test_reward_supplier_constructor() {
@@ -106,6 +108,7 @@ fn test_calculate_staking_rewards() {
             + SECONDS_IN_YEAR.try_into().expect('does not fit in')
     );
     cheat_caller_address_once(contract_address: test_address(), caller_address: staking_contract);
+    let mut spy = snforge_std::spy_events();
     let rewards = state.calculate_staking_rewards();
     // Validate the rewards, unclaimed rewards and l1_pending_requested_amount.
     let unadjusted_expected_rewards: u128 = (cfg.test_info.initial_supply * amount.into()).sqrt();
@@ -118,6 +121,14 @@ fn test_calculate_staking_rewards() {
     let num_msgs = ceil_of_division(dividend: diff, divisor: base_mint_amount);
     let expected_l1_pending_requested_amount = num_msgs * base_mint_amount;
     assert_eq!(state.l1_pending_requested_amount.read(), expected_l1_pending_requested_amount);
+    // Validate the single MintRequest event.
+    let events = spy.get_events().emitted_by(contract_address: test_address()).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "calculate_staking_rewards"
+    );
+    assert_mint_request_event(
+        spied_event: events[0], total_amount: expected_l1_pending_requested_amount, :num_msgs
+    );
 }
 
 #[test]
