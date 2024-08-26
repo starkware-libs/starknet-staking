@@ -55,6 +55,15 @@ pub mod Events {
         pub last_index_update_timestamp: u64,
         pub current_index_update_timestamp: u64
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct DeleteStaker {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub reward_address: ContractAddress,
+        pub operational_address: ContractAddress,
+        pub pool_contract: Option<ContractAddress>,
+    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]

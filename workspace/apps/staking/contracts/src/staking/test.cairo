@@ -25,7 +25,8 @@ use contracts::{
 };
 use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use contracts::event_test_utils::{
-    assert_number_of_events, assert_staker_exit_intent_event, assert_stake_balance_change_event
+    assert_number_of_events, assert_staker_exit_intent_event, assert_stake_balance_change_event,
+    assert_delete_staker_event
 };
 use contracts::event_test_utils::assert_staker_reward_address_change_event;
 use contracts::event_test_utils::assert_new_delegation_pool_event;
@@ -697,7 +698,7 @@ fn test_unstake_action() {
     let staking_contract = cfg.test_info.staking_contract;
 
     // Stake.
-    stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
 
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -712,15 +713,25 @@ fn test_unstake_action() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
     );
+    let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
     assert_eq!(staker_amount, cfg.staker_info.amount_own);
     let actual_staker_info: Option<StakerInfo> = load_option_from_simple_map(
         map_selector: selector!("staker_info"), key: staker_address, contract: staking_contract
     );
     assert!(actual_staker_info.is_none());
+    // There are two events: DeleteStaker and GlobalIndexUpdated.
+    // Validate DeleteStaker event.
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_action");
+    assert_delete_staker_event(
+        spied_event: events[1],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        pool_contract: Option::Some(pool_contract)
+    );
 }
-
-// TODO: test unstake_action.
 
 #[test]
 fn test_get_total_stake() {

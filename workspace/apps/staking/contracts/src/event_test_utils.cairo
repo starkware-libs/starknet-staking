@@ -272,6 +272,33 @@ pub(crate) fn assert_mint_request_event(
     }
 }
 
+pub(crate) fn assert_delete_staker_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    reward_address: ContractAddress,
+    operational_address: ContractAddress,
+    pool_contract: Option<ContractAddress>
+) {
+    let expected_event = @contracts::staking::Staking::Event::DeleteStaker(
+        StakingEvents::DeleteStaker {
+            staker_address, reward_address, operational_address, pool_contract
+        }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "DeleteStaker{{staker_address: {:?}, reward_address: {:?}, operational_address: {:?}, pool_contract: {:?}}}",
+            staker_address,
+            reward_address,
+            operational_address,
+            pool_contract
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn debug_dump_spied_events(ref spy: EventSpy) {
     let mut serialized = array![];
     Serde::<

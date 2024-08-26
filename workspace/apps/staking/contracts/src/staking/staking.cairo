@@ -92,6 +92,7 @@ pub mod Staking {
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
         OperationalAddressChanged: Events::OperationalAddressChanged,
         GlobalIndexUpdated: Events::GlobalIndexUpdated,
+        DeleteStaker: Events::DeleteStaker,
     }
 
     #[constructor]
@@ -663,6 +664,18 @@ pub mod Staking {
             self
                 .operational_address_to_staker_address
                 .write(staker_info.operational_address, Zero::zero());
+            self
+                .emit(
+                    Events::DeleteStaker {
+                        staker_address,
+                        reward_address: staker_info.reward_address,
+                        operational_address: staker_info.operational_address,
+                        pool_contract: match staker_info.pool_info {
+                            Option::Some(pool_info) => Option::Some(pool_info.pooling_contract),
+                            Option::None => Option::None
+                        }
+                    }
+                );
         }
 
         /// Calculates the rewards for a given staker.
