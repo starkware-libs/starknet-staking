@@ -74,6 +74,7 @@ pub mod Pooling {
         DelegationBalanceChange: Events::DelegationBalanceChange,
         PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
         FinalIndexSet: Events::FinalIndexSet,
+        DeletePoolMember: Events::DeletePoolMember,
     }
 
 
@@ -215,7 +216,6 @@ pub mod Pooling {
             let delegated_amount = pool_member_info.amount;
             erc20_dispatcher.transfer(recipient: pool_member, amount: delegated_amount.into());
             self.remove_pool_member(:pool_member);
-            // TODO: Emit event.
             delegated_amount
         }
 
@@ -393,7 +393,14 @@ pub mod Pooling {
         }
 
         fn remove_pool_member(ref self: ContractState, pool_member: ContractAddress) {
+            let pool_member_info = self.get_pool_member_info(:pool_member);
             self.pool_member_info.write(pool_member, Option::None);
+            self
+                .emit(
+                    Events::DeletePoolMember {
+                        pool_member, reward_address: pool_member_info.reward_address
+                    }
+                );
         }
 
         fn receive_index_and_funds_from_staker(self: @ContractState) -> u64 {

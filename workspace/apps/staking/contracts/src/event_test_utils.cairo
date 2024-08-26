@@ -299,6 +299,27 @@ pub(crate) fn assert_delete_staker_event(
     }
 }
 
+pub(crate) fn assert_delete_pool_member_event(
+    spied_event: @(ContractAddress, Event),
+    pool_member: ContractAddress,
+    reward_address: ContractAddress
+) {
+    let expected_event = @contracts::pooling::Pooling::Event::DeletePoolMember(
+        PoolEvents::DeletePoolMember { pool_member, reward_address }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "DeletePoolMember{{pool_member: {:?}, reward_address: {:?}}}",
+            pool_member,
+            reward_address
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn debug_dump_spied_events(ref spy: EventSpy) {
     let mut serialized = array![];
     Serde::<

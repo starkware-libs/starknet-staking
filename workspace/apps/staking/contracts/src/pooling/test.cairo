@@ -29,7 +29,9 @@ use contracts::staking::objects::{
     UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
 };
 use contracts::event_test_utils::assert_final_index_set_event;
-use contracts::event_test_utils::{assert_number_of_events, assert_pool_member_exit_intent_event,};
+use contracts::event_test_utils::{
+    assert_number_of_events, assert_pool_member_exit_intent_event, assert_delete_pool_member_event,
+};
 use contracts::event_test_utils::assert_delegation_balance_change_event;
 use contracts::event_test_utils::assert_pool_member_reward_address_change_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
@@ -568,6 +570,7 @@ fn test_exit_delegation_pool_action() {
     start_cheat_block_timestamp_global(
         block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW
     );
+    let mut spy = snforge_std::spy_events();
     // Exit delegation pool action and check that:
     // 1. The returned value is correct.
     // 2. The pool member is erased from the pool member info map.
@@ -589,8 +592,17 @@ fn test_exit_delegation_pool_action() {
     assert_eq!(
         reward_account_balance_after,
         reward_account_balance_before + unclaimed_rewards_member.into()
-    )
-    // TODO: Test events.
+    );
+    // Validate the single DeletePoolMember event.
+    let events = spy.get_events().emitted_by(contract_address: pooling_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "exit_delegation_pool_action"
+    );
+    assert_delete_pool_member_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        reward_address: cfg.pool_member_info.reward_address,
+    );
 }
 
 // TODO: add event test.
@@ -635,7 +647,7 @@ fn test_switch_delegation_pool() {
     };
     assert_eq!(amount_left, cfg.pool_member_info.amount - switch_amount);
     assert_eq!(actual_pool_member_info, Option::Some(expected_pool_member_info));
-
+    let mut spy = snforge_std::spy_events();
     let amount_left = pooling_dispatcher
         .switch_delegation_pool(
             to_staker: OTHER_STAKER_ADDRESS(),
@@ -649,6 +661,14 @@ fn test_switch_delegation_pool() {
     );
     assert_eq!(amount_left, 0);
     assert!(actual_pool_member_info.is_none());
+    // Validate the single DeletePoolMember event emitted by the from_pool.
+    let events = spy.get_events().emitted_by(contract_address: pooling_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "switch_delegation_pool");
+    assert_delete_pool_member_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        reward_address: cfg.pool_member_info.reward_address,
+    );
 }
 
 #[test]

@@ -33,6 +33,13 @@ pub mod Events {
         pub staker_address: ContractAddress,
         pub final_staker_index: u64
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct DeletePoolMember {
+        #[key]
+        pub pool_member: ContractAddress,
+        pub reward_address: ContractAddress,
+    }
 }
 
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
