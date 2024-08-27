@@ -75,6 +75,7 @@ pub mod Pooling {
         PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
         FinalIndexSet: Events::FinalIndexSet,
         DeletePoolMember: Events::DeletePoolMember,
+        NewPoolMember: Events::NewPoolMember,
     }
 
 
@@ -135,6 +136,12 @@ pub mod Pooling {
                             unpool_time: Option::None,
                         }
                     )
+                );
+            self
+                .emit(
+                    Events::NewPoolMember {
+                        pool_member, staker_address: pooled_staker, reward_address, amount
+                    }
                 );
             true
         }

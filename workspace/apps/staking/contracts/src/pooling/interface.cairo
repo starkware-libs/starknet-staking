@@ -40,6 +40,16 @@ pub mod Events {
         pub pool_member: ContractAddress,
         pub reward_address: ContractAddress,
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct NewPoolMember {
+        #[key]
+        pub pool_member: ContractAddress,
+        #[key]
+        pub staker_address: ContractAddress,
+        pub reward_address: ContractAddress,
+        pub amount: u128
+    }
 }
 
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
