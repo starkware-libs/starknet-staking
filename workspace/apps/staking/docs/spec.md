@@ -49,6 +49,7 @@
     - [Delegation Balance Change](#delegation-balance-change)
     - [Delegation Pool Member Exit intent](#delegation-pool-member-exit-intent)
     - [Final Index Set](#final-index-set)
+    - [New Pool Member](#new-pool-member)
 
 </details>
 
@@ -647,6 +648,7 @@ success: bool
 #### emits <!-- omit from toc -->
 [Delegation Balance Changed](#delegation-balance-change)
 [Stake Balance Changed](#stake-balance-changed)
+[New Pool Member](#new-pool-member)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. caller address (pool member) is not listed in the contract.
@@ -888,3 +890,11 @@ success: bool
 | ------------------ | ------- | ----- |
 | staker_address     | address | ✅    |
 | final_staker_index | u64     | ❌    |
+
+### New Pool Member
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| pool_member    | address | ✅    |
+| staker_address  | address | ✅    |
+| reward_address | address | ❌    |
+| amount         | u128    | ❌    |

@@ -28,7 +28,7 @@ use contracts::{
 use contracts::staking::objects::{
     UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
 };
-use contracts::event_test_utils::assert_final_index_set_event;
+use contracts::event_test_utils::{assert_final_index_set_event, assert_new_pool_member_event};
 use contracts::event_test_utils::{
     assert_number_of_events, assert_pool_member_exit_intent_event, assert_delete_pool_member_event,
 };
@@ -116,6 +116,7 @@ fn test_enter_delegation_pool() {
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let mut spy = snforge_std::spy_events();
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
 
     // Check that the pool member info was updated correctly.
@@ -155,6 +156,17 @@ fn test_enter_delegation_pool() {
         ),
     };
     assert_eq!(staking_dispatcher.state_of(cfg.test_info.staker_address), expected_staker_info);
+
+    // Validate the single NewPoolMember event.
+    let events = spy.get_events().emitted_by(pooling_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "enter_delegation_pool");
+    assert_new_pool_member_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        staker_address: cfg.test_info.staker_address,
+        reward_address: cfg.pool_member_info.reward_address,
+        amount: cfg.pool_member_info.amount
+    );
 }
 
 #[test]
