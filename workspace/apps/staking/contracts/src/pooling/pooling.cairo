@@ -268,6 +268,15 @@ pub mod Pooling {
             };
             let amount_left = pool_member_info.amount - amount;
             if amount_left == 0 {
+                // Claim rewards.
+                let erc20_dispatcher = IERC20Dispatcher {
+                    contract_address: self.token_address.read()
+                };
+                erc20_dispatcher
+                    .transfer(
+                        recipient: pool_member_info.reward_address,
+                        amount: pool_member_info.unclaimed_rewards.into()
+                    );
                 self.remove_pool_member(:pool_member);
             } else {
                 pool_member_info.amount = amount_left;
