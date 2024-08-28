@@ -623,6 +623,7 @@ fn test_switch_delegation_pool() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
+    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
@@ -635,6 +636,31 @@ fn test_switch_delegation_pool() {
     let to_staker_pool_contract = stake_with_pooling_enabled(
         :cfg, :token_address, :staking_contract
     );
+
+    // Make sure the pool member has unclaimed rewards.
+    // Change global index.
+    let index_before = cfg.pool_member_info.index;
+    let updated_index = cfg.pool_member_info.index * 2;
+    snforge_std::store(
+        target: staking_contract,
+        storage_address: selector!("global_index"),
+        serialized_value: array![updated_index.into()].span()
+    );
+    // Calculate the expected rewards and commission.
+    let delegate_amount = cfg.pool_member_info.amount;
+    let rewards = compute_rewards(amount: delegate_amount, interest: updated_index - index_before);
+    let commission_amount = compute_commission_amount(
+        :rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    let unclaimed_rewards_member = rewards - commission_amount;
+    cheat_reward_for_reward_supplier(
+        :cfg,
+        reward_supplier: cfg.staking_contract_info.reward_supplier,
+        expected_reward: unclaimed_rewards_member,
+        :token_address
+    );
+    let reward_account_balance_before = erc20_dispatcher
+        .balance_of(cfg.pool_member_info.reward_address);
 
     cheat_caller_address(
         contract_address: pooling_contract,
@@ -655,7 +681,10 @@ fn test_switch_delegation_pool() {
         contract: pooling_contract
     );
     let expected_pool_member_info = PoolMemberInfo {
-        amount: cfg.pool_member_info.amount - switch_amount, ..cfg.pool_member_info
+        amount: cfg.pool_member_info.amount - switch_amount,
+        unclaimed_rewards: unclaimed_rewards_member,
+        index: updated_index,
+        ..cfg.pool_member_info
     };
     assert_eq!(amount_left, cfg.pool_member_info.amount - switch_amount);
     assert_eq!(actual_pool_member_info, Option::Some(expected_pool_member_info));
@@ -673,6 +702,12 @@ fn test_switch_delegation_pool() {
     );
     assert_eq!(amount_left, 0);
     assert!(actual_pool_member_info.is_none());
+    let reward_account_balance_after = erc20_dispatcher
+        .balance_of(cfg.pool_member_info.reward_address);
+    assert_eq!(
+        reward_account_balance_after,
+        reward_account_balance_before + unclaimed_rewards_member.into()
+    );
     // Validate the single DeletePoolMember event emitted by the from_pool.
     let events = spy.get_events().emitted_by(contract_address: pooling_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "switch_delegation_pool");
