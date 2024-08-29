@@ -126,7 +126,7 @@ pub trait IStaking<TContractState> {
     fn unstake_intent(ref self: TContractState) -> u64;
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> u128;
     fn add_stake_from_pool(
-        ref self: TContractState, pooled_staker: ContractAddress, amount: u128
+        ref self: TContractState, staker_address: ContractAddress, amount: u128
     ) -> (u128, u64);
     fn remove_from_delegation_pool_intent(
         ref self: TContractState,

@@ -109,7 +109,7 @@ pub mod Pooling {
                 self.pool_member_info.read(pool_member).is_none(), Error::POOL_MEMBER_EXISTS
             );
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
-            let pooled_staker = self.staker_address.read();
+            let staker_address = self.staker_address.read();
             let staking_contract = self.staking_contract.read();
             let staking_contract_dispatcher = IStakingDispatcher {
                 contract_address: staking_contract,
@@ -122,7 +122,7 @@ pub mod Pooling {
                 );
             erc20_dispatcher.approve(spender: staking_contract, amount: amount.into());
             let (_, updated_index) = staking_contract_dispatcher
-                .add_stake_from_pool(:pooled_staker, :amount);
+                .add_stake_from_pool(:staker_address, :amount);
             self
                 .pool_member_info
                 .write(
@@ -139,9 +139,7 @@ pub mod Pooling {
                 );
             self
                 .emit(
-                    Events::NewPoolMember {
-                        pool_member, staker_address: pooled_staker, reward_address, amount
-                    }
+                    Events::NewPoolMember { pool_member, staker_address, reward_address, amount }
                 );
             true
         }
@@ -171,7 +169,7 @@ pub mod Pooling {
                 );
             erc20_dispatcher.approve(spender: staking_contract, amount: amount.into());
             let (_, updated_index) = staking_contract_dispatcher
-                .add_stake_from_pool(pooled_staker: self.staker_address.read(), :amount);
+                .add_stake_from_pool(staker_address: self.staker_address.read(), :amount);
             self.calculate_rewards(ref :pool_member_info, :updated_index);
             pool_member_info.amount += amount;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
