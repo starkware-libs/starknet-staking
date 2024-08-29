@@ -1,5 +1,6 @@
 #[starknet::contract]
 pub mod MintingCurve {
+    use core::num::traits::WideMul;
     use contracts::minting_curve::interface::{IMintingCurve, Events};
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
     use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
@@ -64,7 +65,7 @@ pub mod MintingCurve {
     /// Equivalent to: C / 100 * sqrt(total_stake * total_supply)
     /// Note: Differences are negligible at this scale.
     pub(crate) fn compute_yearly_mint(total_stake: u128, total_supply: u128) -> u128 {
-        let product: u256 = total_stake.into() * total_supply.into();
+        let product: u256 = total_stake.wide_mul(total_supply);
         let unadjusted_mint_amount: u128 = product.sqrt();
         multiply_by_max_inflation(amount: unadjusted_mint_amount)
     }
