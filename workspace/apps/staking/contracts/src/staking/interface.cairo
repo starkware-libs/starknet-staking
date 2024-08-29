@@ -6,7 +6,7 @@ use contracts::errors::{panic_by_err, Error, OptionAuxTrait};
 pub mod Events {
     use starknet::ContractAddress;
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct StakeBalanceChange {
+    pub struct StakeBalanceChange {
         #[key]
         pub staker_address: ContractAddress,
         pub old_self_stake: u128,
@@ -16,7 +16,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct NewDelegationPool {
+    pub struct NewDelegationPool {
         #[key]
         pub staker_address: ContractAddress,
         #[key]
@@ -25,7 +25,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct StakerExitIntent {
+    pub struct StakerExitIntent {
         #[key]
         pub staker_address: ContractAddress,
         pub exit_timestamp: u64,
@@ -33,7 +33,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct StakerRewardAddressChanged {
+    pub struct StakerRewardAddressChanged {
         #[key]
         pub staker_address: ContractAddress,
         pub new_address: ContractAddress,
@@ -41,7 +41,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct OperationalAddressChanged {
+    pub struct OperationalAddressChanged {
         #[key]
         pub staker_address: ContractAddress,
         pub new_address: ContractAddress,
@@ -49,7 +49,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct GlobalIndexUpdated {
+    pub struct GlobalIndexUpdated {
         pub old_index: u64,
         pub new_index: u64,
         pub last_index_update_timestamp: u64,
@@ -57,7 +57,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct DeleteStaker {
+    pub struct DeleteStaker {
         #[key]
         pub staker_address: ContractAddress,
         pub reward_address: ContractAddress,

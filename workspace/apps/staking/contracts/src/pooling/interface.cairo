@@ -4,7 +4,7 @@ pub mod Events {
     use starknet::ContractAddress;
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct PoolMemberExitIntent {
+    pub struct PoolMemberExitIntent {
         #[key]
         pub pool_member: ContractAddress,
         pub exit_timestamp: u64,
@@ -12,7 +12,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct DelegationBalanceChange {
+    pub struct DelegationBalanceChange {
         #[key]
         pub pool_member: ContractAddress,
         pub old_delegated_stake: u128,
@@ -20,7 +20,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct PoolMemberRewardAddressChanged {
+    pub struct PoolMemberRewardAddressChanged {
         #[key]
         pub pool_member: ContractAddress,
         pub new_address: ContractAddress,
@@ -28,21 +28,21 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct FinalIndexSet {
+    pub struct FinalIndexSet {
         #[key]
         pub staker_address: ContractAddress,
         pub final_staker_index: u64
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct DeletePoolMember {
+    pub struct DeletePoolMember {
         #[key]
         pub pool_member: ContractAddress,
         pub reward_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct NewPoolMember {
+    pub struct NewPoolMember {
         #[key]
         pub pool_member: ContractAddress,
         #[key]
