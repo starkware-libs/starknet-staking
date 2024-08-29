@@ -1,3 +1,5 @@
+pub mod bool_array;
+
 // Consts and other non-component utilities
 pub mod errors;
 
