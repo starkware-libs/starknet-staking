@@ -318,7 +318,7 @@ pub mod Staking {
             staker_amount
         }
 
-        fn add_to_delegation_pool(
+        fn add_stake_from_pool(
             ref self: ContractState, pooled_staker: ContractAddress, amount: u128
         ) -> (u128, u64) {
             self.assert_is_unpaused();

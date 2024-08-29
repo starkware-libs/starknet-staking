@@ -15,7 +15,7 @@
     - [unstake\_intent](#unstake_intent)
     - [unstake\_action](#unstake_action)
     - [claim\_rewards](#claim_rewards)
-    - [add\_to\_delegation\_pool](#add_to_delegation_pool)
+    - [add\_stake\_from\_pool](#add_stake_from_pool)
     - [remove\_from\_delegation\_pool\_intent](#remove_from_delegation_pool_intent)
     - [remove\_from\_delegation\_pool\_action](#remove_from_delegation_pool_action)
     - [switch\_staking\_delegation\_pool](#switch_staking_delegation_pool)
@@ -80,7 +80,7 @@ classDiagram
     unstake_intent()
     unstake_action()
     claim_rewards()
-    add_to_delegation_pool()
+    add_stake_from_pool()
     remove_from_delegation_pool_intent()
     remove_from_delegation_pool_action()
     switch_staking_delegation_pool()
@@ -145,10 +145,10 @@ sequenceDiagram
   and
     loop
       pool member ->>+ DelegationPoolingContract: enter_delegation_pool
-      DelegationPoolingContract ->>- StakingContract: add_to_delegation_pool
+      DelegationPoolingContract ->>- StakingContract: add_stake_from_pool
       loop
         pool member ->>+ DelegationPoolingContract: add_to_delegation_pool
-        DelegationPoolingContract ->>- StakingContract: add_to_delegation_pool
+        DelegationPoolingContract ->>- StakingContract: add_stake_from_pool
       end
     end
   end
@@ -340,7 +340,7 @@ Only staking address or reward address can execute.
 2. Transfer unclaimed_rewards
 3. Set unclaimed_rewards = 0.
 
-### add_to_delegation_pool
+### add_stake_from_pool
 #### description <!-- omit from toc -->
 Delegation pooling contract's way to add funds to the staking pool.
 #### parameters <!-- omit from toc -->
@@ -680,7 +680,7 @@ only a listed pool member address.
 1. Check that staker for this pool instance is not in exit window.
 2. [Calculate rewards](#calculate_rewards-1)
 3. Transfer funds from caller to the contract.
-4. Call staking contract's [add_to_delegation_pool](#add_to_delegation_pool).
+4. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
 5. Get current index from staking contract.
 6. Update pool memeber entry with
    1. index

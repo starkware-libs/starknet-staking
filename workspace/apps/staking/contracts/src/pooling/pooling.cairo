@@ -122,7 +122,7 @@ pub mod Pooling {
                 );
             erc20_dispatcher.approve(spender: staking_contract, amount: amount.into());
             let (_, updated_index) = staking_contract_dispatcher
-                .add_to_delegation_pool(:pooled_staker, :amount);
+                .add_stake_from_pool(:pooled_staker, :amount);
             self
                 .pool_member_info
                 .write(
@@ -171,7 +171,7 @@ pub mod Pooling {
                 );
             erc20_dispatcher.approve(spender: staking_contract, amount: amount.into());
             let (_, updated_index) = staking_contract_dispatcher
-                .add_to_delegation_pool(pooled_staker: self.staker_address.read(), :amount);
+                .add_stake_from_pool(pooled_staker: self.staker_address.read(), :amount);
             self.calculate_rewards(ref :pool_member_info, :updated_index);
             pool_member_info.amount += amount;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
