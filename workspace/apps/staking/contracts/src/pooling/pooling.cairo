@@ -448,11 +448,13 @@ pub mod Pooling {
             }
             let interest: u64 = updated_index - pool_member_info.index;
             pool_member_info.index = updated_index;
-            let mut rewards = compute_rewards(amount: pool_member_info.amount, :interest);
-            let commission_amount = compute_commission_amount(
-                :rewards, commission: self.commission.read()
+            let rewards_including_commission = compute_rewards(
+                amount: pool_member_info.amount, :interest
             );
-            rewards -= commission_amount;
+            let commission_amount = compute_commission_amount(
+                :rewards_including_commission, commission: self.commission.read()
+            );
+            let rewards = rewards_including_commission - commission_amount;
             pool_member_info.unclaimed_rewards += rewards;
             true
         }

@@ -67,11 +67,12 @@ fn test_calculate_rewards() {
         unpool_time: Option::None,
     };
     let interest = updated_index - pool_member_info.index;
-    let rewards = compute_rewards(amount: pool_member_info.amount, :interest);
+    let rewards_including_commission = compute_rewards(amount: pool_member_info.amount, :interest);
     let commission_amount = compute_commission_amount(
-        :rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+        :rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
-    let unclaimed_rewards = rewards - commission_amount;
+    let unclaimed_rewards = rewards_including_commission - commission_amount;
     assert!(state.calculate_rewards(ref :pool_member_info, :updated_index));
 
     let mut expected_pool_member_info = PoolMemberInfo {
@@ -218,11 +219,14 @@ fn test_add_to_delegation_pool() {
     pooling_dispatcher
         .add_to_delegation_pool(pool_member: first_pool_member, amount: delegate_amount);
     let pool_member_info_after_add = pooling_dispatcher.state_of(pool_member: first_pool_member);
-    let rewards = compute_rewards(amount: delegate_amount, interest: updated_index - index_before);
-    let commission_amount = compute_commission_amount(
-        :rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+    let rewards_including_commission = compute_rewards(
+        amount: delegate_amount, interest: updated_index - index_before
     );
-    let unclaimed_rewards_member = rewards - commission_amount;
+    let commission_amount = compute_commission_amount(
+        :rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    let unclaimed_rewards_member = rewards_including_commission - commission_amount;
     let pool_member_info_expected = PoolMemberInfo {
         amount: first_pool_member_info_before_add.amount + delegate_amount,
         index: updated_index,
@@ -265,11 +269,14 @@ fn test_add_to_delegation_pool() {
     pooling_dispatcher
         .add_to_delegation_pool(pool_member: second_pool_member, amount: delegate_amount);
     let pool_member_info_after_add = pooling_dispatcher.state_of(pool_member: second_pool_member);
-    let rewards = compute_rewards(amount: delegate_amount, interest: updated_index - index_before);
-    let commission_amount = compute_commission_amount(
-        :rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+    let rewards_including_commission = compute_rewards(
+        amount: delegate_amount, interest: updated_index - index_before
     );
-    let unclaimed_rewards_member = rewards - commission_amount;
+    let commission_amount = compute_commission_amount(
+        :rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    let unclaimed_rewards_member = rewards_including_commission - commission_amount;
     let pool_member_info_expected = PoolMemberInfo {
         amount: second_pool_member_info_before_add.amount + delegate_amount,
         index: updated_index,
@@ -459,18 +466,21 @@ fn test_claim_rewards() {
     );
     // Compute expected rewards.
     let interest: u64 = updated_index - cfg.staker_info.index;
-    let rewards = compute_rewards(amount: cfg.pool_member_info.amount, :interest);
-    let commission_amount = compute_commission_amount(
-        :rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+    let rewards_including_commission = compute_rewards(
+        amount: cfg.pool_member_info.amount, :interest
     );
-    let expected_reward = rewards - commission_amount;
+    let commission_amount = compute_commission_amount(
+        :rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    let expected_reward = rewards_including_commission - commission_amount;
     cheat_reward_for_reward_supplier(:cfg, :reward_supplier, :expected_reward, :token_address);
     // Claim rewards, and validate the results.
     cheat_caller_address_once(
         contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
     );
     let actual_reward: u128 = pooling_dispatcher.claim_rewards(cfg.test_info.pool_member_address);
-    let expected_reward = rewards - commission_amount;
+    let expected_reward = rewards_including_commission - commission_amount;
     assert_eq!(actual_reward, expected_reward);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = erc20_dispatcher.balance_of(cfg.pool_member_info.reward_address);
@@ -562,11 +572,14 @@ fn test_exit_delegation_pool_action() {
     );
     // Calculate the expected rewards and commission.
     let delegate_amount = cfg.pool_member_info.amount;
-    let rewards = compute_rewards(amount: delegate_amount, interest: updated_index - index_before);
-    let commission_amount = compute_commission_amount(
-        :rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+    let rewards_including_commission = compute_rewards(
+        amount: delegate_amount, interest: updated_index - index_before
     );
-    let unclaimed_rewards_member = rewards - commission_amount;
+    let commission_amount = compute_commission_amount(
+        :rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    let unclaimed_rewards_member = rewards_including_commission - commission_amount;
     cheat_reward_for_reward_supplier(
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards_member, :token_address
     );
@@ -648,11 +661,14 @@ fn test_switch_delegation_pool() {
     );
     // Calculate the expected rewards and commission.
     let delegate_amount = cfg.pool_member_info.amount;
-    let rewards = compute_rewards(amount: delegate_amount, interest: updated_index - index_before);
-    let commission_amount = compute_commission_amount(
-        :rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+    let rewards_including_commission = compute_rewards(
+        amount: delegate_amount, interest: updated_index - index_before
     );
-    let unclaimed_rewards_member = rewards - commission_amount;
+    let commission_amount = compute_commission_amount(
+        :rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    let unclaimed_rewards_member = rewards_including_commission - commission_amount;
     cheat_reward_for_reward_supplier(
         :cfg,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
@@ -797,15 +813,16 @@ fn test_enter_delegation_pool_from_staking_contract() {
     let pool_member_info = pooling_dispatcher.state_of(:pool_member);
     let updated_amount = amount * 2;
     let interest = updated_index - index;
-    let rewards = compute_rewards(:amount, :interest);
+    let rewards_including_commission = compute_rewards(:amount, :interest);
     let commission_amount = compute_commission_amount(
-        :rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+        :rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
     let expected_pool_member_info = PoolMemberInfo {
         reward_address,
         amount: updated_amount,
         index: updated_index,
-        unclaimed_rewards: rewards - commission_amount,
+        unclaimed_rewards: rewards_including_commission - commission_amount,
         unpool_time: Option::None,
     };
     assert_eq!(pool_member_info, expected_pool_member_info);

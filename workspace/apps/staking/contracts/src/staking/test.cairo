@@ -161,14 +161,15 @@ fn test_calculate_rewards() {
     let interest = state.global_index.read() - staker_info.index;
     assert!(state.calculate_rewards(ref :staker_info));
     let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
-    let pool_rewards = compute_rewards(
+    let pool_rewards_including_commission = compute_rewards(
         amount: staker_info.get_pool_info_unchecked().amount, :interest
     );
     let commission_amount = compute_commission_amount(
-        rewards: pool_rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+        rewards_including_commission: pool_rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
     let unclaimed_rewards_own: u128 = staker_rewards + commission_amount;
-    let unclaimed_rewards: u128 = pool_rewards - commission_amount;
+    let unclaimed_rewards: u128 = pool_rewards_including_commission - commission_amount;
     let expected_staker_info = StakerInfo {
         index: staker_info.index,
         unclaimed_rewards_own,
@@ -284,13 +285,14 @@ fn test_claim_delegation_pool_rewards() {
     );
     // Funds reward supplier and set his unclaimed rewards.
     let interest = updated_index - cfg.staker_info.index;
-    let pool_rewards = compute_rewards(
+    let pool_rewards_including_commission = compute_rewards(
         amount: cfg.staker_info.get_pool_info_unchecked().amount, :interest
     );
     let commission_amount = compute_commission_amount(
-        rewards: pool_rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+        rewards_including_commission: pool_rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
-    let unclaimed_rewards_pool = pool_rewards - commission_amount;
+    let unclaimed_rewards_pool = pool_rewards_including_commission - commission_amount;
 
     cheat_reward_for_reward_supplier(
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards_pool, :token_address
@@ -940,14 +942,15 @@ fn test_switch_staking_delegation_pool() {
 
     let interest = updated_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards(amount: cfg.staker_info.amount_own, :interest);
-    let pool_rewards = compute_rewards(
+    let pool_rewards_including_commission = compute_rewards(
         amount: cfg.staker_info.get_pool_info_unchecked().amount, :interest
     );
     let commission_amount = compute_commission_amount(
-        rewards: pool_rewards, commission: cfg.staker_info.get_pool_info_unchecked().commission
+        rewards_including_commission: pool_rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
     let unclaimed_rewards_own = staker_rewards + commission_amount;
-    let unclaimed_rewards_pool = pool_rewards - commission_amount;
+    let unclaimed_rewards_pool = pool_rewards_including_commission - commission_amount;
     let amount = cfg.staker_info.get_pool_info_unchecked().amount + switched_amount;
     let mut expected_staker_info = StakerInfo {
         index: updated_index, unclaimed_rewards_own, ..to_staker_info
@@ -1149,12 +1152,13 @@ fn test_update_commission() {
     let staker_info = staking_dispatcher.state_of(:staker_address);
     let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
     let pool_info = staker_info.get_pool_info_unchecked();
-    let pool_rewards = compute_rewards(amount: pool_info.amount, :interest);
+    let pool_rewards_including_commission = compute_rewards(amount: pool_info.amount, :interest);
     let commission_amount = compute_commission_amount(
-        rewards: pool_rewards, commission: pool_info.commission
+        rewards_including_commission: pool_rewards_including_commission,
+        commission: pool_info.commission
     );
     let unclaimed_rewards_own = staker_rewards + commission_amount;
-    let unclaimed_rewards_pool = pool_rewards - commission_amount;
+    let unclaimed_rewards_pool = pool_rewards_including_commission - commission_amount;
 
     // Assert rewards and commission are updated in the staker info.
     let expected_staker_info = StakerInfo {

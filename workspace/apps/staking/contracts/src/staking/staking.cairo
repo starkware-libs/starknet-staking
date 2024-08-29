@@ -659,12 +659,14 @@ pub mod Staking {
         ) {
             if let Option::Some(mut pool_info) = staker_info.pool_info {
                 if (pool_info.amount.is_non_zero()) {
-                    let mut rewards = compute_rewards(amount: pool_info.amount, :interest);
+                    let rewards_including_commission = compute_rewards(
+                        amount: pool_info.amount, :interest
+                    );
                     let commission_amount = compute_commission_amount(
-                        :rewards, commission: pool_info.commission
+                        :rewards_including_commission, commission: pool_info.commission
                     );
                     staker_info.unclaimed_rewards_own += commission_amount;
-                    rewards -= commission_amount;
+                    let rewards = rewards_including_commission - commission_amount;
                     pool_info.unclaimed_rewards += rewards;
                     staker_info.pool_info = Option::Some(pool_info);
                 }
