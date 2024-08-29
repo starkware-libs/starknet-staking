@@ -25,7 +25,7 @@ use contracts::{
 };
 use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use contracts::event_test_utils::{
-    assert_number_of_events, assert_staker_exit_intent_event, assert_stake_balance_change_event,
+    assert_number_of_events, assert_staker_exit_intent_event, assert_stake_balance_changed_event,
     assert_delete_staker_event
 };
 use contracts::event_test_utils::assert_staker_reward_address_change_event;
@@ -123,10 +123,10 @@ fn test_stake() {
     );
     assert_eq!(erc20_dispatcher.balance_of(staking_contract), cfg.staker_info.amount_own.into());
     assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own);
-    // Validate the single StakeBalanceChange event.
+    // Validate the single StakeBalanceChanged event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "stake");
-    assert_stake_balance_change_event(
+    assert_stake_balance_changed_event(
         spied_event: events[0],
         :staker_address,
         old_self_stake: Zero::zero(),
@@ -348,14 +348,14 @@ fn test_increase_stake_from_staker_address() {
     let updated_staker_info = staking_dispatcher.state_of(:staker_address);
     assert_eq!(expected_staker_info, updated_staker_info);
     assert_eq!(staking_dispatcher.get_total_stake(), expected_staker_info.amount_own);
-    // Validate the single StakeBalanceChange event.
+    // Validate the single StakeBalanceChanged event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
     let mut new_delegated_stake = 0;
     if let Option::Some(pool_info) = expected_staker_info.pool_info {
         new_delegated_stake = pool_info.amount;
     }
-    assert_stake_balance_change_event(
+    assert_stake_balance_changed_event(
         spied_event: events[0],
         :staker_address,
         old_self_stake: staker_info_before.amount_own,
@@ -434,10 +434,10 @@ fn test_increase_stake_from_reward_address() {
     let updated_staker_info = staking_dispatcher.state_of(:staker_address);
     assert_eq!(expected_staker_info, updated_staker_info);
     assert_eq!(staking_dispatcher.get_total_stake(), expected_staker_info.amount_own);
-    // Validate the single StakeBalanceChange event.
+    // Validate the single StakeBalanceChanged event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
-    assert_stake_balance_change_event(
+    assert_stake_balance_changed_event(
         spied_event: events[0],
         :staker_address,
         old_self_stake: staker_info_before.amount_own,
@@ -637,7 +637,7 @@ fn test_unstake_intent() {
     assert_eq!((staker_info.unstake_time).unwrap(), unstake_time);
     assert_eq!(unstake_time, expected_time);
     assert_eq!(staking_dispatcher.get_total_stake(), Zero::zero());
-    // Validate StakerExitIntent and StakeBalanceChange events.
+    // Validate StakerExitIntent and StakeBalanceChanged events.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_intent");
     assert_staker_exit_intent_event(
@@ -646,7 +646,7 @@ fn test_unstake_intent() {
         exit_timestamp: expected_time,
         amount: cfg.staker_info.amount_own
     );
-    assert_stake_balance_change_event(
+    assert_stake_balance_changed_event(
         spied_event: events[1],
         :staker_address,
         old_self_stake: cfg.staker_info.amount_own,
@@ -788,7 +788,7 @@ fn test_stake_pooling_enabled() {
         pool_contract: pool_info.pooling_contract,
         commission: pool_info.commission
     );
-    assert_stake_balance_change_event(
+    assert_stake_balance_changed_event(
         spied_event: events[1],
         :staker_address,
         old_self_stake: Zero::zero(),

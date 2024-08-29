@@ -39,7 +39,7 @@ pub fn assert_staker_exit_intent_event(
     }
 }
 
-pub fn assert_stake_balance_change_event(
+pub fn assert_stake_balance_changed_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     old_self_stake: u128,
@@ -47,8 +47,8 @@ pub fn assert_stake_balance_change_event(
     new_self_stake: u128,
     new_delegated_stake: u128
 ) {
-    let expected_event = @contracts::staking::Staking::Event::StakeBalanceChange(
-        StakingEvents::StakeBalanceChange {
+    let expected_event = @contracts::staking::Staking::Event::StakeBalanceChanged(
+        StakingEvents::StakeBalanceChanged {
             staker_address, old_self_stake, old_delegated_stake, new_self_stake, new_delegated_stake
         }
     );
@@ -57,7 +57,7 @@ pub fn assert_stake_balance_change_event(
     let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
     if !emitted {
         let details = format!(
-            "StakingEvents::StakeBalanceChange{{staker_address: {:?}, old_self_stake: {}, 
+            "StakingEvents::StakeBalanceChanged{{staker_address: {:?}, old_self_stake: {}, 
                 old_delegated_stake: {}, new_self_stake: {}, new_delegated_stake: {}}}",
             staker_address,
             old_self_stake,
@@ -92,14 +92,14 @@ pub fn assert_pool_member_exit_intent_event(
     }
 }
 
-pub fn assert_delegation_balance_change_event(
+pub fn assert_delegation_balance_changed_event(
     mut spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
     old_delegated_stake: u128,
     new_delegated_stake: u128,
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::DelegationBalanceChange(
-        PoolEvents::DelegationBalanceChange {
+    let expected_event = @contracts::pooling::Pooling::Event::DelegationBalanceChanged(
+        PoolEvents::DelegationBalanceChanged {
             pool_member, old_delegated_stake, new_delegated_stake
         }
     );
@@ -108,7 +108,7 @@ pub fn assert_delegation_balance_change_event(
     let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
     if !emitted {
         let details = format!(
-            "PoolEvents::DelegationBalanceChange{{pool_member: {:?}, old_delegated_stake: {}, new_delegated_stake: {}}}",
+            "PoolEvents::DelegationBalanceChanged{{pool_member: {:?}, old_delegated_stake: {}, new_delegated_stake: {}}}",
             pool_member,
             old_delegated_stake,
             new_delegated_stake

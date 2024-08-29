@@ -46,7 +46,7 @@
     - [update\_commission](#update_commission-1)
   - [Events](#events-1)
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
-    - [Delegation Balance Change](#delegation-balance-change)
+    - [Delegation Balance Changed](#delegation-balance-changed)
     - [Delegation Pool Member Exit intent](#delegation-pool-member-exit-intent)
     - [Final Index Set](#final-index-set)
     - [New Pool Member](#new-pool-member)
@@ -887,7 +887,7 @@ success: bool
 | pool_member | address | ✅     |
 | amount      | u128    | ❌     |
 
-### Delegation Balance Change
+### Delegation Balance Changed
 | data                | type    | keyed |
 | ------------------- | ------- | ----- |
 | pool_member         | address | ✅    |
