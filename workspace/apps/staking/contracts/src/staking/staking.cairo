@@ -66,6 +66,7 @@ pub mod Staking {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         global_index: u64,
+        global_index_last_update_timestamp: u64,
         min_stake: u128,
         staker_info: Map<ContractAddress, Option<StakerInfo>>,
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
@@ -73,7 +74,6 @@ pub mod Staking {
         total_stake: u128,
         pool_contract_class_hash: ClassHash,
         pool_exit_intents: Map<UndelegateIntentKey, UndelegateIntentValue>,
-        last_index_update_timestamp: u64,
         reward_supplier: ContractAddress,
         pool_contract_admin: ContractAddress,
         is_paused: bool,
@@ -110,11 +110,11 @@ pub mod Staking {
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.token_address.write(token_address);
         self.min_stake.write(min_stake);
-        self.global_index.write(BASE_VALUE);
         self.pool_contract_class_hash.write(pool_contract_class_hash);
-        self.last_index_update_timestamp.write(get_block_timestamp());
         self.reward_supplier.write(reward_supplier);
         self.pool_contract_admin.write(pool_contract_admin);
+        self.global_index.write(BASE_VALUE);
+        self.global_index_last_update_timestamp.write(get_block_timestamp());
         self.roles.register_security_admin(account: security_admin);
         self.is_paused.write(false);
     }
@@ -560,7 +560,9 @@ pub mod Staking {
             self.assert_is_unpaused();
             let current_timestmap = get_block_timestamp();
             if day_of(current_timestmap)
-                - day_of(self.last_index_update_timestamp.read()) > MIN_DAYS_BETWEEN_INDEX_UPDATES {
+                - day_of(
+                    self.global_index_last_update_timestamp.read()
+                ) > MIN_DAYS_BETWEEN_INDEX_UPDATES {
                 self.update_global_index();
                 return true;
             }
@@ -788,16 +790,16 @@ pub mod Staking {
             let old_index = self.global_index.read();
             let new_index = old_index + global_index_diff;
             self.global_index.write(new_index);
-            let last_index_update_timestamp = self.last_index_update_timestamp.read();
-            let current_index_update_timestamp = get_block_timestamp();
-            self.last_index_update_timestamp.write(current_index_update_timestamp);
+            let global_index_last_update_timestamp = self.global_index_last_update_timestamp.read();
+            let global_index_current_update_timestamp = get_block_timestamp();
+            self.global_index_last_update_timestamp.write(global_index_current_update_timestamp);
             self
                 .emit(
                     Events::GlobalIndexUpdated {
                         old_index,
                         new_index,
-                        last_index_update_timestamp,
-                        current_index_update_timestamp
+                        global_index_last_update_timestamp,
+                        global_index_current_update_timestamp
                     }
                 );
         }

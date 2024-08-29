@@ -144,12 +144,15 @@ pub fn assert_global_index_updated_event(
     spied_event: @(ContractAddress, Event),
     old_index: u64,
     new_index: u64,
-    last_index_update_timestamp: u64,
-    current_index_update_timestamp: u64,
+    global_index_last_update_timestamp: u64,
+    global_index_current_update_timestamp: u64,
 ) {
     let expected_event = @contracts::staking::Staking::Event::GlobalIndexUpdated(
         StakingEvents::GlobalIndexUpdated {
-            old_index, new_index, last_index_update_timestamp, current_index_update_timestamp
+            old_index,
+            new_index,
+            global_index_last_update_timestamp,
+            global_index_current_update_timestamp
         }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -157,11 +160,11 @@ pub fn assert_global_index_updated_event(
     let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
     if !emitted {
         let details = format!(
-            "GlobalIndexUpdated{{old_index: {}, new_index: {}, last_index_update_timestamp: {}, current_index_update_timestamp: {}}}",
+            "GlobalIndexUpdated{{old_index: {}, new_index: {}, global_index_last_update_timestamp: {}, global_index_current_update_timestamp: {}}}",
             old_index,
             new_index,
-            last_index_update_timestamp,
-            current_index_update_timestamp
+            global_index_last_update_timestamp,
+            global_index_current_update_timestamp
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }

@@ -52,8 +52,8 @@ pub mod Events {
     pub struct GlobalIndexUpdated {
         pub old_index: u64,
         pub new_index: u64,
-        pub last_index_update_timestamp: u64,
-        pub current_index_update_timestamp: u64
+        pub global_index_last_update_timestamp: u64,
+        pub global_index_current_update_timestamp: u64
     }
 
     #[derive(Drop, starknet::Event)]
