@@ -295,28 +295,30 @@ Only the staker address or rewards address for which the change is requested for
 2. Increase staked amount.
 
 ### unstake_intent
+```rust
+fn unstake_intent(ref self: ContractState) -> u64
+```
 #### description <!-- omit from toc -->
 Inform of the intent to exit the stake. 
 This will remove the funds from the stake, pausing rewards collection for the staker and it's pool members (if exist).
 This will also start the exit window timeout.
-#### parameters <!-- omit from toc -->
-| name | type |
-| ---- | ---- |
-|      |      |
-#### return <!-- omit from toc -->
-unstake_time: time - when will the staker be able to unstake.
+Return the time in which the staker will be able to unstake.
 #### emits <!-- omit from toc -->
-[Staker Exit Intent](#staker-exit-intent)
+1. [Staker Exit Intent](#staker-exit-intent)
+2. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### pre-condition <!-- omit from toc -->
-1. Staker (caller) is listed in the contract.
-2. Staker (caller) is not in an exit window.
+1. Staking contract is unpaused.
+2. Staker (caller) is listed in the contract.
+3. Staker (caller) is not in an exit window.
 #### access control <!-- omit from toc -->
 Only the staker address for which the operation is requested for.
 #### logic <!-- omit from toc -->
-1. Validate staker is not in an exit window.
-2. performs [Calculate rewards](#calculate_rewards).
-3. Set unstake_time.
+1. [Calculate rewards](#calculate_rewards).
+2. Set unstake time.
 
 ### unstake_action
 #### description <!-- omit from toc -->
