@@ -10,6 +10,7 @@ use contracts::pooling::{Pooling, Pooling::SwitchPoolData};
 use contracts::pooling::interface::{
     IPooling, PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait
 };
+use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
@@ -23,7 +24,8 @@ use constants::{
     POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH, POOL_MEMBER_ADDRESS,
     POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, BASE_MINT_AMOUNT, BUFFER,
     L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG, STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS,
-    DUMMY_IDENTIFIER, REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN
+    DUMMY_IDENTIFIER, REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN,
+    SECURITY_AGENT
 };
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
@@ -136,6 +138,12 @@ pub(crate) mod constants {
     pub fn POOL_CONTRACT_ADMIN() -> ContractAddress {
         contract_address_const::<'POOL_CONTRACT_ADMIN'>()
     }
+    pub fn SECURITY_ADMIN() -> ContractAddress {
+        contract_address_const::<'SECURITY_ADMIN'>()
+    }
+    pub fn SECURITY_AGENT() -> ContractAddress {
+        contract_address_const::<'SECURITY_AGENT'>()
+    }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
     token_address: ContractAddress, cfg: StakingInitConfig
@@ -146,6 +154,7 @@ pub(crate) fn initialize_staking_state_from_cfg(
         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
         pool_contract_admin: cfg.test_info.pool_contract_admin,
+        security_admin: cfg.test_info.security_admin
     )
 }
 pub(crate) fn initialize_staking_state(
@@ -154,6 +163,7 @@ pub(crate) fn initialize_staking_state(
     pool_contract_class_hash: ClassHash,
     reward_supplier: ContractAddress,
     pool_contract_admin: ContractAddress,
+    security_admin: ContractAddress
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     Staking::constructor(
@@ -162,7 +172,8 @@ pub(crate) fn initialize_staking_state(
         :min_stake,
         :pool_contract_class_hash,
         :reward_supplier,
-        :pool_contract_admin
+        :pool_contract_admin,
+        :security_admin
     );
     state
 }
@@ -246,6 +257,7 @@ pub(crate) fn deploy_staking_contract(
     cfg.staking_contract_info.pool_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
     cfg.test_info.pool_contract_admin.serialize(ref calldata);
+    cfg.test_info.security_admin.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     staking_contract_address
@@ -480,6 +492,12 @@ pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         storage_address: selector!("staking_contract"),
         serialized_value: array![staking_contract.into()].span()
     );
+    // Set security agent.
+    let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
+    );
+    roles_dispatcher.register_security_agent(account: cfg.test_info.security_agent);
 }
 
 pub fn cheat_reward_for_reward_supplier(
@@ -512,6 +530,8 @@ pub(crate) struct TestInfo {
     pub pooling_enabled: bool,
     pub staking_contract: ContractAddress,
     pub pool_contract_admin: ContractAddress,
+    pub security_admin: ContractAddress,
+    pub security_agent: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -574,6 +594,8 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pooling_enabled: false,
             staking_contract: STAKING_CONTRACT_ADDRESS(),
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
+            security_admin: SECURITY_ADMIN(),
+            security_agent: SECURITY_AGENT(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,

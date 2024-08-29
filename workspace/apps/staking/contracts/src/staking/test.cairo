@@ -19,7 +19,7 @@ use contracts::{
             STAKE_AMOUNT, STAKER_INITIAL_BALANCE, COMMISSION, OTHER_STAKER_ADDRESS,
             OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT,
             CALLER_ADDRESS, DUMMY_IDENTIFIER, OTHER_OPERATIONAL_ADDRESS,
-            REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN
+            REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN
         }
     }
 };
@@ -66,6 +66,7 @@ fn test_constructor() {
     let pool_contract_class_hash = DUMMY_CLASS_HASH();
     let reward_supplier = REWARD_SUPPLIER_CONTRACT_ADDRESS();
     let min_stake = MIN_STAKE;
+    let security_admin = SECURITY_ADMIN();
     let mut state = Staking::contract_state_for_testing();
     Staking::constructor(
         ref state,
@@ -73,7 +74,8 @@ fn test_constructor() {
         :min_stake,
         :pool_contract_class_hash,
         :reward_supplier,
-        :pool_contract_admin
+        :pool_contract_admin,
+        :security_admin
     );
     assert_eq!(state.min_stake.read(), min_stake);
     assert_eq!(state.token_address.read(), token_address);
@@ -1306,3 +1308,53 @@ fn test_set_open_for_delegation_staker_has_pool() {
     staking_dispatcher
         .set_open_for_delegation(commission: cfg.staker_info.get_pool_info_unchecked().commission);
 }
+
+#[test]
+fn test_pause() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let is_paused = load_one_felt(
+        target: staking_contract, storage_address: selector!("is_paused")
+    );
+    assert_eq!(is_paused, 0);
+    assert!(!staking_dispatcher.is_paused());
+    // Pause with security agent.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
+    );
+    staking_dispatcher.pause();
+    let is_paused = load_one_felt(
+        target: staking_contract, storage_address: selector!("is_paused")
+    );
+    assert_ne!(is_paused, 0);
+    assert!(staking_dispatcher.is_paused());
+    // Unpause with security admin.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
+    );
+    staking_dispatcher.unpause();
+    assert!(!staking_dispatcher.is_paused());
+}
+
+#[test]
+#[should_panic(expected: ("Contract is paused.",))]
+fn test_stake_when_paused() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
+    );
+    staking_dispatcher.pause();
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+}
+// TODO: test thatonly security admin can unpause
+// TODO: test thatonly security agent can pause
+// TODO: test pause and unpause events
+// TODO: test all functions that should panic when paused
+
+
