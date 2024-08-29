@@ -52,10 +52,13 @@
     - [New Pool Member](#new-pool-member)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
+    - [STAKER\_NOT\_EXISTS](#staker_not_exists)
     - [OPERATIONAL\_EXISTS](#operational_exists)
     - [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
     - [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
     - [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+    - [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+    - [CALLER\_CANNOT\_INCREASE\_STAKE](#caller_cannot_increase_stake)
 
 </details>
 
@@ -264,28 +267,32 @@ Only staker address.
 4. If pooling enabled then deploy a pooling contract instance.
 
 ### increase_stake
+```rust
+fn increase_stake(
+    ref self: ContractState, 
+    staker_address: ContractAddress, 
+    amount: u128
+) -> u128
+``` 
 #### description <!-- omit from toc -->
 Increase the amount staked for an existing staker.
-#### parameters <!-- omit from toc -->
-| name   | type    |
-| ------ | ------- |
-| staker | address |
-| amount | u128    |
-#### return <!-- omit from toc -->
-amount: u128 - updated total amount
+Return the updated total amount.
 #### emits <!-- omit from toc -->
-[Balance Changed](#balance-changed)
+[Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+4. [CALLER\_CANNOT\_INCREASE\_STAKE](#caller_cannot_increase_stake)
 #### pre-condition <!-- omit from toc -->
-1. Staker is listed in the contract.
-2. Staker is not in an exit window.
+1. Staking contract is unpaused.
+2. Staker is listed in the contract.
+3. Staker is not in an exit window.
 #### access control <!-- omit from toc -->
 Only the staker address or rewards address for which the change is requested for.
 #### logic <!-- omit from toc -->
-1. Validate amount is above the minimum set threshold.
-2. Validate staker is not in an exit window.
-3. [Calculate rewards](#calculate_rewards).
-4. Increase staked amount.
+1. [Calculate rewards](#calculate_rewards).
+2. Increase staked amount.
 
 ### unstake_intent
 #### description <!-- omit from toc -->
@@ -918,6 +925,9 @@ success: bool
 ### STAKER_EXISTS
 "Staker already exists, use increase_stake instead."
 
+### STAKER_NOT_EXISTS
+"Staker does not exist."
+
 ### OPERATIONAL_EXISTS
 "Operational address already exists."
 
@@ -929,3 +939,9 @@ success: bool
 
 ### CONTRACT_IS_PAUSED
 "Contract is paused."
+
+### UNSTAKE_IN_PROGRESS
+"Unstake is in progress, staker is in an exit window."
+
+### CALLER_CANNOT_INCREASE_STAKE
+"Caller address should be staker address or reward address."
