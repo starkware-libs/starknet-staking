@@ -213,6 +213,7 @@ pub mod Staking {
                 );
             self.calculate_rewards(ref :staker_info);
             staker_info.amount_own += amount;
+            let mut staker_total_stake = staker_info.amount_own;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             self.add_to_total_stake(:amount);
             let mut old_delegated_stake = 0;
@@ -220,6 +221,7 @@ pub mod Staking {
             if let Option::Some(pool_info) = staker_info.pool_info {
                 old_delegated_stake = pool_info.amount;
                 new_delegated_stake = pool_info.amount;
+                staker_total_stake += pool_info.amount;
             }
             self
                 .emit(
@@ -231,7 +233,7 @@ pub mod Staking {
                         new_delegated_stake
                     }
                 );
-            staker_info.amount_own
+            staker_total_stake
         }
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
