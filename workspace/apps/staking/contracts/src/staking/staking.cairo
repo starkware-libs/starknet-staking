@@ -429,7 +429,9 @@ pub mod Staking {
         ) -> bool {
             self.assert_is_unpaused();
             self.update_global_index_if_needed();
-            assert_with_err(switched_amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
+            if switched_amount.is_zero() {
+                return false;
+            }
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let mut undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
