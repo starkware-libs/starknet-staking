@@ -319,11 +319,11 @@ pub mod Staking {
         }
 
         fn add_stake_from_pool(
-            ref self: ContractState, pooled_staker: ContractAddress, amount: u128
+            ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> (u128, u64) {
             self.assert_is_unpaused();
             self.update_global_index_if_needed();
-            let mut staker_info = self.get_staker_info(staker_address: pooled_staker);
+            let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let pool_contract = staker_info.get_pool_info_unchecked().pooling_contract;
             assert_with_err(
@@ -340,12 +340,12 @@ pub mod Staking {
             let old_delegated_stake = pool_info.amount;
             pool_info.amount += amount;
             staker_info.pool_info = Option::Some(pool_info);
-            self.staker_info.write(pooled_staker, Option::Some(staker_info));
+            self.staker_info.write(staker_address, Option::Some(staker_info));
             self.add_to_total_stake(:amount);
             self
                 .emit(
                     Events::StakeBalanceChange {
-                        staker_address: pooled_staker,
+                        staker_address,
                         old_self_stake: staker_info.amount_own,
                         old_delegated_stake,
                         new_self_stake: staker_info.amount_own,
