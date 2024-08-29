@@ -63,11 +63,11 @@ pub mod Staking {
         min_stake: u128,
         staker_info: Map<ContractAddress, Option<StakerInfo>>,
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
-        token_address: ContractAddress,
+        erc20_dispatcher: IERC20Dispatcher,
         total_stake: u128,
         pool_contract_class_hash: ClassHash,
         pool_exit_intents: Map<UndelegateIntentKey, UndelegateIntentValue>,
-        reward_supplier: ContractAddress,
+        reward_supplier_dispatcher: IRewardSupplierDispatcher,
         pool_contract_admin: ContractAddress,
         is_paused: bool,
     }
@@ -101,10 +101,12 @@ pub mod Staking {
         self.accesscontrol.initializer();
         self.roles.initializer();
         self.replaceability.upgrade_delay.write(Zero::zero());
-        self.token_address.write(token_address);
+        self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);
         self.pool_contract_class_hash.write(pool_contract_class_hash);
-        self.reward_supplier.write(reward_supplier);
+        self
+            .reward_supplier_dispatcher
+            .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
         self.pool_contract_admin.write(pool_contract_admin);
         self.global_index.write(BASE_VALUE);
         self.global_index_last_update_timestamp.write(get_block_timestamp());
@@ -137,8 +139,7 @@ pub mod Staking {
             assert_with_err(amount >= self.min_stake.read(), Error::AMOUNT_LESS_THAN_MIN_STAKE);
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
             let staking_contract = get_contract_address();
-            let token_address = self.token_address.read();
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+            let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
                 .transfer_from(
                     sender: staker_address, recipient: staking_contract, amount: amount.into()
@@ -146,7 +147,10 @@ pub mod Staking {
             let pool_info = if pooling_enabled {
                 let pooling_contract = self
                     .deploy_delegation_pool_contract(
-                        :staker_address, :staking_contract, :token_address, :commission
+                        :staker_address,
+                        :staking_contract,
+                        token_address: erc20_dispatcher.contract_address,
+                        :commission
                     );
                 Option::Some(
                     StakerPoolInfo {
@@ -202,7 +206,7 @@ pub mod Staking {
             );
             let old_self_stake = staker_info.amount_own;
             let staking_contract_address = get_contract_address();
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
                 .transfer_from(
                     sender: caller_address,
@@ -246,7 +250,7 @@ pub mod Staking {
             );
             self.calculate_rewards(ref :staker_info);
             let amount = staker_info.unclaimed_rewards_own;
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc20_dispatcher = self.erc20_dispatcher.read();
             self
                 .send_rewards(
                     reward_address: staker_info.reward_address, :amount, :erc20_dispatcher
@@ -304,7 +308,7 @@ pub mod Staking {
             assert_with_err(
                 get_block_timestamp() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED
             );
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc20_dispatcher = self.erc20_dispatcher.read();
             // Send rewards to staker.
             self
                 .send_rewards(
@@ -335,7 +339,7 @@ pub mod Staking {
             );
 
             self.calculate_rewards(ref :staker_info);
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
                 .transfer_from(
                     sender: pool_contract, recipient: get_contract_address(), amount: amount.into()
@@ -417,7 +421,7 @@ pub mod Staking {
                 get_block_timestamp() >= undelegate_intent.unpool_time,
                 Error::INTENT_WINDOW_NOT_FINISHED
             );
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
                 .transfer(recipient: pool_contract, amount: undelegate_intent.amount.into());
             // TODO: Emit event.
@@ -503,7 +507,7 @@ pub mod Staking {
                 .deploy_delegation_pool_contract(
                     :staker_address,
                     staking_contract: get_contract_address(),
-                    token_address: self.token_address.read(),
+                    token_address: self.erc20_dispatcher.read().contract_address,
                     :commission
                 );
             staker_info
@@ -527,10 +531,10 @@ pub mod Staking {
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
             StakingContractInfo {
                 min_stake: self.min_stake.read(),
-                token_address: self.token_address.read(),
+                token_address: self.erc20_dispatcher.read().contract_address,
                 global_index: self.global_index.read(),
                 pool_contract_class_hash: self.pool_contract_class_hash.read(),
-                reward_supplier: self.reward_supplier.read(),
+                reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
             }
         }
 
@@ -549,7 +553,7 @@ pub mod Staking {
             let mut updated_pool_info = staker_info.get_pool_info_unchecked();
             // Calculate rewards updated the index in staker_info.
             let updated_index = staker_info.index;
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc20_dispatcher = self.erc20_dispatcher.read();
             self
                 .send_rewards(
                     reward_address: pool_address,
@@ -644,9 +648,7 @@ pub mod Staking {
             amount: u128,
             erc20_dispatcher: IERC20Dispatcher
         ) {
-            let reward_supplier_dispatcher = IRewardSupplierDispatcher {
-                contract_address: self.reward_supplier.read()
-            };
+            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             let balance_before = erc20_dispatcher.balance_of(account: get_contract_address());
             reward_supplier_dispatcher.claim_rewards(:amount);
             let balance_after = erc20_dispatcher.balance_of(account: get_contract_address());
@@ -690,9 +692,7 @@ pub mod Staking {
 
         fn transfer_to_pool_when_unstake(ref self: ContractState, staker_info: StakerInfo) {
             if let Option::Some(pool_info) = staker_info.pool_info {
-                let erc20_dispatcher = IERC20Dispatcher {
-                    contract_address: self.token_address.read()
-                };
+                let erc20_dispatcher = self.erc20_dispatcher.read();
                 self
                     .send_rewards(
                         reward_address: pool_info.pooling_contract,
@@ -794,9 +794,7 @@ pub mod Staking {
         }
 
         fn update_global_index(ref self: ContractState) {
-            let reward_supplier_dispatcher = IRewardSupplierDispatcher {
-                contract_address: self.reward_supplier.read()
-            };
+            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             let staking_rewards = reward_supplier_dispatcher.calculate_staking_rewards();
             let total_stake = self.get_total_stake();
             let global_index_diff = compute_global_index_diff(:staking_rewards, :total_stake);

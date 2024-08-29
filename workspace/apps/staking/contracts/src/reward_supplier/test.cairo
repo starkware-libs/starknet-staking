@@ -31,14 +31,17 @@ fn test_reward_supplier_constructor() {
     cfg.test_info.staking_contract = staking_contract;
     let state = @initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     assert_eq!(state.staking_contract.read(), cfg.test_info.staking_contract);
-    assert_eq!(state.token_address.read(), token_address);
+    assert_eq!(state.erc20_dispatcher.read().contract_address, token_address);
     assert_eq!(state.l1_pending_requested_amount.read(), Zero::zero());
     assert_eq!(state.base_mint_amount.read(), cfg.reward_supplier.base_mint_amount);
     assert_eq!(state.base_mint_msg.read(), cfg.reward_supplier.base_mint_msg);
-    assert_eq!(state.minting_curve_contract.read(), cfg.reward_supplier.minting_curve_contract);
+    assert_eq!(
+        state.minting_curve_dispatcher.read().contract_address,
+        cfg.reward_supplier.minting_curve_contract
+    );
     assert_eq!(state.l1_staking_minter.read(), cfg.reward_supplier.l1_staking_minter);
     assert_eq!(state.last_timestamp.read(), get_block_timestamp());
-    assert_eq!(state.unclaimed_rewards.read(), 0_u128);
+    assert_eq!(state.unclaimed_rewards.read(), Zero::zero());
 }
 
 #[test]

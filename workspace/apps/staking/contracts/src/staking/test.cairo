@@ -56,7 +56,9 @@ use contracts::pooling::Pooling::SwitchPoolData;
 use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispatcherTrait};
 use contracts::pooling::interface::PoolingContractInfo;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-
+use contracts::reward_supplier::interface::{
+    IRewardSupplierDispatcherTrait, IRewardSupplierDispatcher
+};
 
 #[test]
 fn test_constructor() {
@@ -78,7 +80,7 @@ fn test_constructor() {
         :security_admin
     );
     assert_eq!(state.min_stake.read(), min_stake);
-    assert_eq!(state.token_address.read(), token_address);
+    assert_eq!(state.erc20_dispatcher.read().contract_address, token_address);
     let contract_global_index: u64 = state.global_index.read();
     assert_eq!(BASE_VALUE, contract_global_index);
     let staker_address = state.operational_address_to_staker_address.read(dummy_address);
@@ -86,7 +88,7 @@ fn test_constructor() {
     let staker_info = state.staker_info.read(dummy_address);
     assert!(staker_info.is_none());
     assert_eq!(state.pool_contract_class_hash.read(), pool_contract_class_hash);
-    assert_eq!(state.reward_supplier.read(), reward_supplier);
+    assert_eq!(state.reward_supplier_dispatcher.read().contract_address, reward_supplier);
     assert_eq!(state.pool_contract_admin.read(), pool_contract_admin);
 }
 

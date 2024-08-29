@@ -513,7 +513,7 @@ pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     );
     snforge_std::store(
         target: minting_curve,
-        storage_address: selector!("staking_contract"),
+        storage_address: selector!("staking_dispatcher"),
         serialized_value: array![staking_contract.into()].span()
     );
 }

@@ -30,9 +30,9 @@ pub mod RewardSupplier {
         l1_pending_requested_amount: u128,
         base_mint_amount: u128,
         base_mint_msg: felt252,
-        minting_curve_contract: ContractAddress,
+        minting_curve_dispatcher: IMintingCurveDispatcher,
         staking_contract: ContractAddress,
-        token_address: ContractAddress,
+        erc20_dispatcher: IERC20Dispatcher,
         l1_staking_minter: felt252,
     }
 
@@ -55,13 +55,15 @@ pub mod RewardSupplier {
         l1_staking_minter: felt252,
     ) {
         self.staking_contract.write(staking_contract);
-        self.token_address.write(token_address);
+        self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.last_timestamp.write(get_block_timestamp());
         self.unclaimed_rewards.write(Zero::zero());
         self.l1_pending_requested_amount.write(Zero::zero());
         self.base_mint_amount.write(base_mint_amount);
         self.base_mint_msg.write(base_mint_msg);
-        self.minting_curve_contract.write(minting_curve_contract);
+        self
+            .minting_curve_dispatcher
+            .write(IMintingCurveDispatcher { contract_address: minting_curve_contract });
         self.l1_staking_minter.write(l1_staking_minter);
     }
 
@@ -86,7 +88,7 @@ pub mod RewardSupplier {
             let unclaimed_rewards = self.unclaimed_rewards.read();
             assert_with_err(unclaimed_rewards >= amount, Error::AMOUNT_TOO_HIGH);
             self.unclaimed_rewards.write(unclaimed_rewards - amount);
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher.transfer(recipient: staking_contract, amount: amount.into());
         }
 
@@ -112,9 +114,7 @@ pub mod RewardSupplier {
     #[generate_trait]
     pub impl InternalRewardSupplierFunctions of InternalRewardSupplierFunctionsTrait {
         fn calculate_rewards(ref self: ContractState) -> u128 {
-            let minting_curve_dispatcher = IMintingCurveDispatcher {
-                contract_address: self.minting_curve_contract.read()
-            };
+            let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
             let yearly_mint = minting_curve_dispatcher.yearly_mint();
             let last_timestamp = self.last_timestamp.read();
             let current_time = get_block_timestamp();
@@ -133,7 +133,7 @@ pub mod RewardSupplier {
         fn request_funds_if_needed(ref self: ContractState, unclaimed_rewards: u128) {
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
             let base_mint_amount = self.base_mint_amount.read();
-            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            let erc20_dispatcher = self.erc20_dispatcher.read();
             let balance: u128 = erc20_dispatcher
                 .balance_of(account: get_contract_address())
                 .try_into()

@@ -21,7 +21,7 @@ pub mod MintingCurve {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        staking_contract: ContractAddress,
+        staking_dispatcher: IStakingDispatcher,
         total_supply: u128,
         l1_staking_minter_address: felt252,
     }
@@ -42,7 +42,7 @@ pub mod MintingCurve {
         total_supply: u128,
         l1_staking_minter_address: felt252
     ) {
-        self.staking_contract.write(staking_contract);
+        self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
         self.total_supply.write(total_supply);
         self.l1_staking_minter_address.write(l1_staking_minter_address)
     }
@@ -85,9 +85,7 @@ pub mod MintingCurve {
         /// - S: Staking rate of total supply (%)
         fn yearly_mint(self: @ContractState) -> u128 {
             let total_supply = self.total_supply.read();
-            let staking_dispatcher = IStakingDispatcher {
-                contract_address: self.staking_contract.read(),
-            };
+            let staking_dispatcher = self.staking_dispatcher.read();
             let total_stake = staking_dispatcher.get_total_stake();
             let yearly_mint: u128 = compute_yearly_mint(:total_stake, :total_supply);
             yearly_mint
