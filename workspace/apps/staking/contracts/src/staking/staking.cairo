@@ -411,14 +411,10 @@ pub mod Staking {
                 get_block_timestamp() >= undelegate_intent.unpool_time,
                 Error::INTENT_WINDOW_NOT_FINISHED
             );
-            if undelegate_intent.amount.is_non_zero() {
-                let erc20_dispatcher = IERC20Dispatcher {
-                    contract_address: self.token_address.read()
-                };
-                erc20_dispatcher
-                    .transfer(recipient: pool_contract, amount: undelegate_intent.amount.into());
-                // TODO: Emit event.
-            }
+            let erc20_dispatcher = IERC20Dispatcher { contract_address: self.token_address.read() };
+            erc20_dispatcher
+                .transfer(recipient: pool_contract, amount: undelegate_intent.amount.into());
+            // TODO: Emit event.
             self.clear_undelegate_intent(:undelegate_intent_key);
             undelegate_intent.amount
         }
