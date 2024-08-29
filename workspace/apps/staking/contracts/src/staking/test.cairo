@@ -800,12 +800,12 @@ fn test_stake_pooling_enabled() {
     );
 }
 
-// TODO: Create tests that cover all panic scenarios for add_to_delegation_pool.
+// TODO: Create tests that cover all panic scenarios for add_stake_from_pool.
 // TODO: Implement the following test.
 //       Note: The happy flow is also tested in test_enter_delegation_pool.
 //       in pooling/test.cairo.
 #[test]
-fn test_add_to_delegation_pool() {
+fn test_add_stake_from_pool() {
     assert!(true);
 }
 
