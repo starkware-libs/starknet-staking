@@ -35,7 +35,7 @@
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
-    - [add\_to\_delegation\_pool](#add_to_delegation_pool-1)
+    - [add\_to\_delegation\_pool](#add_to_delegation_pool)
     - [exit\_delegation\_pool\_intent](#exit_delegation_pool_intent)
     - [exit\_delegaition\_pool\_action](#exit_delegaition_pool_action)
     - [claim\_rewards](#claim_rewards-1)
@@ -50,6 +50,12 @@
     - [Delegation Pool Member Exit intent](#delegation-pool-member-exit-intent)
     - [Final Index Set](#final-index-set)
     - [New Pool Member](#new-pool-member)
+- [Errors](#errors)
+    - [STAKER\_EXISTS](#staker_exists)
+    - [OPERATIONAL\_EXISTS](#operational_exists)
+    - [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
+    - [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
+    - [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 
 </details>
 
@@ -219,34 +225,43 @@ sequenceDiagram
 # Staking contract
 ## Functions
 ### stake
+```rust
+fn stake(
+  ref self: TContractState,
+  reward_address: ContractAddress,
+  operational_address: ContractAddress,
+  amount: u128,
+  pooling_enabled: bool,
+  commission: u16
+) -> bool
+```
 #### description <!-- omit from toc -->
 Add a new staker to the stake.
-#### parameters <!-- omit from toc -->
-| name            | type       |
-| --------------- | ---------- |
-| reward          | address    |
-| operational     | address    |
-| amount          | u128       |
-| pooling_enabled | boolean    |
-| commission      | Option<u8> |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
-[Balance Changed](#balance-changed)  
-[New Staking Delegation Pool](#new-staking-delegation-pool) - if pooling_enabled
+1. [New Delegation Pool](#new-delegation-pool) - if pooling_enabled is true
+2. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [STAKER\_EXISTS](#staker_exists)
+3. [OPERATIONAL\_EXISTS](#operational_exists)
+4. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
+5. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
 #### pre-condition <!-- omit from toc -->
-1. caller address (staker) is not listed in the contract.
-2. Operational address is not listed in the contract.
+1. Staking contract is unpaused.
+2. `caller_address` (staker) is not listed in the contract.
+3. `operational_address` is not listed in the contract.
+4. `amount` is above the minimum amount for staking.
+5. `commission` is not above the maximum commission for staking.
+#### access control <!-- omit from toc -->
+Only staker address.
 #### logic  <!-- omit from toc -->
-1. Validate amount is above the minimum amount for staking.
-2. Transfer amount from staker to be locked in the contract.
-3. Create a new registry for the staker (caller).
-4. Set:
+1. Transfer amount from staker to be locked in the contract.
+2. Create a new registry for the staker (caller).
+3. Set:
    1. Staker index = current global index.
-   2. unclaimed_amount = 0.
+   2. Unclaimed amount = 0.
    3. amount = given amount.
-5. if pooling_enabled then deploy a pooling contract instance.
+4. If pooling enabled then deploy a pooling contract instance.
 
 ### increase_stake
 #### description <!-- omit from toc -->
@@ -895,6 +910,22 @@ success: bool
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
 | pool_member    | address | ✅    |
-| staker_address  | address | ✅    |
+| staker_address | address | ✅    |
 | reward_address | address | ❌    |
 | amount         | u128    | ❌    |
+
+# Errors
+### STAKER_EXISTS
+"Staker already exists, use increase_stake instead."
+
+### OPERATIONAL_EXISTS
+"Operational address already exists."
+
+### AMOUNT_LESS_THAN_MIN_STAKE
+"Amount is less than min stake - try again with enough funds."
+
+### COMMISSION_OUT_OF_RANGE
+"Commission is out of range, expected to be 0-10000."
+
+### CONTRACT_IS_PAUSED
+"Contract is paused."

@@ -1,3 +1,7 @@
+use core::num::traits::BitSize;
+use core::num::traits::zero::Zero;
+
+#[derive(Debug, Drop, PartialEq)]
 struct BoolArrayRange {
     // Inclusive.
     lower_bound: usize,
@@ -5,6 +9,7 @@ struct BoolArrayRange {
     upper_bound: usize,
 }
 
+#[derive(Debug, Drop, PartialEq)]
 pub struct BoolArray<T> {
     // TODO: Consider eliminate size limitations.
     bit_array: T,
@@ -84,5 +89,30 @@ impl BoolArrayImpl<T, +Drop<T>> of BoolArrayTrait<T> {
 
     fn len(self: @BoolArray<T>) -> usize {
         0
+    }
+}
+
+impl TIntoBoolArray<T, +BitSize<T>, +Drop<T>> of Into<T, BoolArray<T>> {
+    fn into(self: T) -> BoolArray<T> {
+        BoolArray {
+            bit_array: self,
+            _range: BoolArrayRange { lower_bound: Zero::zero(), upper_bound: BitSize::<T>::bits() }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BoolArray, BoolArrayRange};
+
+    const TESTED_BIT_ARRAY: u8 = 0b01100001;
+
+    #[test]
+    fn test_t_into_bool_array() {
+        let bool_array = TESTED_BIT_ARRAY.into();
+        let expected = BoolArray {
+            bit_array: TESTED_BIT_ARRAY, _range: BoolArrayRange { lower_bound: 0, upper_bound: 8 }
+        };
+        assert_eq!(bool_array, expected);
     }
 }
