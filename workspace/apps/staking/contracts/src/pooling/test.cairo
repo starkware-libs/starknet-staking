@@ -15,7 +15,8 @@ use contracts::{
         stake_for_testing_using_dispatcher, enter_delegation_pool_for_testing_using_dispatcher,
         stake_with_pooling_enabled, load_from_simple_map, load_option_from_simple_map,
         deploy_minting_curve_contract, deploy_reward_supplier_contract,
-        general_contract_system_deployment, cheat_reward_for_reward_supplier
+        general_contract_system_deployment, cheat_reward_for_reward_supplier,
+        set_account_as_operator
     },
     test_utils::constants::{
         OWNER_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
@@ -641,15 +642,14 @@ fn test_switch_delegation_pool() {
     // Stake, and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
-
     // Create other staker with pool.
     let switch_amount = cfg.pool_member_info.amount / 2;
     cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
+    set_account_as_operator(:staking_contract, account: cfg.test_info.staker_address, :cfg);
     let to_staker_pool_contract = stake_with_pooling_enabled(
         :cfg, :token_address, :staking_contract
     );
-
     // Make sure the pool member has unclaimed rewards.
     // Change global index.
     let index_before = cfg.pool_member_info.index;

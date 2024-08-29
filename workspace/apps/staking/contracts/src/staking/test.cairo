@@ -12,7 +12,7 @@ use contracts::{
         enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
         load_from_simple_map, deploy_reward_supplier_contract, deploy_minting_curve_contract,
         load_one_felt, stake_for_testing_using_dispatcher, general_contract_system_deployment,
-        cheat_reward_for_reward_supplier,
+        cheat_reward_for_reward_supplier, set_default_roles, set_account_as_operator,
         constants::{
             TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OWNER_ADDRESS,
             INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
@@ -227,11 +227,11 @@ fn test_stake_with_same_operational_address() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
 
+    let caller_address = OTHER_STAKER_ADDRESS();
+    assert!(cfg.test_info.staker_address != caller_address);
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
     // Change staker address.
-    cheat_caller_address_once(
-        contract_address: test_address(), caller_address: OTHER_STAKER_ADDRESS()
-    );
-    assert!(cfg.test_info.staker_address != OTHER_STAKER_ADDRESS());
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     // Second stake with the same operational address.
     staking_dispatcher
         .stake(
@@ -385,12 +385,11 @@ fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
 #[should_panic(expected: "Caller is not pool contract.")]
 fn test_claim_delegation_pool_rewards_unauthorized_address() {
     let mut cfg: StakingInitConfig = Default::default();
-    cfg.test_info.pooling_enabled = true;
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     // TODO: Set the contract address to the actual pool contract address.
     let staker_address = cfg.test_info.staker_address;
     // Update staker info for the test.
@@ -426,10 +425,10 @@ fn test_increase_stake_from_reward_address() {
     let increase_amount = cfg.staker_info.amount_own;
     let mut expected_staker_info = staker_info_before;
     expected_staker_info.amount_own += increase_amount;
+    let caller_address = cfg.staker_info.reward_address;
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
     let mut spy = snforge_std::spy_events();
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.staker_info.reward_address
-    );
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher.increase_stake(:staker_address, amount: increase_amount);
     let updated_staker_info = staking_dispatcher.state_of(:staker_address);
     assert_eq!(expected_staker_info, updated_staker_info);
@@ -456,6 +455,10 @@ fn test_increase_stake_staker_address_not_exist() {
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    // Use the default operator.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
     staking_dispatcher
         .increase_stake(staker_address: NON_STAKER_ADDRESS(), amount: cfg.staker_info.amount_own);
 }
@@ -501,9 +504,9 @@ fn test_increase_stake_caller_cannot_increase() {
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
-    );
+    let caller_address = NON_STAKER_ADDRESS();
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher
         .increase_stake(
             staker_address: cfg.test_info.staker_address, amount: cfg.staker_info.amount_own
@@ -552,9 +555,9 @@ fn test_change_reward_address_staker_not_exist() {
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
-    );
+    let caller_address = NON_STAKER_ADDRESS();
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     // Reward address is arbitrary because it should fail because of the caller.
     staking_dispatcher.change_reward_address(reward_address: DUMMY_ADDRESS());
 }
@@ -603,7 +606,9 @@ fn test_claim_rewards_panic_unauthorized() {
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: DUMMY_ADDRESS());
+    let caller_address = DUMMY_ADDRESS();
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher.claim_rewards(staker_address: cfg.test_info.staker_address);
 }
 
@@ -617,6 +622,10 @@ fn test_claim_rewards_panic_staker_doesnt_exist() {
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    // Use the default operator.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
     staking_dispatcher.claim_rewards(staker_address: DUMMY_ADDRESS());
 }
 
@@ -665,9 +674,9 @@ fn test_unstake_intent_staker_doesnt_exist() {
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
-    );
+    let caller_address = NON_STAKER_ADDRESS();
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher.unstake_intent();
 }
 
@@ -709,9 +718,9 @@ fn test_unstake_action() {
         block_timestamp: unstake_time + 1,
         span: CheatSpan::Indefinite
     );
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
-    );
+    let caller_address = NON_STAKER_ADDRESS();
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
     assert_eq!(staker_amount, cfg.staker_info.amount_own);
@@ -761,9 +770,7 @@ fn test_stake_pooling_enabled() {
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let mut spy = snforge_std::spy_events();
-    // Stake with pooling enabled.
-    cfg.test_info.pooling_enabled = true;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     if let Option::Some(mut pool_info) = cfg.staker_info.pool_info {
@@ -780,7 +787,10 @@ fn test_stake_pooling_enabled() {
     assert_eq!(expected_staker_info, staking_dispatcher.state_of(:staker_address));
     // Validate events.
     let events = spy.get_events().emitted_by(staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 2, message: "stake_pooling_enabled");
+    // There are four events: NewDelegationPool, StakeBalanceChange, GovernanceAdminAdded,
+    // OperatorAdded.
+    // We're checking only the first two that are from Staking and not from Roles component.
+    assert_number_of_events(actual: events.len(), expected: 4, message: "stake_pooling_enabled");
     let pool_info = cfg.staker_info.get_pool_info_unchecked();
     assert_new_delegation_pool_event(
         spied_event: events[0],
@@ -876,9 +886,11 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let staking_balance_before_action = erc20_dispatcher.balance_of(staking_contract);
+    let caller_address = CALLER_ADDRESS();
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
     // Remove from delegation pool action, and check it returns 0 and does not change balance.
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: CALLER_ADDRESS());
+    let staking_balance_before_action = erc20_dispatcher.balance_of(staking_contract);
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     let returned_amount = staking_dispatcher
         .remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
     assert_eq!(returned_amount, Zero::zero());
@@ -906,6 +918,7 @@ fn test_switch_staking_delegation_pool() {
     let to_staker = OTHER_STAKER_ADDRESS();
     cfg.test_info.staker_address = to_staker;
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
+    set_account_as_operator(:staking_contract, account: to_staker, :cfg);
     let to_pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     let to_pool_dispatcher = IPoolingDispatcher { contract_address: to_pool_contract };
     let to_staker_info = staking_dispatcher.state_of(staker_address: to_staker);
@@ -928,9 +941,9 @@ fn test_switch_staking_delegation_pool() {
         storage_address: selector!("global_index"),
         serialized_value: array![updated_index.into()].span()
     );
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: from_pool_contract
-    );
+    let caller_address = from_pool_contract;
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher
         .switch_staking_delegation_pool(
             :to_staker,
@@ -939,7 +952,6 @@ fn test_switch_staking_delegation_pool() {
             data: serialized_data.span(),
             identifier: pool_member.into()
         );
-
     let interest = updated_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards(amount: cfg.staker_info.amount_own, :interest);
     let pool_rewards_including_commission = compute_rewards(
@@ -978,10 +990,10 @@ fn test_switch_staking_delegation_pool() {
     assert_eq!(actual_undelegate_intent_value.amount, expected_undelegate_intent_value_amount);
     assert!(actual_undelegate_intent_value.unpool_time.is_non_zero());
     assert_eq!(to_pool_dispatcher.state_of(:pool_member).amount, switched_amount);
+    let caller_address = from_pool_contract;
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
     // Switch again with the rest of the amount, and verify the intent is removed.
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: from_pool_contract
-    );
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     cheat_reward_for_reward_supplier(
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards_pool, :token_address
     );
@@ -1017,6 +1029,10 @@ fn test_update_global_index_if_needed() {
         .expect('global index not fit in u64');
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let mut spy = snforge_std::spy_events();
+    // Use the default operator.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
     // Try to update global index. This shouldn't update the index because a day hasn't passed.
     staking_dispatcher.update_global_index_if_needed();
     let global_index_after_first_update: u64 = load_one_felt(
@@ -1038,6 +1054,10 @@ fn test_update_global_index_if_needed() {
             cfg.test_info.initial_supply.try_into().expect('intial_supply not fit in felt')
         ]
             .span()
+    );
+    // Use the default operator.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
     );
     staking_dispatcher.update_global_index_if_needed();
     let global_index_after_second_update: u64 = load_one_felt(
@@ -1124,6 +1144,10 @@ fn test_change_operational_address_staker_doesnt_exist() {
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
+    // Use the default operator.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
     staking_dispatcher.change_operational_address(:operational_address);
 }
 
@@ -1193,9 +1217,9 @@ fn test_update_commission_caller_not_staker() {
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
-    );
+    let caller_address = NON_STAKER_ADDRESS();
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher
         .update_commission(commission: cfg.staker_info.get_pool_info_unchecked().commission - 1);
 }
@@ -1286,9 +1310,9 @@ fn test_set_open_for_delegation_staker_not_exist() {
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: NON_STAKER_ADDRESS()
-    );
+    let caller_address = NON_STAKER_ADDRESS();
+    set_account_as_operator(:staking_contract, account: caller_address, :cfg);
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher
         .set_open_for_delegation(commission: cfg.staker_info.get_pool_info_unchecked().commission);
 }

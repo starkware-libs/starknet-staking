@@ -6,11 +6,11 @@ use contracts::staking::interface::{
     IStaking, StakerInfo, StakerPoolInfo, StakingContractInfo, IStakingDispatcher,
     IStakingDispatcherTrait, StakerInfoTrait
 };
+use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts::pooling::{Pooling, Pooling::SwitchPoolData};
 use contracts::pooling::interface::{
     IPooling, PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait
 };
-use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address};
 use starknet::syscalls::deploy_syscall;
@@ -260,7 +260,30 @@ pub(crate) fn deploy_staking_contract(
     cfg.test_info.security_admin.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
+    set_default_roles(staking_contract: staking_contract_address, :cfg);
     staking_contract_address
+}
+
+pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingInitConfig,) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
+    );
+    roles_dispatcher.register_security_agent(account: cfg.test_info.security_agent);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
+    );
+    roles_dispatcher.register_operator(account: cfg.test_info.staker_address);
+}
+
+pub(crate) fn set_account_as_operator(
+    staking_contract: ContractAddress, account: ContractAddress, cfg: StakingInitConfig
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
+    );
+    roles_dispatcher.register_operator(:account);
 }
 
 pub(crate) fn deploy_minting_curve_contract(
@@ -376,14 +399,15 @@ pub(crate) fn stake_with_pooling_enabled(
     mut cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress
 ) -> ContractAddress {
     cfg.test_info.pooling_enabled = true;
-
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-
-    staking_dispatcher
+    let pool_contract = staking_dispatcher
         .state_of(cfg.test_info.staker_address)
         .get_pool_info_unchecked()
-        .pooling_contract
+        .pooling_contract;
+    // Set pool contract as operator.
+    set_account_as_operator(:staking_contract, account: pool_contract, :cfg);
+    pool_contract
 }
 
 pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
@@ -492,12 +516,6 @@ pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         storage_address: selector!("staking_contract"),
         serialized_value: array![staking_contract.into()].span()
     );
-    // Set security agent.
-    let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
-    );
-    roles_dispatcher.register_security_agent(account: cfg.test_info.security_agent);
 }
 
 pub fn cheat_reward_for_reward_supplier(
