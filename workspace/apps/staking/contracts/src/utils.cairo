@@ -46,10 +46,10 @@ pub fn deploy_delegation_pool_contract(
 
 // Compute the commission amount of the staker from the pool rewards.
 //
-// $$ commission_amount = rewards * commission / COMMISSION_DENOMINATOR $$
-pub fn compute_commission_amount(rewards: u128, commission: u16) -> u128 {
+// $$ commission_amount = rewards_including_commission * commission / COMMISSION_DENOMINATOR $$
+pub fn compute_commission_amount(rewards_including_commission: u128, commission: u16) -> u128 {
     u128_mul_wide_and_div_unsafe(
-        lhs: rewards,
+        lhs: rewards_including_commission,
         rhs: commission.into(),
         div: COMMISSION_DENOMINATOR.into(),
         error: Error::COMMISSION_ISNT_U128
