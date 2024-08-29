@@ -921,7 +921,7 @@ fn test_switch_staking_delegation_pool() {
     let mut serialized_data = array![];
     switch_pool_data.serialize(ref output: serialized_data);
 
-    let switch_amount = cfg.pool_member_info.amount / 2;
+    let switched_amount = cfg.pool_member_info.amount / 2;
     let updated_index: u64 = cfg.staker_info.index * 2;
     snforge_std::store(
         target: staking_contract,
@@ -935,7 +935,7 @@ fn test_switch_staking_delegation_pool() {
         .switch_staking_delegation_pool(
             :to_staker,
             to_pool: to_pool_contract,
-            amount: switch_amount,
+            :switched_amount,
             data: serialized_data.span(),
             identifier: pool_member.into()
         );
@@ -950,7 +950,7 @@ fn test_switch_staking_delegation_pool() {
     );
     let unclaimed_rewards_own = staker_rewards + commission_amount;
     let unclaimed_rewards_pool = pool_rewards - commission_amount;
-    let amount = cfg.staker_info.get_pool_info_unchecked().amount + switch_amount;
+    let amount = cfg.staker_info.get_pool_info_unchecked().amount + switched_amount;
     let mut expected_staker_info = StakerInfo {
         index: updated_index, unclaimed_rewards_own, ..to_staker_info
     };
@@ -961,11 +961,11 @@ fn test_switch_staking_delegation_pool() {
     let actual_staker_info = staking_dispatcher.state_of(staker_address: to_staker);
     assert_eq!(actual_staker_info, expected_staker_info);
     // Check total_stake was updated.
-    let expected_total_stake = total_stake_before_switching + switch_amount;
+    let expected_total_stake = total_stake_before_switching + switched_amount;
     let actual_total_stake = staking_dispatcher.get_total_stake();
     assert_eq!(actual_total_stake, expected_total_stake);
     // Check that the pool member's intent amount was decreased.
-    let expected_undelegate_intent_value_amount = cfg.pool_member_info.amount - switch_amount;
+    let expected_undelegate_intent_value_amount = cfg.pool_member_info.amount - switched_amount;
     let undelegate_intent_key = UndelegateIntentKey {
         pool_contract: from_pool_contract, identifier: pool_member.into()
     };
@@ -976,7 +976,7 @@ fn test_switch_staking_delegation_pool() {
     );
     assert_eq!(actual_undelegate_intent_value.amount, expected_undelegate_intent_value_amount);
     assert!(actual_undelegate_intent_value.unpool_time.is_non_zero());
-    assert_eq!(to_pool_dispatcher.state_of(:pool_member).amount, switch_amount);
+    assert_eq!(to_pool_dispatcher.state_of(:pool_member).amount, switched_amount);
     // Switch again with the rest of the amount, and verify the intent is removed.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: from_pool_contract
@@ -988,7 +988,7 @@ fn test_switch_staking_delegation_pool() {
         .switch_staking_delegation_pool(
             :to_staker,
             to_pool: to_pool_contract,
-            amount: switch_amount,
+            :switched_amount,
             data: serialized_data.span(),
             identifier: pool_member.into()
         );
