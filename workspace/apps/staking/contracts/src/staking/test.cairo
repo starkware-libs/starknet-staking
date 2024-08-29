@@ -1027,9 +1027,10 @@ fn test_update_global_index_if_needed() {
     assert_eq!(global_index_before_first_update, global_index_after_first_update);
     // Advance time by a year, update total_stake to be total_supply (which is equal to initial
     // supply), which means that max_inflation * BASE_VALUE will be added to global_index.
-    let last_index_update_timestamp = get_block_timestamp();
-    let current_index_update_timestamp = last_index_update_timestamp + SECONDS_IN_DAY * 365;
-    start_cheat_block_timestamp_global(block_timestamp: current_index_update_timestamp);
+    let global_index_last_update_timestamp = get_block_timestamp();
+    let global_index_current_update_timestamp = global_index_last_update_timestamp
+        + SECONDS_IN_DAY * 365;
+    start_cheat_block_timestamp_global(block_timestamp: global_index_current_update_timestamp);
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("total_stake"),
@@ -1058,8 +1059,8 @@ fn test_update_global_index_if_needed() {
         spied_event: events[0],
         old_index: global_index_before_first_update,
         new_index: global_index_after_second_update,
-        :last_index_update_timestamp,
-        :current_index_update_timestamp
+        :global_index_last_update_timestamp,
+        :global_index_current_update_timestamp
     );
 }
 
