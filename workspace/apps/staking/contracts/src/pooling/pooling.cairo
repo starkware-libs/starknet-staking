@@ -26,13 +26,6 @@ pub mod Pooling {
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
-    impl AccessControlImpl =
-        AccessControlComponent::AccessControlImpl<ContractState>;
-
-    #[abi(embed_v0)]
-    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
-
-    #[abi(embed_v0)]
     impl ReplaceabilityImpl =
         ReplaceabilityComponent::ReplaceabilityImpl<ContractState>;
 
