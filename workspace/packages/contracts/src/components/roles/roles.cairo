@@ -310,7 +310,10 @@ pub mod RolesComponent {
             access_comp.set_role_admin(role: APP_GOVERNOR, admin_role: APP_ROLE_ADMIN);
             access_comp.set_role_admin(role: APP_ROLE_ADMIN, admin_role: GOVERNANCE_ADMIN);
             access_comp.set_role_admin(role: GOVERNANCE_ADMIN, admin_role: GOVERNANCE_ADMIN);
-            access_comp.set_role_admin(role: OPERATOR, admin_role: APP_ROLE_ADMIN);
+            // TODO: change back to:
+            // access_comp.set_role_admin(role: OPERATOR, admin_role: APP_ROLE_ADMIN);
+            // after we fix the issue in Staking contract constructor.
+            access_comp.set_role_admin(role: OPERATOR, admin_role: SECURITY_ADMIN);
             access_comp.set_role_admin(role: TOKEN_ADMIN, admin_role: APP_ROLE_ADMIN);
             access_comp.set_role_admin(role: UPGRADE_GOVERNOR, admin_role: GOVERNANCE_ADMIN);
 
