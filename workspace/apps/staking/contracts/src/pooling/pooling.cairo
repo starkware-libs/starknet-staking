@@ -287,7 +287,7 @@ pub mod Pooling {
                 .switch_staking_delegation_pool(
                     :to_staker,
                     :to_pool,
-                    :amount,
+                    switched_amount: amount,
                     data: serialized_data.span(),
                     identifier: pool_member.into()
                 );

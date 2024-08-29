@@ -139,7 +139,7 @@ pub trait IStaking<TContractState> {
         ref self: TContractState,
         to_staker: ContractAddress,
         to_pool: ContractAddress,
-        amount: u128,
+        switched_amount: u128,
         data: Span<felt252>,
         identifier: felt252
     ) -> bool;
