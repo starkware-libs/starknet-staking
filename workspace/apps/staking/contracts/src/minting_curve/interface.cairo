@@ -5,7 +5,7 @@ pub trait IMintingCurve<TContractState> {
 
 pub mod Events {
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct TotalSupplyChanged {
+    pub struct TotalSupplyChanged {
         pub old_total_supply: u128,
         pub new_total_supply: u128
     }

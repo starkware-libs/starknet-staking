@@ -25,7 +25,7 @@ pub struct RewardSupplierStatus {
 
 pub mod Events {
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct MintRequest {
+    pub struct MintRequest {
         pub total_amount: u128,
         pub num_msgs: u128,
     }
