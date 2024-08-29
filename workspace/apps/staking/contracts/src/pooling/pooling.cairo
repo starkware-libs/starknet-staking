@@ -56,7 +56,7 @@ pub mod Pooling {
         #[substorage(v0)]
         roles: RolesComponent::Storage,
         staker_address: ContractAddress,
-        pool_member_info: Map::<ContractAddress, Option<PoolMemberInfo>>,
+        pool_member_info: Map<ContractAddress, Option<PoolMemberInfo>>,
         final_staker_index: Option<u64>,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
