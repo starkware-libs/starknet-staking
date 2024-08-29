@@ -267,7 +267,7 @@ pub mod Pooling {
                 contract_address: self.staking_contract.read()
             };
             let amount_left = pool_member_info.amount - amount;
-            if amount_left == 0 {
+            if amount_left.is_zero() {
                 // Claim rewards.
                 let erc20_dispatcher = IERC20Dispatcher {
                     contract_address: self.token_address.read()

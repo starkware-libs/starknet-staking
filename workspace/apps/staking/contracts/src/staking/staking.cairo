@@ -660,7 +660,7 @@ pub mod Staking {
             ref self: ContractState, interest: u64, ref staker_info: StakerInfo
         ) {
             if let Option::Some(mut pool_info) = staker_info.pool_info {
-                if (pool_info.amount > 0) {
+                if (pool_info.amount.is_non_zero()) {
                     let mut rewards = compute_rewards(amount: pool_info.amount, :interest);
                     let commission_amount = compute_commission_amount(
                         :rewards, commission: pool_info.commission
