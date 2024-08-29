@@ -79,7 +79,7 @@ pub mod Staking {
         RolesEvent: RolesComponent::Event,
         AccessControlEvent: AccessControlComponent::Event,
         SRC5Event: SRC5Component::Event,
-        StakeBalanceChange: Events::StakeBalanceChange,
+        StakeBalanceChanged: Events::StakeBalanceChanged,
         NewDelegationPool: Events::NewDelegationPool,
         StakerExitIntent: Events::StakerExitIntent,
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
@@ -172,7 +172,7 @@ pub mod Staking {
             self.add_to_total_stake(:amount);
             self
                 .emit(
-                    Events::StakeBalanceChange {
+                    Events::StakeBalanceChanged {
                         staker_address,
                         old_self_stake: Zero::zero(),
                         old_delegated_stake: Zero::zero(),
@@ -218,7 +218,7 @@ pub mod Staking {
             }
             self
                 .emit(
-                    Events::StakeBalanceChange {
+                    Events::StakeBalanceChanged {
                         staker_address,
                         old_self_stake,
                         old_delegated_stake,
@@ -275,7 +275,7 @@ pub mod Staking {
                 );
             self
                 .emit(
-                    Events::StakeBalanceChange {
+                    Events::StakeBalanceChanged {
                         staker_address,
                         old_self_stake: staker_info.amount_own,
                         old_delegated_stake: amount_pool,
@@ -339,7 +339,7 @@ pub mod Staking {
             self.add_to_total_stake(:amount);
             self
                 .emit(
-                    Events::StakeBalanceChange {
+                    Events::StakeBalanceChanged {
                         staker_address,
                         old_self_stake: staker_info.amount_own,
                         old_delegated_stake,
@@ -383,7 +383,7 @@ pub mod Staking {
             self.pool_exit_intents.write(undelegate_intent_key, pool_exit_entry);
             self
                 .emit(
-                    Events::StakeBalanceChange {
+                    Events::StakeBalanceChanged {
                         staker_address,
                         old_self_stake: staker_info.amount_own,
                         old_delegated_stake,

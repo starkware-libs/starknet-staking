@@ -64,7 +64,7 @@ pub mod Pooling {
         SRC5Event: SRC5Component::Event,
         RolesEvent: RolesComponent::Event,
         PoolMemberExitIntent: Events::PoolMemberExitIntent,
-        DelegationBalanceChange: Events::DelegationBalanceChange,
+        DelegationBalanceChanged: Events::DelegationBalanceChanged,
         PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
         FinalIndexSet: Events::FinalIndexSet,
         DeletePoolMember: Events::DeletePoolMember,
@@ -319,7 +319,7 @@ pub mod Pooling {
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             self
                 .emit(
-                    Events::DelegationBalanceChange {
+                    Events::DelegationBalanceChanged {
                         pool_member,
                         old_delegated_stake: pool_member_info.amount - amount,
                         new_delegated_stake: pool_member_info.amount

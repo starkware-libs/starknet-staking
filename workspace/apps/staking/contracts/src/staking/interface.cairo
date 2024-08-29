@@ -6,7 +6,7 @@ use contracts::errors::{panic_by_err, Error, OptionAuxTrait};
 pub mod Events {
     use starknet::ContractAddress;
     #[derive(Drop, starknet::Event)]
-    pub struct StakeBalanceChange {
+    pub struct StakeBalanceChanged {
         #[key]
         pub staker_address: ContractAddress,
         pub old_self_stake: u128,
