@@ -32,6 +32,7 @@ pub enum Error {
     GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW,
     UNEXPECTED_BALANCE,
     STAKER_ALREADY_HAS_POOL,
+    CONTRACT_IS_PAUSED,
     // Pooling contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
@@ -116,6 +117,7 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::UNEXPECTED_BALANCE => panic!("Unexpected balance."),
         Error::CANNOT_INCREASE_COMMISSION => panic!("Commission cannot be increased."),
         Error::STAKER_ALREADY_HAS_POOL => panic!("Staker already has a pool."),
+        Error::CONTRACT_IS_PAUSED => panic!("Contract is paused."),
     }
 }
 
