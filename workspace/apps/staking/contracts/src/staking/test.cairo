@@ -32,6 +32,7 @@ use contracts::event_test_utils::assert_staker_reward_address_change_event;
 use contracts::event_test_utils::assert_new_delegation_pool_event;
 use contracts::event_test_utils::assert_change_operational_address_event;
 use contracts::event_test_utils::assert_global_index_updated_event;
+use contracts::event_test_utils::assert_staker_reward_claimed_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address, get_block_timestamp};
 use starknet::syscalls::deploy_syscall;
@@ -585,6 +586,7 @@ fn test_claim_rewards() {
     let expected_reward = cfg.staker_info.amount_own;
     cheat_reward_for_reward_supplier(:cfg, :reward_supplier, :expected_reward, :token_address);
     // Claim rewards and validate the results.
+    let mut spy = snforge_std::spy_events();
     let staking_disaptcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -597,6 +599,15 @@ fn test_claim_rewards() {
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = erc20_dispatcher.balance_of(cfg.staker_info.reward_address);
     assert_eq!(balance, reward.into());
+    // Validate the single StakerRewardClaimed event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "claim_rewards");
+    assert_staker_reward_claimed_event(
+        spied_event: events[0],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        amount: reward
+    );
 }
 
 #[test]
@@ -715,11 +726,8 @@ fn test_unstake_action() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let unstake_time = staking_dispatcher.unstake_intent();
     // Advance time to enable unstake_action.
-    cheat_block_timestamp(
-        contract_address: staking_contract,
-        block_timestamp: unstake_time + 1,
-        span: CheatSpan::Indefinite
-    );
+    start_cheat_block_timestamp_global(block_timestamp: unstake_time + 1);
+    let unclaimed_rewards_own = staking_dispatcher.state_of(:staker_address).unclaimed_rewards_own;
     let caller_address = NON_STAKER_ADDRESS();
     set_account_as_operator(:staking_contract, account: caller_address, :cfg);
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
@@ -730,12 +738,19 @@ fn test_unstake_action() {
         map_selector: selector!("staker_info"), key: staker_address, contract: staking_contract
     );
     assert!(actual_staker_info.is_none());
-    // There are two events: DeleteStaker and GlobalIndexUpdated.
-    // Validate DeleteStaker event.
-    let events = spy.get_events().emitted_by(staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_action");
-    assert_delete_staker_event(
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    // GlobalIndexUpdated, DeleteStaker and StakerRewardClaimed events.
+    assert_number_of_events(actual: events.len(), expected: 3, message: "unstake_action");
+    // Validate StakerRewardClaimed event.
+    assert_staker_reward_claimed_event(
         spied_event: events[1],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        amount: unclaimed_rewards_own
+    );
+    // Validate DeleteStaker event.
+    assert_delete_staker_event(
+        spied_event: events[2],
         :staker_address,
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,

@@ -85,6 +85,7 @@ pub mod Staking {
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
         OperationalAddressChanged: Events::OperationalAddressChanged,
         GlobalIndexUpdated: Events::GlobalIndexUpdated,
+        StakerRewardClaimed: Events::StakerRewardClaimed,
         DeleteStaker: Events::DeleteStaker,
     }
 
@@ -244,16 +245,17 @@ pub mod Staking {
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             let caller_address = get_caller_address();
+            let reward_address = staker_info.reward_address;
             assert_with_err(
-                caller_address == staker_address || caller_address == staker_info.reward_address,
+                caller_address == staker_address || caller_address == reward_address,
                 Error::CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
             );
             self.calculate_rewards(ref :staker_info);
             let amount = staker_info.unclaimed_rewards_own;
             let erc20_dispatcher = self.erc20_dispatcher.read();
             self
-                .send_rewards(
-                    reward_address: staker_info.reward_address, :amount, :erc20_dispatcher
+                .send_rewards_to_staker(
+                    :staker_address, :reward_address, :amount, :erc20_dispatcher
                 );
             staker_info.unclaimed_rewards_own = 0;
             self.staker_info.write(staker_address, Option::Some(staker_info));
@@ -309,9 +311,9 @@ pub mod Staking {
                 get_block_timestamp() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED
             );
             let erc20_dispatcher = self.erc20_dispatcher.read();
-            // Send rewards to staker.
             self
-                .send_rewards(
+                .send_rewards_to_staker(
+                    :staker_address,
                     reward_address: staker_info.reward_address,
                     amount: staker_info.unclaimed_rewards_own,
                     :erc20_dispatcher
@@ -657,6 +659,18 @@ pub mod Staking {
             );
             erc20_dispatcher.transfer(recipient: reward_address, amount: amount.into());
         }
+
+        fn send_rewards_to_staker(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            reward_address: ContractAddress,
+            amount: u128,
+            erc20_dispatcher: IERC20Dispatcher
+        ) {
+            self.send_rewards(:reward_address, :amount, :erc20_dispatcher);
+            self.emit(Events::StakerRewardClaimed { staker_address, reward_address, amount });
+        }
+
         fn clear_undelegate_intent(
             ref self: ContractState, undelegate_intent_key: UndelegateIntentKey
         ) {

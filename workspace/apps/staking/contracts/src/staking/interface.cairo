@@ -49,6 +49,14 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
+    pub struct StakerRewardClaimed {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub reward_address: ContractAddress,
+        pub amount: u128
+    }
+
+    #[derive(Drop, starknet::Event)]
     pub struct GlobalIndexUpdated {
         pub old_index: u64,
         pub new_index: u64,
