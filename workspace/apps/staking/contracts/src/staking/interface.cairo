@@ -72,6 +72,15 @@ pub mod Events {
         pub operational_address: ContractAddress,
         pub pool_contract: Option<ContractAddress>,
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub(crate) struct RewardsSuppliedToDelegationPool {
+        #[key]
+        pub staker_address: ContractAddress,
+        #[key]
+        pub pool_address: ContractAddress,
+        pub amount: u128
+    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]

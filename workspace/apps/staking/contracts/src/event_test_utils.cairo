@@ -371,6 +371,29 @@ pub(crate) fn assert_new_pool_member_event(
     }
 }
 
+pub fn assert_rewards_supplied_to_delegation_pool_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    pool_address: ContractAddress,
+    amount: u128
+) {
+    let expected_event = @contracts::staking::Staking::Event::RewardsSuppliedToDelegationPool(
+        StakingEvents::RewardsSuppliedToDelegationPool { staker_address, pool_address, amount }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "RewardsSuppliedToDelegationPool{{staker_address: {:?}, pool_address: {:?}, amount: {}}}",
+            staker_address,
+            pool_address,
+            amount
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn debug_dump_spied_events(ref spy: EventSpy) {
     let mut serialized = array![];
     Serde::<

@@ -32,6 +32,7 @@
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
     - [Staker Exit intent](#staker-exit-intent)
+    - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -332,6 +333,7 @@ Transfers the funds back to the staker.
 amount: u128 - amount of tokens transferred back to the staker.
 #### emits <!-- omit from toc -->
 [Balance Changed](#balance-changed)
+If pool exists: [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. Staker exist and requested to unstake.
@@ -513,6 +515,7 @@ Calculate rewards and transfer the delegation pool rewards to the delegation poo
 #### return <!-- omit from toc -->
 index: u64 - updated index
 #### emits <!-- omit from toc -->
+[Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. staker exist in the contract
@@ -655,6 +658,13 @@ success: bool
 | ------- | ------- | ----- |
 | staker  | address | ✅     |
 | exit_at | time    | ❌     |
+
+### Rewards Supplied To Delegation Pool
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| staker_address | address | ✅    |
+| pool_address   | address | ✅    |
+| amount         | u128    | ❌    |
 
 # Delegation pooling contract
 

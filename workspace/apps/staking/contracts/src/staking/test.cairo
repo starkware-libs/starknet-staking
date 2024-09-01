@@ -33,6 +33,7 @@ use contracts::event_test_utils::assert_new_delegation_pool_event;
 use contracts::event_test_utils::assert_change_operational_address_event;
 use contracts::event_test_utils::assert_global_index_updated_event;
 use contracts::event_test_utils::assert_staker_reward_claimed_event;
+use contracts::event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{ContractAddress, contract_address_const, get_caller_address, get_block_timestamp};
 use starknet::syscalls::deploy_syscall;
@@ -301,11 +302,24 @@ fn test_claim_delegation_pool_rewards() {
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards_pool, :token_address
     );
 
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pooling_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher.claim_delegation_pool_rewards(staker_address: cfg.test_info.staker_address);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     assert_eq!(erc20_dispatcher.balance_of(pooling_contract), unclaimed_rewards_pool.into());
+
+    // Validate the single RewardsSuppliedToDelegationPool event.
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "claim_delegation_pool_rewards"
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[0],
+        staker_address: cfg.test_info.staker_address,
+        pool_address: pooling_contract,
+        amount: unclaimed_rewards_pool
+    );
 }
 
 #[test]
@@ -739,8 +753,9 @@ fn test_unstake_action() {
     );
     assert!(actual_staker_info.is_none());
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
-    // GlobalIndexUpdated, DeleteStaker and StakerRewardClaimed events.
-    assert_number_of_events(actual: events.len(), expected: 3, message: "unstake_action");
+    // GlobalIndexUpdated, StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
+    // events.
+    assert_number_of_events(actual: events.len(), expected: 4, message: "unstake_action");
     // Validate StakerRewardClaimed event.
     assert_staker_reward_claimed_event(
         spied_event: events[1],
@@ -748,9 +763,16 @@ fn test_unstake_action() {
         reward_address: cfg.staker_info.reward_address,
         amount: unclaimed_rewards_own
     );
+    // Validate RewardsSuppliedToDelegationPool event.
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[2],
+        staker_address: cfg.test_info.staker_address,
+        pool_address: pool_contract,
+        amount: 0
+    );
     // Validate DeleteStaker event.
     assert_delete_staker_event(
-        spied_event: events[2],
+        spied_event: events[3],
         :staker_address,
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
