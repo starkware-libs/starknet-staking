@@ -5,7 +5,7 @@ pub mod Pooling {
     use contracts::{
         errors::{Error, assert_with_err, OptionAuxTrait},
         pooling::{interface::PoolingContractInfo, IPooling, PoolMemberInfo, Events},
-        utils::{compute_rewards, compute_commission_amount}
+        utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up}
     };
     use core::option::OptionTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp};
@@ -431,10 +431,10 @@ pub mod Pooling {
             }
             let interest: u64 = updated_index - pool_member_info.index;
             pool_member_info.index = updated_index;
-            let rewards_including_commission = compute_rewards(
+            let rewards_including_commission = compute_rewards_rounded_down(
                 amount: pool_member_info.amount, :interest
             );
-            let commission_amount = compute_commission_amount(
+            let commission_amount = compute_commission_amount_rounded_up(
                 :rewards_including_commission, commission: self.commission.read()
             );
             let rewards = rewards_including_commission - commission_amount;
