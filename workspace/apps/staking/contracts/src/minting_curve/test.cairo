@@ -1,6 +1,5 @@
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait, StakerInfoTrait};
 use contracts::minting_curve::interface::IMintingCurve;
-use contracts::minting_curve::MintingCurve;
 use contracts::minting_curve::MintingCurve::compute_yearly_mint;
 use contracts::test_utils::{
     initialize_minting_curve_state, deploy_staking_contract, deploy_mock_erc20_contract, fund,

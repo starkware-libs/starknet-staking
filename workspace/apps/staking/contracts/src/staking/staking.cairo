@@ -4,11 +4,10 @@ pub mod Staking {
     use core::num::traits::zero::Zero;
     use contracts::{
         constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES},
-        errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
+        errors::{Error, assert_with_err, OptionAuxTrait},
         staking::{IStaking, StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo},
         utils::{
-            u128_mul_wide_and_div_unsafe, deploy_delegation_pool_contract,
-            compute_commission_amount, compute_rewards, ceil_of_division, day_of,
+            deploy_delegation_pool_contract, compute_commission_amount, compute_rewards, day_of,
             compute_global_index_diff
         },
     };
@@ -23,7 +22,6 @@ pub mod Staking {
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use starknet::get_block_timestamp;
     use starknet::class_hash::ClassHash;
-    use starknet::syscalls::deploy_syscall;
     use contracts::pooling::interface::{IPoolingDispatcherTrait, IPoolingDispatcher};
     use contracts::reward_supplier::interface::{
         IRewardSupplierDispatcherTrait, IRewardSupplierDispatcher

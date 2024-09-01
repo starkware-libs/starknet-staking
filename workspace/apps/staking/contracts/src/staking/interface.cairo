@@ -1,7 +1,7 @@
 use starknet::{ContractAddress, ClassHash, get_block_timestamp};
 use contracts::constants::EXIT_WAITING_WINDOW;
 use core::cmp::max;
-use contracts::errors::{panic_by_err, Error, OptionAuxTrait};
+use contracts::errors::{Error, OptionAuxTrait};
 
 pub mod Events {
     use starknet::ContractAddress;

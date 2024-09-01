@@ -1,29 +1,26 @@
 use core::num::traits::zero::Zero;
 use core::serde::Serde;
 use core::option::OptionTrait;
-use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
+use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispatcherTrait};
 use contracts::{
-    constants::{BASE_VALUE, EXIT_WAITING_WINDOW},
-    pooling::{Pooling, PoolMemberInfo, Pooling::{SwitchPoolData, InternalPoolingFunctionsTrait}},
+    constants::{EXIT_WAITING_WINDOW},
+    pooling::{PoolMemberInfo, Pooling::{SwitchPoolData, InternalPoolingFunctionsTrait}},
     pooling::interface::PoolingContractInfo, staking::interface::StakerInfo,
     staking::interface::StakerInfoTrait, staking::interface::StakerPoolInfo,
     utils::{compute_rewards, compute_commission_amount},
     test_utils::{
         initialize_pooling_state, deploy_mock_erc20_contract, StakingInitConfig,
-        deploy_staking_contract, fund, approve, initialize_staking_state_from_cfg,
-        stake_for_testing_using_dispatcher, enter_delegation_pool_for_testing_using_dispatcher,
+        deploy_staking_contract, approve, enter_delegation_pool_for_testing_using_dispatcher,
         stake_with_pooling_enabled, load_from_simple_map, load_option_from_simple_map,
-        deploy_minting_curve_contract, deploy_reward_supplier_contract,
         general_contract_system_deployment, cheat_reward_for_reward_supplier,
         set_account_as_operator
     },
     test_utils::constants::{
-        OWNER_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
-        STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, INITIAL_SUPPLY, DUMMY_ADDRESS,
-        OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, COMMISSION, POOL_MEMBER_REWARD_ADDRESS,
-        STAKER_FINAL_INDEX, NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
-        OTHER_POOL_CONTRACT_ADDRESS, OTHER_POOL_MEMBER_ADDRESS, OTHER_OPERATIONAL_ADDRESS,
+        STAKER_ADDRESS, STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, DUMMY_ADDRESS,
+        OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, COMMISSION, STAKER_FINAL_INDEX,
+        NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_POOL_MEMBER_ADDRESS,
+        OTHER_OPERATIONAL_ADDRESS,
     }
 };
 use contracts::staking::objects::{
@@ -37,13 +34,11 @@ use contracts::event_test_utils::{
 use contracts::event_test_utils::assert_delegation_balance_changed_event;
 use contracts::event_test_utils::assert_pool_member_reward_address_change_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use starknet::{ContractAddress, contract_address_const, get_block_timestamp, Store};
+use starknet::{get_block_timestamp};
 use snforge_std::{
     cheat_caller_address, CheatSpan, test_address, start_cheat_block_timestamp_global
 };
-use snforge_std::cheatcodes::events::{
-    Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
-};
+use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use contracts_commons::test_utils::cheat_caller_address_once;
 
 

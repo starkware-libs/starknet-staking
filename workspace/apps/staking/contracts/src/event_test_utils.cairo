@@ -1,5 +1,4 @@
 use starknet::{ContractAddress};
-use contracts::staking::interface;
 use contracts::staking::Events as StakingEvents;
 use contracts::pooling::Events as PoolEvents;
 use contracts::reward_supplier::Events as RewardSupplierEvents;

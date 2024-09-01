@@ -1,31 +1,26 @@
 use contracts::{staking::Staking, minting_curve::MintingCurve, reward_supplier::RewardSupplier};
 use contracts::constants::BASE_VALUE;
-use core::num::traits::zero::Zero;
 use core::traits::Into;
 use contracts::staking::interface::{
     IStaking, StakerInfo, StakerPoolInfo, StakingContractInfo, IStakingDispatcher,
     IStakingDispatcherTrait, StakerInfoTrait
 };
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts::pooling::{Pooling, Pooling::SwitchPoolData};
-use contracts::pooling::interface::{
-    IPooling, PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait
-};
+use contracts::pooling::Pooling;
+use contracts::pooling::interface::{PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use starknet::{ContractAddress, contract_address_const, get_caller_address};
-use starknet::syscalls::deploy_syscall;
+use starknet::ContractAddress;
 use starknet::ClassHash;
 use starknet::Store;
-use snforge_std::{declare, ContractClassTrait};
+use snforge_std::ContractClassTrait;
 use contracts::staking::Staking::ContractState;
 use constants::{
     NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_INITIAL_BALANCE, STAKE_AMOUNT,
     STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS, TOKEN_ADDRESS, COMMISSION,
-    POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, DUMMY_CLASS_HASH, POOL_MEMBER_ADDRESS,
+    POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
     POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, BASE_MINT_AMOUNT, BUFFER,
     L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG, STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS,
-    DUMMY_IDENTIFIER, REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN,
-    SECURITY_AGENT
+    REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN, SECURITY_AGENT
 };
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;

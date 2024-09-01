@@ -1,14 +1,11 @@
 use contracts::constants::{BASE_VALUE, SECONDS_IN_DAY};
-use contracts::errors::{panic_by_err, Error, OptionAuxTrait};
+use contracts::errors::{Error, OptionAuxTrait};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait};
 use starknet::syscalls::deploy_syscall;
 use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
 use core::num::traits::WideMul;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts::pooling::interface::{
-    IPooling, PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait
-};
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
