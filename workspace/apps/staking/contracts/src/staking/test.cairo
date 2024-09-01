@@ -31,8 +31,8 @@ use contracts::event_test_utils::assert_new_delegation_pool_event;
 use contracts::event_test_utils::assert_change_operational_address_event;
 use contracts::event_test_utils::assert_commission_changed_event;
 use contracts::event_test_utils::assert_global_index_updated_event;
-use contracts::event_test_utils::assert_staker_reward_claimed_event;
 use contracts::event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
+use contracts::event_test_utils::assert_staker_reward_claimed_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::get_block_timestamp;
 use contracts::staking::objects::{
@@ -42,9 +42,7 @@ use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait}
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
-use snforge_std::{
-    cheat_caller_address, CheatSpan, cheat_block_timestamp, start_cheat_block_timestamp_global
-};
+use snforge_std::{cheat_caller_address, CheatSpan, start_cheat_block_timestamp_global};
 
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use contracts_commons::test_utils::cheat_caller_address_once;
