@@ -87,6 +87,7 @@ pub mod Staking {
         GlobalIndexUpdated: Events::GlobalIndexUpdated,
         StakerRewardClaimed: Events::StakerRewardClaimed,
         DeleteStaker: Events::DeleteStaker,
+        RewardsSuppliedToDelegationPool: Events::RewardsSuppliedToDelegationPool,
     }
 
     #[constructor]
@@ -322,7 +323,7 @@ pub mod Staking {
             let staker_amount = staker_info.amount_own;
             erc20_dispatcher.transfer(recipient: staker_address, amount: staker_amount.into());
 
-            self.transfer_to_pool_when_unstake(:staker_info);
+            self.transfer_to_pool_when_unstake(:staker_address, :staker_info);
             self.remove_staker(:staker_address, :staker_info);
             staker_amount
         }
@@ -557,8 +558,9 @@ pub mod Staking {
             let updated_index = staker_info.index;
             let erc20_dispatcher = self.erc20_dispatcher.read();
             self
-                .send_rewards(
-                    reward_address: pool_address,
+                .send_rewards_to_delegation_pool(
+                    :staker_address,
+                    :pool_address,
                     amount: updated_pool_info.unclaimed_rewards,
                     :erc20_dispatcher
                 );
@@ -671,6 +673,20 @@ pub mod Staking {
             self.emit(Events::StakerRewardClaimed { staker_address, reward_address, amount });
         }
 
+        fn send_rewards_to_delegation_pool(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            pool_address: ContractAddress,
+            amount: u128,
+            erc20_dispatcher: IERC20Dispatcher
+        ) {
+            self.send_rewards(reward_address: pool_address, :amount, :erc20_dispatcher);
+            self
+                .emit(
+                    Events::RewardsSuppliedToDelegationPool { staker_address, pool_address, amount }
+                );
+        }
+
         fn clear_undelegate_intent(
             ref self: ContractState, undelegate_intent_key: UndelegateIntentKey
         ) {
@@ -704,12 +720,15 @@ pub mod Staking {
             }
         }
 
-        fn transfer_to_pool_when_unstake(ref self: ContractState, staker_info: StakerInfo) {
+        fn transfer_to_pool_when_unstake(
+            ref self: ContractState, staker_address: ContractAddress, staker_info: StakerInfo
+        ) {
             if let Option::Some(pool_info) = staker_info.pool_info {
                 let erc20_dispatcher = self.erc20_dispatcher.read();
                 self
-                    .send_rewards(
-                        reward_address: pool_info.pooling_contract,
+                    .send_rewards_to_delegation_pool(
+                        :staker_address,
+                        pool_address: pool_info.pooling_contract,
                         amount: pool_info.unclaimed_rewards,
                         :erc20_dispatcher
                     );
