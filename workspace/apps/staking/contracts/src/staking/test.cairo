@@ -921,10 +921,10 @@ fn test_remove_from_delegation_pool_action() {
     assert_eq!(actual_undelegate_intent_value_after_action, Zero::zero());
     // Check that the amount was transferred correctly.
     let pool_balance_after_action = erc20_dispatcher.balance_of(pooling_contract);
+    // TODO: Test event emitted.
     assert_eq!(
         pool_balance_after_action, pool_balance_before_action + cfg.pool_member_info.amount.into()
     );
-    // TODO: Test event emitted.
 }
 
 // The following test checks that the remove_from_delegation_pool_action function works when there
@@ -950,9 +950,9 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     let returned_amount = staking_dispatcher
         .remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
     assert_eq!(returned_amount, Zero::zero());
+    // TODO: Test event emitted.
     let staking_balance_after_action = erc20_dispatcher.balance_of(staking_contract);
     assert_eq!(staking_balance_after_action, staking_balance_before_action);
-    // TODO: Test event emitted.
 }
 
 #[test]
