@@ -264,25 +264,32 @@ pub(crate) fn deploy_staking_contract(
     staking_contract_address
 }
 
-pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingInitConfig,) {
+pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingInitConfig) {
+    set_account_as_security_agent(
+        :staking_contract,
+        account: cfg.test_info.security_agent,
+        security_admin: cfg.test_info.security_admin
+    );
+    set_account_as_operator(
+        :staking_contract,
+        account: cfg.test_info.staker_address,
+        security_admin: cfg.test_info.security_admin
+    );
+}
+
+pub(crate) fn set_account_as_security_agent(
+    staking_contract: ContractAddress, account: ContractAddress, security_admin: ContractAddress
+) {
     let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
-    );
-    roles_dispatcher.register_security_agent(account: cfg.test_info.security_agent);
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
-    );
-    roles_dispatcher.register_operator(account: cfg.test_info.staker_address);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: security_admin);
+    roles_dispatcher.register_security_agent(:account);
 }
 
 pub(crate) fn set_account_as_operator(
-    staking_contract: ContractAddress, account: ContractAddress, cfg: StakingInitConfig
+    staking_contract: ContractAddress, account: ContractAddress, security_admin: ContractAddress
 ) {
     let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
-    );
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: security_admin);
     roles_dispatcher.register_operator(:account);
 }
 
@@ -406,7 +413,9 @@ pub(crate) fn stake_with_pooling_enabled(
         .get_pool_info_unchecked()
         .pooling_contract;
     // Set pool contract as operator.
-    set_account_as_operator(:staking_contract, account: pool_contract, :cfg);
+    set_account_as_operator(
+        :staking_contract, account: pool_contract, security_admin: cfg.test_info.security_admin
+    );
     pool_contract
 }
 
