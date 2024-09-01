@@ -29,6 +29,7 @@ use contracts::{
 use contracts::staking::objects::{
     UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
 };
+use contracts::event_test_utils::assert_pool_member_reward_claimed_event;
 use contracts::event_test_utils::{assert_final_index_set_event, assert_new_pool_member_event};
 use contracts::event_test_utils::{
     assert_number_of_events, assert_pool_member_exit_intent_event, assert_delete_pool_member_event,
@@ -480,12 +481,23 @@ fn test_claim_rewards() {
     cheat_caller_address_once(
         contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
     );
-    let actual_reward: u128 = pooling_dispatcher.claim_rewards(cfg.test_info.pool_member_address);
+    let mut spy = snforge_std::spy_events();
+    let actual_reward = pooling_dispatcher
+        .claim_rewards(pool_member: cfg.test_info.pool_member_address);
     let expected_reward = rewards_including_commission - commission_amount;
     assert_eq!(actual_reward, expected_reward);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = erc20_dispatcher.balance_of(cfg.pool_member_info.reward_address);
     assert_eq!(balance, actual_reward.into());
+    // Validate the single PoolMemberRewardClaimed event.
+    let events = spy.get_events().emitted_by(pooling_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "claim_rewards");
+    assert_pool_member_reward_claimed_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        reward_address: cfg.pool_member_info.reward_address,
+        amount: actual_reward
+    );
 }
 
 #[test]
@@ -596,14 +608,14 @@ fn test_exit_delegation_pool_action() {
     start_cheat_block_timestamp_global(
         block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW
     );
-    let mut spy = snforge_std::spy_events();
     // Exit delegation pool action and check that:
     // 1. The returned value is correct.
     // 2. The pool member is erased from the pool member info map.
     // 3. The pool amount was transferred back to the pool member.
     // 4. The unclaimed rewards were transferred to the reward account.
+    let mut spy = snforge_std::spy_events();
     let returned_amount = pooling_dispatcher
-        .exit_delegation_pool_action(cfg.test_info.pool_member_address);
+        .exit_delegation_pool_action(pool_member: cfg.test_info.pool_member_address);
     assert_eq!(returned_amount, cfg.pool_member_info.amount);
     let pool_member: Option<PoolMemberInfo> = load_option_from_simple_map(
         map_selector: selector!("pool_member_info"),
@@ -619,13 +631,19 @@ fn test_exit_delegation_pool_action() {
         reward_account_balance_after,
         reward_account_balance_before + unclaimed_rewards_member.into()
     );
-    // Validate the single DeletePoolMember event.
+    // Validate the PoolMemberRewardClaimed and DeletePoolMember event.
     let events = spy.get_events().emitted_by(contract_address: pooling_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 1, message: "exit_delegation_pool_action"
+        actual: events.len(), expected: 2, message: "exit_delegation_pool_action"
+    );
+    assert_pool_member_reward_claimed_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        reward_address: cfg.pool_member_info.reward_address,
+        amount: unclaimed_rewards_member
     );
     assert_delete_pool_member_event(
-        spied_event: events[0],
+        spied_event: events[1],
         pool_member: cfg.test_info.pool_member_address,
         reward_address: cfg.pool_member_info.reward_address,
     );
