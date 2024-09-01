@@ -7,7 +7,8 @@ pub mod Staking {
         errors::{Error, assert_with_err, OptionAuxTrait},
         staking::{IStaking, StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo},
         utils::{
-            deploy_delegation_pool_contract, compute_commission_amount, compute_rewards, day_of,
+            deploy_delegation_pool_contract, compute_commission_amount_rounded_down,
+            compute_rewards_rounded_down, compute_rewards_rounded_up, day_of,
             compute_global_index_diff
         },
     };
@@ -712,10 +713,10 @@ pub mod Staking {
         ) {
             if let Option::Some(mut pool_info) = staker_info.pool_info {
                 if (pool_info.amount.is_non_zero()) {
-                    let rewards_including_commission = compute_rewards(
+                    let rewards_including_commission = compute_rewards_rounded_up(
                         amount: pool_info.amount, :interest
                     );
-                    let commission_amount = compute_commission_amount(
+                    let commission_amount = compute_commission_amount_rounded_down(
                         :rewards_including_commission, commission: pool_info.commission
                     );
                     staker_info.unclaimed_rewards_own += commission_amount;
@@ -795,7 +796,9 @@ pub mod Staking {
             let interest = global_index - staker_info.index;
             staker_info.index = global_index;
 
-            let staker_rewards = compute_rewards(amount: staker_info.amount_own, :interest);
+            let staker_rewards = compute_rewards_rounded_down(
+                amount: staker_info.amount_own, :interest
+            );
             staker_info.unclaimed_rewards_own += staker_rewards;
             self.calculate_and_update_pool_rewards(:interest, ref :staker_info);
             true

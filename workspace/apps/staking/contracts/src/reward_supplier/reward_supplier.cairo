@@ -13,6 +13,7 @@ pub mod RewardSupplier {
     };
     use core::num::traits::Zero;
     use contracts::utils::{ceil_of_division, compute_threshold};
+    use contracts::constants::STRK_IN_FRIS;
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -57,7 +58,9 @@ pub mod RewardSupplier {
         self.staking_contract.write(staking_contract);
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.last_timestamp.write(get_block_timestamp());
-        self.unclaimed_rewards.write(Zero::zero());
+        // Initialize unclaimed_rewards with 1 strk to make up for round ups of pool rewards
+        // calculation in the staking contract.
+        self.unclaimed_rewards.write(STRK_IN_FRIS);
         self.l1_pending_requested_amount.write(Zero::zero());
         self.base_mint_amount.write(base_mint_amount);
         self.base_mint_msg.write(base_mint_msg);

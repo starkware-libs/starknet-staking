@@ -16,6 +16,7 @@ use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::utils::{ceil_of_division, compute_threshold};
 use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event,};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
+use contracts::constants::STRK_IN_FRIS;
 
 #[test]
 fn test_reward_supplier_constructor() {
@@ -39,7 +40,7 @@ fn test_reward_supplier_constructor() {
     );
     assert_eq!(state.l1_staking_minter.read(), cfg.reward_supplier.l1_staking_minter);
     assert_eq!(state.last_timestamp.read(), get_block_timestamp());
-    assert_eq!(state.unclaimed_rewards.read(), Zero::zero());
+    assert_eq!(state.unclaimed_rewards.read(), STRK_IN_FRIS);
 }
 
 #[test]
@@ -115,7 +116,7 @@ fn test_calculate_staking_rewards() {
     let unadjusted_expected_rewards: u128 = (cfg.test_info.initial_supply * amount.into()).sqrt();
     let expected_rewards = multiply_by_max_inflation(unadjusted_expected_rewards);
     assert_eq!(rewards, expected_rewards);
-    let expected_unclaimed_rewards = rewards;
+    let expected_unclaimed_rewards = rewards + STRK_IN_FRIS;
     assert_eq!(state.unclaimed_rewards.read(), expected_unclaimed_rewards);
     let base_mint_amount = cfg.reward_supplier.base_mint_amount;
     let diff = expected_unclaimed_rewards + compute_threshold(base_mint_amount) - balance;
@@ -145,7 +146,7 @@ fn test_state_of() {
     let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     let expected_status = RewardSupplierStatus {
         last_timestamp: block_timestamp,
-        unclaimed_rewards: Zero::zero(),
+        unclaimed_rewards: STRK_IN_FRIS,
         l1_pending_requested_amount: Zero::zero(),
     };
     assert_eq!(state.state_of(), expected_status);
