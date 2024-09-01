@@ -31,6 +31,7 @@ use contracts::event_test_utils::{
 use contracts::event_test_utils::assert_staker_reward_address_change_event;
 use contracts::event_test_utils::assert_new_delegation_pool_event;
 use contracts::event_test_utils::assert_change_operational_address_event;
+use contracts::event_test_utils::assert_commission_changed_event;
 use contracts::event_test_utils::assert_global_index_updated_event;
 use contracts::event_test_utils::assert_staker_reward_claimed_event;
 use contracts::event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
@@ -1220,7 +1221,7 @@ fn test_update_commission() {
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     let interest = cfg.staking_contract_info.global_index - cfg.staker_info.index;
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before_update = staking_dispatcher.state_of(:staker_address);
@@ -1230,8 +1231,10 @@ fn test_update_commission() {
     );
 
     // Update commission.
+    let mut spy = snforge_std::spy_events();
+    let old_commission = cfg.staker_info.get_pool_info_unchecked().commission;
+    let commission = old_commission - 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let commission = cfg.staker_info.get_pool_info_unchecked().commission - 1;
     assert!(staking_dispatcher.update_commission(:commission));
 
     // Assert rewards is updated.
@@ -1261,12 +1264,22 @@ fn test_update_commission() {
     assert_eq!(staker_info, expected_staker_info);
 
     // Assert commission is updated in the pooling contract.
-    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    let pooling_dispatcher = IPoolingDispatcher { contract_address: pool_contract };
     let pooling_contracts_parameters = pooling_dispatcher.contract_parameters();
     let expected_pooling_contracts_parameters = PoolingContractInfo {
         commission, ..pooling_contracts_parameters
     };
     assert_eq!(pooling_contracts_parameters, expected_pooling_contracts_parameters);
+    // Validate the single CommissionChanged event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "update_commission");
+    assert_commission_changed_event(
+        spied_event: events[0],
+        :staker_address,
+        :pool_contract,
+        new_commission: commission,
+        :old_commission
+    );
 }
 
 #[test]

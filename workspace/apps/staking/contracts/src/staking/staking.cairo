@@ -85,6 +85,7 @@ pub mod Staking {
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
         OperationalAddressChanged: Events::OperationalAddressChanged,
         GlobalIndexUpdated: Events::GlobalIndexUpdated,
+        CommissionChanged: Events::CommissionChanged,
         StakerRewardClaimed: Events::StakerRewardClaimed,
         DeleteStaker: Events::DeleteStaker,
         RewardsSuppliedToDelegationPool: Events::RewardsSuppliedToDelegationPool,
@@ -617,15 +618,23 @@ pub mod Staking {
             let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             let pool_info = staker_info.get_pool_info_unchecked();
-            let pooling_contract = pool_info.pooling_contract;
-            assert_with_err(commission <= pool_info.commission, Error::CANNOT_INCREASE_COMMISSION);
+            let pool_contract = pool_info.pooling_contract;
+            let old_commission = pool_info.commission;
+            assert_with_err(commission <= old_commission, Error::CANNOT_INCREASE_COMMISSION);
             self.calculate_rewards(ref :staker_info);
             let mut pool_info = staker_info.get_pool_info_unchecked();
             pool_info.commission = commission;
             staker_info.pool_info = Option::Some(pool_info);
             self.staker_info.write(staker_address, Option::Some(staker_info));
-            let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
-            return pooling_dispatcher.update_commission(:commission);
+            let pooling_dispatcher = IPoolingDispatcher { contract_address: pool_contract };
+            pooling_dispatcher.update_commission(:commission);
+            self
+                .emit(
+                    Events::CommissionChanged {
+                        staker_address, pool_contract, old_commission, new_commission: commission
+                    }
+                );
+            true
         }
 
         fn pause(ref self: ContractState) {

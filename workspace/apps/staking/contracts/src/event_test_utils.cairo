@@ -163,6 +163,33 @@ pub fn assert_staker_reward_address_change_event(
     }
 }
 
+pub fn assert_commission_changed_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    pool_contract: ContractAddress,
+    new_commission: u16,
+    old_commission: u16,
+) {
+    let expected_event = @contracts::staking::Staking::Event::CommissionChanged(
+        StakingEvents::CommissionChanged {
+            staker_address, pool_contract, new_commission, old_commission
+        }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "CommissionChanged{{staker_address: {:?}, pool_contract: {:?}, new_commission: {}, old_commission: {}}}",
+            staker_address,
+            pool_contract,
+            new_commission,
+            old_commission
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn assert_global_index_updated_event(
     spied_event: @(ContractAddress, Event),
     old_index: u64,
