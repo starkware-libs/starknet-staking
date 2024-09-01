@@ -25,6 +25,16 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
+    pub struct CommissionChanged {
+        #[key]
+        pub staker_address: ContractAddress,
+        #[key]
+        pub pool_contract: ContractAddress,
+        pub new_commission: u16,
+        pub old_commission: u16
+    }
+
+    #[derive(Drop, starknet::Event)]
     pub struct StakerExitIntent {
         #[key]
         pub staker_address: ContractAddress,
