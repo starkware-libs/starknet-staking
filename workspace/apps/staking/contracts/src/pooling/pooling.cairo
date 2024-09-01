@@ -67,6 +67,7 @@ pub mod Pooling {
         DelegationBalanceChanged: Events::DelegationBalanceChanged,
         PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
         FinalIndexSet: Events::FinalIndexSet,
+        PoolMemberRewardClaimed: Events::PoolMemberRewardClaimed,
         DeletePoolMember: Events::DeletePoolMember,
         NewPoolMember: Events::NewPoolMember,
     }
@@ -199,10 +200,12 @@ pub mod Pooling {
 
             let erc20_dispatcher = self.erc20_dispatcher.read();
             // Claim rewards.
-            erc20_dispatcher
-                .transfer(
-                    recipient: pool_member_info.reward_address,
-                    amount: pool_member_info.unclaimed_rewards.into()
+            self
+                .send_rewards_to_pool_member(
+                    :pool_member,
+                    reward_address: pool_member_info.reward_address,
+                    amount: pool_member_info.unclaimed_rewards,
+                    :erc20_dispatcher
                 );
             // Transfer delegated amount to the pool member.
             let delegated_amount = pool_member_info.amount;
@@ -214,17 +217,18 @@ pub mod Pooling {
         fn claim_rewards(ref self: ContractState, pool_member: ContractAddress) -> u128 {
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
+            let reward_address = pool_member_info.reward_address;
             assert_with_err(
-                caller_address == pool_member || caller_address == pool_member_info.reward_address,
+                caller_address == pool_member || caller_address == reward_address,
                 Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
             );
             self.update_index_and_calculate_rewards(ref :pool_member_info);
-
             let rewards = pool_member_info.unclaimed_rewards;
             let erc20_dispatcher = self.erc20_dispatcher.read();
-            erc20_dispatcher
-                .transfer(recipient: pool_member_info.reward_address, amount: rewards.into());
-
+            self
+                .send_rewards_to_pool_member(
+                    :pool_member, :reward_address, amount: rewards, :erc20_dispatcher
+                );
             pool_member_info.unclaimed_rewards = 0;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             rewards
@@ -465,6 +469,17 @@ pub mod Pooling {
                 .remove_from_delegation_pool_intent(
                     :staker_address, identifier: pool_member.into(), :amount
                 )
+        }
+
+        fn send_rewards_to_pool_member(
+            ref self: ContractState,
+            pool_member: ContractAddress,
+            reward_address: ContractAddress,
+            amount: u128,
+            erc20_dispatcher: IERC20Dispatcher
+        ) {
+            erc20_dispatcher.transfer(recipient: reward_address, amount: amount.into());
+            self.emit(Events::PoolMemberRewardClaimed { pool_member, reward_address, amount });
         }
     }
 }

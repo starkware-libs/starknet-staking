@@ -28,6 +28,15 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
+    pub struct PoolMemberRewardClaimed {
+        #[key]
+        pub pool_member: ContractAddress,
+        #[key]
+        pub reward_address: ContractAddress,
+        pub amount: u128
+    }
+
+    #[derive(Drop, starknet::Event)]
     pub struct FinalIndexSet {
         #[key]
         pub staker_address: ContractAddress,
