@@ -646,7 +646,11 @@ fn test_switch_delegation_pool() {
     let switch_amount = cfg.pool_member_info.amount / 2;
     cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
-    set_account_as_operator(:staking_contract, account: cfg.test_info.staker_address, :cfg);
+    set_account_as_operator(
+        :staking_contract,
+        account: cfg.test_info.staker_address,
+        security_admin: cfg.test_info.security_admin
+    );
     let to_staker_pool_contract = stake_with_pooling_enabled(
         :cfg, :token_address, :staking_contract
     );

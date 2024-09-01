@@ -33,7 +33,7 @@ pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
-
+    use contracts_commons::components::roles::interface::{OPERATOR, SECURITY_ADMIN};
     pub const COMMISSION_DENOMINATOR: u16 = 10000;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
@@ -102,6 +102,8 @@ pub mod Staking {
     ) {
         self.accesscontrol.initializer();
         self.roles.initializer();
+        // Override default role admin for OPERATOR.
+        self.accesscontrol.set_role_admin(role: OPERATOR, admin_role: SECURITY_ADMIN);
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);
@@ -113,9 +115,6 @@ pub mod Staking {
         self.global_index.write(BASE_VALUE);
         self.global_index_last_update_timestamp.write(get_block_timestamp());
         self.roles.register_security_admin(account: security_admin);
-        // TODO: need to fix the following line and then fix in roles component the initializer
-        // function.
-        // self.accesscontrol.set_role_admin(role: OPERATOR, admin_role: security_admin.into());
         self.is_paused.write(false);
     }
 
