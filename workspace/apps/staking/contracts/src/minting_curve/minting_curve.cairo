@@ -4,7 +4,7 @@ pub mod MintingCurve {
     use contracts::minting_curve::interface::{IMintingCurve, Events};
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
     use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
-    use starknet::{ContractAddress, contract_address_const};
+    use starknet::{ContractAddress};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use core::num::traits::Sqrt;

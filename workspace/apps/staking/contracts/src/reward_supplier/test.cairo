@@ -1,7 +1,6 @@
 use core::option::OptionTrait;
 use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierStatus};
 use starknet::get_block_timestamp;
-use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::test_utils::{
     deploy_mock_erc20_contract, StakingInitConfig, deploy_staking_contract,
@@ -9,15 +8,14 @@ use contracts::test_utils::{
     deploy_minting_curve_contract, fund
 };
 use contracts::reward_supplier::RewardSupplier::SECONDS_IN_YEAR;
-use contracts::reward_supplier::RewardSupplier;
 use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
-use snforge_std::{start_cheat_block_timestamp_global, CheatSpan, test_address};
+use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use core::num::traits::Zero;
 use core::num::traits::Sqrt;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::utils::{ceil_of_division, compute_threshold};
 use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event,};
-use snforge_std::cheatcodes::events::{Events, EventSpy, EventSpyTrait, EventsFilterTrait};
+use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 
 #[test]
 fn test_reward_supplier_constructor() {

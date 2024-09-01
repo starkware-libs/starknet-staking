@@ -1,22 +1,20 @@
 use core::option::OptionTrait;
 use contracts::{
-    constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES, SECONDS_IN_DAY},
+    constants::{BASE_VALUE, EXIT_WAITING_WINDOW, SECONDS_IN_DAY},
     staking::{
         StakerInfo, StakerInfoTrait, StakerPoolInfo, Staking,
         Staking::InternalStakingFunctionsTrait,
     },
     utils::{compute_rewards, compute_commission_amount},
     test_utils::{
-        initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig,
-        stake_for_testing, fund, approve, deploy_staking_contract, stake_with_pooling_enabled,
+        initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig, fund,
+        approve, deploy_staking_contract, stake_with_pooling_enabled,
         enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
-        load_from_simple_map, deploy_reward_supplier_contract, deploy_minting_curve_contract,
-        load_one_felt, stake_for_testing_using_dispatcher, general_contract_system_deployment,
-        cheat_reward_for_reward_supplier, set_default_roles, set_account_as_operator,
+        load_from_simple_map, load_one_felt, stake_for_testing_using_dispatcher,
+        general_contract_system_deployment, cheat_reward_for_reward_supplier,
+        set_account_as_operator,
         constants::{
-            TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OWNER_ADDRESS,
-            INITIAL_SUPPLY, STAKER_REWARD_ADDRESS, OPERATIONAL_ADDRESS, STAKER_ADDRESS,
-            STAKE_AMOUNT, STAKER_INITIAL_BALANCE, COMMISSION, OTHER_STAKER_ADDRESS,
+            TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OTHER_STAKER_ADDRESS,
             OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT,
             CALLER_ADDRESS, DUMMY_IDENTIFIER, OTHER_OPERATIONAL_ADDRESS,
             REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN
@@ -36,32 +34,24 @@ use contracts::event_test_utils::assert_global_index_updated_event;
 use contracts::event_test_utils::assert_staker_reward_claimed_event;
 use contracts::event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use starknet::{ContractAddress, contract_address_const, get_caller_address, get_block_timestamp};
-use starknet::syscalls::deploy_syscall;
-use snforge_std::{declare, ContractClassTrait};
+use starknet::get_block_timestamp;
 use contracts::staking::objects::{
     UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
 };
-use contracts::staking::staking::Staking::ContractState;
-use contracts::staking::interface::{IStaking, IStakingDispatcher, IStakingDispatcherTrait};
+use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
 use snforge_std::{
-    cheat_caller_address, CheatSpan, test_address, cheat_block_timestamp,
-    start_cheat_block_timestamp_global
+    cheat_caller_address, CheatSpan, cheat_block_timestamp, start_cheat_block_timestamp_global
 };
-use snforge_std::cheatcodes::events::{
-    Event, Events, EventSpy, EventSpyTrait, is_emitted, EventsFilterTrait
-};
+
+use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::pooling::Pooling::SwitchPoolData;
-use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispatcherTrait};
+use contracts::pooling::interface::{IPoolingDispatcher, IPoolingDispatcherTrait};
 use contracts::pooling::interface::PoolingContractInfo;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts::reward_supplier::interface::{
-    IRewardSupplierDispatcherTrait, IRewardSupplierDispatcher
-};
 
 #[test]
 fn test_constructor() {

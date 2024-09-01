@@ -3,9 +3,9 @@ pub mod Pooling {
     use core::serde::Serde;
     use core::num::traits::zero::Zero;
     use contracts::{
-        constants::{BASE_VALUE}, errors::{Error, panic_by_err, assert_with_err, OptionAuxTrait},
+        errors::{Error, assert_with_err, OptionAuxTrait},
         pooling::{interface::PoolingContractInfo, IPooling, PoolMemberInfo, Events},
-        utils::{u128_mul_wide_and_div_unsafe, compute_rewards, compute_commission_amount}
+        utils::{compute_rewards, compute_commission_amount}
     };
     use core::option::OptionTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp};
