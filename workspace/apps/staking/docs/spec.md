@@ -33,6 +33,8 @@
     - [New Delegation Pool](#new-delegation-pool)
     - [Staker Exit intent](#staker-exit-intent)
     - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
+    - [Delete Staker](#delete-staker)
+    - [Staker Reward Claimed](#staker-reward-claimed)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -42,7 +44,7 @@
     - [claim\_rewards](#claim_rewards-1)
     - [switch\_delegation\_pool](#switch_delegation_pool)
     - [enter\_from\_staking\_contract](#enter_from_staking_contract)
-    - [staker\_left](#staker_left)
+    - [set\_final\_staker\_index](#set_final_staker_index)
     - [calculate\_rewards](#calculate_rewards-1)
     - [update\_commission](#update_commission-1)
   - [Events](#events-1)
@@ -60,6 +62,11 @@
     - [CONTRACT\_IS\_PAUSED](#contract_is_paused)
     - [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
     - [CALLER\_CANNOT\_INCREASE\_STAKE](#caller_cannot_increase_stake)
+    - [MISSING\_UNSTAKE\_INTENT](#missing_unstake_intent)
+    - [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
+    - [UNEXPECTED\_BALANCE](#unexpected_balance)
+    - [ONLY\_OPERATOR](#only_operator)
+    - [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
 
 </details>
 
@@ -246,16 +253,18 @@ Add a new staker to the stake.
 2. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [STAKER\_EXISTS](#staker_exists)
-3. [OPERATIONAL\_EXISTS](#operational_exists)
-4. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
-5. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_EXISTS](#staker_exists)
+4. [OPERATIONAL\_EXISTS](#operational_exists)
+5. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
+6. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. `caller_address` (staker) is not listed in the contract.
-3. `operational_address` is not listed in the contract.
-4. `amount` is above the minimum amount for staking.
-5. `commission` is not above the maximum commission for staking.
+2. Staker (caller)  has operator role.
+3. Staker (caller) is not listed in the contract.
+4. `operational_address` is not listed in the contract.
+5. `amount` is above the minimum amount for staking.
+6. `commission` is not above the maximum commission for staking.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic  <!-- omit from toc -->
@@ -282,13 +291,15 @@ Return the updated total amount.
 [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-4. [CALLER\_CANNOT\_INCREASE\_STAKE](#caller_cannot_increase_stake)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+5. [CALLER\_CANNOT\_INCREASE\_STAKE](#caller_cannot_increase_stake)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker is listed in the contract.
-3. Staker is not in an exit window.
+2. `caller_address` has operator role.
+3. Staker is listed in the contract.
+4. Staker is not in an exit window.
 #### access control <!-- omit from toc -->
 Only the staker address or rewards address for which the change is requested for.
 #### logic <!-- omit from toc -->
@@ -309,12 +320,14 @@ Return the time in which the staker will be able to unstake.
 2. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller) is listed in the contract.
-3. Staker (caller) is not in an exit window.
+2. Staker (caller) has operator role.
+3. Staker (caller) is listed in the contract.
+4. Staker (caller) is not in an exit window.
 #### access control <!-- omit from toc -->
 Only the staker address for which the operation is requested for.
 #### logic <!-- omit from toc -->
@@ -322,31 +335,42 @@ Only the staker address for which the operation is requested for.
 2. Set unstake time.
 
 ### unstake_action
+```rust
+fn unstake_action(
+  ref self: ContractState, 
+  staker_address: ContractAddress
+) -> u128
+```
 #### description <!-- omit from toc -->
 Executes the intent to exit the stake if enough time have passed.
 Transfers the funds back to the staker.
-#### parameters <!-- omit from toc -->
-| name   | type    |
-| ------ | ------- |
-| staker | address |
-#### return <!-- omit from toc -->
-amount: u128 - amount of tokens transferred back to the staker.
+Return the amount of tokens transferred back to the staker.
 #### emits <!-- omit from toc -->
-[Balance Changed](#balance-changed)
-If pool exists: [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
+1. [Staker Reward Claimed](#staker-reward-claimed)
+2. If pool exists: [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
+3. If pool exists: [Final Index Set](#final-index-set)
+4. [Delete Staker](#delete-staker)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [MISSING\_UNSTAKE\_INTENT](#missing_unstake_intent)
+5. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
+6. [UNEXPECTED\_BALANCE](#unexpected_balance)
+7. [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
 #### pre-condition <!-- omit from toc -->
-1. Staker exist and requested to unstake.
-2. Enough time have passed from the unstake intent call.
+1. Staking contract is unpaused.
+2. Staker (caller) has operator role.
+3. Staker exist and requested to unstake.
+4. Enough time have passed from the unstake intent call.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
-1. Validate enough time have passed from the unstake intent.
-2. claim rewards.
-3. remove funds and transfer to staker.
-4. transfer pool unclaimed rewards and stake to delegation pool contract.
-5. call [staker_left](#staker-left) on the delegation_pool_contract.
-6. delete staker record.
+1. Claim rewards.
+2. Remove funds and transfer to staker.
+3. Transfer pool unclaimed rewards and stake to delegation pool contract.
+4. Call [set\_final\_staker\_index](#set_final_staker_index) on the delegation_pool_contract.
+5. Delete staker record.
 
 ### claim_rewards
 #### description <!-- omit from toc -->
@@ -666,6 +690,21 @@ success: bool
 | pool_address   | address | ✅    |
 | amount         | u128    | ❌    |
 
+### Delete Staker
+| data                | type            | keyed |
+| ------------------- | --------------- | ----- |
+| staker_address      | address         | ✅    |
+| reward_address      | address         | ❌    |
+| operational_address | address         | ❌    |
+| pool_contract       | Option<address> | ❌    |
+
+### Staker Reward Claimed
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| staker_address | address | ✅    |
+| reward_address | address | ❌    |
+| amount         | u128    | ❌    |
+
 # Delegation pooling contract
 
 ## Functions
@@ -838,7 +877,7 @@ Only staking contract can call.
 4. Else
    1. Create an entry for the pool member.
 
-### staker_left
+### set_final_staker_index
 #### description <!-- omit from toc -->
 Informs the delegation pool contract that the staker has left and the contract is now detached from the staking contract.
 #### parameters <!-- omit from toc -->
@@ -957,3 +996,17 @@ success: bool
 
 ### CALLER_CANNOT_INCREASE_STAKE
 "Caller address should be staker address or reward address."
+### MISSING_UNSTAKE_INTENT
+"Unstake intent is missing."
+
+### INTENT_WINDOW_NOT_FINISHED
+"Intent window is not finished."
+
+### UNEXPECTED_BALANCE
+"Unexpected balance."
+
+### ONLY_OPERATOR
+"ONLY_OPERATOR"
+
+### FINAL_STAKER_INDEX_ALREADY_SET
+"Final staker index already set."
