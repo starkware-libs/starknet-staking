@@ -67,6 +67,7 @@ pub struct PoolMemberInfo {
     pub amount: u128,
     pub index: u64,
     pub unclaimed_rewards: u128,
+    pub unpool_amount: u128,
     pub unpool_time: Option<u64>,
 }
 
@@ -87,7 +88,7 @@ pub trait IPooling<TContractState> {
     fn add_to_delegation_pool(
         ref self: TContractState, pool_member: ContractAddress, amount: u128
     ) -> u128;
-    fn exit_delegation_pool_intent(ref self: TContractState);
+    fn exit_delegation_pool_intent(ref self: TContractState, amount: u128);
     fn exit_delegation_pool_action(ref self: TContractState, pool_member: ContractAddress) -> u128;
     fn claim_rewards(ref self: TContractState, pool_member: ContractAddress) -> u128;
     fn switch_delegation_pool(

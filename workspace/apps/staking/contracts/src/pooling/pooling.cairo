@@ -124,8 +124,9 @@ pub mod Pooling {
                             reward_address: reward_address,
                             amount: amount,
                             index: updated_index,
-                            unclaimed_rewards: 0,
+                            unclaimed_rewards: Zero::zero(),
                             unpool_time: Option::None,
+                            unpool_amount: Zero::zero(),
                         }
                     )
                 );
@@ -141,7 +142,6 @@ pub mod Pooling {
         ) -> u128 {
             self.assert_staker_is_active();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
-            assert_with_err(pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS);
             // This line was added to prevent the compiler from doing certain optimizations.
             core::internal::revoke_ap_tracking();
             let caller_address = get_caller_address();
@@ -167,14 +167,20 @@ pub mod Pooling {
             pool_member_info.amount
         }
 
-        fn exit_delegation_pool_intent(ref self: ContractState) {
+        fn exit_delegation_pool_intent(ref self: ContractState, amount: u128) {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
-            assert_with_err(pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS);
             self.update_index_and_calculate_rewards(ref :pool_member_info);
-            let amount = pool_member_info.amount;
+            let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
+            assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
             let unpool_time = self.undelegate_from_staking_contract_intent(:pool_member, :amount);
-            pool_member_info.unpool_time = Option::Some(unpool_time);
+            if amount.is_zero() {
+                pool_member_info.unpool_time = Option::None;
+            } else {
+                pool_member_info.unpool_time = Option::Some(unpool_time);
+            }
+            pool_member_info.unpool_amount = amount;
+            pool_member_info.amount = total_amount - amount;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             self
                 .emit(
@@ -187,7 +193,7 @@ pub mod Pooling {
         fn exit_delegation_pool_action(
             ref self: ContractState, pool_member: ContractAddress
         ) -> u128 {
-            let pool_member_info = self.get_pool_member_info(:pool_member);
+            let mut pool_member_info = self.get_pool_member_info(:pool_member);
             let unpool_time = pool_member_info
                 .unpool_time
                 .expect_with_err(Error::MISSING_UNDELEGATE_INTENT);
@@ -208,10 +214,16 @@ pub mod Pooling {
                     :erc20_dispatcher
                 );
             // Transfer delegated amount to the pool member.
-            let delegated_amount = pool_member_info.amount;
-            erc20_dispatcher.transfer(recipient: pool_member, amount: delegated_amount.into());
-            self.remove_pool_member(:pool_member);
-            delegated_amount
+            let unpool_amount = pool_member_info.unpool_amount;
+            pool_member_info.unpool_amount = Zero::zero();
+            erc20_dispatcher.transfer(recipient: pool_member, amount: unpool_amount.into());
+            if pool_member_info.amount.is_zero() {
+                self.remove_pool_member(:pool_member);
+            } else {
+                pool_member_info.unpool_time = Option::None;
+                self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            }
+            unpool_amount
         }
 
         fn claim_rewards(ref self: ContractState, pool_member: ContractAddress) -> u128 {
@@ -246,15 +258,15 @@ pub mod Pooling {
             assert_with_err(
                 pool_member_info.unpool_time.is_some(), Error::MISSING_UNDELEGATE_INTENT
             );
-            assert_with_err(pool_member_info.amount >= amount, Error::AMOUNT_TOO_HIGH);
+            assert_with_err(pool_member_info.unpool_amount >= amount, Error::AMOUNT_TOO_HIGH);
             let switch_pool_data = SwitchPoolData {
                 pool_member, reward_address: pool_member_info.reward_address
             };
             let mut serialized_data = array![];
             switch_pool_data.serialize(ref output: serialized_data);
             let staking_dispatcher = self.staking_dispatcher.read();
-            let amount_left = pool_member_info.amount - amount;
-            if amount_left.is_zero() {
+            pool_member_info.unpool_amount -= amount;
+            if pool_member_info.unpool_amount.is_zero() && pool_member_info.amount.is_zero() {
                 // Claim rewards.
                 let erc20_dispatcher = self.erc20_dispatcher.read();
                 erc20_dispatcher
@@ -264,9 +276,12 @@ pub mod Pooling {
                     );
                 self.remove_pool_member(:pool_member);
             } else {
-                pool_member_info.amount = amount_left;
+                // One of pool_member_info.unpool_amount or pool_member_info.amount is non-zero.
+                if pool_member_info.unpool_amount.is_zero() {
+                    pool_member_info.unpool_time = Option::None;
+                }
                 self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
-            };
+            }
             // TODO: emit event
             staking_dispatcher
                 .switch_staking_delegation_pool(
@@ -276,7 +291,7 @@ pub mod Pooling {
                     data: serialized_data.span(),
                     identifier: pool_member.into()
                 );
-            amount_left
+            pool_member_info.unpool_amount
         }
 
         fn enter_delegation_pool_from_staking_contract(
@@ -293,9 +308,6 @@ pub mod Pooling {
             let pool_member = switch_pool_data.pool_member;
             let pool_member_info = match self.pool_member_info.read(pool_member) {
                 Option::Some(mut pool_member_info) => {
-                    assert_with_err(
-                        pool_member_info.unpool_time.is_none(), Error::UNDELEGATE_IN_PROGRESS
-                    );
                     self.calculate_rewards(ref :pool_member_info, updated_index: index);
                     pool_member_info.amount += amount;
                     pool_member_info
@@ -305,8 +317,9 @@ pub mod Pooling {
                         reward_address: switch_pool_data.reward_address,
                         amount,
                         index,
-                        unclaimed_rewards: 0,
+                        unclaimed_rewards: Zero::zero(),
                         unpool_time: Option::None,
+                        unpool_amount: Zero::zero(),
                     }
                 }
             };
@@ -426,9 +439,6 @@ pub mod Pooling {
         fn calculate_rewards(
             ref self: ContractState, ref pool_member_info: PoolMemberInfo, updated_index: u64
         ) -> bool {
-            if (pool_member_info.unpool_time.is_some()) {
-                return false;
-            }
             let interest: u64 = updated_index - pool_member_info.index;
             pool_member_info.index = updated_index;
             let rewards_including_commission = compute_rewards_rounded_down(
@@ -461,6 +471,11 @@ pub mod Pooling {
             self: @ContractState, pool_member: ContractAddress, amount: u128
         ) -> u64 {
             if !self.is_staker_active() {
+                // Don't allow intent if an intent is already in progress and the staker is erased.
+                assert_with_err(
+                    self.get_pool_member_info(:pool_member).unpool_time.is_none(),
+                    Error::UNDELEGATE_IN_PROGRESS
+                );
                 return get_block_timestamp();
             }
             let staking_dispatcher = self.staking_dispatcher.read();

@@ -155,7 +155,10 @@ pub mod Staking {
                     );
                 Option::Some(
                     StakerPoolInfo {
-                        pooling_contract, amount: 0, unclaimed_rewards: 0, commission,
+                        pooling_contract,
+                        amount: Zero::zero(),
+                        unclaimed_rewards: Zero::zero(),
+                        commission,
                     }
                 )
             } else {
@@ -375,28 +378,40 @@ pub mod Staking {
             self.roles.only_operator();
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
-            let pool_info = staker_info.get_pool_info_unchecked();
+            let mut pool_info = staker_info.get_pool_info_unchecked();
             assert_with_err(
                 pool_info.pooling_contract == get_caller_address(),
                 Error::CALLER_IS_NOT_POOL_CONTRACT
             );
-            assert_with_err(pool_info.amount >= amount, Error::INSUFFICIENT_POOL_BALANCE);
             self.calculate_rewards(ref :staker_info);
-            let mut updated_pool_info = staker_info.get_pool_info_unchecked();
-            let old_delegated_stake = updated_pool_info.amount;
-            updated_pool_info.amount -= amount;
-            staker_info.pool_info = Option::Some(updated_pool_info);
-            if (staker_info.unstake_time.is_none()) {
-                // Remove from total stake only if the staker is not in the unstake process.
-                self.remove_from_total_stake(:amount);
-            }
-            self.staker_info.write(staker_address, Option::Some(staker_info));
             let unpool_time = staker_info.compute_unpool_time();
             let undelegate_intent_key = UndelegateIntentKey {
                 pool_contract: pool_info.pooling_contract, identifier
             };
-            let pool_exit_entry = UndelegateIntentValue { unpool_time, amount };
-            self.pool_exit_intents.write(undelegate_intent_key, pool_exit_entry);
+            let undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
+            let old_delegated_stake = pool_info.amount;
+            let old_intent_amount = undelegate_intent_value.amount;
+            let total_amount = old_intent_amount + old_delegated_stake;
+            assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
+            let new_delegated_stake = total_amount - amount;
+            pool_info.amount = new_delegated_stake;
+            if (staker_info.unstake_time.is_none()) {
+                // Change total stake only if the staker is not in the unstake process.
+                if new_delegated_stake < old_delegated_stake {
+                    self.remove_from_total_stake(amount: old_delegated_stake - new_delegated_stake);
+                } else {
+                    self.add_to_total_stake(amount: new_delegated_stake - old_delegated_stake);
+                }
+            }
+            staker_info.pool_info = Option::Some(pool_info);
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            if amount.is_zero() {
+                self.clear_undelegate_intent(:undelegate_intent_key);
+            } else {
+                self
+                    .pool_exit_intents
+                    .write(undelegate_intent_key, UndelegateIntentValue { amount, unpool_time });
+            }
             self
                 .emit(
                     Events::StakeBalanceChanged {
