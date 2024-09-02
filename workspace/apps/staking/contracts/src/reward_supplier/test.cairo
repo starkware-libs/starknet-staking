@@ -14,6 +14,7 @@ use core::num::traits::Zero;
 use core::num::traits::Sqrt;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::utils::{ceil_of_division, compute_threshold};
+use contracts::event_test_utils::assert_calculated_rewards_event;
 use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event,};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use contracts::constants::STRK_IN_FRIS;
@@ -97,6 +98,7 @@ fn test_calculate_staking_rewards() {
     cfg.reward_supplier.minting_curve_contract = minting_curve_contract;
     // Use the reward supplier contract state to claim rewards.
     let mut state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
+    let last_timestamp = state.last_timestamp.read();
     // Fund the the reward supplier contract.
     let balance = cfg.reward_supplier.base_mint_amount;
     fund(
@@ -123,13 +125,19 @@ fn test_calculate_staking_rewards() {
     let num_msgs = ceil_of_division(dividend: diff, divisor: base_mint_amount);
     let expected_l1_pending_requested_amount = num_msgs * base_mint_amount;
     assert_eq!(state.l1_pending_requested_amount.read(), expected_l1_pending_requested_amount);
-    // Validate the single MintRequest event.
+    // Validate MintRequest and CalculatedRewards events.
     let events = spy.get_events().emitted_by(contract_address: test_address()).events;
     assert_number_of_events(
-        actual: events.len(), expected: 1, message: "calculate_staking_rewards"
+        actual: events.len(), expected: 2, message: "calculate_staking_rewards"
     );
     assert_mint_request_event(
         spied_event: events[0], total_amount: expected_l1_pending_requested_amount, :num_msgs
+    );
+    assert_calculated_rewards_event(
+        spied_event: events[1],
+        :last_timestamp,
+        new_timestamp: state.last_timestamp.read(),
+        rewards_calculated: rewards,
     );
 }
 

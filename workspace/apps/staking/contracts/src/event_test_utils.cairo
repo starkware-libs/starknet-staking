@@ -355,6 +355,31 @@ pub(crate) fn assert_final_index_set_event(
     }
 }
 
+pub(crate) fn assert_calculated_rewards_event(
+    spied_event: @(ContractAddress, Event),
+    last_timestamp: u64,
+    new_timestamp: u64,
+    rewards_calculated: u128,
+) {
+    let expected_event = @contracts::reward_supplier::RewardSupplier::Event::CalculatedRewards(
+        RewardSupplierEvents::CalculatedRewards {
+            last_timestamp, new_timestamp, rewards_calculated
+        }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "CalculatedRewards{{last_timestamp: {}, new_timestamp: {}, rewards_calculated: {}}}",
+            last_timestamp,
+            new_timestamp,
+            rewards_calculated
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub(crate) fn assert_mint_request_event(
     spied_event: @(ContractAddress, Event), total_amount: u128, num_msgs: u128
 ) {
