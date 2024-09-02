@@ -774,7 +774,7 @@ fn test_unstake_action() {
         spied_event: events[2],
         staker_address: cfg.test_info.staker_address,
         pool_address: pool_contract,
-        amount: 0
+        amount: Zero::zero()
     );
     // Validate DeleteStaker event.
     assert_delete_staker_event(
@@ -974,7 +974,7 @@ fn test_switch_staking_delegation_pool() {
     // Pool member remove_from_delegation_pool_intent.
     let pool_member = cfg.test_info.pool_member_address;
     cheat_caller_address_once(contract_address: from_pool_contract, caller_address: pool_member);
-    from_pool_dispatcher.exit_delegation_pool_intent();
+    from_pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
     let total_stake_before_switching = staking_dispatcher.get_total_stake();
     // Initialize SwitchPoolData.
     let switch_pool_data = SwitchPoolData {

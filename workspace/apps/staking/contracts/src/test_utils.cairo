@@ -1,17 +1,19 @@
 use contracts::{staking::Staking, minting_curve::MintingCurve, reward_supplier::RewardSupplier};
+use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
 use contracts::constants::BASE_VALUE;
 use core::traits::Into;
 use contracts::staking::interface::{
     IStaking, StakerInfo, StakerPoolInfo, StakingContractInfo, IStakingDispatcher,
     IStakingDispatcherTrait, StakerInfoTrait
 };
+use core::num::traits::zero::Zero;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts::pooling::Pooling;
 use contracts::pooling::interface::{PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait};
-use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::ContractAddress;
 use starknet::ClassHash;
 use starknet::Store;
+use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use snforge_std::ContractClassTrait;
 use contracts::staking::Staking::ContractState;
 use constants::{
@@ -489,6 +491,40 @@ pub(crate) fn load_option_from_simple_map<
     }
 }
 
+pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
+    key: K, contract: ContractAddress
+) -> Option<PoolMemberInfo> {
+    let map_selector = selector!("pool_member_info");
+    let mut keys = array![];
+    key.serialize(ref keys);
+    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
+    let mut raw_serialized_value = snforge_std::load(
+        target: contract, :storage_address, size: Store::<Option<PoolMemberInfo>>::size().into()
+    );
+    let idx = raw_serialized_value.pop_front().expect('Failed pop_front');
+    if idx.is_zero() {
+        return Option::None;
+    }
+    assert!(idx == 1, "Invalid Option loaded from map");
+    let mut span = raw_serialized_value.span();
+    let mut pool_member_info = PoolMemberInfo {
+        reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed de reward'),
+        amount: Serde::<u128>::deserialize(ref span).expect('Failed de amount'),
+        index: Serde::<u64>::deserialize(ref span).expect('Failed de index'),
+        unclaimed_rewards: Serde::<u128>::deserialize(ref span).expect('Failed de unclaimed'),
+        unpool_amount: Serde::<u128>::deserialize(ref span).expect('Failed de unpool_amount'),
+        unpool_time: Option::None,
+    };
+    let idx = *span.pop_front().expect('Failed pop_front');
+    if idx.is_non_zero() {
+        assert!(idx == 1, "Invalid Option loaded from map");
+        pool_member_info
+            .unpool_time =
+                Option::Some(Serde::<u64>::deserialize(ref span).expect('Failed de unpool_time'));
+    }
+    return Option::Some(pool_member_info);
+}
+
 pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -> felt252 {
     let value = snforge_std::load(:target, :storage_address, size: 1);
     *value[0]
@@ -541,6 +577,36 @@ pub fn cheat_reward_for_reward_supplier(
     );
 }
 
+pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> (u128, u64) {
+    // Change global index.
+    let index_before = cfg.pool_member_info.index;
+    cfg.pool_member_info.index *= 2;
+    let updated_index = cfg.pool_member_info.index;
+
+    snforge_std::store(
+        target: cfg.test_info.staking_contract,
+        storage_address: selector!("global_index"),
+        serialized_value: array![updated_index.into()].span()
+    );
+    // Calculate the expected rewards and commission.
+    let delegate_amount = cfg.pool_member_info.amount;
+    let rewards = compute_rewards_rounded_down(
+        amount: delegate_amount, interest: updated_index - index_before
+    );
+    let commission_amount = compute_commission_amount_rounded_up(
+        rewards_including_commission: rewards,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    let unclaimed_rewards_member = rewards - commission_amount;
+    cheat_reward_for_reward_supplier(
+        :cfg,
+        reward_supplier: cfg.staking_contract_info.reward_supplier,
+        expected_reward: unclaimed_rewards_member,
+        token_address: cfg.staking_contract_info.token_address,
+    );
+    (unclaimed_rewards_member, updated_index)
+}
+
 #[derive(Drop, Copy)]
 pub(crate) struct TestInfo {
     pub staker_address: ContractAddress,
@@ -586,8 +652,8 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pool_info: Option::Some(
                 StakerPoolInfo {
                     pooling_contract: POOLING_CONTRACT_ADDRESS(),
-                    amount: 0,
-                    unclaimed_rewards: 0,
+                    amount: Zero::zero(),
+                    unclaimed_rewards: Zero::zero(),
                     commission: COMMISSION,
                 }
             )
@@ -596,8 +662,9 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             amount: POOL_MEMBER_STAKE_AMOUNT,
             index: BASE_VALUE,
-            unclaimed_rewards: 0,
+            unclaimed_rewards: Zero::zero(),
             unpool_time: Option::None,
+            unpool_amount: Zero::zero(),
         };
         let staking_contract_info = StakingContractInfo {
             min_stake: MIN_STAKE,
