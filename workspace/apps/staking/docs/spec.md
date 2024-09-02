@@ -35,6 +35,7 @@
     - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
     - [Delete Staker](#delete-staker)
     - [Staker Reward Claimed](#staker-reward-claimed)
+    - [Staker Reward Address Changed](#staker-reward-address-changed)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -400,7 +401,7 @@ Return the amount of tokens transferred to the reward address.
 2. `caller_address` has operator role.
 3. Staker is listed in the contract.
 #### access control <!-- omit from toc -->
-Only staking address or reward address can execute.
+Only staker address or reward address can execute.
 #### logic <!-- omit from toc -->
 1. [Calculate rewards](#calculate_rewards).
 2. Transfer unclaimed_rewards.
@@ -543,22 +544,28 @@ Only pool contract for the given staker can execute.
 4. Call `to_pool`'s [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract) function.
 
 ### change_reward_address
+```rust
+fn change_reward_address(
+  ref self: ContractState, 
+  reward_address: ContractAddress
+) -> bool
+```
 #### description <!-- omit from toc -->
 Change the reward address for a staker.
-#### parameters <!-- omit from toc -->
-| name    | type    |
-| ------- | ------- |
-| address | address |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
+1. [Staker Reward Address Changed](#staker-reward-address-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
-1. Staker exist in the contract.
+1. Staking contract is unpaused.
+2. Staker (caller) has operator role.
+3. Staker (caller) exist in the contract.
 #### access control <!-- omit from toc -->
-Only staking address.
+Only staker address.
 #### logic <!-- omit from toc -->
-1. change registered `reward_address` for the staker.
+1. Change registered `reward_address` for the staker.
 
 ### set_open_for_delegation
 #### description <!-- omit from toc -->
@@ -576,7 +583,7 @@ pool: address
 1. Staker exist in the contract.
 2. Staker has no pool.
 #### access control <!-- omit from toc -->
-Only staking address.
+Only staker address.
 #### logic <!-- omit from toc -->
 1. generate pooling contract for staker.
 2. register pool.
@@ -688,7 +695,7 @@ success: bool
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.
 #### access control <!-- omit from toc -->
-Only staking address.
+Only staker address.
 #### logic <!-- omit from toc -->
 1. change registered `operational_address` for the staker.
 
@@ -756,6 +763,13 @@ success: bool
 | staker_address | address | ✅    |
 | reward_address | address | ❌    |
 | amount         | u128    | ❌    |
+
+### Staker Reward Address Changed
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| staker_address | address | ✅    |
+| new_address    | address | ❌    |
+| old_address    | address | ❌    |
 
 # Delegation pooling contract
 
