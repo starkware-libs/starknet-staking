@@ -24,7 +24,7 @@
     - [claim\_delegation\_pool\_rewards](#claim_delegation_pool_rewards)
     - [state\_of](#state_of)
     - [contract\_parameters](#contract_parameters)
-    - [total\_staked\_tokens](#total_staked_tokens)
+    - [get\_total\_stake](#get_total_stake)
     - [calculate\_rewards](#calculate_rewards)
     - [change\_operational\_address](#change_operational_address)
     - [update\_commission](#update_commission)
@@ -664,14 +664,12 @@ Return general parameters of the contract.
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 
-### total_staked_tokens
+### get_total_stake
+```rust
+get_total_stake(self: @ContractState) -> u128
+```
 #### description <!-- omit from toc -->
-Returns the total amount of staked tokens.
-#### parameters <!-- omit from toc -->
-| name | type |
-| ---- | ---- |
-#### return <!-- omit from toc -->
-total_staked: u128
+Return the total stake amount.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
