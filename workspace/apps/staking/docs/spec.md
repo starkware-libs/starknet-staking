@@ -43,7 +43,7 @@
     - [exit\_delegaition\_pool\_action](#exit_delegaition_pool_action)
     - [claim\_rewards](#claim_rewards-1)
     - [switch\_delegation\_pool](#switch_delegation_pool)
-    - [enter\_from\_staking\_contract](#enter_from_staking_contract)
+    - [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract)
     - [set\_final\_staker\_index](#set_final_staker_index)
     - [calculate\_rewards](#calculate_rewards-1)
     - [update\_commission](#update_commission-1)
@@ -71,6 +71,8 @@
     - [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
     - [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
     - [AMOUNT\_TOO\_HIGH](#amount_too_high)
+    - [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
+    - [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
 
 </details>
 
@@ -225,13 +227,13 @@ sequenceDiagram
   DelegationPoolingContract A ->>- StakingContract: remove_from_delegation_pool_intent
   pool member ->>+ DelegationPoolingContract A: switch_delegation_pool
   DelegationPoolingContract A ->>+ StakingContract: switch_staking_delegation_pool
-  StakingContract ->>- DelegationPoolingContract B: enter_from_staking_contract
+  StakingContract ->>- DelegationPoolingContract B: enter_delegation_pool_from_staking_contract
   deactivate DelegationPoolingContract A
   loop 
     Note left of StakingContract:  optional for switching some<br/> of the funds but keeping the rest<br/> with the original stakeror splitting<br/> between multiple stakers
     pool member ->>+ DelegationPoolingContract A: switch_delegation_pool
     DelegationPoolingContract A ->> StakingContract: switch_staking_delegation_pool
-    StakingContract ->> DelegationPoolingContract B: enter_from_staking_contract
+    StakingContract ->> DelegationPoolingContract B: enter_delegation_pool_from_staking_contract
     deactivate DelegationPoolingContract A
   end
 ```
@@ -501,32 +503,44 @@ Any address can execute.
 2. Remove intent from staker's list.
 
 ### switch_staking_delegation_pool
+```rust
+fn switch_staking_delegation_pool(
+    ref self: ContractState,
+    to_staker: ContractAddress,
+    to_pool: ContractAddress,
+    switched_amount: u128,
+    data: Span<felt252>,
+    identifier: felt252
+) -> bool
+```
 #### description <!-- omit from toc -->
 Execute a pool member request to move from one staker's delegation pool to another staker's delegation pool.
-#### parameters <!-- omit from toc -->
-| name        | type            |
-| ----------- | --------------- |
-| from_staker | address         |
-| to_staker   | address         |
-| to_pool     | address         |
-| amount      | u128            |
-| data        | Span\<felt252\> |
-| identifier  | felt252         |
-#### return <!-- omit from toc -->
-success: bool
+Return true upon success, otherwise return false.
 #### emits <!-- omit from toc -->
+1. [Delegation Balance Changed](#delegation-balance-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
+4. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+5. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+7. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+8. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
 #### pre-condition <!-- omit from toc -->
-1. Enough funds are available in `from_staker` pool.
-2. `to_staker` exist in the contract and is not in exit window.
-3. `to_pool` is the delegation pool contract for `to_staker`.
+1. Staking contract is unpaused.
+2. Pool contract (caller) has operator role.
+3. `switched_amount` is not zero.
+4. Enough funds is in intent for switching.
+5. `to_staker` exist in the contract and is not in exit window.
+6. `to_pool` is the delegation pool contract for `to_staker`.
 #### access control <!-- omit from toc -->
-Only pooling contract for the given staker can execute.
+Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. Remove requested amount from `from_staker`'s pool amount.
-2. Add requested amount to `to_staker`'s pool with pool contract address `to_pool`.
-3. move amount balance from original pool to new pool's behalf.
-4. Call new pool's [enter_from_staking_contract](#enter_from_staking_contract) function.
+1. [Calculate rewards](#calculate_rewards).
+2. Remove requested amount from the caller pool intent amount.
+3. Add requested amount to `to_staker`'s pool with pool contract address `to_pool`.
+4. Call `to_pool`'s [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract) function.
 
 ### change_reward_address
 #### description <!-- omit from toc -->
@@ -887,7 +901,7 @@ Only pool member can call.
 1. Compose and serialize data: pool member address and reward address.
 2. Call staking contract's [switch delegation pool](#switch_staking_delegation_pool).
 
-### enter_from_staking_contract
+### enter_delegation_pool_from_staking_contract
 #### description <!-- omit from toc -->
 Entry point for staking contract to inform pool of a pool member being moved from another pool to this one.
 No funds need to be transferred since staking contract holds the pool funds.
@@ -1061,3 +1075,9 @@ success: bool
 
 ### AMOUNT_TOO_HIGH
 "Amount is too high."
+
+### MISSMATCHED_DELEGATION_POOL
+"to_pool is not the delegation pool contract for to_staker."
+
+### MISSING_UNDELEGATE_INTENT
+"Undelegate intent is missing."
