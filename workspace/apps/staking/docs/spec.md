@@ -70,6 +70,7 @@
     - [CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#claim_rewards_from_unauthorized_address)
     - [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
     - [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+    - [AMOUNT\_TOO\_HIGH](#amount_too_high)
 
 </details>
 
@@ -458,7 +459,7 @@ Return the time in which the pool member will be able to exit.
 3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
 5. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
-6. [INSUFFICIENT\_POOL\_BALANCE](#insufficient_pool_balance)
+6. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Pool contract (caller) has operator role.
@@ -473,28 +474,31 @@ Only pool contract for the given staker can execute.
 3. Register intent with given identifier, amount and unstake_time.
 
 ### remove_from_delegation_pool_action
+```rust
+fn remove_from_delegation_pool_action(
+    ref self: ContractState, 
+    identifier: felt252
+) -> u128
+```
 #### description <!-- omit from toc -->
 Execute the intent to remove funds from pool if enough time have passed.
-Transfers the funds to the pooling contract.
-#### parameters <!-- omit from toc -->
-| name       | type            |
-| ---------- | --------------- |
-| staker     | address         |
-| identifier | Span\<felt252\> |
-#### return <!-- omit from toc -->
-amount: felt252 - amount being transferred to the pooling contract.
+Transfers the funds to the pool contract.
+Return the amount being transferred to the pool contract.
 #### emits <!-- omit from toc -->
-[Balance Changed](#balance-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
 #### pre-condition <!-- omit from toc -->
-1. A removal intent request with this identifier have been sent before.
-2. Enough time have passed since the intent request.
+1. Staking contract is unpaused.
+2. `caller_address` has operator role.
+3. Removal intent request with the given `identifier` have been sent before.
+4. Enough time have passed since the intent request.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
-1. Validate enough time have passed since remove from pool intent.
-2. Transfer funds from staking contract to pooling contract.
-3. Remove intent from staker's list.
+1. Transfer funds from staking contract to pool contract.
+2. Remove intent from staker's list.
 
 ### switch_staking_delegation_pool
 #### description <!-- omit from toc -->
@@ -1054,3 +1058,6 @@ success: bool
 
 ### MISSING_POOL_CONTRACT
 "Staker does not have a pool contract."
+
+### AMOUNT_TOO_HIGH
+"Amount is too high."
