@@ -13,7 +13,7 @@ pub mod Pooling {
         access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
     };
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-    use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
+    use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
     use starknet::storage::Map;
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
@@ -51,7 +51,7 @@ pub mod Pooling {
         staker_address: ContractAddress,
         pool_member_info: Map<ContractAddress, Option<PoolMemberInfo>>,
         final_staker_index: Option<u64>,
-        staking_dispatcher: IStakingDispatcher,
+        staking_pool_dispatcher: IStakingPoolDispatcher,
         erc20_dispatcher: IERC20Dispatcher,
         commission: u16,
     }
@@ -85,7 +85,9 @@ pub mod Pooling {
         self.roles.initializer();
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.staker_address.write(staker_address);
-        self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
+        self
+            .staking_pool_dispatcher
+            .write(IStakingPoolDispatcher { contract_address: staking_contract });
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.commission.write(commission);
     }
@@ -104,7 +106,7 @@ pub mod Pooling {
             );
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             let staker_address = self.staker_address.read();
-            let staking_dispatcher = self.staking_dispatcher.read();
+            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             let erc20_dispatcher = self.erc20_dispatcher.read();
             let self_contract = get_contract_address();
             erc20_dispatcher
@@ -112,8 +114,8 @@ pub mod Pooling {
                     sender: pool_member, recipient: self_contract, amount: amount.into()
                 );
             erc20_dispatcher
-                .approve(spender: staking_dispatcher.contract_address, amount: amount.into());
-            let (_, updated_index) = staking_dispatcher
+                .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
+            let (_, updated_index) = staking_pool_dispatcher
                 .add_stake_from_pool(:staker_address, :amount);
             self
                 .pool_member_info
@@ -149,7 +151,7 @@ pub mod Pooling {
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
                 Error::CALLER_CANNOT_ADD_TO_POOL
             );
-            let staking_dispatcher = self.staking_dispatcher.read();
+            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             let erc20_dispatcher = self.erc20_dispatcher.read();
             let self_contract = get_contract_address();
             erc20_dispatcher
@@ -157,8 +159,8 @@ pub mod Pooling {
                     sender: pool_member, recipient: self_contract, amount: amount.into()
                 );
             erc20_dispatcher
-                .approve(spender: staking_dispatcher.contract_address, amount: amount.into());
-            let (_, updated_index) = staking_dispatcher
+                .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
+            let (_, updated_index) = staking_pool_dispatcher
                 .add_stake_from_pool(staker_address: self.staker_address.read(), :amount);
             self.calculate_rewards(ref :pool_member_info, :updated_index);
             pool_member_info.amount += amount;
@@ -201,8 +203,9 @@ pub mod Pooling {
                 get_block_timestamp() >= unpool_time, Error::INTENT_WINDOW_NOT_FINISHED
             );
             // Clear intent and receive funds from staking contract if needed.
-            let staking_dispatcher = self.staking_dispatcher.read();
-            staking_dispatcher.remove_from_delegation_pool_action(identifier: pool_member.into());
+            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
+            staking_pool_dispatcher
+                .remove_from_delegation_pool_action(identifier: pool_member.into());
 
             let erc20_dispatcher = self.erc20_dispatcher.read();
             // Claim rewards.
@@ -264,7 +267,7 @@ pub mod Pooling {
             };
             let mut serialized_data = array![];
             switch_pool_data.serialize(ref output: serialized_data);
-            let staking_dispatcher = self.staking_dispatcher.read();
+            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             pool_member_info.unpool_amount -= amount;
             if pool_member_info.unpool_amount.is_zero() && pool_member_info.amount.is_zero() {
                 // Claim rewards.
@@ -283,7 +286,7 @@ pub mod Pooling {
                 self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             }
             // TODO: emit event
-            staking_dispatcher
+            staking_pool_dispatcher
                 .switch_staking_delegation_pool(
                     :to_staker,
                     :to_pool,
@@ -299,7 +302,7 @@ pub mod Pooling {
         ) -> bool {
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             assert_with_err(
-                get_caller_address() == self.staking_dispatcher.read().contract_address,
+                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
             let mut serialized = data;
@@ -338,7 +341,7 @@ pub mod Pooling {
         fn set_final_staker_index(ref self: ContractState, final_staker_index: u64) {
             let staking_contract = get_caller_address();
             assert_with_err(
-                staking_contract == self.staking_dispatcher.read().contract_address,
+                staking_contract == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
             assert_with_err(
@@ -376,7 +379,7 @@ pub mod Pooling {
             PoolingContractInfo {
                 staker_address: self.staker_address.read(),
                 final_staker_index: self.final_staker_index.read(),
-                staking_contract: self.staking_dispatcher.read().contract_address,
+                staking_contract: self.staking_pool_dispatcher.read().contract_address,
                 token_address: self.erc20_dispatcher.read().contract_address,
                 commission: self.commission.read(),
             }
@@ -384,7 +387,7 @@ pub mod Pooling {
 
         fn update_commission(ref self: ContractState, commission: u16) -> bool {
             assert_with_err(
-                get_caller_address() == self.staking_dispatcher.read().contract_address,
+                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
             assert_with_err(
@@ -422,8 +425,8 @@ pub mod Pooling {
                 // If the staker is inactive, the staker already pushed index and funds.
                 return final_index;
             }
-            let staking_dispatcher = self.staking_dispatcher.read();
-            staking_dispatcher.claim_delegation_pool_rewards(self.staker_address.read())
+            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
+            staking_pool_dispatcher.claim_delegation_pool_rewards(self.staker_address.read())
         }
 
         /// Calculates the rewards for a pool member.
@@ -478,9 +481,9 @@ pub mod Pooling {
                 );
                 return get_block_timestamp();
             }
-            let staking_dispatcher = self.staking_dispatcher.read();
+            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             let staker_address = self.staker_address.read();
-            staking_dispatcher
+            staking_pool_dispatcher
                 .remove_from_delegation_pool_intent(
                     :staker_address, identifier: pool_member.into(), :amount
                 )

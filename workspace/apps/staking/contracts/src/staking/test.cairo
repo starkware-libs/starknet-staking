@@ -42,7 +42,9 @@ use starknet::get_block_timestamp;
 use contracts::staking::objects::{
     UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
 };
-use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+use contracts::staking::interface::{IStakingDispatcher, IStakingPoolDispatcher};
+use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPoolDispatcherTrait};
+use contracts::staking::interface::{IStakingDispatcherTrait, IStakingPauseDispatcherTrait};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
@@ -306,8 +308,9 @@ fn test_claim_delegation_pool_rewards() {
 
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pooling_contract);
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    staking_dispatcher.claim_delegation_pool_rewards(staker_address: cfg.test_info.staker_address);
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
+    staking_pool_dispatcher
+        .claim_delegation_pool_rewards(staker_address: cfg.test_info.staker_address);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     assert_eq!(erc20_dispatcher.balance_of(pooling_contract), unclaimed_rewards_pool.into());
 
@@ -392,11 +395,11 @@ fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.claim_delegation_pool_rewards(:staker_address);
+    staking_pool_dispatcher.claim_delegation_pool_rewards(:staker_address);
 }
 
 
@@ -407,13 +410,13 @@ fn test_claim_delegation_pool_rewards_unauthorized_address() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     // TODO: Set the contract address to the actual pool contract address.
     let staker_address = cfg.test_info.staker_address;
     // Update staker info for the test.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.claim_delegation_pool_rewards(:staker_address);
+    staking_pool_dispatcher.claim_delegation_pool_rewards(:staker_address);
 }
 
 #[test]
@@ -896,11 +899,11 @@ fn test_remove_from_delegation_pool_action() {
     // Stake and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
     // Remove from delegation pool intent, and then check that the intent was added correctly.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pooling_contract);
-    staking_dispatcher
+    staking_pool_dispatcher
         .remove_from_delegation_pool_intent(
             staker_address: cfg.test_info.staker_address,
             identifier: cfg.test_info.pool_member_address.into(),
@@ -913,7 +916,7 @@ fn test_remove_from_delegation_pool_action() {
     let pool_balance_before_action = erc20_dispatcher.balance_of(pooling_contract);
 
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pooling_contract);
-    let returned_amount = staking_dispatcher
+    let returned_amount = staking_pool_dispatcher
         .remove_from_delegation_pool_action(identifier: cfg.test_info.pool_member_address.into());
     assert_eq!(returned_amount, cfg.pool_member_info.amount);
     let undelegate_intent_key = UndelegateIntentKey {
@@ -945,7 +948,7 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     // Deploy staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     let caller_address = CALLER_ADDRESS();
     set_account_as_operator(
         :staking_contract, account: caller_address, security_admin: cfg.test_info.security_admin
@@ -953,7 +956,7 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     // Remove from delegation pool action, and check it returns 0 and does not change balance.
     let staking_balance_before_action = erc20_dispatcher.balance_of(staking_contract);
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
-    let returned_amount = staking_dispatcher
+    let returned_amount = staking_pool_dispatcher
         .remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
     assert_eq!(returned_amount, Zero::zero());
     // TODO: Test event emitted.
@@ -970,6 +973,7 @@ fn test_switch_staking_delegation_pool() {
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
 
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     // Initialize from_staker.
     let from_pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     let from_pool_dispatcher = IPoolingDispatcher { contract_address: from_pool_contract };
@@ -1010,7 +1014,7 @@ fn test_switch_staking_delegation_pool() {
         :staking_contract, account: caller_address, security_admin: cfg.test_info.security_admin
     );
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
-    staking_dispatcher
+    staking_pool_dispatcher
         .switch_staking_delegation_pool(
             :to_staker,
             to_pool: to_pool_contract,
@@ -1067,7 +1071,7 @@ fn test_switch_staking_delegation_pool() {
     cheat_reward_for_reward_supplier(
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards_pool, :token_address
     );
-    staking_dispatcher
+    staking_pool_dispatcher
         .switch_staking_delegation_pool(
             :to_staker,
             to_pool: to_pool_contract,
@@ -1428,6 +1432,7 @@ fn test_pause() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
     let is_paused = load_one_felt(
         target: staking_contract, storage_address: selector!("is_paused")
     );
@@ -1437,7 +1442,7 @@ fn test_pause() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent
     );
-    staking_dispatcher.pause();
+    staking_pause_dispatcher.pause();
     let is_paused = load_one_felt(
         target: staking_contract, storage_address: selector!("is_paused")
     );
@@ -1447,7 +1452,7 @@ fn test_pause() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_admin
     );
-    staking_dispatcher.unpause();
+    staking_pause_dispatcher.unpause();
     assert!(!staking_dispatcher.is_paused());
 }
 
@@ -1458,11 +1463,11 @@ fn test_stake_when_paused() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent
     );
-    staking_dispatcher.pause();
+    staking_pause_dispatcher.pause();
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
 }
 // TODO: test thatonly security admin can unpause
