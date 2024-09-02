@@ -75,6 +75,9 @@
     - [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
     - [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
     - [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
+- [Structs](#structs)
+    - [StakerPoolInfo](#stakerpoolinfo)
+    - [StakerInfo](#stakerinfo)
 
 </details>
 
@@ -630,25 +633,23 @@ Delegation pool contract of the given staker.
 2. Transfer rewards to pool contract.
 
 ### state_of
+```rust
+fn state_of(
+  self: @ContractState, 
+  staker_address: ContractAddress
+) -> StakerInfo
+```
 #### description <!-- omit from toc -->
-return the state of a staker
-#### parameters <!-- omit from toc -->
-| name   | type    |
-| ------ | ------- |
-| staker | address |
-#### return <!-- omit from toc -->
-own_amount
-pooled_amount
-pooling_contract_address
-operational_address
-reward_address
-staker_unclaimed_rewards
-pool_unclaimed_rewards
+Return [StakerInfo](#stakerinfo) of the given staker.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
+1. Staker exist in the contract.
 #### access control <!-- omit from toc -->
+Any address can execute.
 #### logic <!-- omit from toc -->
+1. Return Staker's info.
 
 ### contract_parameters
 #### description <!-- omit from toc -->
@@ -1118,3 +1119,23 @@ success: bool
 
 ### STAKER_ALREADY_HAS_POOL
 "Staker already has a pool."
+
+# Structs
+### StakerPoolInfo
+| name              | type    |
+| ----------------- | ------- |
+| pooling_contract  | address |
+| amount            | u128    |
+| unclaimed_rewards | u128    |
+| commission        | u16     |
+
+### StakerInfo
+| name                  | type                   |
+| --------------------- | ---------------------- |
+| reward_address        | address                |
+| operational_address   | address                |
+| unstake_time          | Option<u64>            |
+| amount_own            | u128                   |
+| index                 | u64                    |
+| unclaimed_rewards_own | u128                   |
+| pool_info             | Option<StakerPoolInfo> |
