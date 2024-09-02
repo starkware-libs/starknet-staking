@@ -439,28 +439,38 @@ Only pool contract for the given staker can execute.
 3. Add amount to staker's pooled amount
 
 ### remove_from_delegation_pool_intent
+```rust
+fn remove_from_delegation_pool_intent(
+    ref self: ContractState,
+    staker_address: ContractAddress,
+    identifier: felt252,
+    amount: u128,
+) -> u64
+```
 #### description <!-- omit from toc -->
 Inform the staker that an amount will be reduced from the delegation pool.
-#### parameters <!-- omit from toc -->
-| name       | type            |
-| ---------- | --------------- |
-| staker     | address         |
-| identifier | felt252         |
-| amount     | u128            |
-#### return <!-- omit from toc -->
-unstake_time: time - when will the pool member be able to exit.
-index: u64 - updated index
+Return the time in which the pool member will be able to exit.
 #### emits <!-- omit from toc -->
+1. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+5. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+6. [INSUFFICIENT\_POOL\_BALANCE](#insufficient_pool_balance)
 #### pre-condition <!-- omit from toc -->
-1. Staker has a pool.
+1. Staking contract is unpaused.
+2. Pool contract (caller) has operator role.
+3. Staker is listed in the contract.
+4. Staker has pool contract.
+5. Pooled amount is greater or equal then amount requested to remove.
 #### access control <!-- omit from toc -->
-Only pooling contract for the given staker can execute.
+Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. Validate pooled amount is greater or equal then amount requested to remove.
-2. [Calculate rewards](#calculate_rewards).
-3. Remove amount from staker's pooled amount.
-4. Register intent with given identifier, amount and unstake_time.
+1. [Calculate rewards](#calculate_rewards).
+2. Remove amount from staker's pooled amount.
+3. Register intent with given identifier, amount and unstake_time.
 
 ### remove_from_delegation_pool_action
 #### description <!-- omit from toc -->
