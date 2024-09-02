@@ -68,6 +68,8 @@
     - [ONLY\_OPERATOR](#only_operator)
     - [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
     - [CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#claim_rewards_from_unauthorized_address)
+    - [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+    - [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
 
 </details>
 
@@ -402,24 +404,35 @@ Only staking address or reward address can execute.
 3. Set unclaimed_rewards = 0.
 
 ### add_stake_from_pool
+```rust
+fn add_stake_from_pool(
+    ref self: ContractState, 
+    staker_address: ContractAddress, 
+    amount: u128
+) -> (u128, u64)
+```
 #### description <!-- omit from toc -->
-Delegation pooling contract's way to add funds to the staking pool.
-#### parameters <!-- omit from toc -->
-| name          | type    |
-| ------------- | ------- |
-| pooled_staker | address |
-| amount        | u128    |
+Delegation pool contract's way to add funds to the staking pool.
 #### return <!-- omit from toc -->
 pool_amount: u128 - total pool amount after addition.
 index: u64 - updated index
 #### emits <!-- omit from toc -->
-[Balance Changed](#balance-changed)
+1. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+5. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+6. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
 #### pre-condition <!-- omit from toc -->
-1. Staker is not in an exit window.
-2. Staker enabled pooling.
+1. Staking contract is unpaused.
+2. Pool contract (caller) has operator role.
+3. Staker is listed in the contract.
+4. Staker is not in an exit window.
+5. Staker has pool contract.
 #### access control <!-- omit from toc -->
-Only pooling contract for the given staker can execute.
+Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
 1. [Calculate rewards](#calculate_rewards)
 2. transfer funds from pooling contract to staking contract.
@@ -1025,3 +1038,9 @@ success: bool
 
 ### CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
 "Claim rewards must be called from staker address or reward address."
+
+### CALLER_IS_NOT_POOL_CONTRACT
+"Caller is not pool contract."
+
+### MISSING_POOL_CONTRACT
+"Staker does not have a pool contract."
