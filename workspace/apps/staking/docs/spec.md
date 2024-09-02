@@ -78,6 +78,7 @@
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
+    - [StakingContractInfo](#stakingcontractinfo)
 
 </details>
 
@@ -652,13 +653,11 @@ Any address can execute.
 1. Return Staker's info.
 
 ### contract_parameters
+```rust
+fn contract_parameters(self: @ContractState) -> StakingContractInfo
+```
 #### description <!-- omit from toc -->
 Return general parameters of the contract.
-#### parameters <!-- omit from toc -->
-| name | type |
-| ---- | ---- |
-#### return <!-- omit from toc -->
-minimum_stake
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -1139,3 +1138,12 @@ success: bool
 | index                 | u64                    |
 | unclaimed_rewards_own | u128                   |
 | pool_info             | Option<StakerPoolInfo> |
+
+### StakingContractInfo
+| name                     | type      |
+| ------------------------ | --------- |
+| min_stake                | u128      |
+| token_address            | address   |
+| global_index             | u64       |
+| pool_contract_class_hash | ClassHash |
+| reward_supplier          | address   |
