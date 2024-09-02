@@ -32,6 +32,7 @@ use contracts::event_test_utils::{
 use contracts::event_test_utils::assert_staker_reward_address_change_event;
 use contracts::event_test_utils::assert_new_delegation_pool_event;
 use contracts::event_test_utils::assert_change_operational_address_event;
+use contracts::event_test_utils::assert_new_staker_event;
 use contracts::event_test_utils::assert_commission_changed_event;
 use contracts::event_test_utils::assert_global_index_updated_event;
 use contracts::event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
@@ -119,9 +120,9 @@ fn test_stake() {
     );
     assert_eq!(erc20_dispatcher.balance_of(staking_contract), cfg.staker_info.amount_own.into());
     assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own);
-    // Validate the single StakeBalanceChanged event.
+    // Validate StakeBalanceChanged and NewStaker event.
     let events = spy.get_events().emitted_by(staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 1, message: "stake");
+    assert_number_of_events(actual: events.len(), expected: 2, message: "stake");
     assert_stake_balance_changed_event(
         spied_event: events[0],
         :staker_address,
@@ -129,6 +130,13 @@ fn test_stake() {
         old_delegated_stake: Zero::zero(),
         new_self_stake: cfg.staker_info.amount_own,
         new_delegated_stake: Zero::zero()
+    );
+    assert_new_staker_event(
+        spied_event: events[1],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        self_stake: cfg.staker_info.amount_own,
     );
 }
 
@@ -832,10 +840,10 @@ fn test_stake_pooling_enabled() {
     assert_eq!(expected_staker_info, staking_dispatcher.state_of(:staker_address));
     // Validate events.
     let events = spy.get_events().emitted_by(staking_contract).events;
-    // There are four events: NewDelegationPool, StakeBalanceChange, GovernanceAdminAdded,
-    // OperatorAdded.
-    // We're checking only the first two that are from Staking and not from Roles component.
-    assert_number_of_events(actual: events.len(), expected: 4, message: "stake_pooling_enabled");
+    // There are five events: NewDelegationPool, StakeBalanceChange, NewStaker,
+    // GovernanceAdminAdded, OperatorAdded.
+    // We're checking only the first three that are from Staking and not from Roles component.
+    assert_number_of_events(actual: events.len(), expected: 5, message: "stake_pooling_enabled");
     let pool_info = cfg.staker_info.get_pool_info_unchecked();
     assert_new_delegation_pool_event(
         spied_event: events[0],
@@ -850,6 +858,13 @@ fn test_stake_pooling_enabled() {
         old_delegated_stake: Zero::zero(),
         new_self_stake: cfg.staker_info.amount_own,
         new_delegated_stake: Zero::zero()
+    );
+    assert_new_staker_event(
+        spied_event: events[2],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        self_stake: cfg.staker_info.amount_own,
     );
 }
 
