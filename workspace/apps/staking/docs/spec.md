@@ -74,6 +74,7 @@
     - [AMOUNT\_TOO\_HIGH](#amount_too_high)
     - [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
     - [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
+    - [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
 
 </details>
 
@@ -568,25 +569,34 @@ Only staker address.
 1. Change registered `reward_address` for the staker.
 
 ### set_open_for_delegation
+```rust
+fn set_open_for_delegation(
+  ref self: ContractState, 
+  commission: u16
+) -> ContractAddress
+```
 #### description <!-- omit from toc -->
 Creates a staking delegation pool for a staker that doesn't have one.
-#### parameters <!-- omit from toc -->
-| name       | type |
-| ---------- | ---- |
-| commission | u16  |
-#### return <!-- omit from toc -->
-pool: address
+Return the pool address.
 #### emits <!-- omit from toc -->
-[New Delegation Pool](#new-delegation-pool)
+1. [New Delegation Pool](#new-delegation-pool)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
+5. [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
 #### pre-condition <!-- omit from toc -->
-1. Staker exist in the contract.
-2. Staker has no pool.
+1. Staking contract is unpaused.
+2. Staker (caller) has operator role.
+3. Staker (caller) exist in the contract.
+4. `commission` is in valid range.
+5. Staker has no pool.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
-1. generate pooling contract for staker.
-2. register pool.
+1. Generate pool contract for staker.
+2. Register pool.
 
 ### claim_delegation_pool_rewards
 #### description <!-- omit from toc -->
@@ -1095,3 +1105,6 @@ success: bool
 
 ### MISSING_UNDELEGATE_INTENT
 "Undelegate intent is missing."
+
+### STAKER_ALREADY_HAS_POOL
+"Staker already has a pool."
