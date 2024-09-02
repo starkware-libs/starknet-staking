@@ -42,6 +42,7 @@ pub mod RewardSupplier {
     pub enum Event {
         accesscontrolEvent: AccessControlComponent::Event,
         src5Event: SRC5Component::Event,
+        CalculatedRewards: Events::CalculatedRewards,
         mintRequest: Events::MintRequest,
     }
 
@@ -77,9 +78,17 @@ pub mod RewardSupplier {
             assert_with_err(
                 get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
+            let last_timestamp = self.last_timestamp.read();
             let rewards = self.calculate_rewards();
+            let new_timestamp = self.last_timestamp.read();
             let unclaimed_rewards = self.update_unclaimed_rewards(:rewards);
             self.request_funds_if_needed(:unclaimed_rewards);
+            self
+                .emit(
+                    Events::CalculatedRewards {
+                        last_timestamp, new_timestamp, rewards_calculated: rewards,
+                    }
+                );
             rewards
         }
 

@@ -29,4 +29,11 @@ pub mod Events {
         pub total_amount: u128,
         pub num_msgs: u128,
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct CalculatedRewards {
+        pub last_timestamp: u64,
+        pub new_timestamp: u64,
+        pub rewards_calculated: u128,
+    }
 }
