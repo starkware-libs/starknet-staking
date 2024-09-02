@@ -17,6 +17,9 @@ use contracts::utils::{ceil_of_division, compute_threshold};
 use contracts::event_test_utils::assert_calculated_rewards_event;
 use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event,};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
+use snforge_std::cheatcodes::message_to_l1::{
+    spy_messages_to_l1, MessageToL1, MessageToL1SpyAssertionsTrait
+};
 use contracts::constants::STRK_IN_FRIS;
 
 #[test]
@@ -100,7 +103,7 @@ fn test_calculate_staking_rewards() {
     let mut state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     let last_timestamp = state.last_timestamp.read();
     // Fund the the reward supplier contract.
-    let balance = cfg.reward_supplier.base_mint_amount;
+    let balance = 1000;
     fund(
         sender: cfg.test_info.owner_address,
         recipient: test_address(),
@@ -113,6 +116,7 @@ fn test_calculate_staking_rewards() {
     );
     cheat_caller_address_once(contract_address: test_address(), caller_address: staking_contract);
     let mut spy = snforge_std::spy_events();
+    let mut msgs_to_l1 = spy_messages_to_l1();
     let rewards = state.calculate_staking_rewards();
     // Validate the rewards, unclaimed rewards and l1_pending_requested_amount.
     let unadjusted_expected_rewards: u128 = (cfg.test_info.initial_supply * amount.into()).sqrt();
@@ -139,6 +143,22 @@ fn test_calculate_staking_rewards() {
         new_timestamp: state.last_timestamp.read(),
         rewards_calculated: rewards,
     );
+    msgs_to_l1
+        .assert_sent(
+            messages: @array![
+                (
+                    test_address(),
+                    MessageToL1 {
+                        to_address: cfg
+                            .reward_supplier
+                            .l1_staking_minter
+                            .try_into()
+                            .expect('not EthAddress'),
+                        payload: array![base_mint_amount.into()]
+                    }
+                )
+            ]
+        );
 }
 
 #[test]
