@@ -599,22 +599,32 @@ Only staker address.
 2. Register pool.
 
 ### claim_delegation_pool_rewards
+```rust
+fn claim_delegation_pool_rewards(
+    ref self: ContractState, 
+    staker_address: ContractAddress
+) -> u64
+```
 #### description <!-- omit from toc -->
 Calculate rewards and transfer the delegation pool rewards to the delegation pool contract.
-#### parameters <!-- omit from toc -->
-| name   | type    |
-| ------ | ------- |
-| staker | address |
-#### return <!-- omit from toc -->
-index: u64 - updated index
+Return the updated staker index.
 #### emits <!-- omit from toc -->
 [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+5. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+6. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+7. [UNEXPECTED\_BALANCE](#unexpected_balance)
 #### pre-condition <!-- omit from toc -->
-1. staker exist in the contract
-2. delegation pool exist for the staker.
+1. Staking contract is unpaused.
+2. Pool contract (caller) has operator role.
+3. Staker exist in the contract.
+4. Delegation pool exist for the staker.
 #### access control <!-- omit from toc -->
-Staker or delegation pool contract for this staker.
+Delegation pool contract of the given staker.
 #### logic <!-- omit from toc -->
 1. [Calculate rewards](#calculate_rewards)
 2. Transfer rewards to pool contract.
