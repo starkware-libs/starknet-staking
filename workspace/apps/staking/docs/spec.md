@@ -67,6 +67,7 @@
     - [UNEXPECTED\_BALANCE](#unexpected_balance)
     - [ONLY\_OPERATOR](#only_operator)
     - [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
+    - [CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#claim_rewards_from_unauthorized_address)
 
 </details>
 
@@ -373,21 +374,31 @@ Any address can execute.
 5. Delete staker record.
 
 ### claim_rewards
+```rust
+fn claim_rewards(
+  ref self: ContractState, 
+  staker_address: ContractAddress
+) -> u128
+```
 #### description <!-- omit from toc -->
 Calculate rewards and transfer them to the reward address.
-#### parameters <!-- omit from toc -->
-| name   | type    |
-| ------ | ------- |
-| staker | address |
-#### return <!-- omit from toc -->
-amount: u128 - amount of tokens transferred to the reward address.
+Return the amount of tokens transferred to the reward address.
 #### emits <!-- omit from toc -->
+1. [Staker Reward Claimed](#staker-reward-claimed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#claim_rewards_from_unauthorized_address)
+#### pre-condition <!-- omit from toc -->
+1. Staking contract is unpaused.
+2. `caller_address` has operator role.
+3. Staker is listed in the contract.
 #### access control <!-- omit from toc -->
 Only staking address or reward address can execute.
 #### logic <!-- omit from toc -->
 1. [Calculate rewards](#calculate_rewards).
-2. Transfer unclaimed_rewards
+2. Transfer unclaimed_rewards.
 3. Set unclaimed_rewards = 0.
 
 ### add_stake_from_pool
@@ -996,6 +1007,7 @@ success: bool
 
 ### CALLER_CANNOT_INCREASE_STAKE
 "Caller address should be staker address or reward address."
+
 ### MISSING_UNSTAKE_INTENT
 "Unstake intent is missing."
 
@@ -1010,3 +1022,6 @@ success: bool
 
 ### FINAL_STAKER_INDEX_ALREADY_SET
 "Final staker index already set."
+
+### CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
+"Claim rewards must be called from staker address or reward address."
