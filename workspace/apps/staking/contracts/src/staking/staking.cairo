@@ -84,6 +84,7 @@ pub mod Staking {
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
         OperationalAddressChanged: Events::OperationalAddressChanged,
         GlobalIndexUpdated: Events::GlobalIndexUpdated,
+        NewStaker: Events::NewStaker,
         CommissionChanged: Events::CommissionChanged,
         StakerRewardClaimed: Events::StakerRewardClaimed,
         DeleteStaker: Events::DeleteStaker,
@@ -190,6 +191,12 @@ pub mod Staking {
                         old_delegated_stake: Zero::zero(),
                         new_self_stake: amount,
                         new_delegated_stake: Zero::zero()
+                    }
+                );
+            self
+                .emit(
+                    Events::NewStaker {
+                        staker_address, reward_address, operational_address, self_stake: amount
                     }
                 );
             true

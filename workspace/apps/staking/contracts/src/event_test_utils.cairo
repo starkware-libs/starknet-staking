@@ -38,6 +38,31 @@ pub fn assert_staker_exit_intent_event(
     }
 }
 
+pub fn assert_new_staker_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    reward_address: ContractAddress,
+    operational_address: ContractAddress,
+    self_stake: u128,
+) {
+    let expected_event = @contracts::staking::Staking::Event::NewStaker(
+        StakingEvents::NewStaker { staker_address, reward_address, operational_address, self_stake }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "NewStaker{{staker_address: {:?}, reward_address: {:?}, operational_address: {:?}, self_stake: {}}}",
+            staker_address,
+            reward_address,
+            operational_address,
+            self_stake
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn assert_stake_balance_changed_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,

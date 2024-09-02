@@ -16,6 +16,15 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
+    pub struct NewStaker {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub reward_address: ContractAddress,
+        pub operational_address: ContractAddress,
+        pub self_stake: u128,
+    }
+
+    #[derive(Drop, starknet::Event)]
     pub struct NewDelegationPool {
         #[key]
         pub staker_address: ContractAddress,
