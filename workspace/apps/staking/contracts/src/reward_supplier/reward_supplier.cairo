@@ -108,12 +108,20 @@ pub mod RewardSupplier {
         }
 
         fn on_receive(
-            self: @ContractState,
+            ref self: ContractState,
             l2_token: ContractAddress,
             amount: u256,
             depositor: EthAddress,
             message: Span<felt252>
         ) -> bool {
+            let amount_low: u128 = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
+            let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
+            if amount_low > l1_pending_requested_amount {
+                self.l1_pending_requested_amount.write(Zero::zero());
+                return true;
+            }
+            l1_pending_requested_amount -= amount_low;
+            self.l1_pending_requested_amount.write(l1_pending_requested_amount);
             true
         }
 

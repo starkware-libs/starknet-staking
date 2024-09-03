@@ -7,7 +7,7 @@ pub trait IRewardSupplier<TContractState> {
     // Transfers rewards to the staking contract.
     fn claim_rewards(ref self: TContractState, amount: u128);
     fn on_receive(
-        self: @TContractState,
+        ref self: TContractState,
         l2_token: ContractAddress,
         amount: u256,
         depositor: EthAddress,

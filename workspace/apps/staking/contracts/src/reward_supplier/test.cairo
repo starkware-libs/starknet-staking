@@ -1,18 +1,20 @@
 use core::option::OptionTrait;
-use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierStatus};
+use contracts::reward_supplier::interface::{
+    IRewardSupplier, RewardSupplierStatus, IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait
+};
 use starknet::get_block_timestamp;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::test_utils::{
     deploy_mock_erc20_contract, StakingInitConfig, deploy_staking_contract,
     stake_for_testing_using_dispatcher, initialize_reward_supplier_state_from_cfg,
-    deploy_minting_curve_contract, fund
+    deploy_minting_curve_contract, fund, general_contract_system_deployment
 };
 use contracts::reward_supplier::RewardSupplier::SECONDS_IN_YEAR;
 use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use core::num::traits::Zero;
 use core::num::traits::Sqrt;
-use contracts_commons::test_utils::cheat_caller_address_once;
+use contracts_commons::test_utils::{cheat_caller_address_once};
 use contracts::utils::{ceil_of_division, compute_threshold};
 use contracts::event_test_utils::assert_calculated_rewards_event;
 use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event,};
@@ -178,4 +180,66 @@ fn test_state_of() {
         l1_pending_requested_amount: Zero::zero(),
     };
     assert_eq!(state.state_of(), expected_status);
+}
+
+#[test]
+fn test_on_receive() {
+    let mut cfg: StakingInitConfig = Default::default();
+    cfg.test_info.initial_supply *= 1000;
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let reward_supplier_contract = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier_contract
+    };
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let balance = 0;
+    let credit = balance + reward_supplier_dispatcher.state_of().l1_pending_requested_amount;
+    start_cheat_block_timestamp_global(
+        block_timestamp: get_block_timestamp()
+            + SECONDS_IN_YEAR.try_into().expect('does not fit in')
+    );
+    cheat_caller_address_once(
+        contract_address: reward_supplier_contract, caller_address: staking_contract
+    );
+    let rewards = reward_supplier_dispatcher.calculate_staking_rewards();
+    let unclaimed_rewards = rewards + STRK_IN_FRIS;
+    let base_mint_amount = cfg.reward_supplier.base_mint_amount;
+    let debit = unclaimed_rewards;
+    let threshold = compute_threshold(base_mint_amount);
+    let diff = debit + threshold - credit;
+    let num_msgs = ceil_of_division(dividend: diff, divisor: base_mint_amount);
+    let mut expected_l1_pending_requested_amount = num_msgs * base_mint_amount;
+    assert_eq!(
+        reward_supplier_dispatcher.state_of().l1_pending_requested_amount,
+        expected_l1_pending_requested_amount
+    );
+    for _ in 0
+        ..num_msgs {
+            // Transfer base_mint_amount to the reward supplier contract as it received from l1
+            // staking minter.
+            fund(
+                sender: cfg.test_info.owner_address,
+                recipient: reward_supplier_contract,
+                amount: base_mint_amount,
+                :token_address
+            );
+            reward_supplier_dispatcher
+                .on_receive(
+                    l2_token: token_address,
+                    amount: base_mint_amount.into(),
+                    depositor: cfg
+                        .reward_supplier
+                        .l1_staking_minter
+                        .try_into()
+                        .expect('not EthAddress'),
+                    message: array![].span()
+                );
+            expected_l1_pending_requested_amount -= base_mint_amount;
+            assert_eq!(
+                reward_supplier_dispatcher.state_of().l1_pending_requested_amount,
+                expected_l1_pending_requested_amount
+            );
+        };
 }
