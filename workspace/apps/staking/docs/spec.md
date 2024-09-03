@@ -81,6 +81,9 @@
     - [STAKER\_INACTIVE](#staker_inactive)
     - [POOL\_MEMBER\_EXISTS](#pool_member_exists)
     - [AMOUNT\_IS\_ZERO](#amount_is_zero)
+    - [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+    - [UNDELEGATE\_IN\_PROGRESS](#undelegate_in_progress)
+    - [CALLER\_CANNOT\_ADD\_TO\_POOL](#caller_cannot_add_to_pool)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -866,29 +869,36 @@ Only a non-listed pool member address.
 5. Create entry for pool member.
 
 ### add_to_delegation_pool
+```rust
+fn add_to_delegation_pool(
+    ref self: ContractState, 
+    pool_member: ContractAddress, 
+    amount: u128
+) -> u128
+```
 #### description <!-- omit from toc -->
 Increase the funds for an existing pool member.
-#### parameters <!-- omit from toc -->
-| name   | type |
-| ------ | ---- |
-| amount | u128 |
-#### return <!-- omit from toc -->
-amount: u128 - updated total amount for the caller.
+Return the updated total amount.
 #### emits <!-- omit from toc -->
-[Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
-[Stake Balance Changed](#stake-balance-changed)
+1. [Stake Balance Changed](#stake-balance-changed)
+2. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
+1. [STAKER\_INACTIVE](#staker_inactive)
+2. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+3. [CALLER\_CANNOT\_ADD\_TO\_POOL](#caller_cannot_add_to_pool)
+4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### pre-condition <!-- omit from toc -->
-1. caller is a pool member listed in the contract.
+1. Staker is active and not in an exit window.
+2. `pool_member` listed in the contract.
+3. `pool_member` has enough funds.
 #### access control <!-- omit from toc -->
-only a listed pool member address.
+Only the pool member address or rewards address for which the change is requested for.
 #### logic <!-- omit from toc -->
-1. Check that staker for this pool instance is not in exit window.
-2. [Calculate rewards](#calculate_rewards-1)
-3. Transfer funds from caller to the contract.
-4. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
-5. Get current index from staking contract.
-6. Update pool memeber entry with
+1. Transfer funds from caller to the contract.
+2. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
+3. Get current index from staking contract.
+4. [Calculate rewards](#calculate_rewards-1)
+5. Update pool member entry with
    1. index
    2. amount
    3. unclaimed rewards
@@ -1177,6 +1187,15 @@ success: bool
 
 ### AMOUNT_IS_ZERO
 "Amount is zero."
+
+### POOL_MEMBER_DOES_NOT_EXIST
+"Pool member does not exist."
+
+### UNDELEGATE_IN_PROGRESS
+"Undelegate from pool in progress, pool member is in an exit window."
+
+### CALLER_CANNOT_ADD_TO_POOL
+"Caller address should be pool member address or reward address."
 
 # Structs
 ### StakerPoolInfo

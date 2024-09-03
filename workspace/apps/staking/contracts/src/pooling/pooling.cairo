@@ -169,9 +169,17 @@ pub mod Pooling {
             let (_, updated_index) = staking_pool_dispatcher
                 .add_stake_from_pool(staker_address: self.staker_address.read(), :amount);
             self.calculate_rewards(ref :pool_member_info, :updated_index);
+            let old_delegated_stake = pool_member_info.amount;
             pool_member_info.amount += amount;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
-            // TODO: emit event
+            self
+                .emit(
+                    Events::DelegationPoolMemberBalanceChanged {
+                        pool_member,
+                        old_delegated_stake,
+                        new_delegated_stake: pool_member_info.amount
+                    }
+                );
             pool_member_info.amount
         }
 

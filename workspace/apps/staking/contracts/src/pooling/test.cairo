@@ -195,6 +195,7 @@ fn test_add_to_delegation_pool() {
     approve(
         owner: first_pool_member, spender: pooling_contract, amount: delegate_amount, :token_address
     );
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: pooling_contract, caller_address: first_pool_member
     );
@@ -216,6 +217,16 @@ fn test_add_to_delegation_pool() {
         ..first_pool_member_info_before_add
     };
     assert_eq!(pool_member_info_after_add, pool_member_info_expected);
+
+    // Validate the single DelegationPoolMemberBalanceChanged event.
+    let events = spy.get_events().emitted_by(pooling_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "add_to_delegation_pool");
+    assert_delegation_pool_member_balance_changed_event(
+        spied_event: events[0],
+        pool_member: first_pool_member,
+        old_delegated_stake: first_pool_member_info_before_add.amount,
+        new_delegated_stake: pool_member_info_after_add.amount
+    );
 
     // Check staker info after first add to delegation pool.
     let staker_info_after = staking_dispatcher
