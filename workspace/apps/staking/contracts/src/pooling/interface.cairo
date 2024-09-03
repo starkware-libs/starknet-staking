@@ -12,7 +12,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct DelegationBalanceChanged {
+    pub struct DelegationPoolMemberBalanceChanged {
         #[key]
         pub pool_member: ContractAddress,
         pub old_delegated_stake: u128,
@@ -83,7 +83,7 @@ pub struct PoolingContractInfo {
 #[starknet::interface]
 pub trait IPooling<TContractState> {
     fn enter_delegation_pool(
-        ref self: TContractState, amount: u128, reward_address: ContractAddress
+        ref self: TContractState, reward_address: ContractAddress, amount: u128
     ) -> bool;
     fn add_to_delegation_pool(
         ref self: TContractState, pool_member: ContractAddress, amount: u128

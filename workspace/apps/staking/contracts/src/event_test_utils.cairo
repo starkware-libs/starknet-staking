@@ -139,14 +139,14 @@ pub fn assert_pool_member_reward_claimed_event(
     }
 }
 
-pub fn assert_delegation_balance_changed_event(
+pub fn assert_delegation_pool_member_balance_changed_event(
     mut spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
     old_delegated_stake: u128,
     new_delegated_stake: u128,
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::DelegationBalanceChanged(
-        PoolEvents::DelegationBalanceChanged {
+    let expected_event = @contracts::pooling::Pooling::Event::DelegationPoolMemberBalanceChanged(
+        PoolEvents::DelegationPoolMemberBalanceChanged {
             pool_member, old_delegated_stake, new_delegated_stake
         }
     );
@@ -155,7 +155,7 @@ pub fn assert_delegation_balance_changed_event(
     let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
     if !emitted {
         let details = format!(
-            "PoolEvents::DelegationBalanceChanged{{pool_member: {:?}, old_delegated_stake: {}, new_delegated_stake: {}}}",
+            "PoolEvents::DelegationPoolMemberBalanceChanged{{pool_member: {:?}, old_delegated_stake: {}, new_delegated_stake: {}}}",
             pool_member,
             old_delegated_stake,
             new_delegated_stake

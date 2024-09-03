@@ -1,10 +1,8 @@
 mod ReplaceabilityTests {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts_commons::components::replaceability::interface::ImplementationData;
     use contracts_commons::components::replaceability::interface::ImplementationAdded;
     use contracts_commons::components::replaceability::interface::ImplementationRemoved;
     use contracts_commons::components::replaceability::interface::ImplementationReplaced;
-    use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
     use contracts_commons::components::replaceability::interface::IReplaceableDispatcherTrait;
     use contracts_commons::components::replaceability::interface::IReplaceableSafeDispatcher;
     use contracts_commons::components::replaceability::interface::IReplaceableSafeDispatcherTrait;

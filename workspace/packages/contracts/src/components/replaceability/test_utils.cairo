@@ -6,7 +6,7 @@ use contracts_commons::components::replaceability::interface::ImplementationFina
 use contracts_commons::components::replaceability::interface::ImplementationReplaced;
 use contracts_commons::components::replaceability::mock::ReplaceabilityMock;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use snforge_std::{ContractClassTrait, declare, get_class_hash, load};
+use snforge_std::{ContractClassTrait, declare, load};
 use snforge_std::cheatcodes::events::{Event, Events, is_emitted};
 use starknet::ContractAddress;
 use starknet::class_hash::ClassHash;

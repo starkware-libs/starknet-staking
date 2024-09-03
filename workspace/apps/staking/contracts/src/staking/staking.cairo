@@ -5,7 +5,10 @@ pub mod Staking {
     use contracts::{
         constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES},
         errors::{Error, assert_with_err, OptionAuxTrait},
-        staking::{IStaking, StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo},
+        staking::{
+            StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo, IStakingPool,
+            IStakingPause, IStaking
+        },
         utils::{
             deploy_delegation_pool_contract, compute_commission_amount_rounded_down,
             compute_rewards_rounded_down, compute_rewards_rounded_up, day_of,
@@ -16,7 +19,7 @@ pub mod Staking {
         UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
     };
     use contracts::staking::Events;
-    use starknet::{ContractAddress, get_contract_address, get_caller_address};
+    use starknet::{ContractAddress, get_contract_address, get_caller_address, get_tx_info};
     use openzeppelin::{
         access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
     };
@@ -132,7 +135,10 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
+            // TODO: consider calling get_execution_info()
+            // and pass it to the role test for better performance
+            // (remove the additional syscall for get_caller_address()).
+            let staker_address = get_tx_info().account_contract_address;
             assert_with_err(self.staker_info.read(staker_address).is_none(), Error::STAKER_EXISTS);
             assert_with_err(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
@@ -208,9 +214,9 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
+            let caller_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            let caller_address = get_caller_address();
             assert_with_err(
                 caller_address == staker_address || caller_address == staker_info.reward_address,
                 Error::CALLER_CANNOT_INCREASE_STAKE
@@ -254,7 +260,7 @@ pub mod Staking {
             self.roles.only_operator();
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
-            let caller_address = get_caller_address();
+            let caller_address = get_tx_info().account_contract_address;
             let reward_address = staker_info.reward_address;
             assert_with_err(
                 caller_address == staker_address || caller_address == reward_address,
@@ -276,7 +282,7 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
+            let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             self.calculate_rewards(ref :staker_info);
@@ -337,6 +343,141 @@ pub mod Staking {
             staker_amount
         }
 
+        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
+            self.assert_is_unpaused();
+            self.roles.only_operator();
+            self.update_global_index_if_needed();
+            let staker_address = get_tx_info().account_contract_address;
+            let mut staker_info = self.get_staker_info(:staker_address);
+            let old_address = staker_info.reward_address;
+            staker_info.reward_address = reward_address;
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .emit(
+                    Events::StakerRewardAddressChanged {
+                        staker_address, new_address: reward_address, old_address
+                    }
+                );
+            true
+        }
+
+        fn set_open_for_delegation(ref self: ContractState, commission: u16) -> ContractAddress {
+            self.assert_is_unpaused();
+            self.roles.only_operator();
+            self.update_global_index_if_needed();
+            let staker_address = get_tx_info().account_contract_address;
+            let mut staker_info = self.get_staker_info(:staker_address);
+            assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
+            assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
+            let pooling_contract = self
+                .deploy_delegation_pool_contract(
+                    :staker_address,
+                    staking_contract: get_contract_address(),
+                    token_address: self.erc20_dispatcher.read().contract_address,
+                    :commission
+                );
+            staker_info
+                .pool_info =
+                    Option::Some(
+                        StakerPoolInfo {
+                            pooling_contract,
+                            amount: Zero::zero(),
+                            unclaimed_rewards: Zero::zero(),
+                            commission
+                        }
+                    );
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            pooling_contract
+        }
+
+        fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
+            self.get_staker_info(:staker_address)
+        }
+
+        fn contract_parameters(self: @ContractState) -> StakingContractInfo {
+            StakingContractInfo {
+                min_stake: self.min_stake.read(),
+                token_address: self.erc20_dispatcher.read().contract_address,
+                global_index: self.global_index.read(),
+                pool_contract_class_hash: self.pool_contract_class_hash.read(),
+                reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
+            }
+        }
+
+        fn get_total_stake(self: @ContractState) -> u128 {
+            self.total_stake.read()
+        }
+
+        fn update_global_index_if_needed(ref self: ContractState) -> bool {
+            self.assert_is_unpaused();
+            self.roles.only_operator();
+            let current_timestmap = get_block_timestamp();
+            if day_of(current_timestmap)
+                - day_of(
+                    self.global_index_last_update_timestamp.read()
+                ) > MIN_DAYS_BETWEEN_INDEX_UPDATES {
+                self.update_global_index();
+                return true;
+            }
+            false
+        }
+
+        fn change_operational_address(
+            ref self: ContractState, operational_address: ContractAddress
+        ) -> bool {
+            self.assert_is_unpaused();
+            self.roles.only_operator();
+            self.update_global_index_if_needed();
+            let staker_address = get_tx_info().account_contract_address;
+            let mut staker_info = self.get_staker_info(:staker_address);
+            self
+                .operational_address_to_staker_address
+                .write(staker_info.operational_address, Zero::zero());
+            let old_address = staker_info.operational_address;
+            staker_info.operational_address = operational_address;
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self.operational_address_to_staker_address.write(operational_address, staker_address);
+            self
+                .emit(
+                    Events::OperationalAddressChanged {
+                        staker_address, new_address: operational_address, old_address
+                    }
+                );
+            true
+        }
+
+        fn update_commission(ref self: ContractState, commission: u16) -> bool {
+            self.assert_is_unpaused();
+            self.roles.only_operator();
+            let staker_address = get_tx_info().account_contract_address;
+            let mut staker_info = self.get_staker_info(:staker_address);
+            let pool_info = staker_info.get_pool_info_unchecked();
+            let pool_contract = pool_info.pooling_contract;
+            let old_commission = pool_info.commission;
+            assert_with_err(commission <= old_commission, Error::CANNOT_INCREASE_COMMISSION);
+            self.calculate_rewards(ref :staker_info);
+            let mut pool_info = staker_info.get_pool_info_unchecked();
+            pool_info.commission = commission;
+            staker_info.pool_info = Option::Some(pool_info);
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            let pooling_dispatcher = IPoolingDispatcher { contract_address: pool_contract };
+            pooling_dispatcher.update_commission(:commission);
+            self
+                .emit(
+                    Events::CommissionChanged {
+                        staker_address, pool_contract, old_commission, new_commission: commission
+                    }
+                );
+            true
+        }
+
+        fn is_paused(self: @ContractState) -> bool {
+            self.is_paused.read()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl StakingPoolImpl of IStakingPool<ContractState> {
         fn add_stake_from_pool(
             ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> (u128, u64) {
@@ -501,67 +642,6 @@ pub mod Staking {
             true
         }
 
-        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
-            self.assert_is_unpaused();
-            self.roles.only_operator();
-            self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
-            let old_address = staker_info.reward_address;
-            staker_info.reward_address = reward_address;
-            self.staker_info.write(staker_address, Option::Some(staker_info));
-            self
-                .emit(
-                    Events::StakerRewardAddressChanged {
-                        staker_address, new_address: reward_address, old_address
-                    }
-                );
-            true
-        }
-
-        fn set_open_for_delegation(ref self: ContractState, commission: u16) -> ContractAddress {
-            self.assert_is_unpaused();
-            self.roles.only_operator();
-            self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
-            assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
-            assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
-            let pooling_contract = self
-                .deploy_delegation_pool_contract(
-                    :staker_address,
-                    staking_contract: get_contract_address(),
-                    token_address: self.erc20_dispatcher.read().contract_address,
-                    :commission
-                );
-            staker_info
-                .pool_info =
-                    Option::Some(
-                        StakerPoolInfo {
-                            pooling_contract,
-                            amount: Zero::zero(),
-                            unclaimed_rewards: Zero::zero(),
-                            commission
-                        }
-                    );
-            self.staker_info.write(staker_address, Option::Some(staker_info));
-            pooling_contract
-        }
-
-        fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
-            self.get_staker_info(:staker_address)
-        }
-
-        fn contract_parameters(self: @ContractState) -> StakingContractInfo {
-            StakingContractInfo {
-                min_stake: self.min_stake.read(),
-                token_address: self.erc20_dispatcher.read().contract_address,
-                global_index: self.global_index.read(),
-                pool_contract_class_hash: self.pool_contract_class_hash.read(),
-                reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
-            }
-        }
-
         fn claim_delegation_pool_rewards(
             ref self: ContractState, staker_address: ContractAddress
         ) -> u64 {
@@ -590,74 +670,10 @@ pub mod Staking {
             self.staker_info.write(staker_address, Option::Some(staker_info));
             updated_index
         }
+    }
 
-        fn get_total_stake(self: @ContractState) -> u128 {
-            self.total_stake.read()
-        }
-
-        fn update_global_index_if_needed(ref self: ContractState) -> bool {
-            self.assert_is_unpaused();
-            self.roles.only_operator();
-            let current_timestmap = get_block_timestamp();
-            if day_of(current_timestmap)
-                - day_of(
-                    self.global_index_last_update_timestamp.read()
-                ) > MIN_DAYS_BETWEEN_INDEX_UPDATES {
-                self.update_global_index();
-                return true;
-            }
-            false
-        }
-
-        fn change_operational_address(
-            ref self: ContractState, operational_address: ContractAddress
-        ) -> bool {
-            self.assert_is_unpaused();
-            self.roles.only_operator();
-            self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
-            self
-                .operational_address_to_staker_address
-                .write(staker_info.operational_address, Zero::zero());
-            let old_address = staker_info.operational_address;
-            staker_info.operational_address = operational_address;
-            self.staker_info.write(staker_address, Option::Some(staker_info));
-            self.operational_address_to_staker_address.write(operational_address, staker_address);
-            self
-                .emit(
-                    Events::OperationalAddressChanged {
-                        staker_address, new_address: operational_address, old_address
-                    }
-                );
-            true
-        }
-
-        fn update_commission(ref self: ContractState, commission: u16) -> bool {
-            self.assert_is_unpaused();
-            self.roles.only_operator();
-            let staker_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
-            let pool_info = staker_info.get_pool_info_unchecked();
-            let pool_contract = pool_info.pooling_contract;
-            let old_commission = pool_info.commission;
-            assert_with_err(commission <= old_commission, Error::CANNOT_INCREASE_COMMISSION);
-            self.calculate_rewards(ref :staker_info);
-            let mut pool_info = staker_info.get_pool_info_unchecked();
-            pool_info.commission = commission;
-            staker_info.pool_info = Option::Some(pool_info);
-            self.staker_info.write(staker_address, Option::Some(staker_info));
-            let pooling_dispatcher = IPoolingDispatcher { contract_address: pool_contract };
-            pooling_dispatcher.update_commission(:commission);
-            self
-                .emit(
-                    Events::CommissionChanged {
-                        staker_address, pool_contract, old_commission, new_commission: commission
-                    }
-                );
-            true
-        }
-
+    #[abi(embed_v0)]
+    impl StakingPauseImpl of IStakingPause<ContractState> {
         fn pause(ref self: ContractState) {
             self.roles.only_security_agent();
             self.is_paused.write(true);
@@ -666,10 +682,6 @@ pub mod Staking {
         fn unpause(ref self: ContractState) {
             self.roles.only_security_admin();
             self.is_paused.write(false);
-        }
-
-        fn is_paused(self: @ContractState) -> bool {
-            self.is_paused.read()
         }
     }
 

@@ -5,7 +5,10 @@ pub mod RewardSupplier {
     use starknet::{ContractAddress, EthAddress};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
+    use starknet::syscalls::{send_message_to_l1_syscall};
+    use starknet::{
+        get_block_timestamp, get_caller_address, get_contract_address, SyscallResultTrait
+    };
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use contracts::minting_curve::interface::{
@@ -105,12 +108,20 @@ pub mod RewardSupplier {
         }
 
         fn on_receive(
-            self: @ContractState,
+            ref self: ContractState,
             l2_token: ContractAddress,
             amount: u256,
             depositor: EthAddress,
             message: Span<felt252>
         ) -> bool {
+            let amount_low: u128 = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
+            let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
+            if amount_low > l1_pending_requested_amount {
+                self.l1_pending_requested_amount.write(Zero::zero());
+                return true;
+            }
+            l1_pending_requested_amount -= amount_low;
+            self.l1_pending_requested_amount.write(l1_pending_requested_amount);
             true
         }
 
@@ -157,11 +168,19 @@ pub mod RewardSupplier {
                 let diff = debit + threshold - credit;
                 let num_msgs = ceil_of_division(dividend: diff, divisor: base_mint_amount);
                 let total_amount = num_msgs * base_mint_amount;
-                // TODO: Request funds from L1 Staking Minter.
+                for _ in 0..num_msgs {
+                    self.send_mint_request_to_l1_staking_minter();
+                };
                 self.emit(Events::MintRequest { total_amount, num_msgs });
                 l1_pending_requested_amount += total_amount;
             }
             self.l1_pending_requested_amount.write(l1_pending_requested_amount);
+        }
+
+        fn send_mint_request_to_l1_staking_minter(self: @ContractState) {
+            let payload = array![self.base_mint_amount.read().into()].span();
+            let to_address = self.l1_staking_minter.read();
+            send_message_to_l1_syscall(:to_address, :payload).unwrap_syscall();
         }
     }
 }

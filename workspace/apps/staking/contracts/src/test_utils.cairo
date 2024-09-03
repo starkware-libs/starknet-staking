@@ -38,9 +38,9 @@ pub(crate) mod constants {
     pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
     pub const COMMISSION: u16 = 500;
     pub const STAKER_FINAL_INDEX: u64 = 10;
-    pub const BASE_MINT_AMOUNT: u128 = 800000000000;
+    pub const BASE_MINT_AMOUNT: u128 = 8000000000000000;
     pub const BUFFER: u128 = 1000000000000;
-    pub const L1_STAKING_MINTER_ADDRESS: felt252 = 'L1_STAKING_MINTER_ADDRESS';
+    pub const L1_STAKING_MINTER_ADDRESS: felt252 = 'L1_MINTER';
     pub const BASE_MINT_MSG: felt252 = 'base_mint_msg';
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
 
@@ -443,8 +443,8 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
     assert!(
         pooling_dispatcher
             .enter_delegation_pool(
-                amount: cfg.pool_member_info.amount,
-                reward_address: cfg.pool_member_info.reward_address
+                reward_address: cfg.pool_member_info.reward_address,
+                amount: cfg.pool_member_info.amount
             )
     );
 }

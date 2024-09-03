@@ -145,6 +145,8 @@ pub struct StakingContractInfo {
     pub reward_supplier: ContractAddress,
 }
 
+/// Public interface for the staking contract.
+/// This interface is exposed by the operator contract.
 #[starknet::interface]
 pub trait IStaking<TContractState> {
     fn stake(
@@ -161,6 +163,24 @@ pub trait IStaking<TContractState> {
     fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> u128;
     fn unstake_intent(ref self: TContractState) -> u64;
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> u128;
+    fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
+    fn set_open_for_delegation(ref self: TContractState, commission: u16) -> ContractAddress;
+    fn state_of(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
+    fn contract_parameters(self: @TContractState) -> StakingContractInfo;
+
+    fn get_total_stake(self: @TContractState) -> u128;
+    fn update_global_index_if_needed(ref self: TContractState) -> bool;
+    fn change_operational_address(
+        ref self: TContractState, operational_address: ContractAddress
+    ) -> bool;
+    fn update_commission(ref self: TContractState, commission: u16) -> bool;
+    fn is_paused(self: @TContractState) -> bool;
+}
+
+/// Interface for the staking pool contract.
+/// All functions in this interface are called only by the pool contract.
+#[starknet::interface]
+pub trait IStakingPool<TContractState> {
     fn add_stake_from_pool(
         ref self: TContractState, staker_address: ContractAddress, amount: u128
     ) -> (u128, u64);
@@ -179,20 +199,13 @@ pub trait IStaking<TContractState> {
         data: Span<felt252>,
         identifier: felt252
     ) -> bool;
-    fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
-    fn set_open_for_delegation(ref self: TContractState, commission: u16) -> ContractAddress;
-    fn state_of(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
-    fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn claim_delegation_pool_rewards(
         ref self: TContractState, staker_address: ContractAddress
     ) -> u64;
-    fn get_total_stake(self: @TContractState) -> u128;
-    fn update_global_index_if_needed(ref self: TContractState) -> bool;
-    fn change_operational_address(
-        ref self: TContractState, operational_address: ContractAddress
-    ) -> bool;
-    fn update_commission(ref self: TContractState, commission: u16) -> bool;
+}
+
+#[starknet::interface]
+pub trait IStakingPause<TContractState> {
     fn pause(ref self: TContractState);
     fn unpause(ref self: TContractState);
-    fn is_paused(self: @TContractState) -> bool;
 }
