@@ -443,8 +443,8 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
     assert!(
         pooling_dispatcher
             .enter_delegation_pool(
-                amount: cfg.pool_member_info.amount,
-                reward_address: cfg.pool_member_info.reward_address
+                reward_address: cfg.pool_member_info.reward_address,
+                amount: cfg.pool_member_info.amount
             )
     );
 }

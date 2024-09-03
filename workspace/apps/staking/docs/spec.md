@@ -52,7 +52,7 @@
     - [update\_commission](#update_commission-1)
   - [Events](#events-1)
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
-    - [Delegation Balance Changed](#delegation-balance-changed)
+    - [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
     - [Delegation Pool Member Exit intent](#delegation-pool-member-exit-intent)
     - [Final Index Set](#final-index-set)
     - [New Pool Member](#new-pool-member)
@@ -78,6 +78,9 @@
     - [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
     - [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
     - [CANNOT\_INCREASE\_COMMISSION](#cannot_increase_commission)
+    - [STAKER\_INACTIVE](#staker_inactive)
+    - [POOL\_MEMBER\_EXISTS](#pool_member_exists)
+    - [AMOUNT\_IS\_ZERO](#amount_is_zero)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -526,7 +529,7 @@ fn switch_staking_delegation_pool(
 Execute a pool member request to move from one staker's delegation pool to another staker's delegation pool.
 Return true upon success, otherwise return false.
 #### emits <!-- omit from toc -->
-1. [Delegation Balance Changed](#delegation-balance-changed)
+1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [ONLY\_OPERATOR](#only_operator)
@@ -829,26 +832,36 @@ Only staker address.
 
 ## Functions
 ### enter_delegation_pool
+```rust
+fn enter_delegation_pool(
+    ref self: ContractState, 
+    reward_address: ContractAddress, 
+    amount: u128
+) -> bool
+```
 #### description <!-- omit from toc -->
 Add a new pool member to the delegation pool.
-#### parameters <!-- omit from toc -->
-| name   | type    |
-| ------ | ------- |
-| reward | address |
-| amount | u128    |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
-[Delegation Balance Changed](#delegation-balance-change)
-[Stake Balance Changed](#stake-balance-changed)
-[New Pool Member](#new-pool-member)
+1. [Stake Balance Changed](#stake-balance-changed)
+2. [New Pool Member](#new-pool-member)
+3. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
+1. [STAKER\_INACTIVE](#staker_inactive)
+2. [POOL\_MEMBER\_EXISTS](#pool_member_exists)
+3. [AMOUNT\_IS\_ZERO](#amount_is_zero)
+4. [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
+5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### pre-condition <!-- omit from toc -->
-1. caller address (pool member) is not listed in the contract.
+1. Staker is active and not in an exit window.
+2. `caller_address` is not listed in the contract as a pool member.
+3. `amount` is not zero.
+4. `caller_address` has enough funds.
+#### access control <!-- omit from toc -->
+Only a non-listed pool member address.
 #### logic <!-- omit from toc -->
 1. Transfer funds from pool member to pooling contract.
 2. Approve transferal from pooling contract to staking contract.
-3. Call staking contract's [add_to_delegation_pool](#add_to_delegation_pool-).
+3. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
 4. Get current index from staking contract.
 5. Create entry for pool member.
 
@@ -862,7 +875,7 @@ Increase the funds for an existing pool member.
 #### return <!-- omit from toc -->
 amount: u128 - updated total amount for the caller.
 #### emits <!-- omit from toc -->
-[Delegation Balance Changed](#delegation-balance-change)
+[Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -912,7 +925,7 @@ Executes the intent to exit the stake if enough time have passed. Transfers the 
 #### return <!-- omit from toc -->
 amount: u128 - amount of tokens transferred back to the pool member.
 #### emits <!-- omit from toc -->
-[Delegation Balance Changed](#delegation-balance-change)
+[Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -958,7 +971,7 @@ Request the staking contract to move a pool member to another pool contract.
 #### return <!-- omit from toc -->
 amount: u128 - amount left in exit window for the pool member in this pool.
 #### emits <!-- omit from toc -->
-[Delegation Balance Changed](#delegation-balance-change)
+[Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 1. pool member (caller) is in exit window.
@@ -982,7 +995,7 @@ No funds need to be transferred since staking contract holds the pool funds.
 #### return <!-- omit from toc -->
 success: bool
 #### emits <!-- omit from toc -->
-[Delegation Balance Changed](#delegation-balance-change)
+[Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
@@ -1065,7 +1078,7 @@ success: bool
 | pool_member | address | ✅     |
 | amount      | u128    | ❌     |
 
-### Delegation Balance Changed
+### Delegation Pool Member Balance Changed
 | data                | type    | keyed |
 | ------------------- | ------- | ----- |
 | pool_member         | address | ✅    |
@@ -1155,6 +1168,15 @@ success: bool
 
 ### CANNOT_INCREASE_COMMISSION
 "Commission cannot be increased."
+
+### STAKER_INACTIVE
+"Staker inactive."
+
+### POOL_MEMBER_EXISTS
+"Pool member exists, use add_to_delegation_pool instead."
+
+### AMOUNT_IS_ZERO
+"Amount is zero."
 
 # Structs
 ### StakerPoolInfo

@@ -64,7 +64,7 @@ pub mod Pooling {
         SRC5Event: SRC5Component::Event,
         RolesEvent: RolesComponent::Event,
         PoolMemberExitIntent: Events::PoolMemberExitIntent,
-        DelegationBalanceChanged: Events::DelegationBalanceChanged,
+        DelegationPoolMemberBalanceChanged: Events::DelegationPoolMemberBalanceChanged,
         PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
         FinalIndexSet: Events::FinalIndexSet,
         PoolMemberRewardClaimed: Events::PoolMemberRewardClaimed,
@@ -95,7 +95,7 @@ pub mod Pooling {
     #[abi(embed_v0)]
     impl PoolingImpl of IPooling<ContractState> {
         fn enter_delegation_pool(
-            ref self: ContractState, amount: u128, reward_address: ContractAddress
+            ref self: ContractState, reward_address: ContractAddress, amount: u128
         ) -> bool {
             // This line was added to prevent the compiler from doing certain optimizations.
             core::internal::revoke_ap_tracking();
@@ -135,6 +135,12 @@ pub mod Pooling {
             self
                 .emit(
                     Events::NewPoolMember { pool_member, staker_address, reward_address, amount }
+                );
+            self
+                .emit(
+                    Events::DelegationPoolMemberBalanceChanged {
+                        pool_member, old_delegated_stake: Zero::zero(), new_delegated_stake: amount
+                    }
                 );
             true
         }
@@ -329,7 +335,7 @@ pub mod Pooling {
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             self
                 .emit(
-                    Events::DelegationBalanceChanged {
+                    Events::DelegationPoolMemberBalanceChanged {
                         pool_member,
                         old_delegated_stake: pool_member_info.amount - amount,
                         new_delegated_stake: pool_member_info.amount

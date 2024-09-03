@@ -31,7 +31,7 @@ use contracts::event_test_utils::{assert_final_index_set_event, assert_new_pool_
 use contracts::event_test_utils::{
     assert_number_of_events, assert_pool_member_exit_intent_event, assert_delete_pool_member_event,
 };
-use contracts::event_test_utils::assert_delegation_balance_changed_event;
+use contracts::event_test_utils::assert_delegation_pool_member_balance_changed_event;
 use contracts::event_test_utils::assert_pool_member_reward_address_change_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{get_block_timestamp};
@@ -134,15 +134,21 @@ fn test_enter_delegation_pool() {
     };
     assert_eq!(staking_dispatcher.state_of(cfg.test_info.staker_address), expected_staker_info);
 
-    // Validate the single NewPoolMember event.
+    // Validate NewPoolMember and DelegationPoolMemberBalanceChanged events.
     let events = spy.get_events().emitted_by(pooling_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 1, message: "enter_delegation_pool");
+    assert_number_of_events(actual: events.len(), expected: 2, message: "enter_delegation_pool");
     assert_new_pool_member_event(
         spied_event: events[0],
         pool_member: cfg.test_info.pool_member_address,
         staker_address: cfg.test_info.staker_address,
         reward_address: cfg.pool_member_info.reward_address,
         amount: cfg.pool_member_info.amount
+    );
+    assert_delegation_pool_member_balance_changed_event(
+        spied_event: events[1],
+        pool_member: cfg.test_info.pool_member_address,
+        old_delegated_stake: Zero::zero(),
+        new_delegated_stake: cfg.pool_member_info.amount
     );
 }
 
@@ -810,18 +816,18 @@ fn test_enter_delegation_pool_from_staking_contract() {
     };
     assert_eq!(pool_member_info, expected_pool_member_info);
 
-    // Validate the DelegationBalanceChanged events.
+    // Validate two DelegationPoolMemberBalanceChanged events.
     let events = spy.get_events().emitted_by(pooling_contract).events;
     assert_number_of_events(
         actual: events.len(), expected: 2, message: "enter_delegation_pool_from_staking_contract"
     );
-    assert_delegation_balance_changed_event(
+    assert_delegation_pool_member_balance_changed_event(
         spied_event: events[0],
         :pool_member,
         old_delegated_stake: Zero::zero(),
         new_delegated_stake: amount
     );
-    assert_delegation_balance_changed_event(
+    assert_delegation_pool_member_balance_changed_event(
         spied_event: events[1],
         :pool_member,
         old_delegated_stake: amount,
