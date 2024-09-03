@@ -679,25 +679,26 @@ Return the total stake amount.
 
 ### calculate_rewards
 >**note:** internal logic
+```rust
+fn calculate_rewards(
+  ref self: ContractState, 
+  ref staker_info: StakerInfo
+) -> bool
+```
 #### description <!-- omit from toc -->
 Calculate rewards, add amount to unclaimed_rewards, update index.
-#### parameters <!-- omit from toc -->
-| name   | type    |
-| ------ | ------- |
-| staker | address |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
-internal function.
+Internal function.
 #### logic <!-- omit from toc -->
-1. Calculate rewards for `own_amount`.
-2. Calculate rewards for `pooled_amount`.
-3. Update `own_unclaimed_rewards` with own rewards + pooled rewards commission.
-4. Update `pooled_unclaimed_rewards` with pooled rewards without commission. 
-5. Update index.
+1. If Staker is in an exit window, return false.
+2. Update index.
+3. Calculate rewards for `amount_own`.
+4. Calculate rewards for `pool_info.amount`.
+5. Update `unclaimed_rewards_own` with own rewards + pool rewards commission.
+6. Update `pool_info.unclaimed_rewards` with pool rewards without commission. 
 
 ### change_operational_address
 #### description <!-- omit from toc -->
