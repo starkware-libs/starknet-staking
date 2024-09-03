@@ -36,6 +36,7 @@
     - [Delete Staker](#delete-staker)
     - [Staker Reward Claimed](#staker-reward-claimed)
     - [Staker Reward Address Changed](#staker-reward-address-changed)
+    - [Operational Address Changed](#operational-address-changed)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -701,22 +702,28 @@ Internal function.
 6. Update `pool_info.unclaimed_rewards` with pool rewards without commission. 
 
 ### change_operational_address
+```rust
+fn change_operational_address(
+    ref self: ContractState, 
+    operational_address: ContractAddress
+) -> bool
+```
 #### description <!-- omit from toc -->
 Change the operational address for a staker.
-#### parameters <!-- omit from toc -->
-| name                | type    |
-| ------------------- | ------- |
-| operational_address | address |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
+1. [Operational Address Changed](#operational-address-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
-1. Staker exist in the contract.
+1. Staking contract is unpaused.
+2. Staker (caller) has operator role.
+3. Staker (caller) exist in the contract.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
-1. change registered `operational_address` for the staker.
+1. Change registered `operational_address` for the staker.
 
 ### update_commission
 #### description <!-- omit from toc -->
@@ -784,6 +791,13 @@ success: bool
 | amount         | u128    | ❌    |
 
 ### Staker Reward Address Changed
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| staker_address | address | ✅    |
+| new_address    | address | ❌    |
+| old_address    | address | ❌    |
+
+### Operational Address Changed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
 | staker_address | address | ✅    |
