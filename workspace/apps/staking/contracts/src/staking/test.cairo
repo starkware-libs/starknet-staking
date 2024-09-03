@@ -42,13 +42,18 @@ use starknet::get_block_timestamp;
 use contracts::staking::objects::{
     UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
 };
-use contracts::staking::interface::{IStakingDispatcher, IStakingPoolDispatcher};
+use contracts::staking::interface::{IStakingPoolDispatcher};
 use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPoolDispatcherTrait};
-use contracts::staking::interface::{IStakingDispatcherTrait, IStakingPauseDispatcherTrait};
+use contracts::staking::interface::{
+    IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcherTrait
+};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
-use snforge_std::{cheat_caller_address, CheatSpan, start_cheat_block_timestamp_global};
+use snforge_std::{
+    cheat_caller_address, CheatSpan, start_cheat_block_timestamp_global,
+    cheat_account_contract_address
+};
 
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use contracts_commons::test_utils::cheat_caller_address_once;
@@ -712,7 +717,9 @@ fn test_unstake_intent_staker_doesnt_exist() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
+    println!("before staking");
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    println!("staking done");
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     set_account_as_operator(
@@ -734,6 +741,11 @@ fn test_unstake_intent_unstake_in_progress() {
     cheat_caller_address(
         contract_address: staking_contract,
         caller_address: cfg.test_info.staker_address,
+        span: CheatSpan::TargetCalls(2)
+    );
+    cheat_account_contract_address(
+        contract_address: staking_contract,
+        account_contract_address: cfg.test_info.staker_address,
         span: CheatSpan::TargetCalls(2)
     );
     staking_dispatcher.unstake_intent();

@@ -6,8 +6,8 @@ pub mod Staking {
         constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES},
         errors::{Error, assert_with_err, OptionAuxTrait},
         staking::{
-            IStaking, StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo,
-            IStakingPool, IStakingPause
+            StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo, IStakingPool,
+            IStakingPause, IStaking
         },
         utils::{
             deploy_delegation_pool_contract, compute_commission_amount_rounded_down,
@@ -19,7 +19,7 @@ pub mod Staking {
         UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
     };
     use contracts::staking::Events;
-    use starknet::{ContractAddress, get_contract_address, get_caller_address};
+    use starknet::{ContractAddress, get_contract_address, get_caller_address, get_tx_info};
     use openzeppelin::{
         access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
     };
@@ -135,7 +135,10 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
+            // TODO: consider calling get_execution_info()
+            // and pass it to the role test for better performance
+            // (remove the additional syscall for get_caller_address()).
+            let staker_address = get_tx_info().account_contract_address;
             assert_with_err(self.staker_info.read(staker_address).is_none(), Error::STAKER_EXISTS);
             assert_with_err(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
@@ -211,9 +214,9 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
+            let caller_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            let caller_address = get_caller_address();
             assert_with_err(
                 caller_address == staker_address || caller_address == staker_info.reward_address,
                 Error::CALLER_CANNOT_INCREASE_STAKE
@@ -257,7 +260,7 @@ pub mod Staking {
             self.roles.only_operator();
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
-            let caller_address = get_caller_address();
+            let caller_address = get_tx_info().account_contract_address;
             let reward_address = staker_info.reward_address;
             assert_with_err(
                 caller_address == staker_address || caller_address == reward_address,
@@ -279,7 +282,7 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
+            let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             self.calculate_rewards(ref :staker_info);
@@ -344,7 +347,7 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
+            let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             let old_address = staker_info.reward_address;
             staker_info.reward_address = reward_address;
@@ -362,7 +365,7 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
+            let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
             assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
@@ -425,7 +428,7 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
-            let staker_address = get_caller_address();
+            let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             self
                 .operational_address_to_staker_address
@@ -446,7 +449,7 @@ pub mod Staking {
         fn update_commission(ref self: ContractState, commission: u16) -> bool {
             self.assert_is_unpaused();
             self.roles.only_operator();
-            let staker_address = get_caller_address();
+            let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             let pool_info = staker_info.get_pool_info_unchecked();
             let pool_contract = pool_info.pooling_contract;
