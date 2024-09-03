@@ -446,30 +446,30 @@ pub mod Staking {
             true
         }
 
-        fn update_commission(ref self: ContractState, commission: u16) -> bool {
-            self.assert_is_unpaused();
-            self.roles.only_operator();
-            let staker_address = get_tx_info().account_contract_address;
-            let mut staker_info = self.get_staker_info(:staker_address);
-            let pool_info = staker_info.get_pool_info_unchecked();
-            let pool_contract = pool_info.pooling_contract;
-            let old_commission = pool_info.commission;
-            assert_with_err(commission <= old_commission, Error::CANNOT_INCREASE_COMMISSION);
-            self.calculate_rewards(ref :staker_info);
-            let mut pool_info = staker_info.get_pool_info_unchecked();
-            pool_info.commission = commission;
-            staker_info.pool_info = Option::Some(pool_info);
-            self.staker_info.write(staker_address, Option::Some(staker_info));
-            let pooling_dispatcher = IPoolingDispatcher { contract_address: pool_contract };
-            pooling_dispatcher.update_commission(:commission);
-            self
-                .emit(
-                    Events::CommissionChanged {
-                        staker_address, pool_contract, old_commission, new_commission: commission
-                    }
-                );
-            true
-        }
+        // fn update_commission(ref self: ContractState, commission: u16) -> bool {
+        //     self.assert_is_unpaused();
+        //     self.roles.only_operator();
+        //     let staker_address = get_tx_info().account_contract_address;
+        //     let mut staker_info = self.get_staker_info(:staker_address);
+        //     let pool_info = staker_info.get_pool_info_unchecked();
+        //     let pool_contract = pool_info.pooling_contract;
+        //     let old_commission = pool_info.commission;
+        //     assert_with_err(commission <= old_commission, Error::CANNOT_INCREASE_COMMISSION);
+        //     self.calculate_rewards(ref :staker_info);
+        //     let mut pool_info = staker_info.get_pool_info_unchecked();
+        //     pool_info.commission = commission;
+        //     staker_info.pool_info = Option::Some(pool_info);
+        //     self.staker_info.write(staker_address, Option::Some(staker_info));
+        //     let pooling_dispatcher = IPoolingDispatcher { contract_address: pool_contract };
+        //     pooling_dispatcher.update_commission(:commission);
+        //     self
+        //         .emit(
+        //             Events::CommissionChanged {
+        //                 staker_address, pool_contract, old_commission, new_commission: commission
+        //             }
+        //         );
+        //     true
+        // }
 
         fn is_paused(self: @ContractState) -> bool {
             self.is_paused.read()

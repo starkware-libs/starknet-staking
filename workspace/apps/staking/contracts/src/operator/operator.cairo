@@ -113,9 +113,9 @@ pub mod Operator {
             self.staking_dispatcher.read().change_operational_address(:operational_address)
         }
 
-        fn update_commission(ref self: ContractState, commission: u16) -> bool {
-            self.staking_dispatcher.read().update_commission(:commission)
-        }
+        // fn update_commission(ref self: ContractState, commission: u16) -> bool {
+        //     self.staking_dispatcher.read().update_commission(:commission)
+        // }
 
         fn is_paused(self: @ContractState) -> bool {
             self.staking_dispatcher.read().is_paused()

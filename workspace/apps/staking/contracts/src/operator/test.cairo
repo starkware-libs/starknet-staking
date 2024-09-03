@@ -138,12 +138,13 @@ fn test_change_operational_address_from_operator() {
     operator_contract_dispatcher.change_operational_address(operational_address: DUMMY_ADDRESS(),);
 }
 
-#[test]
-fn test_update_commission_from_operator() {
-    let (_staking_mock_contract_dispatcher, operator_contract_dispatcher, _caller_account_address) =
-        setup();
-    operator_contract_dispatcher.update_commission(commission: 0);
-}
+// #[test]
+// fn test_update_commission_from_operator() {
+//     let (_staking_mock_contract_dispatcher,
+// operator_contract_dispatcher, _caller_account_address) =
+//         setup();
+//     operator_contract_dispatcher.update_commission(commission: 0);
+// }
 
 #[test]
 fn test_is_paused_from_operator() {
