@@ -37,6 +37,7 @@
     - [Staker Reward Claimed](#staker-reward-claimed)
     - [Staker Reward Address Changed](#staker-reward-address-changed)
     - [Operational Address Changed](#operational-address-changed)
+    - [Commission Changed](#commission-changed)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -76,6 +77,7 @@
     - [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
     - [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
     - [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
+    - [CANNOT\_INCREASE\_COMMISSION](#cannot_increase_commission)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -726,23 +728,34 @@ Only staker address.
 1. Change registered `operational_address` for the staker.
 
 ### update_commission
+```rust
+fn update_commission(
+  ref self: ContractState, 
+  commission: u16
+) -> bool
+```
 #### description <!-- omit from toc -->
 Update commission. 
-#### parameters <!-- omit from toc -->
-| name           | type |
-| -----          | ---- |
-| commission     | u16  |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
+1. [Commission Changed](#commission-changed)
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+5. [CANNOT\_INCREASE\_COMMISSION](#cannot_increase_commission)
 #### pre-condition <!-- omit from toc -->
-1. only staker can call.
-2. staker have pooling contract.
-3. given commission is lower or equal to staker current commission
+1. Staking contract is unpaused.
+2. Staker (caller) has operator role.
+3. Staker (caller) exist in the contract.
+4. Staker (caller) has pool contract.
+5. `commission` is lower or equal to staker current commission
 #### access control <!-- omit from toc -->
+Only staker address.
 #### logic <!-- omit from toc -->
-1. Update staker's commission to be the given commission.
+1. [Calculate rewards](#calculate_rewards)
+2. Update staker's commission to be the given commission.
+3. Call pool's [update\_commission](#update_commission-1)
 
 ## Events
 ### Stake Balance Changed
@@ -803,6 +816,14 @@ success: bool
 | staker_address | address | ✅    |
 | new_address    | address | ❌    |
 | old_address    | address | ❌    |
+
+### Commission Changed
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| staker_address | address | ✅    |
+| pool_contract  | address | ✅    |
+| new_commission | u16     | ❌    |
+| old_commission | u16     | ❌    |
 
 # Delegation pooling contract
 
@@ -1131,6 +1152,9 @@ success: bool
 
 ### STAKER_ALREADY_HAS_POOL
 "Staker already has a pool."
+
+### CANNOT_INCREASE_COMMISSION
+"Commission cannot be increased."
 
 # Structs
 ### StakerPoolInfo
