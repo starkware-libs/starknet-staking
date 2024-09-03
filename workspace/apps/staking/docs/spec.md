@@ -53,7 +53,7 @@
   - [Events](#events-1)
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
     - [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
-    - [Delegation Pool Member Exit intent](#delegation-pool-member-exit-intent)
+    - [Pool Member Exit Intent](#pool-member-exit-intent)
     - [Final Index Set](#final-index-set)
     - [New Pool Member](#new-pool-member)
 - [Errors](#errors)
@@ -904,26 +904,36 @@ Only the pool member address or rewards address for which the change is requeste
    3. unclaimed rewards
 
 ### exit_delegation_pool_intent
+```rust
+fn exit_delegation_pool_intent(
+  ref self: ContractState, 
+  amount: u128
+)
+```
 #### description <!-- omit from toc -->
 Inform of the intent to exit the stake. This will remove the funds from the stake, pausing rewards collection for the pool member. This will also start the exit window timeout.
-#### parameters <!-- omit from toc -->
-| name | type |
-| ---- | ---- |
-#### return <!-- omit from toc -->
 #### emits <!-- omit from toc -->
-[Delegation Pool Member Exit Intent](#delegation-pool-member-exit-intent)
+1. If staker is active: [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
+2. If staker is active: [Stake Balance Changed](#stake-balance-changed)
+3. [Pool Member Exit Intent](#pool-member-exit-intent)
 #### errors <!-- omit from toc -->
+1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+2. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+3. [UNDELEGATE\_IN\_PROGRESS](#undelegate_in_progress)
+4. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+5. [ONLY\_OPERATOR](#only_operator)
 #### pre-condition <!-- omit from toc -->
 1. Pool member (caller) is listed in the contract.
-2. Pool member (caller) is not in an exit window.
+2. `amount` is lower or equal to the total amount of the pool member (caller). 
+3. Pool member (caller) is not in an exit window or staker is active.
+4. Staking contract is unpaused.
 #### access control <!-- omit from toc -->
 Only the pool member address for which the operation is requested for.
 #### logic <!-- omit from toc -->
-1. Validate pool member is not in exit window.
-2. [Calculate rewards](#calculate_rewards-1)
-3. If staker is in exit window set it's unstake time as the pool member exit_pool_time.
-4. Else set exit_pool_time to the configured value.
-5. [Inform staking contract](#remove_from_delegation_pool_intent)
+1. [Calculate rewards](#calculate_rewards-1)
+2. If staker is active, call [remove from delegation pool intent](#remove_from_delegation_pool_intent)
+3. If `amount` is zero, remove request for intent (if exist).
+4. If `amount` is not zero, set exit window timeout.
 
 ### exit_delegaition_pool_action
 #### description <!-- omit from toc -->
@@ -1095,7 +1105,7 @@ success: bool
 | old_delegated_stake | u128    | ❌    |
 | new_delegated_stake | u128    | ❌    |
 
-### Delegation Pool Member Exit intent
+### Pool Member Exit Intent
 | data        | type    | keyed |
 | ----------- | ------- | ----- |
 | pool_member | address | ✅     |
