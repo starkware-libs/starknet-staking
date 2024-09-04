@@ -3,11 +3,14 @@
     <summary><strong style="font-size: 1.5em;">Table of contents</strong></summary>
 
 - [Diagrams](#diagrams)
-  - [Contracts block diagram](#contracts-block-diagram)
+  - [L2 Contracts block diagram](#l2-contracts-block-diagram)
+  - [L1 Contracts block diagram](#l1-contracts-block-diagram)
   - [Enter protocol flow diagram](#enter-protocol-flow-diagram)
   - [Exit protocol flow diagram](#exit-protocol-flow-diagram)
   - [Rewards claim flow diagram](#rewards-claim-flow-diagram)
   - [Delegation pool switching flow diagram](#delegation-pool-switching-flow-diagram)
+  - [L1 Mint \& transfer flow diagram](#l1-mint--transfer-flow-diagram)
+  - [L2 Rewards calculation and minting request flow diagram](#l2-rewards-calculation-and-minting-request-flow-diagram)
 - [Staking contract](#staking-contract)
   - [Functions](#functions)
     - [stake](#stake)
@@ -27,17 +30,15 @@
     - [get\_total\_stake](#get_total_stake)
     - [calculate\_rewards](#calculate_rewards)
     - [change\_operational\_address](#change_operational_address)
-    - [update\_commission](#update_commission)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
-    - [Staker Exit Intent](#staker-exit-intent)
+    - [Staker Exit intent](#staker-exit-intent)
     - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
     - [Delete Staker](#delete-staker)
     - [Staker Reward Claimed](#staker-reward-claimed)
     - [Staker Reward Address Changed](#staker-reward-address-changed)
     - [Operational Address Changed](#operational-address-changed)
-    - [Commission Changed](#commission-changed)
     - [Global Index Updated](#global-index-updated)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
@@ -49,8 +50,10 @@
     - [switch\_delegation\_pool](#switch_delegation_pool)
     - [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract)
     - [set\_final\_staker\_index](#set_final_staker_index)
+    - [change\_reward\_address](#change_reward_address-1)
+    - [state\_of](#state_of-1)
+    - [contract\_parameters](#contract_parameters-1)
     - [calculate\_rewards](#calculate_rewards-1)
-    - [update\_commission](#update_commission-1)
   - [Events](#events-1)
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
     - [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
@@ -58,6 +61,21 @@
     - [Final Index Set](#final-index-set)
     - [New Pool Member](#new-pool-member)
     - [Delete Pool Member](#delete-pool-member)
+    - [Pool Member Reward Claimed](#pool-member-reward-claimed)
+    - [Pool Member Reward Address Changed](#pool-member-reward-address-changed)
+- [L2 Reward supplier contract](#l2-reward-supplier-contract)
+  - [Functions](#functions-2)
+    - [calculate\_staking\_rewards](#calculate_staking_rewards)
+    - [claim\_rewards](#claim_rewards-2)
+    - [on\_receive](#on_receive)
+    - [state\_of](#state_of-2)
+  - [Events](#events-2)
+    - [Mint Request](#mint-request)
+- [Minting curve contract](#minting-curve-contract)
+  - [Functions](#functions-3)
+    - [yearly\_mint](#yearly_mint)
+  - [Events](#events-3)
+    - [Total Supply Changed](#total-supply-changed)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -79,7 +97,6 @@
     - [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
     - [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
     - [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
-    - [CANNOT\_INCREASE\_COMMISSION](#cannot_increase_commission)
     - [STAKER\_INACTIVE](#staker_inactive)
     - [POOL\_MEMBER\_EXISTS](#pool_member_exists)
     - [AMOUNT\_IS\_ZERO](#amount_is_zero)
@@ -87,10 +104,15 @@
     - [UNDELEGATE\_IN\_PROGRESS](#undelegate_in_progress)
     - [CALLER\_CANNOT\_ADD\_TO\_POOL](#caller_cannot_add_to_pool)
     - [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
+    - [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+    - [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
     - [StakingContractInfo](#stakingcontractinfo)
+    - [PoolMemberInfo](#poolmemberinfo)
+    - [PoolingContractInfo](#poolingcontractinfo)
+    - [RewardSupplierStatus](#rewardsupplierstatus)
 
 </details>
 
@@ -108,14 +130,20 @@ function info template:
 #### logic
 -->
 # Diagrams
-## Contracts block diagram
+## L2 Contracts block diagram
 ```mermaid
 classDiagram
   class StakingContract{
-    map < staker_address, StakerInfo >
-    map < operational_address, StakerInfo >
+    map < staker_address, Option < StakerInfo >>
+    map < operational_address, staker_address >
     global_index
+    global_index_last_update_timestamp
     min_stake
+    total_stake
+    pool_contract_class_hash
+    map < UndelegateIntentKey, UndelegateIntentValue >
+    pool_contract_admin
+    is_paused
     stake()
     increase_stake()
     unstake_intent()
@@ -126,48 +154,100 @@ classDiagram
     remove_from_delegation_pool_action()
     switch_staking_delegation_pool()
     change_reward_address()
+    change_operational_address()
     set_open_for_delegation()
     claim_delegation_pool_rewards()
     state_of()
     contract_parameters()
-    calsulate_rewards()
+    calculate_rewards()
+    get_total_stake()
 
   }
   class DelegationPoolingContract{
     map < pool_member_address, PoolMemberInfo >
     staker_address
-    staker_final_index
+    final_staker_index
+    map < ContractAddress, Option < PoolMemberInfo >>
+    commission
     enter_delegation_pool()
     add_to_delegation_pool()
     exit_delegation_pool_intent()
     exit_delegation_pool_action()
     claim_rewards()
+    change_reward_address()
+    state_of()
+    contract_parameters()
     switch_delegation_pool()
-    enter_from_stakin_contract()
+    enter_delegation_pool_from_staking_contract()
+    set_final_staker_index()
     calculate_rewards()
   }
   class StakerInfo{
-    own_amount
-    pooled_amount
-    index
-    own_unclaimed_rewards
-    pooled_unclaimed_rewards
-    exit_pooled_amnt: Map < felt, (amnt, time) >
     reward_address
-    option < unstake_time >
     operational_address
-    option < PoollingContract >
+    option < unstake_time >
+    amount_own
+    index
+    pooled_amount
+    unclaimed_rewards_own
+    pooled_unclaimed_rewards
+    option < StakerPoolInfo >
+  }
+  class StakerPoolInfo{
+    pooling_contract
+    amount
+    unclaimed_rewards
     commission
   }
   class PoolMemberInfo{
+    reward_address
     amount
     index
     unclaimed_rewards
-    reward_address
     option < unpool_time >
   }
+  class RewardSupplier {
+    last_timestamp,
+    unclaimed_rewards,
+    l1_pending_requested_amount,
+    base_mint_amount,
+    base_mint_msg,
+    minting_curve_dispatcher,
+    staking_contract,
+    erc20_dispatcher,
+    l1_staking_minter,
+    calculate_staking_rewards()
+    claim_rewards()
+    on_receive()
+    state_of()
+  }
+  class MintingCurve {
+    staking_dispatcher,
+    total_supply,
+    l1_staking_minter_address,
+    yearly_mint()
+  }
   StakingContract o-- StakerInfo
+  StakerInfo o-- StakerPoolInfo
   DelegationPoolingContract o-- PoolMemberInfo
+  StakingContract o-- RewardSupplier
+  RewardSupplier o-- MintingCurve
+```
+
+## L1 Contracts block diagram
+```mermaid
+classDiagram
+  class RewardSupplier {
+    tick()
+  }
+  class MintManager {
+    mintRequest()
+    allowance()
+    approve()
+    increaseAllowance()
+    decreaseAllowance()
+    stopAllowance()
+  }
 ```
 
 ## Enter protocol flow diagram
@@ -222,15 +302,23 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   actor staker
+  participant RewardSupplier
   participant StakingContract
   participant DelegationPoolingContract
-  actor pool memberopt 
+  actor pool member
   Loop
     staker ->> StakingContract: claim_rewards
+    StakingContract ->>+ RewardSupplier: claim_rewards
+    RewardSupplier -->> StakingContract: Transfer
+    StakingContract -->> staker: Transfer
   end
   opt Loop
     pool member ->>+ DelegationPoolingContract: claim_rewards
-    DelegationPoolingContract ->>- StakingContract: claim_delegation_pool_rewards
+    DelegationPoolingContract ->>+ StakingContract: claim_delegation_pool_rewards
+    StakingContract ->>+ RewardSupplier: claim_rewards
+    RewardSupplier -->> StakingContract: Transfer
+    StakingContract -->> DelegationPoolingContract: Transfer
+    DelegationPoolingContract -->> pool member: Transfer
   end
 ```
 
@@ -254,6 +342,38 @@ sequenceDiagram
     StakingContract ->> DelegationPoolingContract B: enter_delegation_pool_from_staking_contract
     deactivate DelegationPoolingContract A
   end
+```
+
+## L1 Mint & transfer flow diagram
+```mermaid
+sequenceDiagram
+  actor anyAccount
+  participant RewardSupplier
+  participant MintingManager
+  participant STRK ERC20
+  participant StarkGate bridge
+  anyAccount ->>+ RewardSupplier: tick(tokensPerMintAmount, maxMessagesToProcess)
+  RewardSupplier ->>+ MintingManager: mintRequest(totalAmountToMint)
+  MintingManager ->>- STRK ERC20: mint
+  RewardSupplier ->>+ StarkGate bridge: depositWithMessage
+  deactivate RewardSupplier
+```
+
+## L2 Rewards calculation and minting request flow diagram
+```mermaid
+sequenceDiagram
+  actor caller
+  participant Staking
+  participant RewardSupplier
+  participant MintingCurve
+  participant L1
+  caller ->>+ Staking: update_global_index
+  Staking ->>+ RewardSupplier: calculate_staking_rewards
+  RewardSupplier ->>+ MintingCurve: yearly_mint
+  MintingCurve ->> Staking: get_total_stake
+  MintingCurve -->>- RewardSupplier: return yearly amount
+  RewardSupplier ->>- L1: send mint request
+  deactivate Staking
 ```
 
 
@@ -736,52 +856,22 @@ Only staker address.
 #### logic <!-- omit from toc -->
 1. Change registered `operational_address` for the staker.
 
-### update_commission
-```rust
-fn update_commission(
-  ref self: ContractState, 
-  commission: u16
-) -> bool
-```
-#### description <!-- omit from toc -->
-Update commission. 
-#### emits <!-- omit from toc -->
-1. [Commission Changed](#commission-changed)
-#### errors <!-- omit from toc -->
-1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-5. [CANNOT\_INCREASE\_COMMISSION](#cannot_increase_commission)
-#### pre-condition <!-- omit from toc -->
-1. Staking contract is unpaused.
-2. Staker (caller) has operator role.
-3. Staker (caller) exist in the contract.
-4. Staker (caller) has pool contract.
-5. `commission` is lower or equal to staker current commission
-#### access control <!-- omit from toc -->
-Only staker address.
-#### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards)
-2. Update staker's commission to be the given commission.
-3. Call pool's [update\_commission](#update_commission-1)
-
 ## Events
 ### Stake Balance Changed
-| data                | type            | keyed  |
-| ------              | -------         | -----  |
-| staker_address      | address         | ✅     |
-| old_self_stake      | u128            | ❌     |
-| old_delegated_stake | u128            | ❌     |
-| new_self_stake      | u128            | ❌     |
-| new_delegated_stake | u128            | ❌     |
+| data                | type    | keyed |
+| ------------------- | ------- | ----- |
+| staker_address      | address | ✅     |
+| old_self_stake      | u128    | ❌     |
+| old_delegated_stake | u128    | ❌     |
+| new_self_stake      | u128    | ❌     |
+| new_delegated_stake | u128    | ❌     |
 
 ### New Delegation Pool
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| pool_contract  | address | ✅    |
-| commission     | u16     | ❌    |
+| staker_address | address | ✅     |
+| pool_contract  | address | ✅     |
+| commission     | u16     | ❌     |
 
 
 ### Staker Exit intent
@@ -793,54 +883,46 @@ Only staker address.
 ### Rewards Supplied To Delegation Pool
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| pool_address   | address | ✅    |
-| amount         | u128    | ❌    |
+| staker_address | address | ✅     |
+| pool_address   | address | ✅     |
+| amount         | u128    | ❌     |
 
 ### Delete Staker
 | data                | type            | keyed |
 | ------------------- | --------------- | ----- |
-| staker_address      | address         | ✅    |
-| reward_address      | address         | ❌    |
-| operational_address | address         | ❌    |
-| pool_contract       | Option<address> | ❌    |
+| staker_address      | address         | ✅     |
+| reward_address      | address         | ❌     |
+| operational_address | address         | ❌     |
+| pool_contract       | Option<address> | ❌     |
 
 ### Staker Reward Claimed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| reward_address | address | ❌    |
-| amount         | u128    | ❌    |
+| staker_address | address | ✅     |
+| reward_address | address | ❌     |
+| amount         | u128    | ❌     |
 
 ### Staker Reward Address Changed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| new_address    | address | ❌    |
-| old_address    | address | ❌    |
+| staker_address | address | ✅     |
+| new_address    | address | ❌     |
+| old_address    | address | ❌     |
 
 ### Operational Address Changed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| new_address    | address | ❌    |
-| old_address    | address | ❌    |
-
-### Commission Changed
-| data           | type    | keyed |
-| -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| pool_contract  | address | ✅    |
-| new_commission | u16     | ❌    |
-| old_commission | u16     | ❌    |
+| staker_address | address | ✅     |
+| new_address    | address | ❌     |
+| old_address    | address | ❌     |
 
 ### Global Index Updated
 | data                                  | type | keyed |
 | ------------------------------------- | ---- | ----- |
-| old_index                             | u64  | ❌    |
-| new_index                             | u64  | ❌    |
-| global_index_last_update_timestamp    | u64  | ❌    |
-| global_index_current_update_timestamp | u64  | ❌    |
+| old_index                             | u64  | ❌     |
+| new_index                             | u64  | ❌     |
+| global_index_last_update_timestamp    | u64  | ❌     |
+| global_index_current_update_timestamp | u64  | ❌     |
 
 # Delegation pooling contract
 
@@ -1041,92 +1123,128 @@ Only pool member can execute.
 3. Call staking contract's [switch delegation pool](#switch_staking_delegation_pool).
 
 ### enter_delegation_pool_from_staking_contract
+```rust
+fn enter_delegation_pool_from_staking_contract(
+    ref self: ContractState, 
+    amount: u128, 
+    index: u64, 
+    data: Span<felt252>
+) -> bool
+```
 #### description <!-- omit from toc -->
 Entry point for staking contract to inform pool of a pool member being moved from another pool to this one.
 No funds need to be transferred since staking contract holds the pool funds.
-#### parameters <!-- omit from toc -->
-| name   | type          |
-| ------ | ------------- |
-| amount | u128          |
-| index  | u64           |
-| data   | Span<felt252> |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
-[Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
+1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
+1. [AMOUNT\_IS\_ZERO](#amount_is_zero)
+2. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+3. [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
 #### pre-condition <!-- omit from toc -->
+1. `amount` is not zero.
+2. `pool_member` is not in an exit window.
 #### access control <!-- omit from toc -->
-Only staking contract can call.
+Only staking contract can execute.
 #### logic <!-- omit from toc -->
-1. Check that staker for this pool instance is not in exit window.
-2. Deserialize data, get pool_member and rewrad addresses.
-3. If pool member is listed in the contract:
-   1. validate that pool member is not in exit window.
-   2. [Calculate rewards](#calculate_rewards-1)
-   3. Update pool member entry
-4. Else
+1. Deserialize data, get `pool_member` and `rewrad_address`.
+2. If pool member is listed in the contract:
+   1. [Calculate rewards](#calculate_rewards-1)
+   2. Update pool member entry
+3. Else
    1. Create an entry for the pool member.
 
 ### set_final_staker_index
+```rust
+fn set_final_staker_index(
+  ref self: ContractState, 
+  final_staker_index: u64
+)
+```
 #### description <!-- omit from toc -->
 Informs the delegation pool contract that the staker has left and the contract is now detached from the staking contract.
-#### parameters <!-- omit from toc -->
-| name  | type |
-| ----- | ---- |
-| index | u64  |
-#### return <!-- omit from toc -->
-sucess: bool
+#### emits <!-- omit from toc -->
+1. [Final Index Set](#final-index-set)
+#### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+2. [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
+#### pre-condition <!-- omit from toc -->
+1. Final staker index is not already set.
+#### access control <!-- omit from toc -->
+Only staking contract can execute.
+#### logic <!-- omit from toc -->
+1. Set staker final index to the provided index.
+
+### change_reward_address
+```rust
+fn change_reward_address(
+  ref self: ContractState, 
+  reward_address: ContractAddress
+) -> bool
+```
+#### description <!-- omit from toc -->
+Change the reward address for a pool member.
+#### emits <!-- omit from toc -->
+1. [Pool Member Reward Address Changed](#pool-member-reward-address-changed)
+#### errors <!-- omit from toc -->
+1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+#### pre-condition <!-- omit from toc -->
+1. Pool member exist in the contract.
+#### access control <!-- omit from toc -->
+Only pool member can execute.
+#### logic <!-- omit from toc -->
+1. Change registered `reward_address` for the pool member.
+
+### state_of
+```rust
+fn state_of(
+  self: @ContractState, 
+  pool_member: ContractAddress
+) -> PoolMemberInfo
+```
+#### description <!-- omit from toc -->
+Return [PoolMemberInfo](#poolmemberinfo) of the given pool member.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+#### pre-condition <!-- omit from toc -->
+1. Pool member exist in the contract.
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Return Pool member info.
+
+### contract_parameters
+```rust
+fn contract_parameters(self: @ContractState) -> StakingContractInfo
+```
+#### description <!-- omit from toc -->
+Return [PoolingContractInfo](#poolingcontractinfo) of the contract.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
-only staking contract can call
 #### logic <!-- omit from toc -->
-1. set staker final index to the provided index.
 
 ### calculate_rewards
+```rust
+fn calculate_rewards(
+    ref self: ContractState, 
+    ref pool_member_info: PoolMemberInfo, 
+    updated_index: u64
+) -> bool
+```
 >**note:** internal logic
 #### description <!-- omit from toc -->
 Calculate rewards, add amount to unclaimed_rewards, update index.
-Assumes this function call is after an one of the interactions with the staking contract:
-1. [add to delegation pool](#add_to_delegation_pool)
-2. [claim delegation pool rewards](#claim_delegation_pool_rewards)
-3. [exit delegation pool intent](#exit_delegation_pool_intent)
-that perform rewards calculation and index update on the staker and returns the updated index.
-#### parameters <!-- omit from toc -->
-| name  | type |
-| ----- | ---- |
-| index | u64  |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 internal function.
 #### logic <!-- omit from toc -->
-1. Calculate rewards for pool member (caller).
-2. Update `unclaimed_rewards`.
-3. Update index.
-
-### update_commission
-#### description <!-- omit from toc -->
-Update commission. 
-#### parameters <!-- omit from toc -->
-| name           | type |
-| -----          | ---- |
-| commission     | u16  |
-#### return <!-- omit from toc -->
-success: bool
-#### emits <!-- omit from toc -->
-#### errors <!-- omit from toc -->
-#### pre-condition <!-- omit from toc -->
-1. only staking contract can call.
-2. given commission is lower or equal to pool contract's commission.
-#### access control <!-- omit from toc -->
-#### logic <!-- omit from toc -->
-1. Update `commission` to be the given commission.
+1. Update index.
+2. Calculate rewards for `pool_member_info`.
+3. Update `unclaimed_rewards`.
 
 ## Events
 ### New Staking Delegation Pool Member
@@ -1139,9 +1257,9 @@ success: bool
 ### Delegation Pool Member Balance Changed
 | data                | type    | keyed |
 | ------------------- | ------- | ----- |
-| pool_member         | address | ✅    |
-| old_delegated_stake | u128    | ❌    |
-| new_delegated_stake | u128    | ❌    |
+| pool_member         | address | ✅     |
+| old_delegated_stake | u128    | ❌     |
+| new_delegated_stake | u128    | ❌     |
 
 ### Pool Member Exit Intent
 | data        | type    | keyed |
@@ -1152,29 +1270,148 @@ success: bool
 ### Final Index Set
 | data               | type    | keyed |
 | ------------------ | ------- | ----- |
-| staker_address     | address | ✅    |
-| final_staker_index | u64     | ❌    |
+| staker_address     | address | ✅     |
+| final_staker_index | u64     | ❌     |
 
 ### New Pool Member
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| pool_member    | address | ✅    |
-| staker_address | address | ✅    |
-| reward_address | address | ❌    |
-| amount         | u128    | ❌    |
+| pool_member    | address | ✅     |
+| staker_address | address | ✅     |
+| reward_address | address | ❌     |
+| amount         | u128    | ❌     |
 
 ### Delete Pool Member
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| pool_member    | address | ✅    |
-| reward_address | address | ❌    |
+| pool_member    | address | ✅     |
+| reward_address | address | ❌     |
 
 ### Pool Member Reward Claimed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| pool_member    | address |   ✅  |
-| reward_address | address |   ✅  |
-| amount         | u128    |   ❌  |
+| pool_member    | address | ✅     |
+| reward_address | address | ✅     |
+| amount         | u128    | ❌     |
+
+### Pool Member Reward Address Changed
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| pool_member    | address | ✅    |
+| new_address    | address | ❌    |
+| old_address    | address | ❌    |
+
+# L2 Reward supplier contract
+
+## Functions
+### calculate_staking_rewards
+```rust
+fn calculate_staking_rewards(ref self: TContractState) -> u128
+```
+#### description <!-- omit from toc -->
+Calculate the total amount of rewards owed to the stakers (based on total stake), since the previous
+time it was calculated.
+#### return <!-- omit from toc -->
+rewards: u128 - the rewards owed to stakers, in FRI.
+#### emits <!-- omit from toc -->
+[Mint Request](#mint-request)
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. Invoke the Minting Curve's [yearly_mint](#yearly-mint) to receive the theoretic yearly amount of rewards.
+2. From the theoretic yearly amount, deduce the rewards from the last timestamp.
+3. Request funds from L1 if needed.
+
+#### access control <!-- omit from toc -->
+Only staking contract.
+
+### claim_rewards
+```rust
+fn claim_rewards(ref self: TContractState, amount: u128)
+```
+#### description <!-- omit from toc -->
+Transfers `amount` FRI to staking contract
+#### return <!-- omit from toc -->
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+`unclaimed_rewards >= amount`
+
+#### logic <!-- omit from toc -->
+1. Transfer `amount` FRI to staking contract and decrease it from unclaimed_rewards.
+
+#### access control <!-- omit from toc -->
+Only staking contract.
+
+### state_of
+```rust
+fn state_of(self: @TContractState) -> RewardSupplierStatus
+```
+#### description <!-- omit from toc -->
+Return [RewardSupplierStatus](#rewardsupplierstatus) filled with the corresponding storage values.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### on_receive
+```rust
+fn on_receive(
+    ref self: TContractState,
+    l2_token: ContractAddress,
+    amount: u256,
+    depositor: EthAddress,
+    message: Span<felt252>
+) -> bool
+```
+#### description <!-- omit from toc -->
+Get notified by StarkGate `amount` was transferred from L1.
+Return true upon success. 
+The function will fail only in the unlikely scenario where `amount` is over 2**128 FRI.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+- [AMOUNT\_TOO\_HIGH](#amount_too_high)
+#### pre-condition <!-- omit from toc -->
+
+#### logic <!-- omit from toc -->
+1. Decrease `amount` from l1_pending_requested_amount. If the expected result is negative, the
+variable is set to 0.
+
+#### access control <!-- omit from toc -->
+
+## Events
+### Mint Request
+| data         | type | keyed |
+| ------------ | ---- | ----- |
+| total_amount | u128 | ❌    |
+| num_msgs     | u128 | ❌    |
+
+# Minting Curve Contract
+
+## Functions
+### yearly_mint
+```rust
+fn yearly_mint(self: @TContractState) -> u128
+```
+#### description <!-- omit from toc -->
+Return the amount to be minted in a year given the current total stake in the staking contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. [get_total_stake](#get_total_stake).
+2. Compute the yearly mint by using total_stake and total_supply.
+
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+## Events
+### Total Supply Changed
+| data                 | type | keyed |
+| -------------------- | ---- | ----- |
+| old_total_supply     | u128 | ❌    |
+| new_total_supply     | u128 | ❌    |
+
 # Errors
 ### STAKER_EXISTS
 "Staker already exists, use increase_stake instead."
@@ -1236,9 +1473,6 @@ success: bool
 ### STAKER_ALREADY_HAS_POOL
 "Staker already has a pool."
 
-### CANNOT_INCREASE_COMMISSION
-"Commission cannot be increased."
-
 ### STAKER_INACTIVE
 "Staker inactive."
 
@@ -1259,6 +1493,12 @@ success: bool
 
 ### POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
 "Claim rewards must be called from pool member address or reward address."
+
+### CALLER_IS_NOT_STAKING_CONTRACT
+"Caller is not staking contract."
+
+### SWITCH_POOL_DATA_DESERIALIZATION_FAILED
+"Switch pool data deserialization failed."
 
 # Structs
 ### StakerPoolInfo
@@ -1288,3 +1528,29 @@ success: bool
 | global_index             | u64       |
 | pool_contract_class_hash | ClassHash |
 | reward_supplier          | address   |
+
+### PoolMemberInfo
+| name              | type        |
+| ----------------- | ----------- |
+| reward_address    | address     |
+| amount            | u128        |
+| index             | u64         |
+| unclaimed_rewards | u128        |
+| unpool_amount     | u128        |
+| unpool_time       | Option<u64> |
+
+### PoolingContractInfo
+| name               | type        |
+| ------------------ | ----------- |
+| staker_address     | address     |
+| final_staker_index | Option<u64> |
+| staking_contract   | address     |
+| token_address      | address     |
+| commission         | u16         |
+
+### RewardSupplierStatus
+| name                          | type      |
+| ----------------------------- | --------- |
+| last_timestamp                | u64       |
+| unclaimed_rewards             | u128      |
+| l1_pending_requested_amount   | u128      |

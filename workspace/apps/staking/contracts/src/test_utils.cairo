@@ -1,6 +1,6 @@
 use contracts::{staking::Staking, minting_curve::MintingCurve, reward_supplier::RewardSupplier};
 use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
-use contracts::constants::BASE_VALUE;
+use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW};
 use core::traits::Into;
 use contracts::staking::interface::{
     IStaking, StakerInfo, StakerPoolInfo, StakingContractInfo, IStakingDispatcher,
@@ -22,7 +22,8 @@ use constants::{
     POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
     POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, BASE_MINT_AMOUNT, BUFFER,
     L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG, STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS,
-    REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN, SECURITY_AGENT
+    REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN, SECURITY_AGENT,
+    APP_GOVERNER
 };
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
@@ -141,10 +142,17 @@ pub(crate) mod constants {
     pub fn SECURITY_AGENT() -> ContractAddress {
         contract_address_const::<'SECURITY_AGENT'>()
     }
+    pub fn APP_GOVERNER() -> ContractAddress {
+        contract_address_const::<'APP_GOVERNER'>()
+    }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
-    token_address: ContractAddress, cfg: StakingInitConfig
+    ref cfg: StakingInitConfig
 ) -> Staking::ContractState {
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    cfg.staking_contract_info.token_address = token_address;
     initialize_staking_state(
         :token_address,
         min_stake: cfg.staking_contract_info.min_stake,
@@ -163,6 +171,7 @@ pub(crate) fn initialize_staking_state(
     security_admin: ContractAddress
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
+    cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
     Staking::constructor(
         ref state,
         :token_address,
@@ -272,6 +281,9 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
         account: cfg.test_info.staker_address,
         security_admin: cfg.test_info.security_admin
     );
+    set_account_as_app_governer(
+        :staking_contract, account: cfg.test_info.app_governer, governance_admin: test_address()
+    );
 }
 
 pub(crate) fn set_account_as_security_agent(
@@ -288,6 +300,14 @@ pub(crate) fn set_account_as_operator(
     let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(contract_address: staking_contract, caller_address: security_admin);
     roles_dispatcher.register_operator(:account);
+}
+
+pub(crate) fn set_account_as_app_governer(
+    staking_contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: governance_admin);
+    roles_dispatcher.register_app_governor(:account);
 }
 
 pub(crate) fn deploy_minting_curve_contract(
@@ -451,7 +471,7 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
 
 /// *****WARNING*****
 /// This function only works on simple data types or structs that have no special implementations
-/// for Hash, Store, or Serde traits. And won't work on any standard enum.
+/// for Hash, Store, or Serde traits. It also won't work on any standard enum.
 /// This statement applies to both key and value.
 /// The trait used to serialize and deserialize the key for the address calculation is Hash trait.
 /// The trait used to serialize and deserialize the value for the storage is Store trait.
@@ -620,6 +640,7 @@ pub(crate) struct TestInfo {
     pub pool_contract_admin: ContractAddress,
     pub security_admin: ContractAddress,
     pub security_agent: ContractAddress,
+    pub app_governer: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -672,6 +693,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             global_index: BASE_VALUE,
             pool_contract_class_hash: declare_pool_contract(),
             reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
+            exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW
         };
         let test_info = TestInfo {
             staker_address: STAKER_ADDRESS(),
@@ -685,6 +707,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
             security_admin: SECURITY_ADMIN(),
             security_agent: SECURITY_AGENT(),
+            app_governer: APP_GOVERNER(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,
