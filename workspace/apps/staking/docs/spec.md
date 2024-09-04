@@ -1384,6 +1384,31 @@ Transfers `amount` FRI to staking contract
 #### access control <!-- omit from toc -->
 Only staking contract.
 
+### on_receive
+```rust
+fn on_receive(
+    ref self: TContractState,
+    l2_token: ContractAddress,
+    amount: u256,
+    depositor: EthAddress,
+    message: Span<felt252>
+) -> bool
+```
+#### description <!-- omit from toc -->
+Get notified by StarkGate `amount` was transferred from L1.
+Return true upon success. 
+The function will fail only in the unlikely scenario where `amount` is over 2**128 FRI.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+- [AMOUNT\_TOO\_HIGH](#amount_too_high)
+#### pre-condition <!-- omit from toc -->
+
+#### logic <!-- omit from toc -->
+1. Decrease `amount` from l1_pending_requested_amount. If the expected result is negative, the
+variable is set to 0.
+
+#### access control <!-- omit from toc -->
+
 ## Events
 ### Mint Request
 | data         | type | keyed |
