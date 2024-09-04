@@ -482,7 +482,6 @@ pub mod Staking {
             ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> (u128, u64) {
             self.assert_is_unpaused();
-            self.roles.only_operator();
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -523,7 +522,6 @@ pub mod Staking {
             amount: u128,
         ) -> u64 {
             self.assert_is_unpaused();
-            self.roles.only_operator();
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             let mut pool_info = staker_info.get_pool_info_unchecked();
@@ -577,7 +575,6 @@ pub mod Staking {
             ref self: ContractState, identifier: felt252
         ) -> u128 {
             self.assert_is_unpaused();
-            self.roles.only_operator();
             self.update_global_index_if_needed();
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
@@ -603,7 +600,6 @@ pub mod Staking {
             identifier: felt252
         ) -> bool {
             self.assert_is_unpaused();
-            self.roles.only_operator();
             self.update_global_index_if_needed();
             if switched_amount.is_zero() {
                 return false;
@@ -646,7 +642,6 @@ pub mod Staking {
             ref self: ContractState, staker_address: ContractAddress
         ) -> u64 {
             self.assert_is_unpaused();
-            self.roles.only_operator();
             self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info_unchecked().pooling_contract;
