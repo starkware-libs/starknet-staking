@@ -1145,22 +1145,24 @@ internal function.
 3. Update `unclaimed_rewards`.
 
 ### update_commission
+```rust
+fn update_commission(
+  ref self: ContractState, 
+  commission: u16
+) -> bool
+```
 #### description <!-- omit from toc -->
-Update commission. 
-#### parameters <!-- omit from toc -->
-| name       | type |
-| ---------- | ---- |
-| commission | u16  |
-#### return <!-- omit from toc -->
-success: bool
+Update pool contract's commission.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+2. [CANNOT\_INCREASE\_COMMISSION](#cannot_increase_commission)
 #### pre-condition <!-- omit from toc -->
-1. only staking contract can call.
-2. given commission is lower or equal to pool contract's commission.
+1. `commission` is lower or equal to pool contract's commission.
 #### access control <!-- omit from toc -->
+Only staking contract can execute.
 #### logic <!-- omit from toc -->
-1. Update `commission` to be the given commission.
+1. Update pool contract's commission to be the given commission.
 
 ## Events
 ### New Staking Delegation Pool Member
