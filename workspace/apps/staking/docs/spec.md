@@ -69,8 +69,13 @@
     - [claim\_rewards](#claim_rewards-2)
     - [on\_receive](#on_receive)
     - [state\_of](#state_of-2)
-  - [Events](#events-1)
+  - [Events](#events-2)
     - [Mint Request](#mint-request)
+- [Minting curve contract](#minting-curve-contract)
+  - [Functions](#functions-3)
+    - [yearly\_mint](#yearly_mint)
+  - [Events](#events-3)
+    - [Total Supply Changed](#total-supply-changed)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -1381,6 +1386,31 @@ variable is set to 0.
 | ------------ | ---- | ----- |
 | total_amount | u128 | ❌    |
 | num_msgs     | u128 | ❌    |
+
+# Minting Curve Contract
+
+## Functions
+### yearly_mint
+```rust
+fn yearly_mint(self: @TContractState) -> u128
+```
+#### description <!-- omit from toc -->
+Return the amount to be minted in a year given the current total stake in the staking contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. [get_total_stake](#get_total_stake).
+2. Compute the yearly mint by using total_stake and total_supply.
+
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+## Events
+### Total Supply Changed
+| data                 | type | keyed |
+| -------------------- | ---- | ----- |
+| old_total_supply     | u128 | ❌    |
+| new_total_supply     | u128 | ❌    |
 
 # Errors
 ### STAKER_EXISTS
