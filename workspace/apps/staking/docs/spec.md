@@ -1074,21 +1074,25 @@ Only staking contract can execute.
    1. Create an entry for the pool member.
 
 ### set_final_staker_index
+```rust
+fn set_final_staker_index(
+  ref self: ContractState, 
+  final_staker_index: u64
+)
+```
 #### description <!-- omit from toc -->
 Informs the delegation pool contract that the staker has left and the contract is now detached from the staking contract.
-#### parameters <!-- omit from toc -->
-| name  | type |
-| ----- | ---- |
-| index | u64  |
-#### return <!-- omit from toc -->
-sucess: bool
 #### emits <!-- omit from toc -->
+1. [Final Index Set](#final-index-set)
 #### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+2. [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
 #### pre-condition <!-- omit from toc -->
+1. Final staker index is not already set.
 #### access control <!-- omit from toc -->
-only staking contract can call
+Only staking contract can execute.
 #### logic <!-- omit from toc -->
-1. set staker final index to the provided index.
+1. Set staker final index to the provided index.
 
 ### calculate_rewards
 >**note:** internal logic
