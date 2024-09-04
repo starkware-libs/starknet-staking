@@ -294,15 +294,23 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   actor staker
+  participant RewardSupplier
   participant StakingContract
   participant DelegationPoolingContract
   actor pool member
   Loop
     staker ->> StakingContract: claim_rewards
+    StakingContract ->>+ RewardSupplier: claim_rewards
+    RewardSupplier -->> StakingContract: Transfer
+    StakingContract -->> staker: Transfer
   end
   opt Loop
     pool member ->>+ DelegationPoolingContract: claim_rewards
-    DelegationPoolingContract ->>- StakingContract: claim_delegation_pool_rewards
+    DelegationPoolingContract ->>+ StakingContract: claim_delegation_pool_rewards
+    StakingContract ->>+ RewardSupplier: claim_rewards
+    RewardSupplier -->> StakingContract: Transfer
+    StakingContract -->> DelegationPoolingContract: Transfer
+    DelegationPoolingContract -->> pool member: Transfer
   end
 ```
 
