@@ -124,10 +124,16 @@ function info template:
 ```mermaid
 classDiagram
   class StakingContract{
-    map < staker_address, StakerInfo >
-    map < operational_address, StakerInfo >
+    map < staker_address, Option < StakerInfo >>
+    map < operational_address, staker_address >
     global_index
+    global_index_last_update_timestamp
     min_stake
+    total_stake
+    pool_contract_class_hash
+    map < UndelegateIntentKey, UndelegateIntentValue >
+    pool_contract_admin
+    is_paused
     stake()
     increase_stake()
     unstake_intent()
@@ -138,17 +144,22 @@ classDiagram
     remove_from_delegation_pool_action()
     switch_staking_delegation_pool()
     change_reward_address()
+    change_operational_address()
     set_open_for_delegation()
     claim_delegation_pool_rewards()
     state_of()
     contract_parameters()
-    calsulate_rewards()
+    calculate_rewards()
+    update_commission()
+    get_total_stake()
 
   }
   class DelegationPoolingContract{
     map < pool_member_address, PoolMemberInfo >
     staker_address
-    staker_final_index
+    final_staker_index
+    map < ContractAddress, Option < PoolMemberInfo >>
+    commission
     enter_delegation_pool()
     add_to_delegation_pool()
     exit_delegation_pool_intent()
@@ -158,27 +169,33 @@ classDiagram
     state_of()
     contract_parameters()
     switch_delegation_pool()
-    enter_from_staking_contract()
+    enter_delegation_pool_from_staking_contract()
+    set_final_staker_index()
     calculate_rewards()
+    update_commission()
   }
   class StakerInfo{
-    own_amount
-    pooled_amount
-    index
-    own_unclaimed_rewards
-    pooled_unclaimed_rewards
-    exit_pooled_amnt: Map < felt, (amnt, time) >
     reward_address
-    option < unstake_time >
     operational_address
-    option < PoollingContract >
+    option < unstake_time >
+    amount_own
+    index
+    pooled_amount
+    unclaimed_rewards_own
+    pooled_unclaimed_rewards
+    option < StakerPoolInfo >
+  }
+  class StakerPoolInfo{
+    pooling_contract
+    amount
+    unclaimed_rewards
     commission
   }
   class PoolMemberInfo{
+    reward_address
     amount
     index
     unclaimed_rewards
-    reward_address
     option < unpool_time >
   }
   class RewardSupplier {
@@ -203,6 +220,7 @@ classDiagram
     yearly_mint()
   }
   StakingContract o-- StakerInfo
+  StakerInfo o-- StakerPoolInfo
   DelegationPoolingContract o-- PoolMemberInfo
   StakingContract o-- RewardSupplier
   RewardSupplier o-- MintingCurve
