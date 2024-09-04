@@ -93,7 +93,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub(crate) struct RewardsSuppliedToDelegationPool {
+    pub struct RewardsSuppliedToDelegationPool {
         #[key]
         pub staker_address: ContractAddress,
         #[key]
