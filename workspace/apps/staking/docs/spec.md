@@ -31,7 +31,7 @@
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
-    - [Staker Exit Intent](#staker-exit-intent)
+    - [Staker Exit intent](#staker-exit-intent)
     - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
     - [Delete Staker](#delete-staker)
     - [Staker Reward Claimed](#staker-reward-claimed)
@@ -58,6 +58,12 @@
     - [Final Index Set](#final-index-set)
     - [New Pool Member](#new-pool-member)
     - [Delete Pool Member](#delete-pool-member)
+    - [Pool Member Reward Claimed](#pool-member-reward-claimed)
+- [L2 Reward supplier contract](#l2-reward-supplier-contract)
+  - [Functions](#functions-2)
+    - [calculate\_staking\_rewards](#calculate_staking_rewards)
+  - [Events](#events-2)
+    - [Mint Request](#mint-request)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -793,20 +799,20 @@ Only staker address.
 
 ## Events
 ### Stake Balance Changed
-| data                | type            | keyed  |
-| ------              | -------         | -----  |
-| staker_address      | address         | ✅     |
-| old_self_stake      | u128            | ❌     |
-| old_delegated_stake | u128            | ❌     |
-| new_self_stake      | u128            | ❌     |
-| new_delegated_stake | u128            | ❌     |
+| data                | type    | keyed |
+| ------------------- | ------- | ----- |
+| staker_address      | address | ✅     |
+| old_self_stake      | u128    | ❌     |
+| old_delegated_stake | u128    | ❌     |
+| new_self_stake      | u128    | ❌     |
+| new_delegated_stake | u128    | ❌     |
 
 ### New Delegation Pool
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| pool_contract  | address | ✅    |
-| commission     | u16     | ❌    |
+| staker_address | address | ✅     |
+| pool_contract  | address | ✅     |
+| commission     | u16     | ❌     |
 
 
 ### Staker Exit intent
@@ -818,54 +824,54 @@ Only staker address.
 ### Rewards Supplied To Delegation Pool
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| pool_address   | address | ✅    |
-| amount         | u128    | ❌    |
+| staker_address | address | ✅     |
+| pool_address   | address | ✅     |
+| amount         | u128    | ❌     |
 
 ### Delete Staker
 | data                | type            | keyed |
 | ------------------- | --------------- | ----- |
-| staker_address      | address         | ✅    |
-| reward_address      | address         | ❌    |
-| operational_address | address         | ❌    |
-| pool_contract       | Option<address> | ❌    |
+| staker_address      | address         | ✅     |
+| reward_address      | address         | ❌     |
+| operational_address | address         | ❌     |
+| pool_contract       | Option<address> | ❌     |
 
 ### Staker Reward Claimed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| reward_address | address | ❌    |
-| amount         | u128    | ❌    |
+| staker_address | address | ✅     |
+| reward_address | address | ❌     |
+| amount         | u128    | ❌     |
 
 ### Staker Reward Address Changed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| new_address    | address | ❌    |
-| old_address    | address | ❌    |
+| staker_address | address | ✅     |
+| new_address    | address | ❌     |
+| old_address    | address | ❌     |
 
 ### Operational Address Changed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| new_address    | address | ❌    |
-| old_address    | address | ❌    |
+| staker_address | address | ✅     |
+| new_address    | address | ❌     |
+| old_address    | address | ❌     |
 
 ### Commission Changed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| staker_address | address | ✅    |
-| pool_contract  | address | ✅    |
-| new_commission | u16     | ❌    |
-| old_commission | u16     | ❌    |
+| staker_address | address | ✅     |
+| pool_contract  | address | ✅     |
+| new_commission | u16     | ❌     |
+| old_commission | u16     | ❌     |
 
 ### Global Index Updated
 | data                                  | type | keyed |
 | ------------------------------------- | ---- | ----- |
-| old_index                             | u64  | ❌    |
-| new_index                             | u64  | ❌    |
-| global_index_last_update_timestamp    | u64  | ❌    |
-| global_index_current_update_timestamp | u64  | ❌    |
+| old_index                             | u64  | ❌     |
+| new_index                             | u64  | ❌     |
+| global_index_last_update_timestamp    | u64  | ❌     |
+| global_index_current_update_timestamp | u64  | ❌     |
 
 # Delegation pooling contract
 
@@ -1142,9 +1148,9 @@ internal function.
 #### description <!-- omit from toc -->
 Update commission. 
 #### parameters <!-- omit from toc -->
-| name           | type |
-| -----          | ---- |
-| commission     | u16  |
+| name       | type |
+| ---------- | ---- |
+| commission | u16  |
 #### return <!-- omit from toc -->
 success: bool
 #### emits <!-- omit from toc -->
@@ -1167,9 +1173,9 @@ success: bool
 ### Delegation Pool Member Balance Changed
 | data                | type    | keyed |
 | ------------------- | ------- | ----- |
-| pool_member         | address | ✅    |
-| old_delegated_stake | u128    | ❌    |
-| new_delegated_stake | u128    | ❌    |
+| pool_member         | address | ✅     |
+| old_delegated_stake | u128    | ❌     |
+| new_delegated_stake | u128    | ❌     |
 
 ### Pool Member Exit Intent
 | data        | type    | keyed |
@@ -1180,29 +1186,29 @@ success: bool
 ### Final Index Set
 | data               | type    | keyed |
 | ------------------ | ------- | ----- |
-| staker_address     | address | ✅    |
-| final_staker_index | u64     | ❌    |
+| staker_address     | address | ✅     |
+| final_staker_index | u64     | ❌     |
 
 ### New Pool Member
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| pool_member    | address | ✅    |
-| staker_address | address | ✅    |
-| reward_address | address | ❌    |
-| amount         | u128    | ❌    |
+| pool_member    | address | ✅     |
+| staker_address | address | ✅     |
+| reward_address | address | ❌     |
+| amount         | u128    | ❌     |
 
 ### Delete Pool Member
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| pool_member    | address | ✅    |
-| reward_address | address | ❌    |
+| pool_member    | address | ✅     |
+| reward_address | address | ❌     |
 
 ### Pool Member Reward Claimed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| pool_member    | address |   ✅  |
-| reward_address | address |   ✅  |
-| amount         | u128    |   ❌  |
+| pool_member    | address | ✅     |
+| reward_address | address | ✅     |
+| amount         | u128    | ❌     |
 
 # L2 Reward supplier contract
 
@@ -1231,8 +1237,8 @@ Only staking contract.
 ### Mint Request
 | data         | type | keyed |
 | ------------ | ---- | ----- |
-| total_amount | u128 | ❌    |
-| num_msgs     | u128 | ❌    |
+| total_amount | u128 | ❌     |
+| num_msgs     | u128 | ❌     |
 
 
 # Errors
