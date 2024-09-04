@@ -255,7 +255,7 @@ sequenceDiagram
   actor staker
   participant StakingContract
   participant DelegationPoolingContract
-  actor pool memberopt 
+  actor pool member
   Loop
     staker ->> StakingContract: claim_rewards
   end
