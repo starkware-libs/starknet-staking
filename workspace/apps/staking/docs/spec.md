@@ -203,6 +203,8 @@ classDiagram
   }
   StakingContract o-- StakerInfo
   DelegationPoolingContract o-- PoolMemberInfo
+  StakingContract o-- RewardSupplier
+  RewardSupplier o-- MintingCurve
 ```
 
 ## L1 Contracts block diagram
@@ -1301,9 +1303,57 @@ Only staking contract can execute.
 ### Pool Member Reward Address Changed
 | data           | type    | keyed |
 | -------------- | ------- | ----- |
-| pool_member    | address | ✅     |
-| new_address    | address | ❌     |
-| old_address    | address | ❌     |
+| pool_member    | address | ✅    |
+| new_address    | address | ❌    |
+| old_address    | address | ❌    |
+
+# L2 Reward supplier contract
+
+## Functions
+### calculate_staking_rewards
+```rust
+fn calculate_staking_rewards(ref self: TContractState) -> u128
+```
+#### description <!-- omit from toc -->
+Calculate the total amount of rewards owed to the stakers (based on total stake), since the previous
+time it was calculated.
+#### return <!-- omit from toc -->
+rewards: u128 - the rewards owed to stakers, in FRI.
+#### emits <!-- omit from toc -->
+[Mint Request](#mint-request)
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. Invoke the Minting Curve's [yearly_mint](#yearly-mint) to receive the theoretic yearly amount of rewards.
+2. From the theoretic yearly amount, deduce the rewards from the last timestamp.
+3. Request funds from L1 if needed.
+
+#### access control <!-- omit from toc -->
+Only staking contract.
+
+### claim_rewards
+```rust
+fn claim_rewards(ref self: TContractState, amount: u128)
+```
+#### description <!-- omit from toc -->
+Transfers `amount` FRI to staking contract
+#### return <!-- omit from toc -->
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+`unclaimed_rewards >= amount`
+
+#### logic <!-- omit from toc -->
+1. Transfer `amount` FRI to staking contract and decrease it from unclaimed_rewards.
+
+#### access control <!-- omit from toc -->
+Only staking contract.
+
+## Events
+### Mint Request
+| data         | type | keyed |
+| ------------ | ---- | ----- |
+| total_amount | u128 | ❌    |
+| num_msgs     | u128 | ❌    |
 
 # Errors
 ### STAKER_EXISTS
