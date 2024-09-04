@@ -111,6 +111,7 @@
     - [StakingContractInfo](#stakingcontractinfo)
     - [PoolMemberInfo](#poolmemberinfo)
     - [PoolingContractInfo](#poolingcontractinfo)
+    - [RewardSupplierStatus](#rewardsupplierstatus)
 
 </details>
 
@@ -1400,6 +1401,19 @@ Transfers `amount` FRI to staking contract
 #### access control <!-- omit from toc -->
 Only staking contract.
 
+### state_of
+```rust
+fn state_of(self: @TContractState) -> RewardSupplierStatus
+```
+#### description <!-- omit from toc -->
+Return [RewardSupplierStatus](#rewardsupplierstatus) filled with the corresponding storage values.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+
 ### on_receive
 ```rust
 fn on_receive(
@@ -1570,3 +1584,10 @@ variable is set to 0.
 | staking_contract   | address     |
 | token_address      | address     |
 | commission         | u16         |
+
+### RewardSupplierStatus
+| name                          | type      |
+| ----------------------------- | --------- |
+| last_timestamp                | u64       |
+| unclaimed_rewards             | u128      |
+| l1_pending_requested_amount   | u128      |
