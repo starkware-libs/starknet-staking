@@ -80,6 +80,7 @@ pub mod StakingForOperatorMock {
                 global_index: 0,
                 pool_contract_class_hash: class_hash_const::<'DUMMY'>(),
                 reward_supplier: contract_address_const::<'DUMMY_ADDRESS'>(),
+                exit_wait_window: 0,
             }
         }
         fn get_total_stake(self: @ContractState) -> u128 {

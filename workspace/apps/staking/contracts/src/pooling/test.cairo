@@ -4,7 +4,6 @@ use core::option::OptionTrait;
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::pooling::interface::{IPooling, IPoolingDispatcher, IPoolingDispatcherTrait};
 use contracts::{
-    constants::{EXIT_WAITING_WINDOW},
     pooling::{PoolMemberInfo, Pooling::{SwitchPoolData, InternalPoolingFunctionsTrait}},
     pooling::interface::PoolingContractInfo, staking::interface::StakerInfo,
     staking::interface::StakerInfoTrait, staking::interface::StakerPoolInfo,
@@ -510,7 +509,8 @@ fn test_exit_delegation_pool_intent() {
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     pooling_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
     // Validate the expected pool member info and staker info.
-    let expected_time = get_block_timestamp() + EXIT_WAITING_WINDOW;
+    let expected_time = get_block_timestamp()
+        + staking_dispatcher.contract_parameters().exit_wait_window;
     let expected_pool_member_info = PoolMemberInfo {
         amount: Zero::zero(),
         unpool_amount: cfg.pool_member_info.amount,
@@ -567,6 +567,7 @@ fn test_exit_delegation_pool_action() {
     // Stake and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     // Change global index and exit delegation pool intent.
@@ -600,7 +601,8 @@ fn test_exit_delegation_pool_action() {
     let reward_account_balance_before = erc20_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
     start_cheat_block_timestamp_global(
-        block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW
+        block_timestamp: get_block_timestamp()
+            + staking_dispatcher.contract_parameters().exit_wait_window
     );
     // Exit delegation pool action and check that:
     // 1. The returned value is correct.
@@ -954,7 +956,8 @@ fn test_partial_undelegate() {
     let actual_pool_member_info: Option<PoolMemberInfo> = load_pool_member_info_from_map(
         key: cfg.test_info.pool_member_address, contract: pooling_contract
     );
-    let expected_time = get_block_timestamp() + EXIT_WAITING_WINDOW;
+    let expected_time = get_block_timestamp()
+        + staking_dispatcher.contract_parameters().exit_wait_window;
     let expected_pool_member_info = PoolMemberInfo {
         unclaimed_rewards: unclaimed_rewards_member,
         index: updated_index,

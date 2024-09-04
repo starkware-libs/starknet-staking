@@ -3,11 +3,11 @@ pub mod Staking {
     use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
     use contracts::{
-        constants::{BASE_VALUE, EXIT_WAITING_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES},
+        constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES},
         errors::{Error, assert_with_err, OptionAuxTrait},
         staking::{
             StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo, IStakingPool,
-            IStakingPause, IStaking
+            IStakingPause, IStaking, IStakingConfig
         },
         utils::{
             deploy_delegation_pool_contract, compute_commission_amount_rounded_down,
@@ -35,7 +35,9 @@ pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
-    use contracts_commons::components::roles::interface::{OPERATOR, SECURITY_ADMIN};
+    use contracts_commons::components::roles::interface::{
+        OPERATOR, SECURITY_ADMIN, APP_GOVERNOR, GOVERNANCE_ADMIN
+    };
     pub const COMMISSION_DENOMINATOR: u16 = 10000;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
@@ -72,6 +74,7 @@ pub mod Staking {
         reward_supplier_dispatcher: IRewardSupplierDispatcher,
         pool_contract_admin: ContractAddress,
         is_paused: bool,
+        exit_wait_window: u64,
     }
 
     #[event]
@@ -106,8 +109,9 @@ pub mod Staking {
     ) {
         self.accesscontrol.initializer();
         self.roles.initializer();
-        // Override default role admin for OPERATOR.
+        // Override default role admins.
         self.accesscontrol.set_role_admin(role: OPERATOR, admin_role: SECURITY_ADMIN);
+        self.accesscontrol.set_role_admin(role: APP_GOVERNOR, admin_role: GOVERNANCE_ADMIN);
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);
@@ -118,6 +122,7 @@ pub mod Staking {
         self.pool_contract_admin.write(pool_contract_admin);
         self.global_index.write(BASE_VALUE);
         self.global_index_last_update_timestamp.write(get_block_timestamp());
+        self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.roles.register_security_admin(account: security_admin);
         self.is_paused.write(false);
     }
@@ -287,7 +292,7 @@ pub mod Staking {
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             self.calculate_rewards(ref :staker_info);
             let current_time = get_block_timestamp();
-            let unstake_time = current_time + EXIT_WAITING_WINDOW;
+            let unstake_time = current_time + self.exit_wait_window.read();
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             let mut amount_pool = 0;
@@ -401,6 +406,7 @@ pub mod Staking {
                 global_index: self.global_index.read(),
                 pool_contract_class_hash: self.pool_contract_class_hash.read(),
                 reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
+                exit_wait_window: self.exit_wait_window.read()
             }
         }
 
@@ -530,7 +536,8 @@ pub mod Staking {
                 Error::CALLER_IS_NOT_POOL_CONTRACT
             );
             self.calculate_rewards(ref :staker_info);
-            let unpool_time = staker_info.compute_unpool_time();
+            let unpool_time = staker_info
+                .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
             let undelegate_intent_key = UndelegateIntentKey {
                 pool_contract: pool_info.pooling_contract, identifier
             };
@@ -677,6 +684,27 @@ pub mod Staking {
         fn unpause(ref self: ContractState) {
             self.roles.only_security_admin();
             self.is_paused.write(false);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl StakingConfigImpl of IStakingConfig<ContractState> {
+        fn set_min_stake(ref self: ContractState, min_stake: u128) {
+            if self.is_paused() {
+                self.roles.only_security_admin();
+            } else {
+                self.roles.only_app_governor();
+            }
+            self.min_stake.write(min_stake);
+        }
+
+        fn set_exit_wait_window(ref self: ContractState, exit_wait_window: u64) {
+            if self.is_paused() {
+                self.roles.only_security_admin();
+            } else {
+                self.roles.only_app_governor();
+            }
+            self.exit_wait_window.write(exit_wait_window);
         }
     }
 

@@ -1,5 +1,4 @@
 use starknet::{ContractAddress, ClassHash, get_block_timestamp};
-use contracts::constants::EXIT_WAITING_WINDOW;
 use core::cmp::max;
 use contracts::errors::{Error, OptionAuxTrait};
 
@@ -124,11 +123,11 @@ pub struct StakerInfo {
 
 #[generate_trait]
 pub impl StakerInfoImpl of StakerInfoTrait {
-    fn compute_unpool_time(self: @StakerInfo) -> u64 {
+    fn compute_unpool_time(self: @StakerInfo, exit_wait_window: u64) -> u64 {
         if let Option::Some(unstake_time) = *self.unstake_time {
             return max(unstake_time, get_block_timestamp());
         }
-        get_block_timestamp() + EXIT_WAITING_WINDOW
+        get_block_timestamp() + exit_wait_window
     }
 
     fn get_pool_info_unchecked(self: StakerInfo) -> StakerPoolInfo {
@@ -143,6 +142,7 @@ pub struct StakingContractInfo {
     pub global_index: u64,
     pub pool_contract_class_hash: ClassHash,
     pub reward_supplier: ContractAddress,
+    pub exit_wait_window: u64
 }
 
 /// Public interface for the staking contract.
@@ -207,4 +207,10 @@ pub trait IStakingPool<TContractState> {
 pub trait IStakingPause<TContractState> {
     fn pause(ref self: TContractState);
     fn unpause(ref self: TContractState);
+}
+
+#[starknet::interface]
+pub trait IStakingConfig<TContractState> {
+    fn set_min_stake(ref self: TContractState, min_stake: u128);
+    fn set_exit_wait_window(ref self: TContractState, exit_wait_window: u64);
 }

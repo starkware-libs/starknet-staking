@@ -1,10 +1,7 @@
 use core::option::OptionTrait;
 use contracts::{
-    constants::{BASE_VALUE, EXIT_WAITING_WINDOW, SECONDS_IN_DAY},
-    staking::{
-        StakerInfo, StakerInfoTrait, StakerPoolInfo, Staking,
-        Staking::InternalStakingFunctionsTrait,
-    },
+    constants::{BASE_VALUE, SECONDS_IN_DAY},
+    staking::{StakerInfo, StakerInfoTrait, StakerPoolInfo, Staking::InternalStakingFunctionsTrait,},
     utils::{
         compute_rewards_rounded_down, compute_rewards_rounded_up,
         compute_commission_amount_rounded_down
@@ -17,10 +14,9 @@ use contracts::{
         general_contract_system_deployment, cheat_reward_for_reward_supplier,
         set_account_as_operator,
         constants::{
-            TOKEN_ADDRESS, DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, MIN_STAKE, OTHER_STAKER_ADDRESS,
-            OTHER_REWARD_ADDRESS, NON_STAKER_ADDRESS, DUMMY_CLASS_HASH, POOL_MEMBER_STAKE_AMOUNT,
-            CALLER_ADDRESS, DUMMY_IDENTIFIER, OTHER_OPERATIONAL_ADDRESS,
-            REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN
+            DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS,
+            NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER,
+            OTHER_OPERATIONAL_ADDRESS
         }
     }
 };
@@ -46,6 +42,7 @@ use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPoolDispatc
 use contracts::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcherTrait
 };
+use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
@@ -62,34 +59,28 @@ use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDi
 
 #[test]
 fn test_constructor() {
-    let token_address = TOKEN_ADDRESS();
-    let dummy_address = DUMMY_ADDRESS();
-    let pool_contract_admin = POOL_CONTRACT_ADMIN();
-    let pool_contract_class_hash = DUMMY_CLASS_HASH();
-    let reward_supplier = REWARD_SUPPLIER_CONTRACT_ADDRESS();
-    let min_stake = MIN_STAKE;
-    let security_admin = SECURITY_ADMIN();
-    let mut state = Staking::contract_state_for_testing();
-    Staking::constructor(
-        ref state,
-        :token_address,
-        :min_stake,
-        :pool_contract_class_hash,
-        :reward_supplier,
-        :pool_contract_admin,
-        :security_admin
+    let mut cfg: StakingInitConfig = Default::default();
+    let mut state = initialize_staking_state_from_cfg(ref :cfg);
+    assert_eq!(state.min_stake.read(), cfg.staking_contract_info.min_stake);
+    assert_eq!(
+        state.erc20_dispatcher.read().contract_address, cfg.staking_contract_info.token_address
     );
-    assert_eq!(state.min_stake.read(), min_stake);
-    assert_eq!(state.erc20_dispatcher.read().contract_address, token_address);
     let contract_global_index: u64 = state.global_index.read();
     assert_eq!(BASE_VALUE, contract_global_index);
-    let staker_address = state.operational_address_to_staker_address.read(dummy_address);
+    let staker_address = state
+        .operational_address_to_staker_address
+        .read(cfg.staker_info.operational_address);
     assert_eq!(staker_address, Zero::zero());
-    let staker_info = state.staker_info.read(dummy_address);
+    let staker_info = state.staker_info.read(staker_address);
     assert!(staker_info.is_none());
-    assert_eq!(state.pool_contract_class_hash.read(), pool_contract_class_hash);
-    assert_eq!(state.reward_supplier_dispatcher.read().contract_address, reward_supplier);
-    assert_eq!(state.pool_contract_admin.read(), pool_contract_admin);
+    assert_eq!(
+        state.pool_contract_class_hash.read(), cfg.staking_contract_info.pool_contract_class_hash
+    );
+    assert_eq!(
+        state.reward_supplier_dispatcher.read().contract_address,
+        cfg.staking_contract_info.reward_supplier
+    );
+    assert_eq!(state.pool_contract_admin.read(), cfg.test_info.pool_contract_admin);
 }
 
 #[test]
@@ -162,10 +153,7 @@ fn test_calculate_rewards() {
                 ..cfg.staker_info
             };
 
-    let token_address = deploy_mock_erc20_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address
-    );
-    let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
+    let mut state = initialize_staking_state_from_cfg(ref :cfg);
     let mut staker_info = cfg.staker_info;
     let interest = state.global_index.read() - staker_info.index;
     assert!(state.calculate_rewards(ref :staker_info));
@@ -192,12 +180,8 @@ fn test_calculate_rewards() {
 
 #[test]
 fn test_calculate_rewards_unstake_intent() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
-    );
-    let mut state = initialize_staking_state_from_cfg(:token_address, :cfg);
-
+    let mut cfg: StakingInitConfig = Default::default();
+    let mut state = initialize_staking_state_from_cfg(ref :cfg);
     let mut staker_info = StakerInfo { unstake_time: Option::Some(1), ..cfg.staker_info };
     assert!(!state.calculate_rewards(ref :staker_info));
 }
@@ -345,6 +329,7 @@ fn test_contract_parameters() {
         global_index: cfg.staking_contract_info.global_index,
         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
+        exit_wait_window: cfg.staking_contract_info.exit_wait_window
     };
     assert_eq!(staking_dispatcher.contract_parameters(), expected_staking_contract_info);
 }
@@ -685,7 +670,8 @@ fn test_unstake_intent() {
     let mut spy = snforge_std::spy_events();
     let unstake_time = staking_dispatcher.unstake_intent();
     let staker_info = staking_dispatcher.state_of(:staker_address);
-    let expected_time = get_block_timestamp() + EXIT_WAITING_WINDOW;
+    let expected_time = get_block_timestamp()
+        + staking_dispatcher.contract_parameters().exit_wait_window;
     assert_eq!((staker_info.unstake_time).unwrap(), unstake_time);
     assert_eq!(unstake_time, expected_time);
     assert_eq!(staking_dispatcher.get_total_stake(), Zero::zero());
@@ -907,6 +893,7 @@ fn test_remove_from_delegation_pool_action() {
     // Stake and enter delegation pool.
     let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
     // Remove from delegation pool intent, and then check that the intent was added correctly.
@@ -919,7 +906,8 @@ fn test_remove_from_delegation_pool_action() {
         );
     // Remove from delegation pool action, and then check that the intent was removed correctly.
     start_cheat_block_timestamp_global(
-        block_timestamp: get_block_timestamp() + EXIT_WAITING_WINDOW
+        block_timestamp: get_block_timestamp()
+            + staking_dispatcher.contract_parameters().exit_wait_window
     );
     let pool_balance_before_action = erc20_dispatcher.balance_of(pooling_contract);
 
@@ -1484,4 +1472,36 @@ fn test_stake_when_paused() {
 // TODO: test pause and unpause events
 // TODO: test all functions that should panic when paused
 
+#[test]
+fn test_set_min_stake() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let old_min_stake = cfg.staking_contract_info.min_stake;
+    assert_eq!(old_min_stake, staking_dispatcher.contract_parameters().min_stake);
+    let new_min_stake = old_min_stake / 2;
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governer
+    );
+    staking_config_dispatcher.set_min_stake(min_stake: new_min_stake);
+    assert_eq!(new_min_stake, staking_dispatcher.contract_parameters().min_stake);
+}
 
+#[test]
+fn test_set_exit_waiting_window() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let old_exit_wait_window = cfg.staking_contract_info.exit_wait_window;
+    assert_eq!(old_exit_wait_window, staking_dispatcher.contract_parameters().exit_wait_window);
+    let new_exit_wait_window = SECONDS_IN_DAY * 7;
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governer
+    );
+    staking_config_dispatcher.set_exit_wait_window(exit_wait_window: new_exit_wait_window);
+    assert_eq!(new_exit_wait_window, staking_dispatcher.contract_parameters().exit_wait_window);
+}
