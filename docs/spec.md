@@ -38,12 +38,13 @@
     - [Staker Reward Address Changed](#staker-reward-address-changed)
     - [Operational Address Changed](#operational-address-changed)
     - [Commission Changed](#commission-changed)
+    - [Global Index Updated](#global-index-updated)
 - [Delegation pooling contract](#delegation-pooling-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
     - [add\_to\_delegation\_pool](#add_to_delegation_pool)
     - [exit\_delegation\_pool\_intent](#exit_delegation_pool_intent)
-    - [exit\_delegaition\_pool\_action](#exit_delegaition_pool_action)
+    - [exit\_delegation\_pool\_action](#exit_delegation_pool_action)
     - [claim\_rewards](#claim_rewards-1)
     - [switch\_delegation\_pool](#switch_delegation_pool)
     - [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract)
@@ -56,6 +57,7 @@
     - [Pool Member Exit Intent](#pool-member-exit-intent)
     - [Final Index Set](#final-index-set)
     - [New Pool Member](#new-pool-member)
+    - [Delete Pool Member](#delete-pool-member)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -831,6 +833,14 @@ Only staker address.
 | new_commission | u16     | ❌    |
 | old_commission | u16     | ❌    |
 
+### Global Index Updated
+| data                                  | type | keyed |
+| ------------------------------------- | ---- | ----- |
+| old_index                             | u64  | ❌    |
+| new_index                             | u64  | ❌    |
+| global_index_last_update_timestamp    | u64  | ❌    |
+| global_index_current_update_timestamp | u64  | ❌    |
+
 # Delegation pooling contract
 
 ## Functions
@@ -935,29 +945,34 @@ Only the pool member address for which the operation is requested for.
 3. If `amount` is zero, remove request for intent (if exist).
 4. If `amount` is not zero, set exit window timeout.
 
-### exit_delegaition_pool_action
+### exit_delegation_pool_action
+```rust
+fn exit_delegation_pool_action(
+    ref self: ContractState, 
+    pool_member: ContractAddress
+) -> u128
+```
 #### description <!-- omit from toc -->
 Executes the intent to exit the stake if enough time have passed. Transfers the funds back to the pool member.
-#### parameters <!-- omit from toc -->
-| name        | type    |
-| ----------- | ------- |
-| pool_member | address |
-#### return <!-- omit from toc -->
-amount: u128 - amount of tokens transferred back to the pool member.
+Return the amount of tokens transferred back to the pool member.
 #### emits <!-- omit from toc -->
-[Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
-[Stake Balance Changed](#stake-balance-changed)
+1. [Pool Member Reward Claimed](#pool-member-reward-claimed)
+2. [Delete Pool Member](#delete-pool-member)
 #### errors <!-- omit from toc -->
+1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+2. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
+3. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
+4. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+5. [ONLY\_OPERATOR](#only_operator)
 #### pre-condition <!-- omit from toc -->
 1. Pool member exist and requested to unstake.
 2. Enough time have passed from the delegation pool exit intent call.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
-1. Validate enough time have passed from the exit intent.
-2. [claim rewards](#claim_rewards--1).
-3. [Remove from delegation pool action](#remove_from_delegation_pool_action).
-4. Transfer funds to pool member.
+1. [Remove from delegation pool action](#remove_from_delegation_pool_action).
+2. Transfer rewards to pool member.
+3. Transfer funds to pool member.
 
 
 ### claim_rewards
@@ -1125,6 +1140,18 @@ success: bool
 | reward_address | address | ❌    |
 | amount         | u128    | ❌    |
 
+### Delete Pool Member
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| pool_member    | address | ✅    |
+| reward_address | address | ❌    |
+
+### Pool Member Reward Claimed
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| pool_member    | address |   ✅  |
+| reward_address | address |   ✅  |
+| amount         | u128    |   ❌  |
 # Errors
 ### STAKER_EXISTS
 "Staker already exists, use increase_stake instead."
