@@ -86,6 +86,7 @@
     - [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
     - [UNDELEGATE\_IN\_PROGRESS](#undelegate_in_progress)
     - [CALLER\_CANNOT\_ADD\_TO\_POOL](#caller_cannot_add_to_pool)
+    - [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -976,17 +977,25 @@ Any address can execute.
 
 
 ### claim_rewards
+```rust
+fn claim_rewards(
+  ref self: ContractState, 
+  pool_member: ContractAddress
+) -> u128
+```
 #### description <!-- omit from toc -->
 Calculate rewards and transfer them to the reward address.
-#### parameters <!-- omit from toc -->
-| name        | type    |
-| ----------- | ------- |
-| pool_member | address |
-#### return <!-- omit from toc -->
-amount: u128 - amount of tokens transferred to the reward address.
+Return the amount transferred to the reward address.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+2. [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
+3. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+4. [ONLY\_OPERATOR](#only_operator)
+5. [UNEXPECTED\_BALANCE](#unexpected_balance)
+6. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
+1. `pool_member` is listed in the contract.
 #### access control <!-- omit from toc -->
 Only pool member address or reward address can execute.
 #### logic <!-- omit from toc -->
@@ -1233,6 +1242,9 @@ success: bool
 
 ### CALLER_CANNOT_ADD_TO_POOL
 "Caller address should be pool member address or reward address."
+
+### POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
+"Claim rewards must be called from pool member address or reward address."
 
 # Structs
 ### StakerPoolInfo
