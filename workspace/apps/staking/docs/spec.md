@@ -1118,29 +1118,25 @@ Only staking contract can execute.
 1. Set staker final index to the provided index.
 
 ### calculate_rewards
+```rust
+fn calculate_rewards(
+    ref self: ContractState, 
+    ref pool_member_info: PoolMemberInfo, 
+    updated_index: u64
+) -> bool
+```
 >**note:** internal logic
 #### description <!-- omit from toc -->
 Calculate rewards, add amount to unclaimed_rewards, update index.
-Assumes this function call is after an one of the interactions with the staking contract:
-1. [add to delegation pool](#add_to_delegation_pool)
-2. [claim delegation pool rewards](#claim_delegation_pool_rewards)
-3. [exit delegation pool intent](#exit_delegation_pool_intent)
-that perform rewards calculation and index update on the staker and returns the updated index.
-#### parameters <!-- omit from toc -->
-| name  | type |
-| ----- | ---- |
-| index | u64  |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 internal function.
 #### logic <!-- omit from toc -->
-1. Calculate rewards for pool member (caller).
-2. Update `unclaimed_rewards`.
-3. Update index.
+1. Update index.
+2. Calculate rewards for `pool_member_info`.
+3. Update `unclaimed_rewards`.
 
 ### update_commission
 #### description <!-- omit from toc -->
