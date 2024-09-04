@@ -10,6 +10,7 @@
   - [Rewards claim flow diagram](#rewards-claim-flow-diagram)
   - [Delegation pool switching flow diagram](#delegation-pool-switching-flow-diagram)
   - [L1 Mint \& transfer flow diagram](#l1-mint--transfer-flow-diagram)
+  - [L2 Rewards calculation and minting request flow diagram](#l2-rewards-calculation-and-minting-request-flow-diagram)
 - [Staking contract](#staking-contract)
   - [Functions](#functions)
     - [stake](#stake)
@@ -322,6 +323,23 @@ sequenceDiagram
   MintingManager ->>- STRK ERC20: mint
   RewardSupplier ->>+ StarkGate bridge: depositWithMessage
   deactivate RewardSupplier
+```
+
+## L2 Rewards calculation and minting request flow diagram
+```mermaid
+sequenceDiagram
+  actor caller
+  participant Staking
+  participant RewardSupplier
+  participant MintingCurve
+  participant L1
+  caller ->>+ Staking: update_global_index
+  Staking ->>+ RewardSupplier: calculate_staking_rewards
+  RewardSupplier ->>+ MintingCurve: yearly_mint
+  MintingCurve ->> Staking: get_total_stake
+  MintingCurve -->>- RewardSupplier: return yearly amount
+  RewardSupplier ->>- L1: send mint request
+  deactivate Staking
 ```
 
 
@@ -1476,20 +1494,20 @@ Only staking contract.
 | reward_supplier          | address   |
 
 ### PoolMemberInfo
-| name                     | type        |
-| ------------------------ | ----------- |
-| reward_address           | address     |
-| amount                   | u128        |
-| index                    | u64         |
-| unclaimed_rewards        | u128        |
-| unpool_amount            | u128        |
-| unpool_time              | Option<u64> |
+| name              | type        |
+| ----------------- | ----------- |
+| reward_address    | address     |
+| amount            | u128        |
+| index             | u64         |
+| unclaimed_rewards | u128        |
+| unpool_amount     | u128        |
+| unpool_time       | Option<u64> |
 
 ### PoolingContractInfo
-| name                     | type        |
-| ------------------------ | ----------- |
-| staker_address           | address     |
-| final_staker_index       | Option<u64> |
-| staking_contract         | address     |
-| token_address            | address     |
-| commission               | u16         |
+| name               | type        |
+| ------------------ | ----------- |
+| staker_address     | address     |
+| final_staker_index | Option<u64> |
+| staking_contract   | address     |
+| token_address      | address     |
+| commission         | u16         |
