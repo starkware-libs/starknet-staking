@@ -487,7 +487,7 @@ pub(crate) fn load_from_simple_map<K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V
         target: contract, :storage_address, size: Store::<V>::size().into()
     );
     let mut span = serialized_value.span();
-    Serde::<V>::deserialize(ref span).expect('Failed deserialization')
+    Serde::<V>::deserialize(ref span).expect('Failed deserialize')
 }
 
 // This only works for shallow Option. i.e. if within V there is an Option, this will fail.
