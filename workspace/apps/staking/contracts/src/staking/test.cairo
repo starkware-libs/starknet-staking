@@ -715,9 +715,7 @@ fn test_unstake_intent_staker_doesnt_exist() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    println!("before staking");
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    println!("staking done");
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     set_account_as_operator(

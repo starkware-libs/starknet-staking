@@ -1,4 +1,5 @@
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
+use contracts::operator::Operator::MAX_WHITELIST_SIZE;
 
 #[derive(Drop)]
 pub enum Error {
@@ -17,6 +18,9 @@ pub enum Error {
     AMOUNT_TOO_HIGH,
     AMOUNT_IS_ZERO,
     CANNOT_INCREASE_COMMISSION,
+    // Operator contract errors
+    NOT_WHITELISTED,
+    WHITELIST_FULL,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     COMMISSION_OUT_OF_RANGE,
@@ -61,6 +65,10 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::STAKER_NOT_EXISTS => panic!("Staker does not exist."),
         Error::CALLER_CANNOT_INCREASE_STAKE => panic!(
             "Caller address should be staker address or reward address."
+        ),
+        Error::NOT_WHITELISTED => panic!("Caller is not in whitelist."),
+        Error::WHITELIST_FULL => panic!(
+            "Whitelist is limited to {} addresses.", MAX_WHITELIST_SIZE
         ),
         Error::INVALID_REWARD_ADDRESS => panic!("Invalid reward address."),
         Error::AMOUNT_TOO_HIGH => panic!("Amount is too high."),
