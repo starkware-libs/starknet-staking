@@ -3,7 +3,8 @@
     <summary><strong style="font-size: 1.5em;">Table of contents</strong></summary>
 
 - [Diagrams](#diagrams)
-  - [Contracts block diagram](#contracts-block-diagram)
+  - [L2 Contracts block diagram](#l2-contracts-block-diagram)
+  - [L1 Contracts block diagram](#l1-contracts-block-diagram)
   - [Enter protocol flow diagram](#enter-protocol-flow-diagram)
   - [Exit protocol flow diagram](#exit-protocol-flow-diagram)
   - [Rewards claim flow diagram](#rewards-claim-flow-diagram)
@@ -59,11 +60,6 @@
     - [New Pool Member](#new-pool-member)
     - [Delete Pool Member](#delete-pool-member)
     - [Pool Member Reward Claimed](#pool-member-reward-claimed)
-- [L2 Reward supplier contract](#l2-reward-supplier-contract)
-  - [Functions](#functions-2)
-    - [calculate\_staking\_rewards](#calculate_staking_rewards)
-  - [Events](#events-2)
-    - [Mint Request](#mint-request)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -116,7 +112,7 @@ function info template:
 #### logic
 -->
 # Diagrams
-## Contracts block diagram
+## L2 Contracts block diagram
 ```mermaid
 classDiagram
   class StakingContract{
@@ -197,8 +193,22 @@ classDiagram
   }
   StakingContract o-- StakerInfo
   DelegationPoolingContract o-- PoolMemberInfo
-  StakingContract o-- RewardSupplier
-  RewardSupplier o-- MintingCurve
+```
+
+## L1 Contracts block diagram
+```mermaid
+classDiagram
+  class RewardSupplier {
+    tick()
+  }
+  class MintManager {
+    mintRequest()
+    allowance()
+    approve()
+    increaseAllowance()
+    decreaseAllowance()
+    stopAllowance()
+  }
 ```
 
 ## Enter protocol flow diagram
@@ -1211,38 +1221,6 @@ Only staking contract can execute.
 | pool_member    | address | ✅     |
 | reward_address | address | ✅     |
 | amount         | u128    | ❌     |
-
-# L2 Reward supplier contract
-
-## Functions
-### calculate_staking_rewards
-```rust
-fn calculate_staking_rewards(ref self: TContractState) -> u128
-```
-#### description <!-- omit from toc -->
-Calculate the total amount of rewards owed to the stakers (based on total stake), since the previous
-time it was calculated.
-#### return <!-- omit from toc -->
-rewards: u128 - the rewards owed to stakers, in FRI.
-#### emits <!-- omit from toc -->
-[Mint Request](#mint-request)
-#### errors <!-- omit from toc -->
-#### logic <!-- omit from toc -->
-1. Invoke the Minting Curve's [yearly_mint](#yearly-mint) to receive the theoretic yearly amount of rewards.
-2. From the theoretic yearly amount, deduce the rewards from the last timestamp.
-3. Request funds from L1 if needed.
-
-#### access control <!-- omit from toc -->
-Only staking contract.
-
-## Events
-### Mint Request
-| data         | type | keyed |
-| ------------ | ---- | ----- |
-| total_amount | u128 | ❌     |
-| num_msgs     | u128 | ❌     |
-
-
 # Errors
 ### STAKER_EXISTS
 "Staker already exists, use increase_stake instead."
