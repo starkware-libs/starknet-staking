@@ -281,7 +281,6 @@ pub mod Pooling {
             };
             let mut serialized_data = array![];
             switch_pool_data.serialize(ref output: serialized_data);
-            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             pool_member_info.unpool_amount -= amount;
             if pool_member_info.unpool_amount.is_zero() && pool_member_info.amount.is_zero() {
                 // Claim rewards.
@@ -300,7 +299,9 @@ pub mod Pooling {
                 self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             }
             // TODO: emit event
-            staking_pool_dispatcher
+            self
+                .staking_pool_dispatcher
+                .read()
                 .switch_staking_delegation_pool(
                     :to_staker,
                     :to_pool,
