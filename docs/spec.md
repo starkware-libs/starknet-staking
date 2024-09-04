@@ -31,7 +31,7 @@
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
-    - [Staker Exit intent](#staker-exit-intent)
+    - [Staker Exit Intent](#staker-exit-intent)
     - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
     - [Delete Staker](#delete-staker)
     - [Staker Reward Claimed](#staker-reward-claimed)
@@ -273,7 +273,7 @@ fn stake(
 #### description <!-- omit from toc -->
 Add a new staker to the stake.
 #### emits <!-- omit from toc -->
-1. [New Delegation Pool](#new-delegation-pool) - if pooling_enabled is true
+1. [New Delegation Pool](#new-delegation-pool) - if `pooling_enabled` is true
 2. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)

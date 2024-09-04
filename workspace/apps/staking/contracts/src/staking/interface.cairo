@@ -167,7 +167,6 @@ pub trait IStaking<TContractState> {
     fn set_open_for_delegation(ref self: TContractState, commission: u16) -> ContractAddress;
     fn state_of(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
-
     fn get_total_stake(self: @TContractState) -> u128;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
     fn change_operational_address(
