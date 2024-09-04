@@ -1004,27 +1004,41 @@ Only pool member address or reward address can execute.
 3. Set unclaimed_rewards = 0.
 
 ### switch_delegation_pool
+```rust
+fn switch_delegation_pool(
+    ref self: ContractState,
+    to_staker: ContractAddress,
+    to_pool: ContractAddress,
+    amount: u128
+) -> u128
+```
 #### description <!-- omit from toc -->
 Request the staking contract to move a pool member to another pool contract.
-#### parameters <!-- omit from toc -->
-| name      | type    |
-| --------- | ------- |
-| to_staker | address |
-| to_pool   | address |
-| amount    | u128    |
-#### return <!-- omit from toc -->
-amount: u128 - amount left in exit window for the pool member in this pool.
+Return the amount left in exit window for the pool member in this pool.
 #### emits <!-- omit from toc -->
-[Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
+1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
+2. If pool member amount and intent amount are zero: [Delete Pool Member](#delete-pool-member)
 #### errors <!-- omit from toc -->
+1. [AMOUNT\_IS\_ZERO](#amount_is_zero)
+2. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+3. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
+4. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+5. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+6. [ONLY\_OPERATOR](#only_operator)
+7. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+8. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
 #### pre-condition <!-- omit from toc -->
-1. pool member (caller) is in exit window.
-2. pool member's amount is greater or equal to the amount requested.
+1. `amount` is not zero.
+2. Pool member (caller) is in exit window.
+3. Pool member's amount is greater or equal to the amount requested.
+4. `to_staker` exist in the staking contract and is not in an exit window.
+5. `to_pool` is the delegation pool contract for `to_staker`.
 #### access control <!-- omit from toc -->
-Only pool member can call.
+Only pool member can execute.
 #### logic <!-- omit from toc -->
 1. Compose and serialize data: pool member address and reward address.
-2. Call staking contract's [switch delegation pool](#switch_staking_delegation_pool).
+2. If pool member amount and intent amount are zero, transfer rewards to pool member and remove him from the pool. 
+3. Call staking contract's [switch delegation pool](#switch_staking_delegation_pool).
 
 ### enter_delegation_pool_from_staking_contract
 #### description <!-- omit from toc -->
