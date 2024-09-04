@@ -471,7 +471,7 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
 
 /// *****WARNING*****
 /// This function only works on simple data types or structs that have no special implementations
-/// for Hash, Store, or Serde traits. And won't work on any standard enum.
+/// for Hash, Store, or Serde traits. It also won't work on any standard enum.
 /// This statement applies to both key and value.
 /// The trait used to serialize and deserialize the key for the address calculation is Hash trait.
 /// The trait used to serialize and deserialize the value for the storage is Store trait.
