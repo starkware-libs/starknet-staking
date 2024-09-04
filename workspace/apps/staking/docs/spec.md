@@ -51,6 +51,9 @@
     - [switch\_delegation\_pool](#switch_delegation_pool)
     - [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract)
     - [set\_final\_staker\_index](#set_final_staker_index)
+    - [change\_reward\_address](#change_reward_address-1)
+    - [state\_of](#state_of-1)
+    - [contract\_parameters](#contract_parameters-1)
     - [calculate\_rewards](#calculate_rewards-1)
     - [update\_commission](#update_commission-1)
   - [Events](#events-1)
@@ -61,6 +64,7 @@
     - [New Pool Member](#new-pool-member)
     - [Delete Pool Member](#delete-pool-member)
     - [Pool Member Reward Claimed](#pool-member-reward-claimed)
+    - [Pool Member Reward Address Changed](#pool-member-reward-address-changed)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -96,6 +100,8 @@
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
     - [StakingContractInfo](#stakingcontractinfo)
+    - [PoolMemberInfo](#poolmemberinfo)
+    - [PoolingContractInfo](#poolingcontractinfo)
 
 </details>
 
@@ -147,8 +153,11 @@ classDiagram
     exit_delegation_pool_intent()
     exit_delegation_pool_action()
     claim_rewards()
+    change_reward_address()
+    state_of()
+    contract_parameters()
     switch_delegation_pool()
-    enter_from_stakin_contract()
+    enter_from_staking_contract()
     calculate_rewards()
   }
   class StakerInfo{
@@ -1149,6 +1158,57 @@ Only staking contract can execute.
 #### logic <!-- omit from toc -->
 1. Set staker final index to the provided index.
 
+### change_reward_address
+```rust
+fn change_reward_address(
+  ref self: ContractState, 
+  reward_address: ContractAddress
+) -> bool
+```
+#### description <!-- omit from toc -->
+Change the reward address for a pool member.
+#### emits <!-- omit from toc -->
+1. [Pool Member Reward Address Changed](#pool-member-reward-address-changed)
+#### errors <!-- omit from toc -->
+1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+#### pre-condition <!-- omit from toc -->
+1. Pool member exist in the contract.
+#### access control <!-- omit from toc -->
+Only pool member can execute.
+#### logic <!-- omit from toc -->
+1. Change registered `reward_address` for the pool member.
+
+### state_of
+```rust
+fn state_of(
+  self: @ContractState, 
+  pool_member: ContractAddress
+) -> PoolMemberInfo
+```
+#### description <!-- omit from toc -->
+Return [PoolMemberInfo](#poolmemberinfo) of the given pool member.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+#### pre-condition <!-- omit from toc -->
+1. Pool member exist in the contract.
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Return Pool member info.
+
+### contract_parameters
+```rust
+fn contract_parameters(self: @ContractState) -> StakingContractInfo
+```
+#### description <!-- omit from toc -->
+Return [PoolingContractInfo](#poolingcontractinfo) of the contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+
 ### calculate_rewards
 ```rust
 fn calculate_rewards(
@@ -1237,6 +1297,14 @@ Only staking contract can execute.
 | pool_member    | address | ✅     |
 | reward_address | address | ✅     |
 | amount         | u128    | ❌     |
+
+### Pool Member Reward Address Changed
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| pool_member    | address | ✅     |
+| new_address    | address | ❌     |
+| old_address    | address | ❌     |
+
 # Errors
 ### STAKER_EXISTS
 "Staker already exists, use increase_stake instead."
@@ -1356,3 +1424,22 @@ Only staking contract can execute.
 | global_index             | u64       |
 | pool_contract_class_hash | ClassHash |
 | reward_supplier          | address   |
+
+### PoolMemberInfo
+| name                     | type        |
+| ------------------------ | ----------- |
+| reward_address           | address     |
+| amount                   | u128        |
+| index                    | u64         |
+| unclaimed_rewards        | u128        |
+| unpool_amount            | u128        |
+| unpool_time              | Option<u64> |
+
+### PoolingContractInfo
+| name                     | type        |
+| ------------------------ | ----------- |
+| staker_address           | address     |
+| final_staker_index       | Option<u64> |
+| staking_contract         | address     |
+| token_address            | address     |
+| commission               | u16         |
