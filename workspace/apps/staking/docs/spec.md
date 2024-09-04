@@ -9,6 +9,7 @@
   - [Exit protocol flow diagram](#exit-protocol-flow-diagram)
   - [Rewards claim flow diagram](#rewards-claim-flow-diagram)
   - [Delegation pool switching flow diagram](#delegation-pool-switching-flow-diagram)
+  - [L1 Mint \& transfer flow diagram](#l1-mint--transfer-flow-diagram)
 - [Staking contract](#staking-contract)
   - [Functions](#functions)
     - [stake](#stake)
@@ -295,6 +296,21 @@ sequenceDiagram
     StakingContract ->> DelegationPoolingContract B: enter_delegation_pool_from_staking_contract
     deactivate DelegationPoolingContract A
   end
+```
+
+## L1 Mint & transfer flow diagram
+```mermaid
+sequenceDiagram
+  actor anyAccount
+  participant RewardSupplier
+  participant MintingManager
+  participant STRK ERC20
+  participant StarkGate bridge
+  anyAccount ->>+ RewardSupplier: tick(tokensPerMintAmount, maxMessagesToProcess)
+  RewardSupplier ->>+ MintingManager: mintRequest(totalAmountToMint)
+  MintingManager ->>- STRK ERC20: mint
+  RewardSupplier ->>+ StarkGate bridge: depositWithMessage
+  deactivate RewardSupplier
 ```
 
 
