@@ -87,6 +87,8 @@
     - [UNDELEGATE\_IN\_PROGRESS](#undelegate_in_progress)
     - [CALLER\_CANNOT\_ADD\_TO\_POOL](#caller_cannot_add_to_pool)
     - [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
+    - [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+    - [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -1041,31 +1043,34 @@ Only pool member can execute.
 3. Call staking contract's [switch delegation pool](#switch_staking_delegation_pool).
 
 ### enter_delegation_pool_from_staking_contract
+```rust
+fn enter_delegation_pool_from_staking_contract(
+    ref self: ContractState, 
+    amount: u128, 
+    index: u64, 
+    data: Span<felt252>
+) -> bool
+```
 #### description <!-- omit from toc -->
 Entry point for staking contract to inform pool of a pool member being moved from another pool to this one.
 No funds need to be transferred since staking contract holds the pool funds.
-#### parameters <!-- omit from toc -->
-| name   | type          |
-| ------ | ------------- |
-| amount | u128          |
-| index  | u64           |
-| data   | Span<felt252> |
-#### return <!-- omit from toc -->
-success: bool
 #### emits <!-- omit from toc -->
-[Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
+1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
+1. [AMOUNT\_IS\_ZERO](#amount_is_zero)
+2. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+3. [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
 #### pre-condition <!-- omit from toc -->
+1. `amount` is not zero.
+2. `pool_member` is not in an exit window.
 #### access control <!-- omit from toc -->
-Only staking contract can call.
+Only staking contract can execute.
 #### logic <!-- omit from toc -->
-1. Check that staker for this pool instance is not in exit window.
-2. Deserialize data, get pool_member and rewrad addresses.
-3. If pool member is listed in the contract:
-   1. validate that pool member is not in exit window.
-   2. [Calculate rewards](#calculate_rewards-1)
-   3. Update pool member entry
-4. Else
+1. Deserialize data, get `pool_member` and `rewrad_address`.
+2. If pool member is listed in the contract:
+   1. [Calculate rewards](#calculate_rewards-1)
+   2. Update pool member entry
+3. Else
    1. Create an entry for the pool member.
 
 ### set_final_staker_index
@@ -1259,6 +1264,12 @@ success: bool
 
 ### POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
 "Claim rewards must be called from pool member address or reward address."
+
+### CALLER_IS_NOT_STAKING_CONTRACT
+"Caller is not staking contract."
+
+### SWITCH_POOL_DATA_DESERIALIZATION_FAILED
+"Switch pool data deserialization failed."
 
 # Structs
 ### StakerPoolInfo
