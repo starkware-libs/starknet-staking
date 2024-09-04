@@ -140,9 +140,8 @@ pub mod Staking {
             self.assert_is_unpaused();
             self.roles.only_operator();
             self.update_global_index_if_needed();
-            // TODO: consider calling get_execution_info()
-            // and pass it to the role test for better performance
-            // (remove the additional syscall for get_caller_address()).
+            // TODO: consider calling get_execution_info() and pass it to the role test for better
+            // performance (remove the additional syscall for get_caller_address()).
             let staker_address = get_tx_info().account_contract_address;
             assert_with_err(self.staker_info.read(staker_address).is_none(), Error::STAKER_EXISTS);
             assert_with_err(
