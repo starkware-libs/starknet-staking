@@ -1,21 +1,19 @@
 #[starknet::component]
 pub mod RolesComponent {
     use core::num::traits::Zero;
-
-    use contracts_commons::components::roles::interface::{
-        RoleId, IRoles, APP_GOVERNOR, APP_ROLE_ADMIN, GOVERNANCE_ADMIN, OPERATOR, SECURITY_ADMIN,
-        SECURITY_AGENT, TOKEN_ADMIN, UPGRADE_GOVERNOR, AppGovernorAdded, AppGovernorRemoved,
-        AppRoleAdminAdded, AppRoleAdminRemoved, GovernanceAdminAdded, GovernanceAdminRemoved,
-        OperatorAdded, OperatorRemoved, SecurityAdminAdded, SecurityAdminRemoved,
-        SecurityAgentAdded, SecurityAgentRemoved, TokenAdminAdded, TokenAdminRemoved,
-        UpgradeGovernorAdded, UpgradeGovernorRemoved,
-    };
-    use starknet::{ContractAddress, get_caller_address,};
-    use contracts_commons::errors::AccessErrors::{
-        GOV_ADMIN_CANNOT_RENOUNCE, ZERO_ADDRESS, ALREADY_INITIALIZED, ONLY_APP_GOVERNOR,
-        ONLY_OPERATOR, ONLY_TOKEN_ADMIN, ONLY_UPGRADE_GOVERNOR, ONLY_SECURITY_ADMIN,
-        ONLY_SECURITY_AGENT,
-    };
+    use contracts_commons::components::roles::interface as RolesInterface;
+    use RolesInterface::{RoleId, IRoles, APP_GOVERNOR, APP_ROLE_ADMIN, GOVERNANCE_ADMIN, OPERATOR};
+    use RolesInterface::{SECURITY_ADMIN, SECURITY_AGENT, TOKEN_ADMIN, UPGRADE_GOVERNOR};
+    use RolesInterface::{AppGovernorAdded, AppGovernorRemoved, AppRoleAdminAdded};
+    use RolesInterface::{AppRoleAdminRemoved, GovernanceAdminAdded, GovernanceAdminRemoved};
+    use RolesInterface::{OperatorAdded, OperatorRemoved, SecurityAdminAdded, SecurityAdminRemoved};
+    use RolesInterface::{SecurityAgentAdded, SecurityAgentRemoved, TokenAdminAdded};
+    use RolesInterface::{TokenAdminRemoved, UpgradeGovernorAdded, UpgradeGovernorRemoved};
+    use starknet::{ContractAddress, get_caller_address};
+    use contracts_commons::errors::AccessErrors;
+    use AccessErrors::{GOV_ADMIN_CANNOT_RENOUNCE, ZERO_ADDRESS, ALREADY_INITIALIZED};
+    use AccessErrors::{ONLY_APP_GOVERNOR, ONLY_OPERATOR, ONLY_TOKEN_ADMIN};
+    use AccessErrors::{ONLY_UPGRADE_GOVERNOR, ONLY_SECURITY_ADMIN, ONLY_SECURITY_AGENT};
 
     #[storage]
     struct Storage {}

@@ -8,8 +8,8 @@ pub mod MintingCurve {
     use starknet::{ContractAddress};
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
+    use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use contracts_commons::components::roles::interface::{APP_GOVERNOR, GOVERNANCE_ADMIN};
     use contracts::constants::{DEFAULT_C_NOM, C_DENOM};

@@ -1,26 +1,23 @@
 use core::option::OptionTrait;
-use contracts::reward_supplier::interface::{
-    IRewardSupplier, RewardSupplierStatus, IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait
-};
+use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierStatus};
+use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
+use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
 use starknet::get_block_timestamp;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use contracts::test_utils::{
-    deploy_mock_erc20_contract, StakingInitConfig, deploy_staking_contract,
-    stake_for_testing_using_dispatcher, initialize_reward_supplier_state_from_cfg,
-    deploy_minting_curve_contract, fund, general_contract_system_deployment
-};
+use contracts::test_utils;
+use test_utils::{deploy_mock_erc20_contract, StakingInitConfig, deploy_staking_contract};
+use test_utils::{stake_for_testing_using_dispatcher, initialize_reward_supplier_state_from_cfg};
+use test_utils::{deploy_minting_curve_contract, fund, general_contract_system_deployment};
 use contracts::reward_supplier::RewardSupplier::SECONDS_IN_YEAR;
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
-use core::num::traits::Zero;
-use core::num::traits::Sqrt;
+use core::num::traits::{Zero, Sqrt};
 use contracts_commons::test_utils::{cheat_caller_address_once};
 use contracts::utils::{ceil_of_division, compute_threshold};
 use contracts::event_test_utils::assert_calculated_rewards_event;
-use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event,};
+use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use snforge_std::cheatcodes::message_to_l1::{
-    spy_messages_to_l1, MessageToL1, MessageToL1SpyAssertionsTrait
-};
+use snforge_std::cheatcodes::message_to_l1::{spy_messages_to_l1, MessageToL1};
+use snforge_std::cheatcodes::message_to_l1::MessageToL1SpyAssertionsTrait;
 use contracts::constants::STRK_IN_FRIS;
 
 #[test]

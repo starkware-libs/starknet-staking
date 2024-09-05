@@ -1,55 +1,44 @@
 use core::option::OptionTrait;
-use contracts::{
-    constants::{BASE_VALUE, SECONDS_IN_DAY},
-    staking::{StakerInfo, StakerInfoTrait, StakerPoolInfo, Staking::InternalStakingFunctionsTrait},
-    utils::{
-        compute_rewards_rounded_down, compute_rewards_rounded_up,
-        compute_commission_amount_rounded_down
-    },
-    test_utils::{
-        initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig, fund,
-        approve, deploy_staking_contract, stake_with_pool_enabled,
-        enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
-        load_from_simple_map, load_one_felt, stake_for_testing_using_dispatcher,
-        general_contract_system_deployment, cheat_reward_for_reward_supplier,
-        set_account_as_operator,
-        constants::{
-            DUMMY_ADDRESS, POOL_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS,
-            NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER,
-            OTHER_OPERATIONAL_ADDRESS
-        }
-    }
-};
-use contracts::event_test_utils::{
-    assert_number_of_events, assert_staker_exit_intent_event, assert_stake_balance_changed_event,
-    assert_delete_staker_event
-};
-use contracts::event_test_utils::assert_staker_reward_address_change_event;
-use contracts::event_test_utils::assert_new_delegation_pool_event;
-use contracts::event_test_utils::assert_change_operational_address_event;
-use contracts::event_test_utils::assert_new_staker_event;
-use contracts::event_test_utils::assert_global_index_updated_event;
-use contracts::event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
-use contracts::event_test_utils::assert_staker_reward_claimed_event;
+use contracts::constants::{BASE_VALUE, SECONDS_IN_DAY};
+use contracts::staking::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
+use contracts::staking::Staking::InternalStakingFunctionsTrait;
+use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
+use contracts::utils::compute_commission_amount_rounded_down;
+use contracts::test_utils;
+use test_utils::{initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig};
+use test_utils::{fund, approve, deploy_staking_contract, stake_with_pool_enabled};
+use test_utils::{enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map};
+use test_utils::{load_from_simple_map, load_one_felt, stake_for_testing_using_dispatcher};
+use test_utils::{general_contract_system_deployment, cheat_reward_for_reward_supplier};
+use test_utils::set_account_as_operator;
+use test_utils::constants;
+use constants::{DUMMY_ADDRESS, POOL_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS};
+use constants::{NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER};
+use constants::OTHER_OPERATIONAL_ADDRESS;
+use contracts::event_test_utils;
+use event_test_utils::{assert_number_of_events, assert_staker_exit_intent_event};
+use event_test_utils::{assert_stake_balance_changed_event, assert_delete_staker_event};
+use event_test_utils::assert_staker_reward_address_change_event;
+use event_test_utils::assert_new_delegation_pool_event;
+use event_test_utils::assert_change_operational_address_event;
+use event_test_utils::assert_new_staker_event;
+use event_test_utils::assert_global_index_updated_event;
+use event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
+use event_test_utils::assert_staker_reward_claimed_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::get_block_timestamp;
-use contracts::staking::objects::{
-    UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
-};
+use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+use contracts::staking::objects::UndelegateIntentValueZero;
 use contracts::staking::interface::{IStakingPoolDispatcher};
 use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPoolDispatcherTrait};
-use contracts::staking::interface::{
-    IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcherTrait
-};
+use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+use contracts::staking::interface::IStakingPauseDispatcherTrait;
 use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
 use contracts::staking::interface::StakingContractInfo;
-use snforge_std::{
-    cheat_caller_address, CheatSpan, start_cheat_block_timestamp_global,
-    cheat_account_contract_address
-};
-
+use snforge_std::{cheat_caller_address, CheatSpan, cheat_account_contract_address};
+use snforge_std::start_cheat_block_timestamp_global;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::pool::Pool::SwitchPoolData;
