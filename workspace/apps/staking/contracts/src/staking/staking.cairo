@@ -622,7 +622,7 @@ pub mod Staking {
             assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let mut to_staker_pool_info = to_staker_info.get_pool_info_unchecked();
             let to_staker_pool_contract = to_staker_pool_info.pool_contract;
-            assert_with_err(to_pool == to_staker_pool_contract, Error::MISSMATCHED_DELEGATION_POOL);
+            assert_with_err(to_pool == to_staker_pool_contract, Error::DELEGATION_POOL_MISMATCH);
 
             self.calculate_rewards(ref staker_info: to_staker_info);
             to_staker_pool_info.amount += switched_amount;

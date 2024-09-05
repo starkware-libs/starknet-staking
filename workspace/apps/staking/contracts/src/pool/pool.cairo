@@ -326,6 +326,10 @@ pub mod Pool {
             let pool_member = switch_pool_data.pool_member;
             let pool_member_info = match self.pool_member_info.read(pool_member) {
                 Option::Some(mut pool_member_info) => {
+                    assert_with_err(
+                        pool_member_info.reward_address == switch_pool_data.reward_address,
+                        Error::REWARD_ADDRESS_MISMATCH
+                    );
                     self.calculate_rewards(ref :pool_member_info, updated_index: index);
                     pool_member_info.amount += amount;
                     pool_member_info

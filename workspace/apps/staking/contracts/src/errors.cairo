@@ -30,7 +30,7 @@ pub enum Error {
     MISSING_UNSTAKE_INTENT,
     CALLER_IS_NOT_POOL_CONTRACT,
     MISSING_POOL_CONTRACT,
-    MISSMATCHED_DELEGATION_POOL,
+    DELEGATION_POOL_MISMATCH,
     GLOBAL_INDEX_DIFF_NOT_U64,
     GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW,
     UNEXPECTED_BALANCE,
@@ -47,6 +47,7 @@ pub enum Error {
     FINAL_STAKER_INDEX_ALREADY_SET,
     MISSING_UNDELEGATE_INTENT,
     CALLER_CANNOT_ADD_TO_POOL,
+    REWARD_ADDRESS_MISMATCH,
     // Minting contract errors
     TOTAL_SUPPLY_NOT_U128,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
@@ -109,12 +110,13 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::CALLER_CANNOT_ADD_TO_POOL => panic!(
             "Caller address should be pool member address or reward address."
         ),
+        Error::REWARD_ADDRESS_MISMATCH => panic!("Reward address mismatch."),
         Error::MISSING_POOL_CONTRACT => panic!("Staker does not have a pool contract."),
         Error::UNAUTHORIZED_MESSAGE_SENDER => panic!("Unauthorized message sender."),
         Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED => panic!(
             "Switch pool data deserialization failed."
         ),
-        Error::MISSMATCHED_DELEGATION_POOL => panic!(
+        Error::DELEGATION_POOL_MISMATCH => panic!(
             "to_pool is not the delegation pool contract for to_staker."
         ),
         Error::GLOBAL_INDEX_DIFF_NOT_U64 => panic!("Global index diff does not fit in u64."),
