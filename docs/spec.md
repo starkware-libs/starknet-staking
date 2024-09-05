@@ -40,7 +40,7 @@
     - [Staker Reward Address Changed](#staker-reward-address-changed)
     - [Operational Address Changed](#operational-address-changed)
     - [Global Index Updated](#global-index-updated)
-- [Delegation pooling contract](#delegation-pooling-contract)
+- [Delegation pool contract](#delegation-pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
     - [add\_to\_delegation\_pool](#add_to_delegation_pool)
@@ -111,7 +111,7 @@
     - [StakerInfo](#stakerinfo)
     - [StakingContractInfo](#stakingcontractinfo)
     - [PoolMemberInfo](#poolmemberinfo)
-    - [PoolingContractInfo](#poolingcontractinfo)
+    - [PoolContractInfo](#poolcontractinfo)
     - [RewardSupplierStatus](#rewardsupplierstatus)
 
 </details>
@@ -163,7 +163,7 @@ classDiagram
     get_total_stake()
 
   }
-  class DelegationPoolingContract{
+  class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
     staker_address
     final_staker_index
@@ -194,7 +194,7 @@ classDiagram
     option < StakerPoolInfo >
   }
   class StakerPoolInfo{
-    pooling_contract
+    pool_contract
     amount
     unclaimed_rewards
     commission
@@ -229,7 +229,7 @@ classDiagram
   }
   StakingContract o-- StakerInfo
   StakerInfo o-- StakerPoolInfo
-  DelegationPoolingContract o-- PoolMemberInfo
+  DelegationPoolContract o-- PoolMemberInfo
   StakingContract o-- RewardSupplier
   RewardSupplier o-- MintingCurve
 ```
@@ -255,21 +255,21 @@ classDiagram
 sequenceDiagram
   actor staker
   participant StakingContract
-  participant DelegationPoolingContract
+  participant DelegationPoolContract
   actor pool member
-  staker ->>+ StakingContract: stake<br/>(pooling enabled = true)
-  StakingContract -->> DelegationPoolingContract: deploy delegation pool contract
+  staker ->>+ StakingContract: stake<br/>(pool enabled = true)
+  StakingContract -->> DelegationPoolContract: deploy delegation pool contract
   par
     loop
       staker ->> StakingContract: increase_stake
     end
   and
     loop
-      pool member ->>+ DelegationPoolingContract: enter_delegation_pool
-      DelegationPoolingContract ->>- StakingContract: add_stake_from_pool
+      pool member ->>+ DelegationPoolContract: enter_delegation_pool
+      DelegationPoolContract ->>- StakingContract: add_stake_from_pool
       loop
-        pool member ->>+ DelegationPoolingContract: add_to_delegation_pool
-        DelegationPoolingContract ->>- StakingContract: add_stake_from_pool
+        pool member ->>+ DelegationPoolContract: add_to_delegation_pool
+        DelegationPoolContract ->>- StakingContract: add_stake_from_pool
       end
     end
   end
@@ -280,21 +280,21 @@ sequenceDiagram
 sequenceDiagram
   actor staker
   participant StakingContract
-  participant DelegationPoolingContract
+  participant DelegationPoolContract
   actor pool member
   opt Loop
-    pool member ->>+ DelegationPoolingContract: exit_delegation_pool_intent
-    DelegationPoolingContract ->>- StakingContract: remove_from_delegation_pool_intent
-    pool member ->>+ DelegationPoolingContract: exit_delegation_pool_action
-    DelegationPoolingContract ->>- StakingContract: remove_from_delegation_pool_action
+    pool member ->>+ DelegationPoolContract: exit_delegation_pool_intent
+    DelegationPoolContract ->>- StakingContract: remove_from_delegation_pool_intent
+    pool member ->>+ DelegationPoolContract: exit_delegation_pool_action
+    DelegationPoolContract ->>- StakingContract: remove_from_delegation_pool_action
   end
   staker ->> StakingContract: unstake_intent
   staker ->> StakingContract: unstake_action
   opt Loop
-    pool member ->>+ DelegationPoolingContract: exit_delegation_pool_intent
-    DelegationPoolingContract ->>- StakingContract: remove_from_delegation_pool_intent
-    pool member ->>+ DelegationPoolingContract: exit_delegation_pool_action
-    DelegationPoolingContract ->>- StakingContract: remove_from_delegation_pool_action
+    pool member ->>+ DelegationPoolContract: exit_delegation_pool_intent
+    DelegationPoolContract ->>- StakingContract: remove_from_delegation_pool_intent
+    pool member ->>+ DelegationPoolContract: exit_delegation_pool_action
+    DelegationPoolContract ->>- StakingContract: remove_from_delegation_pool_action
   end
 ```
 
@@ -304,7 +304,7 @@ sequenceDiagram
   actor staker
   participant RewardSupplier
   participant StakingContract
-  participant DelegationPoolingContract
+  participant DelegationPoolContract
   actor pool member
   Loop
     staker ->> StakingContract: claim_rewards
@@ -313,34 +313,34 @@ sequenceDiagram
     StakingContract -->> staker: Transfer
   end
   opt Loop
-    pool member ->>+ DelegationPoolingContract: claim_rewards
-    DelegationPoolingContract ->>+ StakingContract: claim_delegation_pool_rewards
+    pool member ->>+ DelegationPoolContract: claim_rewards
+    DelegationPoolContract ->>+ StakingContract: claim_delegation_pool_rewards
     StakingContract ->>+ RewardSupplier: claim_rewards
     RewardSupplier -->> StakingContract: Transfer
-    StakingContract -->> DelegationPoolingContract: Transfer
-    DelegationPoolingContract -->> pool member: Transfer
+    StakingContract -->> DelegationPoolContract: Transfer
+    DelegationPoolContract -->> pool member: Transfer
   end
 ```
 
 ## Delegation pool switching flow diagram
 ```mermaid
 sequenceDiagram
-  participant DelegationPoolingContract B
+  participant DelegationPoolContract B
   participant StakingContract
-  participant DelegationPoolingContract A
+  participant DelegationPoolContract A
   actor pool member
-  pool member ->>+ DelegationPoolingContract A: exit_delegation_pool_intent
-  DelegationPoolingContract A ->>- StakingContract: remove_from_delegation_pool_intent
-  pool member ->>+ DelegationPoolingContract A: switch_delegation_pool
-  DelegationPoolingContract A ->>+ StakingContract: switch_staking_delegation_pool
-  StakingContract ->>- DelegationPoolingContract B: enter_delegation_pool_from_staking_contract
-  deactivate DelegationPoolingContract A
+  pool member ->>+ DelegationPoolContract A: exit_delegation_pool_intent
+  DelegationPoolContract A ->>- StakingContract: remove_from_delegation_pool_intent
+  pool member ->>+ DelegationPoolContract A: switch_delegation_pool
+  DelegationPoolContract A ->>+ StakingContract: switch_staking_delegation_pool
+  StakingContract ->>- DelegationPoolContract B: enter_delegation_pool_from_staking_contract
+  deactivate DelegationPoolContract A
   loop 
     Note left of StakingContract:  optional for switching some<br/> of the funds but keeping the rest<br/> with the original stakeror splitting<br/> between multiple stakers
-    pool member ->>+ DelegationPoolingContract A: switch_delegation_pool
-    DelegationPoolingContract A ->> StakingContract: switch_staking_delegation_pool
-    StakingContract ->> DelegationPoolingContract B: enter_delegation_pool_from_staking_contract
-    deactivate DelegationPoolingContract A
+    pool member ->>+ DelegationPoolContract A: switch_delegation_pool
+    DelegationPoolContract A ->> StakingContract: switch_staking_delegation_pool
+    StakingContract ->> DelegationPoolContract B: enter_delegation_pool_from_staking_contract
+    deactivate DelegationPoolContract A
   end
 ```
 
@@ -386,14 +386,14 @@ fn stake(
   reward_address: ContractAddress,
   operational_address: ContractAddress,
   amount: u128,
-  pooling_enabled: bool,
+  pool_enabled: bool,
   commission: u16
 ) -> bool
 ```
 #### description <!-- omit from toc -->
 Add a new staker to the stake.
 #### emits <!-- omit from toc -->
-1. [New Delegation Pool](#new-delegation-pool) - if `pooling_enabled` is true
+1. [New Delegation Pool](#new-delegation-pool) - if `pool_enabled` is true
 2. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
@@ -418,7 +418,7 @@ Only staker address.
    1. Staker index = current global index.
    2. Unclaimed amount = 0.
    3. amount = given amount.
-4. If pooling enabled then deploy a pooling contract instance.
+4. If pool enabled then deploy a pool contract instance.
 
 ### increase_stake
 ```rust
@@ -576,7 +576,7 @@ index: u64 - updated index
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
 1. [Calculate rewards](#calculate_rewards)
-2. transfer funds from pooling contract to staking contract.
+2. transfer funds from pool contract to staking contract.
 3. Add amount to staker's pooled amount
 
 ### remove_from_delegation_pool_intent
@@ -924,7 +924,7 @@ Only staker address.
 | global_index_last_update_timestamp    | u64  | ❌     |
 | global_index_current_update_timestamp | u64  | ❌     |
 
-# Delegation pooling contract
+# Delegation pool contract
 
 ## Functions
 ### enter_delegation_pool
@@ -955,8 +955,8 @@ Add a new pool member to the delegation pool.
 #### access control <!-- omit from toc -->
 Only a non-listed pool member address.
 #### logic <!-- omit from toc -->
-1. Transfer funds from pool member to pooling contract.
-2. Approve transferal from pooling contract to staking contract.
+1. Transfer funds from pool member to pool contract.
+2. Approve transferal from pool contract to staking contract.
 3. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
 4. Get current index from staking contract.
 5. Create entry for pool member.
@@ -1218,7 +1218,7 @@ Any address can execute.
 fn contract_parameters(self: @ContractState) -> StakingContractInfo
 ```
 #### description <!-- omit from toc -->
-Return [PoolingContractInfo](#poolingcontractinfo) of the contract.
+Return [PoolContractInfo](#poolcontractinfo) of the contract.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -1504,7 +1504,7 @@ Any address can execute.
 ### StakerPoolInfo
 | name              | type    |
 | ----------------- | ------- |
-| pooling_contract  | address |
+| pool_contract  | address |
 | amount            | u128    |
 | unclaimed_rewards | u128    |
 | commission        | u16     |
@@ -1539,7 +1539,7 @@ Any address can execute.
 | unpool_amount     | u128        |
 | unpool_time       | Option<u64> |
 
-### PoolingContractInfo
+### PoolContractInfo
 | name               | type        |
 | ------------------ | ----------- |
 | staker_address     | address     |

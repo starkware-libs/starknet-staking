@@ -7,7 +7,7 @@ pub mod event_test_utils;
 
 // Contracts
 pub mod staking;
-pub mod pooling;
+pub mod pool;
 pub mod minting_curve;
 pub mod reward_supplier;
 pub mod operator;

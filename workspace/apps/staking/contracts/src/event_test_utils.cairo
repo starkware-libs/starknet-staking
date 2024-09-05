@@ -1,6 +1,6 @@
 use starknet::{ContractAddress};
 use contracts::staking::Events as StakingEvents;
-use contracts::pooling::Events as PoolEvents;
+use contracts::pool::Events as PoolEvents;
 use contracts::reward_supplier::Events as RewardSupplierEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
 
@@ -99,7 +99,7 @@ pub fn assert_pool_member_exit_intent_event(
     exit_timestamp: u64,
     amount: u128,
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::PoolMemberExitIntent(
+    let expected_event = @contracts::pool::Pool::Event::PoolMemberExitIntent(
         PoolEvents::PoolMemberExitIntent { pool_member, exit_timestamp, amount }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -122,7 +122,7 @@ pub fn assert_pool_member_reward_claimed_event(
     reward_address: ContractAddress,
     amount: u128,
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::PoolMemberRewardClaimed(
+    let expected_event = @contracts::pool::Pool::Event::PoolMemberRewardClaimed(
         PoolEvents::PoolMemberRewardClaimed { pool_member, reward_address, amount }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -145,7 +145,7 @@ pub fn assert_delegation_pool_member_balance_changed_event(
     old_delegated_stake: u128,
     new_delegated_stake: u128,
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::DelegationPoolMemberBalanceChanged(
+    let expected_event = @contracts::pool::Pool::Event::DelegationPoolMemberBalanceChanged(
         PoolEvents::DelegationPoolMemberBalanceChanged {
             pool_member, old_delegated_stake, new_delegated_stake
         }
@@ -273,7 +273,7 @@ pub fn assert_pool_member_reward_address_change_event(
     new_address: ContractAddress,
     old_address: ContractAddress,
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::PoolMemberRewardAddressChanged(
+    let expected_event = @contracts::pool::Pool::Event::PoolMemberRewardAddressChanged(
         PoolEvents::PoolMemberRewardAddressChanged { pool_member, new_address, old_address }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -339,7 +339,7 @@ pub fn assert_change_operational_address_event(
 pub(crate) fn assert_final_index_set_event(
     spied_event: @(ContractAddress, Event), staker_address: ContractAddress, final_staker_index: u64
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::FinalIndexSet(
+    let expected_event = @contracts::pool::Pool::Event::FinalIndexSet(
         PoolEvents::FinalIndexSet { staker_address, final_staker_index }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -429,7 +429,7 @@ pub(crate) fn assert_delete_pool_member_event(
     pool_member: ContractAddress,
     reward_address: ContractAddress
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::DeletePoolMember(
+    let expected_event = @contracts::pool::Pool::Event::DeletePoolMember(
         PoolEvents::DeletePoolMember { pool_member, reward_address }
     );
     let (expected_emitted_by, raw_event) = spied_event;
@@ -452,7 +452,7 @@ pub(crate) fn assert_new_pool_member_event(
     reward_address: ContractAddress,
     amount: u128
 ) {
-    let expected_event = @contracts::pooling::Pooling::Event::NewPoolMember(
+    let expected_event = @contracts::pool::Pool::Event::NewPoolMember(
         PoolEvents::NewPoolMember { pool_member, staker_address, reward_address, amount }
     );
     let (expected_emitted_by, raw_event) = spied_event;

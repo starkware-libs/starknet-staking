@@ -8,13 +8,13 @@ use contracts::{
     },
     test_utils::{
         initialize_staking_state_from_cfg, deploy_mock_erc20_contract, StakingInitConfig, fund,
-        approve, deploy_staking_contract, stake_with_pooling_enabled,
+        approve, deploy_staking_contract, stake_with_pool_enabled,
         enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map,
         load_from_simple_map, load_one_felt, stake_for_testing_using_dispatcher,
         general_contract_system_deployment, cheat_reward_for_reward_supplier,
         set_account_as_operator,
         constants::{
-            DUMMY_ADDRESS, POOLING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS,
+            DUMMY_ADDRESS, POOL_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS,
             NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER,
             OTHER_OPERATIONAL_ADDRESS
         }
@@ -53,8 +53,8 @@ use snforge_std::{
 
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use contracts_commons::test_utils::cheat_caller_address_once;
-use contracts::pooling::Pooling::SwitchPoolData;
-use contracts::pooling::interface::{IPoolingDispatcher, IPoolingDispatcherTrait};
+use contracts::pool::Pool::SwitchPoolData;
+use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 
 #[test]
@@ -144,7 +144,7 @@ fn test_calculate_rewards() {
             StakerInfo {
                 pool_info: Option::Some(
                     StakerPoolInfo {
-                        pooling_contract: POOLING_CONTRACT_ADDRESS(),
+                        pool_contract: POOL_CONTRACT_ADDRESS(),
                         amount: POOL_MEMBER_STAKE_AMOUNT,
                         ..cfg.staker_info.get_pool_info_unchecked()
                     }
@@ -205,7 +205,7 @@ fn test_stake_from_same_staker_address() {
             reward_address: cfg.staker_info.reward_address,
             operational_address: cfg.staker_info.operational_address,
             amount: cfg.staker_info.amount_own,
-            pooling_enabled: cfg.test_info.pooling_enabled,
+            pool_enabled: cfg.test_info.pool_enabled,
             commission: cfg.staker_info.get_pool_info_unchecked().commission
         );
 }
@@ -233,7 +233,7 @@ fn test_stake_with_same_operational_address() {
             reward_address: cfg.staker_info.reward_address,
             operational_address: cfg.staker_info.operational_address,
             amount: cfg.staker_info.amount_own,
-            pooling_enabled: cfg.test_info.pooling_enabled,
+            pool_enabled: cfg.test_info.pool_enabled,
             commission: cfg.staker_info.get_pool_info_unchecked().commission,
         );
 }
@@ -269,8 +269,8 @@ fn test_claim_delegation_pool_rewards() {
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
-    // Stake with pooling enabled.
-    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    // Stake with pool enabled.
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     // Update index in staking contract.
     let updated_index = cfg.staker_info.index * 2;
     snforge_std::store(
@@ -294,12 +294,12 @@ fn test_claim_delegation_pool_rewards() {
     );
 
     let mut spy = snforge_std::spy_events();
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: pooling_contract);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     staking_pool_dispatcher
         .claim_delegation_pool_rewards(staker_address: cfg.test_info.staker_address);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    assert_eq!(erc20_dispatcher.balance_of(pooling_contract), unclaimed_rewards_pool.into());
+    assert_eq!(erc20_dispatcher.balance_of(pool_contract), unclaimed_rewards_pool.into());
 
     // Validate the single RewardsSuppliedToDelegationPool event.
     let events = spy.get_events().emitted_by(staking_contract).events;
@@ -309,7 +309,7 @@ fn test_claim_delegation_pool_rewards() {
     assert_rewards_supplied_to_delegation_pool_event(
         spied_event: events[0],
         staker_address: cfg.test_info.staker_address,
-        pool_address: pooling_contract,
+        pool_address: pool_contract,
         amount: unclaimed_rewards_pool
     );
 }
@@ -379,7 +379,7 @@ fn test_increase_stake_from_staker_address() {
 #[should_panic(expected: "Staker does not have a pool contract.")]
 fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
-    cfg.test_info.pooling_enabled = false;
+    cfg.test_info.pool_enabled = false;
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
@@ -399,7 +399,7 @@ fn test_claim_delegation_pool_rewards_unauthorized_address() {
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     // TODO: Set the contract address to the actual pool contract address.
     let staker_address = cfg.test_info.staker_address;
     // Update staker info for the test.
@@ -742,7 +742,7 @@ fn test_unstake_action() {
     let staking_contract = cfg.test_info.staking_contract;
 
     // Stake.
-    let pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -814,22 +814,22 @@ fn test_get_total_stake() {
 }
 
 #[test]
-fn test_stake_pooling_enabled() {
+fn test_stake_pool_enabled() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let mut spy = snforge_std::spy_events();
-    stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     if let Option::Some(mut pool_info) = cfg.staker_info.pool_info {
         pool_info
-            .pooling_contract = staking_dispatcher
+            .pool_contract = staking_dispatcher
             .state_of(:staker_address)
             .pool_info
             .unwrap()
-            .pooling_contract;
+            .pool_contract;
         cfg.staker_info.pool_info = Option::Some(pool_info);
     };
     let expected_staker_info = cfg.staker_info;
@@ -840,12 +840,12 @@ fn test_stake_pooling_enabled() {
     // There are five events: NewDelegationPool, StakeBalanceChange, NewStaker,
     // GovernanceAdminAdded, OperatorAdded.
     // We're checking only the first three that are from Staking and not from Roles component.
-    assert_number_of_events(actual: events.len(), expected: 5, message: "stake_pooling_enabled");
+    assert_number_of_events(actual: events.len(), expected: 5, message: "stake_pool_enabled");
     let pool_info = cfg.staker_info.get_pool_info_unchecked();
     assert_new_delegation_pool_event(
         spied_event: events[0],
         :staker_address,
-        pool_contract: pool_info.pooling_contract,
+        pool_contract: pool_info.pool_contract,
         commission: pool_info.commission
     );
     assert_stake_balance_changed_event(
@@ -868,7 +868,7 @@ fn test_stake_pooling_enabled() {
 // TODO: Create tests that cover all panic scenarios for add_stake_from_pool.
 // TODO: Implement the following test.
 //       Note: The happy flow is also tested in test_enter_delegation_pool.
-//       in pooling/test.cairo.
+//       in pool/test.cairo.
 #[test]
 fn test_add_stake_from_pool() {
     assert!(true);
@@ -877,7 +877,7 @@ fn test_add_stake_from_pool() {
 // TODO: Create tests that cover all panic scenarios for remove_from_delegation_pool_intent.
 // TODO: Implement the following test.
 //       Note: The happy flow is also tested in test_exit_delegation_pool_intent.
-//       in pooling/test.cairo.
+//       in pool/test.cairo.
 #[test]
 fn test_remove_from_delegation_pool_intent() {
     assert!(true);
@@ -891,13 +891,13 @@ fn test_remove_from_delegation_pool_action() {
     let staking_contract = cfg.test_info.staking_contract;
 
     // Stake and enter delegation pool.
-    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    enter_delegation_pool_for_testing_using_dispatcher(:pooling_contract, :cfg, :token_address);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     // Remove from delegation pool intent, and then check that the intent was added correctly.
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: pooling_contract);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     staking_pool_dispatcher
         .remove_from_delegation_pool_intent(
             staker_address: cfg.test_info.staker_address,
@@ -909,14 +909,14 @@ fn test_remove_from_delegation_pool_action() {
         block_timestamp: get_block_timestamp()
             + staking_dispatcher.contract_parameters().exit_wait_window
     );
-    let pool_balance_before_action = erc20_dispatcher.balance_of(pooling_contract);
+    let pool_balance_before_action = erc20_dispatcher.balance_of(pool_contract);
 
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: pooling_contract);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     let returned_amount = staking_pool_dispatcher
         .remove_from_delegation_pool_action(identifier: cfg.test_info.pool_member_address.into());
     assert_eq!(returned_amount, cfg.pool_member_info.amount);
     let undelegate_intent_key = UndelegateIntentKey {
-        pool_contract: pooling_contract, identifier: cfg.test_info.pool_member_address.into(),
+        pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
     let actual_undelegate_intent_value_after_action: UndelegateIntentValue = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),
@@ -925,7 +925,7 @@ fn test_remove_from_delegation_pool_action() {
     );
     assert_eq!(actual_undelegate_intent_value_after_action, Zero::zero());
     // Check that the amount was transferred correctly.
-    let pool_balance_after_action = erc20_dispatcher.balance_of(pooling_contract);
+    let pool_balance_after_action = erc20_dispatcher.balance_of(pool_contract);
     // TODO: Test event emitted.
     assert_eq!(
         pool_balance_after_action, pool_balance_before_action + cfg.pool_member_info.amount.into()
@@ -971,10 +971,10 @@ fn test_switch_staking_delegation_pool() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     // Initialize from_staker.
-    let from_pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
-    let from_pool_dispatcher = IPoolingDispatcher { contract_address: from_pool_contract };
+    let from_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let from_pool_dispatcher = IPoolDispatcher { contract_address: from_pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(
-        pooling_contract: from_pool_contract, :cfg, :token_address
+        pool_contract: from_pool_contract, :cfg, :token_address
     );
     // Initialize to_staker.
     let to_staker = OTHER_STAKER_ADDRESS();
@@ -983,8 +983,8 @@ fn test_switch_staking_delegation_pool() {
     set_account_as_operator(
         :staking_contract, account: to_staker, security_admin: cfg.test_info.security_admin
     );
-    let to_pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
-    let to_pool_dispatcher = IPoolingDispatcher { contract_address: to_pool_contract };
+    let to_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let to_pool_dispatcher = IPoolDispatcher { contract_address: to_pool_contract };
     let to_staker_info = staking_dispatcher.state_of(staker_address: to_staker);
     // Pool member remove_from_delegation_pool_intent.
     let pool_member = cfg.test_info.pool_member_address;
@@ -1161,11 +1161,11 @@ fn test_pool_contract_admin_role() {
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
-    // Deploy the staking contract and stake with pooling enabled.
+    // Deploy the staking contract and stake with pool enabled.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    let pooling_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     // Assert the correct governance admins are set.
-    let pool_contract_roles_dispatcher = IRolesDispatcher { contract_address: pooling_contract };
+    let pool_contract_roles_dispatcher = IRolesDispatcher { contract_address: pool_contract };
     assert!(
         pool_contract_roles_dispatcher
             .is_governance_admin(account: cfg.test_info.pool_contract_admin)
@@ -1229,7 +1229,7 @@ fn test_change_operational_address_staker_doesnt_exist() {
 //     );
 //     let staking_contract = deploy_staking_contract(:token_address, :cfg);
 //     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-//     let pool_contract = stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+//     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 //     let interest = cfg.staking_contract_info.global_index - cfg.staker_info.index;
 //     let staker_address = cfg.test_info.staker_address;
 //     let staker_info_before_update = staking_dispatcher.state_of(:staker_address);
@@ -1274,13 +1274,13 @@ fn test_change_operational_address_staker_doesnt_exist() {
 //     };
 //     assert_eq!(staker_info, expected_staker_info);
 
-//     // Assert commission is updated in the pooling contract.
-//     let pooling_dispatcher = IPoolingDispatcher { contract_address: pool_contract };
-//     let pooling_contracts_parameters = pooling_dispatcher.contract_parameters();
-//     let expected_pooling_contracts_parameters = PoolingContractInfo {
-//         commission, ..pooling_contracts_parameters
+//     // Assert commission is updated in the pool contract.
+//     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+//     let pool_contracts_parameters = pool_dispatcher.contract_parameters();
+//     let expected_pool_contracts_parameters = PoolContractInfo {
+//         commission, ..pool_contracts_parameters
 //     };
-//     assert_eq!(pooling_contracts_parameters, expected_pooling_contracts_parameters);
+//     assert_eq!(pool_contracts_parameters, expected_pool_contracts_parameters);
 //     // Validate the single CommissionChanged event.
 //     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
 //     assert_number_of_events(actual: events.len(), expected: 1, message: "update_commission");
@@ -1319,7 +1319,7 @@ fn test_change_operational_address_staker_doesnt_exist() {
 //         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
 //     );
 //     let staking_contract = deploy_staking_contract(:token_address, :cfg);
-//     stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+//     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 //     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
 //     cheat_caller_address_once(
 //         contract_address: staking_contract, caller_address: cfg.test_info.staker_address
@@ -1358,17 +1358,17 @@ fn test_set_open_for_delegation() {
     let commission = cfg.staker_info.get_pool_info_unchecked().commission;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let pooling_contract = staking_dispatcher.set_open_for_delegation(:commission);
+    let pool_contract = staking_dispatcher.set_open_for_delegation(:commission);
     let pool_info = staking_dispatcher.state_of(:staker_address).get_pool_info_unchecked();
     let expected_pool_info = StakerPoolInfo {
-        commission, pooling_contract, ..cfg.staker_info.get_pool_info_unchecked()
+        commission, pool_contract, ..cfg.staker_info.get_pool_info_unchecked()
     };
     assert_eq!(pool_info, expected_pool_info);
 
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_open_for_delegation");
     assert_new_delegation_pool_event(
-        spied_event: events[0], :staker_address, pool_contract: pooling_contract, :commission
+        spied_event: events[0], :staker_address, pool_contract: pool_contract, :commission
     );
 }
 
@@ -1415,7 +1415,7 @@ fn test_set_open_for_delegation_staker_has_pool() {
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_with_pooling_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address
     );
