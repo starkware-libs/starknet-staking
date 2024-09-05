@@ -231,8 +231,8 @@ pub mod Staking {
             let mut staker_total_stake = staker_info.amount_own;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             self.add_to_total_stake(:amount);
-            let mut old_delegated_stake = 0;
-            let mut new_delegated_stake = 0;
+            let mut old_delegated_stake = Zero::zero();
+            let mut new_delegated_stake = Zero::zero();
             if let Option::Some(pool_info) = staker_info.pool_info {
                 old_delegated_stake = pool_info.amount;
                 new_delegated_stake = pool_info.amount;
@@ -269,7 +269,7 @@ pub mod Staking {
                 .send_rewards_to_staker(
                     :staker_address, :reward_address, :amount, :erc20_dispatcher
                 );
-            staker_info.unclaimed_rewards_own = 0;
+            staker_info.unclaimed_rewards_own = Zero::zero();
             self.staker_info.write(staker_address, Option::Some(staker_info));
             amount
         }
@@ -286,7 +286,7 @@ pub mod Staking {
             let unstake_time = current_time + self.exit_wait_window.read();
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, Option::Some(staker_info));
-            let mut amount_pool = 0;
+            let mut amount_pool = Zero::zero();
             if let Option::Some(pool_info) = staker_info.pool_info {
                 amount_pool = pool_info.amount;
             }
@@ -657,7 +657,7 @@ pub mod Staking {
                     amount: updated_pool_info.unclaimed_rewards,
                     :erc20_dispatcher
                 );
-            updated_pool_info.unclaimed_rewards = 0;
+            updated_pool_info.unclaimed_rewards = Zero::zero();
             staker_info.pool_info = Option::Some(updated_pool_info);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             updated_index
