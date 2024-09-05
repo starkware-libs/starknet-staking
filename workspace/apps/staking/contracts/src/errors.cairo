@@ -5,6 +5,7 @@ use contracts::constants::C_DENOM;
 #[derive(Drop)]
 pub enum Error {
     // Generic errors
+    MESSAGES_COUNT_ISNT_U32,
     INTEREST_ISNT_U64,
     REWARDS_ISNT_U128,
     BALANCE_ISNT_U128,
@@ -60,6 +61,9 @@ pub enum Error {
 #[inline(always)]
 pub fn panic_by_err(error: Error) -> core::never {
     match error {
+        Error::MESSAGES_COUNT_ISNT_U32 => panic!(
+            "Number of messages is too large, expected to fit in u32."
+        ),
         Error::INTEREST_ISNT_U64 => panic!("Interest is too large, expected to fit in u64."),
         Error::REWARDS_ISNT_U128 => panic!("Rewards is too large, expected to fit in u128."),
         Error::BALANCE_ISNT_U128 => panic!("Balance is too large, expected to fit in u128."),

@@ -4,10 +4,11 @@ use contracts::operator::interface::{IOperatorDispatcher, IOperatorDispatcherTra
 use contracts::operator::Operator::MAX_WHITELIST_SIZE;
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::test_utils::constants::{DUMMY_ADDRESS, CALLER_ADDRESS};
+use contracts::test_utils::deploy_operator_contract;
 use snforge_std::ContractClassTrait;
 use snforge_std::{CheatSpan, cheat_caller_address, cheat_account_contract_address};
 use starknet::ContractAddress;
-use contracts::test_utils::{StakingInitConfig, set_account_as_security_agent};
+use contracts::test_utils::StakingInitConfig;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use core::num::traits::zero::Zero;
 use core::num::traits::one::One;
@@ -19,26 +20,12 @@ fn deploy_mock_staking_contract() -> ContractAddress {
     staking_mock_contract_address
 }
 
-fn deploy_operator_contract(
-    staking_mock_contract_address: ContractAddress, cfg: StakingInitConfig
-) -> ContractAddress {
-    let mut calldata = ArrayTrait::new();
-    staking_mock_contract_address.serialize(ref calldata);
-    cfg.test_info.security_admin.serialize(ref calldata);
-    let operator_contract = snforge_std::declare("Operator").unwrap();
-    let (operator_contract_address, _) = operator_contract.deploy(@calldata).unwrap();
-    set_account_as_security_agent(
-        staking_contract: operator_contract_address,
-        account: cfg.test_info.security_agent,
-        security_admin: cfg.test_info.security_admin
-    );
-    operator_contract_address
-}
 fn setup(
     ref cfg: StakingInitConfig
 ) -> (IStakingDispatcher, IStakingDispatcher, IOperatorDispatcher, ContractAddress) {
     let staking_mock_contract_address = deploy_mock_staking_contract();
-    let operator_contract_address = deploy_operator_contract(:staking_mock_contract_address, :cfg);
+    cfg.test_info.staking_contract = staking_mock_contract_address;
+    let operator_contract_address = deploy_operator_contract(:cfg);
     let caller_account_address = CALLER_ADDRESS();
     IStakingMockSetterDispatcher { contract_address: staking_mock_contract_address }
         .set_addresses(

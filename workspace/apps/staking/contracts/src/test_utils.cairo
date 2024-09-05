@@ -21,7 +21,7 @@ use constants::{POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INI
 use constants::{BASE_MINT_AMOUNT, BUFFER, L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG};
 use constants::{STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS};
 use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN};
-use constants::{SECURITY_AGENT, APP_GOVERNER};
+use constants::{SECURITY_AGENT, APP_GOVERNER, GOVERNANCE_ADMIN, OPERATOR_CONTRACT_ADDRESS};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
 
@@ -77,8 +77,14 @@ pub(crate) mod constants {
     pub fn OWNER_ADDRESS() -> ContractAddress {
         contract_address_const::<'OWNER_ADDRESS'>()
     }
+    pub fn GOVERNANCE_ADMIN() -> ContractAddress {
+        contract_address_const::<'GOVERNANCE_ADMIN'>()
+    }
     pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'STAKING_CONTRACT_ADDRESS'>()
+    }
+    pub fn OPERATOR_CONTRACT_ADDRESS() -> ContractAddress {
+        contract_address_const::<'OPERATOR_CONTRACT_ADDRESS'>()
     }
     pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'NOT_STAKING_CONTRACT_ADDRESS'>()
@@ -311,16 +317,14 @@ pub(crate) fn set_account_as_app_governer(
     roles_dispatcher.register_app_governor(:account);
 }
 
-pub(crate) fn deploy_minting_curve_contract(
-    staking_contract: ContractAddress, cfg: StakingInitConfig
-) -> ContractAddress {
+pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     let initial_supply: u128 = cfg
         .test_info
         .initial_supply
         .try_into()
         .expect('initial supply does not fit');
-    staking_contract.serialize(ref calldata);
+    cfg.test_info.staking_contract.serialize(ref calldata);
     initial_supply.serialize(ref calldata);
     cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
     let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap();
@@ -333,15 +337,13 @@ pub(crate) fn deploy_minting_curve_contract(
     minting_curve_contract_address
 }
 
-pub(crate) fn deploy_reward_supplier_contract(
-    token_address: ContractAddress, cfg: StakingInitConfig
-) -> ContractAddress {
+pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     cfg.reward_supplier.base_mint_amount.serialize(ref calldata);
     cfg.reward_supplier.base_mint_msg.serialize(ref calldata);
     cfg.reward_supplier.minting_curve_contract.serialize(ref calldata);
     cfg.test_info.staking_contract.serialize(ref calldata);
-    token_address.serialize(ref calldata);
+    cfg.staking_contract_info.token_address.serialize(ref calldata);
     cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
     let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap();
     let (reward_supplier_contract_address, _) = reward_supplier_contract.deploy(@calldata).unwrap();
@@ -350,6 +352,20 @@ pub(crate) fn deploy_reward_supplier_contract(
 
 pub(crate) fn declare_pool_contract() -> ClassHash {
     snforge_std::declare("Pool").unwrap().class_hash
+}
+
+pub(crate) fn deploy_operator_contract(cfg: StakingInitConfig) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    cfg.test_info.staking_contract.serialize(ref calldata);
+    cfg.test_info.security_admin.serialize(ref calldata);
+    let operator_contract = snforge_std::declare("Operator").unwrap();
+    let (operator_contract_address, _) = operator_contract.deploy(@calldata).unwrap();
+    set_account_as_security_agent(
+        staking_contract: operator_contract_address,
+        account: cfg.test_info.security_agent,
+        security_admin: cfg.test_info.security_admin
+    );
+    operator_contract_address
 }
 
 pub(crate) fn fund(
@@ -562,11 +578,11 @@ pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
     cfg.staking_contract_info.token_address = token_address;
-    let minting_curve = deploy_minting_curve_contract(
-        staking_contract: cfg.test_info.staking_contract, :cfg
-    );
+    // Deploy the minting_curve, with faked staking_address.
+    let minting_curve = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve;
-    let reward_supplier = deploy_reward_supplier_contract(:token_address, :cfg);
+    // Deploy the reward_supplier, with faked staking_address.
+    let reward_supplier = deploy_reward_supplier_contract(:cfg);
     cfg.staking_contract_info.reward_supplier = reward_supplier;
     // Deploy the staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -581,6 +597,14 @@ pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         target: minting_curve,
         storage_address: selector!("staking_dispatcher"),
         serialized_value: array![staking_contract.into()].span()
+    );
+    // Deploy the operator contract. Add it as an operator of the staking.
+    let operator_contract = deploy_operator_contract(:cfg);
+    cfg.test_info.operator_contract = operator_contract;
+    set_account_as_operator(
+        staking_contract: staking_contract,
+        account: operator_contract,
+        security_admin: cfg.test_info.security_admin
     );
 }
 
@@ -638,11 +662,13 @@ pub(crate) struct TestInfo {
     pub staker_address: ContractAddress,
     pub pool_member_address: ContractAddress,
     pub owner_address: ContractAddress,
+    pub governance_admin: ContractAddress,
     pub initial_supply: u256,
     pub staker_initial_balance: u128,
     pub pool_member_initial_balance: u128,
     pub pool_enabled: bool,
     pub staking_contract: ContractAddress,
+    pub operator_contract: ContractAddress,
     pub pool_contract_admin: ContractAddress,
     pub security_admin: ContractAddress,
     pub security_agent: ContractAddress,
@@ -709,11 +735,13 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             staker_address: STAKER_ADDRESS(),
             pool_member_address: POOL_MEMBER_ADDRESS(),
             owner_address: OWNER_ADDRESS(),
+            governance_admin: GOVERNANCE_ADMIN(),
             initial_supply: INITIAL_SUPPLY,
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pool_enabled: false,
             staking_contract: STAKING_CONTRACT_ADDRESS(),
+            operator_contract: OPERATOR_CONTRACT_ADDRESS(),
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
             security_admin: SECURITY_ADMIN(),
             security_agent: SECURITY_AGENT(),

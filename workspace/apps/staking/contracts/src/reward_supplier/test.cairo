@@ -60,7 +60,7 @@ fn test_claim_rewards() {
     cfg.staker_info.amount_own = amount;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     // Deploy the minting curve contract.
-    let minting_curve_contract = deploy_minting_curve_contract(:staking_contract, :cfg);
+    let minting_curve_contract = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve_contract;
     // Use the reward supplier contract state to claim rewards.
     let mut state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
@@ -95,7 +95,7 @@ fn test_calculate_staking_rewards() {
     cfg.staker_info.amount_own = amount;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     // Deploy the minting curve contract.
-    let minting_curve_contract = deploy_minting_curve_contract(:staking_contract, :cfg);
+    let minting_curve_contract = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve_contract;
     // Use the reward supplier contract state to claim rewards.
     let mut state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);

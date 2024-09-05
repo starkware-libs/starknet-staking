@@ -4,6 +4,8 @@ pub mod utils;
 pub mod test_utils;
 #[cfg(test)]
 pub mod event_test_utils;
+#[cfg(test)]
+pub mod message_to_l1_test_utils;
 
 // Contracts
 pub mod staking;
@@ -15,3 +17,6 @@ pub mod operator;
 // Consts and other non-component utilities
 pub mod errors;
 pub mod constants;
+
+// Not under #[cfg(test)] as it may contains Mocks.
+mod flow_test;
