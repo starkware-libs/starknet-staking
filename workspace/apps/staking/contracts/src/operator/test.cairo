@@ -1,6 +1,5 @@
-use contracts::operator::staking_mock::StakingForOperatorMock::{
-    IStakingMockSetterDispatcher, IStakingMockSetterDispatcherTrait
-};
+use contracts::operator::staking_mock::StakingForOperatorMock::IStakingMockSetterDispatcher;
+use contracts::operator::staking_mock::StakingForOperatorMock::IStakingMockSetterDispatcherTrait;
 use contracts::operator::interface::{IOperatorDispatcher, IOperatorDispatcherTrait};
 use contracts::operator::Operator::MAX_WHITELIST_SIZE;
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};

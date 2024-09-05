@@ -4,13 +4,12 @@ pub mod Operator {
     use contracts::staking::{IStaking, StakerInfo, StakingContractInfo};
     use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
+    use openzeppelin::access::accesscontrol::AccessControlComponent;
+    use openzeppelin::introspection::src5::SRC5Component;
+    use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use core::num::traits::zero::Zero;
-    use openzeppelin::{
-        access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
-    };
     use starknet::{ContractAddress, get_caller_address};
     use starknet::storage::{Map, Vec, MutableVecTrait, VecTrait};
     use contracts::errors::{Error, panic_by_err};

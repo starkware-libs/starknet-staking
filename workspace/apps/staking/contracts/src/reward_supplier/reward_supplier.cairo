@@ -6,14 +6,12 @@ pub mod RewardSupplier {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::syscalls::{send_message_to_l1_syscall};
-    use starknet::{
-        get_block_timestamp, get_caller_address, get_contract_address, SyscallResultTrait
-    };
+    use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
+    use starknet::SyscallResultTrait;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-    use contracts::minting_curve::interface::{
-        IMintingCurveDispatcher, IMintingCurveDispatcherTrait
-    };
+    use contracts::minting_curve::interface::IMintingCurveDispatcher;
+    use contracts::minting_curve::interface::IMintingCurveDispatcherTrait;
     use core::num::traits::Zero;
     use contracts::utils::{ceil_of_division, compute_threshold};
     use contracts::constants::STRK_IN_FRIS;

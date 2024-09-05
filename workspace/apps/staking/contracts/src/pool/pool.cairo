@@ -2,23 +2,20 @@
 pub mod Pool {
     use core::serde::Serde;
     use core::num::traits::zero::Zero;
-    use contracts::{
-        errors::{Error, assert_with_err, OptionAuxTrait},
-        pool::{interface::PoolContractInfo, IPool, PoolMemberInfo, Events},
-        utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up}
-    };
+    use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
+    use contracts::pool::{interface::PoolContractInfo, IPool, PoolMemberInfo, Events};
+    use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
     use core::option::OptionTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp};
-    use openzeppelin::{
-        access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
-    };
+    use openzeppelin::access::accesscontrol::AccessControlComponent;
+    use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
     use starknet::storage::Map;
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
+    use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);

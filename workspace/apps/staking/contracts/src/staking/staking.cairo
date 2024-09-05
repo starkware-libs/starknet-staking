@@ -2,42 +2,34 @@
 pub mod Staking {
     use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
-    use contracts::{
-        constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MIN_DAYS_BETWEEN_INDEX_UPDATES},
-        errors::{Error, assert_with_err, OptionAuxTrait},
-        staking::{
-            StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo, IStakingPool,
-            IStakingPause, IStaking, IStakingConfig
-        },
-        utils::{
-            deploy_delegation_pool_contract, compute_commission_amount_rounded_down,
-            compute_rewards_rounded_down, compute_rewards_rounded_up, day_of,
-            compute_global_index_diff
-        },
-    };
-    use contracts::staking::objects::{
-        UndelegateIntentValueZero, UndelegateIntentKey, UndelegateIntentValue
-    };
+    use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW};
+    use contracts::constants::MIN_DAYS_BETWEEN_INDEX_UPDATES;
+    use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
+    use contracts::staking::{StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo};
+    use contracts::staking::{IStakingPool, IStakingPause, IStaking, IStakingConfig};
+    use contracts::utils::{deploy_delegation_pool_contract, compute_commission_amount_rounded_down};
+    use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up, day_of};
+    use contracts::utils::compute_global_index_diff;
+    use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+    use contracts::staking::objects::UndelegateIntentValueZero;
     use contracts::staking::Events;
     use starknet::{ContractAddress, get_contract_address, get_caller_address, get_tx_info};
-    use openzeppelin::{
-        access::accesscontrol::AccessControlComponent, introspection::src5::SRC5Component
-    };
+    use openzeppelin::access::accesscontrol::AccessControlComponent;
+    use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use starknet::get_block_timestamp;
     use starknet::class_hash::ClassHash;
     use contracts::pool::interface::{IPoolDispatcherTrait, IPoolDispatcher};
-    use contracts::reward_supplier::interface::{
-        IRewardSupplierDispatcherTrait, IRewardSupplierDispatcher
-    };
+    use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
+    use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
     use starknet::storage::Map;
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
-    use contracts_commons::components::roles::interface::{
-        OPERATOR, SECURITY_ADMIN, APP_GOVERNOR, GOVERNANCE_ADMIN
-    };
+    use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
+    use contracts_commons::components::roles::interface::{OPERATOR, SECURITY_ADMIN};
+    use contracts_commons::components::roles::interface::{APP_GOVERNOR, GOVERNANCE_ADMIN};
+
     pub const COMMISSION_DENOMINATOR: u16 = 10000;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
