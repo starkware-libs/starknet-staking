@@ -28,7 +28,7 @@ pub mod StakingForOperatorMock {
             reward_address: ContractAddress,
             operational_address: ContractAddress,
             amount: u128,
-            pooling_enabled: bool,
+            pool_enabled: bool,
             commission: u16,
         ) -> bool {
             self.assert_execution_context();

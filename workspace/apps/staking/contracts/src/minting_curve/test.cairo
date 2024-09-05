@@ -40,7 +40,7 @@ fn test_yearly_mint() {
             reward_address: cfg.staker_info.reward_address,
             operational_address: cfg.staker_info.operational_address,
             amount: cfg.staker_info.amount_own,
-            pooling_enabled: cfg.test_info.pooling_enabled,
+            pool_enabled: cfg.test_info.pool_enabled,
             commission: cfg.staker_info.get_pool_info_unchecked().commission
         );
 

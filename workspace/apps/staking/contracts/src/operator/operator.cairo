@@ -126,16 +126,14 @@ pub mod Operator {
             reward_address: ContractAddress,
             operational_address: ContractAddress,
             amount: u128,
-            pooling_enabled: bool,
+            pool_enabled: bool,
             commission: u16,
         ) -> bool {
             self.check_whitelist(get_caller_address());
             self
                 .staking_dispatcher
                 .read()
-                .stake(
-                    :reward_address, :operational_address, :amount, :pooling_enabled, :commission
-                )
+                .stake(:reward_address, :operational_address, :amount, :pool_enabled, :commission)
         }
 
         fn increase_stake(

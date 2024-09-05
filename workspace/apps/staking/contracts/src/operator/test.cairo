@@ -81,7 +81,7 @@ fn test_stake_from_operator() {
             reward_address: DUMMY_ADDRESS(),
             operational_address: DUMMY_ADDRESS(),
             amount: 0,
-            pooling_enabled: false,
+            pool_enabled: false,
             commission: 0
         );
 }
@@ -432,7 +432,7 @@ fn test_stake_from_operator_with_whitelist() {
             reward_address: cfg.staker_info.reward_address,
             operational_address: cfg.staker_info.operational_address,
             amount: 0,
-            pooling_enabled: false,
+            pool_enabled: false,
             commission: 0
         );
 }
@@ -470,7 +470,7 @@ fn test_stake_from_operator_with_whitelist_caller_not_whitelisted() {
             reward_address: cfg.staker_info.reward_address,
             operational_address: cfg.staker_info.operational_address,
             amount: 0,
-            pooling_enabled: false,
+            pool_enabled: false,
             commission: 0
         );
 }

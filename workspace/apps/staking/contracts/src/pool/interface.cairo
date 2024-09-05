@@ -72,7 +72,7 @@ pub struct PoolMemberInfo {
 }
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
-pub struct PoolingContractInfo {
+pub struct PoolContractInfo {
     pub staker_address: ContractAddress,
     pub final_staker_index: Option<u64>,
     pub staking_contract: ContractAddress,
@@ -81,7 +81,7 @@ pub struct PoolingContractInfo {
 }
 
 #[starknet::interface]
-pub trait IPooling<TContractState> {
+pub trait IPool<TContractState> {
     fn enter_delegation_pool(
         ref self: TContractState, reward_address: ContractAddress, amount: u128
     ) -> bool;
@@ -100,6 +100,6 @@ pub trait IPooling<TContractState> {
     fn set_final_staker_index(ref self: TContractState, final_staker_index: u64);
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
     fn state_of(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
-    fn contract_parameters(self: @TContractState) -> PoolingContractInfo;
+    fn contract_parameters(self: @TContractState) -> PoolContractInfo;
     fn update_commission(ref self: TContractState, commission: u16) -> bool;
 }

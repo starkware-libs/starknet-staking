@@ -1,10 +1,10 @@
 #[starknet::contract]
-pub mod Pooling {
+pub mod Pool {
     use core::serde::Serde;
     use core::num::traits::zero::Zero;
     use contracts::{
         errors::{Error, assert_with_err, OptionAuxTrait},
-        pooling::{interface::PoolingContractInfo, IPooling, PoolMemberInfo, Events},
+        pool::{interface::PoolContractInfo, IPool, PoolMemberInfo, Events},
         utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up}
     };
     use core::option::OptionTrait;
@@ -93,7 +93,7 @@ pub mod Pooling {
     }
 
     #[abi(embed_v0)]
-    impl PoolingImpl of IPooling<ContractState> {
+    impl PoolImpl of IPool<ContractState> {
         fn enter_delegation_pool(
             ref self: ContractState, reward_address: ContractAddress, amount: u128
         ) -> bool {
@@ -390,8 +390,8 @@ pub mod Pooling {
             self.get_pool_member_info(:pool_member)
         }
 
-        fn contract_parameters(self: @ContractState) -> PoolingContractInfo {
-            PoolingContractInfo {
+        fn contract_parameters(self: @ContractState) -> PoolContractInfo {
+            PoolContractInfo {
                 staker_address: self.staker_address.read(),
                 final_staker_index: self.final_staker_index.read(),
                 staking_contract: self.staking_pool_dispatcher.read().contract_address,
@@ -414,7 +414,7 @@ pub mod Pooling {
     }
 
     #[generate_trait]
-    pub(crate) impl InternalPoolingFunctions of InternalPoolingFunctionsTrait {
+    pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
         fn get_pool_member_info(
             self: @ContractState, pool_member: ContractAddress
         ) -> PoolMemberInfo {

@@ -36,7 +36,7 @@ pub enum Error {
     UNEXPECTED_BALANCE,
     STAKER_ALREADY_HAS_POOL,
     CONTRACT_IS_PAUSED,
-    // Pooling contract errors
+    // Pool contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
     POOL_MEMBER_EXISTS,

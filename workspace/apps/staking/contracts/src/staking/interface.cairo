@@ -103,7 +103,7 @@ pub mod Events {
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerPoolInfo {
-    pub pooling_contract: ContractAddress,
+    pub pool_contract: ContractAddress,
     pub amount: u128,
     pub unclaimed_rewards: u128,
     pub commission: u16,
@@ -154,7 +154,7 @@ pub trait IStaking<TContractState> {
         reward_address: ContractAddress,
         operational_address: ContractAddress,
         amount: u128,
-        pooling_enabled: bool,
+        pool_enabled: bool,
         commission: u16,
     ) -> bool;
     fn increase_stake(

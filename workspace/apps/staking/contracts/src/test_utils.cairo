@@ -8,8 +8,8 @@ use contracts::staking::interface::{
 };
 use core::num::traits::zero::Zero;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts::pooling::Pooling;
-use contracts::pooling::interface::{PoolMemberInfo, IPoolingDispatcher, IPoolingDispatcherTrait};
+use contracts::pool::Pool;
+use contracts::pool::interface::{PoolMemberInfo, IPoolDispatcher, IPoolDispatcherTrait};
 use starknet::ContractAddress;
 use starknet::ClassHash;
 use starknet::Store;
@@ -19,7 +19,7 @@ use contracts::staking::Staking::ContractState;
 use constants::{
     NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_INITIAL_BALANCE, STAKE_AMOUNT,
     STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS, TOKEN_ADDRESS, COMMISSION,
-    POOLING_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
+    POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_ADDRESS,
     POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, BASE_MINT_AMOUNT, BUFFER,
     L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG, STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS,
     REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN, SECURITY_AGENT,
@@ -85,8 +85,8 @@ pub(crate) mod constants {
     pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'NOT_STAKING_CONTRACT_ADDRESS'>()
     }
-    pub fn POOLING_CONTRACT_ADDRESS() -> ContractAddress {
-        contract_address_const::<'POOLING_CONTRACT_ADDRESS'>()
+    pub fn POOL_CONTRACT_ADDRESS() -> ContractAddress {
+        contract_address_const::<'POOL_CONTRACT_ADDRESS'>()
     }
     pub fn OTHER_POOL_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'OTHER_POOL_CONTRACT_ADDRESS'>()
@@ -106,8 +106,8 @@ pub(crate) mod constants {
     pub fn POOL_MEMBER_REWARD_ADDRESS() -> ContractAddress {
         contract_address_const::<'POOL_MEMBER_REWARD_ADDRESS'>()
     }
-    pub fn POOLING_REWARD_ADDRESS() -> ContractAddress {
-        contract_address_const::<'POOLING_REWARD_ADDRESS'>()
+    pub fn POOL_REWARD_ADDRESS() -> ContractAddress {
+        contract_address_const::<'POOL_REWARD_ADDRESS'>()
     }
     pub fn OTHER_REWARD_ADDRESS() -> ContractAddress {
         contract_address_const::<'OTHER_REWARD_ADDRESS'>()
@@ -185,16 +185,14 @@ pub(crate) fn initialize_staking_state(
 }
 
 
-pub(crate) fn initialize_pooling_state(
+pub(crate) fn initialize_pool_state(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
     commission: u16
-) -> Pooling::ContractState {
-    let mut state = Pooling::contract_state_for_testing();
-    Pooling::constructor(
-        ref state, :staker_address, :staking_contract, :token_address, :commission
-    );
+) -> Pool::ContractState {
+    let mut state = Pool::contract_state_for_testing();
+    Pool::constructor(ref state, :staker_address, :staking_contract, :token_address, :commission);
     state
 }
 
@@ -343,7 +341,7 @@ pub(crate) fn deploy_reward_supplier_contract(
 }
 
 pub(crate) fn declare_pool_contract() -> ClassHash {
-    snforge_std::declare("Pooling").unwrap().class_hash
+    snforge_std::declare("Pool").unwrap().class_hash
 }
 
 pub(crate) fn fund(
@@ -396,7 +394,7 @@ pub(crate) fn stake_for_testing(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
             cfg.staker_info.amount_own,
-            cfg.test_info.pooling_enabled,
+            cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info_unchecked().commission
         );
 }
@@ -414,21 +412,21 @@ pub(crate) fn stake_for_testing_using_dispatcher(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
             cfg.staker_info.amount_own,
-            cfg.test_info.pooling_enabled,
+            cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info_unchecked().commission
         );
 }
 
-pub(crate) fn stake_with_pooling_enabled(
+pub(crate) fn stake_with_pool_enabled(
     mut cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress
 ) -> ContractAddress {
-    cfg.test_info.pooling_enabled = true;
+    cfg.test_info.pool_enabled = true;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = staking_dispatcher
         .state_of(cfg.test_info.staker_address)
         .get_pool_info_unchecked()
-        .pooling_contract;
+        .pool_contract;
     // Set pool contract as operator.
     set_account_as_operator(
         :staking_contract, account: pool_contract, security_admin: cfg.test_info.security_admin
@@ -437,7 +435,7 @@ pub(crate) fn stake_with_pooling_enabled(
 }
 
 pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
-    pooling_contract: ContractAddress, cfg: StakingInitConfig, token_address: ContractAddress
+    pool_contract: ContractAddress, cfg: StakingInitConfig, token_address: ContractAddress
 ) {
     // Transfer the stake amount to the pool member.
     fund(
@@ -447,21 +445,21 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
         :token_address
     );
 
-    // Approve the pooling contract to transfer the pool member's funds.
+    // Approve the pool contract to transfer the pool member's funds.
     approve(
         owner: cfg.test_info.pool_member_address,
-        spender: pooling_contract,
+        spender: pool_contract,
         amount: cfg.pool_member_info.amount,
         :token_address
     );
 
     // Enter the delegation pool.
     cheat_caller_address_once(
-        contract_address: pooling_contract, caller_address: cfg.test_info.pool_member_address
+        contract_address: pool_contract, caller_address: cfg.test_info.pool_member_address
     );
-    let pooling_dispatcher = IPoolingDispatcher { contract_address: pooling_contract };
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     assert!(
-        pooling_dispatcher
+        pool_dispatcher
             .enter_delegation_pool(
                 reward_address: cfg.pool_member_info.reward_address,
                 amount: cfg.pool_member_info.amount
@@ -635,7 +633,7 @@ pub(crate) struct TestInfo {
     pub initial_supply: u256,
     pub staker_initial_balance: u128,
     pub pool_member_initial_balance: u128,
-    pub pooling_enabled: bool,
+    pub pool_enabled: bool,
     pub staking_contract: ContractAddress,
     pub pool_contract_admin: ContractAddress,
     pub security_admin: ContractAddress,
@@ -672,7 +670,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(
                 StakerPoolInfo {
-                    pooling_contract: POOLING_CONTRACT_ADDRESS(),
+                    pool_contract: POOL_CONTRACT_ADDRESS(),
                     amount: Zero::zero(),
                     unclaimed_rewards: Zero::zero(),
                     commission: COMMISSION,
@@ -702,7 +700,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             initial_supply: INITIAL_SUPPLY,
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
-            pooling_enabled: false,
+            pool_enabled: false,
             staking_contract: STAKING_CONTRACT_ADDRESS(),
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
             security_admin: SECURITY_ADMIN(),
