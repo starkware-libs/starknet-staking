@@ -193,7 +193,7 @@ fn test_on_receive() {
         contract_address: reward_supplier_contract
     };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let balance = 0;
+    let balance = Zero::zero();
     let credit = balance + reward_supplier_dispatcher.state_of().l1_pending_requested_amount;
     start_cheat_block_timestamp_global(
         block_timestamp: get_block_timestamp()

@@ -302,7 +302,7 @@ pub mod RolesComponent {
         fn initializer(ref self: ComponentState<TContractState>) {
             let mut access_comp = get_dep_component_mut!(ref self, Access);
             let governance_admin = get_caller_address();
-            let un_initialized = access_comp.get_role_admin(role: GOVERNANCE_ADMIN) == 0;
+            let un_initialized = access_comp.get_role_admin(role: GOVERNANCE_ADMIN).is_zero();
             assert(un_initialized, ALREADY_INITIALIZED);
             access_comp._grant_role(role: GOVERNANCE_ADMIN, account: governance_admin);
             access_comp.set_role_admin(role: APP_GOVERNOR, admin_role: APP_ROLE_ADMIN);

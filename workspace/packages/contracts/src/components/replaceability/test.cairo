@@ -24,6 +24,7 @@ mod ReplaceabilityTests {
     use snforge_std::{EventSpyAssertionsTrait, EventsFilterTrait, EventSpyTrait, CheatSpan};
     use snforge_std::{cheat_block_timestamp, cheat_caller_address, get_class_hash, spy_events};
     use contracts_commons::test_utils::cheat_caller_address_once;
+    use core::num::traits::zero::Zero;
 
     #[test]
     fn test_get_upgrade_delay() {
@@ -38,7 +39,7 @@ mod ReplaceabilityTests {
         let implementation_data = DUMMY_NONFINAL_IMPLEMENTATION_DATA();
 
         // Check implementation time pre addition.
-        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_zero());
 
         cheat_caller_address_once(
             :contract_address, caller_address: get_upgrade_governor_account(:contract_address),
@@ -95,14 +96,14 @@ mod ReplaceabilityTests {
 
         // Remove implementation that was not previously added.
         replaceable_dispatcher.remove_implementation(:implementation_data);
-        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_zero());
         let emitted_events = spy.get_events().emitted_by(:contract_address);
         // The following should NOT emit an event.
-        assert!(emitted_events.events.len() == 0);
+        assert!(emitted_events.events.len().is_zero());
 
         replaceable_dispatcher.add_new_implementation(:implementation_data);
         replaceable_dispatcher.remove_implementation(:implementation_data);
-        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_zero());
 
         // Validate event emission.
         spy
@@ -155,14 +156,16 @@ mod ReplaceabilityTests {
 
         // Add implementation.
         replaceable_dispatcher.add_new_implementation(:implementation_data);
-        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) != 0);
+        assert!(
+            replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_non_zero()
+        );
 
         // Advance time to enable implementation.
         cheat_block_timestamp(contract_address, DEFAULT_UPGRADE_DELAY + 1, CheatSpan::Indefinite);
         replaceable_dispatcher.replace_to(:implementation_data);
 
         // Check enabled timestamp zeroed for replaced to impl, and non-zero for other.
-        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_zero());
 
         // Add implementation for 2nd time.
         replaceable_dispatcher.add_new_implementation(:implementation_data);
@@ -319,10 +322,13 @@ mod ReplaceabilityTests {
         replaceable_dispatcher.add_new_implementation(:implementation_data);
         replaceable_dispatcher
             .add_new_implementation(implementation_data: other_implementation_data);
-        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) != 0);
+        assert!(
+            replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_non_zero()
+        );
         assert!(
             replaceable_dispatcher
-                .get_impl_activation_time(implementation_data: other_implementation_data) != 0
+                .get_impl_activation_time(implementation_data: other_implementation_data)
+                .is_non_zero()
         );
 
         // Advance time to enable implementation.
@@ -331,10 +337,11 @@ mod ReplaceabilityTests {
         replaceable_dispatcher.replace_to(:implementation_data);
 
         // Check enabled timestamp zeroed for replaced to impl, and non-zero for other.
-        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data) == 0);
+        assert!(replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_zero());
         assert!(
             replaceable_dispatcher
-                .get_impl_activation_time(implementation_data: other_implementation_data) != 0
+                .get_impl_activation_time(implementation_data: other_implementation_data)
+                .is_non_zero()
         );
 
         // Should revert with UNKNOWN_IMPLEMENTATION as replace_to removes the implementation.

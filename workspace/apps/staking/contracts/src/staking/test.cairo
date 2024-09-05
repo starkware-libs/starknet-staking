@@ -349,7 +349,7 @@ fn test_increase_stake_from_staker_address() {
     // Validate the single StakeBalanceChanged event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
-    let mut new_delegated_stake = 0;
+    let mut new_delegated_stake = Zero::zero();
     if let Option::Some(pool_info) = expected_staker_info.pool_info {
         new_delegated_stake = pool_info.amount;
     }

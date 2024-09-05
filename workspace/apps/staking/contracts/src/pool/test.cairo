@@ -508,7 +508,7 @@ fn test_exit_delegation_pool_intent() {
         amount_own: cfg.staker_info.amount_own, ..cfg.staker_info
     };
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
-        pool_info.amount = 0;
+        pool_info.amount = Zero::zero();
         pool_info.pool_contract = pool_contract;
         expected_staker_info.pool_info = Option::Some(pool_info);
     }

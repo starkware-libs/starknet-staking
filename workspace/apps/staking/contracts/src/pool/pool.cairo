@@ -255,7 +255,7 @@ pub mod Pool {
                 .send_rewards_to_pool_member(
                     :pool_member, :reward_address, amount: rewards, :erc20_dispatcher
                 );
-            pool_member_info.unclaimed_rewards = 0;
+            pool_member_info.unclaimed_rewards = Zero::zero();
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             rewards
         }
