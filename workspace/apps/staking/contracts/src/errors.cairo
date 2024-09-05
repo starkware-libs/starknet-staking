@@ -1,5 +1,6 @@
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use contracts::operator::Operator::MAX_WHITELIST_SIZE;
+use contracts::constants::C_DENOM;
 
 #[derive(Drop)]
 pub enum Error {
@@ -52,6 +53,7 @@ pub enum Error {
     TOTAL_SUPPLY_NOT_U128,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     UNAUTHORIZED_MESSAGE_SENDER,
+    C_NOM_OUT_OF_RANGE,
 }
 
 
@@ -127,6 +129,7 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::CANNOT_INCREASE_COMMISSION => panic!("Commission cannot be increased."),
         Error::STAKER_ALREADY_HAS_POOL => panic!("Staker already has a pool."),
         Error::CONTRACT_IS_PAUSED => panic!("Contract is paused."),
+        Error::C_NOM_OUT_OF_RANGE => panic!("C_NOM is out of range, expected to be 0-{}.", C_DENOM)
     }
 }
 

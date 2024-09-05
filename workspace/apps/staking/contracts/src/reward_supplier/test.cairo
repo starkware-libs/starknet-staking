@@ -10,7 +10,6 @@ use contracts::test_utils::{
     deploy_minting_curve_contract, fund, general_contract_system_deployment
 };
 use contracts::reward_supplier::RewardSupplier::SECONDS_IN_YEAR;
-use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use core::num::traits::Zero;
 use core::num::traits::Sqrt;
@@ -122,7 +121,10 @@ fn test_calculate_staking_rewards() {
     let rewards = state.calculate_staking_rewards();
     // Validate the rewards, unclaimed rewards and l1_pending_requested_amount.
     let unadjusted_expected_rewards: u128 = (cfg.test_info.initial_supply * amount.into()).sqrt();
-    let expected_rewards = multiply_by_max_inflation(unadjusted_expected_rewards);
+    // Multiply by max inflation.
+    let expected_rewards = cfg.minting_curve_contract_info.c_nom.into()
+        * unadjusted_expected_rewards
+        / cfg.minting_curve_contract_info.c_denom.into();
     assert_eq!(rewards, expected_rewards);
     let expected_unclaimed_rewards = rewards + STRK_IN_FRIS;
     assert_eq!(state.unclaimed_rewards.read(), expected_unclaimed_rewards);

@@ -1,7 +1,7 @@
 use core::option::OptionTrait;
 use contracts::{
     constants::{BASE_VALUE, SECONDS_IN_DAY},
-    staking::{StakerInfo, StakerInfoTrait, StakerPoolInfo, Staking::InternalStakingFunctionsTrait,},
+    staking::{StakerInfo, StakerInfoTrait, StakerPoolInfo, Staking::InternalStakingFunctionsTrait},
     utils::{
         compute_rewards_rounded_down, compute_rewards_rounded_up,
         compute_commission_amount_rounded_down
@@ -20,7 +20,6 @@ use contracts::{
         }
     }
 };
-use contracts::minting_curve::MintingCurve::multiply_by_max_inflation;
 use contracts::event_test_utils::{
     assert_number_of_events, assert_staker_exit_intent_event, assert_stake_balance_changed_event,
     assert_delete_staker_event
@@ -1113,6 +1112,11 @@ fn test_update_global_index_if_needed() {
     assert_eq!(global_index_before_first_update, global_index_after_first_update);
     // Advance time by a year, update total_stake to be total_supply (which is equal to initial
     // supply), which means that max_inflation * BASE_VALUE will be added to global_index.
+    let global_index_increment = (cfg.minting_curve_contract_info.c_nom.into()
+        * BASE_VALUE
+        / cfg.minting_curve_contract_info.c_denom.into())
+        .try_into()
+        .expect('inflation not fit in u64');
     let global_index_last_update_timestamp = get_block_timestamp();
     let global_index_current_update_timestamp = global_index_last_update_timestamp
         + SECONDS_IN_DAY * 365;
@@ -1136,11 +1140,7 @@ fn test_update_global_index_if_needed() {
         .try_into()
         .expect('global index not fit in u64');
     assert_eq!(
-        global_index_after_second_update,
-        global_index_after_first_update
-            + multiply_by_max_inflation(BASE_VALUE.into())
-                .try_into()
-                .expect('inflation not fit in u64')
+        global_index_after_second_update, global_index_after_first_update + global_index_increment
     );
     // Validate events.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
