@@ -1,6 +1,6 @@
 use contracts::{staking::Staking, minting_curve::MintingCurve, reward_supplier::RewardSupplier};
 use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
-use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW};
+use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, DEFAULT_C_NOM, C_DENOM};
 use core::traits::Into;
 use contracts::staking::interface::{
     IStaking, StakerInfo, StakerPoolInfo, StakingContractInfo, IStakingDispatcher,
@@ -10,6 +10,7 @@ use core::num::traits::zero::Zero;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts::pool::Pool;
 use contracts::pool::interface::{PoolMemberInfo, IPoolDispatcher, IPoolDispatcherTrait};
+use contracts::minting_curve::interface::MintingCurveContractInfo;
 use starknet::ContractAddress;
 use starknet::ClassHash;
 use starknet::Store;
@@ -114,6 +115,9 @@ pub(crate) mod constants {
     }
     pub fn SPENDER_ADDRESS() -> ContractAddress {
         contract_address_const::<'SPENDER_ADDRESS'>()
+    }
+    pub fn NON_APP_GOVERNOR() -> ContractAddress {
+        contract_address_const::<'NON_APP_GOVERNOR'>()
     }
     pub fn STRK_TOKEN_ADDRESS() -> ContractAddress {
         contract_address_const::<
@@ -280,7 +284,9 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
         security_admin: cfg.test_info.security_admin
     );
     set_account_as_app_governer(
-        :staking_contract, account: cfg.test_info.app_governer, governance_admin: test_address()
+        contract: staking_contract,
+        account: cfg.test_info.app_governer,
+        governance_admin: test_address()
     );
 }
 
@@ -301,10 +307,10 @@ pub(crate) fn set_account_as_operator(
 }
 
 pub(crate) fn set_account_as_app_governer(
-    staking_contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
 ) {
-    let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: governance_admin);
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
     roles_dispatcher.register_app_governor(:account);
 }
 
@@ -322,6 +328,11 @@ pub(crate) fn deploy_minting_curve_contract(
     cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
     let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap();
     let (minting_curve_contract_address, _) = minting_curve_contract.deploy(@calldata).unwrap();
+    set_account_as_app_governer(
+        contract: minting_curve_contract_address,
+        account: cfg.test_info.app_governer,
+        governance_admin: test_address()
+    );
     minting_curve_contract_address
 }
 
@@ -655,6 +666,7 @@ pub(crate) struct StakingInitConfig {
     pub staker_info: StakerInfo,
     pub pool_member_info: PoolMemberInfo,
     pub staking_contract_info: StakingContractInfo,
+    pub minting_curve_contract_info: MintingCurveContractInfo,
     pub test_info: TestInfo,
     pub reward_supplier: RewardSupplierInfo,
 }
@@ -693,6 +705,9 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW
         };
+        let minting_curve_contract_info = MintingCurveContractInfo {
+            c_nom: DEFAULT_C_NOM, c_denom: C_DENOM,
+        };
         let test_info = TestInfo {
             staker_address: STAKER_ADDRESS(),
             pool_member_address: POOL_MEMBER_ADDRESS(),
@@ -715,7 +730,12 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             buffer: BUFFER,
         };
         StakingInitConfig {
-            staker_info, pool_member_info, staking_contract_info, test_info, reward_supplier
+            staker_info,
+            pool_member_info,
+            staking_contract_info,
+            minting_curve_contract_info,
+            test_info,
+            reward_supplier
         }
     }
 }
