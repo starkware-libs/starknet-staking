@@ -1,10 +1,11 @@
 use starknet::ContractAddress;
 use core::num::traits::Zero;
 
-
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub struct UndelegateIntentKey {
     pub pool_contract: ContractAddress,
+    // The identifier is generally the pool member address, but it can be any unique identifier,
+    // depending on the logic of the pool contract.
     pub identifier: felt252
 }
 
