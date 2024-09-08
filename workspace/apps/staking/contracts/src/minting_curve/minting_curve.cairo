@@ -64,14 +64,11 @@ pub mod MintingCurve {
     }
 
     #[l1_handler]
-    fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: felt252) {
+    fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: u128) {
         assert_with_err(
             from_address == self.l1_staking_minter_address.read(),
             Error::UNAUTHORIZED_MESSAGE_SENDER
         );
-        let total_supply: u128 = total_supply
-            .try_into()
-            .expect_with_err(Error::TOTAL_SUPPLY_NOT_U128);
         let old_total_supply = self.total_supply.read();
         self.total_supply.write(total_supply);
         self.emit(Events::TotalSupplyChanged { old_total_supply, new_total_supply: total_supply });
