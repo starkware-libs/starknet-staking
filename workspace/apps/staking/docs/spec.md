@@ -33,6 +33,7 @@
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
+    - [New Staker](#new-staker)
     - [Staker Exit intent](#staker-exit-intent)
     - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
     - [Delete Staker](#delete-staker)
@@ -395,6 +396,7 @@ Add a new staker to the stake.
 #### emits <!-- omit from toc -->
 1. [New Delegation Pool](#new-delegation-pool) - if `pool_enabled` is true
 2. [Stake Balance Changed](#stake-balance-changed)
+3. [New Staker](#new-staker)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [ONLY\_OPERATOR](#only_operator)
@@ -873,6 +875,13 @@ Only staker address.
 | pool_contract  | address | ✅     |
 | commission     | u16     | ❌     |
 
+### New Staker
+| data                | type    | keyed |
+| ------------------- | ------- | ----- |
+| staker_address      | address | ✅     |
+| reward_address      | address | ❌     |
+| operational_address | address | ❌     |
+| self_stake          | u128    | ❌     |
 
 ### Staker Exit intent
 | data    | type    | keyed |
