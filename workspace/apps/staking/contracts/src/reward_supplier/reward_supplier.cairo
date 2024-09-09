@@ -38,6 +38,7 @@ pub mod RewardSupplier {
         staking_contract: ContractAddress,
         erc20_dispatcher: IERC20Dispatcher,
         l1_staking_minter: felt252,
+        starkgate_address: ContractAddress,
     }
 
     #[event]
@@ -60,6 +61,7 @@ pub mod RewardSupplier {
         staking_contract: ContractAddress,
         token_address: ContractAddress,
         l1_staking_minter: felt252,
+        starkgate_address: ContractAddress,
     ) {
         self.staking_contract.write(staking_contract);
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
@@ -74,6 +76,7 @@ pub mod RewardSupplier {
             .minting_curve_dispatcher
             .write(IMintingCurveDispatcher { contract_address: minting_curve_contract });
         self.l1_staking_minter.write(l1_staking_minter);
+        self.starkgate_address.write(starkgate_address);
     }
 
     #[abi(embed_v0)]
@@ -116,6 +119,10 @@ pub mod RewardSupplier {
             depositor: EthAddress,
             message: Span<felt252>
         ) -> bool {
+            assert_with_err(
+                get_caller_address() == self.starkgate_address.read(),
+                Error::ON_RECEIVE_NOT_FROM_STARKGATE
+            );
             let amount_low: u128 = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
             if amount_low > l1_pending_requested_amount {
