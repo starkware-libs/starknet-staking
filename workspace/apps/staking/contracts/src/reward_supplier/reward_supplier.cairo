@@ -41,7 +41,9 @@ pub mod RewardSupplier {
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
+        #[flat]
         accesscontrolEvent: AccessControlComponent::Event,
+        #[flat]
         src5Event: SRC5Component::Event,
         CalculatedRewards: Events::CalculatedRewards,
         mintRequest: Events::MintRequest,

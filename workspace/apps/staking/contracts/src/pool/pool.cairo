@@ -56,9 +56,13 @@ pub mod Pool {
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
+        #[flat]
         ReplaceabilityEvent: ReplaceabilityComponent::Event,
+        #[flat]
         AccessControlEvent: AccessControlComponent::Event,
+        #[flat]
         SRC5Event: SRC5Component::Event,
+        #[flat]
         RolesEvent: RolesComponent::Event,
         PoolMemberExitIntent: Events::PoolMemberExitIntent,
         DelegationPoolMemberBalanceChanged: Events::DelegationPoolMemberBalanceChanged,

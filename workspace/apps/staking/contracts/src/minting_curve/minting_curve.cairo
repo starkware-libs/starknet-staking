@@ -39,8 +39,11 @@ pub mod MintingCurve {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
+        #[flat]
         RolesEvent: RolesComponent::Event,
+        #[flat]
         AccessControlEvent: AccessControlComponent::Event,
+        #[flat]
         SRC5Event: SRC5Component::Event,
         TotalSupplyChanged: Events::TotalSupplyChanged
     }

@@ -72,9 +72,13 @@ pub mod Staking {
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
+        #[flat]
         ReplaceabilityEvent: ReplaceabilityComponent::Event,
+        #[flat]
         RolesEvent: RolesComponent::Event,
+        #[flat]
         AccessControlEvent: AccessControlComponent::Event,
+        #[flat]
         SRC5Event: SRC5Component::Event,
         StakeBalanceChanged: Events::StakeBalanceChanged,
         NewDelegationPool: Events::NewDelegationPool,
