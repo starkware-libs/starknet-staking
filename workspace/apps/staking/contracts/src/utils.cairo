@@ -1,7 +1,8 @@
 use contracts::constants::{BASE_VALUE, SECONDS_IN_DAY};
-use contracts::errors::{Error, OptionAuxTrait};
-use starknet::{ContractAddress, ClassHash, SyscallResultTrait};
+use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
+use starknet::{ContractAddress, ClassHash, SyscallResultTrait, get_contract_address};
 use starknet::syscalls::deploy_syscall;
+use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
 use core::num::traits::WideMul;
@@ -127,6 +128,26 @@ pub fn day_of(timestamp: u64) -> u64 {
     timestamp / SECONDS_IN_DAY
 }
 
+#[generate_trait]
+pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
+    fn checked_transfer_from(
+        self: IERC20Dispatcher, sender: ContractAddress, recipient: ContractAddress, amount: u256
+    ) -> bool {
+        assert_with_err(amount <= self.balance_of(account: sender), Error::INSUFFICIENT_BALANCE);
+        assert_with_err(
+            amount <= self.allowance(owner: sender, spender: get_contract_address()),
+            Error::INSUFFICIENT_ALLOWANCE
+        );
+        self.transfer_from(:sender, :recipient, :amount)
+    }
+
+    fn checked_transfer(self: IERC20Dispatcher, recipient: ContractAddress, amount: u256) -> bool {
+        assert_with_err(
+            amount <= self.balance_of(account: get_contract_address()), Error::INSUFFICIENT_BALANCE
+        );
+        self.transfer(:recipient, :amount)
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -16,7 +16,8 @@ pub mod Staking {
     use starknet::{ContractAddress, get_contract_address, get_caller_address, get_tx_info};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
+    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use contracts::utils::CheckedIERC20DispatcherTrait;
     use starknet::get_block_timestamp;
     use starknet::class_hash::ClassHash;
     use contracts::pool::interface::{IPoolDispatcherTrait, IPoolDispatcher};
@@ -151,7 +152,7 @@ pub mod Staking {
             let staking_contract = get_contract_address();
             let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
-                .transfer_from(
+                .checked_transfer_from(
                     sender: staker_address, recipient: staking_contract, amount: amount.into()
                 );
             let pool_info = if pool_enabled {
@@ -227,7 +228,7 @@ pub mod Staking {
             let staking_contract_address = get_contract_address();
             let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
-                .transfer_from(
+                .checked_transfer_from(
                     sender: caller_address,
                     recipient: staking_contract_address,
                     amount: amount.into()
@@ -338,7 +339,8 @@ pub mod Staking {
                 );
             // Transfer stake to staker.
             let staker_amount = staker_info.amount_own;
-            erc20_dispatcher.transfer(recipient: staker_address, amount: staker_amount.into());
+            erc20_dispatcher
+                .checked_transfer(recipient: staker_address, amount: staker_amount.into());
 
             self.transfer_to_pool_when_unstake(:staker_address, :staker_info);
             self.remove_staker(:staker_address, :staker_info);
@@ -496,7 +498,7 @@ pub mod Staking {
             self.calculate_rewards(ref :staker_info);
             let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
-                .transfer_from(
+                .checked_transfer_from(
                     sender: pool_contract, recipient: get_contract_address(), amount: amount.into()
                 );
             let mut pool_info = staker_info.get_pool_info_unchecked();
@@ -588,7 +590,9 @@ pub mod Staking {
             );
             let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
-                .transfer(recipient: pool_contract, amount: undelegate_intent.amount.into());
+                .checked_transfer(
+                    recipient: pool_contract, amount: undelegate_intent.amount.into()
+                );
             // TODO: Emit event.
             self.clear_undelegate_intent(:undelegate_intent_key);
             undelegate_intent.amount
@@ -721,7 +725,7 @@ pub mod Staking {
             assert_with_err(
                 balance_after - balance_before == amount.into(), Error::UNEXPECTED_BALANCE
             );
-            erc20_dispatcher.transfer(recipient: reward_address, amount: amount.into());
+            erc20_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
         }
 
         fn send_rewards_to_staker(
@@ -795,7 +799,9 @@ pub mod Staking {
                         :erc20_dispatcher
                     );
                 erc20_dispatcher
-                    .transfer(recipient: pool_info.pool_contract, amount: pool_info.amount.into());
+                    .checked_transfer(
+                        recipient: pool_info.pool_contract, amount: pool_info.amount.into()
+                    );
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_info.pool_contract };
                 pool_dispatcher.set_final_staker_index(final_staker_index: staker_info.index);
             }
