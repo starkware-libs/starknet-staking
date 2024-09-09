@@ -10,6 +10,9 @@ pub enum Error {
     REWARDS_ISNT_U128,
     BALANCE_ISNT_U128,
     COMMISSION_ISNT_U128,
+    // ERC20 errors,
+    INSUFFICIENT_BALANCE,
+    INSUFFICIENT_ALLOWANCE,
     // Shared errors
     STAKER_EXISTS,
     STAKER_NOT_EXISTS,
@@ -135,7 +138,9 @@ pub fn panic_by_err(error: Error) -> core::never {
         Error::CONTRACT_IS_PAUSED => panic!("Contract is paused."),
         Error::C_NUM_OUT_OF_RANGE => panic!(
             "C numerator is out of range, expected to be 0-{}.", C_DENOM
-        )
+        ),
+        Error::INSUFFICIENT_BALANCE => panic!("Insufficient ERC20 balance."),
+        Error::INSUFFICIENT_ALLOWANCE => panic!("Insufficient ERC20 allowance.")
     }
 }
 

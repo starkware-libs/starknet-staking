@@ -16,6 +16,7 @@ pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
+    use contracts::utils::CheckedIERC20DispatcherTrait;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -111,7 +112,7 @@ pub mod Pool {
             let erc20_dispatcher = self.erc20_dispatcher.read();
             let self_contract = get_contract_address();
             erc20_dispatcher
-                .transfer_from(
+                .checked_transfer_from(
                     sender: pool_member, recipient: self_contract, amount: amount.into()
                 );
             erc20_dispatcher
@@ -162,7 +163,7 @@ pub mod Pool {
             let erc20_dispatcher = self.erc20_dispatcher.read();
             let self_contract = get_contract_address();
             erc20_dispatcher
-                .transfer_from(
+                .checked_transfer_from(
                     sender: pool_member, recipient: self_contract, amount: amount.into()
                 );
             erc20_dispatcher
@@ -234,7 +235,7 @@ pub mod Pool {
             // Transfer delegated amount to the pool member.
             let unpool_amount = pool_member_info.unpool_amount;
             pool_member_info.unpool_amount = Zero::zero();
-            erc20_dispatcher.transfer(recipient: pool_member, amount: unpool_amount.into());
+            erc20_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
             if pool_member_info.amount.is_zero() {
                 self.remove_pool_member(:pool_member);
             } else {
@@ -287,7 +288,7 @@ pub mod Pool {
                 // Claim rewards.
                 let erc20_dispatcher = self.erc20_dispatcher.read();
                 erc20_dispatcher
-                    .transfer(
+                    .checked_transfer(
                         recipient: pool_member_info.reward_address,
                         amount: pool_member_info.unclaimed_rewards.into()
                     );
@@ -516,7 +517,7 @@ pub mod Pool {
             amount: u128,
             erc20_dispatcher: IERC20Dispatcher
         ) {
-            erc20_dispatcher.transfer(recipient: reward_address, amount: amount.into());
+            erc20_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
             self.emit(Events::PoolMemberRewardClaimed { pool_member, reward_address, amount });
         }
     }

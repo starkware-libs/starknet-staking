@@ -15,6 +15,8 @@ pub mod RewardSupplier {
     use core::num::traits::Zero;
     use contracts::utils::{ceil_of_division, compute_threshold};
     use contracts::constants::STRK_IN_FRIS;
+    use contracts::utils::CheckedIERC20DispatcherTrait;
+
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
@@ -104,7 +106,7 @@ pub mod RewardSupplier {
             assert_with_err(unclaimed_rewards >= amount, Error::AMOUNT_TOO_HIGH);
             self.unclaimed_rewards.write(unclaimed_rewards - amount);
             let erc20_dispatcher = self.erc20_dispatcher.read();
-            erc20_dispatcher.transfer(recipient: staking_contract, amount: amount.into());
+            erc20_dispatcher.checked_transfer(recipient: staking_contract, amount: amount.into());
         }
 
         fn on_receive(
