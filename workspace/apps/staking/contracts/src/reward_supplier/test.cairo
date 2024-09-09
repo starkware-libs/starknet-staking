@@ -119,7 +119,7 @@ fn test_calculate_staking_rewards() {
     // Validate the rewards, unclaimed rewards and l1_pending_requested_amount.
     let unadjusted_expected_rewards: u128 = (cfg.test_info.initial_supply * amount.into()).sqrt();
     // Multiply by max inflation.
-    let expected_rewards = cfg.minting_curve_contract_info.c_nom.into()
+    let expected_rewards = cfg.minting_curve_contract_info.c_num.into()
         * unadjusted_expected_rewards
         / cfg.minting_curve_contract_info.c_denom.into();
     assert_eq!(rewards, expected_rewards);
