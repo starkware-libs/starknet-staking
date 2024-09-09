@@ -1,5 +1,6 @@
 use starknet::{ContractAddress};
 use contracts::staking::Events as StakingEvents;
+use contracts::staking::PauseEvents;
 use contracts::pool::Events as PoolEvents;
 use contracts::reward_supplier::Events as RewardSupplierEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
@@ -489,6 +490,32 @@ pub fn assert_rewards_supplied_to_delegation_pool_event(
             pool_address,
             amount
         );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+pub fn assert_paused_event(spied_event: @(ContractAddress, Event), account: ContractAddress) {
+    let expected_event = @contracts::staking::Staking::Event::Paused(
+        PauseEvents::Paused { account }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!("Paused{{account: {:?}}}", account);
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+pub fn assert_unpaused_event(spied_event: @(ContractAddress, Event), account: ContractAddress) {
+    let expected_event = @contracts::staking::Staking::Event::Unpaused(
+        PauseEvents::Unpaused { account }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!("Unpaused{{account: {:?}}}", account);
         panic_with_event_details(:expected_emitted_by, :details);
     }
 }
