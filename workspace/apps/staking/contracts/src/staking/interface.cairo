@@ -209,6 +209,19 @@ pub trait IStakingPause<TContractState> {
     fn unpause(ref self: TContractState);
 }
 
+pub mod PauseEvents {
+    use starknet::ContractAddress;
+    #[derive(Drop, starknet::Event)]
+    pub struct Paused {
+        pub account: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct Unpaused {
+        pub account: ContractAddress,
+    }
+}
+
 #[starknet::interface]
 pub trait IStakingConfig<TContractState> {
     fn set_min_stake(ref self: TContractState, min_stake: u128);

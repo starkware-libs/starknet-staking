@@ -7,7 +7,7 @@ pub mod objects;
 pub use staking::Staking;
 pub use interface::{IStaking, StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo};
 pub use interface::{IStakingPool, IStakingPause, IStakingConfig};
-pub use interface::Events;
+pub use interface::{Events, PauseEvents};
 
 #[cfg(test)]
 mod test;

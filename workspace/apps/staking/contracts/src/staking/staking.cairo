@@ -12,7 +12,7 @@ pub mod Staking {
     use contracts::utils::compute_global_index_diff;
     use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
     use contracts::staking::objects::UndelegateIntentValueZero;
-    use contracts::staking::Events;
+    use contracts::staking::{Events, PauseEvents};
     use starknet::{ContractAddress, get_contract_address, get_caller_address, get_tx_info};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -87,6 +87,8 @@ pub mod Staking {
         StakerRewardClaimed: Events::StakerRewardClaimed,
         DeleteStaker: Events::DeleteStaker,
         RewardsSuppliedToDelegationPool: Events::RewardsSuppliedToDelegationPool,
+        Paused: PauseEvents::Paused,
+        Unpaused: PauseEvents::Unpaused
     }
 
     #[constructor]
@@ -669,11 +671,13 @@ pub mod Staking {
         fn pause(ref self: ContractState) {
             self.roles.only_security_agent();
             self.is_paused.write(true);
+            self.emit(PauseEvents::Paused { account: get_caller_address() });
         }
 
         fn unpause(ref self: ContractState) {
             self.roles.only_security_admin();
             self.is_paused.write(false);
+            self.emit(PauseEvents::Unpaused { account: get_caller_address() });
         }
     }
 

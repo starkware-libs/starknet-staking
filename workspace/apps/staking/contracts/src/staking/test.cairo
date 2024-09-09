@@ -25,6 +25,7 @@ use event_test_utils::assert_new_staker_event;
 use event_test_utils::assert_global_index_updated_event;
 use event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
 use event_test_utils::assert_staker_reward_claimed_event;
+use event_test_utils::{assert_paused_event, assert_unpaused_event};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::get_block_timestamp;
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
@@ -1424,6 +1425,7 @@ fn test_pause() {
     );
     assert_eq!(is_paused, 0);
     assert!(!staking_dispatcher.is_paused());
+    let mut spy = snforge_std::spy_events();
     // Pause with security agent.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent
@@ -1440,6 +1442,11 @@ fn test_pause() {
     );
     staking_pause_dispatcher.unpause();
     assert!(!staking_dispatcher.is_paused());
+    // Validate Paused and Unpaused events.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 2, message: "pause");
+    assert_paused_event(spied_event: events[0], account: cfg.test_info.security_agent);
+    assert_unpaused_event(spied_event: events[1], account: cfg.test_info.security_admin);
 }
 
 #[test]
