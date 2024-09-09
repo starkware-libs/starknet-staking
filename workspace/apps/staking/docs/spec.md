@@ -30,6 +30,9 @@
     - [get\_total\_stake](#get_total_stake)
     - [calculate\_rewards](#calculate_rewards)
     - [change\_operational\_address](#change_operational_address)
+    - [is\_paused](#is_paused)
+    - [pause](#pause)
+    - [unpause](#unpause)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
@@ -41,6 +44,8 @@
     - [Staker Reward Address Changed](#staker-reward-address-changed)
     - [Operational Address Changed](#operational-address-changed)
     - [Global Index Updated](#global-index-updated)
+    - [Paused](#paused)
+    - [Unpaused](#unpaused)
 - [Delegation pool contract](#delegation-pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -107,6 +112,8 @@
     - [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
     - [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
     - [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
+    - [ONLY\_SECURITY\_AGENT](#only_security_agent)
+    - [ONLY\_SECURITY\_ADMIN](#only_security_admin)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -858,6 +865,49 @@ Only staker address.
 #### logic <!-- omit from toc -->
 1. Change registered `operational_address` for the staker.
 
+### is_paused
+```rust
+fn is_paused(self: @TContractState) -> bool
+```
+#### description <!-- omit from toc -->
+Return `true` if the staking contract is paused.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+
+### pause
+```rust
+fn pause(ref self: TContractState)
+```
+#### description <!-- omit from toc -->
+Pause the staking contract.
+#### emits <!-- omit from toc -->
+1. [Paused](#paused)
+#### errors <!-- omit from toc -->
+1. [ONLY\_SECURITY\_AGENT](#only_security_agent)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only security agent.
+#### logic <!-- omit from toc -->
+
+### unpause
+```rust
+fn unpause(ref self: TContractState)
+```
+#### description <!-- omit from toc -->
+Unpause the staking contract.
+#### emits <!-- omit from toc -->
+1. [Unpaused](#unpaused)
+#### errors <!-- omit from toc -->
+1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only security admin.
+#### logic <!-- omit from toc -->
+
 ## Events
 ### Stake Balance Changed
 | data                | type    | keyed |
@@ -932,6 +982,16 @@ Only staker address.
 | new_index                             | u64  | ❌     |
 | global_index_last_update_timestamp    | u64  | ❌     |
 | global_index_current_update_timestamp | u64  | ❌     |
+
+### Paused
+| data    | type    | keyed |
+| ------- | ------- | ----- |
+| account | address | ❌    |
+
+### Unpaused
+| data    | type    | keyed |
+| ------- | ------- | ----- |
+| account | address | ❌    |
 
 # Delegation pool contract
 
@@ -1508,6 +1568,12 @@ Any address can execute.
 
 ### SWITCH_POOL_DATA_DESERIALIZATION_FAILED
 "Switch pool data deserialization failed."
+
+### ONLY_SECURITY_AGENT
+"ONLY_SECURITY_AGENT"
+
+### ONLY_SECURITY_ADMIN
+"ONLY_SECURITY_ADMIN"
 
 # Structs
 ### StakerPoolInfo
