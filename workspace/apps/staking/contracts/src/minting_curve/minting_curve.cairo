@@ -4,7 +4,7 @@ pub mod MintingCurve {
     use contracts::minting_curve::interface::{IMintingCurve, Events};
     use contracts::minting_curve::interface::{IMintingCurveConfig, MintingCurveContractInfo};
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
-    use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
+    use contracts::errors::{Error, assert_with_err};
     use starknet::{ContractAddress};
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
@@ -12,7 +12,7 @@ pub mod MintingCurve {
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use contracts_commons::components::roles::interface::{APP_GOVERNOR, GOVERNANCE_ADMIN};
-    use contracts::constants::{DEFAULT_C_NOM, C_DENOM};
+    use contracts::constants::{DEFAULT_C_NUM, C_DENOM};
 
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
@@ -33,7 +33,7 @@ pub mod MintingCurve {
         staking_dispatcher: IStakingDispatcher,
         total_supply: u128,
         l1_staking_minter_address: felt252,
-        c_nom: u16
+        c_num: u16
     }
 
     #[event]
@@ -60,7 +60,7 @@ pub mod MintingCurve {
         self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
         self.total_supply.write(total_supply);
         self.l1_staking_minter_address.write(l1_staking_minter_address);
-        self.c_nom.write(DEFAULT_C_NOM);
+        self.c_num.write(DEFAULT_C_NUM);
     }
 
     #[l1_handler]
@@ -92,16 +92,16 @@ pub mod MintingCurve {
         }
 
         fn contract_parameters(self: @ContractState) -> MintingCurveContractInfo {
-            MintingCurveContractInfo { c_nom: self.c_nom.read(), c_denom: C_DENOM }
+            MintingCurveContractInfo { c_num: self.c_num.read(), c_denom: C_DENOM }
         }
     }
 
     #[abi(embed_v0)]
     impl IMintingCurveConfigImpl of IMintingCurveConfig<ContractState> {
-        fn set_c_nom(ref self: ContractState, c_nom: u16) {
+        fn set_c_num(ref self: ContractState, c_num: u16) {
             self.roles.only_app_governor();
-            assert_with_err(c_nom <= C_DENOM, Error::C_NOM_OUT_OF_RANGE);
-            self.c_nom.write(c_nom);
+            assert_with_err(c_num <= C_DENOM, Error::C_NUM_OUT_OF_RANGE);
+            self.c_num.write(c_num);
         }
     }
 
@@ -119,7 +119,7 @@ pub mod MintingCurve {
         }
 
         fn multiply_by_max_inflation(self: @ContractState, amount: u128) -> u128 {
-            self.c_nom.read().into() * amount / C_DENOM.into()
+            self.c_num.read().into() * amount / C_DENOM.into()
         }
     }
 }

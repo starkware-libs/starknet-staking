@@ -1101,7 +1101,7 @@ fn test_update_global_index_if_needed() {
     assert_eq!(global_index_before_first_update, global_index_after_first_update);
     // Advance time by a year, update total_stake to be total_supply (which is equal to initial
     // supply), which means that max_inflation * BASE_VALUE will be added to global_index.
-    let global_index_increment = (cfg.minting_curve_contract_info.c_nom.into()
+    let global_index_increment = (cfg.minting_curve_contract_info.c_num.into()
         * BASE_VALUE
         / cfg.minting_curve_contract_info.c_denom.into())
         .try_into()

@@ -6,12 +6,12 @@ pub trait IMintingCurve<TContractState> {
 
 #[starknet::interface]
 pub trait IMintingCurveConfig<TContractState> {
-    fn set_c_nom(ref self: TContractState, c_nom: u16);
+    fn set_c_num(ref self: TContractState, c_num: u16);
 }
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct MintingCurveContractInfo {
-    pub c_nom: u16,
+    pub c_num: u16,
     pub c_denom: u16,
 }
 

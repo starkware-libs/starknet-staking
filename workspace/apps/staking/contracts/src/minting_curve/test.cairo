@@ -27,7 +27,7 @@ fn test_yearly_mint() {
         .expect('total_supply doesn\'t fit u128');
     let product: u256 = total_stake.wide_mul(total_supply);
     let unadjusted_mint_amount: u128 = product.sqrt();
-    let expected_minted_tokens: u128 = cfg.minting_curve_contract_info.c_nom.into()
+    let expected_minted_tokens: u128 = cfg.minting_curve_contract_info.c_num.into()
         * unadjusted_mint_amount
         / cfg.minting_curve_contract_info.c_denom.into();
     let minted_tokens = minting_curve_dispatcher.yearly_mint();
@@ -35,7 +35,7 @@ fn test_yearly_mint() {
 }
 
 #[test]
-fn test_set_c_nom() {
+fn test_set_c_num() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
@@ -45,46 +45,46 @@ fn test_set_c_nom() {
     let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
         contract_address: minting_curve_contract
     };
-    let old_c_nom = cfg.minting_curve_contract_info.c_nom;
-    assert_eq!(old_c_nom, minting_curve_dispatcher.contract_parameters().c_nom);
-    let new_c_nom = old_c_nom * 2;
+    let old_c_num = cfg.minting_curve_contract_info.c_num;
+    assert_eq!(old_c_num, minting_curve_dispatcher.contract_parameters().c_num);
+    let new_c_num = old_c_num * 2;
     cheat_caller_address_once(
         contract_address: minting_curve_contract, caller_address: cfg.test_info.app_governer
     );
-    minting_curve_config_dispatcher.set_c_nom(c_nom: new_c_nom);
-    assert_eq!(new_c_nom, minting_curve_dispatcher.contract_parameters().c_nom);
+    minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
+    assert_eq!(new_c_num, minting_curve_dispatcher.contract_parameters().c_num);
 }
 
 #[test]
 #[should_panic(expected: 'ONLY_APP_GOVERNOR')]
-fn test_set_c_nom_unauthorized() {
+fn test_set_c_num_unauthorized() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
         contract_address: minting_curve_contract
     };
-    let new_c_nom = cfg.minting_curve_contract_info.c_nom * 2;
+    let new_c_num = cfg.minting_curve_contract_info.c_num * 2;
     cheat_caller_address_once(
         contract_address: minting_curve_contract, caller_address: NON_APP_GOVERNOR()
     );
-    minting_curve_config_dispatcher.set_c_nom(c_nom: new_c_nom);
+    minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }
 
 #[test]
-#[should_panic(expected: "C_NOM is out of range, expected to be 0-10000.")]
-fn test_set_invalid_c_nom() {
+#[should_panic(expected: "C numerator is out of range, expected to be 0-10000.")]
+fn test_set_invalid_c_num() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
         contract_address: minting_curve_contract
     };
-    let new_c_nom = cfg.minting_curve_contract_info.c_denom + 1;
+    let new_c_num = cfg.minting_curve_contract_info.c_denom + 1;
     cheat_caller_address_once(
         contract_address: minting_curve_contract, caller_address: cfg.test_info.app_governer
     );
-    minting_curve_config_dispatcher.set_c_nom(c_nom: new_c_nom);
+    minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }
 #[test]
 fn test_contract_parameters() {
@@ -95,7 +95,7 @@ fn test_contract_parameters() {
         contract_address: minting_curve_contract
     };
     let expected_contract_parameters = MintingCurveContractInfo {
-        c_nom: cfg.minting_curve_contract_info.c_nom,
+        c_num: cfg.minting_curve_contract_info.c_num,
         c_denom: cfg.minting_curve_contract_info.c_denom
     };
     assert_eq!(expected_contract_parameters, minting_curve_dispatcher.contract_parameters());

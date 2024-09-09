@@ -1,6 +1,6 @@
 use contracts::{staking::Staking, minting_curve::MintingCurve, reward_supplier::RewardSupplier};
 use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
-use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, DEFAULT_C_NOM, C_DENOM};
+use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, DEFAULT_C_NUM, C_DENOM};
 use core::traits::Into;
 use contracts::staking::interface::{IStaking, StakerInfo, StakerPoolInfo};
 use contracts::staking::interface::{StakingContractInfo, IStakingDispatcher};
@@ -729,7 +729,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW
         };
         let minting_curve_contract_info = MintingCurveContractInfo {
-            c_nom: DEFAULT_C_NOM, c_denom: C_DENOM,
+            c_num: DEFAULT_C_NUM, c_denom: C_DENOM,
         };
         let test_info = TestInfo {
             staker_address: STAKER_ADDRESS(),
