@@ -30,6 +30,7 @@
     - [get\_total\_stake](#get_total_stake)
     - [calculate\_rewards](#calculate_rewards)
     - [change\_operational\_address](#change_operational_address)
+    - [update\_global\_index\_if\_needed](#update_global_index_if_needed)
     - [is\_paused](#is_paused)
     - [pause](#pause)
     - [unpause](#unpause)
@@ -864,6 +865,30 @@ Change the operational address for a staker.
 Only staker address.
 #### logic <!-- omit from toc -->
 1. Change registered `operational_address` for the staker.
+
+### update_global_index_if_needed
+```rust
+fn update_global_index_if_needed(ref self: TContractState) -> bool
+```
+#### description <!-- omit from toc -->
+Update the global index if enough time has passed since the last update.
+This function is called in every staking function that alter the state.
+Return `true` if the index has been updated.
+#### emits <!-- omit from toc -->
+1. [Global Index Updated](#global-index-updated)
+#### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [ONLY\_OPERATOR](#only_operator)
+#### pre-condition <!-- omit from toc -->
+1. Staking contract is unpaused.
+2. Caller has operator role.
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Check if enough time has passed since the last update, if not, return `false`.
+2. [calculate\_staking\_rewards](#calculate_staking_rewards).
+3. [get_total_stake](#get_total_stake).
+4. Update the global index.
 
 ### is_paused
 ```rust

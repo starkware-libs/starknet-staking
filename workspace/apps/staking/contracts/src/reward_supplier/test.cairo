@@ -5,6 +5,7 @@ use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
 use starknet::get_block_timestamp;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::test_utils;
+use contracts::test_utils::constants::NOT_STARKGATE_ADDRESS;
 use test_utils::{deploy_mock_erc20_contract, StakingInitConfig, deploy_staking_contract};
 use test_utils::{stake_for_testing_using_dispatcher, initialize_reward_supplier_state_from_cfg};
 use test_utils::{deploy_minting_curve_contract, fund, general_contract_system_deployment};
@@ -224,6 +225,10 @@ fn test_on_receive() {
                 amount: base_mint_amount,
                 :token_address
             );
+            cheat_caller_address_once(
+                contract_address: reward_supplier_contract,
+                caller_address: cfg.reward_supplier.starkgate_address
+            );
             reward_supplier_dispatcher
                 .on_receive(
                     l2_token: token_address,
@@ -241,4 +246,25 @@ fn test_on_receive() {
                 expected_l1_pending_requested_amount
             );
         };
+}
+
+#[test]
+#[should_panic(expected: "Only StarkGate can call on_receive.")]
+fn test_on_receive_caller_not_starkgate() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier_contract = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier_contract
+    };
+    cheat_caller_address_once(
+        contract_address: reward_supplier_contract, caller_address: NOT_STARKGATE_ADDRESS()
+    );
+    reward_supplier_dispatcher
+        .on_receive(
+            l2_token: cfg.staking_contract_info.token_address,
+            amount: cfg.reward_supplier.base_mint_amount.into(),
+            depositor: cfg.reward_supplier.l1_staking_minter.try_into().expect('not EthAddress'),
+            message: array![].span()
+        );
 }

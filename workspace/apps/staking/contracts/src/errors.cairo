@@ -58,12 +58,15 @@ pub enum Error {
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     UNAUTHORIZED_MESSAGE_SENDER,
     C_NUM_OUT_OF_RANGE,
+    // Reward Supplier contract errors
+    ON_RECEIVE_NOT_FROM_STARKGATE,
 }
 
 
 #[inline(always)]
 pub fn panic_by_err(error: Error) -> core::never {
     match error {
+        Error::ON_RECEIVE_NOT_FROM_STARKGATE => panic!("Only StarkGate can call on_receive."),
         Error::MESSAGES_COUNT_ISNT_U32 => panic!(
             "Number of messages is too large, expected to fit in u32."
         ),

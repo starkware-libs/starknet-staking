@@ -19,7 +19,7 @@ use constants::{STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD
 use constants::{TOKEN_ADDRESS, COMMISSION, POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT};
 use constants::{POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE};
 use constants::{BASE_MINT_AMOUNT, BUFFER, L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG};
-use constants::{STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS};
+use constants::{STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS, STARKGATE_ADDRESS};
 use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN};
 use constants::{SECURITY_AGENT, APP_GOVERNER, GOVERNANCE_ADMIN, OPERATOR_CONTRACT_ADDRESS};
 use contracts_commons::test_utils::cheat_caller_address_once;
@@ -152,6 +152,12 @@ pub(crate) mod constants {
     pub fn APP_GOVERNER() -> ContractAddress {
         contract_address_const::<'APP_GOVERNER'>()
     }
+    pub fn STARKGATE_ADDRESS() -> ContractAddress {
+        contract_address_const::<'STARKGATE_ADDRESS'>()
+    }
+    pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress {
+        contract_address_const::<'NOT_STARKGATE_ADDRESS'>()
+    }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
     ref cfg: StakingInitConfig
@@ -223,6 +229,7 @@ pub(crate) fn initialize_reward_supplier_state_from_cfg(
         staking_contract: cfg.test_info.staking_contract,
         :token_address,
         l1_staking_minter: cfg.reward_supplier.l1_staking_minter,
+        starkgate_address: cfg.reward_supplier.starkgate_address,
     )
 }
 pub(crate) fn initialize_reward_supplier_state(
@@ -232,6 +239,7 @@ pub(crate) fn initialize_reward_supplier_state(
     staking_contract: ContractAddress,
     token_address: ContractAddress,
     l1_staking_minter: felt252,
+    starkgate_address: ContractAddress,
 ) -> RewardSupplier::ContractState {
     let mut state = RewardSupplier::contract_state_for_testing();
     RewardSupplier::constructor(
@@ -242,6 +250,7 @@ pub(crate) fn initialize_reward_supplier_state(
         :staking_contract,
         :token_address,
         :l1_staking_minter,
+        :starkgate_address,
     );
     state
 }
@@ -345,6 +354,7 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     cfg.test_info.staking_contract.serialize(ref calldata);
     cfg.staking_contract_info.token_address.serialize(ref calldata);
     cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
+    cfg.reward_supplier.starkgate_address.serialize(ref calldata);
     let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap();
     let (reward_supplier_contract_address, _) = reward_supplier_contract.deploy(@calldata).unwrap();
     reward_supplier_contract_address
@@ -682,6 +692,7 @@ struct RewardSupplierInfo {
     pub minting_curve_contract: ContractAddress,
     pub l1_staking_minter: felt252,
     pub buffer: u128,
+    pub starkgate_address: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -753,6 +764,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             minting_curve_contract: MINTING_CONTRACT_ADDRESS(),
             l1_staking_minter: L1_STAKING_MINTER_ADDRESS,
             buffer: BUFFER,
+            starkgate_address: STARKGATE_ADDRESS(),
         };
         StakingInitConfig {
             staker_info,
