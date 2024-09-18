@@ -356,9 +356,8 @@ pub mod Pool {
         }
 
         fn set_final_staker_index(ref self: ContractState, final_staker_index: u64) {
-            let staking_contract = get_caller_address();
             assert_with_err(
-                staking_contract == self.staking_pool_dispatcher.read().contract_address,
+                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
             assert_with_err(
