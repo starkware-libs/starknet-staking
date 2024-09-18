@@ -99,8 +99,6 @@ pub mod Pool {
         fn enter_delegation_pool(
             ref self: ContractState, reward_address: ContractAddress, amount: u128
         ) -> bool {
-            // This line was added to prevent the compiler from doing certain optimizations.
-            core::internal::revoke_ap_tracking();
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
             assert_with_err(
@@ -152,8 +150,6 @@ pub mod Pool {
         ) -> u128 {
             self.assert_staker_is_active();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
-            // This line was added to prevent the compiler from doing certain optimizations.
-            core::internal::revoke_ap_tracking();
             let caller_address = get_caller_address();
             assert_with_err(
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
