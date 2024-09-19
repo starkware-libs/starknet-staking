@@ -415,7 +415,6 @@ pub mod Staking {
 
         fn update_global_index_if_needed(ref self: ContractState) -> bool {
             self.assert_is_unpaused();
-            self.roles.only_operator();
             let current_timestmap = get_block_timestamp();
             if day_of(current_timestmap)
                 - day_of(
