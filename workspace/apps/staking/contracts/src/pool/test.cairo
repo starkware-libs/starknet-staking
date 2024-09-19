@@ -288,7 +288,7 @@ fn test_assert_staker_is_active() {
 }
 
 #[test]
-#[should_panic(expected: ("Staker inactive.",))]
+#[should_panic(expected: "Staker inactive.")]
 fn test_assert_staker_is_active_panic() {
     let mut state = initialize_pool_state(
         staker_address: STAKER_ADDRESS(),
@@ -713,7 +713,7 @@ fn test_switch_delegation_pool() {
 }
 
 #[test]
-#[should_panic(expected: ("Pool member does not exist.",))]
+#[should_panic(expected: "Pool member does not exist.")]
 fn test_claim_rewards_pool_member_not_exist() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -730,7 +730,7 @@ fn test_claim_rewards_pool_member_not_exist() {
 
 #[test]
 #[should_panic(
-    expected: ("Claim rewards must be called from pool member address or reward address.",)
+    expected: "Claim rewards must be called from pool member address or reward address."
 )]
 fn test_claim_rewards_unauthorized_address() {
     let cfg: StakingInitConfig = Default::default();
@@ -877,7 +877,7 @@ fn test_update_commission() {
 }
 
 #[test]
-#[should_panic(expected: ("Caller is not staking contract.",))]
+#[should_panic(expected: "Caller is not staking contract.")]
 fn test_update_commission_caller_not_staking_contract() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -894,7 +894,7 @@ fn test_update_commission_caller_not_staking_contract() {
 }
 
 #[test]
-#[should_panic(expected: ("Commission cannot be increased.",))]
+#[should_panic(expected: "Commission cannot be increased.")]
 fn test_update_commission_with_higher_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(

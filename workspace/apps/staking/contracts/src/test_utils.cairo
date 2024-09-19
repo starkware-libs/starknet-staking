@@ -12,7 +12,7 @@ use contracts::pool::interface::{PoolMemberInfo, IPoolDispatcher, IPoolDispatche
 use contracts::minting_curve::interface::MintingCurveContractInfo;
 use starknet::{ContractAddress, ClassHash, Store};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use snforge_std::ContractClassTrait;
+use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use contracts::staking::Staking::ContractState;
 use constants::{NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_INITIAL_BALANCE};
 use constants::{STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS};
@@ -263,7 +263,7 @@ pub(crate) fn deploy_mock_erc20_contract(
     SYMBOL().serialize(ref calldata);
     initial_supply.serialize(ref calldata);
     owner_address.serialize(ref calldata);
-    let erc20_contract = snforge_std::declare("DualCaseERC20Mock").unwrap();
+    let erc20_contract = snforge_std::declare("DualCaseERC20Mock").unwrap().contract_class();
     let (token_address, _) = erc20_contract.deploy(@calldata).unwrap();
     token_address
 }
@@ -278,7 +278,7 @@ pub(crate) fn deploy_staking_contract(
     cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
     cfg.test_info.pool_contract_admin.serialize(ref calldata);
     cfg.test_info.security_admin.serialize(ref calldata);
-    let staking_contract = snforge_std::declare("Staking").unwrap();
+    let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     set_default_roles(staking_contract: staking_contract_address, :cfg);
     staking_contract_address
@@ -336,7 +336,7 @@ pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractA
     cfg.test_info.staking_contract.serialize(ref calldata);
     initial_supply.serialize(ref calldata);
     cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
-    let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap();
+    let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap().contract_class();
     let (minting_curve_contract_address, _) = minting_curve_contract.deploy(@calldata).unwrap();
     set_account_as_app_governer(
         contract: minting_curve_contract_address,
@@ -355,20 +355,20 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     cfg.staking_contract_info.token_address.serialize(ref calldata);
     cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
     cfg.reward_supplier.starkgate_address.serialize(ref calldata);
-    let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap();
+    let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap().contract_class();
     let (reward_supplier_contract_address, _) = reward_supplier_contract.deploy(@calldata).unwrap();
     reward_supplier_contract_address
 }
 
 pub(crate) fn declare_pool_contract() -> ClassHash {
-    snforge_std::declare("Pool").unwrap().class_hash
+    *snforge_std::declare("Pool").unwrap().contract_class().class_hash
 }
 
 pub(crate) fn deploy_operator_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     cfg.test_info.staking_contract.serialize(ref calldata);
     cfg.test_info.security_admin.serialize(ref calldata);
-    let operator_contract = snforge_std::declare("Operator").unwrap();
+    let operator_contract = snforge_std::declare("Operator").unwrap().contract_class();
     let (operator_contract_address, _) = operator_contract.deploy(@calldata).unwrap();
     set_account_as_security_agent(
         staking_contract: operator_contract_address,
