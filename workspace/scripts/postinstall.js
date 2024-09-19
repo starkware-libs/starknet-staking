@@ -4,7 +4,7 @@ const fs = require('fs');
 const tragetDir = process.env.HOME + "/.asdf";
 const asdfVersion = 'v0.14.0';
 const scarbVersion = '2.8.1';
-const foundryVersion = '0.27.0';
+const foundryVersion = '0.30.0';
 
 // Install asdf
 if (!fs.existsSync(tragetDir)) {

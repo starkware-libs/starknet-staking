@@ -11,6 +11,7 @@ openzeppelin.workspace = true
 contracts_commons = { path = "../../../packages/contracts" }
 
 [dev-dependencies]
+assert_macros.workspace = true
 snforge_std.workspace = true
 
 [scripts]

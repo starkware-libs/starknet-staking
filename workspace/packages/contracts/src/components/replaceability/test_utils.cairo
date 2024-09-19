@@ -6,7 +6,7 @@ use contracts_commons::components::replaceability::interface::ImplementationFina
 use contracts_commons::components::replaceability::interface::ImplementationReplaced;
 use contracts_commons::components::replaceability::mock::ReplaceabilityMock;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use snforge_std::{ContractClassTrait, declare, load};
+use snforge_std::{ContractClassTrait, declare, load, DeclareResultTrait};
 use snforge_std::cheatcodes::events::{Event, Events, is_emitted};
 use starknet::ContractAddress;
 use starknet::class_hash::ClassHash;
@@ -41,7 +41,7 @@ pub(crate) mod Constants {
 }
 
 pub(crate) fn deploy_replaceability_mock() -> IReplaceableDispatcher {
-    let replaceable_contract = declare("ReplaceabilityMock").unwrap();
+    let replaceable_contract = declare("ReplaceabilityMock").unwrap().contract_class();
     let (contract_address, _) = replaceable_contract
         .deploy(@array![Constants::DEFAULT_UPGRADE_DELAY.into()])
         .unwrap();
@@ -77,8 +77,8 @@ pub(crate) fn dummy_nonfinal_eic_implementation_data_with_class_hash(
     // Set the eic_init_data calldata.
     let calldata = array![Constants::EIC_UPGRADE_DELAY_ADDITION.into()];
 
-    let eic_contract = declare("EICTestContract").unwrap();
-    let eic_data = EICData { eic_hash: eic_contract.class_hash, eic_init_data: calldata.span() };
+    let eic_contract = declare("EICTestContract").unwrap().contract_class();
+    let eic_data = EICData { eic_hash: *eic_contract.class_hash, eic_init_data: calldata.span() };
 
     ImplementationData { impl_hash: class_hash, eic_data: Option::Some(eic_data), final: false }
 }

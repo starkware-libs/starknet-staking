@@ -173,7 +173,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: ("Interest is too large, expected to fit in u64.",))]
+    #[should_panic(expected: "Interest is too large, expected to fit in u64.")]
     fn u64_mul_wide_and_div_unsafe_test_panic() {
         u64_mul_wide_and_div_unsafe(
             lhs: MAX_U64, rhs: MAX_U64, div: 1, error: Error::INTEREST_ISNT_U64
@@ -196,7 +196,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: ("Interest is too large, expected to fit in u64.",))]
+    #[should_panic(expected: "Interest is too large, expected to fit in u64.")]
     fn u64_mul_wide_and_ceil_div_unsafe_test_panic() {
         let max_u33: u64 = 0x1_FFFF_FFFF; // 2**33 -1 
         // The following calculation is ceil((2**33-1)*(2**33+1)/4) == ceil((2**66-1)/4),
@@ -220,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: ("Rewards is too large, expected to fit in u128.",))]
+    #[should_panic(expected: "Rewards is too large, expected to fit in u128.")]
     fn u128_mul_wide_and_div_unsafe_test_panic() {
         u128_mul_wide_and_div_unsafe(MAX_U128, MAX_U128, 1, Error::REWARDS_ISNT_U128);
     }
@@ -241,7 +241,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: ("Interest is too large, expected to fit in u64.",))]
+    #[should_panic(expected: "Interest is too large, expected to fit in u64.")]
     fn u128_mul_wide_and_ceil_div_unsafe_test_panic() {
         let max_u65: u128 = 0x1_FFFF_FFFF_FFFF_FFFF;
         u128_mul_wide_and_ceil_div_unsafe(

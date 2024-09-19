@@ -5,7 +5,7 @@ use contracts::operator::Operator::MAX_WHITELIST_SIZE;
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::test_utils::constants::{DUMMY_ADDRESS, CALLER_ADDRESS};
 use contracts::test_utils::deploy_operator_contract;
-use snforge_std::ContractClassTrait;
+use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use snforge_std::{CheatSpan, cheat_caller_address, cheat_account_contract_address};
 use starknet::ContractAddress;
 use contracts::test_utils::StakingInitConfig;
@@ -15,7 +15,9 @@ use core::num::traits::one::One;
 
 fn deploy_mock_staking_contract() -> ContractAddress {
     let mut calldata = ArrayTrait::new();
-    let staking_mock_contract = snforge_std::declare("StakingForOperatorMock").unwrap();
+    let staking_mock_contract = snforge_std::declare("StakingForOperatorMock")
+        .unwrap()
+        .contract_class();
     let (staking_mock_contract_address, _) = staking_mock_contract.deploy(@calldata).unwrap();
     staking_mock_contract_address
 }
