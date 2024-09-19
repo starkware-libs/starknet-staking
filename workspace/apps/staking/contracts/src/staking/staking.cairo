@@ -136,9 +136,8 @@ pub mod Staking {
             pool_enabled: bool,
             commission: u16,
         ) -> bool {
-            self.assert_is_unpaused();
+            self.general_prerequisites();
             self.roles.only_operator();
-            self.update_global_index_if_needed();
             // TODO: consider calling get_execution_info() and pass it to the role test for better
             // performance (remove the additional syscall for get_caller_address()).
             let staker_address = get_tx_info().account_contract_address;
@@ -214,9 +213,8 @@ pub mod Staking {
         fn increase_stake(
             ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> u128 {
-            self.assert_is_unpaused();
+            self.general_prerequisites();
             self.roles.only_operator();
-            self.update_global_index_if_needed();
             let caller_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -259,9 +257,8 @@ pub mod Staking {
         }
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
-            self.assert_is_unpaused();
+            self.general_prerequisites();
             self.roles.only_operator();
-            self.update_global_index_if_needed();
             let mut staker_info = self.get_staker_info(:staker_address);
             let caller_address = get_tx_info().account_contract_address;
             let reward_address = staker_info.reward_address;
@@ -282,9 +279,8 @@ pub mod Staking {
         }
 
         fn unstake_intent(ref self: ContractState) -> u64 {
-            self.assert_is_unpaused();
+            self.general_prerequisites();
             self.roles.only_operator();
-            self.update_global_index_if_needed();
             let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -319,9 +315,8 @@ pub mod Staking {
         }
 
         fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
-            self.assert_is_unpaused();
+            self.general_prerequisites();
             self.roles.only_operator();
-            self.update_global_index_if_needed();
             let staker_info = self.get_staker_info(:staker_address);
             let unstake_time = staker_info
                 .unstake_time
@@ -348,9 +343,8 @@ pub mod Staking {
         }
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
-            self.assert_is_unpaused();
+            self.general_prerequisites();
             self.roles.only_operator();
-            self.update_global_index_if_needed();
             let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             let old_address = staker_info.reward_address;
@@ -366,9 +360,8 @@ pub mod Staking {
         }
 
         fn set_open_for_delegation(ref self: ContractState, commission: u16) -> ContractAddress {
-            self.assert_is_unpaused();
+            self.general_prerequisites();
             self.roles.only_operator();
-            self.update_global_index_if_needed();
             let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
@@ -429,9 +422,8 @@ pub mod Staking {
         fn change_operational_address(
             ref self: ContractState, operational_address: ContractAddress
         ) -> bool {
-            self.assert_is_unpaused();
+            self.general_prerequisites();
             self.roles.only_operator();
-            self.update_global_index_if_needed();
             let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             self
@@ -485,8 +477,7 @@ pub mod Staking {
         fn add_stake_from_pool(
             ref self: ContractState, staker_address: ContractAddress, amount: u128
         ) -> (u128, u64) {
-            self.assert_is_unpaused();
-            self.update_global_index_if_needed();
+            self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let pool_contract = staker_info.get_pool_info_unchecked().pool_contract;
@@ -525,8 +516,7 @@ pub mod Staking {
             identifier: felt252,
             amount: u128,
         ) -> u64 {
-            self.assert_is_unpaused();
-            self.update_global_index_if_needed();
+            self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             let mut pool_info = staker_info.get_pool_info_unchecked();
             assert_with_err(
@@ -578,8 +568,7 @@ pub mod Staking {
         fn remove_from_delegation_pool_action(
             ref self: ContractState, identifier: felt252
         ) -> u128 {
-            self.assert_is_unpaused();
-            self.update_global_index_if_needed();
+            self.general_prerequisites();
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let undelegate_intent = self.pool_exit_intents.read(undelegate_intent_key);
@@ -605,8 +594,7 @@ pub mod Staking {
             data: Span<felt252>,
             identifier: felt252
         ) -> bool {
-            self.assert_is_unpaused();
-            self.update_global_index_if_needed();
+            self.general_prerequisites();
             if switched_amount.is_zero() {
                 return false;
             }
@@ -647,8 +635,7 @@ pub mod Staking {
         fn claim_delegation_pool_rewards(
             ref self: ContractState, staker_address: ContractAddress
         ) -> u64 {
-            self.assert_is_unpaused();
-            self.update_global_index_if_needed();
+            self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info_unchecked().pool_contract;
             assert_with_err(
@@ -911,6 +898,12 @@ pub mod Staking {
                         global_index_current_update_timestamp
                     }
                 );
+        }
+
+        /// Wrap initial operations required in any public staking function.
+        fn general_prerequisites(ref self: ContractState) {
+            self.assert_is_unpaused();
+            self.update_global_index_if_needed();
         }
     }
 }
