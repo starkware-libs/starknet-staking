@@ -7,7 +7,6 @@
     "clean": "scarb clean && snforge clean-cache",
     "dev": "scarb cairo-run",
     "format": "pnpm sort-package-json && scarb fmt",
-    "postinstall": "node ../../scripts/postinstall.js",
     "lint": "scarb fmt --check",
     "test": "scarb test"
   },

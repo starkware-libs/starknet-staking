@@ -1,5 +1,5 @@
 [workspace]
-members = ["workspace/apps/staking/contracts", "workspace/packages/contracts"]
+members = ["workspace/apps/staking/contracts", "workspace/packages/contracts", "workspace/apps/perpetuals/contracts"]
 
 
 [workspace.dependencies]

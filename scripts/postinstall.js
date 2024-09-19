@@ -14,8 +14,15 @@ process.env['PATH'] = `${process.env['PATH']}:${process.env['HOME']}/.asdf/bin:$
 if (process.env.CI) {
     fs.appendFileSync(process.env.GITHUB_ENV, `PATH=${process.env['PATH']}\n`);
 } else {
-    execSync(`echo -e "\\n. ~/.asdf/asdf.sh" >> ~/.bashrc`);
-    execSync(`echo -e "\\n. ~/.asdf/completions/asdf.bash" >> ~/.bashrc`);
+    try {
+        // Check if the asdf.sh exists in .bashrc
+        execSync(`grep -Fq asdf.sh ~/.bashrc`);
+        // If grep finds the line, it means it exists
+      } catch (err) {
+        // If grep fails, it means the text doesn't exist, so we append it
+        execSync(`printf "\\n. ~/.asdf/asdf.sh" >> ~/.bashrc`);
+        execSync(`printf "\\n. ~/.asdf/completions/asdf.bash" >> ~/.bashrc`); 
+      }
 }
 
 // Install scarb
