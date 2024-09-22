@@ -2,7 +2,6 @@ use core::iter::Iterator;
 use core::iter::IntoIterator;
 use core::num::traits::BitSize;
 use core::num::traits::zero::Zero;
-use core::ops::AddAssign;
 use core::starknet::storage_access::StorePacking;
 
 use contracts_commons::pow_of_two::PowOfTwo;
@@ -129,7 +128,7 @@ impl TIntoBoolArray<T, +BitSize<T>, +Drop<T>> of Into<T, BoolArray<T>> {
 }
 
 impl SpanTryIntoBoolArray<
-    T, +AddAssign<T, T>, +BitSize<T>, +Copy<T>, +Drop<T>, +Zero<T>, impl TPowOfTwo: PowOfTwo<T>
+    T, +BitOr<T>, +BitSize<T>, +Copy<T>, +Drop<T>, +Zero<T>, impl TPowOfTwo: PowOfTwo<T>
 > of TryInto<Span<usize>, BoolArray<T>> {
     fn try_into(self: Span<usize>) -> Option<BoolArray<T>> {
         let mut bit_array = Zero::<T>::zero();
@@ -140,7 +139,7 @@ impl SpanTryIntoBoolArray<
                     match PowOfTwo::two_to_the(*index) {
                         // In case of invalid index we get an Error from 'PowOfTwo::two_to_the'.
                         Result::Err(_) => { break Option::None; },
-                        Result::Ok(val) => bit_array += val,
+                        Result::Ok(val) => bit_array = bit_array | val,
                     };
                 },
                 // Iterator was fully consumed, ready to return.
