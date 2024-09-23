@@ -1,6 +1,6 @@
 {
   "name": "@staking/contracts",
-  "version": "0.1.1-dev.221",
+  "version": "0.1.1-dev.222",
   "private": true,
   "description": "staking contracts",
   "scripts": {
@@ -8,6 +8,7 @@
     "clean": "scarb clean && snforge clean-cache",
     "dev": "scarb cairo-run",
     "format": "pnpm sort-package-json && scarb fmt",
+    "postinstall": "node ../../../../scripts/install-scarb.js",
     "lint": "scarb fmt --check",
     "test": "scarb test"
   },

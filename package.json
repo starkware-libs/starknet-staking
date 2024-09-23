@@ -8,7 +8,7 @@
     "dev": "turbo run dev --parallel",
     "dev:apps": "node ./scripts/dev-apps.js",
     "format": "sort-package-json && prettier --write \"**.+(js|json|md|yaml)\" && turbo run format --parallel",
-    "postinstall": "pnpm manypkg:check && node ./scripts/postinstall.js",
+    "postinstall": "pnpm manypkg:check",
     "lint": "turbo run lint",
     "manypkg:check": "manypkg check || exit 0",
     "npkill": "npkill",
