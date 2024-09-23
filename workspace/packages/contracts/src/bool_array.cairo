@@ -9,26 +9,26 @@ use contracts_commons::pow_of_two::PowOfTwo;
 const MASK_32: u64 = 0b11_111_111_111_111_111_111_111_111_111_111;
 
 #[derive(Copy, Debug, Drop, PartialEq)]
-struct BoolArrayRange {
+struct BitSetRange {
     // Inclusive.
     lower_bound: usize,
     // Exclusive.
     upper_bound: usize,
 }
 
-impl BoolArrayRangeStorePacking of StorePacking<BoolArrayRange, u64> {
-    fn pack(value: BoolArrayRange) -> u64 {
+impl BitSetRangeStorePacking of StorePacking<BitSetRange, u64> {
+    fn pack(value: BitSetRange) -> u64 {
         let packed = value.lower_bound.into()
             + (value.upper_bound.into()
                 * PowOfTwo::<u64>::two_to_the(32).expect('Valid fixed index.'));
         packed
     }
 
-    fn unpack(value: u64) -> BoolArrayRange {
+    fn unpack(value: u64) -> BitSetRange {
         let lower_bound = value & MASK_32;
         let upper_bound = value / PowOfTwo::<u64>::two_to_the(32).expect('Valid fixed index.');
 
-        BoolArrayRange {
+        BitSetRange {
             lower_bound: lower_bound.try_into().expect('Masked by 32 bits.'),
             upper_bound: upper_bound.try_into().expect('Shifted right by 32 bits.'),
         }
@@ -36,101 +36,101 @@ impl BoolArrayRangeStorePacking of StorePacking<BoolArrayRange, u64> {
 }
 
 #[derive(Debug, Drop, PartialEq)]
-pub struct BoolArray<T> {
+pub struct BitSet<T> {
     // TODO: Consider eliminate size limitations.
     bit_array: T,
-    _range: BoolArrayRange,
+    _range: BitSetRange,
 }
 
-pub trait BoolArrayTrait<T> {
+pub trait BitSetTrait<T> {
     // TODO: Wrap return types with a 'Result'.
-    fn get(self: @BoolArray<T>, index: usize) -> bool;
-    fn set(ref self: BoolArray<T>, index: usize, value: bool);
-    fn count(self: @BoolArray<T>) -> usize;
-    fn clear(ref self: BoolArray<T>);
-    fn set_all(ref self: BoolArray<T>);
-    fn toggle(ref self: BoolArray<T>, index: usize);
-    fn all(self: @BoolArray<T>) -> bool;
-    fn any(self: @BoolArray<T>) -> bool;
-    fn none(self: @BoolArray<T>) -> bool;
-    fn get_true_indices(self: @BoolArray<T>) -> Span<usize>;
-    fn set_lower_bound(ref self: BoolArray<T>, bound: usize);
-    fn set_upper_bound(ref self: BoolArray<T>, bound: usize);
-    fn is_initialized(self: @BoolArray<T>) -> bool;
-    fn len(self: @BoolArray<T>) -> usize;
+    fn get(self: @BitSet<T>, index: usize) -> bool;
+    fn set(ref self: BitSet<T>, index: usize, value: bool);
+    fn count(self: @BitSet<T>) -> usize;
+    fn clear(ref self: BitSet<T>);
+    fn set_all(ref self: BitSet<T>);
+    fn toggle(ref self: BitSet<T>, index: usize);
+    fn all(self: @BitSet<T>) -> bool;
+    fn any(self: @BitSet<T>) -> bool;
+    fn none(self: @BitSet<T>) -> bool;
+    fn get_true_indices(self: @BitSet<T>) -> Span<usize>;
+    fn set_lower_bound(ref self: BitSet<T>, bound: usize);
+    fn set_upper_bound(ref self: BitSet<T>, bound: usize);
+    fn is_initialized(self: @BitSet<T>) -> bool;
+    fn len(self: @BitSet<T>) -> usize;
 }
 
-impl BoolArrayImpl<T, +Drop<T>> of BoolArrayTrait<T> {
-    fn get(self: @BoolArray<T>, index: usize) -> bool {
+impl BitSetImpl<T, +Drop<T>> of BitSetTrait<T> {
+    fn get(self: @BitSet<T>, index: usize) -> bool {
         false
     }
 
-    fn set(ref self: BoolArray<T>, index: usize, value: bool) {
+    fn set(ref self: BitSet<T>, index: usize, value: bool) {
         ()
     }
 
-    fn count(self: @BoolArray<T>) -> usize {
+    fn count(self: @BitSet<T>) -> usize {
         0
     }
 
-    fn clear(ref self: BoolArray<T>) {
+    fn clear(ref self: BitSet<T>) {
         ()
     }
 
-    fn set_all(ref self: BoolArray<T>) {
+    fn set_all(ref self: BitSet<T>) {
         ()
     }
 
-    fn toggle(ref self: BoolArray<T>, index: usize) {
+    fn toggle(ref self: BitSet<T>, index: usize) {
         ()
     }
 
-    fn all(self: @BoolArray<T>) -> bool {
+    fn all(self: @BitSet<T>) -> bool {
         false
     }
 
-    fn any(self: @BoolArray<T>) -> bool {
+    fn any(self: @BitSet<T>) -> bool {
         false
     }
 
-    fn none(self: @BoolArray<T>) -> bool {
+    fn none(self: @BitSet<T>) -> bool {
         false
     }
 
-    fn get_true_indices(self: @BoolArray<T>) -> Span<usize> {
+    fn get_true_indices(self: @BitSet<T>) -> Span<usize> {
         array![].span()
     }
 
-    fn set_lower_bound(ref self: BoolArray<T>, bound: usize) {
+    fn set_lower_bound(ref self: BitSet<T>, bound: usize) {
         ()
     }
 
-    fn set_upper_bound(ref self: BoolArray<T>, bound: usize) {
+    fn set_upper_bound(ref self: BitSet<T>, bound: usize) {
         ()
     }
 
-    fn is_initialized(self: @BoolArray<T>) -> bool {
+    fn is_initialized(self: @BitSet<T>) -> bool {
         false
     }
 
-    fn len(self: @BoolArray<T>) -> usize {
+    fn len(self: @BitSet<T>) -> usize {
         0
     }
 }
 
-impl TIntoBoolArray<T, +BitSize<T>, +Drop<T>> of Into<T, BoolArray<T>> {
-    fn into(self: T) -> BoolArray<T> {
-        BoolArray {
+impl TIntoBitSet<T, +BitSize<T>, +Drop<T>> of Into<T, BitSet<T>> {
+    fn into(self: T) -> BitSet<T> {
+        BitSet {
             bit_array: self,
-            _range: BoolArrayRange { lower_bound: Zero::zero(), upper_bound: BitSize::<T>::bits() }
+            _range: BitSetRange { lower_bound: Zero::zero(), upper_bound: BitSize::<T>::bits() }
         }
     }
 }
 
-impl SpanTryIntoBoolArray<
+impl SpanTryIntoBitSet<
     T, +BitOr<T>, +BitSize<T>, +Copy<T>, +Drop<T>, +Zero<T>, impl TPowOfTwo: PowOfTwo<T>
-> of TryInto<Span<usize>, BoolArray<T>> {
-    fn try_into(self: Span<usize>) -> Option<BoolArray<T>> {
+> of TryInto<Span<usize>, BitSet<T>> {
+    fn try_into(self: Span<usize>) -> Option<BitSet<T>> {
         let mut bit_array = Zero::<T>::zero();
         let mut span_iter = self.into_iter();
         loop {
@@ -152,40 +152,40 @@ impl SpanTryIntoBoolArray<
 #[cfg(test)]
 mod tests {
     use core::starknet::storage_access::StorePacking;
-    use super::{BoolArray, BoolArrayRange};
+    use super::{BitSet, BitSetRange};
 
     const TESTED_BIT_ARRAY: u8 = 0b01100001;
     const TESTED_TRUE_INDICES: [usize; 3] = [0, 5, 6];
     const INVALID_INDEX: usize = 8;
 
     #[test]
-    fn test_t_into_bool_array() {
-        let bool_array = TESTED_BIT_ARRAY.into();
-        let expected = BoolArray {
-            bit_array: TESTED_BIT_ARRAY, _range: BoolArrayRange { lower_bound: 0, upper_bound: 8 }
+    fn test_t_into_bit_set() {
+        let bit_set = TESTED_BIT_ARRAY.into();
+        let expected = BitSet {
+            bit_array: TESTED_BIT_ARRAY, _range: BitSetRange { lower_bound: 0, upper_bound: 8 }
         };
-        assert_eq!(bool_array, expected);
+        assert_eq!(bit_set, expected);
     }
 
     #[test]
-    fn test_span_try_into_bool_array() {
+    fn test_span_try_into_bit_set() {
         let valid_span = TESTED_TRUE_INDICES.span();
-        let bool_array = valid_span.try_into().unwrap();
-        let expected = BoolArray {
-            bit_array: TESTED_BIT_ARRAY, _range: BoolArrayRange { lower_bound: 0, upper_bound: 8 }
+        let bit_set = valid_span.try_into().unwrap();
+        let expected = BitSet {
+            bit_array: TESTED_BIT_ARRAY, _range: BitSetRange { lower_bound: 0, upper_bound: 8 }
         };
-        assert_eq!(bool_array, expected);
+        assert_eq!(bit_set, expected);
 
         let invalid_span = array![INVALID_INDEX].span();
-        let bool_array_option: Option<BoolArray<u8>> = invalid_span.try_into();
-        assert!(bool_array_option.is_none());
+        let bit_set_option: Option<BitSet<u8>> = invalid_span.try_into();
+        assert!(bit_set_option.is_none());
     }
 
     #[test]
-    fn test_bool_array_range_store_packing() {
+    fn test_bit_set_range_store_packing() {
         let packed: u64 =
             0b0_000_000_000_000_000_000_000_000_000_001_000_000_000_000_000_000_000_000_000_000_001;
-        let unpacked = BoolArrayRange { lower_bound: 0b1, upper_bound: 0b10 };
+        let unpacked = BitSetRange { lower_bound: 0b1, upper_bound: 0b10 };
         assert_eq!(StorePacking::pack(unpacked), packed);
         assert_eq!(StorePacking::unpack(packed), unpacked);
     }
