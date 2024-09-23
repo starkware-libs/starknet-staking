@@ -1,4 +1,4 @@
-pub mod bool_array;
+pub mod bit_set;
 
 pub mod components;
 
