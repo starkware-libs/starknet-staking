@@ -5,6 +5,7 @@ use core::traits::Into;
 use contracts::staking::interface::{IStaking, StakerInfo, StakerPoolInfo};
 use contracts::staking::interface::{StakingContractInfo, IStakingDispatcher};
 use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
+use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPauseDispatcherTrait};
 use core::num::traits::zero::Zero;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts::pool::Pool;
@@ -665,6 +666,16 @@ pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> (u128, u64)
         token_address: cfg.staking_contract_info.token_address,
     );
     (unclaimed_rewards_member, updated_index)
+}
+
+// Assumes the staking contract has already been deployed.
+pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
+    );
+    staking_pause_dispatcher.pause();
 }
 
 #[derive(Drop, Copy)]

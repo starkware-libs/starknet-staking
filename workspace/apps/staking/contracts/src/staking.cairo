@@ -11,3 +11,6 @@ pub use interface::{Events, PauseEvents};
 
 #[cfg(test)]
 mod test;
+
+#[cfg(test)]
+mod pause_test;
