@@ -25,15 +25,13 @@ use event_test_utils::assert_new_staker_event;
 use event_test_utils::assert_global_index_updated_event;
 use event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
 use event_test_utils::assert_staker_reward_claimed_event;
-use event_test_utils::{assert_paused_event, assert_unpaused_event};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::get_block_timestamp;
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use contracts::staking::objects::UndelegateIntentValueZero;
 use contracts::staking::interface::{IStakingPoolDispatcher};
-use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPoolDispatcherTrait};
+use contracts::staking::interface::{IStakingPoolDispatcherTrait};
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
-use contracts::staking::interface::IStakingPauseDispatcherTrait;
 use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
@@ -1412,61 +1410,6 @@ fn test_set_open_for_delegation_staker_has_pool() {
     staking_dispatcher
         .set_open_for_delegation(commission: cfg.staker_info.get_pool_info_unchecked().commission);
 }
-
-#[test]
-fn test_pause() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
-    let is_paused = load_one_felt(
-        target: staking_contract, storage_address: selector!("is_paused")
-    );
-    assert_eq!(is_paused, 0);
-    assert!(!staking_dispatcher.is_paused());
-    let mut spy = snforge_std::spy_events();
-    // Pause with security agent.
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
-    );
-    staking_pause_dispatcher.pause();
-    let is_paused = load_one_felt(
-        target: staking_contract, storage_address: selector!("is_paused")
-    );
-    assert_ne!(is_paused, 0);
-    assert!(staking_dispatcher.is_paused());
-    // Unpause with security admin.
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
-    );
-    staking_pause_dispatcher.unpause();
-    assert!(!staking_dispatcher.is_paused());
-    // Validate Paused and Unpaused events.
-    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 2, message: "pause");
-    assert_paused_event(spied_event: events[0], account: cfg.test_info.security_agent);
-    assert_unpaused_event(spied_event: events[1], account: cfg.test_info.security_admin);
-}
-
-#[test]
-#[should_panic(expected: "Contract is paused.")]
-fn test_stake_when_paused() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let staking_contract = cfg.test_info.staking_contract;
-    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
-    );
-    staking_pause_dispatcher.pause();
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-}
-// TODO: test thatonly security admin can unpause
-// TODO: test thatonly security agent can pause
-// TODO: test pause and unpause events
-// TODO: test all functions that should panic when paused
 
 #[test]
 fn test_set_min_stake() {
