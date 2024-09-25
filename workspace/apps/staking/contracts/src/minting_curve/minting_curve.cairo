@@ -11,7 +11,6 @@ pub mod MintingCurve {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
-    use contracts_commons::components::roles::interface::{APP_GOVERNOR, GOVERNANCE_ADMIN};
     use contracts::constants::{DEFAULT_C_NUM, C_DENOM};
 
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -58,8 +57,6 @@ pub mod MintingCurve {
     ) {
         self.accesscontrol.initializer();
         self.roles.initializer();
-        // Override default role admins.
-        self.accesscontrol.set_role_admin(role: APP_GOVERNOR, admin_role: GOVERNANCE_ADMIN);
         self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
         self.total_supply.write(total_supply);
         self.l1_staking_minter_address.write(l1_staking_minter_address);

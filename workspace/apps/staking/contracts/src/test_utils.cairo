@@ -23,6 +23,7 @@ use constants::{BASE_MINT_AMOUNT, BUFFER, L1_STAKING_MINTER_ADDRESS, BASE_MINT_M
 use constants::{STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS, STARKGATE_ADDRESS};
 use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN};
 use constants::{SECURITY_AGENT, APP_GOVERNER, GOVERNANCE_ADMIN, OPERATOR_CONTRACT_ADDRESS};
+use constants::APP_ROLE_ADMIN;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
 
@@ -152,6 +153,9 @@ pub(crate) mod constants {
     }
     pub fn APP_GOVERNER() -> ContractAddress {
         contract_address_const::<'APP_GOVERNER'>()
+    }
+    pub fn APP_ROLE_ADMIN() -> ContractAddress {
+        contract_address_const::<'APP_ROLE_ADMIN'>()
     }
     pub fn STARKGATE_ADDRESS() -> ContractAddress {
         contract_address_const::<'STARKGATE_ADDRESS'>()
@@ -296,10 +300,15 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
         account: cfg.test_info.staker_address,
         security_admin: cfg.test_info.security_admin
     );
+    set_account_as_app_role_admin(
+        contract: staking_contract,
+        account: cfg.test_info.app_role_admin,
+        governance_admin: test_address()
+    );
     set_account_as_app_governer(
         contract: staking_contract,
         account: cfg.test_info.app_governer,
-        governance_admin: test_address()
+        app_role_admin: cfg.test_info.app_role_admin
     );
 }
 
@@ -319,11 +328,19 @@ pub(crate) fn set_account_as_operator(
     roles_dispatcher.register_operator(:account);
 }
 
-pub(crate) fn set_account_as_app_governer(
+pub(crate) fn set_account_as_app_role_admin(
     contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
 ) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
     cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
+    roles_dispatcher.register_app_role_admin(:account);
+}
+
+pub(crate) fn set_account_as_app_governer(
+    contract: ContractAddress, account: ContractAddress, app_role_admin: ContractAddress
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: app_role_admin);
     roles_dispatcher.register_app_governor(:account);
 }
 
@@ -339,10 +356,15 @@ pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractA
     cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
     let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap().contract_class();
     let (minting_curve_contract_address, _) = minting_curve_contract.deploy(@calldata).unwrap();
+    set_account_as_app_role_admin(
+        contract: minting_curve_contract_address,
+        account: cfg.test_info.app_role_admin,
+        governance_admin: test_address()
+    );
     set_account_as_app_governer(
         contract: minting_curve_contract_address,
         account: cfg.test_info.app_governer,
-        governance_admin: test_address()
+        app_role_admin: cfg.test_info.app_role_admin
     );
     minting_curve_contract_address
 }
@@ -694,6 +716,7 @@ pub(crate) struct TestInfo {
     pub security_admin: ContractAddress,
     pub security_agent: ContractAddress,
     pub app_governer: ContractAddress,
+    pub app_role_admin: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -768,6 +791,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             security_admin: SECURITY_ADMIN(),
             security_agent: SECURITY_AGENT(),
             app_governer: APP_GOVERNER(),
+            app_role_admin: APP_ROLE_ADMIN()
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,
