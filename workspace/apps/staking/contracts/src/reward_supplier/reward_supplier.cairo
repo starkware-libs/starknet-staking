@@ -16,15 +16,30 @@ pub mod RewardSupplier {
     use contracts::utils::{ceil_of_division, compute_threshold};
     use contracts::constants::STRK_IN_FRIS;
     use contracts::utils::CheckedIERC20DispatcherTrait;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::roles::RolesComponent;
+    use RolesComponent::InternalTrait as RolesInternalTrait;
 
-
+    component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
+    component!(path: RolesComponent, storage: roles, event: RolesEvent);
     component!(path: AccessControlComponent, storage: accesscontrol, event: accesscontrolEvent);
     component!(path: SRC5Component, storage: src5, event: src5Event);
+
+    #[abi(embed_v0)]
+    impl ReplaceabilityImpl =
+        ReplaceabilityComponent::ReplaceabilityImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
 
     pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 60 * 60;
 
     #[storage]
     struct Storage {
+        #[substorage(v0)]
+        replaceability: ReplaceabilityComponent::Storage,
+        #[substorage(v0)]
+        roles: RolesComponent::Storage,
         #[substorage(v0)]
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
@@ -45,6 +60,10 @@ pub mod RewardSupplier {
     #[derive(Drop, starknet::Event)]
     pub enum Event {
         #[flat]
+        ReplaceabilityEvent: ReplaceabilityComponent::Event,
+        #[flat]
+        RolesEvent: RolesComponent::Event,
+        #[flat]
         accesscontrolEvent: AccessControlComponent::Event,
         #[flat]
         src5Event: SRC5Component::Event,
@@ -63,6 +82,7 @@ pub mod RewardSupplier {
         l1_staking_minter: felt252,
         starkgate_address: ContractAddress,
     ) {
+        self.roles.initializer();
         self.staking_contract.write(staking_contract);
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.last_timestamp.write(get_block_timestamp());
