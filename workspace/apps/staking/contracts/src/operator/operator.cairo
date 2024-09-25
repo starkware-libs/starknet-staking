@@ -12,7 +12,7 @@ pub mod Operator {
     use core::num::traits::zero::Zero;
     use starknet::{ContractAddress, get_caller_address};
     use starknet::storage::{Map, Vec, MutableVecTrait, VecTrait};
-    use contracts::errors::{Error, panic_by_err};
+    use contracts::errors::{Error, ErrorTrait};
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use core::cmp::min;
 
@@ -89,7 +89,7 @@ pub mod Operator {
         fn add_to_whitelist(ref self: ContractState, address: ContractAddress) {
             self.roles.only_security_admin();
             if self.whitelist.len() >= MAX_WHITELIST_SIZE {
-                panic_by_err(Error::WHITELIST_FULL);
+                Error::WHITELIST_FULL.panic();
             }
             if self.is_in_whitelist(address) {
                 return;
@@ -112,7 +112,7 @@ pub mod Operator {
     pub impl InternalImpl of InternalTrait {
         fn check_whitelist(self: @ContractState, address: ContractAddress) {
             if self.is_whitelist_enabled() && !self.is_in_whitelist(address) {
-                panic_by_err(Error::NOT_WHITELISTED);
+                Error::NOT_WHITELISTED.panic();
             }
         }
 
