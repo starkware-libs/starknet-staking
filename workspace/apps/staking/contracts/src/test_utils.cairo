@@ -176,7 +176,8 @@ pub(crate) fn initialize_staking_state_from_cfg(
         min_stake: cfg.staking_contract_info.min_stake,
         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
-        pool_contract_admin: cfg.test_info.pool_contract_admin
+        pool_contract_admin: cfg.test_info.pool_contract_admin,
+        governance_admin: cfg.test_info.governance_admin
     )
 }
 pub(crate) fn initialize_staking_state(
@@ -184,7 +185,8 @@ pub(crate) fn initialize_staking_state(
     min_stake: u128,
     pool_contract_class_hash: ClassHash,
     reward_supplier: ContractAddress,
-    pool_contract_admin: ContractAddress
+    pool_contract_admin: ContractAddress,
+    governance_admin: ContractAddress
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
@@ -194,7 +196,8 @@ pub(crate) fn initialize_staking_state(
         :min_stake,
         :pool_contract_class_hash,
         :reward_supplier,
-        :pool_contract_admin
+        :pool_contract_admin,
+        :governance_admin
     );
     state
 }
@@ -212,11 +215,14 @@ pub(crate) fn initialize_pool_state(
 }
 
 pub(crate) fn initialize_minting_curve_state(
-    staking_contract: ContractAddress, total_supply: u128, l1_staking_minter_address: felt252
+    staking_contract: ContractAddress,
+    total_supply: u128,
+    l1_staking_minter_address: felt252,
+    governance_admin: ContractAddress
 ) -> MintingCurve::ContractState {
     let mut state = MintingCurve::contract_state_for_testing();
     MintingCurve::constructor(
-        ref state, :staking_contract, :total_supply, :l1_staking_minter_address
+        ref state, :staking_contract, :total_supply, :l1_staking_minter_address, :governance_admin
     );
     state
 }
@@ -232,6 +238,7 @@ pub(crate) fn initialize_reward_supplier_state_from_cfg(
         :token_address,
         l1_staking_minter: cfg.reward_supplier.l1_staking_minter,
         starkgate_address: cfg.reward_supplier.starkgate_address,
+        governance_admin: cfg.test_info.governance_admin
     )
 }
 pub(crate) fn initialize_reward_supplier_state(
@@ -242,6 +249,7 @@ pub(crate) fn initialize_reward_supplier_state(
     token_address: ContractAddress,
     l1_staking_minter: felt252,
     starkgate_address: ContractAddress,
+    governance_admin: ContractAddress
 ) -> RewardSupplier::ContractState {
     let mut state = RewardSupplier::contract_state_for_testing();
     RewardSupplier::constructor(
@@ -253,6 +261,7 @@ pub(crate) fn initialize_reward_supplier_state(
         :token_address,
         :l1_staking_minter,
         :starkgate_address,
+        :governance_admin
     );
     state
 }
@@ -279,6 +288,7 @@ pub(crate) fn deploy_staking_contract(
     cfg.staking_contract_info.pool_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
     cfg.test_info.pool_contract_admin.serialize(ref calldata);
+    cfg.test_info.governance_admin.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     set_default_roles(staking_contract: staking_contract_address, :cfg);
@@ -289,7 +299,7 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
     set_account_as_security_admin(
         contract: staking_contract,
         account: cfg.test_info.security_admin,
-        governance_admin: test_address()
+        governance_admin: cfg.test_info.governance_admin
     );
     set_account_as_security_agent(
         :staking_contract,
@@ -304,7 +314,7 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
     set_account_as_app_role_admin(
         contract: staking_contract,
         account: cfg.test_info.app_role_admin,
-        governance_admin: test_address()
+        governance_admin: cfg.test_info.governance_admin
     );
     set_account_as_app_governer(
         contract: staking_contract,
@@ -363,12 +373,13 @@ pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractA
     cfg.test_info.staking_contract.serialize(ref calldata);
     initial_supply.serialize(ref calldata);
     cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
+    cfg.test_info.governance_admin.serialize(ref calldata);
     let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap().contract_class();
     let (minting_curve_contract_address, _) = minting_curve_contract.deploy(@calldata).unwrap();
     set_account_as_app_role_admin(
         contract: minting_curve_contract_address,
         account: cfg.test_info.app_role_admin,
-        governance_admin: test_address()
+        governance_admin: cfg.test_info.governance_admin
     );
     set_account_as_app_governer(
         contract: minting_curve_contract_address,
@@ -387,6 +398,7 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     cfg.staking_contract_info.token_address.serialize(ref calldata);
     cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
     cfg.reward_supplier.starkgate_address.serialize(ref calldata);
+    cfg.test_info.governance_admin.serialize(ref calldata);
     let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap().contract_class();
     let (reward_supplier_contract_address, _) = reward_supplier_contract.deploy(@calldata).unwrap();
     reward_supplier_contract_address
@@ -399,12 +411,13 @@ pub(crate) fn declare_pool_contract() -> ClassHash {
 pub(crate) fn deploy_operator_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     cfg.test_info.staking_contract.serialize(ref calldata);
+    cfg.test_info.security_admin.serialize(ref calldata);
     let operator_contract = snforge_std::declare("Operator").unwrap().contract_class();
     let (operator_contract_address, _) = operator_contract.deploy(@calldata).unwrap();
     set_account_as_security_admin(
         contract: operator_contract_address,
         account: cfg.test_info.security_admin,
-        governance_admin: test_address()
+        governance_admin: cfg.test_info.governance_admin
     );
     set_account_as_security_agent(
         staking_contract: operator_contract_address,

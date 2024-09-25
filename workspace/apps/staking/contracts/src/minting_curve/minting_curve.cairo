@@ -53,10 +53,11 @@ pub mod MintingCurve {
         ref self: ContractState,
         staking_contract: ContractAddress,
         total_supply: u128,
-        l1_staking_minter_address: felt252
+        l1_staking_minter_address: felt252,
+        governance_admin: ContractAddress
     ) {
         self.accesscontrol.initializer();
-        self.roles.initializer();
+        self.roles.initializer(:governance_admin);
         self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
         self.total_supply.write(total_supply);
         self.l1_staking_minter_address.write(l1_staking_minter_address);
