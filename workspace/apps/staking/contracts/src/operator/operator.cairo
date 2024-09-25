@@ -60,14 +60,11 @@ pub mod Operator {
     }
 
     #[constructor]
-    pub fn constructor(
-        ref self: ContractState, staking_address: ContractAddress, security_admin: ContractAddress
-    ) {
+    pub fn constructor(ref self: ContractState, staking_address: ContractAddress) {
         self.accesscontrol.initializer();
         self.roles.initializer();
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_address });
-        self.roles.register_security_admin(account: security_admin);
         self.whitelist_enabled.write(false);
     }
 
