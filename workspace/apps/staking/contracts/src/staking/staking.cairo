@@ -102,10 +102,11 @@ pub mod Staking {
         min_stake: u128,
         pool_contract_class_hash: ClassHash,
         reward_supplier: ContractAddress,
-        pool_contract_admin: ContractAddress
+        pool_contract_admin: ContractAddress,
+        governance_admin: ContractAddress
     ) {
         self.accesscontrol.initializer();
-        self.roles.initializer();
+        self.roles.initializer(:governance_admin);
         // Override default role admins.
         self.accesscontrol.set_role_admin(role: OPERATOR, admin_role: SECURITY_ADMIN);
         self.replaceability.upgrade_delay.write(Zero::zero());

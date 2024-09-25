@@ -81,8 +81,9 @@ pub mod RewardSupplier {
         token_address: ContractAddress,
         l1_staking_minter: felt252,
         starkgate_address: ContractAddress,
+        governance_admin: ContractAddress
     ) {
-        self.roles.initializer();
+        self.roles.initializer(:governance_admin);
         self.staking_contract.write(staking_contract);
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.last_timestamp.write(get_block_timestamp());

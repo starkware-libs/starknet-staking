@@ -299,9 +299,10 @@ pub mod RolesComponent {
         // The following internal method is unprotected and should only be used from the containing
         // contract's constructor (or, in context of tests, from the setup method).
         // It should be called after the initialization of the access_control component.
-        fn initializer(ref self: ComponentState<TContractState>) {
+        fn initializer(
+            ref self: ComponentState<TContractState>, governance_admin: ContractAddress
+        ) {
             let mut access_comp = get_dep_component_mut!(ref self, Access);
-            let governance_admin = get_caller_address();
             let un_initialized = access_comp.get_role_admin(role: GOVERNANCE_ADMIN).is_zero();
             assert(un_initialized, ALREADY_INITIALIZED);
             access_comp._grant_role(role: GOVERNANCE_ADMIN, account: governance_admin);

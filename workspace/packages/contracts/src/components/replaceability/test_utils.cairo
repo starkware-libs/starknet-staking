@@ -6,6 +6,7 @@ use contracts_commons::components::replaceability::interface::ImplementationFina
 use contracts_commons::components::replaceability::interface::ImplementationReplaced;
 use contracts_commons::components::replaceability::mock::ReplaceabilityMock;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::{ContractClassTrait, declare, load, DeclareResultTrait};
 use snforge_std::cheatcodes::events::{Event, Events, is_emitted};
 use starknet::ContractAddress;
@@ -21,6 +22,10 @@ pub(crate) mod Constants {
 
     pub(crate) fn CALLER_ADDRESS() -> ContractAddress {
         contract_address_const::<'CALLER_ADDRESS'>()
+    }
+
+    pub(crate) fn GOVERNANCE_ADMIN() -> ContractAddress {
+        contract_address_const::<'GOVERNANCE_ADMIN'>()
     }
 
     pub(crate) fn DUMMY_FINAL_IMPLEMENTATION_DATA() -> ImplementationData {
@@ -43,7 +48,9 @@ pub(crate) mod Constants {
 pub(crate) fn deploy_replaceability_mock() -> IReplaceableDispatcher {
     let replaceable_contract = declare("ReplaceabilityMock").unwrap().contract_class();
     let (contract_address, _) = replaceable_contract
-        .deploy(@array![Constants::DEFAULT_UPGRADE_DELAY.into()])
+        .deploy(
+            @array![Constants::DEFAULT_UPGRADE_DELAY.into(), Constants::GOVERNANCE_ADMIN().into()]
+        )
         .unwrap();
     return IReplaceableDispatcher { contract_address: contract_address };
 }
@@ -56,6 +63,7 @@ pub(crate) fn get_upgrade_governor_account(contract_address: ContractAddress) ->
 
 fn set_caller_as_upgrade_governor(contract_address: ContractAddress, caller: ContractAddress) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract_address };
+    cheat_caller_address_once(:contract_address, caller_address: Constants::GOVERNANCE_ADMIN());
     roles_dispatcher.register_upgrade_governor(account: caller);
 }
 
