@@ -29,7 +29,6 @@ pub mod Staking {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts_commons::components::roles::interface::{OPERATOR, SECURITY_ADMIN};
-    use contracts_commons::components::roles::interface::{APP_GOVERNOR, GOVERNANCE_ADMIN};
 
     pub const COMMISSION_DENOMINATOR: u16 = 10000;
 
@@ -110,7 +109,6 @@ pub mod Staking {
         self.roles.initializer();
         // Override default role admins.
         self.accesscontrol.set_role_admin(role: OPERATOR, admin_role: SECURITY_ADMIN);
-        self.accesscontrol.set_role_admin(role: APP_GOVERNOR, admin_role: GOVERNANCE_ADMIN);
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);
