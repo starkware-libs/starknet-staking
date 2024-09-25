@@ -1209,6 +1209,21 @@ fn test_change_operational_address_staker_doesnt_exist() {
     staking_dispatcher.change_operational_address(:operational_address);
 }
 
+#[test]
+#[should_panic(expected: "Operational address already exists.")]
+fn test_change_operational_address_operational_address_exists() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+    let operational_address = cfg.staker_info.operational_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.change_operational_address(:operational_address);
+}
+
 // #[test]
 // fn test_update_commission() {
 //     let cfg: StakingInitConfig = Default::default();

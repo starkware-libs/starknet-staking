@@ -420,6 +420,10 @@ pub mod Staking {
         ) -> bool {
             self.general_prerequisites();
             self.roles.only_operator();
+            assert_with_err(
+                self.operational_address_to_staker_address.read(operational_address).is_zero(),
+                Error::OPERATIONAL_EXISTS
+            );
             let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             self
