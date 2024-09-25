@@ -102,8 +102,7 @@ pub mod Staking {
         min_stake: u128,
         pool_contract_class_hash: ClassHash,
         reward_supplier: ContractAddress,
-        pool_contract_admin: ContractAddress,
-        security_admin: ContractAddress,
+        pool_contract_admin: ContractAddress
     ) {
         self.accesscontrol.initializer();
         self.roles.initializer();
@@ -120,7 +119,6 @@ pub mod Staking {
         self.global_index.write(BASE_VALUE);
         self.global_index_last_update_timestamp.write(get_block_timestamp());
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
-        self.roles.register_security_admin(account: security_admin);
         self.is_paused.write(false);
     }
 

@@ -176,8 +176,7 @@ pub(crate) fn initialize_staking_state_from_cfg(
         min_stake: cfg.staking_contract_info.min_stake,
         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
-        pool_contract_admin: cfg.test_info.pool_contract_admin,
-        security_admin: cfg.test_info.security_admin
+        pool_contract_admin: cfg.test_info.pool_contract_admin
     )
 }
 pub(crate) fn initialize_staking_state(
@@ -185,8 +184,7 @@ pub(crate) fn initialize_staking_state(
     min_stake: u128,
     pool_contract_class_hash: ClassHash,
     reward_supplier: ContractAddress,
-    pool_contract_admin: ContractAddress,
-    security_admin: ContractAddress
+    pool_contract_admin: ContractAddress
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
@@ -196,8 +194,7 @@ pub(crate) fn initialize_staking_state(
         :min_stake,
         :pool_contract_class_hash,
         :reward_supplier,
-        :pool_contract_admin,
-        :security_admin
+        :pool_contract_admin
     );
     state
 }
@@ -282,7 +279,6 @@ pub(crate) fn deploy_staking_contract(
     cfg.staking_contract_info.pool_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
     cfg.test_info.pool_contract_admin.serialize(ref calldata);
-    cfg.test_info.security_admin.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     set_default_roles(staking_contract: staking_contract_address, :cfg);
@@ -290,6 +286,11 @@ pub(crate) fn deploy_staking_contract(
 }
 
 pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingInitConfig) {
+    set_account_as_security_admin(
+        contract: staking_contract,
+        account: cfg.test_info.security_admin,
+        governance_admin: test_address()
+    );
     set_account_as_security_agent(
         :staking_contract,
         account: cfg.test_info.security_agent,
