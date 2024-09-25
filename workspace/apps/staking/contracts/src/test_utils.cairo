@@ -312,6 +312,14 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
     );
 }
 
+pub(crate) fn set_account_as_security_admin(
+    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
+    roles_dispatcher.register_security_admin(:account);
+}
+
 pub(crate) fn set_account_as_security_agent(
     staking_contract: ContractAddress, account: ContractAddress, security_admin: ContractAddress
 ) {
@@ -390,9 +398,13 @@ pub(crate) fn declare_pool_contract() -> ClassHash {
 pub(crate) fn deploy_operator_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     cfg.test_info.staking_contract.serialize(ref calldata);
-    cfg.test_info.security_admin.serialize(ref calldata);
     let operator_contract = snforge_std::declare("Operator").unwrap().contract_class();
     let (operator_contract_address, _) = operator_contract.deploy(@calldata).unwrap();
+    set_account_as_security_admin(
+        contract: operator_contract_address,
+        account: cfg.test_info.security_admin,
+        governance_admin: test_address()
+    );
     set_account_as_security_agent(
         staking_contract: operator_contract_address,
         account: cfg.test_info.security_agent,
