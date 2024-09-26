@@ -505,7 +505,7 @@ pub(crate) fn stake_with_pool_enabled(
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = staking_dispatcher
-        .state_of(cfg.test_info.staker_address)
+        .staker_info(cfg.test_info.staker_address)
         .get_pool_info_unchecked()
         .pool_contract;
     // Set pool contract as operator.

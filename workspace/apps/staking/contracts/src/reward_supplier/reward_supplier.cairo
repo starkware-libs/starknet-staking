@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod RewardSupplier {
     use core::traits::TryInto;
-    use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierStatus, Events};
+    use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo, Events};
     use starknet::{ContractAddress, EthAddress};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -152,8 +152,8 @@ pub mod RewardSupplier {
             true
         }
 
-        fn state_of(self: @ContractState) -> RewardSupplierStatus {
-            RewardSupplierStatus {
+        fn contract_parameters(self: @ContractState) -> RewardSupplierInfo {
+            RewardSupplierInfo {
                 last_timestamp: self.last_timestamp.read(),
                 unclaimed_rewards: self.unclaimed_rewards.read(),
                 l1_pending_requested_amount: self.l1_pending_requested_amount.read(),

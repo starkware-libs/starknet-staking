@@ -387,7 +387,7 @@ pub mod Pool {
             true
         }
 
-        fn state_of(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
+        fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
             self.get_pool_member_info(:pool_member)
         }
 

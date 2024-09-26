@@ -25,7 +25,7 @@
     - [change\_reward\_address](#change_reward_address)
     - [set\_open\_for\_delegation](#set_open_for_delegation)
     - [claim\_delegation\_pool\_rewards](#claim_delegation_pool_rewards)
-    - [state\_of](#state_of)
+    - [staker\_info](#staker_info)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
     - [calculate\_rewards](#calculate_rewards)
@@ -58,7 +58,7 @@
     - [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract)
     - [set\_final\_staker\_index](#set_final_staker_index)
     - [change\_reward\_address](#change_reward_address-1)
-    - [state\_of](#state_of-1)
+    - [pool\_member\_info](#pool_member_info)
     - [contract\_parameters](#contract_parameters-1)
     - [calculate\_rewards](#calculate_rewards-1)
   - [Events](#events-1)
@@ -74,11 +74,11 @@
   - [Functions](#functions-2)
     - [calculate\_staking\_rewards](#calculate_staking_rewards)
     - [claim\_rewards](#claim_rewards-2)
+    - [contract\_parameters](#contract_parameters-2)
     - [on\_receive](#on_receive)
-    - [state\_of](#state_of-2)
   - [Events](#events-2)
     - [Mint Request](#mint-request)
-- [Minting curve contract](#minting-curve-contract)
+- [Minting Curve Contract](#minting-curve-contract)
   - [Functions](#functions-3)
     - [yearly\_mint](#yearly_mint)
   - [Events](#events-3)
@@ -121,7 +121,7 @@
     - [StakingContractInfo](#stakingcontractinfo)
     - [PoolMemberInfo](#poolmemberinfo)
     - [PoolContractInfo](#poolcontractinfo)
-    - [RewardSupplierStatus](#rewardsupplierstatus)
+    - [RewardSupplierInfo](#rewardsupplierinfo)
 
 </details>
 
@@ -166,7 +166,7 @@ classDiagram
     change_operational_address()
     set_open_for_delegation()
     claim_delegation_pool_rewards()
-    state_of()
+    staker_info()
     contract_parameters()
     calculate_rewards()
     get_total_stake()
@@ -184,7 +184,7 @@ classDiagram
     exit_delegation_pool_action()
     claim_rewards()
     change_reward_address()
-    state_of()
+    pool_member_info()
     contract_parameters()
     switch_delegation_pool()
     enter_delegation_pool_from_staking_contract()
@@ -228,7 +228,7 @@ classDiagram
     calculate_staking_rewards()
     claim_rewards()
     on_receive()
-    state_of()
+    contract_parameters()
   }
   class MintingCurve {
     staking_dispatcher,
@@ -775,9 +775,9 @@ Delegation pool contract of the given staker.
 1. [Calculate rewards](#calculate_rewards)
 2. Transfer rewards to pool contract.
 
-### state_of
+### staker_info
 ```rust
-fn state_of(
+fn staker_info(
   self: @ContractState, 
   staker_address: ContractAddress
 ) -> StakerInfo
@@ -1288,9 +1288,9 @@ Only pool member can execute.
 #### logic <!-- omit from toc -->
 1. Change registered `reward_address` for the pool member.
 
-### state_of
+### pool_member_info
 ```rust
-fn state_of(
+fn pool_member_info(
   self: @ContractState, 
   pool_member: ContractAddress
 ) -> PoolMemberInfo
@@ -1436,12 +1436,12 @@ Transfers `amount` FRI to staking contract
 #### access control <!-- omit from toc -->
 Only staking contract.
 
-### state_of
+### contract_parameters
 ```rust
-fn state_of(self: @TContractState) -> RewardSupplierStatus
+fn contract_parameters(self: @TContractState) -> RewardSupplierInfo
 ```
 #### description <!-- omit from toc -->
-Return [RewardSupplierStatus](#rewardsupplierstatus) filled with the corresponding storage values.
+Return [RewardSupplierInfo](#RewardSupplierInfo) filled with the corresponding storage values.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -1648,7 +1648,7 @@ Any address can execute.
 | token_address      | address     |
 | commission         | u16         |
 
-### RewardSupplierStatus
+### RewardSupplierInfo
 | name                          | type      |
 | ----------------------------- | --------- |
 | last_timestamp                | u64       |

@@ -384,7 +384,7 @@ pub mod Staking {
             pool_contract
         }
 
-        fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
+        fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             self.get_staker_info(:staker_address)
         }
 
