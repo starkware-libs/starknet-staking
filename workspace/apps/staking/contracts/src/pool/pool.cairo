@@ -84,7 +84,7 @@ pub mod Pool {
         commission: u16
     ) {
         self.accesscontrol.initializer();
-        self.roles.initializer(governance_admin: get_caller_address());
+        self.roles.initializer(governance_admin: staking_contract);
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.staker_address.write(staker_address);
         self
