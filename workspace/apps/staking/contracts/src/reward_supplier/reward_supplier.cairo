@@ -48,7 +48,6 @@ pub mod RewardSupplier {
         unclaimed_rewards: u128,
         l1_pending_requested_amount: u128,
         base_mint_amount: u128,
-        base_mint_msg: felt252,
         minting_curve_dispatcher: IMintingCurveDispatcher,
         staking_contract: ContractAddress,
         erc20_dispatcher: IERC20Dispatcher,
@@ -75,7 +74,6 @@ pub mod RewardSupplier {
     pub fn constructor(
         ref self: ContractState,
         base_mint_amount: u128,
-        base_mint_msg: felt252,
         minting_curve_contract: ContractAddress,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
@@ -92,7 +90,6 @@ pub mod RewardSupplier {
         self.unclaimed_rewards.write(STRK_IN_FRIS);
         self.l1_pending_requested_amount.write(Zero::zero());
         self.base_mint_amount.write(base_mint_amount);
-        self.base_mint_msg.write(base_mint_msg);
         self
             .minting_curve_dispatcher
             .write(IMintingCurveDispatcher { contract_address: minting_curve_contract });
