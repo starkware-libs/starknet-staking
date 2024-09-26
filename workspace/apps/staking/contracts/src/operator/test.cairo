@@ -342,7 +342,7 @@ fn test_add_to_whitelist() {
 }
 
 #[test]
-#[should_panic(expected: "Whitelist is limited to 100 addresses.")]
+#[should_panic(expected: "Whitelist is limited to 100 addresses")]
 fn test_add_too_many_to_whitelist() {
     let mut cfg: StakingInitConfig = Default::default();
     let (
@@ -427,7 +427,7 @@ fn test_stake_from_operator_with_whitelist() {
 
 
 #[test]
-#[should_panic(expected: "Caller is not in whitelist.")]
+#[should_panic(expected: "Caller is not in whitelist")]
 fn test_stake_from_operator_with_whitelist_caller_not_whitelisted() {
     let mut cfg: StakingInitConfig = Default::default();
     let (

@@ -47,7 +47,7 @@ fn test_pause() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_stake_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -58,7 +58,7 @@ fn test_stake_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_increase_stake_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -70,7 +70,7 @@ fn test_increase_stake_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_claim_rewards_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -82,7 +82,7 @@ fn test_claim_rewards_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_unstake_intent_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -94,7 +94,7 @@ fn test_unstake_intent_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_unstake_action_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -106,7 +106,7 @@ fn test_unstake_action_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_change_reward_address_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -118,7 +118,7 @@ fn test_change_reward_address_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_set_open_for_delegation_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -130,7 +130,7 @@ fn test_set_open_for_delegation_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_update_global_index_if_needed_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -142,7 +142,7 @@ fn test_update_global_index_if_needed_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_change_operational_address_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -154,7 +154,7 @@ fn test_change_operational_address_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_add_stake_from_pool_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -166,7 +166,7 @@ fn test_add_stake_from_pool_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_remove_from_delegation_pool_intent_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -181,7 +181,7 @@ fn test_remove_from_delegation_pool_intent_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_remove_from_delegation_pool_action_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -193,7 +193,7 @@ fn test_remove_from_delegation_pool_action_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_switch_staking_delegation_pool_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -212,7 +212,7 @@ fn test_switch_staking_delegation_pool_when_paused() {
 }
 
 #[test]
-#[should_panic(expected: "Contract is paused.")]
+#[should_panic(expected: "Contract is paused")]
 fn test_claim_delegation_pool_rewards_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

@@ -414,7 +414,7 @@ mod ReplaceabilityTests {
         // Should NOT revert with FINALIZED as there is no finalized implementation yet.
         match replaceable_safe_dispatcher.replace_to(:implementation_data) {
             Result::Ok(_) => (),
-            Result::Err(_) => panic!("First replace should NOT result an error."),
+            Result::Err(_) => panic!("First replace should NOT result an error"),
         };
 
         // Should revert with FINALIZED as the implementation is already finalized.

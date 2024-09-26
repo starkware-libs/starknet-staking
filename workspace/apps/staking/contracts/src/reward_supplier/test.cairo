@@ -249,7 +249,7 @@ fn test_on_receive() {
 }
 
 #[test]
-#[should_panic(expected: "Only StarkGate can call on_receive.")]
+#[should_panic(expected: "Only StarkGate can call on_receive")]
 fn test_on_receive_caller_not_starkgate() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
