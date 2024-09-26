@@ -19,7 +19,7 @@ use constants::{NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_I
 use constants::{STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS};
 use constants::{TOKEN_ADDRESS, COMMISSION, POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT};
 use constants::{POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE};
-use constants::{BASE_MINT_AMOUNT, BUFFER, L1_STAKING_MINTER_ADDRESS, BASE_MINT_MSG};
+use constants::{BASE_MINT_AMOUNT, BUFFER, L1_STAKING_MINTER_ADDRESS};
 use constants::{STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS, STARKGATE_ADDRESS};
 use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN};
 use constants::{SECURITY_AGENT, APP_GOVERNER, GOVERNANCE_ADMIN, OPERATOR_CONTRACT_ADDRESS};
@@ -42,7 +42,6 @@ pub(crate) mod constants {
     pub const BASE_MINT_AMOUNT: u128 = 8000000000000000;
     pub const BUFFER: u128 = 1000000000000;
     pub const L1_STAKING_MINTER_ADDRESS: felt252 = 'L1_MINTER';
-    pub const BASE_MINT_MSG: felt252 = 'base_mint_msg';
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
 
 
@@ -235,7 +234,6 @@ pub(crate) fn initialize_reward_supplier_state_from_cfg(
 ) -> RewardSupplier::ContractState {
     initialize_reward_supplier_state(
         base_mint_amount: cfg.reward_supplier.base_mint_amount,
-        base_mint_msg: cfg.reward_supplier.base_mint_msg,
         minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
         staking_contract: cfg.test_info.staking_contract,
         :token_address,
@@ -246,7 +244,6 @@ pub(crate) fn initialize_reward_supplier_state_from_cfg(
 }
 pub(crate) fn initialize_reward_supplier_state(
     base_mint_amount: u128,
-    base_mint_msg: felt252,
     minting_curve_contract: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
@@ -258,7 +255,6 @@ pub(crate) fn initialize_reward_supplier_state(
     RewardSupplier::constructor(
         ref state,
         :base_mint_amount,
-        :base_mint_msg,
         :minting_curve_contract,
         :staking_contract,
         :token_address,
@@ -395,7 +391,6 @@ pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractA
 pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     cfg.reward_supplier.base_mint_amount.serialize(ref calldata);
-    cfg.reward_supplier.base_mint_msg.serialize(ref calldata);
     cfg.reward_supplier.minting_curve_contract.serialize(ref calldata);
     cfg.test_info.staking_contract.serialize(ref calldata);
     cfg.staking_contract_info.token_address.serialize(ref calldata);
@@ -751,7 +746,6 @@ pub(crate) struct TestInfo {
 #[derive(Drop, Copy)]
 struct RewardSupplierInfo {
     pub base_mint_amount: u128,
-    pub base_mint_msg: felt252,
     pub minting_curve_contract: ContractAddress,
     pub l1_staking_minter: felt252,
     pub buffer: u128,
@@ -824,7 +818,6 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,
-            base_mint_msg: BASE_MINT_MSG,
             minting_curve_contract: MINTING_CONTRACT_ADDRESS(),
             l1_staking_minter: L1_STAKING_MINTER_ADDRESS,
             buffer: BUFFER,

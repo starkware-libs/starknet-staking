@@ -36,7 +36,6 @@ fn test_reward_supplier_constructor() {
     assert_eq!(state.erc20_dispatcher.read().contract_address, token_address);
     assert_eq!(state.l1_pending_requested_amount.read(), Zero::zero());
     assert_eq!(state.base_mint_amount.read(), cfg.reward_supplier.base_mint_amount);
-    assert_eq!(state.base_mint_msg.read(), cfg.reward_supplier.base_mint_msg);
     assert_eq!(
         state.minting_curve_dispatcher.read().contract_address,
         cfg.reward_supplier.minting_curve_contract
