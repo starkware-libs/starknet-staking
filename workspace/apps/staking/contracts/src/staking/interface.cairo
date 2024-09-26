@@ -226,4 +226,5 @@ pub mod PauseEvents {
 pub trait IStakingConfig<TContractState> {
     fn set_min_stake(ref self: TContractState, min_stake: u128);
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: u64);
+    fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
 }
