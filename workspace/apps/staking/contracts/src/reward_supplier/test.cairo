@@ -1,5 +1,5 @@
 use core::option::OptionTrait;
-use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierStatus};
+use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo};
 use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
 use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
 use starknet::get_block_timestamp;
@@ -163,22 +163,22 @@ fn test_calculate_staking_rewards() {
 }
 
 #[test]
-fn test_state_of() {
+fn test_contract_parameters() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
-    // Change the block_timestamp so the state_of() won't return zero for all fields.
+    // Change the block_timestamp so the contract_parameters() won't return zero for all fields.
     let block_timestamp = get_block_timestamp() + 1;
     start_cheat_block_timestamp_global(:block_timestamp);
     let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
-    let expected_status = RewardSupplierStatus {
+    let expected_info = RewardSupplierInfo {
         last_timestamp: block_timestamp,
         unclaimed_rewards: STRK_IN_FRIS,
         l1_pending_requested_amount: Zero::zero(),
     };
-    assert_eq!(state.state_of(), expected_status);
+    assert_eq!(state.contract_parameters(), expected_info);
 }
 
 #[test]
@@ -194,7 +194,8 @@ fn test_on_receive() {
     };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let balance = Zero::zero();
-    let credit = balance + reward_supplier_dispatcher.state_of().l1_pending_requested_amount;
+    let credit = balance
+        + reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount;
     start_cheat_block_timestamp_global(
         block_timestamp: get_block_timestamp()
             + SECONDS_IN_YEAR.try_into().expect('does not fit in')
@@ -211,7 +212,7 @@ fn test_on_receive() {
     let num_msgs = ceil_of_division(dividend: diff, divisor: base_mint_amount);
     let mut expected_l1_pending_requested_amount = num_msgs * base_mint_amount;
     assert_eq!(
-        reward_supplier_dispatcher.state_of().l1_pending_requested_amount,
+        reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
         expected_l1_pending_requested_amount
     );
     for _ in 0
@@ -241,7 +242,7 @@ fn test_on_receive() {
                 );
             expected_l1_pending_requested_amount -= base_mint_amount;
             assert_eq!(
-                reward_supplier_dispatcher.state_of().l1_pending_requested_amount,
+                reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
                 expected_l1_pending_requested_amount
             );
         };

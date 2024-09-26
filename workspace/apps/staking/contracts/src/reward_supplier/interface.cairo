@@ -13,11 +13,11 @@ pub trait IRewardSupplier<TContractState> {
         depositor: EthAddress,
         message: Span<felt252>
     ) -> bool;
-    fn state_of(self: @TContractState) -> RewardSupplierStatus;
+    fn contract_parameters(self: @TContractState) -> RewardSupplierInfo;
 }
 
 #[derive(Debug, Copy, Drop, Serde, PartialEq)]
-pub struct RewardSupplierStatus {
+pub struct RewardSupplierInfo {
     pub last_timestamp: u64,
     pub unclaimed_rewards: u128,
     pub l1_pending_requested_amount: u128,

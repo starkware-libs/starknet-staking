@@ -166,7 +166,7 @@ fn test_set_open_for_delegation_from_operator() {
 }
 
 #[test]
-fn test_state_of_from_operator() {
+fn test_staker_info_from_operator() {
     let mut cfg: StakingInitConfig = Default::default();
     let (
         _staking_mock_contract_dispatcher,
@@ -177,7 +177,7 @@ fn test_state_of_from_operator() {
         setup(
         ref :cfg
     );
-    operator_staking_contract_dispatcher.state_of(staker_address: DUMMY_ADDRESS(),);
+    operator_staking_contract_dispatcher.staker_info(staker_address: DUMMY_ADDRESS(),);
 }
 
 #[test]

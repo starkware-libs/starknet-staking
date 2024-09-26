@@ -99,7 +99,7 @@ pub trait IPool<TContractState> {
     ) -> bool;
     fn set_final_staker_index(ref self: TContractState, final_staker_index: u64);
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
-    fn state_of(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
+    fn pool_member_info(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
     fn contract_parameters(self: @TContractState) -> PoolContractInfo;
     fn update_commission(ref self: TContractState, commission: u16) -> bool;
 }

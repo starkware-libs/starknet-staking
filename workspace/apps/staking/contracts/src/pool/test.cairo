@@ -100,7 +100,8 @@ fn test_enter_delegation_pool() {
     };
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     assert_eq!(
-        pool_dispatcher.state_of(cfg.test_info.pool_member_address), expected_pool_member_info
+        pool_dispatcher.pool_member_info(cfg.test_info.pool_member_address),
+        expected_pool_member_info
     );
     // Check that all the pool amount was transferred to the staking contract.
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
@@ -126,7 +127,7 @@ fn test_enter_delegation_pool() {
             }
         ),
     };
-    assert_eq!(staking_dispatcher.state_of(cfg.test_info.staker_address), expected_staker_info);
+    assert_eq!(staking_dispatcher.staker_info(cfg.test_info.staker_address), expected_staker_info);
 
     // Validate NewPoolMember and DelegationPoolMemberBalanceChanged events.
     let events = spy.get_events().emitted_by(pool_contract).events;
@@ -171,7 +172,7 @@ fn test_add_to_delegation_pool() {
     let second_pool_member = cfg.test_info.pool_member_address;
     let second_pool_member_info = cfg.pool_member_info;
     let staker_info_before = staking_dispatcher
-        .state_of(staker_address: cfg.test_info.staker_address);
+        .staker_info(staker_address: cfg.test_info.staker_address);
 
     // Change global index.
     let index_before = first_pool_member_info.index;
@@ -184,7 +185,7 @@ fn test_add_to_delegation_pool() {
 
     // First pool member adds to the delegation pool.
     let first_pool_member_info_before_add = pool_dispatcher
-        .state_of(pool_member: first_pool_member);
+        .pool_member_info(pool_member: first_pool_member);
     let delegate_amount = first_pool_member_info.amount;
     approve(
         owner: first_pool_member, spender: pool_contract, amount: delegate_amount, :token_address
@@ -192,7 +193,8 @@ fn test_add_to_delegation_pool() {
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: pool_contract, caller_address: first_pool_member);
     pool_dispatcher.add_to_delegation_pool(pool_member: first_pool_member, amount: delegate_amount);
-    let pool_member_info_after_add = pool_dispatcher.state_of(pool_member: first_pool_member);
+    let pool_member_info_after_add = pool_dispatcher
+        .pool_member_info(pool_member: first_pool_member);
     let rewards_including_commission = compute_rewards_rounded_down(
         amount: delegate_amount, interest: updated_index - index_before
     );
@@ -221,7 +223,7 @@ fn test_add_to_delegation_pool() {
 
     // Check staker info after first add to delegation pool.
     let staker_info_after = staking_dispatcher
-        .state_of(staker_address: cfg.test_info.staker_address);
+        .staker_info(staker_address: cfg.test_info.staker_address);
     let unclaimed_rewards_own = compute_rewards_rounded_down(
         amount: staker_info_before.amount_own, interest: updated_index - index_before
     );
@@ -239,7 +241,7 @@ fn test_add_to_delegation_pool() {
 
     // Second pool member adds to the delegation pool.
     let second_pool_member_info_before_add = pool_dispatcher
-        .state_of(pool_member: second_pool_member);
+        .pool_member_info(pool_member: second_pool_member);
     let delegate_amount = second_pool_member_info.amount;
     approve(
         owner: second_pool_member, spender: pool_contract, amount: delegate_amount, :token_address
@@ -247,7 +249,8 @@ fn test_add_to_delegation_pool() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: second_pool_member);
     pool_dispatcher
         .add_to_delegation_pool(pool_member: second_pool_member, amount: delegate_amount);
-    let pool_member_info_after_add = pool_dispatcher.state_of(pool_member: second_pool_member);
+    let pool_member_info_after_add = pool_dispatcher
+        .pool_member_info(pool_member: second_pool_member);
     let rewards_including_commission = compute_rewards_rounded_down(
         amount: delegate_amount, interest: updated_index - index_before
     );
@@ -266,7 +269,7 @@ fn test_add_to_delegation_pool() {
 
     // Check staker info after second add to delegation pool.
     let staker_info_after = staking_dispatcher
-        .state_of(staker_address: cfg.test_info.staker_address);
+        .staker_info(staker_address: cfg.test_info.staker_address);
     if let Option::Some(mut pool_info) = staker_info_expected.pool_info {
         pool_info.amount += delegate_amount;
         staker_info_expected.pool_info = Option::Some(pool_info);
@@ -375,7 +378,7 @@ fn test_change_reward_address() {
 
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let pool_member_info_before_change = pool_dispatcher
-        .state_of(cfg.test_info.pool_member_address);
+        .pool_member_info(cfg.test_info.pool_member_address);
     let other_reward_address = OTHER_REWARD_ADDRESS();
 
     cheat_caller_address_once(
@@ -383,7 +386,8 @@ fn test_change_reward_address() {
     );
     let mut spy = snforge_std::spy_events();
     pool_dispatcher.change_reward_address(other_reward_address);
-    let pool_member_info_after_change = pool_dispatcher.state_of(cfg.test_info.pool_member_address);
+    let pool_member_info_after_change = pool_dispatcher
+        .pool_member_info(cfg.test_info.pool_member_address);
     let pool_member_info_expected = PoolMemberInfo {
         reward_address: other_reward_address, ..pool_member_info_before_change
     };
@@ -433,7 +437,9 @@ fn test_claim_rewards() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     // Check that the pool member info was updated correctly.
-    assert_eq!(pool_dispatcher.state_of(cfg.test_info.pool_member_address), cfg.pool_member_info);
+    assert_eq!(
+        pool_dispatcher.pool_member_info(cfg.test_info.pool_member_address), cfg.pool_member_info
+    );
     // Update index for testing.
     // TODO: Wrap in a function.
     let updated_index: u64 = cfg.staker_info.index * 2;
@@ -502,7 +508,8 @@ fn test_exit_delegation_pool_intent() {
         ..cfg.pool_member_info
     };
     assert_eq!(
-        pool_dispatcher.state_of(cfg.test_info.pool_member_address), expected_pool_member_info
+        pool_dispatcher.pool_member_info(cfg.test_info.pool_member_address),
+        expected_pool_member_info
     );
     let mut expected_staker_info = StakerInfo {
         amount_own: cfg.staker_info.amount_own, ..cfg.staker_info
@@ -512,7 +519,7 @@ fn test_exit_delegation_pool_intent() {
         pool_info.pool_contract = pool_contract;
         expected_staker_info.pool_info = Option::Some(pool_info);
     }
-    assert_eq!(staking_dispatcher.state_of(cfg.test_info.staker_address), expected_staker_info);
+    assert_eq!(staking_dispatcher.staker_info(cfg.test_info.staker_address), expected_staker_info);
     // Validate that the data is written in the exit intents map in staking contract.
     let undelegate_intent_key = UndelegateIntentKey {
         pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
@@ -773,7 +780,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     assert!(pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :index, :data));
 
-    let pool_member_info = pool_dispatcher.state_of(:pool_member);
+    let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     let expected_pool_member_info = PoolMemberInfo {
         reward_address,
         amount,
@@ -791,7 +798,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
         pool_dispatcher
             .enter_delegation_pool_from_staking_contract(:amount, index: updated_index, :data)
     );
-    let pool_member_info = pool_dispatcher.state_of(:pool_member);
+    let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     let updated_amount = amount * 2;
     let interest = updated_index - index;
     let rewards_including_commission = compute_rewards_rounded_down(:amount, :interest);
@@ -960,7 +967,7 @@ fn test_partial_undelegate() {
     };
     assert_eq!(actual_undelegate_intent_value, expected_undelegate_intent_value);
 
-    let staker_info = staking_dispatcher.state_of(cfg.test_info.staker_address);
+    let staker_info = staking_dispatcher.staker_info(cfg.test_info.staker_address);
     assert_eq!(staker_info.get_pool_info_unchecked().amount, cfg.pool_member_info.amount);
 
     // Intent 0 and see that the unpool_time is now optional.
@@ -986,6 +993,6 @@ fn test_partial_undelegate() {
     );
     let expected_undelegate_intent_value: UndelegateIntentValue = Zero::zero();
     assert_eq!(actual_undelegate_intent_value, expected_undelegate_intent_value);
-    let staker_info = staking_dispatcher.state_of(cfg.test_info.staker_address);
+    let staker_info = staking_dispatcher.staker_info(cfg.test_info.staker_address);
     assert_eq!(staker_info.get_pool_info_unchecked().amount, cfg.pool_member_info.amount);
 }

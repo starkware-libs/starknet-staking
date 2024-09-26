@@ -60,7 +60,7 @@ pub mod StakingForOperatorMock {
             self.assert_execution_context();
             contract_address_const::<'DUMMY_ADDRESS'>()
         }
-        fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
+        fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             self.assert_execution_context();
             StakerInfo {
                 reward_address: contract_address_const::<'DUMMY_ADDRESS'>(),

@@ -170,8 +170,8 @@ pub mod Operator {
             self.staking_dispatcher.read().set_open_for_delegation(:commission)
         }
 
-        fn state_of(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
-            self.staking_dispatcher.read().state_of(:staker_address)
+        fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
+            self.staking_dispatcher.read().staker_info(:staker_address)
         }
 
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
