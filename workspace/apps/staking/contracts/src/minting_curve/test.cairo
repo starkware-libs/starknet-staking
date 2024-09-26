@@ -72,7 +72,7 @@ fn test_set_c_num_unauthorized() {
 }
 
 #[test]
-#[should_panic(expected: "C numerator is out of range, expected to be 0-10000.")]
+#[should_panic(expected: "C numerator is out of range, expected to be 0-10000")]
 fn test_set_invalid_c_num() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

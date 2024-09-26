@@ -174,7 +174,7 @@ fn test_calculate_rewards_unstake_intent() {
 }
 
 #[test]
-#[should_panic(expected: "Staker already exists, use increase_stake instead.")]
+#[should_panic(expected: "Staker already exists, use increase_stake instead")]
 fn test_stake_from_same_staker_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -198,7 +198,7 @@ fn test_stake_from_same_staker_address() {
 }
 
 #[test]
-#[should_panic(expected: "Operational address already exists.")]
+#[should_panic(expected: "Operational address already exists")]
 fn test_stake_with_same_operational_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -226,7 +226,7 @@ fn test_stake_with_same_operational_address() {
 }
 
 #[test]
-#[should_panic(expected: "Amount is less than min stake - try again with enough funds.")]
+#[should_panic(expected: "Amount is less than min stake - try again with enough funds")]
 fn test_stake_with_less_than_min_stake() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg.staker_info.amount_own = cfg.staking_contract_info.min_stake - 1;
@@ -237,7 +237,7 @@ fn test_stake_with_less_than_min_stake() {
 }
 
 #[test]
-#[should_panic(expected: "Commission is out of range, expected to be 0-10000.")]
+#[should_panic(expected: "Commission is out of range, expected to be 0-10000")]
 fn test_stake_with_commission_out_of_range() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -363,7 +363,7 @@ fn test_increase_stake_from_staker_address() {
 }
 
 #[test]
-#[should_panic(expected: "Staker does not have a pool contract.")]
+#[should_panic(expected: "Staker does not have a pool contract")]
 fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg.test_info.pool_enabled = false;
@@ -379,7 +379,7 @@ fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
 
 
 #[test]
-#[should_panic(expected: "Caller is not pool contract.")]
+#[should_panic(expected: "Caller is not pool contract")]
 fn test_claim_delegation_pool_rewards_unauthorized_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -446,7 +446,7 @@ fn test_increase_stake_from_reward_address() {
 }
 
 #[test]
-#[should_panic(expected: "Staker does not exist.")]
+#[should_panic(expected: "Staker does not exist")]
 fn test_increase_stake_staker_address_not_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -463,7 +463,7 @@ fn test_increase_stake_staker_address_not_exist() {
 }
 
 #[test]
-#[should_panic(expected: "Unstake is in progress, staker is in an exit window.")]
+#[should_panic(expected: "Unstake is in progress, staker is in an exit window")]
 fn test_increase_stake_unstake_in_progress() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -495,7 +495,7 @@ fn test_increase_stake_amount_is_zero() {
 }
 
 #[test]
-#[should_panic(expected: "Caller address should be staker address or reward address.")]
+#[should_panic(expected: "Caller address should be staker address or reward address")]
 fn test_increase_stake_caller_cannot_increase() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -548,7 +548,7 @@ fn test_change_reward_address() {
 
 
 #[test]
-#[should_panic(expected: "Staker does not exist.")]
+#[should_panic(expected: "Staker does not exist")]
 fn test_change_reward_address_staker_not_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -611,7 +611,7 @@ fn test_claim_rewards() {
 }
 
 #[test]
-#[should_panic(expected: "Claim rewards must be called from staker address or reward address.")]
+#[should_panic(expected: "Claim rewards must be called from staker address or reward address")]
 fn test_claim_rewards_panic_unauthorized() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -629,7 +629,7 @@ fn test_claim_rewards_panic_unauthorized() {
 
 
 #[test]
-#[should_panic(expected: "Staker does not exist.")]
+#[should_panic(expected: "Staker does not exist")]
 fn test_claim_rewards_panic_staker_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -682,7 +682,7 @@ fn test_unstake_intent() {
 }
 
 #[test]
-#[should_panic(expected: "Staker does not exist.")]
+#[should_panic(expected: "Staker does not exist")]
 fn test_unstake_intent_staker_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -699,7 +699,7 @@ fn test_unstake_intent_staker_doesnt_exist() {
 }
 
 #[test]
-#[should_panic(expected: "Unstake is in progress, staker is in an exit window.")]
+#[should_panic(expected: "Unstake is in progress, staker is in an exit window")]
 fn test_unstake_intent_unstake_in_progress() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -1193,7 +1193,7 @@ fn test_change_operational_address() {
 }
 
 #[test]
-#[should_panic(expected: "Staker does not exist.")]
+#[should_panic(expected: "Staker does not exist")]
 fn test_change_operational_address_staker_doesnt_exist() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -1210,7 +1210,7 @@ fn test_change_operational_address_staker_doesnt_exist() {
 }
 
 #[test]
-#[should_panic(expected: "Operational address already exists.")]
+#[should_panic(expected: "Operational address already exists")]
 fn test_change_operational_address_operational_address_exists() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -1297,7 +1297,7 @@ fn test_change_operational_address_operational_address_exists() {
 // }
 
 // #[test]
-// #[should_panic(expected: "Staker does not exist.")]
+// #[should_panic(expected: "Staker does not exist")]
 // fn test_update_commission_caller_not_staker() {
 //     let cfg: StakingInitConfig = Default::default();
 //     let token_address = deploy_mock_erc20_contract(
@@ -1315,7 +1315,7 @@ fn test_change_operational_address_operational_address_exists() {
 // }
 
 // #[test]
-// #[should_panic(expected: "Commission cannot be increased.")]
+// #[should_panic(expected: "Commission cannot be increased")]
 // fn test_update_commission_with_higher_commission() {
 //     let cfg: StakingInitConfig = Default::default();
 //     let token_address = deploy_mock_erc20_contract(
@@ -1332,7 +1332,7 @@ fn test_change_operational_address_operational_address_exists() {
 // }
 
 // #[test]
-// #[should_panic(expected: "Staker does not have a pool contract.")]
+// #[should_panic(expected: "Staker does not have a pool contract")]
 // fn test_update_commission_with_no_pool() {
 //     let cfg: StakingInitConfig = Default::default();
 //     let token_address = deploy_mock_erc20_contract(
@@ -1376,7 +1376,7 @@ fn test_set_open_for_delegation() {
 }
 
 #[test]
-#[should_panic(expected: "Commission is out of range, expected to be 0-10000.")]
+#[should_panic(expected: "Commission is out of range, expected to be 0-10000")]
 fn test_set_open_for_delegation_commission_out_of_range() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -1392,7 +1392,7 @@ fn test_set_open_for_delegation_commission_out_of_range() {
 }
 
 #[test]
-#[should_panic(expected: "Staker does not exist.")]
+#[should_panic(expected: "Staker does not exist")]
 fn test_set_open_for_delegation_staker_not_exist() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -1410,7 +1410,7 @@ fn test_set_open_for_delegation_staker_not_exist() {
 }
 
 #[test]
-#[should_panic(expected: "Staker already has a pool.")]
+#[should_panic(expected: "Staker already has a pool")]
 fn test_set_open_for_delegation_staker_has_pool() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
