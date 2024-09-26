@@ -14,7 +14,7 @@ use test_utils::set_account_as_operator;
 use test_utils::constants;
 use constants::{DUMMY_ADDRESS, POOL_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS};
 use constants::{NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER};
-use constants::OTHER_OPERATIONAL_ADDRESS;
+use constants::{OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS};
 use contracts::event_test_utils;
 use event_test_utils::{assert_number_of_events, assert_staker_exit_intent_event};
 use event_test_utils::{assert_stake_balance_changed_event, assert_delete_staker_event};
@@ -1458,4 +1458,21 @@ fn test_set_exit_waiting_window() {
     );
     staking_config_dispatcher.set_exit_wait_window(exit_wait_window: new_exit_wait_window);
     assert_eq!(new_exit_wait_window, staking_dispatcher.contract_parameters().exit_wait_window);
+}
+
+#[test]
+fn test_set_reward_supplier() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let old_reward_supplier = cfg.staking_contract_info.reward_supplier;
+    assert_eq!(old_reward_supplier, staking_dispatcher.contract_parameters().reward_supplier);
+    let new_reward_supplier = OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governer
+    );
+    staking_config_dispatcher.set_reward_supplier(reward_supplier: new_reward_supplier);
+    assert_eq!(new_reward_supplier, staking_dispatcher.contract_parameters().reward_supplier);
 }

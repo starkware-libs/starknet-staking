@@ -679,21 +679,20 @@ pub mod Staking {
     #[abi(embed_v0)]
     impl StakingConfigImpl of IStakingConfig<ContractState> {
         fn set_min_stake(ref self: ContractState, min_stake: u128) {
-            if self.is_paused() {
-                self.roles.only_security_admin();
-            } else {
-                self.roles.only_app_governor();
-            }
+            self.roles.only_app_governor();
             self.min_stake.write(min_stake);
         }
 
         fn set_exit_wait_window(ref self: ContractState, exit_wait_window: u64) {
-            if self.is_paused() {
-                self.roles.only_security_admin();
-            } else {
-                self.roles.only_app_governor();
-            }
+            self.roles.only_app_governor();
             self.exit_wait_window.write(exit_wait_window);
+        }
+
+        fn set_reward_supplier(ref self: ContractState, reward_supplier: ContractAddress) {
+            self.roles.only_app_governor();
+            self
+                .reward_supplier_dispatcher
+                .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
         }
     }
 
