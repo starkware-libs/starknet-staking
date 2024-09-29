@@ -156,22 +156,20 @@ pub trait IStaking<TContractState> {
         amount: u128,
         pool_enabled: bool,
         commission: u16,
-    ) -> bool;
+    );
     fn increase_stake(
         ref self: TContractState, staker_address: ContractAddress, amount: u128
     ) -> u128;
     fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> u128;
     fn unstake_intent(ref self: TContractState) -> u64;
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> u128;
-    fn change_reward_address(ref self: TContractState, reward_address: ContractAddress) -> bool;
+    fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn set_open_for_delegation(ref self: TContractState, commission: u16) -> ContractAddress;
     fn staker_info(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> u128;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
-    fn change_operational_address(
-        ref self: TContractState, operational_address: ContractAddress
-    ) -> bool;
+    fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
     // fn update_commission(ref self: TContractState, commission: u16) -> bool;
     fn is_paused(self: @TContractState) -> bool;
 }

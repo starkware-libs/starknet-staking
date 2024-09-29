@@ -397,7 +397,7 @@ fn stake(
   amount: u128,
   pool_enabled: bool,
   commission: u16
-) -> bool
+)
 ```
 #### description <!-- omit from toc -->
 Add a new staker to the stake.
@@ -695,7 +695,7 @@ Only pool contract for the given staker can execute.
 fn change_reward_address(
   ref self: ContractState, 
   reward_address: ContractAddress
-) -> bool
+)
 ```
 #### description <!-- omit from toc -->
 Change the reward address for a staker.
@@ -847,7 +847,7 @@ Internal function.
 fn change_operational_address(
     ref self: ContractState, 
     operational_address: ContractAddress
-) -> bool
+)
 ```
 #### description <!-- omit from toc -->
 Change the operational address for a staker.
@@ -1027,7 +1027,7 @@ fn enter_delegation_pool(
     ref self: ContractState, 
     reward_address: ContractAddress, 
     amount: u128
-) -> bool
+)
 ```
 #### description <!-- omit from toc -->
 Add a new pool member to the delegation pool.
@@ -1223,7 +1223,7 @@ fn enter_delegation_pool_from_staking_contract(
     amount: u128, 
     index: u64, 
     data: Span<felt252>
-) -> bool
+)
 ```
 #### description <!-- omit from toc -->
 Entry point for staking contract to inform pool of a pool member being moved from another pool to this one.
@@ -1273,7 +1273,7 @@ Only staking contract can execute.
 fn change_reward_address(
   ref self: ContractState, 
   reward_address: ContractAddress
-) -> bool
+)
 ```
 #### description <!-- omit from toc -->
 Change the reward address for a pool member.
@@ -1325,7 +1325,7 @@ fn calculate_rewards(
     ref self: ContractState, 
     ref pool_member_info: PoolMemberInfo, 
     updated_index: u64
-) -> bool
+)
 ```
 >**note:** internal logic
 #### description <!-- omit from toc -->
@@ -1457,7 +1457,7 @@ fn on_receive(
     amount: u256,
     depositor: EthAddress,
     message: Span<felt252>
-) -> bool
+)
 ```
 #### description <!-- omit from toc -->
 Get notified by StarkGate `amount` was transferred from L1.

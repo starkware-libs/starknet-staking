@@ -67,7 +67,7 @@ fn test_calculate_rewards() {
         commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
     let unclaimed_rewards = rewards_including_commission - commission_amount;
-    assert!(state.calculate_rewards(ref :pool_member_info, :updated_index));
+    state.calculate_rewards(ref :pool_member_info, :updated_index);
 
     let mut expected_pool_member_info = PoolMemberInfo {
         index: cfg.staker_info.index * 2, unclaimed_rewards, ..pool_member_info
@@ -778,7 +778,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
     let amount = cfg.pool_member_info.amount;
     let index = cfg.pool_member_info.index;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
-    assert!(pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :index, :data));
+    pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :index, :data);
 
     let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     let expected_pool_member_info = PoolMemberInfo {
@@ -794,10 +794,8 @@ fn test_enter_delegation_pool_from_staking_contract() {
     // Enter with an existing pool member.
     let updated_index = index * 2;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
-    assert!(
-        pool_dispatcher
-            .enter_delegation_pool_from_staking_contract(:amount, index: updated_index, :data)
-    );
+    pool_dispatcher
+        .enter_delegation_pool_from_staking_contract(:amount, index: updated_index, :data);
     let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     let updated_amount = amount * 2;
     let interest = updated_index - index;
@@ -872,7 +870,7 @@ fn test_update_commission() {
 
     let commission = cfg.staker_info.get_pool_info_unchecked().commission - 1;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
-    assert!(pool_dispatcher.update_commission(:commission));
+    pool_dispatcher.update_commission(:commission);
 
     let parameters_after_update = pool_dispatcher.contract_parameters();
     let expected_parameters_after_update = PoolContractInfo {

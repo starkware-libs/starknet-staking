@@ -130,7 +130,7 @@ pub mod Operator {
             amount: u128,
             pool_enabled: bool,
             commission: u16,
-        ) -> bool {
+        ) {
             self.check_whitelist(get_caller_address());
             self
                 .staking_dispatcher
@@ -160,7 +160,7 @@ pub mod Operator {
             self.staking_dispatcher.read().unstake_action(:staker_address)
         }
 
-        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
+        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
             self.check_whitelist(get_caller_address());
             self.staking_dispatcher.read().change_reward_address(:reward_address)
         }
@@ -189,7 +189,7 @@ pub mod Operator {
 
         fn change_operational_address(
             ref self: ContractState, operational_address: ContractAddress
-        ) -> bool {
+        ) {
             self.check_whitelist(get_caller_address());
             self.staking_dispatcher.read().change_operational_address(:operational_address)
         }

@@ -132,7 +132,7 @@ pub mod Staking {
             amount: u128,
             pool_enabled: bool,
             commission: u16,
-        ) -> bool {
+        ) {
             self.general_prerequisites();
             self.roles.only_operator();
             // TODO: consider calling get_execution_info() and pass it to the role test for better
@@ -204,7 +204,6 @@ pub mod Staking {
                         staker_address, reward_address, operational_address, self_stake: amount
                     }
                 );
-            true
         }
 
         fn increase_stake(
@@ -339,7 +338,7 @@ pub mod Staking {
             staker_amount
         }
 
-        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
+        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
             self.general_prerequisites();
             self.roles.only_operator();
             let staker_address = get_tx_info().account_contract_address;
@@ -353,7 +352,6 @@ pub mod Staking {
                         staker_address, new_address: reward_address, old_address
                     }
                 );
-            true
         }
 
         fn set_open_for_delegation(ref self: ContractState, commission: u16) -> ContractAddress {
@@ -418,7 +416,7 @@ pub mod Staking {
 
         fn change_operational_address(
             ref self: ContractState, operational_address: ContractAddress
-        ) -> bool {
+        ) {
             self.general_prerequisites();
             self.roles.only_operator();
             assert_with_err(
@@ -440,7 +438,6 @@ pub mod Staking {
                         staker_address, new_address: operational_address, old_address
                     }
                 );
-            true
         }
 
         // fn update_commission(ref self: ContractState, commission: u16) -> bool {

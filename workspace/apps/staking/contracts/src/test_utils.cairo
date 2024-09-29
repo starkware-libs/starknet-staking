@@ -539,13 +539,10 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
         contract_address: pool_contract, caller_address: cfg.test_info.pool_member_address
     );
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    assert!(
-        pool_dispatcher
-            .enter_delegation_pool(
-                reward_address: cfg.pool_member_info.reward_address,
-                amount: cfg.pool_member_info.amount
-            )
-    );
+    pool_dispatcher
+        .enter_delegation_pool(
+            reward_address: cfg.pool_member_info.reward_address, amount: cfg.pool_member_info.amount
+        )
 }
 
 /// *****WARNING*****

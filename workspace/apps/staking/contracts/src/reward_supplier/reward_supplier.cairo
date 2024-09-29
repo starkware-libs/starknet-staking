@@ -136,7 +136,7 @@ pub mod RewardSupplier {
             amount: u256,
             depositor: EthAddress,
             message: Span<felt252>
-        ) -> bool {
+        ) {
             assert_with_err(
                 get_caller_address() == self.starkgate_address.read(),
                 Error::ON_RECEIVE_NOT_FROM_STARKGATE
@@ -145,11 +145,10 @@ pub mod RewardSupplier {
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
             if amount_low > l1_pending_requested_amount {
                 self.l1_pending_requested_amount.write(Zero::zero());
-                return true;
+                return;
             }
             l1_pending_requested_amount -= amount_low;
             self.l1_pending_requested_amount.write(l1_pending_requested_amount);
-            true
         }
 
         fn contract_parameters(self: @ContractState) -> RewardSupplierInfo {

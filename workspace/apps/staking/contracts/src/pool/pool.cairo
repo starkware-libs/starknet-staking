@@ -98,7 +98,7 @@ pub mod Pool {
     impl PoolImpl of IPool<ContractState> {
         fn enter_delegation_pool(
             ref self: ContractState, reward_address: ContractAddress, amount: u128
-        ) -> bool {
+        ) {
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
             assert_with_err(
@@ -142,7 +142,6 @@ pub mod Pool {
                         pool_member, old_delegated_stake: Zero::zero(), new_delegated_stake: amount
                     }
                 );
-            true
         }
 
         fn add_to_delegation_pool(
@@ -312,7 +311,7 @@ pub mod Pool {
 
         fn enter_delegation_pool_from_staking_contract(
             ref self: ContractState, amount: u128, index: u64, data: Span<felt252>
-        ) -> bool {
+        ) {
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             assert_with_err(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
@@ -352,7 +351,6 @@ pub mod Pool {
                         new_delegated_stake: pool_member_info.amount
                     }
                 );
-            true
         }
 
         fn set_final_staker_index(ref self: ContractState, final_staker_index: u64) {
@@ -372,7 +370,7 @@ pub mod Pool {
                 );
         }
 
-        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
+        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             let old_address = pool_member_info.reward_address;
@@ -384,7 +382,6 @@ pub mod Pool {
                         pool_member, new_address: reward_address, old_address
                     }
                 );
-            true
         }
 
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
@@ -401,7 +398,7 @@ pub mod Pool {
             }
         }
 
-        fn update_commission(ref self: ContractState, commission: u16) -> bool {
+        fn update_commission(ref self: ContractState, commission: u16) {
             assert_with_err(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
@@ -410,7 +407,6 @@ pub mod Pool {
                 commission <= self.commission.read(), Error::CANNOT_INCREASE_COMMISSION
             );
             self.commission.write(commission);
-            true
         }
     }
 
@@ -457,7 +453,7 @@ pub mod Pool {
         /// - index
         fn calculate_rewards(
             ref self: ContractState, ref pool_member_info: PoolMemberInfo, updated_index: u64
-        ) -> bool {
+        ) {
             let interest: u64 = updated_index - pool_member_info.index;
             pool_member_info.index = updated_index;
             let rewards_including_commission = compute_rewards_rounded_down(
@@ -468,12 +464,11 @@ pub mod Pool {
             );
             let rewards = rewards_including_commission - commission_amount;
             pool_member_info.unclaimed_rewards += rewards;
-            true
         }
 
         fn update_index_and_calculate_rewards(
             ref self: ContractState, ref pool_member_info: PoolMemberInfo
-        ) -> bool {
+        ) {
             let updated_index = self.receive_index_and_funds_from_staker();
             self.calculate_rewards(ref :pool_member_info, :updated_index)
         }
