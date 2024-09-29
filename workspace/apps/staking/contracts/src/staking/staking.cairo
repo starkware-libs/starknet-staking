@@ -520,19 +520,19 @@ pub mod Staking {
             assert_with_err(
                 pool_info.pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
-            self.calculate_rewards(ref :staker_info);
-            let unpool_time = staker_info
-                .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
             let undelegate_intent_key = UndelegateIntentKey {
                 pool_contract: pool_info.pool_contract, identifier
             };
             let undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
-            let old_delegated_stake = pool_info.amount;
             let old_intent_amount = undelegate_intent_value.amount;
+            let old_delegated_stake = pool_info.amount;
             let total_amount = old_intent_amount + old_delegated_stake;
             assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
             let new_delegated_stake = total_amount - amount;
             pool_info.amount = new_delegated_stake;
+            self.calculate_rewards(ref :staker_info);
+            let unpool_time = staker_info
+                .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
             if (staker_info.unstake_time.is_none()) {
                 // Change total stake only if the staker is not in the unstake process.
                 if new_delegated_stake < old_delegated_stake {

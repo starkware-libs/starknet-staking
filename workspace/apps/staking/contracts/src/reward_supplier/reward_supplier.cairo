@@ -180,15 +180,15 @@ pub mod RewardSupplier {
         }
 
         fn request_funds_if_needed(ref self: ContractState, unclaimed_rewards: u128) {
-            let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
-            let base_mint_amount = self.base_mint_amount.read();
             let erc20_dispatcher = self.erc20_dispatcher.read();
             let balance: u128 = erc20_dispatcher
                 .balance_of(account: get_contract_address())
                 .try_into()
                 .expect_with_err(Error::BALANCE_ISNT_U128);
+            let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
             let credit = balance + l1_pending_requested_amount;
             let debit = unclaimed_rewards;
+            let base_mint_amount = self.base_mint_amount.read();
             let threshold = compute_threshold(base_mint_amount);
             if credit < debit + threshold {
                 let diff = debit + threshold - credit;
