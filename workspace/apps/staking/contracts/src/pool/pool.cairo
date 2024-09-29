@@ -105,16 +105,16 @@ pub mod Pool {
                 self.pool_member_info.read(pool_member).is_none(), Error::POOL_MEMBER_EXISTS
             );
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
-            let staker_address = self.staker_address.read();
-            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             let erc20_dispatcher = self.erc20_dispatcher.read();
             let self_contract = get_contract_address();
             erc20_dispatcher
                 .checked_transfer_from(
                     sender: pool_member, recipient: self_contract, amount: amount.into()
                 );
+            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             erc20_dispatcher
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
+            let staker_address = self.staker_address.read();
             let (_, updated_index) = staking_pool_dispatcher
                 .add_stake_from_pool(:staker_address, :amount);
             self
@@ -154,13 +154,13 @@ pub mod Pool {
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
                 Error::CALLER_CANNOT_ADD_TO_POOL
             );
-            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             let erc20_dispatcher = self.erc20_dispatcher.read();
             let self_contract = get_contract_address();
             erc20_dispatcher
                 .checked_transfer_from(
                     sender: pool_member, recipient: self_contract, amount: amount.into()
                 );
+            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             erc20_dispatcher
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
             let (_, updated_index) = staking_pool_dispatcher
@@ -183,9 +183,9 @@ pub mod Pool {
         fn exit_delegation_pool_intent(ref self: ContractState, amount: u128) {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
-            self.update_index_and_calculate_rewards(ref :pool_member_info);
             let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
             assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
+            self.update_index_and_calculate_rewards(ref :pool_member_info);
             let unpool_time = self.undelegate_from_staking_contract_intent(:pool_member, :amount);
             if amount.is_zero() {
                 pool_member_info.unpool_time = Option::None;
@@ -273,11 +273,6 @@ pub mod Pool {
                 pool_member_info.unpool_time.is_some(), Error::MISSING_UNDELEGATE_INTENT
             );
             assert_with_err(pool_member_info.unpool_amount >= amount, Error::AMOUNT_TOO_HIGH);
-            let switch_pool_data = SwitchPoolData {
-                pool_member, reward_address: pool_member_info.reward_address
-            };
-            let mut serialized_data = array![];
-            switch_pool_data.serialize(ref output: serialized_data);
             pool_member_info.unpool_amount -= amount;
             if pool_member_info.unpool_amount.is_zero() && pool_member_info.amount.is_zero() {
                 // Claim rewards.
@@ -295,6 +290,11 @@ pub mod Pool {
                 }
                 self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             }
+            let switch_pool_data = SwitchPoolData {
+                pool_member, reward_address: pool_member_info.reward_address
+            };
+            let mut serialized_data = array![];
+            switch_pool_data.serialize(ref output: serialized_data);
             // TODO: emit event
             self
                 .staking_pool_dispatcher
