@@ -30,9 +30,8 @@ pub mod StakingForOperatorMock {
             amount: u128,
             pool_enabled: bool,
             commission: u16,
-        ) -> bool {
+        ) {
             self.assert_execution_context();
-            true
         }
         fn increase_stake(
             ref self: ContractState, staker_address: ContractAddress, amount: u128
@@ -52,9 +51,8 @@ pub mod StakingForOperatorMock {
             self.assert_execution_context();
             0
         }
-        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) -> bool {
+        fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
             self.assert_execution_context();
-            true
         }
         fn set_open_for_delegation(ref self: ContractState, commission: u16) -> ContractAddress {
             self.assert_execution_context();
@@ -93,9 +91,8 @@ pub mod StakingForOperatorMock {
         }
         fn change_operational_address(
             ref self: ContractState, operational_address: ContractAddress
-        ) -> bool {
+        ) {
             self.assert_execution_context();
-            true
         }
         // fn update_commission(ref self: ContractState, commission: u16) -> bool {
         //     self.assert_execution_context();
