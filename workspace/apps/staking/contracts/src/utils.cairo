@@ -7,6 +7,7 @@ use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
 use core::num::traits::WideMul;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+use contracts::types::Commission;
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
@@ -34,7 +35,7 @@ pub fn deploy_delegation_pool_contract(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
-    commission: u16,
+    commission: Commission,
     admin: ContractAddress,
 ) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
@@ -55,7 +56,7 @@ pub fn deploy_delegation_pool_contract(
 //
 // $$ commission_amount = rewards_including_commission * commission / COMMISSION_DENOMINATOR $$
 pub fn compute_commission_amount_rounded_down(
-    rewards_including_commission: u128, commission: u16
+    rewards_including_commission: u128, commission: Commission
 ) -> u128 {
     u128_mul_wide_and_div_unsafe(
         lhs: rewards_including_commission,
@@ -70,7 +71,7 @@ pub fn compute_commission_amount_rounded_down(
 // $$ commission_amount = ceil_of_division(rewards_including_commission * commission,
 // COMMISSION_DENOMINATOR) $$
 pub fn compute_commission_amount_rounded_up(
-    rewards_including_commission: u128, commission: u16
+    rewards_including_commission: u128, commission: Commission
 ) -> u128 {
     u128_mul_wide_and_ceil_div_unsafe(
         lhs: rewards_including_commission,

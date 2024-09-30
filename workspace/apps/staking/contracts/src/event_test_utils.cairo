@@ -4,6 +4,7 @@ use contracts::staking::PauseEvents;
 use contracts::pool::Events as PoolEvents;
 use contracts::reward_supplier::Events as RewardSupplierEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
+use contracts::types::Commission;
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(
@@ -192,8 +193,8 @@ pub fn assert_commission_changed_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     pool_contract: ContractAddress,
-    new_commission: u16,
-    old_commission: u16,
+    new_commission: Commission,
+    old_commission: Commission,
 ) {
     let expected_event = @contracts::staking::Staking::Event::CommissionChanged(
         StakingEvents::CommissionChanged {
@@ -249,7 +250,7 @@ pub fn assert_new_delegation_pool_event(
     mut spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     pool_contract: ContractAddress,
-    commission: u16
+    commission: Commission
 ) {
     let expected_event = @contracts::staking::Staking::Event::NewDelegationPool(
         StakingEvents::NewDelegationPool { staker_address, pool_contract, commission }

@@ -17,6 +17,7 @@ pub mod operator;
 // Consts and other non-component utilities
 pub mod errors;
 pub mod constants;
+pub mod types;
 
 // Not under #[cfg(test)] as it may contains Mocks.
 mod flow_test;

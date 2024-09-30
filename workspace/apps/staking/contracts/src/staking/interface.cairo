@@ -1,9 +1,11 @@
 use starknet::{ContractAddress, ClassHash, get_block_timestamp};
 use core::cmp::max;
 use contracts::errors::{Error, OptionAuxTrait};
+use contracts::types::Commission;
 
 pub mod Events {
     use starknet::ContractAddress;
+    use contracts::types::Commission;
     #[derive(Drop, starknet::Event)]
     pub struct StakeBalanceChanged {
         #[key]
@@ -29,7 +31,7 @@ pub mod Events {
         pub staker_address: ContractAddress,
         #[key]
         pub pool_contract: ContractAddress,
-        pub commission: u16
+        pub commission: Commission
     }
 
     #[derive(Drop, starknet::Event)]
@@ -38,8 +40,8 @@ pub mod Events {
         pub staker_address: ContractAddress,
         #[key]
         pub pool_contract: ContractAddress,
-        pub new_commission: u16,
-        pub old_commission: u16
+        pub new_commission: Commission,
+        pub old_commission: Commission
     }
 
     #[derive(Drop, starknet::Event)]
@@ -106,7 +108,7 @@ pub struct StakerPoolInfo {
     pub pool_contract: ContractAddress,
     pub amount: u128,
     pub unclaimed_rewards: u128,
-    pub commission: u16,
+    pub commission: Commission,
 }
 
 // TODO create a different struct for not exposing internal implemenation
@@ -155,7 +157,7 @@ pub trait IStaking<TContractState> {
         operational_address: ContractAddress,
         amount: u128,
         pool_enabled: bool,
-        commission: u16,
+        commission: Commission,
     );
     fn increase_stake(
         ref self: TContractState, staker_address: ContractAddress, amount: u128
@@ -170,7 +172,7 @@ pub trait IStaking<TContractState> {
     fn get_total_stake(self: @TContractState) -> u128;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
-    // fn update_commission(ref self: TContractState, commission: u16) -> bool;
+    // fn update_commission(ref self: TContractState, commission: Commission) -> bool;
     fn is_paused(self: @TContractState) -> bool;
 }
 

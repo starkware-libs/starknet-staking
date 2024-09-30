@@ -3,6 +3,7 @@ pub mod StakingForOperatorMock {
     use contracts::staking::{IStaking, StakerInfo, StakingContractInfo};
     use starknet::{ContractAddress, get_execution_info, contract_address_const};
     use starknet::class_hash::class_hash_const;
+    use contracts::types::Commission;
 
     #[storage]
     struct Storage {
@@ -29,7 +30,7 @@ pub mod StakingForOperatorMock {
             operational_address: ContractAddress,
             amount: u128,
             pool_enabled: bool,
-            commission: u16,
+            commission: Commission,
         ) {
             self.assert_execution_context();
         }
@@ -54,7 +55,9 @@ pub mod StakingForOperatorMock {
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
             self.assert_execution_context();
         }
-        fn set_open_for_delegation(ref self: ContractState, commission: u16) -> ContractAddress {
+        fn set_open_for_delegation(
+            ref self: ContractState, commission: Commission
+        ) -> ContractAddress {
             self.assert_execution_context();
             contract_address_const::<'DUMMY_ADDRESS'>()
         }
@@ -94,7 +97,7 @@ pub mod StakingForOperatorMock {
         ) {
             self.assert_execution_context();
         }
-        // fn update_commission(ref self: ContractState, commission: u16) -> bool {
+        // fn update_commission(ref self: ContractState, commission: Commission) -> bool {
         //     self.assert_execution_context();
         //     true
         // }

@@ -26,10 +26,12 @@ use constants::{SECURITY_AGENT, APP_GOVERNER, GOVERNANCE_ADMIN, OPERATOR_CONTRAC
 use constants::APP_ROLE_ADMIN;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
+use contracts::types::Commission;
 
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
     use starknet::class_hash::{ClassHash, class_hash_const};
+    use contracts::types::Commission;
 
     pub const STAKER_INITIAL_BALANCE: u128 = 10000000000;
     pub const POOL_MEMBER_INITIAL_BALANCE: u128 = 10000000000;
@@ -37,7 +39,7 @@ pub(crate) mod constants {
     pub const MIN_STAKE: u128 = 100000;
     pub const STAKE_AMOUNT: u128 = 200000;
     pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
-    pub const COMMISSION: u16 = 500;
+    pub const COMMISSION: Commission = 500;
     pub const STAKER_FINAL_INDEX: u64 = 10;
     pub const BASE_MINT_AMOUNT: u128 = 8000000000000000;
     pub const BUFFER: u128 = 1000000000000;
@@ -209,7 +211,7 @@ pub(crate) fn initialize_pool_state(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
-    commission: u16
+    commission: Commission
 ) -> Pool::ContractState {
     let mut state = Pool::contract_state_for_testing();
     Pool::constructor(ref state, :staker_address, :staking_contract, :token_address, :commission);
@@ -608,7 +610,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
         amount: Serde::<u128>::deserialize(ref span).expect('Failed de amount'),
         index: Serde::<u64>::deserialize(ref span).expect('Failed de index'),
         unclaimed_rewards: Serde::<u128>::deserialize(ref span).expect('Failed de unclaimed'),
-        commission: Serde::<u16>::deserialize(ref span).expect('Failed de commission'),
+        commission: Serde::<Commission>::deserialize(ref span).expect('Failed de commission'),
         unpool_amount: Serde::<u128>::deserialize(ref span).expect('Failed de unpool_amount'),
         unpool_time: Option::None,
     };
