@@ -1,4 +1,5 @@
 use starknet::ContractAddress;
+use contracts::types::Commission;
 
 pub mod Events {
     use starknet::ContractAddress;
@@ -67,7 +68,7 @@ pub struct PoolMemberInfo {
     pub amount: u128,
     pub index: u64,
     pub unclaimed_rewards: u128,
-    pub commission: u16,
+    pub commission: Commission,
     pub unpool_amount: u128,
     pub unpool_time: Option<u64>,
 }
@@ -78,7 +79,7 @@ pub struct PoolContractInfo {
     pub final_staker_index: Option<u64>,
     pub staking_contract: ContractAddress,
     pub token_address: ContractAddress,
-    pub commission: u16,
+    pub commission: Commission,
 }
 
 #[starknet::interface]
@@ -102,5 +103,5 @@ pub trait IPool<TContractState> {
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn pool_member_info(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
     fn contract_parameters(self: @TContractState) -> PoolContractInfo;
-    fn update_commission(ref self: TContractState, commission: u16);
+    fn update_commission(ref self: TContractState, commission: Commission);
 }

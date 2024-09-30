@@ -29,8 +29,9 @@ pub mod Staking {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts_commons::components::roles::interface::{OPERATOR, SECURITY_ADMIN};
+    use contracts::types::Commission;
 
-    pub const COMMISSION_DENOMINATOR: u16 = 10000;
+    pub const COMMISSION_DENOMINATOR: Commission = 10000;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -131,7 +132,7 @@ pub mod Staking {
             operational_address: ContractAddress,
             amount: u128,
             pool_enabled: bool,
-            commission: u16,
+            commission: Commission,
         ) {
             self.general_prerequisites();
             self.roles.only_operator();
@@ -354,7 +355,9 @@ pub mod Staking {
                 );
         }
 
-        fn set_open_for_delegation(ref self: ContractState, commission: u16) -> ContractAddress {
+        fn set_open_for_delegation(
+            ref self: ContractState, commission: Commission
+        ) -> ContractAddress {
             self.general_prerequisites();
             self.roles.only_operator();
             let staker_address = get_tx_info().account_contract_address;
@@ -440,7 +443,7 @@ pub mod Staking {
                 );
         }
 
-        // fn update_commission(ref self: ContractState, commission: u16) -> bool {
+        // fn update_commission(ref self: ContractState, commission: Commission) -> bool {
         //     self.assert_is_unpaused();
         //     self.roles.only_operator();
         //     let staker_address = get_tx_info().account_contract_address;
@@ -849,7 +852,7 @@ pub mod Staking {
             staker_address: ContractAddress,
             staking_contract: ContractAddress,
             token_address: ContractAddress,
-            commission: u16,
+            commission: Commission,
         ) -> ContractAddress {
             let class_hash = self.pool_contract_class_hash.read();
             let contract_address_salt: felt252 = get_block_timestamp().into();

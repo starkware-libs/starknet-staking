@@ -15,6 +15,7 @@ pub mod Operator {
     use contracts::errors::{Error, ErrorTrait};
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use core::cmp::min;
+    use contracts::types::Commission;
 
     pub const MAX_WHITELIST_SIZE: u64 = 100;
 
@@ -129,7 +130,7 @@ pub mod Operator {
             operational_address: ContractAddress,
             amount: u128,
             pool_enabled: bool,
-            commission: u16,
+            commission: Commission,
         ) {
             self.check_whitelist(get_caller_address());
             self
@@ -165,7 +166,9 @@ pub mod Operator {
             self.staking_dispatcher.read().change_reward_address(:reward_address)
         }
 
-        fn set_open_for_delegation(ref self: ContractState, commission: u16) -> ContractAddress {
+        fn set_open_for_delegation(
+            ref self: ContractState, commission: Commission
+        ) -> ContractAddress {
             self.check_whitelist(get_caller_address());
             self.staking_dispatcher.read().set_open_for_delegation(:commission)
         }
@@ -194,7 +197,7 @@ pub mod Operator {
             self.staking_dispatcher.read().change_operational_address(:operational_address)
         }
 
-        // fn update_commission(ref self: ContractState, commission: u16) -> bool {
+        // fn update_commission(ref self: ContractState, commission: Commission) -> bool {
         //     self.check_whitelist(get_caller_address());
         //     self.staking_dispatcher.read().update_commission(:commission)
         // }

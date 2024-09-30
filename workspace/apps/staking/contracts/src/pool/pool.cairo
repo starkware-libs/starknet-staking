@@ -17,6 +17,7 @@ pub mod Pool {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts::utils::CheckedIERC20DispatcherTrait;
+    use contracts::types::Commission;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -51,7 +52,7 @@ pub mod Pool {
         final_staker_index: Option<u64>,
         staking_pool_dispatcher: IStakingPoolDispatcher,
         erc20_dispatcher: IERC20Dispatcher,
-        commission: u16,
+        commission: Commission,
     }
 
     #[event]
@@ -81,7 +82,7 @@ pub mod Pool {
         staker_address: ContractAddress,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
-        commission: u16
+        commission: Commission
     ) {
         self.accesscontrol.initializer();
         self.roles.initializer(governance_admin: staking_contract);
@@ -400,7 +401,7 @@ pub mod Pool {
             }
         }
 
-        fn update_commission(ref self: ContractState, commission: u16) {
+        fn update_commission(ref self: ContractState, commission: Commission) {
             assert_with_err(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
