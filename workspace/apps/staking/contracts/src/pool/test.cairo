@@ -660,7 +660,7 @@ fn test_switch_delegation_pool() {
     );
     let to_staker_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 
-    let (unclaimed_rewards_member, updated_index) = create_rewards_for_pool_member(ref :cfg);
+    let unclaimed_rewards_member = create_rewards_for_pool_member(ref :cfg);
     let reward_account_balance_before = erc20_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
 
@@ -686,7 +686,6 @@ fn test_switch_delegation_pool() {
         amount: Zero::zero(),
         unpool_amount: cfg.pool_member_info.amount - switch_amount,
         unclaimed_rewards: unclaimed_rewards_member,
-        index: updated_index,
         ..cfg.pool_member_info
     };
     assert_eq!(amount_left, cfg.pool_member_info.amount - switch_amount);
@@ -928,7 +927,7 @@ fn test_partial_undelegate() {
     // member's amount and unpool amount.
     let total_pool_member_amount = cfg.pool_member_info.amount;
     // Make sure the pool member has unclaimed rewards to see it's updated.
-    let (unclaimed_rewards_member, updated_index) = create_rewards_for_pool_member(ref :cfg);
+    let unclaimed_rewards_member = create_rewards_for_pool_member(ref :cfg);
     cheat_caller_address(
         contract_address: pool_contract,
         caller_address: cfg.test_info.pool_member_address,
@@ -949,7 +948,6 @@ fn test_partial_undelegate() {
         + staking_dispatcher.contract_parameters().exit_wait_window;
     let expected_pool_member_info = PoolMemberInfo {
         unclaimed_rewards: unclaimed_rewards_member,
-        index: updated_index,
         unpool_time: Option::Some(expected_time),
         ..cfg.pool_member_info
     };
@@ -982,7 +980,6 @@ fn test_partial_undelegate() {
     );
     let expected_pool_member_info = PoolMemberInfo {
         unclaimed_rewards: unclaimed_rewards_member,
-        index: updated_index,
         unpool_time: Option::None,
         ..cfg.pool_member_info
     };
