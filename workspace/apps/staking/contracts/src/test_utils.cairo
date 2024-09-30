@@ -684,34 +684,41 @@ pub fn cheat_reward_for_reward_supplier(
     );
 }
 
-pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> (u128, u64) {
-    // Change global index.
+pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> u128 {
     let index_before = cfg.pool_member_info.index;
     cfg.pool_member_info.index *= 2;
     let updated_index = cfg.pool_member_info.index;
+    change_global_index(ref :cfg, index: updated_index);
 
+    let unclaimed_rewards_member = compute_unclaimed_rewards_member(
+        amount: cfg.pool_member_info.amount,
+        interest: updated_index - index_before,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    add_reward_for_reward_supplier(
+        :cfg,
+        reward_supplier: cfg.staking_contract_info.reward_supplier,
+        reward: unclaimed_rewards_member,
+        token_address: cfg.staking_contract_info.token_address,
+    );
+    unclaimed_rewards_member
+}
+
+fn change_global_index(ref cfg: StakingInitConfig, index: u64) {
     snforge_std::store(
         target: cfg.test_info.staking_contract,
         storage_address: selector!("global_index"),
-        serialized_value: array![updated_index.into()].span()
+        serialized_value: array![index.into()].span()
     );
-    // Calculate the expected rewards and commission.
-    let delegate_amount = cfg.pool_member_info.amount;
-    let rewards = compute_rewards_rounded_down(
-        amount: delegate_amount, interest: updated_index - index_before
-    );
+    cfg.staking_contract_info.global_index = index;
+}
+
+fn compute_unclaimed_rewards_member(amount: u128, interest: u64, commission: Commission) -> u128 {
+    let rewards_including_commission = compute_rewards_rounded_down(:amount, :interest);
     let commission_amount = compute_commission_amount_rounded_up(
-        rewards_including_commission: rewards,
-        commission: cfg.staker_info.get_pool_info_unchecked().commission
+        :rewards_including_commission, :commission
     );
-    let unclaimed_rewards_member = rewards - commission_amount;
-    cheat_reward_for_reward_supplier(
-        :cfg,
-        reward_supplier: cfg.staking_contract_info.reward_supplier,
-        expected_reward: unclaimed_rewards_member,
-        token_address: cfg.staking_contract_info.token_address,
-    );
-    (unclaimed_rewards_member, updated_index)
+    return rewards_including_commission - commission_amount;
 }
 
 // Assumes the staking contract has already been deployed.
@@ -722,6 +729,31 @@ pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent
     );
     staking_pause_dispatcher.pause();
+}
+
+pub fn add_reward_for_reward_supplier(
+    cfg: StakingInitConfig,
+    reward_supplier: ContractAddress,
+    reward: u128,
+    token_address: ContractAddress
+) {
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: reward_supplier,
+        amount: reward,
+        :token_address
+    );
+    let current_unclaimed_rewards = *snforge_std::load(
+        target: reward_supplier,
+        storage_address: selector!("unclaimed_rewards"),
+        size: Store::<u128>::size().into()
+    )
+        .at(0);
+    snforge_std::store(
+        target: reward_supplier,
+        storage_address: selector!("unclaimed_rewards"),
+        serialized_value: array![current_unclaimed_rewards + reward.into()].span()
+    );
 }
 
 #[derive(Drop, Copy)]
