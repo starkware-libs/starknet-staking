@@ -181,6 +181,27 @@ pub trait IStakingPool<TContractState> {
     fn add_stake_from_pool(
         ref self: TContractState, staker_address: ContractAddress, amount: u128
     ) -> (u128, u64);
+
+    /// Registers an intention to remove `amount` FRI of pooled stake from the staking contract.
+    /// Returns the timestmap when the pool is allowed to remove the `amount` for `identifier`.
+    ///
+    /// The flow, if making a brand new intent:
+    /// 1. Decrease the staker's pooled amount by `amount`.
+    /// 2. Decrease total_stake by `amount`.
+    /// 3. Calculate the timestamp when the pool may perform remove_from_delegation_pool_action for
+    ///    this `amount` and `identifier` (notate it as unpool_time for following use).
+    /// 4. Create an entry in pool_exit_intents map for this `identifier` and pool contract address
+    ///    with the value being `UndelegateIntentValue { amount, unpool_time }`.
+    /// 5. Return unpool_time.
+    ///
+    /// The function supports overriding intentions, upwards and downwards, *which recalculates the
+    /// unpool_time and restarts the timer*. This slightly changes the flow, meaning that if the
+    /// pool already has an intent for this `identifier`, the flow is the same except for
+    /// points 1 and 2:
+    /// * If the amount to be removed is greater in the previous intent, the staker's pooled amount
+    ///   and total_stake will be *decreased* by the difference between the new and the old amount.
+    /// * If the amount to be removed is smaller in the previous intent, the staker's pooled amount
+    ///   and total_stake will be *increased* by the difference between the old and the new amount.
     fn remove_from_delegation_pool_intent(
         ref self: TContractState,
         staker_address: ContractAddress,
