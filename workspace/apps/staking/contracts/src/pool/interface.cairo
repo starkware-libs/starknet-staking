@@ -67,6 +67,7 @@ pub struct PoolMemberInfo {
     pub amount: u128,
     pub index: u64,
     pub unclaimed_rewards: u128,
+    pub commission: u16,
     pub unpool_amount: u128,
     pub unpool_time: Option<u64>,
 }
