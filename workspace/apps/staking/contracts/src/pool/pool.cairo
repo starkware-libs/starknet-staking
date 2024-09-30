@@ -127,6 +127,7 @@ pub mod Pool {
                             amount: amount,
                             index: updated_index,
                             unclaimed_rewards: Zero::zero(),
+                            commission: self.commission.read(),
                             unpool_time: Option::None,
                             unpool_amount: Zero::zero(),
                         }
@@ -337,6 +338,7 @@ pub mod Pool {
                         amount,
                         index,
                         unclaimed_rewards: Zero::zero(),
+                        commission: self.commission.read(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
                     }

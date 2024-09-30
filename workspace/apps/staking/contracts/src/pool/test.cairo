@@ -55,6 +55,7 @@ fn test_calculate_rewards() {
         amount: cfg.staker_info.amount_own,
         index: cfg.staker_info.index,
         unclaimed_rewards: cfg.staker_info.get_pool_info_unchecked().unclaimed_rewards,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
     };
@@ -95,6 +96,7 @@ fn test_enter_delegation_pool() {
         index: cfg.pool_member_info.index,
         unpool_time: Option::None,
         reward_address: cfg.pool_member_info.reward_address,
+        commission: cfg.pool_member_info.commission,
         unclaimed_rewards: cfg.pool_member_info.unclaimed_rewards,
         unpool_amount: Zero::zero(),
     };
@@ -786,6 +788,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
         amount,
         index,
         unclaimed_rewards: Zero::zero(),
+        commission: cfg.pool_member_info.commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
     };
@@ -809,6 +812,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
         amount: updated_amount,
         index: updated_index,
         unclaimed_rewards: rewards_including_commission - commission_amount,
+        commission: cfg.pool_member_info.commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
     };

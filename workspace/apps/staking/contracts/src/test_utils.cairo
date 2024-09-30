@@ -608,6 +608,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
         amount: Serde::<u128>::deserialize(ref span).expect('Failed de amount'),
         index: Serde::<u64>::deserialize(ref span).expect('Failed de index'),
         unclaimed_rewards: Serde::<u128>::deserialize(ref span).expect('Failed de unclaimed'),
+        commission: Serde::<u16>::deserialize(ref span).expect('Failed de commission'),
         unpool_amount: Serde::<u128>::deserialize(ref span).expect('Failed de unpool_amount'),
         unpool_time: Option::None,
     };
@@ -782,6 +783,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             amount: POOL_MEMBER_STAKE_AMOUNT,
             index: BASE_VALUE,
             unclaimed_rewards: Zero::zero(),
+            commission: COMMISSION,
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),
         };
