@@ -5,6 +5,8 @@ use core::num::traits::zero::Zero;
 
 use contracts_commons::pow_of_two::PowOfTwo;
 
+pub enum BitSetError {}
+
 #[derive(Debug, Drop, PartialEq)]
 pub struct BitSet<T> {
     // TODO: Consider eliminate size limitations.
@@ -16,30 +18,29 @@ pub struct BitSet<T> {
 }
 
 pub trait BitSetTrait<T> {
-    // TODO: Wrap return types with a 'Result'.
-    fn get(self: @BitSet<T>, index: usize) -> bool;
-    fn set(ref self: BitSet<T>, index: usize, value: bool);
+    fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError>;
+    fn set(ref self: BitSet<T>, index: usize, value: bool) -> Result<(), BitSetError>;
     fn count(self: @BitSet<T>) -> usize;
     fn clear(ref self: BitSet<T>);
     fn set_all(ref self: BitSet<T>);
-    fn toggle(ref self: BitSet<T>, index: usize);
+    fn toggle(ref self: BitSet<T>, index: usize) -> Result<(), BitSetError>;
     fn all(self: @BitSet<T>) -> bool;
     fn any(self: @BitSet<T>) -> bool;
     fn none(self: @BitSet<T>) -> bool;
     fn get_true_indices(self: @BitSet<T>) -> Span<usize>;
-    fn set_lower_bound(ref self: BitSet<T>, bound: usize);
-    fn set_upper_bound(ref self: BitSet<T>, bound: usize);
+    fn set_lower_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError>;
+    fn set_upper_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError>;
     fn is_initialized(self: @BitSet<T>) -> bool;
     fn len(self: @BitSet<T>) -> usize;
 }
 
 impl BitSetImpl<T, +Drop<T>> of BitSetTrait<T> {
-    fn get(self: @BitSet<T>, index: usize) -> bool {
-        false
+    fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError> {
+        Result::Ok(false)
     }
 
-    fn set(ref self: BitSet<T>, index: usize, value: bool) {
-        ()
+    fn set(ref self: BitSet<T>, index: usize, value: bool) -> Result<(), BitSetError> {
+        Result::Ok(())
     }
 
     fn count(self: @BitSet<T>) -> usize {
@@ -54,8 +55,8 @@ impl BitSetImpl<T, +Drop<T>> of BitSetTrait<T> {
         ()
     }
 
-    fn toggle(ref self: BitSet<T>, index: usize) {
-        ()
+    fn toggle(ref self: BitSet<T>, index: usize) -> Result<(), BitSetError> {
+        Result::Ok(())
     }
 
     fn all(self: @BitSet<T>) -> bool {
@@ -74,12 +75,12 @@ impl BitSetImpl<T, +Drop<T>> of BitSetTrait<T> {
         array![].span()
     }
 
-    fn set_lower_bound(ref self: BitSet<T>, bound: usize) {
-        ()
+    fn set_lower_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError> {
+        Result::Ok(())
     }
 
-    fn set_upper_bound(ref self: BitSet<T>, bound: usize) {
-        ()
+    fn set_upper_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError> {
+        Result::Ok(())
     }
 
     fn is_initialized(self: @BitSet<T>) -> bool {
