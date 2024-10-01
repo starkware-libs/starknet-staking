@@ -4,7 +4,7 @@ use contracts::staking::PauseEvents;
 use contracts::pool::Events as PoolEvents;
 use contracts::reward_supplier::Events as RewardSupplierEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
-use contracts::types::Commission;
+use contracts::types::{Commission, TimeStamp};
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(
@@ -20,7 +20,7 @@ pub fn panic_with_event_details(expected_emitted_by: @ContractAddress, details: 
 pub fn assert_staker_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
-    exit_timestamp: u64,
+    exit_timestamp: TimeStamp,
     amount: u128
 ) {
     let expected_event = @contracts::staking::Staking::Event::StakerExitIntent(
@@ -98,7 +98,7 @@ pub fn assert_stake_balance_changed_event(
 pub fn assert_pool_member_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
-    exit_timestamp: u64,
+    exit_timestamp: TimeStamp,
     amount: u128,
 ) {
     let expected_event = @contracts::pool::Pool::Event::PoolMemberExitIntent(
@@ -220,8 +220,8 @@ pub fn assert_global_index_updated_event(
     spied_event: @(ContractAddress, Event),
     old_index: u64,
     new_index: u64,
-    global_index_last_update_timestamp: u64,
-    global_index_current_update_timestamp: u64,
+    global_index_last_update_timestamp: TimeStamp,
+    global_index_current_update_timestamp: TimeStamp,
 ) {
     let expected_event = @contracts::staking::Staking::Event::GlobalIndexUpdated(
         StakingEvents::GlobalIndexUpdated {
@@ -359,8 +359,8 @@ pub(crate) fn assert_final_index_set_event(
 
 pub(crate) fn assert_calculated_rewards_event(
     spied_event: @(ContractAddress, Event),
-    last_timestamp: u64,
-    new_timestamp: u64,
+    last_timestamp: TimeStamp,
+    new_timestamp: TimeStamp,
     rewards_calculated: u128,
 ) {
     let expected_event = @contracts::reward_supplier::RewardSupplier::Event::CalculatedRewards(

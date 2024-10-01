@@ -7,7 +7,7 @@ use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
 use core::num::traits::WideMul;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts::types::Commission;
+use contracts::types::{Commission, TimeStamp};
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
@@ -125,7 +125,7 @@ pub fn compute_threshold(base_mint_amount: u128) -> u128 {
     base_mint_amount / 2
 }
 
-pub fn day_of(timestamp: u64) -> u64 {
+pub fn day_of(timestamp: TimeStamp) -> TimeStamp {
     timestamp / SECONDS_IN_DAY
 }
 

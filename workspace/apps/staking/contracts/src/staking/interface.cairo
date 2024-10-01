@@ -1,11 +1,11 @@
 use starknet::{ContractAddress, ClassHash, get_block_timestamp};
 use core::cmp::max;
 use contracts::errors::{Error, OptionAuxTrait};
-use contracts::types::Commission;
+use contracts::types::{Commission, TimeDelta, TimeStamp};
 
 pub mod Events {
     use starknet::ContractAddress;
-    use contracts::types::Commission;
+    use contracts::types::{Commission, TimeStamp};
     #[derive(Drop, starknet::Event)]
     pub struct StakeBalanceChanged {
         #[key]
@@ -48,7 +48,7 @@ pub mod Events {
     pub struct StakerExitIntent {
         #[key]
         pub staker_address: ContractAddress,
-        pub exit_timestamp: u64,
+        pub exit_timestamp: TimeStamp,
         pub amount: u128
     }
 
@@ -80,8 +80,8 @@ pub mod Events {
     pub struct GlobalIndexUpdated {
         pub old_index: u64,
         pub new_index: u64,
-        pub global_index_last_update_timestamp: u64,
-        pub global_index_current_update_timestamp: u64
+        pub global_index_last_update_timestamp: TimeStamp,
+        pub global_index_current_update_timestamp: TimeStamp
     }
 
     #[derive(Drop, starknet::Event)]
@@ -125,7 +125,7 @@ pub struct StakerInfo {
 
 #[generate_trait]
 pub impl StakerInfoImpl of StakerInfoTrait {
-    fn compute_unpool_time(self: @StakerInfo, exit_wait_window: u64) -> u64 {
+    fn compute_unpool_time(self: @StakerInfo, exit_wait_window: TimeDelta) -> TimeStamp {
         if let Option::Some(unstake_time) = *self.unstake_time {
             return max(unstake_time, get_block_timestamp());
         }
@@ -144,7 +144,7 @@ pub struct StakingContractInfo {
     pub global_index: u64,
     pub pool_contract_class_hash: ClassHash,
     pub reward_supplier: ContractAddress,
-    pub exit_wait_window: u64
+    pub exit_wait_window: TimeDelta
 }
 
 /// Public interface for the staking contract.
@@ -246,6 +246,6 @@ pub mod PauseEvents {
 #[starknet::interface]
 pub trait IStakingConfig<TContractState> {
     fn set_min_stake(ref self: TContractState, min_stake: u128);
-    fn set_exit_wait_window(ref self: TContractState, exit_wait_window: u64);
+    fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
 }

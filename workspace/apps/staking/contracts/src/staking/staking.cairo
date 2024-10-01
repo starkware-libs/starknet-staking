@@ -29,7 +29,7 @@ pub mod Staking {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts_commons::components::roles::interface::{OPERATOR, SECURITY_ADMIN};
-    use contracts::types::Commission;
+    use contracts::types::{Commission, TimeDelta, TimeStamp};
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
 
@@ -56,7 +56,7 @@ pub mod Staking {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         global_index: u64,
-        global_index_last_update_timestamp: u64,
+        global_index_last_update_timestamp: TimeStamp,
         min_stake: u128,
         staker_info: Map<ContractAddress, Option<StakerInfo>>,
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
@@ -67,7 +67,7 @@ pub mod Staking {
         reward_supplier_dispatcher: IRewardSupplierDispatcher,
         pool_contract_admin: ContractAddress,
         is_paused: bool,
-        exit_wait_window: u64,
+        exit_wait_window: TimeDelta,
     }
 
     #[event]
@@ -683,7 +683,7 @@ pub mod Staking {
             self.min_stake.write(min_stake);
         }
 
-        fn set_exit_wait_window(ref self: ContractState, exit_wait_window: u64) {
+        fn set_exit_wait_window(ref self: ContractState, exit_wait_window: TimeDelta) {
             self.roles.only_app_governor();
             self.exit_wait_window.write(exit_wait_window);
         }

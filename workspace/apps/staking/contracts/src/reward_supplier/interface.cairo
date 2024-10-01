@@ -1,4 +1,5 @@
 use starknet::{ContractAddress, EthAddress};
+use contracts::types::TimeStamp;
 
 #[starknet::interface]
 pub trait IRewardSupplier<TContractState> {
@@ -18,12 +19,13 @@ pub trait IRewardSupplier<TContractState> {
 
 #[derive(Debug, Copy, Drop, Serde, PartialEq)]
 pub struct RewardSupplierInfo {
-    pub last_timestamp: u64,
+    pub last_timestamp: TimeStamp,
     pub unclaimed_rewards: u128,
     pub l1_pending_requested_amount: u128,
 }
 
 pub mod Events {
+    use contracts::types::TimeStamp;
     #[derive(Drop, starknet::Event)]
     pub struct MintRequest {
         pub total_amount: u128,
@@ -32,8 +34,8 @@ pub mod Events {
 
     #[derive(Drop, starknet::Event)]
     pub struct CalculatedRewards {
-        pub last_timestamp: u64,
-        pub new_timestamp: u64,
+        pub last_timestamp: TimeStamp,
+        pub new_timestamp: TimeStamp,
         pub rewards_calculated: u128,
     }
 }
