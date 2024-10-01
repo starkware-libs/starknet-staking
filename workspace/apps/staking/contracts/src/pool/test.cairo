@@ -710,11 +710,17 @@ fn test_switch_delegation_pool() {
         reward_account_balance_after,
         reward_account_balance_before + unclaimed_rewards_member.into()
     );
-    // Validate the single DeletePoolMember event emitted by the from_pool.
+    // Validate DeletePoolMember and PoolMemberRewardClaimed events emitted by the from_pool.
     let events = spy.get_events().emitted_by(contract_address: pool_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 1, message: "switch_delegation_pool");
-    assert_delete_pool_member_event(
+    assert_number_of_events(actual: events.len(), expected: 2, message: "switch_delegation_pool");
+    assert_pool_member_reward_claimed_event(
         spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        reward_address: cfg.pool_member_info.reward_address,
+        amount: unclaimed_rewards_member
+    );
+    assert_delete_pool_member_event(
+        spied_event: events[1],
         pool_member: cfg.test_info.pool_member_address,
         reward_address: cfg.pool_member_info.reward_address,
     );
