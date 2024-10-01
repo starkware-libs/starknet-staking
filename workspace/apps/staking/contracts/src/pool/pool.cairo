@@ -187,6 +187,7 @@ pub mod Pool {
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
             assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
+            let old_delegated_stake = pool_member_info.amount;
             self.update_index_and_calculate_rewards(ref :pool_member_info);
             let unpool_time = self.undelegate_from_staking_contract_intent(:pool_member, :amount);
             if amount.is_zero() {
@@ -201,6 +202,14 @@ pub mod Pool {
                 .emit(
                     Events::PoolMemberExitIntent {
                         pool_member, exit_timestamp: unpool_time, amount
+                    }
+                );
+            self
+                .emit(
+                    Events::DelegationPoolMemberBalanceChanged {
+                        pool_member,
+                        old_delegated_stake,
+                        new_delegated_stake: pool_member_info.amount
                     }
                 );
         }
