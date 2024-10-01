@@ -3,7 +3,7 @@ pub mod StakingForOperatorMock {
     use contracts::staking::{IStaking, StakerInfo, StakingContractInfo};
     use starknet::{ContractAddress, get_execution_info, contract_address_const};
     use starknet::class_hash::class_hash_const;
-    use contracts::types::Commission;
+    use contracts::types::{Commission, Amount};
 
     #[storage]
     struct Storage {
@@ -28,19 +28,19 @@ pub mod StakingForOperatorMock {
             ref self: ContractState,
             reward_address: ContractAddress,
             operational_address: ContractAddress,
-            amount: u128,
+            amount: Amount,
             pool_enabled: bool,
             commission: Commission,
         ) {
             self.assert_execution_context();
         }
         fn increase_stake(
-            ref self: ContractState, staker_address: ContractAddress, amount: u128
-        ) -> u128 {
+            ref self: ContractState, staker_address: ContractAddress, amount: Amount
+        ) -> Amount {
             self.assert_execution_context();
             0
         }
-        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
+        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             self.assert_execution_context();
             0
         }
@@ -48,7 +48,7 @@ pub mod StakingForOperatorMock {
             self.assert_execution_context();
             0
         }
-        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
+        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             self.assert_execution_context();
             0
         }
@@ -84,7 +84,7 @@ pub mod StakingForOperatorMock {
                 exit_wait_window: 0,
             }
         }
-        fn get_total_stake(self: @ContractState) -> u128 {
+        fn get_total_stake(self: @ContractState) -> Amount {
             self.assert_execution_context();
             0
         }

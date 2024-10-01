@@ -26,23 +26,23 @@ use constants::{SECURITY_AGENT, APP_GOVERNER, GOVERNANCE_ADMIN, OPERATOR_CONTRAC
 use constants::APP_ROLE_ADMIN;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
-use contracts::types::{Commission, Index};
+use contracts::types::{Commission, Index, Amount};
 
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
     use starknet::class_hash::{ClassHash, class_hash_const};
-    use contracts::types::{Commission, Index};
+    use contracts::types::{Commission, Index, Amount};
 
-    pub const STAKER_INITIAL_BALANCE: u128 = 10000000000;
-    pub const POOL_MEMBER_INITIAL_BALANCE: u128 = 10000000000;
+    pub const STAKER_INITIAL_BALANCE: Amount = 10000000000;
+    pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000000000;
     pub const INITIAL_SUPPLY: u256 = 10000000000000000;
-    pub const MIN_STAKE: u128 = 100000;
-    pub const STAKE_AMOUNT: u128 = 200000;
-    pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
+    pub const MIN_STAKE: Amount = 100000;
+    pub const STAKE_AMOUNT: Amount = 200000;
+    pub const POOL_MEMBER_STAKE_AMOUNT: Amount = 100000;
     pub const COMMISSION: Commission = 500;
     pub const STAKER_FINAL_INDEX: Index = 10;
-    pub const BASE_MINT_AMOUNT: u128 = 8000000000000000;
-    pub const BUFFER: u128 = 1000000000000;
+    pub const BASE_MINT_AMOUNT: Amount = 8000000000000000;
+    pub const BUFFER: Amount = 1000000000000;
     pub const L1_STAKING_MINTER_ADDRESS: felt252 = 'L1_MINTER';
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
     pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
@@ -187,7 +187,7 @@ pub(crate) fn initialize_staking_state_from_cfg(
 }
 pub(crate) fn initialize_staking_state(
     token_address: ContractAddress,
-    min_stake: u128,
+    min_stake: Amount,
     pool_contract_class_hash: ClassHash,
     reward_supplier: ContractAddress,
     pool_contract_admin: ContractAddress,
@@ -221,7 +221,7 @@ pub(crate) fn initialize_pool_state(
 
 pub(crate) fn initialize_minting_curve_state(
     staking_contract: ContractAddress,
-    total_supply: u128,
+    total_supply: Amount,
     l1_staking_minter_address: felt252,
     governance_admin: ContractAddress
 ) -> MintingCurve::ContractState {
@@ -246,7 +246,7 @@ pub(crate) fn initialize_reward_supplier_state_from_cfg(
     )
 }
 pub(crate) fn initialize_reward_supplier_state(
-    base_mint_amount: u128,
+    base_mint_amount: Amount,
     minting_curve_contract: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
@@ -367,7 +367,7 @@ pub(crate) fn set_account_as_app_governer(
 
 pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
-    let initial_supply: u128 = cfg
+    let initial_supply: Amount = cfg
         .test_info
         .initial_supply
         .try_into()
@@ -431,7 +431,7 @@ pub(crate) fn deploy_operator_contract(cfg: StakingInitConfig) -> ContractAddres
 pub(crate) fn fund(
     sender: ContractAddress,
     recipient: ContractAddress,
-    amount: u128,
+    amount: Amount,
     token_address: ContractAddress
 ) {
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
@@ -440,7 +440,7 @@ pub(crate) fn fund(
 }
 
 pub(crate) fn approve(
-    owner: ContractAddress, spender: ContractAddress, amount: u128, token_address: ContractAddress
+    owner: ContractAddress, spender: ContractAddress, amount: Amount, token_address: ContractAddress
 ) {
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
     cheat_caller_address_once(contract_address: token_address, caller_address: owner);
@@ -608,11 +608,11 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
     let mut span = raw_serialized_value.span();
     let mut pool_member_info = PoolMemberInfo {
         reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed de reward'),
-        amount: Serde::<u128>::deserialize(ref span).expect('Failed de amount'),
+        amount: Serde::<Amount>::deserialize(ref span).expect('Failed de amount'),
         index: Serde::<Index>::deserialize(ref span).expect('Failed de index'),
-        unclaimed_rewards: Serde::<u128>::deserialize(ref span).expect('Failed de unclaimed'),
+        unclaimed_rewards: Serde::<Amount>::deserialize(ref span).expect('Failed de unclaimed'),
         commission: Serde::<Commission>::deserialize(ref span).expect('Failed de commission'),
-        unpool_amount: Serde::<u128>::deserialize(ref span).expect('Failed de unpool_amount'),
+        unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed de unpool_amount'),
         unpool_time: Option::None,
     };
     let idx = *span.pop_front().expect('Failed pop_front');
@@ -669,7 +669,7 @@ pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
 pub fn cheat_reward_for_reward_supplier(
     cfg: StakingInitConfig,
     reward_supplier: ContractAddress,
-    expected_reward: u128,
+    expected_reward: Amount,
     token_address: ContractAddress
 ) {
     fund(
@@ -685,7 +685,7 @@ pub fn cheat_reward_for_reward_supplier(
     );
 }
 
-pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> u128 {
+pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> Amount {
     let index_before = cfg.pool_member_info.index;
     cfg.pool_member_info.index *= 2;
     let updated_index = cfg.pool_member_info.index;
@@ -714,7 +714,9 @@ fn change_global_index(ref cfg: StakingInitConfig, index: Index) {
     cfg.staking_contract_info.global_index = index;
 }
 
-fn compute_unclaimed_rewards_member(amount: u128, interest: u64, commission: Commission) -> u128 {
+fn compute_unclaimed_rewards_member(
+    amount: Amount, interest: u64, commission: Commission
+) -> Amount {
     let rewards_including_commission = compute_rewards_rounded_down(:amount, :interest);
     let commission_amount = compute_commission_amount_rounded_up(
         :rewards_including_commission, :commission
@@ -735,7 +737,7 @@ pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
 pub fn add_reward_for_reward_supplier(
     cfg: StakingInitConfig,
     reward_supplier: ContractAddress,
-    reward: u128,
+    reward: Amount,
     token_address: ContractAddress
 ) {
     fund(
@@ -747,7 +749,7 @@ pub fn add_reward_for_reward_supplier(
     let current_unclaimed_rewards = *snforge_std::load(
         target: reward_supplier,
         storage_address: selector!("unclaimed_rewards"),
-        size: Store::<u128>::size().into()
+        size: Store::<Amount>::size().into()
     )
         .at(0);
     snforge_std::store(
@@ -764,8 +766,8 @@ pub(crate) struct TestInfo {
     pub owner_address: ContractAddress,
     pub governance_admin: ContractAddress,
     pub initial_supply: u256,
-    pub staker_initial_balance: u128,
-    pub pool_member_initial_balance: u128,
+    pub staker_initial_balance: Amount,
+    pub pool_member_initial_balance: Amount,
     pub pool_enabled: bool,
     pub staking_contract: ContractAddress,
     pub operator_contract: ContractAddress,
@@ -778,10 +780,10 @@ pub(crate) struct TestInfo {
 
 #[derive(Drop, Copy)]
 struct RewardSupplierInfo {
-    pub base_mint_amount: u128,
+    pub base_mint_amount: Amount,
     pub minting_curve_contract: ContractAddress,
     pub l1_staking_minter: felt252,
-    pub buffer: u128,
+    pub buffer: Amount,
     pub starkgate_address: ContractAddress,
 }
 

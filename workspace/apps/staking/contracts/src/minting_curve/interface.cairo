@@ -1,8 +1,8 @@
-use contracts::types::Inflation;
+use contracts::types::{Inflation, Amount};
 
 #[starknet::interface]
 pub trait IMintingCurve<TContractState> {
-    fn yearly_mint(self: @TContractState) -> u128;
+    fn yearly_mint(self: @TContractState) -> Amount;
     fn contract_parameters(self: @TContractState) -> MintingCurveContractInfo;
 }
 
@@ -18,9 +18,11 @@ pub struct MintingCurveContractInfo {
 }
 
 pub mod Events {
+    use contracts::types::Amount;
+
     #[derive(Drop, starknet::Event)]
     pub struct TotalSupplyChanged {
-        pub old_total_supply: u128,
-        pub new_total_supply: u128
+        pub old_total_supply: Amount,
+        pub new_total_supply: Amount
     }
 }

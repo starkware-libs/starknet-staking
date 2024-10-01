@@ -1,5 +1,6 @@
 use starknet::ContractAddress;
 use core::num::traits::Zero;
+use contracts::types::Amount;
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub struct UndelegateIntentKey {
@@ -12,7 +13,7 @@ pub struct UndelegateIntentKey {
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct UndelegateIntentValue {
     pub unpool_time: u64,
-    pub amount: u128
+    pub amount: Amount
 }
 
 pub impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentValue> {

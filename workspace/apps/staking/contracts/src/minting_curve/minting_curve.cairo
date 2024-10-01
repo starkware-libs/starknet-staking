@@ -12,7 +12,7 @@ pub mod MintingCurve {
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use contracts::constants::{DEFAULT_C_NUM, C_DENOM};
-    use contracts::types::Inflation;
+    use contracts::types::{Inflation, Amount};
 
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
@@ -31,7 +31,7 @@ pub mod MintingCurve {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staking_dispatcher: IStakingDispatcher,
-        total_supply: u128,
+        total_supply: Amount,
         l1_staking_minter_address: felt252,
         c_num: Inflation
     }
@@ -53,7 +53,7 @@ pub mod MintingCurve {
     pub fn constructor(
         ref self: ContractState,
         staking_contract: ContractAddress,
-        total_supply: u128,
+        total_supply: Amount,
         l1_staking_minter_address: felt252,
         governance_admin: ContractAddress
     ) {
@@ -66,7 +66,7 @@ pub mod MintingCurve {
     }
 
     #[l1_handler]
-    fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: u128) {
+    fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: Amount) {
         assert_with_err(
             from_address == self.l1_staking_minter_address.read(),
             Error::UNAUTHORIZED_MESSAGE_SENDER
@@ -85,7 +85,7 @@ pub mod MintingCurve {
         /// - M: Yearly mint rate (%)
         /// - C: Max theoretical inflation (%)
         /// - S: Staking rate of total supply (%)
-        fn yearly_mint(self: @ContractState) -> u128 {
+        fn yearly_mint(self: @ContractState) -> Amount {
             let total_supply = self.total_supply.read();
             let staking_dispatcher = self.staking_dispatcher.read();
             let total_stake = staking_dispatcher.get_total_stake();
@@ -113,14 +113,14 @@ pub mod MintingCurve {
         /// Equivalent to: C / 100 * sqrt(total_stake * total_supply)
         /// Note: Differences are negligible at this scale.
         fn compute_yearly_mint(
-            self: @ContractState, total_stake: u128, total_supply: u128
-        ) -> u128 {
+            self: @ContractState, total_stake: Amount, total_supply: Amount
+        ) -> Amount {
             let product: u256 = total_stake.wide_mul(total_supply);
-            let unadjusted_mint_amount: u128 = product.sqrt();
+            let unadjusted_mint_amount: Amount = product.sqrt();
             self.multiply_by_max_inflation(amount: unadjusted_mint_amount)
         }
 
-        fn multiply_by_max_inflation(self: @ContractState, amount: u128) -> u128 {
+        fn multiply_by_max_inflation(self: @ContractState, amount: Amount) -> Amount {
             self.c_num.read().into() * amount / C_DENOM.into()
         }
     }

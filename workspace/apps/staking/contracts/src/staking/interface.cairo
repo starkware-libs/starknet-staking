@@ -1,19 +1,19 @@
 use starknet::{ContractAddress, ClassHash, get_block_timestamp};
 use core::cmp::max;
 use contracts::errors::{Error, OptionAuxTrait};
-use contracts::types::{Commission, TimeDelta, TimeStamp, Index};
+use contracts::types::{Commission, TimeDelta, TimeStamp, Index, Amount};
 
 pub mod Events {
     use starknet::ContractAddress;
-    use contracts::types::{Commission, TimeStamp, Index};
+    use contracts::types::{Commission, TimeStamp, Index, Amount};
     #[derive(Drop, starknet::Event)]
     pub struct StakeBalanceChanged {
         #[key]
         pub staker_address: ContractAddress,
-        pub old_self_stake: u128,
-        pub old_delegated_stake: u128,
-        pub new_self_stake: u128,
-        pub new_delegated_stake: u128
+        pub old_self_stake: Amount,
+        pub old_delegated_stake: Amount,
+        pub new_self_stake: Amount,
+        pub new_delegated_stake: Amount
     }
 
     #[derive(Drop, starknet::Event)]
@@ -22,7 +22,7 @@ pub mod Events {
         pub staker_address: ContractAddress,
         pub reward_address: ContractAddress,
         pub operational_address: ContractAddress,
-        pub self_stake: u128,
+        pub self_stake: Amount,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -49,7 +49,7 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         pub exit_timestamp: TimeStamp,
-        pub amount: u128
+        pub amount: Amount
     }
 
     #[derive(Drop, starknet::Event)]
@@ -73,7 +73,7 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         pub reward_address: ContractAddress,
-        pub amount: u128
+        pub amount: Amount
     }
 
     #[derive(Drop, starknet::Event)]
@@ -99,15 +99,15 @@ pub mod Events {
         pub staker_address: ContractAddress,
         #[key]
         pub pool_address: ContractAddress,
-        pub amount: u128
+        pub amount: Amount
     }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerPoolInfo {
     pub pool_contract: ContractAddress,
-    pub amount: u128,
-    pub unclaimed_rewards: u128,
+    pub amount: Amount,
+    pub unclaimed_rewards: Amount,
     pub commission: Commission,
 }
 
@@ -117,9 +117,9 @@ pub struct StakerInfo {
     pub reward_address: ContractAddress,
     pub operational_address: ContractAddress,
     pub unstake_time: Option<u64>,
-    pub amount_own: u128,
+    pub amount_own: Amount,
     pub index: Index,
-    pub unclaimed_rewards_own: u128,
+    pub unclaimed_rewards_own: Amount,
     pub pool_info: Option<StakerPoolInfo>,
 }
 
@@ -139,7 +139,7 @@ pub impl StakerInfoImpl of StakerInfoTrait {
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
-    pub min_stake: u128,
+    pub min_stake: Amount,
     pub token_address: ContractAddress,
     pub global_index: Index,
     pub pool_contract_class_hash: ClassHash,
@@ -155,21 +155,21 @@ pub trait IStaking<TContractState> {
         ref self: TContractState,
         reward_address: ContractAddress,
         operational_address: ContractAddress,
-        amount: u128,
+        amount: Amount,
         pool_enabled: bool,
         commission: Commission,
     );
     fn increase_stake(
-        ref self: TContractState, staker_address: ContractAddress, amount: u128
-    ) -> u128;
-    fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> u128;
+        ref self: TContractState, staker_address: ContractAddress, amount: Amount
+    ) -> Amount;
+    fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn unstake_intent(ref self: TContractState) -> u64;
-    fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> u128;
+    fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn set_open_for_delegation(ref self: TContractState, commission: u16) -> ContractAddress;
     fn staker_info(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
-    fn get_total_stake(self: @TContractState) -> u128;
+    fn get_total_stake(self: @TContractState) -> Amount;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
     // fn update_commission(ref self: TContractState, commission: Commission) -> bool;
@@ -191,8 +191,8 @@ pub trait IStakingPool<TContractState> {
     /// 3. Increase the staker's pooled amount by `amount`.
     /// 4. Increase the total_stake by `amount`.
     fn add_stake_from_pool(
-        ref self: TContractState, staker_address: ContractAddress, amount: u128
-    ) -> (u128, Index);
+        ref self: TContractState, staker_address: ContractAddress, amount: Amount
+    ) -> (Amount, Index);
 
     /// Registers an intention to remove `amount` FRI of pooled stake from the staking contract.
     /// Returns the timestmap when the pool is allowed to remove the `amount` for `identifier`.
@@ -219,7 +219,7 @@ pub trait IStakingPool<TContractState> {
         ref self: TContractState,
         staker_address: ContractAddress,
         identifier: felt252,
-        amount: u128,
+        amount: Amount,
     ) -> u64;
 
     /// Transfers the removal intent amount back to the pool contract, and clears the intent.
@@ -228,7 +228,7 @@ pub trait IStakingPool<TContractState> {
     /// * There is an entry in the pool_exit_intents map for this `identifier` and pool contract
     ///   (the caller).
     /// * The unpool_time, in the value of the entry above, has passed.
-    fn remove_from_delegation_pool_action(ref self: TContractState, identifier: felt252) -> u128;
+    fn remove_from_delegation_pool_action(ref self: TContractState, identifier: felt252) -> Amount;
 
     /// Moves the stake from being in exit intent, to being staked in `to_staker`'s pooled stake.
     /// Conditions:
@@ -250,7 +250,7 @@ pub trait IStakingPool<TContractState> {
         ref self: TContractState,
         to_staker: ContractAddress,
         to_pool: ContractAddress,
-        switched_amount: u128,
+        switched_amount: Amount,
         data: Span<felt252>,
         identifier: felt252
     ) -> bool;
@@ -287,7 +287,7 @@ pub mod PauseEvents {
 
 #[starknet::interface]
 pub trait IStakingConfig<TContractState> {
-    fn set_min_stake(ref self: TContractState, min_stake: u128);
+    fn set_min_stake(ref self: TContractState, min_stake: Amount);
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
 }

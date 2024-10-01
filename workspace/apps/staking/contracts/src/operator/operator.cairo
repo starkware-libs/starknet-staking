@@ -15,7 +15,7 @@ pub mod Operator {
     use contracts::errors::{Error, ErrorTrait};
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use core::cmp::min;
-    use contracts::types::Commission;
+    use contracts::types::{Commission, Amount};
 
     pub const MAX_WHITELIST_SIZE: u64 = 100;
 
@@ -128,7 +128,7 @@ pub mod Operator {
             ref self: ContractState,
             reward_address: ContractAddress,
             operational_address: ContractAddress,
-            amount: u128,
+            amount: Amount,
             pool_enabled: bool,
             commission: Commission,
         ) {
@@ -140,13 +140,13 @@ pub mod Operator {
         }
 
         fn increase_stake(
-            ref self: ContractState, staker_address: ContractAddress, amount: u128
-        ) -> u128 {
+            ref self: ContractState, staker_address: ContractAddress, amount: Amount
+        ) -> Amount {
             self.check_whitelist(get_caller_address());
             self.staking_dispatcher.read().increase_stake(:staker_address, :amount)
         }
 
-        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
+        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             self.check_whitelist(get_caller_address());
             self.staking_dispatcher.read().claim_rewards(:staker_address)
         }
@@ -156,7 +156,7 @@ pub mod Operator {
             self.staking_dispatcher.read().unstake_intent()
         }
 
-        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
+        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             self.check_whitelist(get_caller_address());
             self.staking_dispatcher.read().unstake_action(:staker_address)
         }
@@ -181,7 +181,7 @@ pub mod Operator {
             self.staking_dispatcher.read().contract_parameters()
         }
 
-        fn get_total_stake(self: @ContractState) -> u128 {
+        fn get_total_stake(self: @ContractState) -> Amount {
             self.staking_dispatcher.read().get_total_stake()
         }
 

@@ -29,7 +29,7 @@ pub mod Staking {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts_commons::components::roles::interface::{OPERATOR, SECURITY_ADMIN};
-    use contracts::types::{Commission, TimeDelta, TimeStamp, Index};
+    use contracts::types::{Commission, TimeDelta, TimeStamp, Index, Amount};
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
 
@@ -57,11 +57,11 @@ pub mod Staking {
         src5: SRC5Component::Storage,
         global_index: Index,
         global_index_last_update_timestamp: TimeStamp,
-        min_stake: u128,
+        min_stake: Amount,
         staker_info: Map<ContractAddress, Option<StakerInfo>>,
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
         erc20_dispatcher: IERC20Dispatcher,
-        total_stake: u128,
+        total_stake: Amount,
         pool_contract_class_hash: ClassHash,
         pool_exit_intents: Map<UndelegateIntentKey, UndelegateIntentValue>,
         reward_supplier_dispatcher: IRewardSupplierDispatcher,
@@ -100,7 +100,7 @@ pub mod Staking {
     pub fn constructor(
         ref self: ContractState,
         token_address: ContractAddress,
-        min_stake: u128,
+        min_stake: Amount,
         pool_contract_class_hash: ClassHash,
         reward_supplier: ContractAddress,
         pool_contract_admin: ContractAddress,
@@ -130,7 +130,7 @@ pub mod Staking {
             ref self: ContractState,
             reward_address: ContractAddress,
             operational_address: ContractAddress,
-            amount: u128,
+            amount: Amount,
             pool_enabled: bool,
             commission: Commission,
         ) {
@@ -208,8 +208,8 @@ pub mod Staking {
         }
 
         fn increase_stake(
-            ref self: ContractState, staker_address: ContractAddress, amount: u128
-        ) -> u128 {
+            ref self: ContractState, staker_address: ContractAddress, amount: Amount
+        ) -> Amount {
             self.general_prerequisites();
             self.roles.only_operator();
             let caller_address = get_tx_info().account_contract_address;
@@ -253,7 +253,7 @@ pub mod Staking {
             staker_total_stake
         }
 
-        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> u128 {
+        fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             self.general_prerequisites();
             self.roles.only_operator();
             let mut staker_info = self.get_staker_info(:staker_address);
@@ -307,7 +307,7 @@ pub mod Staking {
             unstake_time
         }
 
-        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
+        fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             self.general_prerequisites();
             self.roles.only_operator();
             let mut staker_info = self.get_staker_info(:staker_address);
@@ -390,7 +390,7 @@ pub mod Staking {
             }
         }
 
-        fn get_total_stake(self: @ContractState) -> u128 {
+        fn get_total_stake(self: @ContractState) -> Amount {
             self.total_stake.read()
         }
 
@@ -466,8 +466,8 @@ pub mod Staking {
     #[abi(embed_v0)]
     impl StakingPoolImpl of IStakingPool<ContractState> {
         fn add_stake_from_pool(
-            ref self: ContractState, staker_address: ContractAddress, amount: u128
-        ) -> (u128, Index) {
+            ref self: ContractState, staker_address: ContractAddress, amount: Amount
+        ) -> (Amount, Index) {
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -505,7 +505,7 @@ pub mod Staking {
             ref self: ContractState,
             staker_address: ContractAddress,
             identifier: felt252,
-            amount: u128,
+            amount: Amount,
         ) -> u64 {
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
@@ -558,7 +558,7 @@ pub mod Staking {
 
         fn remove_from_delegation_pool_action(
             ref self: ContractState, identifier: felt252
-        ) -> u128 {
+        ) -> Amount {
             self.general_prerequisites();
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
@@ -581,7 +581,7 @@ pub mod Staking {
             ref self: ContractState,
             to_staker: ContractAddress,
             to_pool: ContractAddress,
-            switched_amount: u128,
+            switched_amount: Amount,
             data: Span<felt252>,
             identifier: felt252
         ) -> bool {
@@ -662,7 +662,7 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingConfigImpl of IStakingConfig<ContractState> {
-        fn set_min_stake(ref self: ContractState, min_stake: u128) {
+        fn set_min_stake(ref self: ContractState, min_stake: Amount) {
             self.roles.only_app_governor();
             self.min_stake.write(min_stake);
         }
@@ -685,7 +685,7 @@ pub mod Staking {
         fn send_rewards(
             self: @ContractState,
             reward_address: ContractAddress,
-            amount: u128,
+            amount: Amount,
             erc20_dispatcher: IERC20Dispatcher
         ) {
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
@@ -866,11 +866,11 @@ pub mod Staking {
             pool_contract
         }
 
-        fn add_to_total_stake(ref self: ContractState, amount: u128) {
+        fn add_to_total_stake(ref self: ContractState, amount: Amount) {
             self.total_stake.write(self.total_stake.read() + amount);
         }
 
-        fn remove_from_total_stake(ref self: ContractState, amount: u128) {
+        fn remove_from_total_stake(ref self: ContractState, amount: Amount) {
             self.total_stake.write(self.total_stake.read() - amount);
         }
 

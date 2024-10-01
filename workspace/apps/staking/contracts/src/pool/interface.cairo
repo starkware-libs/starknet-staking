@@ -1,24 +1,24 @@
 use starknet::ContractAddress;
-use contracts::types::{Commission, Index};
+use contracts::types::{Commission, Index, Amount};
 
 pub mod Events {
     use starknet::ContractAddress;
-    use contracts::types::{TimeStamp, Index};
+    use contracts::types::{TimeStamp, Index, Amount};
 
     #[derive(Drop, starknet::Event)]
     pub struct PoolMemberExitIntent {
         #[key]
         pub pool_member: ContractAddress,
         pub exit_timestamp: TimeStamp,
-        pub amount: u128
+        pub amount: Amount
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct DelegationPoolMemberBalanceChanged {
         #[key]
         pub pool_member: ContractAddress,
-        pub old_delegated_stake: u128,
-        pub new_delegated_stake: u128
+        pub old_delegated_stake: Amount,
+        pub new_delegated_stake: Amount
     }
 
     #[derive(Drop, starknet::Event)]
@@ -35,7 +35,7 @@ pub mod Events {
         pub pool_member: ContractAddress,
         #[key]
         pub reward_address: ContractAddress,
-        pub amount: u128
+        pub amount: Amount
     }
 
     #[derive(Drop, starknet::Event)]
@@ -59,18 +59,18 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         pub reward_address: ContractAddress,
-        pub amount: u128
+        pub amount: Amount
     }
 }
 
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub struct PoolMemberInfo {
     pub reward_address: ContractAddress,
-    pub amount: u128,
+    pub amount: Amount,
     pub index: Index,
-    pub unclaimed_rewards: u128,
+    pub unclaimed_rewards: Amount,
     pub commission: Commission,
-    pub unpool_amount: u128,
+    pub unpool_amount: Amount,
     pub unpool_time: Option<u64>,
 }
 
@@ -86,19 +86,24 @@ pub struct PoolContractInfo {
 #[starknet::interface]
 pub trait IPool<TContractState> {
     fn enter_delegation_pool(
-        ref self: TContractState, reward_address: ContractAddress, amount: u128
+        ref self: TContractState, reward_address: ContractAddress, amount: Amount
     );
     fn add_to_delegation_pool(
-        ref self: TContractState, pool_member: ContractAddress, amount: u128
-    ) -> u128;
-    fn exit_delegation_pool_intent(ref self: TContractState, amount: u128);
-    fn exit_delegation_pool_action(ref self: TContractState, pool_member: ContractAddress) -> u128;
-    fn claim_rewards(ref self: TContractState, pool_member: ContractAddress) -> u128;
+        ref self: TContractState, pool_member: ContractAddress, amount: Amount
+    ) -> Amount;
+    fn exit_delegation_pool_intent(ref self: TContractState, amount: Amount);
+    fn exit_delegation_pool_action(
+        ref self: TContractState, pool_member: ContractAddress
+    ) -> Amount;
+    fn claim_rewards(ref self: TContractState, pool_member: ContractAddress) -> Amount;
     fn switch_delegation_pool(
-        ref self: TContractState, to_staker: ContractAddress, to_pool: ContractAddress, amount: u128
-    ) -> u128;
+        ref self: TContractState,
+        to_staker: ContractAddress,
+        to_pool: ContractAddress,
+        amount: Amount
+    ) -> Amount;
     fn enter_delegation_pool_from_staking_contract(
-        ref self: TContractState, amount: u128, index: Index, data: Span<felt252>
+        ref self: TContractState, amount: Amount, index: Index, data: Span<felt252>
     );
     fn set_final_staker_index(ref self: TContractState, final_staker_index: Index);
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);

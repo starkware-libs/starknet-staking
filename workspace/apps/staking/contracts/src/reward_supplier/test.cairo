@@ -20,6 +20,7 @@ use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::cheatcodes::message_to_l1::{spy_messages_to_l1, MessageToL1};
 use snforge_std::cheatcodes::message_to_l1::MessageToL1SpyAssertionsTrait;
 use contracts::constants::STRK_IN_FRIS;
+use contracts::types::Amount;
 
 #[test]
 fn test_reward_supplier_constructor() {
@@ -117,7 +118,7 @@ fn test_calculate_staking_rewards() {
     let mut msgs_to_l1 = spy_messages_to_l1();
     let rewards = state.calculate_staking_rewards();
     // Validate the rewards, unclaimed rewards and l1_pending_requested_amount.
-    let unadjusted_expected_rewards: u128 = (cfg.test_info.initial_supply * amount.into()).sqrt();
+    let unadjusted_expected_rewards: Amount = (cfg.test_info.initial_supply * amount.into()).sqrt();
     // Multiply by max inflation.
     let expected_rewards = cfg.minting_curve_contract_info.c_num.into()
         * unadjusted_expected_rewards

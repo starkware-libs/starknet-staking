@@ -7,6 +7,7 @@ use contracts::test_utils::{general_contract_system_deployment, stake_for_testin
 use contracts::test_utils::StakingInitConfig;
 use contracts::test_utils::constants::NON_APP_GOVERNOR;
 use contracts_commons::test_utils::cheat_caller_address_once;
+use contracts::types::Amount;
 
 #[test]
 fn test_yearly_mint() {
@@ -20,14 +21,14 @@ fn test_yearly_mint() {
     };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let total_stake = cfg.staker_info.amount_own;
-    let total_supply: u128 = cfg
+    let total_supply: Amount = cfg
         .test_info
         .initial_supply
         .try_into()
         .expect('total_supply doesn\'t fit u128');
     let product: u256 = total_stake.wide_mul(total_supply);
-    let unadjusted_mint_amount: u128 = product.sqrt();
-    let expected_minted_tokens: u128 = cfg.minting_curve_contract_info.c_num.into()
+    let unadjusted_mint_amount: Amount = product.sqrt();
+    let expected_minted_tokens: Amount = cfg.minting_curve_contract_info.c_num.into()
         * unadjusted_mint_amount
         / cfg.minting_curve_contract_info.c_denom.into();
     let minted_tokens = minting_curve_dispatcher.yearly_mint();

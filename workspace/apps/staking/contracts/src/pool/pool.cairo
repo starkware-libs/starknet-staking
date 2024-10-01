@@ -17,7 +17,7 @@ pub mod Pool {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts::utils::CheckedIERC20DispatcherTrait;
-    use contracts::types::{Commission, TimeStamp, Index};
+    use contracts::types::{Commission, TimeStamp, Index, Amount};
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -98,7 +98,7 @@ pub mod Pool {
     #[abi(embed_v0)]
     impl PoolImpl of IPool<ContractState> {
         fn enter_delegation_pool(
-            ref self: ContractState, reward_address: ContractAddress, amount: u128
+            ref self: ContractState, reward_address: ContractAddress, amount: Amount
         ) {
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
@@ -147,8 +147,8 @@ pub mod Pool {
         }
 
         fn add_to_delegation_pool(
-            ref self: ContractState, pool_member: ContractAddress, amount: u128
-        ) -> u128 {
+            ref self: ContractState, pool_member: ContractAddress, amount: Amount
+        ) -> Amount {
             self.assert_staker_is_active();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
@@ -182,7 +182,7 @@ pub mod Pool {
             pool_member_info.amount
         }
 
-        fn exit_delegation_pool_intent(ref self: ContractState, amount: u128) {
+        fn exit_delegation_pool_intent(ref self: ContractState, amount: Amount) {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
@@ -216,7 +216,7 @@ pub mod Pool {
 
         fn exit_delegation_pool_action(
             ref self: ContractState, pool_member: ContractAddress
-        ) -> u128 {
+        ) -> Amount {
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             let unpool_time = pool_member_info
                 .unpool_time
@@ -245,7 +245,7 @@ pub mod Pool {
             unpool_amount
         }
 
-        fn claim_rewards(ref self: ContractState, pool_member: ContractAddress) -> u128 {
+        fn claim_rewards(ref self: ContractState, pool_member: ContractAddress) -> Amount {
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
             let reward_address = pool_member_info.reward_address;
@@ -265,8 +265,8 @@ pub mod Pool {
             ref self: ContractState,
             to_staker: ContractAddress,
             to_pool: ContractAddress,
-            amount: u128
-        ) -> u128 {
+            amount: Amount
+        ) -> Amount {
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             let pool_member = get_caller_address();
             let mut pool_member_info = self.get_pool_member_info(:pool_member);
@@ -306,7 +306,7 @@ pub mod Pool {
         }
 
         fn enter_delegation_pool_from_staking_contract(
-            ref self: ContractState, amount: u128, index: Index, data: Span<felt252>
+            ref self: ContractState, amount: Amount, index: Index, data: Span<felt252>
         ) {
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             assert_with_err(
@@ -479,7 +479,7 @@ pub mod Pool {
         }
 
         fn undelegate_from_staking_contract_intent(
-            self: @ContractState, pool_member: ContractAddress, amount: u128
+            self: @ContractState, pool_member: ContractAddress, amount: Amount
         ) -> TimeStamp {
             if !self.is_staker_active() {
                 // Don't allow intent if an intent is already in progress and the staker is erased.
