@@ -266,11 +266,7 @@ pub mod Staking {
             self.calculate_rewards(ref :staker_info);
             let amount = staker_info.unclaimed_rewards_own;
             let erc20_dispatcher = self.erc20_dispatcher.read();
-            self
-                .send_rewards_to_staker(
-                    :staker_address, :reward_address, :amount, :erc20_dispatcher
-                );
-            staker_info.unclaimed_rewards_own = Zero::zero();
+            self.send_rewards_to_staker(:staker_address, ref :staker_info, :erc20_dispatcher);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             amount
         }
@@ -314,7 +310,7 @@ pub mod Staking {
         fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> u128 {
             self.general_prerequisites();
             self.roles.only_operator();
-            let staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.get_staker_info(:staker_address);
             let unstake_time = staker_info
                 .unstake_time
                 .expect_with_err(Error::MISSING_UNSTAKE_INTENT);
@@ -322,19 +318,13 @@ pub mod Staking {
                 get_block_timestamp() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED
             );
             let erc20_dispatcher = self.erc20_dispatcher.read();
-            self
-                .send_rewards_to_staker(
-                    :staker_address,
-                    reward_address: staker_info.reward_address,
-                    amount: staker_info.unclaimed_rewards_own,
-                    :erc20_dispatcher
-                );
+            self.send_rewards_to_staker(:staker_address, ref :staker_info, :erc20_dispatcher);
             // Transfer stake to staker.
             let staker_amount = staker_info.amount_own;
             erc20_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
 
-            self.transfer_to_pool_when_unstake(:staker_address, :staker_info);
+            self.transfer_to_pool_when_unstake(:staker_address, ref :staker_info);
             self.remove_staker(:staker_address, :staker_info);
             staker_amount
         }
@@ -643,19 +633,13 @@ pub mod Staking {
                 pool_address == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
             self.calculate_rewards(ref :staker_info);
-            let mut updated_pool_info = staker_info.get_pool_info_unchecked();
-            // Calculate rewards updated the index in staker_info.
+            // The function calculate_rewards updated the index in staker_info.
             let updated_index = staker_info.index;
             let erc20_dispatcher = self.erc20_dispatcher.read();
             self
                 .send_rewards_to_delegation_pool(
-                    :staker_address,
-                    :pool_address,
-                    amount: updated_pool_info.unclaimed_rewards,
-                    :erc20_dispatcher
+                    :staker_address, ref :staker_info, :erc20_dispatcher
                 );
-            updated_pool_info.unclaimed_rewards = Zero::zero();
-            staker_info.pool_info = Option::Some(updated_pool_info);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             updated_index
         }
@@ -714,25 +698,40 @@ pub mod Staking {
             erc20_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
         }
 
+        /// Sends the rewards to `staker_address`'s reward address.
+        /// Important note:
+        /// After calling this function, one must write the updated staker_info to the storage.
         fn send_rewards_to_staker(
             ref self: ContractState,
             staker_address: ContractAddress,
-            reward_address: ContractAddress,
-            amount: u128,
+            ref staker_info: StakerInfo,
             erc20_dispatcher: IERC20Dispatcher
         ) {
+            let reward_address = staker_info.reward_address;
+            let amount = staker_info.unclaimed_rewards_own;
+
             self.send_rewards(:reward_address, :amount, :erc20_dispatcher);
+            staker_info.unclaimed_rewards_own = Zero::zero();
+
             self.emit(Events::StakerRewardClaimed { staker_address, reward_address, amount });
         }
-
+        /// Sends the rewards to `staker_address`'s pool contract.
+        /// Important note:
+        /// After calling this function, one must write the updated staker_info to the storage.
         fn send_rewards_to_delegation_pool(
             ref self: ContractState,
             staker_address: ContractAddress,
-            pool_address: ContractAddress,
-            amount: u128,
+            ref staker_info: StakerInfo,
             erc20_dispatcher: IERC20Dispatcher
         ) {
+            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let pool_address = pool_info.pool_contract;
+            let amount = pool_info.unclaimed_rewards;
+
             self.send_rewards(reward_address: pool_address, :amount, :erc20_dispatcher);
+            pool_info.unclaimed_rewards = Zero::zero();
+            staker_info.pool_info = Option::Some(pool_info);
+
             self
                 .emit(
                     Events::RewardsSuppliedToDelegationPool { staker_address, pool_address, amount }
@@ -773,16 +772,13 @@ pub mod Staking {
         }
 
         fn transfer_to_pool_when_unstake(
-            ref self: ContractState, staker_address: ContractAddress, staker_info: StakerInfo
+            ref self: ContractState, staker_address: ContractAddress, ref staker_info: StakerInfo
         ) {
             if let Option::Some(pool_info) = staker_info.pool_info {
                 let erc20_dispatcher = self.erc20_dispatcher.read();
                 self
                     .send_rewards_to_delegation_pool(
-                        :staker_address,
-                        pool_address: pool_info.pool_contract,
-                        amount: pool_info.unclaimed_rewards,
-                        :erc20_dispatcher
+                        :staker_address, ref :staker_info, :erc20_dispatcher
                     );
                 erc20_dispatcher
                     .checked_transfer(

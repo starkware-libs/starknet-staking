@@ -10,11 +10,12 @@ use test_utils::{fund, approve, deploy_staking_contract, stake_with_pool_enabled
 use test_utils::{enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map};
 use test_utils::{load_from_simple_map, load_one_felt, stake_for_testing_using_dispatcher};
 use test_utils::{general_contract_system_deployment, cheat_reward_for_reward_supplier};
-use test_utils::set_account_as_operator;
+use test_utils::{set_account_as_operator, deploy_reward_supplier_contract};
 use test_utils::constants;
 use constants::{DUMMY_ADDRESS, POOL_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS};
 use constants::{NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER};
 use constants::{OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS};
+use constants::{POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_UNCLAIMED_REWARDS};
 use contracts::event_test_utils;
 use event_test_utils::{assert_number_of_events, assert_staker_exit_intent_event};
 use event_test_utils::{assert_stake_balance_changed_event, assert_delete_staker_event};
@@ -43,6 +44,7 @@ use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::pool::Pool::SwitchPoolData;
 use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
 use contracts::types::Index;
 
 #[test]
@@ -165,6 +167,104 @@ fn test_calculate_rewards() {
     };
     assert_eq!(staker_info, expected_staker_info);
 }
+
+
+#[test]
+fn test_send_rewards_to_delegation_pool() {
+    // Initialize staking state.
+    let mut cfg: StakingInitConfig = Default::default();
+    let pool_contract = POOL_CONTRACT_ADDRESS();
+    let mut state = initialize_staking_state_from_cfg(ref :cfg);
+    cfg.test_info.staking_contract = snforge_std::test_address();
+    let token_address = cfg.staking_contract_info.token_address;
+    let erc20_dispatcher = IERC20Dispatcher {
+        contract_address: cfg.staking_contract_info.token_address
+    };
+    // Deploy reward supplier contract.
+    let reward_supplier = deploy_reward_supplier_contract(:cfg);
+    cfg.staking_contract_info.reward_supplier = reward_supplier;
+    state
+        .reward_supplier_dispatcher
+        .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
+    // Setup staker_info and expected results before sending rewards.
+    let unclaimed_rewards = POOL_MEMBER_UNCLAIMED_REWARDS;
+    cfg
+        .staker_info
+        .pool_info =
+            Option::Some(
+                StakerPoolInfo {
+                    pool_contract, unclaimed_rewards, ..cfg.staker_info.get_pool_info_unchecked()
+                }
+            );
+    cheat_reward_for_reward_supplier(
+        :cfg, :reward_supplier, expected_reward: unclaimed_rewards, :token_address
+    );
+    let pool_balance_before_rewards = erc20_dispatcher.balance_of(account: pool_contract);
+    let expected_staker_info = StakerInfo {
+        pool_info: Option::Some(
+            StakerPoolInfo {
+                unclaimed_rewards: Zero::zero(), ..cfg.staker_info.get_pool_info_unchecked()
+            }
+        ),
+        ..cfg.staker_info
+    };
+    // Send rewards to pool contract.
+    state
+        .send_rewards_to_delegation_pool(
+            staker_address: cfg.test_info.staker_address,
+            ref staker_info: cfg.staker_info,
+            :erc20_dispatcher
+        );
+    // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
+    assert_eq!(expected_staker_info, cfg.staker_info);
+    let pool_balance_after_rewards = erc20_dispatcher.balance_of(account: pool_contract);
+    assert_eq!(pool_balance_after_rewards, pool_balance_before_rewards + unclaimed_rewards.into());
+}
+
+
+#[test]
+fn test_send_rewards_to_staker() {
+    // Initialize staking state.
+    let mut cfg: StakingInitConfig = Default::default();
+    let mut state = initialize_staking_state_from_cfg(ref :cfg);
+    cfg.test_info.staking_contract = snforge_std::test_address();
+    let token_address = cfg.staking_contract_info.token_address;
+    let erc20_dispatcher = IERC20Dispatcher {
+        contract_address: cfg.staking_contract_info.token_address
+    };
+    // Deploy reward supplier contract.
+    let reward_supplier = deploy_reward_supplier_contract(:cfg);
+    cfg.staking_contract_info.reward_supplier = reward_supplier;
+    state
+        .reward_supplier_dispatcher
+        .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
+    // Setup staker_info and expected results before sending rewards.
+    let unclaimed_rewards_own = STAKER_UNCLAIMED_REWARDS;
+    cfg.staker_info.unclaimed_rewards_own = unclaimed_rewards_own;
+    let expected_staker_info = StakerInfo {
+        unclaimed_rewards_own: Zero::zero(), ..cfg.staker_info
+    };
+    cheat_reward_for_reward_supplier(
+        :cfg, :reward_supplier, expected_reward: unclaimed_rewards_own, :token_address
+    );
+    let staker_balance_before_rewards = erc20_dispatcher
+        .balance_of(account: cfg.staker_info.reward_address);
+    // Send rewards to staker's reward address.
+    state
+        .send_rewards_to_staker(
+            staker_address: cfg.test_info.staker_address,
+            ref staker_info: cfg.staker_info,
+            :erc20_dispatcher
+        );
+    // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
+    assert_eq!(expected_staker_info, cfg.staker_info);
+    let staker_balance_after_rewards = erc20_dispatcher
+        .balance_of(account: cfg.staker_info.reward_address);
+    assert_eq!(
+        staker_balance_after_rewards, staker_balance_before_rewards + unclaimed_rewards_own.into()
+    );
+}
+
 
 #[test]
 fn test_calculate_rewards_unstake_intent() {
