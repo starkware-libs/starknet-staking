@@ -180,6 +180,16 @@ pub trait IStaking<TContractState> {
 /// All functions in this interface are called only by the pool contract.
 #[starknet::interface]
 pub trait IStakingPool<TContractState> {
+    /// Adds `amount` FRI to the staking pool.
+    ///
+    /// Conditions:
+    /// * The staker is not in exit window.
+    ///
+    /// The flow:
+    /// 1. Calculate rewards for `staker_address`.
+    /// 2. Transfer `amount` FRI from the pool contract (the caller) to staking contract.
+    /// 3. Increase the staker's pooled amount by `amount`.
+    /// 4. Increase the total_stake by `amount`.
     fn add_stake_from_pool(
         ref self: TContractState, staker_address: ContractAddress, amount: u128
     ) -> (u128, Index);
@@ -188,18 +198,19 @@ pub trait IStakingPool<TContractState> {
     /// Returns the timestmap when the pool is allowed to remove the `amount` for `identifier`.
     ///
     /// The flow, if making a brand new intent:
-    /// 1. Decrease the staker's pooled amount by `amount`.
-    /// 2. Decrease total_stake by `amount`.
-    /// 3. Calculate the timestamp when the pool may perform remove_from_delegation_pool_action for
+    /// 1. Calculate rewards for `staker_address`.
+    /// 2. Decrease the staker's pooled amount by `amount`.
+    /// 3. Decrease total_stake by `amount`.
+    /// 4. Calculate the timestamp when the pool may perform remove_from_delegation_pool_action for
     ///    this `amount` and `identifier` (notate it as unpool_time for following use).
-    /// 4. Create an entry in pool_exit_intents map for this `identifier` and pool contract address
+    /// 5. Create an entry in pool_exit_intents map for this `identifier` and pool contract address
     ///    with the value being `UndelegateIntentValue { amount, unpool_time }`.
-    /// 5. Return unpool_time.
+    /// 6. Return unpool_time.
     ///
     /// The function supports overriding intentions, upwards and downwards, *which recalculates the
     /// unpool_time and restarts the timer*. This slightly changes the flow, meaning that if the
-    /// pool already has an intent for this `identifier`, the flow is the same except for
-    /// points 1 and 2:
+    /// pool already has an intent for this `identifier`, the flow remains the same except for
+    /// points 2 and 3:
     /// * If the amount to be removed is greater in the previous intent, the staker's pooled amount
     ///   and total_stake will be *decreased* by the difference between the new and the old amount.
     /// * If the amount to be removed is smaller in the previous intent, the staker's pooled amount
@@ -210,7 +221,31 @@ pub trait IStakingPool<TContractState> {
         identifier: felt252,
         amount: u128,
     ) -> u64;
+
+    /// Transfers the removal intent amount back to the pool contract, and clears the intent.
+    ///
+    /// Conditions:
+    /// * There is an entry in the pool_exit_intents map for this `identifier` and pool contract
+    ///   (the caller).
+    /// * The unpool_time, in the value of the entry above, has passed.
     fn remove_from_delegation_pool_action(ref self: TContractState, identifier: felt252) -> u128;
+
+    /// Moves the stake from being in exit intent, to being staked in `to_staker`'s pooled stake.
+    /// Conditions:
+    /// * There is an entry in the pool_exit_intents map for this `identifier` and pool contract,
+    ///   with an amount greater than `switched_amount`. Note: It does not matter if the unpool_time
+    ///   has passed or not.
+    /// * `to_staker` is not in exit window.
+    ///
+    /// The flow:
+    /// 1. Calculate rewards for `to_staker`.
+    /// 2. Increase `to_staker`'s pooled amount by `switched_amount`.
+    /// 3. Increase the total_stake by `switched_amount`. This happens because when an intent is
+    ///    made, the intent amount is subtracted from the total_stake.
+    /// 4. Decrease the intent amount by `switched_amount`, in the pool_exit_intents map's entry for
+    ///    this `identifier` and pool contract. If amount is 0, remove the entry.
+    /// 5. Invoke enter_delegation_pool_from_staking_contract in `to_pool`'s contract, which lets
+    ///    `to_pool` know that new pooled stake was added.
     fn switch_staking_delegation_pool(
         ref self: TContractState,
         to_staker: ContractAddress,
@@ -219,6 +254,13 @@ pub trait IStakingPool<TContractState> {
         data: Span<felt252>,
         identifier: felt252
     ) -> bool;
+
+    /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
+    ///
+    /// The flow:
+    /// 1. Calculate the rewards for `staker_address`.
+    /// 2. Send `pool_info.unclaimed_rewards` FRI to the pool contract.
+    /// 3. Set pool_info.unclaimed_rewards to zero.
     fn claim_delegation_pool_rewards(
         ref self: TContractState, staker_address: ContractAddress
     ) -> Index;
