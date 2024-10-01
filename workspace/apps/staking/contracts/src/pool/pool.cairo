@@ -275,14 +275,17 @@ pub mod Pool {
                 pool_member_info.unpool_time.is_some(), Error::MISSING_UNDELEGATE_INTENT
             );
             assert_with_err(pool_member_info.unpool_amount >= amount, Error::AMOUNT_TOO_HIGH);
+            let reward_address = pool_member_info.reward_address;
             pool_member_info.unpool_amount -= amount;
             if pool_member_info.unpool_amount.is_zero() && pool_member_info.amount.is_zero() {
                 // Claim rewards.
                 let erc20_dispatcher = self.erc20_dispatcher.read();
-                erc20_dispatcher
-                    .checked_transfer(
-                        recipient: pool_member_info.reward_address,
-                        amount: pool_member_info.unclaimed_rewards.into()
+                self
+                    .send_rewards_to_pool_member(
+                        :pool_member,
+                        :reward_address,
+                        amount: pool_member_info.unclaimed_rewards,
+                        :erc20_dispatcher
                     );
                 self.remove_pool_member(:pool_member);
             } else {
@@ -292,9 +295,7 @@ pub mod Pool {
                 }
                 self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             }
-            let switch_pool_data = SwitchPoolData {
-                pool_member, reward_address: pool_member_info.reward_address
-            };
+            let switch_pool_data = SwitchPoolData { pool_member, reward_address };
             let mut serialized_data = array![];
             switch_pool_data.serialize(ref output: serialized_data);
             // TODO: emit event
