@@ -1,11 +1,11 @@
 use starknet::{ContractAddress, ClassHash, get_block_timestamp};
 use core::cmp::max;
 use contracts::errors::{Error, OptionAuxTrait};
-use contracts::types::{Commission, TimeDelta, TimeStamp};
+use contracts::types::{Commission, TimeDelta, TimeStamp, Index};
 
 pub mod Events {
     use starknet::ContractAddress;
-    use contracts::types::{Commission, TimeStamp};
+    use contracts::types::{Commission, TimeStamp, Index};
     #[derive(Drop, starknet::Event)]
     pub struct StakeBalanceChanged {
         #[key]
@@ -78,8 +78,8 @@ pub mod Events {
 
     #[derive(Drop, starknet::Event)]
     pub struct GlobalIndexUpdated {
-        pub old_index: u64,
-        pub new_index: u64,
+        pub old_index: Index,
+        pub new_index: Index,
         pub global_index_last_update_timestamp: TimeStamp,
         pub global_index_current_update_timestamp: TimeStamp
     }
@@ -118,7 +118,7 @@ pub struct StakerInfo {
     pub operational_address: ContractAddress,
     pub unstake_time: Option<u64>,
     pub amount_own: u128,
-    pub index: u64,
+    pub index: Index,
     pub unclaimed_rewards_own: u128,
     pub pool_info: Option<StakerPoolInfo>,
 }
@@ -141,7 +141,7 @@ pub impl StakerInfoImpl of StakerInfoTrait {
 pub struct StakingContractInfo {
     pub min_stake: u128,
     pub token_address: ContractAddress,
-    pub global_index: u64,
+    pub global_index: Index,
     pub pool_contract_class_hash: ClassHash,
     pub reward_supplier: ContractAddress,
     pub exit_wait_window: TimeDelta
@@ -182,7 +182,7 @@ pub trait IStaking<TContractState> {
 pub trait IStakingPool<TContractState> {
     fn add_stake_from_pool(
         ref self: TContractState, staker_address: ContractAddress, amount: u128
-    ) -> (u128, u64);
+    ) -> (u128, Index);
 
     /// Registers an intention to remove `amount` FRI of pooled stake from the staking contract.
     /// Returns the timestmap when the pool is allowed to remove the `amount` for `identifier`.
@@ -221,7 +221,7 @@ pub trait IStakingPool<TContractState> {
     ) -> bool;
     fn claim_delegation_pool_rewards(
         ref self: TContractState, staker_address: ContractAddress
-    ) -> u64;
+    ) -> Index;
 }
 
 #[starknet::interface]

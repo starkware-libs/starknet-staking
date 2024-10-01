@@ -7,7 +7,7 @@ use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
 use core::num::traits::WideMul;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts::types::{Commission, TimeStamp};
+use contracts::types::{Commission, TimeStamp, Index};
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
@@ -81,7 +81,7 @@ pub fn compute_commission_amount_rounded_up(
     )
 }
 
-pub fn compute_global_index_diff(staking_rewards: u128, total_stake: u128) -> u64 {
+pub fn compute_global_index_diff(staking_rewards: u128, total_stake: u128) -> Index {
     if total_stake.is_zero() {
         return 0;
     }
@@ -91,7 +91,7 @@ pub fn compute_global_index_diff(staking_rewards: u128, total_stake: u128) -> u6
         div: total_stake,
         error: Error::GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW,
     );
-    diff.try_into().expect_with_err(Error::GLOBAL_INDEX_DIFF_NOT_U64)
+    diff.try_into().expect_with_err(Error::GLOBAL_INDEX_DIFF_NOT_INDEX_TYPE)
 }
 
 // Compute the rewards from the amount and interest.

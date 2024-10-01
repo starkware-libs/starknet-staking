@@ -26,12 +26,12 @@ use constants::{SECURITY_AGENT, APP_GOVERNER, GOVERNANCE_ADMIN, OPERATOR_CONTRAC
 use constants::APP_ROLE_ADMIN;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
-use contracts::types::Commission;
+use contracts::types::{Commission, Index};
 
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
     use starknet::class_hash::{ClassHash, class_hash_const};
-    use contracts::types::Commission;
+    use contracts::types::{Commission, Index};
 
     pub const STAKER_INITIAL_BALANCE: u128 = 10000000000;
     pub const POOL_MEMBER_INITIAL_BALANCE: u128 = 10000000000;
@@ -40,7 +40,7 @@ pub(crate) mod constants {
     pub const STAKE_AMOUNT: u128 = 200000;
     pub const POOL_MEMBER_STAKE_AMOUNT: u128 = 100000;
     pub const COMMISSION: Commission = 500;
-    pub const STAKER_FINAL_INDEX: u64 = 10;
+    pub const STAKER_FINAL_INDEX: Index = 10;
     pub const BASE_MINT_AMOUNT: u128 = 8000000000000000;
     pub const BUFFER: u128 = 1000000000000;
     pub const L1_STAKING_MINTER_ADDRESS: felt252 = 'L1_MINTER';
@@ -608,7 +608,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
     let mut pool_member_info = PoolMemberInfo {
         reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed de reward'),
         amount: Serde::<u128>::deserialize(ref span).expect('Failed de amount'),
-        index: Serde::<u64>::deserialize(ref span).expect('Failed de index'),
+        index: Serde::<Index>::deserialize(ref span).expect('Failed de index'),
         unclaimed_rewards: Serde::<u128>::deserialize(ref span).expect('Failed de unclaimed'),
         commission: Serde::<Commission>::deserialize(ref span).expect('Failed de commission'),
         unpool_amount: Serde::<u128>::deserialize(ref span).expect('Failed de unpool_amount'),
@@ -704,7 +704,7 @@ pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> u128 {
     unclaimed_rewards_member
 }
 
-fn change_global_index(ref cfg: StakingInitConfig, index: u64) {
+fn change_global_index(ref cfg: StakingInitConfig, index: Index) {
     snforge_std::store(
         target: cfg.test_info.staking_contract,
         storage_address: selector!("global_index"),

@@ -12,6 +12,7 @@ pub mod MintingCurve {
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use contracts::constants::{DEFAULT_C_NUM, C_DENOM};
+    use contracts::types::Inflation;
 
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
@@ -32,7 +33,7 @@ pub mod MintingCurve {
         staking_dispatcher: IStakingDispatcher,
         total_supply: u128,
         l1_staking_minter_address: felt252,
-        c_num: u16
+        c_num: Inflation
     }
 
     #[event]
@@ -99,7 +100,7 @@ pub mod MintingCurve {
 
     #[abi(embed_v0)]
     impl IMintingCurveConfigImpl of IMintingCurveConfig<ContractState> {
-        fn set_c_num(ref self: ContractState, c_num: u16) {
+        fn set_c_num(ref self: ContractState, c_num: Inflation) {
             self.roles.only_app_governor();
             assert_with_err(c_num <= C_DENOM, Error::C_NUM_OUT_OF_RANGE);
             self.c_num.write(c_num);
