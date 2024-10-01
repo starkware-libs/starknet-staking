@@ -1,3 +1,5 @@
+use contracts::types::Inflation;
+
 #[starknet::interface]
 pub trait IMintingCurve<TContractState> {
     fn yearly_mint(self: @TContractState) -> u128;
@@ -6,13 +8,13 @@ pub trait IMintingCurve<TContractState> {
 
 #[starknet::interface]
 pub trait IMintingCurveConfig<TContractState> {
-    fn set_c_num(ref self: TContractState, c_num: u16);
+    fn set_c_num(ref self: TContractState, c_num: Inflation);
 }
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct MintingCurveContractInfo {
-    pub c_num: u16,
-    pub c_denom: u16,
+    pub c_num: Inflation,
+    pub c_denom: Inflation,
 }
 
 pub mod Events {

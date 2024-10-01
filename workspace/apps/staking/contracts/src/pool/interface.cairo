@@ -1,9 +1,9 @@
 use starknet::ContractAddress;
-use contracts::types::Commission;
+use contracts::types::{Commission, Index};
 
 pub mod Events {
     use starknet::ContractAddress;
-    use contracts::types::TimeStamp;
+    use contracts::types::{TimeStamp, Index};
 
     #[derive(Drop, starknet::Event)]
     pub struct PoolMemberExitIntent {
@@ -42,7 +42,7 @@ pub mod Events {
     pub struct FinalIndexSet {
         #[key]
         pub staker_address: ContractAddress,
-        pub final_staker_index: u64
+        pub final_staker_index: Index
     }
 
     #[derive(Drop, starknet::Event)]
@@ -67,7 +67,7 @@ pub mod Events {
 pub struct PoolMemberInfo {
     pub reward_address: ContractAddress,
     pub amount: u128,
-    pub index: u64,
+    pub index: Index,
     pub unclaimed_rewards: u128,
     pub commission: Commission,
     pub unpool_amount: u128,
@@ -77,7 +77,7 @@ pub struct PoolMemberInfo {
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct PoolContractInfo {
     pub staker_address: ContractAddress,
-    pub final_staker_index: Option<u64>,
+    pub final_staker_index: Option<Index>,
     pub staking_contract: ContractAddress,
     pub token_address: ContractAddress,
     pub commission: Commission,
@@ -98,9 +98,9 @@ pub trait IPool<TContractState> {
         ref self: TContractState, to_staker: ContractAddress, to_pool: ContractAddress, amount: u128
     ) -> u128;
     fn enter_delegation_pool_from_staking_contract(
-        ref self: TContractState, amount: u128, index: u64, data: Span<felt252>
+        ref self: TContractState, amount: u128, index: Index, data: Span<felt252>
     );
-    fn set_final_staker_index(ref self: TContractState, final_staker_index: u64);
+    fn set_final_staker_index(ref self: TContractState, final_staker_index: Index);
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn pool_member_info(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
     fn contract_parameters(self: @TContractState) -> PoolContractInfo;

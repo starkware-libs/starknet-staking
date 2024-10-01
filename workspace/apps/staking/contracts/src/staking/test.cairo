@@ -43,6 +43,7 @@ use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::pool::Pool::SwitchPoolData;
 use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+use contracts::types::Index;
 
 #[test]
 fn test_constructor() {
@@ -52,7 +53,7 @@ fn test_constructor() {
     assert_eq!(
         state.erc20_dispatcher.read().contract_address, cfg.staking_contract_info.token_address
     );
-    let contract_global_index: u64 = state.global_index.read();
+    let contract_global_index = state.global_index.read();
     assert_eq!(BASE_VALUE, contract_global_index);
     let staker_address = state
         .operational_address_to_staker_address
@@ -988,7 +989,7 @@ fn test_switch_staking_delegation_pool() {
     switch_pool_data.serialize(ref output: serialized_data);
 
     let switched_amount = cfg.pool_member_info.amount / 2;
-    let updated_index: u64 = cfg.staker_info.index * 2;
+    let updated_index = cfg.staker_info.index * 2;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -1081,7 +1082,7 @@ fn test_update_global_index_if_needed() {
     let staking_contract = cfg.test_info.staking_contract;
 
     // Get the initial global index.
-    let global_index_before_first_update: u64 = load_one_felt(
+    let global_index_before_first_update: Index = load_one_felt(
         target: staking_contract, storage_address: selector!("global_index")
     )
         .try_into()
@@ -1094,7 +1095,7 @@ fn test_update_global_index_if_needed() {
     );
     // Try to update global index. This shouldn't update the index because a day hasn't passed.
     staking_dispatcher.update_global_index_if_needed();
-    let global_index_after_first_update: u64 = load_one_felt(
+    let global_index_after_first_update: Index = load_one_felt(
         target: staking_contract, storage_address: selector!("global_index")
     )
         .try_into()
@@ -1124,7 +1125,7 @@ fn test_update_global_index_if_needed() {
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address
     );
     staking_dispatcher.update_global_index_if_needed();
-    let global_index_after_second_update: u64 = load_one_felt(
+    let global_index_after_second_update: Index = load_one_felt(
         target: staking_contract, storage_address: selector!("global_index")
     )
         .try_into()

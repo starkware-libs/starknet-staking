@@ -29,7 +29,7 @@ pub mod Staking {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts_commons::components::roles::interface::{OPERATOR, SECURITY_ADMIN};
-    use contracts::types::{Commission, TimeDelta, TimeStamp};
+    use contracts::types::{Commission, TimeDelta, TimeStamp, Index};
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
 
@@ -55,7 +55,7 @@ pub mod Staking {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        global_index: u64,
+        global_index: Index,
         global_index_last_update_timestamp: TimeStamp,
         min_stake: u128,
         staker_info: Map<ContractAddress, Option<StakerInfo>>,
@@ -477,7 +477,7 @@ pub mod Staking {
     impl StakingPoolImpl of IStakingPool<ContractState> {
         fn add_stake_from_pool(
             ref self: ContractState, staker_address: ContractAddress, amount: u128
-        ) -> (u128, u64) {
+        ) -> (u128, Index) {
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -635,7 +635,7 @@ pub mod Staking {
 
         fn claim_delegation_pool_rewards(
             ref self: ContractState, staker_address: ContractAddress
-        ) -> u64 {
+        ) -> Index {
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info_unchecked().pool_contract;

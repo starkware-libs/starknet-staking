@@ -17,7 +17,7 @@ pub mod Pool {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts::utils::CheckedIERC20DispatcherTrait;
-    use contracts::types::{Commission, TimeStamp};
+    use contracts::types::{Commission, TimeStamp, Index};
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -49,7 +49,7 @@ pub mod Pool {
         roles: RolesComponent::Storage,
         staker_address: ContractAddress,
         pool_member_info: Map<ContractAddress, Option<PoolMemberInfo>>,
-        final_staker_index: Option<u64>,
+        final_staker_index: Option<Index>,
         staking_pool_dispatcher: IStakingPoolDispatcher,
         erc20_dispatcher: IERC20Dispatcher,
         commission: Commission,
@@ -313,7 +313,7 @@ pub mod Pool {
         }
 
         fn enter_delegation_pool_from_staking_contract(
-            ref self: ContractState, amount: u128, index: u64, data: Span<felt252>
+            ref self: ContractState, amount: u128, index: Index, data: Span<felt252>
         ) {
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             assert_with_err(
@@ -357,7 +357,7 @@ pub mod Pool {
                 );
         }
 
-        fn set_final_staker_index(ref self: ContractState, final_staker_index: u64) {
+        fn set_final_staker_index(ref self: ContractState, final_staker_index: Index) {
             assert_with_err(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
@@ -436,7 +436,7 @@ pub mod Pool {
                 );
         }
 
-        fn receive_index_and_funds_from_staker(self: @ContractState) -> u64 {
+        fn receive_index_and_funds_from_staker(self: @ContractState) -> Index {
             if let Option::Some(final_index) = self.final_staker_index.read() {
                 // If the staker is inactive, the staker already pushed index and funds.
                 return final_index;
@@ -456,7 +456,7 @@ pub mod Pool {
         /// - unclaimed_rewards
         /// - index
         fn calculate_rewards(
-            ref self: ContractState, ref pool_member_info: PoolMemberInfo, updated_index: u64
+            ref self: ContractState, ref pool_member_info: PoolMemberInfo, updated_index: Index
         ) {
             let interest: u64 = updated_index - pool_member_info.index;
             pool_member_info.index = updated_index;

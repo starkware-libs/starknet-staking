@@ -4,7 +4,7 @@ use contracts::staking::PauseEvents;
 use contracts::pool::Events as PoolEvents;
 use contracts::reward_supplier::Events as RewardSupplierEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
-use contracts::types::{Commission, TimeStamp};
+use contracts::types::{Commission, TimeStamp, Index};
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(
@@ -218,8 +218,8 @@ pub fn assert_commission_changed_event(
 
 pub fn assert_global_index_updated_event(
     spied_event: @(ContractAddress, Event),
-    old_index: u64,
-    new_index: u64,
+    old_index: Index,
+    new_index: Index,
     global_index_last_update_timestamp: TimeStamp,
     global_index_current_update_timestamp: TimeStamp,
 ) {
@@ -339,7 +339,9 @@ pub fn assert_change_operational_address_event(
 }
 
 pub(crate) fn assert_final_index_set_event(
-    spied_event: @(ContractAddress, Event), staker_address: ContractAddress, final_staker_index: u64
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    final_staker_index: Index
 ) {
     let expected_event = @contracts::pool::Pool::Event::FinalIndexSet(
         PoolEvents::FinalIndexSet { staker_address, final_staker_index }
