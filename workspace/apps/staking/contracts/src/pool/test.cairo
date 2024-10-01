@@ -586,13 +586,19 @@ fn test_exit_delegation_pool_intent() {
     // Validate the single PoolMemberExitIntent event.
     let events = spy.get_events().emitted_by(pool_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 1, message: "exit_delegation_pool_intent"
+        actual: events.len(), expected: 2, message: "exit_delegation_pool_intent"
     );
     assert_pool_member_exit_intent_event(
         spied_event: events[0],
         pool_member: cfg.test_info.pool_member_address,
         exit_timestamp: expected_time,
         amount: cfg.pool_member_info.amount
+    );
+    assert_delegation_pool_member_balance_changed_event(
+        spied_event: events[1],
+        pool_member: cfg.test_info.pool_member_address,
+        old_delegated_stake: cfg.pool_member_info.amount,
+        new_delegated_stake: Zero::zero()
     );
 }
 
