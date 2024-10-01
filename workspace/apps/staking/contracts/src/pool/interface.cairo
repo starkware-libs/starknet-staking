@@ -3,12 +3,13 @@ use contracts::types::Commission;
 
 pub mod Events {
     use starknet::ContractAddress;
+    use contracts::types::TimeStamp;
 
     #[derive(Drop, starknet::Event)]
     pub struct PoolMemberExitIntent {
         #[key]
         pub pool_member: ContractAddress,
-        pub exit_timestamp: u64,
+        pub exit_timestamp: TimeStamp,
         pub amount: u128
     }
 

@@ -17,7 +17,7 @@ pub mod Pool {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts::utils::CheckedIERC20DispatcherTrait;
-    use contracts::types::Commission;
+    use contracts::types::{Commission, TimeStamp};
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -487,7 +487,7 @@ pub mod Pool {
 
         fn undelegate_from_staking_contract_intent(
             self: @ContractState, pool_member: ContractAddress, amount: u128
-        ) -> u64 {
+        ) -> TimeStamp {
             if !self.is_staker_active() {
                 // Don't allow intent if an intent is already in progress and the staker is erased.
                 assert_with_err(

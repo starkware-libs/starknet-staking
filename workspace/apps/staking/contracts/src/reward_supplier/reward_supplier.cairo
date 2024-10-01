@@ -19,6 +19,7 @@ pub mod RewardSupplier {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
+    use contracts::types::TimeStamp;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -44,7 +45,7 @@ pub mod RewardSupplier {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        last_timestamp: u64,
+        last_timestamp: TimeStamp,
         unclaimed_rewards: u128,
         l1_pending_requested_amount: u128,
         base_mint_amount: u128,
