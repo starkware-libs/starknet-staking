@@ -222,13 +222,7 @@ pub mod Pool {
 
             let erc20_dispatcher = self.erc20_dispatcher.read();
             // Claim rewards.
-            self
-                .send_rewards_to_pool_member(
-                    :pool_member,
-                    reward_address: pool_member_info.reward_address,
-                    amount: pool_member_info.unclaimed_rewards,
-                    :erc20_dispatcher
-                );
+            self.send_rewards_to_member(ref :pool_member_info, :pool_member, :erc20_dispatcher);
             // Transfer delegated amount to the pool member.
             let unpool_amount = pool_member_info.unpool_amount;
             pool_member_info.unpool_amount = Zero::zero();
@@ -253,11 +247,7 @@ pub mod Pool {
             self.update_index_and_calculate_rewards(ref :pool_member_info);
             let rewards = pool_member_info.unclaimed_rewards;
             let erc20_dispatcher = self.erc20_dispatcher.read();
-            self
-                .send_rewards_to_pool_member(
-                    :pool_member, :reward_address, amount: rewards, :erc20_dispatcher
-                );
-            pool_member_info.unclaimed_rewards = Zero::zero();
+            self.send_rewards_to_member(ref :pool_member_info, :pool_member, :erc20_dispatcher);
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             rewards
         }
@@ -280,13 +270,7 @@ pub mod Pool {
             if pool_member_info.unpool_amount.is_zero() && pool_member_info.amount.is_zero() {
                 // Claim rewards.
                 let erc20_dispatcher = self.erc20_dispatcher.read();
-                self
-                    .send_rewards_to_pool_member(
-                        :pool_member,
-                        :reward_address,
-                        amount: pool_member_info.unclaimed_rewards,
-                        :erc20_dispatcher
-                    );
+                self.send_rewards_to_member(ref :pool_member_info, :pool_member, :erc20_dispatcher);
                 self.remove_pool_member(:pool_member);
             } else {
                 // One of pool_member_info.unpool_amount or pool_member_info.amount is non-zero.
@@ -504,14 +488,21 @@ pub mod Pool {
                 )
         }
 
-        fn send_rewards_to_pool_member(
+        /// Sends the rewards to the `pool_member`'s reward address.
+        /// Important note:
+        /// After calling this function, one must write the updated pool_member_info to the storage.
+        fn send_rewards_to_member(
             ref self: ContractState,
+            ref pool_member_info: PoolMemberInfo,
             pool_member: ContractAddress,
-            reward_address: ContractAddress,
-            amount: u128,
             erc20_dispatcher: IERC20Dispatcher
         ) {
+            let reward_address = pool_member_info.reward_address;
+            let amount = pool_member_info.unclaimed_rewards;
+
             erc20_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
+            pool_member_info.unclaimed_rewards = Zero::zero();
+
             self.emit(Events::PoolMemberRewardClaimed { pool_member, reward_address, amount });
         }
     }

@@ -8,7 +8,7 @@ use contracts::pool::{PoolMemberInfo, Pool::{SwitchPoolData, InternalPoolFunctio
 use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
 use contracts::test_utils;
 use test_utils::{initialize_pool_state, deploy_mock_erc20_contract, StakingInitConfig};
-use test_utils::{deploy_staking_contract, approve};
+use test_utils::{deploy_staking_contract, approve, fund};
 use test_utils::{stake_with_pool_enabled, load_from_simple_map, load_option_from_simple_map};
 use test_utils::{general_contract_system_deployment, cheat_reward_for_reward_supplier};
 use test_utils::{create_rewards_for_pool_member, load_pool_member_info_from_map};
@@ -17,7 +17,7 @@ use contracts::test_utils::constants;
 use constants::{STAKER_ADDRESS, STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, DUMMY_ADDRESS};
 use constants::{OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, COMMISSION, STAKER_FINAL_INDEX};
 use constants::{NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_POOL_MEMBER_ADDRESS};
-use constants::OTHER_OPERATIONAL_ADDRESS;
+use constants::{OTHER_OPERATIONAL_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS};
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use contracts::staking::objects::UndelegateIntentValueZero;
 use contracts::event_test_utils;
@@ -75,6 +75,52 @@ fn test_calculate_rewards() {
     };
     assert_eq!(pool_member_info, expected_pool_member_info);
 }
+
+
+#[test]
+fn test_send_rewards_to_member() {
+    // Initialize pool state.
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address
+    );
+    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let mut state = initialize_pool_state(
+        staker_address: cfg.test_info.staker_address,
+        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        :token_address,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    // Setup pool_member_info and expected results before sending rewards.
+    let unclaimed_rewards = POOL_MEMBER_UNCLAIMED_REWARDS;
+    cfg.pool_member_info.unclaimed_rewards = unclaimed_rewards;
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: test_address(),
+        amount: unclaimed_rewards,
+        :token_address
+    );
+    let member_balance_before_rewards = erc20_dispatcher
+        .balance_of(account: cfg.pool_member_info.reward_address);
+    let expected_pool_member_info = PoolMemberInfo {
+        unclaimed_rewards: Zero::zero(), ..cfg.pool_member_info
+    };
+    // Send rewards to pool member's reward address.
+    state
+        .send_rewards_to_member(
+            ref pool_member_info: cfg.pool_member_info,
+            pool_member: cfg.test_info.pool_member_address,
+            :erc20_dispatcher
+        );
+    // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
+    assert_eq!(expected_pool_member_info, cfg.pool_member_info);
+    let member_balance_after_rewards = erc20_dispatcher
+        .balance_of(account: cfg.pool_member_info.reward_address);
+    assert_eq!(
+        member_balance_after_rewards, member_balance_before_rewards + unclaimed_rewards.into()
+    );
+}
+
 
 // TODO(alon, 24/07/2024): Complete this function.
 #[test]

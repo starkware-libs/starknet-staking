@@ -45,7 +45,8 @@ pub(crate) mod constants {
     pub const BUFFER: u128 = 1000000000000;
     pub const L1_STAKING_MINTER_ADDRESS: felt252 = 'L1_MINTER';
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
-
+    pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
+    pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         contract_address_const::<'CALLER_ADDRESS'>()
