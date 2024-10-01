@@ -44,8 +44,8 @@ use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::pool::Pool::SwitchPoolData;
 use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+use contracts::types::{Index, Amount};
 use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
-use contracts::types::Index;
 
 #[test]
 fn test_constructor() {
@@ -155,8 +155,8 @@ fn test_calculate_rewards() {
         rewards_including_commission: pool_rewards_including_commission,
         commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
-    let unclaimed_rewards_own: u128 = staker_rewards + commission_amount;
-    let unclaimed_rewards: u128 = pool_rewards_including_commission - commission_amount;
+    let unclaimed_rewards_own: Amount = staker_rewards + commission_amount;
+    let unclaimed_rewards: Amount = pool_rewards_including_commission - commission_amount;
     let expected_staker_info = StakerInfo {
         index: staker_info.index,
         unclaimed_rewards_own,

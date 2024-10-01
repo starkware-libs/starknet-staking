@@ -4,7 +4,7 @@ use contracts::staking::PauseEvents;
 use contracts::pool::Events as PoolEvents;
 use contracts::reward_supplier::Events as RewardSupplierEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
-use contracts::types::{Commission, TimeStamp, Index};
+use contracts::types::{Commission, TimeStamp, Index, Amount};
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(
@@ -21,7 +21,7 @@ pub fn assert_staker_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     exit_timestamp: TimeStamp,
-    amount: u128
+    amount: Amount
 ) {
     let expected_event = @contracts::staking::Staking::Event::StakerExitIntent(
         StakingEvents::StakerExitIntent { staker_address, exit_timestamp, amount }
@@ -45,7 +45,7 @@ pub fn assert_new_staker_event(
     staker_address: ContractAddress,
     reward_address: ContractAddress,
     operational_address: ContractAddress,
-    self_stake: u128,
+    self_stake: Amount
 ) {
     let expected_event = @contracts::staking::Staking::Event::NewStaker(
         StakingEvents::NewStaker { staker_address, reward_address, operational_address, self_stake }
@@ -68,10 +68,10 @@ pub fn assert_new_staker_event(
 pub fn assert_stake_balance_changed_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
-    old_self_stake: u128,
-    old_delegated_stake: u128,
-    new_self_stake: u128,
-    new_delegated_stake: u128
+    old_self_stake: Amount,
+    old_delegated_stake: Amount,
+    new_self_stake: Amount,
+    new_delegated_stake: Amount
 ) {
     let expected_event = @contracts::staking::Staking::Event::StakeBalanceChanged(
         StakingEvents::StakeBalanceChanged {
@@ -99,7 +99,7 @@ pub fn assert_pool_member_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
     exit_timestamp: TimeStamp,
-    amount: u128,
+    amount: Amount
 ) {
     let expected_event = @contracts::pool::Pool::Event::PoolMemberExitIntent(
         PoolEvents::PoolMemberExitIntent { pool_member, exit_timestamp, amount }
@@ -122,7 +122,7 @@ pub fn assert_pool_member_reward_claimed_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
     reward_address: ContractAddress,
-    amount: u128,
+    amount: Amount
 ) {
     let expected_event = @contracts::pool::Pool::Event::PoolMemberRewardClaimed(
         PoolEvents::PoolMemberRewardClaimed { pool_member, reward_address, amount }
@@ -144,8 +144,8 @@ pub fn assert_pool_member_reward_claimed_event(
 pub fn assert_delegation_pool_member_balance_changed_event(
     mut spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
-    old_delegated_stake: u128,
-    new_delegated_stake: u128,
+    old_delegated_stake: Amount,
+    new_delegated_stake: Amount
 ) {
     let expected_event = @contracts::pool::Pool::Event::DelegationPoolMemberBalanceChanged(
         PoolEvents::DelegationPoolMemberBalanceChanged {
@@ -296,7 +296,7 @@ pub fn assert_staker_reward_claimed_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     reward_address: ContractAddress,
-    amount: u128,
+    amount: Amount
 ) {
     let expected_event = @contracts::staking::Staking::Event::StakerRewardClaimed(
         StakingEvents::StakerRewardClaimed { staker_address, reward_address, amount }
@@ -363,7 +363,7 @@ pub(crate) fn assert_calculated_rewards_event(
     spied_event: @(ContractAddress, Event),
     last_timestamp: TimeStamp,
     new_timestamp: TimeStamp,
-    rewards_calculated: u128,
+    rewards_calculated: Amount
 ) {
     let expected_event = @contracts::reward_supplier::RewardSupplier::Event::CalculatedRewards(
         RewardSupplierEvents::CalculatedRewards {
@@ -385,7 +385,7 @@ pub(crate) fn assert_calculated_rewards_event(
 }
 
 pub(crate) fn assert_mint_request_event(
-    spied_event: @(ContractAddress, Event), total_amount: u128, num_msgs: u128
+    spied_event: @(ContractAddress, Event), total_amount: Amount, num_msgs: u128
 ) {
     let expected_event = @contracts::reward_supplier::RewardSupplier::Event::mintRequest(
         RewardSupplierEvents::MintRequest { total_amount, num_msgs }
@@ -454,7 +454,7 @@ pub(crate) fn assert_new_pool_member_event(
     pool_member: ContractAddress,
     staker_address: ContractAddress,
     reward_address: ContractAddress,
-    amount: u128
+    amount: Amount
 ) {
     let expected_event = @contracts::pool::Pool::Event::NewPoolMember(
         PoolEvents::NewPoolMember { pool_member, staker_address, reward_address, amount }
@@ -478,7 +478,7 @@ pub fn assert_rewards_supplied_to_delegation_pool_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     pool_address: ContractAddress,
-    amount: u128
+    amount: Amount
 ) {
     let expected_event = @contracts::staking::Staking::Event::RewardsSuppliedToDelegationPool(
         StakingEvents::RewardsSuppliedToDelegationPool { staker_address, pool_address, amount }

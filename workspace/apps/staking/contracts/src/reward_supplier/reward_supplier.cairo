@@ -19,7 +19,7 @@ pub mod RewardSupplier {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts::types::TimeStamp;
+    use contracts::types::{TimeStamp, Amount};
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -46,9 +46,9 @@ pub mod RewardSupplier {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         last_timestamp: TimeStamp,
-        unclaimed_rewards: u128,
-        l1_pending_requested_amount: u128,
-        base_mint_amount: u128,
+        unclaimed_rewards: Amount,
+        l1_pending_requested_amount: Amount,
+        base_mint_amount: Amount,
         minting_curve_dispatcher: IMintingCurveDispatcher,
         staking_contract: ContractAddress,
         erc20_dispatcher: IERC20Dispatcher,
@@ -74,7 +74,7 @@ pub mod RewardSupplier {
     #[constructor]
     pub fn constructor(
         ref self: ContractState,
-        base_mint_amount: u128,
+        base_mint_amount: Amount,
         minting_curve_contract: ContractAddress,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
@@ -100,7 +100,7 @@ pub mod RewardSupplier {
 
     #[abi(embed_v0)]
     impl RewardSupplierImpl of IRewardSupplier<ContractState> {
-        fn calculate_staking_rewards(ref self: ContractState) -> u128 {
+        fn calculate_staking_rewards(ref self: ContractState) -> Amount {
             let staking_contract = self.staking_contract.read();
             assert_with_err(
                 get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT
@@ -119,7 +119,7 @@ pub mod RewardSupplier {
             rewards
         }
 
-        fn claim_rewards(ref self: ContractState, amount: u128) {
+        fn claim_rewards(ref self: ContractState, amount: Amount) {
             let staking_contract = self.staking_contract.read();
             assert_with_err(
                 get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT
@@ -142,7 +142,7 @@ pub mod RewardSupplier {
                 get_caller_address() == self.starkgate_address.read(),
                 Error::ON_RECEIVE_NOT_FROM_STARKGATE
             );
-            let amount_low: u128 = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
+            let amount_low: Amount = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
             if amount_low > l1_pending_requested_amount {
                 self.l1_pending_requested_amount.write(Zero::zero());
@@ -163,7 +163,7 @@ pub mod RewardSupplier {
 
     #[generate_trait]
     pub impl InternalRewardSupplierFunctions of InternalRewardSupplierFunctionsTrait {
-        fn calculate_rewards(ref self: ContractState) -> u128 {
+        fn calculate_rewards(ref self: ContractState) -> Amount {
             let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
             let yearly_mint = minting_curve_dispatcher.yearly_mint();
             let last_timestamp = self.last_timestamp.read();
@@ -173,19 +173,19 @@ pub mod RewardSupplier {
             yearly_mint * seconds_diff.into() / SECONDS_IN_YEAR
         }
 
-        fn update_unclaimed_rewards(ref self: ContractState, rewards: u128) -> u128 {
+        fn update_unclaimed_rewards(ref self: ContractState, rewards: Amount) -> Amount {
             let mut unclaimed_rewards = self.unclaimed_rewards.read();
             unclaimed_rewards += rewards;
             self.unclaimed_rewards.write(unclaimed_rewards);
             unclaimed_rewards
         }
 
-        fn request_funds_if_needed(ref self: ContractState, unclaimed_rewards: u128) {
+        fn request_funds_if_needed(ref self: ContractState, unclaimed_rewards: Amount) {
             let erc20_dispatcher = self.erc20_dispatcher.read();
-            let balance: u128 = erc20_dispatcher
+            let balance: Amount = erc20_dispatcher
                 .balance_of(account: get_contract_address())
                 .try_into()
-                .expect_with_err(Error::BALANCE_ISNT_U128);
+                .expect_with_err(Error::BALANCE_ISNT_AMOUNT_TYPE);
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
             let credit = balance + l1_pending_requested_amount;
             let debit = unclaimed_rewards;

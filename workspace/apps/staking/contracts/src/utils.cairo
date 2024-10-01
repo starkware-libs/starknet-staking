@@ -7,7 +7,7 @@ use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
 use core::num::traits::WideMul;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts::types::{Commission, TimeStamp, Index};
+use contracts::types::{Commission, TimeStamp, Index, Amount};
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
@@ -56,13 +56,13 @@ pub fn deploy_delegation_pool_contract(
 //
 // $$ commission_amount = rewards_including_commission * commission / COMMISSION_DENOMINATOR $$
 pub fn compute_commission_amount_rounded_down(
-    rewards_including_commission: u128, commission: Commission
-) -> u128 {
+    rewards_including_commission: Amount, commission: Commission
+) -> Amount {
     u128_mul_wide_and_div_unsafe(
         lhs: rewards_including_commission,
         rhs: commission.into(),
         div: COMMISSION_DENOMINATOR.into(),
-        error: Error::COMMISSION_ISNT_U128
+        error: Error::COMMISSION_ISNT_AMOUNT_TYPE
     )
 }
 
@@ -71,17 +71,17 @@ pub fn compute_commission_amount_rounded_down(
 // $$ commission_amount = ceil_of_division(rewards_including_commission * commission,
 // COMMISSION_DENOMINATOR) $$
 pub fn compute_commission_amount_rounded_up(
-    rewards_including_commission: u128, commission: Commission
-) -> u128 {
+    rewards_including_commission: Amount, commission: Commission
+) -> Amount {
     u128_mul_wide_and_ceil_div_unsafe(
         lhs: rewards_including_commission,
         rhs: commission.into(),
         div: COMMISSION_DENOMINATOR.into(),
-        error: Error::COMMISSION_ISNT_U128
+        error: Error::COMMISSION_ISNT_AMOUNT_TYPE
     )
 }
 
-pub fn compute_global_index_diff(staking_rewards: u128, total_stake: u128) -> Index {
+pub fn compute_global_index_diff(staking_rewards: Amount, total_stake: Amount) -> Index {
     if total_stake.is_zero() {
         return 0;
     }
@@ -97,18 +97,24 @@ pub fn compute_global_index_diff(staking_rewards: u128, total_stake: u128) -> In
 // Compute the rewards from the amount and interest.
 //
 // $$ rewards = amount * interest / BASE_VALUE $$
-pub fn compute_rewards_rounded_down(amount: u128, interest: u64) -> u128 {
+pub fn compute_rewards_rounded_down(amount: Amount, interest: u64) -> Amount {
     u128_mul_wide_and_div_unsafe(
-        lhs: amount, rhs: interest.into(), div: BASE_VALUE.into(), error: Error::REWARDS_ISNT_U128
+        lhs: amount,
+        rhs: interest.into(),
+        div: BASE_VALUE.into(),
+        error: Error::REWARDS_ISNT_AMOUNT_TYPE
     )
 }
 
 // Compute the rewards from the amount and interest.
 //
 // $$ rewards = ceil_of_division(amount * interest, BASE_VALUE) $$
-pub fn compute_rewards_rounded_up(amount: u128, interest: u64) -> u128 {
+pub fn compute_rewards_rounded_up(amount: Amount, interest: u64) -> Amount {
     u128_mul_wide_and_ceil_div_unsafe(
-        lhs: amount, rhs: interest.into(), div: BASE_VALUE.into(), error: Error::REWARDS_ISNT_U128
+        lhs: amount,
+        rhs: interest.into(),
+        div: BASE_VALUE.into(),
+        error: Error::REWARDS_ISNT_AMOUNT_TYPE
     )
 }
 
@@ -121,7 +127,7 @@ pub fn u256_ceil_of_division(dividend: u256, divisor: u256) -> u256 {
 }
 
 // Compute the threshold for requesting funds from L1 Staking Minter.
-pub fn compute_threshold(base_mint_amount: u128) -> u128 {
+pub fn compute_threshold(base_mint_amount: Amount) -> Amount {
     base_mint_amount / 2
 }
 
@@ -223,7 +229,7 @@ mod tests {
     #[test]
     #[should_panic(expected: "Rewards is too large, expected to fit in u128")]
     fn u128_mul_wide_and_div_unsafe_test_panic() {
-        u128_mul_wide_and_div_unsafe(MAX_U128, MAX_U128, 1, Error::REWARDS_ISNT_U128);
+        u128_mul_wide_and_div_unsafe(MAX_U128, MAX_U128, 1, Error::REWARDS_ISNT_AMOUNT_TYPE);
     }
 
     #[test]
