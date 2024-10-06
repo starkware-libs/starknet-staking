@@ -1186,7 +1186,7 @@ fn test_update_global_index_if_needed() {
         target: staking_contract, storage_address: selector!("global_index")
     )
         .try_into()
-        .expect('global index not fit in u64');
+        .expect('global index not fit in Index');
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let mut spy = snforge_std::spy_events();
     // Use the default operator.
@@ -1199,7 +1199,7 @@ fn test_update_global_index_if_needed() {
         target: staking_contract, storage_address: selector!("global_index")
     )
         .try_into()
-        .expect('global index not fit in u64');
+        .expect('global index not fit in Index');
     assert_eq!(global_index_before_first_update, global_index_after_first_update);
     // Advance time by a year, update total_stake to be total_supply (which is equal to initial
     // supply), which means that max_inflation * BASE_VALUE will be added to global_index.
@@ -1229,7 +1229,7 @@ fn test_update_global_index_if_needed() {
         target: staking_contract, storage_address: selector!("global_index")
     )
         .try_into()
-        .expect('global index not fit in u64');
+        .expect('global index not fit in Index');
     assert_eq!(
         global_index_after_second_update, global_index_after_first_update + global_index_increment
     );

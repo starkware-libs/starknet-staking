@@ -87,7 +87,7 @@ pub fn compute_global_index_diff(staking_rewards: Amount, total_stake: Amount) -
     }
     let diff = u128_mul_wide_and_div_unsafe(
         lhs: staking_rewards,
-        rhs: BASE_VALUE.into(),
+        rhs: BASE_VALUE,
         div: total_stake,
         error: Error::GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW,
     );
@@ -97,24 +97,18 @@ pub fn compute_global_index_diff(staking_rewards: Amount, total_stake: Amount) -
 // Compute the rewards from the amount and interest.
 //
 // $$ rewards = amount * interest / BASE_VALUE $$
-pub fn compute_rewards_rounded_down(amount: Amount, interest: u64) -> Amount {
+pub fn compute_rewards_rounded_down(amount: Amount, interest: Index) -> Amount {
     u128_mul_wide_and_div_unsafe(
-        lhs: amount,
-        rhs: interest.into(),
-        div: BASE_VALUE.into(),
-        error: Error::REWARDS_ISNT_AMOUNT_TYPE
+        lhs: amount, rhs: interest, div: BASE_VALUE, error: Error::REWARDS_ISNT_AMOUNT_TYPE
     )
 }
 
 // Compute the rewards from the amount and interest.
 //
 // $$ rewards = ceil_of_division(amount * interest, BASE_VALUE) $$
-pub fn compute_rewards_rounded_up(amount: Amount, interest: u64) -> Amount {
+pub fn compute_rewards_rounded_up(amount: Amount, interest: Index) -> Amount {
     u128_mul_wide_and_ceil_div_unsafe(
-        lhs: amount,
-        rhs: interest.into(),
-        div: BASE_VALUE.into(),
-        error: Error::REWARDS_ISNT_AMOUNT_TYPE
+        lhs: amount, rhs: interest, div: BASE_VALUE, error: Error::REWARDS_ISNT_AMOUNT_TYPE
     )
 }
 
@@ -158,70 +152,71 @@ pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
 
 #[cfg(test)]
 mod tests {
-    use super::{Error, MAX_U64, MAX_U128, BASE_VALUE};
+    use super::{Error, MAX_U64, MAX_U128};
     use super::{
         u64_mul_wide_and_div_unsafe, u64_mul_wide_and_ceil_div_unsafe, u128_mul_wide_and_div_unsafe,
         u128_mul_wide_and_ceil_div_unsafe
     };
+    const TEST_NUM: u64 = 100000000000;
 
     #[test]
     fn u64_mul_wide_and_div_unsafe_test() {
         let num = u64_mul_wide_and_div_unsafe(
-            lhs: MAX_U64, rhs: MAX_U64, div: MAX_U64, error: Error::INTEREST_ISNT_U64
+            lhs: MAX_U64, rhs: MAX_U64, div: MAX_U64, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
         assert!(num == MAX_U64, "MAX_U64*MAX_U64/MAX_U64 calcaulated wrong");
         let max_u33: u64 = 0x1_FFFF_FFFF; // 2**33 -1 
         // The following calculation is (2**33-1)*(2**33+1)/4 == (2**66-1)/4,
         // Which is MAX_U64 (== 2**64-1) when rounded down.
         let num = u64_mul_wide_and_div_unsafe(
-            lhs: max_u33, rhs: (max_u33 + 2), div: 4, error: Error::INTEREST_ISNT_U64
+            lhs: max_u33, rhs: (max_u33 + 2), div: 4, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
         assert!(num == MAX_U64, "MAX_U33*(MAX_U33+2)/4 calcaulated wrong");
     }
 
     #[test]
-    #[should_panic(expected: "Interest is too large, expected to fit in u64")]
+    #[should_panic(expected: "Interest is too large, expected to fit in u128")]
     fn u64_mul_wide_and_div_unsafe_test_panic() {
         u64_mul_wide_and_div_unsafe(
-            lhs: MAX_U64, rhs: MAX_U64, div: 1, error: Error::INTEREST_ISNT_U64
+            lhs: MAX_U64, rhs: MAX_U64, div: 1, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
     }
 
     #[test]
     fn u64_mul_wide_and_ceil_div_unsafe_test() {
         let num = u64_mul_wide_and_ceil_div_unsafe(
-            lhs: MAX_U64, rhs: MAX_U64, div: MAX_U64, error: Error::INTEREST_ISNT_U64
+            lhs: MAX_U64, rhs: MAX_U64, div: MAX_U64, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
         assert!(num == MAX_U64, "ceil_of_div(MAX_U64*MAX_U64, MAX_U64) calcaulated wrong");
         let num = u64_mul_wide_and_ceil_div_unsafe(
-            lhs: BASE_VALUE.into() + 1,
+            lhs: TEST_NUM.into() + 1,
             rhs: 1,
-            div: BASE_VALUE.into(),
-            error: Error::INTEREST_ISNT_U64
+            div: TEST_NUM.into(),
+            error: Error::INTEREST_ISNT_INDEX_TYPE
         );
-        assert!(num == 2, "ceil_of_division((BASE_VALUE+1)*1, BASE_VALUE) calcaulated wrong");
+        assert!(num == 2, "ceil_of_division((TEST_NUM+1)*1, TEST_NUM) calcaulated wrong");
     }
 
     #[test]
-    #[should_panic(expected: "Interest is too large, expected to fit in u64")]
+    #[should_panic(expected: "Interest is too large, expected to fit in u128")]
     fn u64_mul_wide_and_ceil_div_unsafe_test_panic() {
         let max_u33: u64 = 0x1_FFFF_FFFF; // 2**33 -1 
         // The following calculation is ceil((2**33-1)*(2**33+1)/4) == ceil((2**66-1)/4),
         // Which is MAX_U64+1 (== 2**64) when rounded up.
         u64_mul_wide_and_ceil_div_unsafe(
-            lhs: max_u33, rhs: (max_u33 + 2), div: 4, error: Error::INTEREST_ISNT_U64
+            lhs: max_u33, rhs: (max_u33 + 2), div: 4, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
     }
 
     #[test]
     fn u128_mul_wide_and_div_unsafe_test() {
         let num = u128_mul_wide_and_div_unsafe(
-            lhs: MAX_U128, rhs: MAX_U128, div: MAX_U128, error: Error::INTEREST_ISNT_U64
+            lhs: MAX_U128, rhs: MAX_U128, div: MAX_U128, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
         assert!(num == MAX_U128, "MAX_U128*MAX_U128/MAX_U128 calcaulated wrong");
         let max_u65: u128 = 0x1_FFFF_FFFF_FFFF_FFFF;
         let num = u128_mul_wide_and_div_unsafe(
-            lhs: max_u65, rhs: (max_u65 + 2), div: 4, error: Error::INTEREST_ISNT_U64
+            lhs: max_u65, rhs: (max_u65 + 2), div: 4, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
         assert!(num == MAX_U128, "MAX_U65*(MAX_U65+2)/4 calcaulated wrong");
     }
@@ -235,24 +230,24 @@ mod tests {
     #[test]
     fn u128_mul_wide_and_ceil_div_unsafe_test() {
         let num = u128_mul_wide_and_ceil_div_unsafe(
-            lhs: MAX_U128, rhs: MAX_U128, div: MAX_U128, error: Error::INTEREST_ISNT_U64
+            lhs: MAX_U128, rhs: MAX_U128, div: MAX_U128, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
         assert!(num == MAX_U128, "ceil_of_div(MAX_U128*MAX_U128, MAX_U128) calcaulated wrong");
         let num = u128_mul_wide_and_ceil_div_unsafe(
-            lhs: BASE_VALUE.into() + 1,
+            lhs: TEST_NUM.into() + 1,
             rhs: 1,
-            div: BASE_VALUE.into(),
-            error: Error::INTEREST_ISNT_U64
+            div: TEST_NUM.into(),
+            error: Error::INTEREST_ISNT_INDEX_TYPE
         );
-        assert!(num == 2, "ceil_of_division((BASE_VALUE+1)*1, BASE_VALUE) calcaulated wrong");
+        assert!(num == 2, "ceil_of_division((TEST_NUM+1)*1, TEST_NUM) calcaulated wrong");
     }
 
     #[test]
-    #[should_panic(expected: "Interest is too large, expected to fit in u64")]
+    #[should_panic(expected: "Interest is too large, expected to fit in u128")]
     fn u128_mul_wide_and_ceil_div_unsafe_test_panic() {
         let max_u65: u128 = 0x1_FFFF_FFFF_FFFF_FFFF;
         u128_mul_wide_and_ceil_div_unsafe(
-            lhs: max_u65, rhs: (max_u65 + 2), div: 4, error: Error::INTEREST_ISNT_U64
+            lhs: max_u65, rhs: (max_u65 + 2), div: 4, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
     }
 }

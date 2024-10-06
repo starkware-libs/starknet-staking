@@ -21,6 +21,7 @@ use constants::{OTHER_OPERATIONAL_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS};
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use contracts::staking::objects::UndelegateIntentValueZero;
 use contracts::event_test_utils;
+use contracts::types::Index;
 use event_test_utils::assert_pool_member_reward_claimed_event;
 use event_test_utils::{assert_final_index_set_event, assert_new_pool_member_event};
 use event_test_utils::assert_pool_member_exit_intent_event;
@@ -49,7 +50,7 @@ fn test_calculate_rewards() {
         commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
 
-    let updated_index: u64 = cfg.staker_info.index * 2;
+    let updated_index: Index = cfg.staker_info.index * 2;
     let mut pool_member_info = PoolMemberInfo {
         reward_address: cfg.staker_info.reward_address,
         amount: cfg.staker_info.amount_own,
@@ -490,12 +491,12 @@ fn test_claim_rewards() {
     );
     // Update index for testing.
     // TODO: Wrap in a function.
-    let updated_index: u64 = cfg.staker_info.index * 2;
+    let updated_index: Index = cfg.staker_info.index * 2;
     snforge_std::store(
         staking_contract, selector!("global_index"), array![updated_index.into()].span()
     );
     // Compute expected rewards.
-    let interest: u64 = updated_index - cfg.staker_info.index;
+    let interest: Index = updated_index - cfg.staker_info.index;
     let rewards_including_commission = compute_rewards_rounded_down(
         amount: cfg.pool_member_info.amount, :interest
     );

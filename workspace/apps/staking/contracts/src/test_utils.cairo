@@ -715,7 +715,7 @@ fn change_global_index(ref cfg: StakingInitConfig, index: Index) {
 }
 
 fn compute_unclaimed_rewards_member(
-    amount: Amount, interest: u64, commission: Commission
+    amount: Amount, interest: Index, commission: Commission
 ) -> Amount {
     let rewards_including_commission = compute_rewards_rounded_down(:amount, :interest);
     let commission_amount = compute_commission_amount_rounded_up(
