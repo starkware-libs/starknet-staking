@@ -453,7 +453,7 @@ pub mod Pool {
         fn calculate_rewards(
             ref self: ContractState, ref pool_member_info: PoolMemberInfo, updated_index: Index
         ) {
-            let interest: u64 = updated_index - pool_member_info.index;
+            let interest: Index = updated_index - pool_member_info.index;
             pool_member_info.index = updated_index;
             let rewards_including_commission = compute_rewards_rounded_down(
                 amount: pool_member_info.amount, :interest

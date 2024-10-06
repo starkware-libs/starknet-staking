@@ -7,7 +7,7 @@ use core::panics::panic_with_byte_array;
 pub enum Error {
     // Generic errors
     MESSAGES_COUNT_ISNT_U32,
-    INTEREST_ISNT_U64,
+    INTEREST_ISNT_INDEX_TYPE,
     REWARDS_ISNT_AMOUNT_TYPE,
     BALANCE_ISNT_AMOUNT_TYPE,
     COMMISSION_ISNT_AMOUNT_TYPE,
@@ -75,7 +75,7 @@ pub impl ErrorImpl of ErrorTrait {
         match self {
             Error::ON_RECEIVE_NOT_FROM_STARKGATE => "Only StarkGate can call on_receive",
             Error::MESSAGES_COUNT_ISNT_U32 => "Number of messages is too large, expected to fit in u32",
-            Error::INTEREST_ISNT_U64 => "Interest is too large, expected to fit in u64",
+            Error::INTEREST_ISNT_INDEX_TYPE => "Interest is too large, expected to fit in u128",
             Error::REWARDS_ISNT_AMOUNT_TYPE => "Rewards is too large, expected to fit in u128",
             Error::BALANCE_ISNT_AMOUNT_TYPE => "Balance is too large, expected to fit in u128",
             Error::COMMISSION_ISNT_AMOUNT_TYPE => "Commission is too large, expected to fit in u128",
@@ -116,7 +116,7 @@ pub impl ErrorImpl of ErrorTrait {
             Error::UNAUTHORIZED_MESSAGE_SENDER => "Unauthorized message sender",
             Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED => "Switch pool data deserialization failed",
             Error::DELEGATION_POOL_MISMATCH => "to_pool is not the delegation pool contract for to_staker",
-            Error::GLOBAL_INDEX_DIFF_NOT_INDEX_TYPE => "Global index diff does not fit in u64",
+            Error::GLOBAL_INDEX_DIFF_NOT_INDEX_TYPE => "Global index diff does not fit in u128",
             Error::GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW => "Overflow during computation global index diff",
             Error::UNEXPECTED_BALANCE => "Unexpected balance",
             Error::CANNOT_INCREASE_COMMISSION => "Commission cannot be increased",

@@ -752,7 +752,7 @@ pub mod Staking {
         }
 
         fn calculate_and_update_pool_rewards(
-            ref self: ContractState, interest: u64, ref staker_info: StakerInfo
+            ref self: ContractState, interest: Index, ref staker_info: StakerInfo
         ) {
             if let Option::Some(mut pool_info) = staker_info.pool_info {
                 if (pool_info.amount.is_non_zero()) {
