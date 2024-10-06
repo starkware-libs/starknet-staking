@@ -126,8 +126,8 @@ pub(crate) mod constants {
     pub fn SPENDER_ADDRESS() -> ContractAddress {
         contract_address_const::<'SPENDER_ADDRESS'>()
     }
-    pub fn NON_APP_GOVERNOR() -> ContractAddress {
-        contract_address_const::<'NON_APP_GOVERNOR'>()
+    pub fn NON_TOKEN_ADMIN() -> ContractAddress {
+        contract_address_const::<'NON_TOKEN_ADMIN'>()
     }
     pub fn STRK_TOKEN_ADDRESS() -> ContractAddress {
         contract_address_const::<
@@ -362,7 +362,7 @@ pub(crate) fn set_account_as_app_governer(
 ) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
     cheat_caller_address_once(contract_address: contract, caller_address: app_role_admin);
-    roles_dispatcher.register_app_governor(:account);
+    roles_dispatcher.register_token_admin(:account);
 }
 
 pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractAddress {
