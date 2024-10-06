@@ -395,7 +395,9 @@ pub mod Pool {
             }
         }
 
-        fn update_commission(ref self: ContractState, commission: Commission) {
+        fn update_commission_from_staking_contract(
+            ref self: ContractState, commission: Commission
+        ) {
             assert_with_err(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
@@ -457,10 +459,11 @@ pub mod Pool {
                 amount: pool_member_info.amount, :interest
             );
             let commission_amount = compute_commission_amount_rounded_up(
-                :rewards_including_commission, commission: self.commission.read()
+                :rewards_including_commission, commission: pool_member_info.commission
             );
             let rewards = rewards_including_commission - commission_amount;
             pool_member_info.unclaimed_rewards += rewards;
+            pool_member_info.commission = self.commission.read();
         }
 
         fn update_index_and_calculate_rewards(

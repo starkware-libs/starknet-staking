@@ -197,10 +197,10 @@ pub mod Operator {
             self.staking_dispatcher.read().change_operational_address(:operational_address)
         }
 
-        // fn update_commission(ref self: ContractState, commission: Commission) -> bool {
-        //     self.check_whitelist(get_caller_address());
-        //     self.staking_dispatcher.read().update_commission(:commission)
-        // }
+        fn update_commission(ref self: ContractState, commission: Commission) {
+            self.check_whitelist(get_caller_address());
+            self.staking_dispatcher.read().update_commission(:commission)
+        }
 
         fn is_paused(self: @ContractState) -> bool {
             self.staking_dispatcher.read().is_paused()

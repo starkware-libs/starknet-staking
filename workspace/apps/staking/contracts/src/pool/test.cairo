@@ -914,7 +914,7 @@ fn test_contract_parameters() {
 }
 
 #[test]
-fn test_update_commission() {
+fn test_update_commission_from_staking_contract() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
@@ -931,7 +931,7 @@ fn test_update_commission() {
 
     let commission = cfg.staker_info.get_pool_info_unchecked().commission - 1;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
-    pool_dispatcher.update_commission(:commission);
+    pool_dispatcher.update_commission_from_staking_contract(:commission);
 
     let parameters_after_update = pool_dispatcher.contract_parameters();
     let expected_parameters_after_update = PoolContractInfo {
@@ -954,7 +954,9 @@ fn test_update_commission_caller_not_staking_contract() {
         contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS()
     );
     pool_dispatcher
-        .update_commission(commission: cfg.staker_info.get_pool_info_unchecked().commission);
+        .update_commission_from_staking_contract(
+            commission: cfg.staker_info.get_pool_info_unchecked().commission
+        );
 }
 
 #[test]
@@ -969,7 +971,31 @@ fn test_update_commission_with_higher_commission() {
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     pool_dispatcher
-        .update_commission(commission: cfg.staker_info.get_pool_info_unchecked().commission + 1);
+        .update_commission_from_staking_contract(
+            commission: cfg.staker_info.get_pool_info_unchecked().commission + 1
+        );
+}
+
+#[test]
+fn test_update_commission_with_same_commission() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    let parameters_before_update = pool_dispatcher.contract_parameters();
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
+    pool_dispatcher
+        .update_commission_from_staking_contract(
+            commission: cfg.staker_info.get_pool_info_unchecked().commission
+        );
+    let parameters_after_update = pool_dispatcher.contract_parameters();
+    let expected_parameters_after_update = PoolContractInfo {
+        commission: cfg.staker_info.get_pool_info_unchecked().commission, ..parameters_before_update
+    };
+    assert_eq!(parameters_after_update, expected_parameters_after_update);
 }
 
 #[test]

@@ -97,10 +97,9 @@ pub mod StakingForOperatorMock {
         ) {
             self.assert_execution_context();
         }
-        // fn update_commission(ref self: ContractState, commission: Commission) -> bool {
-        //     self.assert_execution_context();
-        //     true
-        // }
+        fn update_commission(ref self: ContractState, commission: Commission) {
+            self.assert_execution_context();
+        }
         fn is_paused(self: @ContractState) -> bool {
             self.assert_execution_context();
             false
