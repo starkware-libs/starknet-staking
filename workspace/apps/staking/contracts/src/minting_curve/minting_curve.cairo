@@ -101,7 +101,7 @@ pub mod MintingCurve {
     #[abi(embed_v0)]
     impl IMintingCurveConfigImpl of IMintingCurveConfig<ContractState> {
         fn set_c_num(ref self: ContractState, c_num: Inflation) {
-            self.roles.only_app_governor();
+            self.roles.only_token_admin();
             assert_with_err(c_num <= C_DENOM, Error::C_NUM_OUT_OF_RANGE);
             self.c_num.write(c_num);
         }

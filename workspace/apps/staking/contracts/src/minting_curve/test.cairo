@@ -5,7 +5,7 @@ use contracts::minting_curve::interface::MintingCurveContractInfo;
 use core::num::traits::{WideMul, Sqrt};
 use contracts::test_utils::{general_contract_system_deployment, stake_for_testing_using_dispatcher};
 use contracts::test_utils::StakingInitConfig;
-use contracts::test_utils::constants::NON_APP_GOVERNOR;
+use contracts::test_utils::constants::NON_TOKEN_ADMIN;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::types::Amount;
 
@@ -57,7 +57,7 @@ fn test_set_c_num() {
 }
 
 #[test]
-#[should_panic(expected: 'ONLY_APP_GOVERNOR')]
+#[should_panic(expected: 'ONLY_TOKEN_ADMIN')]
 fn test_set_c_num_unauthorized() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -67,7 +67,7 @@ fn test_set_c_num_unauthorized() {
     };
     let new_c_num = cfg.minting_curve_contract_info.c_num * 2;
     cheat_caller_address_once(
-        contract_address: minting_curve_contract, caller_address: NON_APP_GOVERNOR()
+        contract_address: minting_curve_contract, caller_address: NON_TOKEN_ADMIN()
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }
