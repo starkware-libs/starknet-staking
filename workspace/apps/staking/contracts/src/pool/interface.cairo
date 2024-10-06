@@ -109,5 +109,5 @@ pub trait IPool<TContractState> {
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn pool_member_info(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
     fn contract_parameters(self: @TContractState) -> PoolContractInfo;
-    fn update_commission(ref self: TContractState, commission: Commission);
+    fn update_commission_from_staking_contract(ref self: TContractState, commission: Commission);
 }

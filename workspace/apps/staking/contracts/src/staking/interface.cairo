@@ -172,7 +172,7 @@ pub trait IStaking<TContractState> {
     fn get_total_stake(self: @TContractState) -> Amount;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
-    // fn update_commission(ref self: TContractState, commission: Commission) -> bool;
+    fn update_commission(ref self: TContractState, commission: Commission);
     fn is_paused(self: @TContractState) -> bool;
 }
 
