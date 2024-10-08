@@ -892,7 +892,6 @@ packages:
   gar@1.0.4:
     resolution:
       integrity: sha512-w4n9cPWyP7aHxKxYHFQMegj7WIAsL/YX/C4Bs5Rr8s1H9M1rNtRWRsw+ovYMkXDQ5S4ZbYHsHAPmevPjPgw44w==
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
   get-caller-file@2.0.5:
     resolution:
       integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==

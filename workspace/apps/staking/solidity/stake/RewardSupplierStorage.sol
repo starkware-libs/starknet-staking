@@ -19,10 +19,13 @@ abstract contract RewardSupplierStorage {
 
     // L2 contract addresses.
     // The address from which reward requests are received.
-    string internal constant L2_MESSAGE_SOURCE_TAG = "REWARD_SUPPLIER_L2_MESSAGE_SOURCE_SLOT_TAG";
+    string internal constant L2_MINT_REQUEST_SOURCE_TAG =
+        "REWARD_SUPPLIER_L2_MINT_REQUEST_SOURCE_SLOT_TAG";
     // The contract address that receives the minted reward tokens.
     string internal constant L2_MINT_DESTINATION_TAG =
         "REWARD_SUPPLIER_L2_MINT_DESTINATION_SLOT_TAG";
+    // The contract address that determines the minting curve.
+    string internal constant L2_MINTING_CURVE_TAG = "REWARD_SUPPLIER_L2_MINTING_CURVE_SLOT_TAG";
 
     // Storage Getters.
     function bridge() internal view returns (IBridge) {
@@ -41,12 +44,16 @@ abstract contract RewardSupplierStorage {
         return IStarknetMessaging(NamedStorage.getAddressValue(MESSAGING_CONTRACT_TAG));
     }
 
-    function source() internal view returns (uint256) {
-        return NamedStorage.getUintValue(L2_MESSAGE_SOURCE_TAG);
+    function mintRequestSource() internal view returns (uint256) {
+        return NamedStorage.getUintValue(L2_MINT_REQUEST_SOURCE_TAG);
     }
 
     function mintDestination() internal view returns (uint256) {
         return NamedStorage.getUintValue(L2_MINT_DESTINATION_TAG);
+    }
+
+    function mintingCurve() internal view returns (uint256) {
+        return NamedStorage.getUintValue(L2_MINTING_CURVE_TAG);
     }
 
     // Storage Setters.
@@ -66,11 +73,15 @@ abstract contract RewardSupplierStorage {
         NamedStorage.setAddressValueOnce(MESSAGING_CONTRACT_TAG, contract_);
     }
 
-    function setSource(uint256 source_) internal {
-        NamedStorage.setUintValueOnce(L2_MESSAGE_SOURCE_TAG, source_);
+    function setMintRequestSource(uint256 mintRequestSource) internal {
+        NamedStorage.setUintValueOnce(L2_MINT_REQUEST_SOURCE_TAG, mintRequestSource);
     }
 
     function setMintDestination(uint256 mintDestination_) internal {
         NamedStorage.setUintValueOnce(L2_MINT_DESTINATION_TAG, mintDestination_);
+    }
+
+    function setMintingCurve(uint256 mintingCurve_) internal {
+        NamedStorage.setUintValueOnce(L2_MINTING_CURVE_TAG, mintingCurve_);
     }
 }

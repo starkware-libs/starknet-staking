@@ -2,6 +2,7 @@ use core::iter::Iterator;
 use core::iter::IntoIterator;
 use core::num::traits::BitSize;
 use core::num::traits::zero::Zero;
+use core::starknet::storage_access::StorePacking;
 
 use contracts_commons::pow_of_two::PowOfTwo;
 
@@ -15,6 +16,34 @@ pub struct BitSet<T> {
     lower_bound: usize,
     // Exclusive.
     upper_bound: usize,
+}
+
+impl BitSetStorePacking<
+    T, +Into<T, u128>, +TryInto<u128, T>, +Drop<T>, +BitSize<T>,
+> of StorePacking<BitSet<T>, u128> {
+    fn pack(value: BitSet<T>) -> u128 {
+        let shift_64 = PowOfTwo::<u128>::two_to_the(64).expect('Valid fixed index.');
+        let shift_96 = PowOfTwo::<u128>::two_to_the(96).expect('Valid fixed index.');
+
+        let packed = value.bit_array.into()
+            + value.lower_bound.into() * shift_64
+            + value.upper_bound.into() * shift_96;
+        packed
+    }
+
+    fn unpack(value: u128) -> BitSet<T> {
+        let bit_size = BitSize::<T>::bits();
+        let mask_t = PowOfTwo::<u128>::two_to_the(bit_size).expect('Valid bit size.') - 1;
+        let bit_array = (value & mask_t).try_into().expect('Masked by T\'s bit-size bits.');
+
+        let mask_32 = PowOfTwo::<u128>::two_to_the(32).expect('Valid fixed index.') - 1;
+        let shift_64 = PowOfTwo::<u128>::two_to_the(64).expect('Valid fixed index.');
+        let shift_96 = PowOfTwo::<u128>::two_to_the(96).expect('Valid fixed index.');
+        let lower_bound = ((value / shift_64) & mask_32).try_into().expect('Masked by 32 bits.');
+        let upper_bound = ((value / shift_96) & mask_32).try_into().expect('Masked by 32 bits.');
+
+        BitSet { bit_array, lower_bound, upper_bound }
+    }
 }
 
 pub trait BitSetTrait<T> {
@@ -122,6 +151,7 @@ impl SpanTryIntoBitSet<
 
 #[cfg(test)]
 mod tests {
+    use core::starknet::storage_access::StorePacking;
     use super::BitSet;
 
     const TESTED_BIT_ARRAY: u8 = 0b01100001;
@@ -146,13 +176,15 @@ mod tests {
         let bit_set_option: Option<BitSet<u8>> = invalid_span.try_into();
         assert!(bit_set_option.is_none());
     }
-    // TODO(uriel): Restore and change this test once BitSet will implement StorePacking.
-// #[test]
-// fn test_bit_set_range_store_packing() {
-//     let packed: u64 =
-//         0b0_000_000_000_000_000_000_000_000_000_001_000_000_000_000_000_000_000_000_000_000_001;
-//     let unpacked = BitSetRange { lower_bound: 0b1, upper_bound: 0b10 };
-//     assert_eq!(StorePacking::pack(unpacked), packed);
-//     assert_eq!(StorePacking::unpack(packed), unpacked);
-// }
+
+    #[test]
+    fn test_bit_set_store_packing() {
+        let packed: u128 =
+            0b00_000_000_000_000_000_000_000_000_000_010_000_000_000_000_000_000_000_000_000_000_010_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_110;
+        // The type of bit_array field does not change the fact that it is packed into the 64
+        // lower bits, so the packed version is the same for the _u8, _u16, _u32, _u64 suffixes.
+        let unpacked = BitSet { bit_array: 0b110_u8, lower_bound: 0b1, upper_bound: 0b10 };
+        assert_eq!(StorePacking::unpack(packed), unpacked);
+        assert_eq!(StorePacking::pack(unpacked), packed);
+    }
 }
