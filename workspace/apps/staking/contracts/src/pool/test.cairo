@@ -925,10 +925,10 @@ fn test_update_commission_from_staking_contract() {
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
 
     let parameters_before_update = pool_dispatcher.contract_parameters();
-    let ecpected_parameters_before_update = PoolContractInfo {
+    let expected_parameters_before_update = PoolContractInfo {
         commission: cfg.staker_info.get_pool_info_unchecked().commission, ..parameters_before_update
     };
-    assert_eq!(parameters_before_update, ecpected_parameters_before_update);
+    assert_eq!(parameters_before_update, expected_parameters_before_update);
 
     let commission = cfg.staker_info.get_pool_info_unchecked().commission - 1;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
