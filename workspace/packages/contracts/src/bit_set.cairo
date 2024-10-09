@@ -1,6 +1,6 @@
 use core::iter::Iterator;
 use core::iter::IntoIterator;
-use core::num::traits::BitSize;
+use core::num::traits::{BitSize, Bounded};
 use core::num::traits::zero::Zero;
 use core::starknet::storage_access::StorePacking;
 
@@ -19,7 +19,7 @@ pub struct BitSet<T> {
 }
 
 impl BitSetStorePacking<
-    T, +Into<T, u128>, +TryInto<u128, T>, +Drop<T>, +BitSize<T>,
+    T, +Into<T, u128>, +TryInto<u128, T>, +Drop<T>, +BitSize<T>, +Bounded<T>,
 > of StorePacking<BitSet<T>, u128> {
     fn pack(value: BitSet<T>) -> u128 {
         let shift_64 = PowOfTwo::<u128>::two_to_the(64).expect('Valid fixed index.');
@@ -32,11 +32,10 @@ impl BitSetStorePacking<
     }
 
     fn unpack(value: u128) -> BitSet<T> {
-        let bit_size = BitSize::<T>::bits();
-        let mask_t = PowOfTwo::<u128>::two_to_the(bit_size).expect('Valid bit size.') - 1;
+        let mask_t = Bounded::<T>::MAX.into();
         let bit_array = (value & mask_t).try_into().expect('Masked by T\'s bit-size bits.');
 
-        let mask_32 = PowOfTwo::<u128>::two_to_the(32).expect('Valid fixed index.') - 1;
+        let mask_32 = Bounded::<u32>::MAX.into();
         let shift_64 = PowOfTwo::<u128>::two_to_the(64).expect('Valid fixed index.');
         let shift_96 = PowOfTwo::<u128>::two_to_the(96).expect('Valid fixed index.');
         let lower_bound = ((value / shift_64) & mask_32).try_into().expect('Masked by 32 bits.');
