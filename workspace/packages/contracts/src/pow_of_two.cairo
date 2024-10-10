@@ -730,6 +730,78 @@ mod TwoToThe {
     const _251: felt252 =
         0b100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000;
 }
-// TODO: Write tests.
 
+#[cfg(test)]
+mod tests {
+    use super::PowOfTwo;
 
+    #[test]
+    fn test_u8_two_to_the() {
+        let mut power: usize = 0;
+        let mut expected: u8 = 1;
+        while power < 8 {
+            assert_eq!(PowOfTwo::two_to_the(power).unwrap(), expected);
+            power += 1;
+            if power < 8 {
+                expected *= 2;
+            }
+        };
+        assert_eq!(PowOfTwo::<u8>::two_to_the(power), Result::Err('Invalid power'));
+    }
+
+    #[test]
+    fn test_u16_two_to_the() {
+        let mut power: usize = 0;
+        let mut expected: u16 = 1;
+        while power < 16 {
+            assert_eq!(PowOfTwo::two_to_the(power).unwrap(), expected);
+            power += 1;
+            if power < 16 {
+                expected *= 2;
+            }
+        };
+        assert_eq!(PowOfTwo::<u16>::two_to_the(power), Result::Err('Invalid power'));
+    }
+
+    #[test]
+    fn test_u32_two_to_the() {
+        let mut power: usize = 0;
+        let mut expected: u32 = 1;
+        while power < 32 {
+            assert_eq!(PowOfTwo::two_to_the(power).unwrap(), expected);
+            power += 1;
+            if power < 32 {
+                expected *= 2;
+            }
+        };
+        assert_eq!(PowOfTwo::<u32>::two_to_the(power), Result::Err('Invalid power'));
+    }
+
+    #[test]
+    fn test_u64_two_to_the() {
+        let mut power: usize = 0;
+        let mut expected: u64 = 1;
+        while power < 64 {
+            assert_eq!(PowOfTwo::two_to_the(power).unwrap(), expected);
+            power += 1;
+            if power < 64 {
+                expected *= 2;
+            }
+        };
+        assert_eq!(PowOfTwo::<u64>::two_to_the(power), Result::Err('Invalid power'));
+    }
+
+    #[test]
+    fn test_u128_two_to_the() {
+        let mut power: usize = 0;
+        let mut expected: u128 = 1;
+        while power < 128 {
+            assert_eq!(PowOfTwo::two_to_the(power).unwrap(), expected);
+            power += 1;
+            if power < 128 {
+                expected *= 2;
+            }
+        };
+        assert_eq!(PowOfTwo::<u128>::two_to_the(power), Result::Err('Invalid power'));
+    }
+}

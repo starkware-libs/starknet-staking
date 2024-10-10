@@ -11,7 +11,7 @@ import "starkware/solidity/stake/RewardSupplierExternalInterfaces.sol";
 import "starkware/solidity/tokens/ERC20/IERC20.sol";
 import "third_party/open_zeppelin/utils/math/Math.sol";
 
-uint256 constant TOKENS_PER_MINT_REQUEST = 1_300_000;
+uint256 constant TOKENS_PER_MINT_REQUEST = 1_300_000 * 10 ** 18;
 uint256 constant MAX_MESSAGES_TO_PROCESS_PER_TICK = 10;
 
 // L1_handler selector for 'update_total_supply'.
