@@ -438,6 +438,7 @@ pub mod Staking {
             self.roles.only_operator();
             let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
+            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let pool_info = staker_info.get_pool_info_unchecked();
             let pool_contract = pool_info.pool_contract;
             let old_commission = pool_info.commission;
