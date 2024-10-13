@@ -116,7 +116,7 @@ pub mod Pool {
             erc20_dispatcher
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
             let staker_address = self.staker_address.read();
-            let (_, updated_index) = staking_pool_dispatcher
+            let updated_index = staking_pool_dispatcher
                 .add_stake_from_pool(:staker_address, :amount);
             self
                 .pool_member_info
@@ -165,7 +165,7 @@ pub mod Pool {
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             erc20_dispatcher
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
-            let (_, updated_index) = staking_pool_dispatcher
+            let updated_index = staking_pool_dispatcher
                 .add_stake_from_pool(staker_address: self.staker_address.read(), :amount);
             self.update_rewards(ref :pool_member_info, :updated_index);
             let old_delegated_stake = pool_member_info.amount;
@@ -474,7 +474,7 @@ pub mod Pool {
         }
 
         fn assert_staker_is_active(self: @ContractState) {
-            assert_with_err(self.final_staker_index.read().is_none(), Error::STAKER_INACTIVE);
+            assert_with_err(self.is_staker_active(), Error::STAKER_INACTIVE);
         }
 
         fn is_staker_active(self: @ContractState) -> bool {

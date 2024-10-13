@@ -403,8 +403,8 @@ fn stake(
 Add a new staker to the stake.
 #### emits <!-- omit from toc -->
 1. [New Delegation Pool](#new-delegation-pool) - if `pool_enabled` is true
-2. [Stake Balance Changed](#stake-balance-changed)
-3. [New Staker](#new-staker)
+2. [New Staker](#new-staker)
+3. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [ONLY\_OPERATOR](#only_operator)
@@ -560,13 +560,12 @@ fn add_stake_from_pool(
     ref self: ContractState, 
     staker_address: ContractAddress, 
     amount: u128
-) -> (u128, u64)
+) -> u128
 ```
 #### description <!-- omit from toc -->
 Delegation pool contract's way to add funds to the staking pool.
 #### return <!-- omit from toc -->
-pool_amount: u128 - total pool amount after addition.
-index: u64 - updated index
+index: u128 - updated index
 #### emits <!-- omit from toc -->
 1. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
@@ -659,11 +658,10 @@ fn switch_staking_delegation_pool(
     switched_amount: u128,
     data: Span<felt252>,
     identifier: felt252
-) -> bool
+)
 ```
 #### description <!-- omit from toc -->
 Execute a pool member request to move from one staker's delegation pool to another staker's delegation pool.
-Return true upon success, otherwise return false.
 #### emits <!-- omit from toc -->
 1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->

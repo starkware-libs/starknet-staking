@@ -192,7 +192,7 @@ pub trait IStakingPool<TContractState> {
     /// 4. Increase the total_stake by `amount`.
     fn add_stake_from_pool(
         ref self: TContractState, staker_address: ContractAddress, amount: Amount
-    ) -> (Amount, Index);
+    ) -> Index;
 
     /// Registers an intention to remove `amount` FRI of pooled stake from the staking contract.
     /// Returns the timestmap when the pool is allowed to remove the `amount` for `identifier`.
@@ -253,7 +253,7 @@ pub trait IStakingPool<TContractState> {
         switched_amount: Amount,
         data: Span<felt252>,
         identifier: felt252
-    ) -> bool;
+    );
 
     /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
     ///

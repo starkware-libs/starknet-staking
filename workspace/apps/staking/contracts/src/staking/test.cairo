@@ -109,20 +109,20 @@ fn test_stake() {
     // Validate StakeBalanceChanged and NewStaker event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 2, message: "stake");
-    assert_stake_balance_changed_event(
+    assert_new_staker_event(
         spied_event: events[0],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        self_stake: cfg.staker_info.amount_own,
+    );
+    assert_stake_balance_changed_event(
+        spied_event: events[1],
         :staker_address,
         old_self_stake: Zero::zero(),
         old_delegated_stake: Zero::zero(),
         new_self_stake: cfg.staker_info.amount_own,
         new_delegated_stake: Zero::zero()
-    );
-    assert_new_staker_event(
-        spied_event: events[1],
-        :staker_address,
-        reward_address: cfg.staker_info.reward_address,
-        operational_address: cfg.staker_info.operational_address,
-        self_stake: cfg.staker_info.amount_own,
     );
 }
 
@@ -940,20 +940,20 @@ fn test_stake_pool_enabled() {
         pool_contract: pool_info.pool_contract,
         commission: pool_info.commission
     );
-    assert_stake_balance_changed_event(
+    assert_new_staker_event(
         spied_event: events[1],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        self_stake: cfg.staker_info.amount_own,
+    );
+    assert_stake_balance_changed_event(
+        spied_event: events[2],
         :staker_address,
         old_self_stake: Zero::zero(),
         old_delegated_stake: Zero::zero(),
         new_self_stake: cfg.staker_info.amount_own,
         new_delegated_stake: Zero::zero()
-    );
-    assert_new_staker_event(
-        spied_event: events[2],
-        :staker_address,
-        reward_address: cfg.staker_info.reward_address,
-        operational_address: cfg.staker_info.operational_address,
-        self_stake: cfg.staker_info.amount_own,
     );
 }
 
