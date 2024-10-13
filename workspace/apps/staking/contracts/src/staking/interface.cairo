@@ -228,7 +228,7 @@ pub trait IStakingPool<TContractState> {
     /// * There is an entry in the pool_exit_intents map for this `identifier` and pool contract
     ///   (the caller).
     /// * The unpool_time, in the value of the entry above, has passed.
-    fn remove_from_delegation_pool_action(ref self: TContractState, identifier: felt252) -> Amount;
+    fn remove_from_delegation_pool_action(ref self: TContractState, identifier: felt252);
 
     /// Moves the stake from being in exit intent, to being staked in `to_staker`'s pooled stake.
     /// Conditions:

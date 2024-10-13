@@ -1004,9 +1004,8 @@ fn test_remove_from_delegation_pool_action() {
     let pool_balance_before_action = erc20_dispatcher.balance_of(pool_contract);
 
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
-    let returned_amount = staking_pool_dispatcher
+    staking_pool_dispatcher
         .remove_from_delegation_pool_action(identifier: cfg.test_info.pool_member_address.into());
-    assert_eq!(returned_amount, cfg.pool_member_info.amount);
     let undelegate_intent_key = UndelegateIntentKey {
         pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
@@ -1044,9 +1043,7 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     // Remove from delegation pool action, and check it returns 0 and does not change balance.
     let staking_balance_before_action = erc20_dispatcher.balance_of(staking_contract);
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
-    let returned_amount = staking_pool_dispatcher
-        .remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
-    assert_eq!(returned_amount, Zero::zero());
+    staking_pool_dispatcher.remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
     // TODO: Test event emitted.
     let staking_balance_after_action = erc20_dispatcher.balance_of(staking_contract);
     assert_eq!(staking_balance_after_action, staking_balance_before_action);

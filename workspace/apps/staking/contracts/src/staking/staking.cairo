@@ -556,9 +556,7 @@ pub mod Staking {
             unpool_time
         }
 
-        fn remove_from_delegation_pool_action(
-            ref self: ContractState, identifier: felt252
-        ) -> Amount {
+        fn remove_from_delegation_pool_action(ref self: ContractState, identifier: felt252) {
             self.general_prerequisites();
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
@@ -574,7 +572,6 @@ pub mod Staking {
                 );
             // TODO: Emit event.
             self.clear_undelegate_intent(:undelegate_intent_key);
-            undelegate_intent.amount
         }
 
         fn switch_staking_delegation_pool(
