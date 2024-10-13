@@ -167,7 +167,7 @@ pub mod Pool {
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
             let (_, updated_index) = staking_pool_dispatcher
                 .add_stake_from_pool(staker_address: self.staker_address.read(), :amount);
-            self.calculate_rewards(ref :pool_member_info, :updated_index);
+            self.update_rewards(ref :pool_member_info, :updated_index);
             let old_delegated_stake = pool_member_info.amount;
             pool_member_info.amount += amount;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
@@ -188,7 +188,7 @@ pub mod Pool {
             let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
             assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
             let old_delegated_stake = pool_member_info.amount;
-            self.update_index_and_calculate_rewards(ref :pool_member_info);
+            self.update_index_and_update_rewards(ref :pool_member_info);
             let unpool_time = self.undelegate_from_staking_contract_intent(:pool_member, :amount);
             if amount.is_zero() {
                 pool_member_info.unpool_time = Option::None;
@@ -253,7 +253,7 @@ pub mod Pool {
                 caller_address == pool_member || caller_address == reward_address,
                 Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
             );
-            self.update_index_and_calculate_rewards(ref :pool_member_info);
+            self.update_index_and_update_rewards(ref :pool_member_info);
             let rewards = pool_member_info.unclaimed_rewards;
             let erc20_dispatcher = self.erc20_dispatcher.read();
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :erc20_dispatcher);
@@ -323,7 +323,7 @@ pub mod Pool {
                         pool_member_info.reward_address == switch_pool_data.reward_address,
                         Error::REWARD_ADDRESS_MISMATCH
                     );
-                    self.calculate_rewards(ref :pool_member_info, updated_index: index);
+                    self.update_rewards(ref :pool_member_info, updated_index: index);
                     pool_member_info.amount += amount;
                     pool_member_info
                 },
@@ -450,7 +450,7 @@ pub mod Pool {
         /// Fields that are changed in pool_member_info:
         /// - unclaimed_rewards
         /// - index
-        fn calculate_rewards(
+        fn update_rewards(
             ref self: ContractState, ref pool_member_info: PoolMemberInfo, updated_index: Index
         ) {
             let interest: Index = updated_index - pool_member_info.index;
@@ -466,11 +466,11 @@ pub mod Pool {
             pool_member_info.commission = self.commission.read();
         }
 
-        fn update_index_and_calculate_rewards(
+        fn update_index_and_update_rewards(
             ref self: ContractState, ref pool_member_info: PoolMemberInfo
         ) {
             let updated_index = self.receive_index_and_funds_from_staker();
-            self.calculate_rewards(ref :pool_member_info, :updated_index)
+            self.update_rewards(ref :pool_member_info, :updated_index)
         }
 
         fn assert_staker_is_active(self: @ContractState) {

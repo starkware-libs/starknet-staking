@@ -38,7 +38,7 @@ use contracts_commons::test_utils::cheat_caller_address_once;
 
 
 #[test]
-fn test_calculate_rewards() {
+fn test_update_rewards() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         cfg.test_info.initial_supply, cfg.test_info.owner_address
@@ -69,7 +69,7 @@ fn test_calculate_rewards() {
         commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
     let unclaimed_rewards = rewards_including_commission - commission_amount;
-    state.calculate_rewards(ref :pool_member_info, :updated_index);
+    state.update_rewards(ref :pool_member_info, :updated_index);
 
     let mut expected_pool_member_info = PoolMemberInfo {
         index: cfg.staker_info.index * 2, unclaimed_rewards, ..pool_member_info

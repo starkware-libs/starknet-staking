@@ -186,7 +186,7 @@ pub trait IStakingPool<TContractState> {
     /// * The staker is not in exit window.
     ///
     /// The flow:
-    /// 1. Calculate rewards for `staker_address`.
+    /// 1. Update rewards for `staker_address`.
     /// 2. Transfer `amount` FRI from the pool contract (the caller) to staking contract.
     /// 3. Increase the staker's pooled amount by `amount`.
     /// 4. Increase the total_stake by `amount`.
@@ -198,7 +198,7 @@ pub trait IStakingPool<TContractState> {
     /// Returns the timestmap when the pool is allowed to remove the `amount` for `identifier`.
     ///
     /// The flow, if making a brand new intent:
-    /// 1. Calculate rewards for `staker_address`.
+    /// 1. Update rewards for `staker_address`.
     /// 2. Decrease the staker's pooled amount by `amount`.
     /// 3. Decrease total_stake by `amount`.
     /// 4. Calculate the timestamp when the pool may perform remove_from_delegation_pool_action for
@@ -238,7 +238,7 @@ pub trait IStakingPool<TContractState> {
     /// * `to_staker` is not in exit window.
     ///
     /// The flow:
-    /// 1. Calculate rewards for `to_staker`.
+    /// 1. Update rewards for `to_staker`.
     /// 2. Increase `to_staker`'s pooled amount by `switched_amount`.
     /// 3. Increase the total_stake by `switched_amount`. This happens because when an intent is
     ///    made, the intent amount is subtracted from the total_stake.
@@ -258,7 +258,7 @@ pub trait IStakingPool<TContractState> {
     /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
     ///
     /// The flow:
-    /// 1. Calculate the rewards for `staker_address`.
+    /// 1. Update the rewards for `staker_address`.
     /// 2. Send `pool_info.unclaimed_rewards` FRI to the pool contract.
     /// 3. Set pool_info.unclaimed_rewards to zero.
     fn claim_delegation_pool_rewards(

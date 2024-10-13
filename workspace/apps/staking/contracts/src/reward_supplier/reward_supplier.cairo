@@ -106,7 +106,7 @@ pub mod RewardSupplier {
                 get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
             let last_timestamp = self.last_timestamp.read();
-            let rewards = self.calculate_rewards();
+            let rewards = self.update_rewards();
             let new_timestamp = self.last_timestamp.read();
             let unclaimed_rewards = self.update_unclaimed_rewards(:rewards);
             self.request_funds_if_needed(:unclaimed_rewards);
@@ -163,7 +163,7 @@ pub mod RewardSupplier {
 
     #[generate_trait]
     pub impl InternalRewardSupplierFunctions of InternalRewardSupplierFunctionsTrait {
-        fn calculate_rewards(ref self: ContractState) -> Amount {
+        fn update_rewards(ref self: ContractState) -> Amount {
             let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
             let yearly_mint = minting_curve_dispatcher.yearly_mint();
             let last_timestamp = self.last_timestamp.read();

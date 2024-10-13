@@ -228,7 +228,7 @@ pub mod Staking {
                     recipient: staking_contract_address,
                     amount: amount.into()
                 );
-            self.calculate_rewards(ref :staker_info);
+            self.update_rewards(ref :staker_info);
             staker_info.amount_own += amount;
             let mut staker_total_stake = staker_info.amount_own;
             self.staker_info.write(staker_address, Option::Some(staker_info));
@@ -263,7 +263,7 @@ pub mod Staking {
                 caller_address == staker_address || caller_address == reward_address,
                 Error::CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
             );
-            self.calculate_rewards(ref :staker_info);
+            self.update_rewards(ref :staker_info);
             let amount = staker_info.unclaimed_rewards_own;
             let erc20_dispatcher = self.erc20_dispatcher.read();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :erc20_dispatcher);
@@ -277,7 +277,7 @@ pub mod Staking {
             let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            self.calculate_rewards(ref :staker_info);
+            self.update_rewards(ref :staker_info);
             let current_time = get_block_timestamp();
             let unstake_time = current_time + self.exit_wait_window.read();
             staker_info.unstake_time = Option::Some(unstake_time);
@@ -442,7 +442,7 @@ pub mod Staking {
             let pool_contract = pool_info.pool_contract;
             let old_commission = pool_info.commission;
             assert_with_err(commission <= old_commission, Error::CANNOT_INCREASE_COMMISSION);
-            self.calculate_rewards(ref :staker_info);
+            self.update_rewards(ref :staker_info);
             let mut pool_info = staker_info.get_pool_info_unchecked();
             pool_info.commission = commission;
             staker_info.pool_info = Option::Some(pool_info);
@@ -475,7 +475,7 @@ pub mod Staking {
                 pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
 
-            self.calculate_rewards(ref :staker_info);
+            self.update_rewards(ref :staker_info);
             let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
                 .checked_transfer_from(
@@ -522,7 +522,7 @@ pub mod Staking {
             assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
             let new_delegated_stake = total_amount - amount;
             pool_info.amount = new_delegated_stake;
-            self.calculate_rewards(ref :staker_info);
+            self.update_rewards(ref :staker_info);
             let unpool_time = staker_info
                 .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
             if (staker_info.unstake_time.is_none()) {
@@ -603,7 +603,7 @@ pub mod Staking {
             let to_staker_pool_contract = to_staker_pool_info.pool_contract;
             assert_with_err(to_pool == to_staker_pool_contract, Error::DELEGATION_POOL_MISMATCH);
 
-            self.calculate_rewards(ref staker_info: to_staker_info);
+            self.update_rewards(ref staker_info: to_staker_info);
             to_staker_pool_info.amount += switched_amount;
             self.staker_info.write(to_staker, Option::Some(to_staker_info));
             self.add_to_total_stake(amount: switched_amount);
@@ -631,8 +631,8 @@ pub mod Staking {
             assert_with_err(
                 pool_address == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
-            self.calculate_rewards(ref :staker_info);
-            // The function calculate_rewards updated the index in staker_info.
+            self.update_rewards(ref :staker_info);
+            // The function update_rewards updated the index in staker_info.
             let updated_index = staker_info.index;
             let erc20_dispatcher = self.erc20_dispatcher.read();
             self
@@ -826,7 +826,7 @@ pub mod Staking {
         /// - unclaimed_rewards_own
         /// - unclaimed_rewards
         /// - index
-        fn calculate_rewards(ref self: ContractState, ref staker_info: StakerInfo) -> bool {
+        fn update_rewards(ref self: ContractState, ref staker_info: StakerInfo) -> bool {
             if (staker_info.unstake_time.is_some()) {
                 return false;
             }
