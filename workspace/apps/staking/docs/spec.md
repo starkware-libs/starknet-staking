@@ -825,7 +825,7 @@ Return the total stake amount.
 fn update_rewards(
   ref self: ContractState, 
   ref staker_info: StakerInfo
-) -> bool
+)
 ```
 #### description <!-- omit from toc -->
 Update rewards, add amount to unclaimed_rewards, update index.

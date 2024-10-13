@@ -146,7 +146,7 @@ fn test_update_rewards() {
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     let mut staker_info = cfg.staker_info;
     let interest = state.global_index.read() - staker_info.index;
-    assert!(state.update_rewards(ref :staker_info));
+    state.update_rewards(ref :staker_info);
     let staker_rewards = compute_rewards_rounded_down(amount: staker_info.amount_own, :interest);
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: staker_info.get_pool_info_unchecked().amount, :interest
@@ -270,8 +270,10 @@ fn test_send_rewards_to_staker() {
 fn test_update_rewards_unstake_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
-    let mut staker_info = StakerInfo { unstake_time: Option::Some(1), ..cfg.staker_info };
-    assert!(!state.update_rewards(ref :staker_info));
+    let staker_info_expected = StakerInfo { unstake_time: Option::Some(1), ..cfg.staker_info };
+    let mut staker_info = staker_info_expected;
+    state.update_rewards(ref :staker_info);
+    assert_eq!(staker_info, staker_info_expected);
 }
 
 #[test]

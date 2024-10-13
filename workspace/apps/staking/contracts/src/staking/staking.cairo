@@ -826,9 +826,9 @@ pub mod Staking {
         /// - unclaimed_rewards_own
         /// - unclaimed_rewards
         /// - index
-        fn update_rewards(ref self: ContractState, ref staker_info: StakerInfo) -> bool {
+        fn update_rewards(ref self: ContractState, ref staker_info: StakerInfo) {
             if (staker_info.unstake_time.is_some()) {
-                return false;
+                return;
             }
             let global_index = self.global_index.read();
             let interest = global_index - staker_info.index;
@@ -839,7 +839,6 @@ pub mod Staking {
             );
             staker_info.unclaimed_rewards_own += staker_rewards;
             self.calculate_and_update_pool_rewards(:interest, ref :staker_info);
-            true
         }
 
         fn deploy_delegation_pool_contract(
