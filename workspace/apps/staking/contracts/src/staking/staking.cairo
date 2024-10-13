@@ -471,18 +471,18 @@ pub mod Staking {
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            let pool_contract = staker_info.get_pool_info_unchecked().pool_contract;
+            self.update_rewards(ref :staker_info);
+            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let pool_contract = pool_info.pool_contract;
             assert_with_err(
                 pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
 
-            self.update_rewards(ref :staker_info);
             let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
                 .checked_transfer_from(
                     sender: pool_contract, recipient: get_contract_address(), amount: amount.into()
                 );
-            let mut pool_info = staker_info.get_pool_info_unchecked();
             let old_delegated_stake = pool_info.amount;
             pool_info.amount += amount;
             staker_info.pool_info = Option::Some(pool_info);
