@@ -182,7 +182,7 @@ pub mod Staking {
                             unstake_time: Option::None,
                             amount_own: amount,
                             index: self.global_index.read(),
-                            unclaimed_rewards_own: 0,
+                            unclaimed_rewards_own: Zero::zero(),
                             pool_info,
                         }
                     )
@@ -191,18 +191,18 @@ pub mod Staking {
             self.add_to_total_stake(:amount);
             self
                 .emit(
+                    Events::NewStaker {
+                        staker_address, reward_address, operational_address, self_stake: amount
+                    }
+                );
+            self
+                .emit(
                     Events::StakeBalanceChanged {
                         staker_address,
                         old_self_stake: Zero::zero(),
                         old_delegated_stake: Zero::zero(),
                         new_self_stake: amount,
                         new_delegated_stake: Zero::zero()
-                    }
-                );
-            self
-                .emit(
-                    Events::NewStaker {
-                        staker_address, reward_address, operational_address, self_stake: amount
                     }
                 );
         }
@@ -467,7 +467,7 @@ pub mod Staking {
     impl StakingPoolImpl of IStakingPool<ContractState> {
         fn add_stake_from_pool(
             ref self: ContractState, staker_address: ContractAddress, amount: Amount
-        ) -> (Amount, Index) {
+        ) -> Index {
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -498,7 +498,7 @@ pub mod Staking {
                         new_delegated_stake: pool_info.amount
                     }
                 );
-            (pool_info.amount, staker_info.index)
+            staker_info.index
         }
 
         fn remove_from_delegation_pool_intent(
@@ -584,10 +584,10 @@ pub mod Staking {
             switched_amount: Amount,
             data: Span<felt252>,
             identifier: felt252
-        ) -> bool {
+        ) {
             self.general_prerequisites();
             if switched_amount.is_zero() {
-                return false;
+                return;
             }
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
@@ -620,7 +620,6 @@ pub mod Staking {
                 .enter_delegation_pool_from_staking_contract(
                     amount: switched_amount, index: to_staker_info.index, :data
                 );
-            true
         }
 
         fn claim_delegation_pool_rewards(
