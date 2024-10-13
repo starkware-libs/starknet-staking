@@ -627,12 +627,11 @@ Only pool contract for the given staker can execute.
 fn remove_from_delegation_pool_action(
     ref self: ContractState, 
     identifier: felt252
-) -> u128
+)
 ```
 #### description <!-- omit from toc -->
 Execute the intent to remove funds from pool if enough time have passed.
 Transfers the funds to the pool contract.
-Return the amount being transferred to the pool contract.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
