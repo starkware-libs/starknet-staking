@@ -1507,6 +1507,27 @@ fn test_update_commission_with_no_pool() {
 }
 
 #[test]
+#[should_panic(expected: "Unstake is in progress, staker is in an exit window")]
+fn test_update_commission_staker_in_exit_window() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
+    staking_dispatcher.unstake_intent();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
+    staking_dispatcher
+        .update_commission(commission: cfg.staker_info.get_pool_info_unchecked().commission - 1);
+}
+
+#[test]
 fn test_set_open_for_delegation() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
