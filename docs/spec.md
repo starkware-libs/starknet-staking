@@ -28,7 +28,7 @@
     - [staker\_info](#staker_info)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
-    - [calculate\_rewards](#calculate_rewards)
+    - [calculate\_rewards](#update_rewards)
     - [change\_operational\_address](#change_operational_address)
     - [update\_global\_index\_if\_needed](#update_global_index_if_needed)
     - [is\_paused](#is_paused)
@@ -60,7 +60,7 @@
     - [change\_reward\_address](#change_reward_address-1)
     - [pool\_member\_info](#pool_member_info)
     - [contract\_parameters](#contract_parameters-1)
-    - [calculate\_rewards](#calculate_rewards-1)
+    - [calculate\_rewards](#update_rewards-1)
   - [Events](#events-1)
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
     - [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
@@ -168,7 +168,7 @@ classDiagram
     claim_delegation_pool_rewards()
     staker_info()
     contract_parameters()
-    calculate_rewards()
+    update_rewards()
     get_total_stake()
 
   }
@@ -189,7 +189,7 @@ classDiagram
     switch_delegation_pool()
     enter_delegation_pool_from_staking_contract()
     set_final_staker_index()
-    calculate_rewards()
+    update_rewards()
   }
   class StakerInfo{
     reward_address
@@ -457,7 +457,7 @@ Return the updated total amount.
 #### access control <!-- omit from toc -->
 Only the staker address or rewards address for which the change is requested for.
 #### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards).
+1. [Update rewards](#update_rewards).
 2. Increase staked amount.
 
 ### unstake_intent
@@ -485,7 +485,7 @@ Return the time in which the staker will be able to unstake.
 #### access control <!-- omit from toc -->
 Only the staker address for which the operation is requested for.
 #### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards).
+1. [Update rewards](#update_rewards).
 2. Set unstake time.
 
 ### unstake_action
@@ -534,7 +534,7 @@ fn claim_rewards(
 ) -> u128
 ```
 #### description <!-- omit from toc -->
-Calculate rewards and transfer them to the reward address.
+Update rewards and transfer them to the reward address.
 Return the amount of tokens transferred to the reward address.
 #### emits <!-- omit from toc -->
 1. [Staker Reward Claimed](#staker-reward-claimed)
@@ -550,7 +550,7 @@ Return the amount of tokens transferred to the reward address.
 #### access control <!-- omit from toc -->
 Only staker address or reward address can execute.
 #### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards).
+1. [Update rewards](#update_rewards).
 2. Transfer unclaimed_rewards.
 3. Set unclaimed_rewards = 0.
 
@@ -585,7 +585,7 @@ index: u64 - updated index
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards)
+1. [Update rewards](#update_rewards)
 2. transfer funds from pool contract to staking contract.
 3. Add amount to staker's pooled amount
 
@@ -619,7 +619,7 @@ Return the time in which the pool member will be able to exit.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards).
+1. [Update rewards](#update_rewards).
 2. Remove amount from staker's pooled amount.
 3. Register intent with given identifier, amount and unstake_time.
 
@@ -685,7 +685,7 @@ Return true upon success, otherwise return false.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards).
+1. [Update rewards](#update_rewards).
 2. Remove requested amount from the caller pool intent amount.
 3. Add requested amount to `to_staker`'s pool with pool contract address `to_pool`.
 4. Call `to_pool`'s [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract) function.
@@ -752,7 +752,7 @@ fn claim_delegation_pool_rewards(
 ) -> u64
 ```
 #### description <!-- omit from toc -->
-Calculate rewards and transfer the delegation pool rewards to the delegation pool contract.
+Update rewards and transfer the delegation pool rewards to the delegation pool contract.
 Return the updated staker index.
 #### emits <!-- omit from toc -->
 [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
@@ -772,7 +772,7 @@ Return the updated staker index.
 #### access control <!-- omit from toc -->
 Delegation pool contract of the given staker.
 #### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards)
+1. [Update rewards](#update_rewards)
 2. Transfer rewards to pool contract.
 
 ### staker_info
@@ -819,16 +819,16 @@ Return the total stake amount.
 #### logic <!-- omit from toc -->
 
 
-### calculate_rewards
+### update_rewards
 >**note:** internal logic
 ```rust
-fn calculate_rewards(
+fn update_rewards(
   ref self: ContractState, 
   ref staker_info: StakerInfo
 ) -> bool
 ```
 #### description <!-- omit from toc -->
-Calculate rewards, add amount to unclaimed_rewards, update index.
+Update rewards, add amount to unclaimed_rewards, update index.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -837,8 +837,8 @@ Internal function.
 #### logic <!-- omit from toc -->
 1. If Staker is in an exit window, return false.
 2. Update index.
-3. Calculate rewards for `amount_own`.
-4. Calculate rewards for `pool_info.amount`.
+3. Update rewards for `amount_own`.
+4. Update rewards for `pool_info.amount`.
 5. Update `unclaimed_rewards_own` with own rewards + pool rewards commission.
 6. Update `pool_info.unclaimed_rewards` with pool rewards without commission. 
 
@@ -1084,7 +1084,7 @@ Only the pool member address or rewards address for which the change is requeste
 1. Transfer funds from caller to the contract.
 2. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
 3. Get current index from staking contract.
-4. [Calculate rewards](#calculate_rewards-1)
+4. [Update rewards](#update_rewards-1)
 5. Update pool member entry with
    1. index
    2. amount
@@ -1117,7 +1117,7 @@ Inform of the intent to exit the stake. This will remove the funds from the stak
 #### access control <!-- omit from toc -->
 Only the pool member address for which the operation is requested for.
 #### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards-1)
+1. [Update rewards](#update_rewards-1)
 2. If staker is active, call [remove from delegation pool intent](#remove_from_delegation_pool_intent)
 3. If `amount` is zero, remove request for intent (if exist).
 4. If `amount` is not zero, set exit window timeout.
@@ -1160,7 +1160,7 @@ fn claim_rewards(
 ) -> u128
 ```
 #### description <!-- omit from toc -->
-Calculate rewards and transfer them to the reward address.
+Update rewards and transfer them to the reward address.
 Return the amount transferred to the reward address.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
@@ -1175,7 +1175,7 @@ Return the amount transferred to the reward address.
 #### access control <!-- omit from toc -->
 Only pool member address or reward address can execute.
 #### logic <!-- omit from toc -->
-1. [Calculate rewards](#calculate_rewards-1).
+1. [Update rewards](#update_rewards-1).
 2. Transfer unclaimed_rewards
 3. Set unclaimed_rewards = 0.
 
@@ -1242,7 +1242,7 @@ Only staking contract can execute.
 #### logic <!-- omit from toc -->
 1. Deserialize data, get `pool_member` and `rewrad_address`.
 2. If pool member is listed in the contract:
-   1. [Calculate rewards](#calculate_rewards-1)
+   1. [Update rewards](#update_rewards-1)
    2. Update pool member entry
 3. Else
    1. Create an entry for the pool member.
@@ -1319,9 +1319,9 @@ Return [PoolContractInfo](#poolcontractinfo) of the contract.
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 
-### calculate_rewards
+### update_rewards
 ```rust
-fn calculate_rewards(
+fn update_rewards(
     ref self: ContractState, 
     ref pool_member_info: PoolMemberInfo, 
     updated_index: u64
@@ -1329,7 +1329,7 @@ fn calculate_rewards(
 ```
 >**note:** internal logic
 #### description <!-- omit from toc -->
-Calculate rewards, add amount to unclaimed_rewards, update index.
+Update rewards, add amount to unclaimed_rewards, update index.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -1337,7 +1337,7 @@ Calculate rewards, add amount to unclaimed_rewards, update index.
 internal function.
 #### logic <!-- omit from toc -->
 1. Update index.
-2. Calculate rewards for `pool_member_info`.
+2. Update rewards for `pool_member_info`.
 3. Update `unclaimed_rewards`.
 
 ## Events
