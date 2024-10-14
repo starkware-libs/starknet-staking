@@ -55,14 +55,16 @@ pub trait BitSetTrait<T> {
     fn all(self: @BitSet<T>) -> bool;
     fn any(self: @BitSet<T>) -> bool;
     fn none(self: @BitSet<T>) -> bool;
-    fn get_true_indices(self: @BitSet<T>) -> Span<usize>;
+    fn get_set_bits_indices(self: @BitSet<T>) -> Span<usize>;
     fn set_lower_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError>;
     fn set_upper_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError>;
     fn is_initialized(self: @BitSet<T>) -> bool;
     fn len(self: @BitSet<T>) -> usize;
 }
 
-impl BitSetImpl<T, +Drop<T>> of BitSetTrait<T> {
+impl BitSetImpl<
+    T, +BitAnd<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +PowOfTwo<T>, +Zero<T>
+> of BitSetTrait<T> {
     fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError> {
         Result::Ok(false)
     }
@@ -99,8 +101,17 @@ impl BitSetImpl<T, +Drop<T>> of BitSetTrait<T> {
         false
     }
 
-    fn get_true_indices(self: @BitSet<T>) -> Span<usize> {
-        array![].span()
+    fn get_set_bits_indices(self: @BitSet<T>) -> Span<usize> {
+        let mut indices = array![];
+        let mut index = *self.lower_bound;
+        while index < *self.upper_bound {
+            let mask = PowOfTwo::<T>::two_to_the(index).expect('Index should be bounded.');
+            if *self.bit_array & mask != Zero::zero() {
+                indices.append(index);
+            }
+            index += 1;
+        };
+        indices.span()
     }
 
     fn set_lower_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError> {
@@ -151,7 +162,7 @@ impl SpanTryIntoBitSet<
 #[cfg(test)]
 mod tests {
     use core::starknet::storage_access::StorePacking;
-    use super::BitSet;
+    use super::{BitSet, BitSetTrait};
 
     const TESTED_BIT_ARRAY: u8 = 0b01100001;
     const TESTED_TRUE_INDICES: [usize; 3] = [0, 5, 6];
@@ -185,5 +196,11 @@ mod tests {
         let unpacked = BitSet { bit_array: 0b110_u8, lower_bound: 0b1, upper_bound: 0b10 };
         assert_eq!(StorePacking::unpack(packed), unpacked);
         assert_eq!(StorePacking::pack(unpacked), packed);
+    }
+
+    #[test]
+    fn test_get_set_bits_indices() {
+        let bit_set: BitSet<u8> = TESTED_TRUE_INDICES.span().try_into().unwrap();
+        assert_eq!(bit_set.get_set_bits_indices(), TESTED_TRUE_INDICES.span());
     }
 }
