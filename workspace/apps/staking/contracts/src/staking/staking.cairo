@@ -154,7 +154,7 @@ pub mod Staking {
                 );
             let pool_info = if pool_enabled {
                 let pool_contract = self
-                    .deploy_delegation_pool_contract(
+                    .deploy_delegation_pool_from_staking_contract(
                         :staker_address,
                         :staking_contract,
                         token_address: erc20_dispatcher.contract_address,
@@ -355,7 +355,7 @@ pub mod Staking {
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
             assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
             let pool_contract = self
-                .deploy_delegation_pool_contract(
+                .deploy_delegation_pool_from_staking_contract(
                     :staker_address,
                     staking_contract: get_contract_address(),
                     token_address: self.erc20_dispatcher.read().contract_address,
@@ -839,7 +839,7 @@ pub mod Staking {
             self.calculate_and_update_pool_rewards(:interest, ref :staker_info);
         }
 
-        fn deploy_delegation_pool_contract(
+        fn deploy_delegation_pool_from_staking_contract(
             ref self: ContractState,
             staker_address: ContractAddress,
             staking_contract: ContractAddress,
