@@ -178,7 +178,7 @@ fn test_enter_delegation_pool() {
     };
     assert_eq!(staking_dispatcher.staker_info(cfg.test_info.staker_address), expected_staker_info);
 
-    // Validate NewPoolMember and DelegationPoolMemberBalanceChanged events.
+    // Validate NewPoolMember and PoolMemberBalanceChanged events.
     let events = spy.get_events().emitted_by(pool_contract).events;
     assert_number_of_events(actual: events.len(), expected: 2, message: "enter_delegation_pool");
     assert_new_pool_member_event(
@@ -260,7 +260,7 @@ fn test_add_to_delegation_pool() {
     };
     assert_eq!(pool_member_info_after_add, pool_member_info_expected);
 
-    // Validate the single DelegationPoolMemberBalanceChanged event.
+    // Validate the single PoolMemberBalanceChanged event.
     let events = spy.get_events().emitted_by(pool_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "add_to_delegation_pool");
     assert_delegation_pool_member_balance_changed_event(
@@ -876,7 +876,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
     };
     assert_eq!(pool_member_info, expected_pool_member_info);
 
-    // Validate two DelegationPoolMemberBalanceChanged events.
+    // Validate two PoolMemberBalanceChanged events.
     let events = spy.get_events().emitted_by(pool_contract).events;
     assert_number_of_events(
         actual: events.len(), expected: 2, message: "enter_delegation_pool_from_staking_contract"

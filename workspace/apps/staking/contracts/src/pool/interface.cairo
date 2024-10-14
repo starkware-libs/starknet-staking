@@ -14,7 +14,7 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct DelegationPoolMemberBalanceChanged {
+    pub struct PoolMemberBalanceChanged {
         #[key]
         pub pool_member: ContractAddress,
         pub old_delegated_stake: Amount,

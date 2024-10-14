@@ -67,7 +67,7 @@ pub mod Pool {
         #[flat]
         RolesEvent: RolesComponent::Event,
         PoolMemberExitIntent: Events::PoolMemberExitIntent,
-        DelegationPoolMemberBalanceChanged: Events::DelegationPoolMemberBalanceChanged,
+        PoolMemberBalanceChanged: Events::PoolMemberBalanceChanged,
         PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
         FinalIndexSet: Events::FinalIndexSet,
         PoolMemberRewardClaimed: Events::PoolMemberRewardClaimed,
@@ -140,7 +140,7 @@ pub mod Pool {
                 );
             self
                 .emit(
-                    Events::DelegationPoolMemberBalanceChanged {
+                    Events::PoolMemberBalanceChanged {
                         pool_member, old_delegated_stake: Zero::zero(), new_delegated_stake: amount
                     }
                 );
@@ -173,7 +173,7 @@ pub mod Pool {
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             self
                 .emit(
-                    Events::DelegationPoolMemberBalanceChanged {
+                    Events::PoolMemberBalanceChanged {
                         pool_member,
                         old_delegated_stake,
                         new_delegated_stake: pool_member_info.amount
@@ -206,7 +206,7 @@ pub mod Pool {
                 );
             self
                 .emit(
-                    Events::DelegationPoolMemberBalanceChanged {
+                    Events::PoolMemberBalanceChanged {
                         pool_member,
                         old_delegated_stake,
                         new_delegated_stake: pool_member_info.amount
@@ -342,7 +342,7 @@ pub mod Pool {
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             self
                 .emit(
-                    Events::DelegationPoolMemberBalanceChanged {
+                    Events::PoolMemberBalanceChanged {
                         pool_member,
                         old_delegated_stake: pool_member_info.amount - amount,
                         new_delegated_stake: pool_member_info.amount
