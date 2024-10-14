@@ -565,13 +565,13 @@ pub mod Staking {
                 get_block_timestamp() >= undelegate_intent.unpool_time,
                 Error::INTENT_WINDOW_NOT_FINISHED
             );
+            self.clear_undelegate_intent(:undelegate_intent_key);
             let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
                 .checked_transfer(
                     recipient: pool_contract, amount: undelegate_intent.amount.into()
                 );
             // TODO: Emit event.
-            self.clear_undelegate_intent(:undelegate_intent_key);
         }
 
         fn switch_staking_delegation_pool(
