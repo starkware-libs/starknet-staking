@@ -1127,6 +1127,7 @@ fn test_switch_staking_delegation_pool() {
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
         pool_info.amount = amount;
         pool_info.unclaimed_rewards = unclaimed_rewards_pool;
+        expected_staker_info.pool_info = Option::Some(pool_info);
     };
     let actual_staker_info = staking_dispatcher.staker_info(staker_address: to_staker);
     assert_eq!(actual_staker_info, expected_staker_info);

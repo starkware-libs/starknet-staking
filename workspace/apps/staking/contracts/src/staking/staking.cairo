@@ -596,13 +596,14 @@ pub mod Staking {
                 undelegate_intent_value.amount >= switched_amount, Error::AMOUNT_TOO_HIGH
             );
             let mut to_staker_info = self.get_staker_info(staker_address: to_staker);
+            self.update_rewards(ref staker_info: to_staker_info);
             assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let mut to_staker_pool_info = to_staker_info.get_pool_info_unchecked();
             let to_staker_pool_contract = to_staker_pool_info.pool_contract;
             assert_with_err(to_pool == to_staker_pool_contract, Error::DELEGATION_POOL_MISMATCH);
 
-            self.update_rewards(ref staker_info: to_staker_info);
             to_staker_pool_info.amount += switched_amount;
+            to_staker_info.pool_info = Option::Some(to_staker_pool_info);
             self.staker_info.write(to_staker, Option::Some(to_staker_info));
             self.add_to_total_stake(amount: switched_amount);
 
