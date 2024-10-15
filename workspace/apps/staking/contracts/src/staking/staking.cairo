@@ -442,7 +442,10 @@ pub mod Staking {
             let pool_info = staker_info.get_pool_info_unchecked();
             let pool_contract = pool_info.pool_contract;
             let old_commission = pool_info.commission;
-            assert_with_err(commission <= old_commission, Error::CANNOT_INCREASE_COMMISSION);
+            if commission == old_commission {
+                return;
+            }
+            assert_with_err(commission < old_commission, Error::CANNOT_INCREASE_COMMISSION);
             self.update_rewards(ref :staker_info);
             let mut pool_info = staker_info.get_pool_info_unchecked();
             pool_info.commission = commission;

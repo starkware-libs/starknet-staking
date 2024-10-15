@@ -951,13 +951,11 @@ fn test_update_commission_caller_not_staking_contract() {
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    let commission = cfg.staker_info.get_pool_info_unchecked().commission - 1;
     cheat_caller_address_once(
         contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS()
     );
-    pool_dispatcher
-        .update_commission_from_staking_contract(
-            commission: cfg.staker_info.get_pool_info_unchecked().commission
-        );
+    pool_dispatcher.update_commission_from_staking_contract(:commission);
 }
 
 #[test]
