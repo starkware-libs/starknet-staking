@@ -6,7 +6,10 @@ use core::starknet::storage_access::StorePacking;
 
 use contracts_commons::bit_mask::{BitMask, PowOfTwo};
 
-pub enum BitSetError {}
+#[derive(Debug, Drop, PartialEq)]
+pub enum BitSetError {
+    IndexOutOfBounds,
+}
 
 #[derive(Debug, Drop, PartialEq)]
 pub struct BitSet<T> {
@@ -63,13 +66,26 @@ pub trait BitSetTrait<T> {
 }
 
 impl BitSetImpl<
-    T, +BitAnd<T>, +BitMask<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
+    T, +BitAnd<T>, +BitMask<T>, +BitOr<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
 > of BitSetTrait<T> {
     fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError> {
         Result::Ok(false)
     }
 
     fn set(ref self: BitSet<T>, index: usize, value: bool) -> Result<(), BitSetError> {
+        if index < self.lower_bound || index >= self.upper_bound {
+            return Result::Err(BitSetError::IndexOutOfBounds);
+        }
+        if value {
+            // Set the bit by applying bitwise OR with the mask.
+            let mask = BitMask::<T>::bit_mask(index).expect('Index should be bounded.');
+            self.bit_array = self.bit_array | mask;
+        } else {
+            // Clear the bit by applying bitwise AND with the inverse mask.
+            let inverse_mask = BitMask::<T>::inverse_bit_mask(index)
+                .expect('Index should be bounded.');
+            self.bit_array = self.bit_array & inverse_mask;
+        }
         Result::Ok(())
     }
 
@@ -162,7 +178,7 @@ impl SpanTryIntoBitSet<
 #[cfg(test)]
 mod tests {
     use core::starknet::storage_access::StorePacking;
-    use super::{BitSet, BitSetTrait};
+    use super::{BitSet, BitSetTrait, BitSetError};
 
     const TESTED_BIT_ARRAY: u8 = 0b01100001;
     const TESTED_TRUE_INDICES: [usize; 3] = [0, 5, 6];
@@ -202,5 +218,30 @@ mod tests {
     fn test_get_set_bits_indices() {
         let bit_set: BitSet<u8> = TESTED_TRUE_INDICES.span().try_into().unwrap();
         assert_eq!(bit_set.get_set_bits_indices(), TESTED_TRUE_INDICES.span());
+    }
+
+    #[test]
+    fn test_set() {
+        let mut bit_set: BitSet<u8> = 0_u8.into();
+
+        bit_set.set(1, true).unwrap();
+        let expected = array![1].span().try_into().unwrap();
+        assert_eq!(bit_set, expected);
+
+        bit_set.set(1, true).unwrap();
+        // assert nothing changed (1 -> 1).
+        assert_eq!(bit_set, expected);
+
+        bit_set.set(1, false).unwrap();
+        let expected = array![].span().try_into().unwrap();
+        assert_eq!(bit_set, expected);
+
+        bit_set.set(1, false).unwrap();
+        // assert nothing changed (0 -> 0).
+        assert_eq!(bit_set, expected);
+
+        // TODO: Seperate into another test and add index below lower bound error assertion.
+        assert_eq!(bit_set.set(8, true), Result::Err(BitSetError::IndexOutOfBounds));
+        assert_eq!(bit_set.set(9, true), Result::Err(BitSetError::IndexOutOfBounds));
     }
 }
