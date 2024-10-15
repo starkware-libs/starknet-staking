@@ -1,8 +1,7 @@
-pub trait BitMask<T, +PowOfTwo<T>> {
-    // Assumes the compiler inlines this function, and its existence is only semantic.
-    fn bit_mask(index: usize) -> Result<T, felt252> {
-        PowOfTwo::<T>::two_to_the(index)
-    }
+pub trait BitMask<T> {
+    // A default bit_mask implementation could reduce duplication, but Cairo has limited support for
+    // default implementations in generic traits.
+    fn bit_mask(index: usize) -> Result<T, felt252>;
     fn inverse_bit_mask(index: usize) -> Result<T, felt252>;
 }
 
@@ -28,6 +27,10 @@ pub impl U8PowOfTwo of PowOfTwo<u8> {
 }
 
 pub impl U8BitMask of BitMask<u8> {
+    fn bit_mask(index: usize) -> Result<u8, felt252> {
+        PowOfTwo::two_to_the(index)
+    }
+
     fn inverse_bit_mask(index: usize) -> Result<u8, felt252> {
         let val = match index {
             0 => InverseBitMask::u8_0,
@@ -70,6 +73,10 @@ pub impl U16PowOfTwo of PowOfTwo<u16> {
 }
 
 pub impl U16BitMask of BitMask<u16> {
+    fn bit_mask(index: usize) -> Result<u16, felt252> {
+        PowOfTwo::two_to_the(index)
+    }
+
     fn inverse_bit_mask(index: usize) -> Result<u16, felt252> {
         let val = match index {
             0 => InverseBitMask::u16_0,
@@ -136,6 +143,10 @@ pub impl U32PowOfTwo of PowOfTwo<u32> {
 }
 
 pub impl U32BitMask of BitMask<u32> {
+    fn bit_mask(index: usize) -> Result<u32, felt252> {
+        PowOfTwo::two_to_the(index)
+    }
+
     fn inverse_bit_mask(index: usize) -> Result<u32, felt252> {
         let val = match index {
             0 => InverseBitMask::u32_0,
@@ -250,6 +261,10 @@ pub impl U64PowOfTwo of PowOfTwo<u64> {
 }
 
 pub impl U64BitMask of BitMask<u64> {
+    fn bit_mask(index: usize) -> Result<u64, felt252> {
+        PowOfTwo::two_to_the(index)
+    }
+
     fn inverse_bit_mask(index: usize) -> Result<u64, felt252> {
         let val = match index {
             0 => InverseBitMask::u64_0,
@@ -460,6 +475,10 @@ pub impl U128PowOfTwo of PowOfTwo<u128> {
 }
 
 pub impl U128BitMask of BitMask<u128> {
+    fn bit_mask(index: usize) -> Result<u128, felt252> {
+        PowOfTwo::two_to_the(index)
+    }
+
     fn inverse_bit_mask(index: usize) -> Result<u128, felt252> {
         let val = match index {
             0 => InverseBitMask::u128_0,

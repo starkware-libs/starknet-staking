@@ -4,7 +4,7 @@ use core::num::traits::{BitSize, Bounded};
 use core::num::traits::zero::Zero;
 use core::starknet::storage_access::StorePacking;
 
-use contracts_commons::pow_of_two::PowOfTwo;
+use contracts_commons::bit_mask::{BitMask, PowOfTwo};
 
 pub enum BitSetError {}
 
@@ -63,7 +63,7 @@ pub trait BitSetTrait<T> {
 }
 
 impl BitSetImpl<
-    T, +BitAnd<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +PowOfTwo<T>, +Zero<T>
+    T, +BitAnd<T>, +BitMask<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
 > of BitSetTrait<T> {
     fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError> {
         Result::Ok(false)
@@ -105,7 +105,7 @@ impl BitSetImpl<
         let mut indices = array![];
         let mut index = *self.lower_bound;
         while index < *self.upper_bound {
-            let mask = PowOfTwo::<T>::two_to_the(index).expect('Index should be bounded.');
+            let mask = BitMask::<T>::bit_mask(index).expect('Index should be bounded.');
             if *self.bit_array & mask != Zero::zero() {
                 indices.append(index);
             }

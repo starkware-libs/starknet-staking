@@ -2,7 +2,7 @@ pub mod bit_set;
 
 pub mod components;
 
-pub(crate) mod pow_of_two;
+pub(crate) mod bit_mask;
 
 // Make the module be available in the starknet-contract target.
 #[cfg(target: 'starknet-contract')]
