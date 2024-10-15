@@ -398,12 +398,14 @@ pub mod Pool {
         fn update_commission_from_staking_contract(
             ref self: ContractState, commission: Commission
         ) {
+            let old_commission = self.commission.read();
+            if commission == old_commission {
+                return;
+            }
+            assert_with_err(commission < old_commission, Error::CANNOT_INCREASE_COMMISSION);
             assert_with_err(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
-            );
-            assert_with_err(
-                commission <= self.commission.read(), Error::CANNOT_INCREASE_COMMISSION
             );
             self.commission.write(commission);
         }
