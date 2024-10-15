@@ -649,12 +649,18 @@ pub mod Staking {
     impl StakingPauseImpl of IStakingPause<ContractState> {
         fn pause(ref self: ContractState) {
             self.roles.only_security_agent();
+            if self.is_paused() {
+                return;
+            }
             self.is_paused.write(true);
             self.emit(PauseEvents::Paused { account: get_caller_address() });
         }
 
         fn unpause(ref self: ContractState) {
             self.roles.only_security_admin();
+            if !self.is_paused() {
+                return;
+            }
             self.is_paused.write(false);
             self.emit(PauseEvents::Unpaused { account: get_caller_address() });
         }

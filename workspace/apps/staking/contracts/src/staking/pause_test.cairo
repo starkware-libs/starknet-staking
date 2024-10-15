@@ -47,6 +47,47 @@ fn test_pause() {
 }
 
 #[test]
+fn test_already_paused_and_unpaused() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
+    let is_paused = load_one_felt(
+        target: staking_contract, storage_address: selector!("is_paused")
+    );
+    assert_eq!(is_paused, 0);
+    assert!(!staking_dispatcher.is_paused());
+    let mut spy = snforge_std::spy_events();
+    // Unpause with security admin when already unpaused should change nothing and emit nothing.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
+    );
+    staking_pause_dispatcher.unpause();
+    let is_paused = load_one_felt(
+        target: staking_contract, storage_address: selector!("is_paused")
+    );
+    assert_eq!(is_paused, 0);
+    assert!(!staking_dispatcher.is_paused());
+    // Pause with security agent.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
+    );
+    staking_pause_dispatcher.pause();
+    assert!(staking_dispatcher.is_paused());
+    // Pause with security agent when already paused should change nothing and emit nothing.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
+    );
+    staking_pause_dispatcher.pause();
+    assert!(staking_dispatcher.is_paused());
+    // Validate the single Paused event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "pause");
+    assert_paused_event(spied_event: events[0], account: cfg.test_info.security_agent);
+}
+
+#[test]
 #[should_panic(expected: "Contract is paused")]
 fn test_stake_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
