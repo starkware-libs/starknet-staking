@@ -434,7 +434,7 @@ pub mod Staking {
         }
 
         fn update_commission(ref self: ContractState, commission: Commission) {
-            self.assert_is_unpaused();
+            self.general_prerequisites();
             self.roles.only_operator();
             let staker_address = get_tx_info().account_contract_address;
             let mut staker_info = self.get_staker_info(:staker_address);
