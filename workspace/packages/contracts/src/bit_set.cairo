@@ -66,7 +66,7 @@ pub trait BitSetTrait<T> {
 }
 
 impl BitSetImpl<
-    T, +BitAnd<T>, +BitMask<T>, +BitOr<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
+    T, +BitAnd<T>, +BitMask<T>, +BitOr<T>, +BitXor<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
 > of BitSetTrait<T> {
     fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError> {
         if index < *self.lower_bound || index >= *self.upper_bound {
@@ -107,6 +107,12 @@ impl BitSetImpl<
     }
 
     fn toggle(ref self: BitSet<T>, index: usize) -> Result<(), BitSetError> {
+        if index < self.lower_bound || index >= self.upper_bound {
+            return Result::Err(BitSetError::IndexOutOfBounds);
+        }
+        // Toggle the bit by applying bitwise XOR with the mask.
+        let mask = BitMask::<T>::bit_mask(index).expect('Index should be bounded.');
+        self.bit_array = self.bit_array ^ mask;
         Result::Ok(())
     }
 
@@ -263,5 +269,22 @@ mod tests {
         // TODO: Seperate into another test and add index below lower bound error assertion.
         assert_eq!(bit_set.set(8, true), Result::Err(BitSetError::IndexOutOfBounds));
         assert_eq!(bit_set.set(9, true), Result::Err(BitSetError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn test_toggle() {
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        bit_set.toggle(0).unwrap();
+        assert!(!bit_set.get(0).unwrap());
+        bit_set.toggle(0).unwrap();
+        assert!(bit_set.get(0).unwrap());
+    }
+
+    #[test]
+    fn test_toggle_out_of_bounds() {
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        // TODO: Add index below lower bound error assertion (after set_lower_bound is implemented).
+        assert_eq!(bit_set.toggle(8), Result::Err(BitSetError::IndexOutOfBounds));
+        assert_eq!(bit_set.toggle(9), Result::Err(BitSetError::IndexOutOfBounds));
     }
 }
