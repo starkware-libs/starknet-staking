@@ -69,7 +69,12 @@ impl BitSetImpl<
     T, +BitAnd<T>, +BitMask<T>, +BitOr<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
 > of BitSetTrait<T> {
     fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError> {
-        Result::Ok(false)
+        if index < *self.lower_bound || index >= *self.upper_bound {
+            return Result::Err(BitSetError::IndexOutOfBounds);
+        }
+        // Get the bit by applying bitwise AND with the mask.
+        let mask = BitMask::<T>::bit_mask(index).expect('Index should be bounded.');
+        Result::Ok(*self.bit_array & mask != Zero::zero())
     }
 
     fn set(ref self: BitSet<T>, index: usize, value: bool) -> Result<(), BitSetError> {
@@ -218,6 +223,21 @@ mod tests {
     fn test_get_set_bits_indices() {
         let bit_set: BitSet<u8> = TESTED_TRUE_INDICES.span().try_into().unwrap();
         assert_eq!(bit_set.get_set_bits_indices(), TESTED_TRUE_INDICES.span());
+    }
+
+    #[test]
+    fn test_get() {
+        let bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        assert!(bit_set.get(0).unwrap());
+        assert!(!bit_set.get(1).unwrap());
+    }
+
+    #[test]
+    fn test_get_out_of_bounds() {
+        let bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        // TODO: Add index below lower bound error assertion (after set_lower_bound is implemented).
+        assert_eq!(bit_set.get(8), Result::Err(BitSetError::IndexOutOfBounds));
+        assert_eq!(bit_set.get(9), Result::Err(BitSetError::IndexOutOfBounds));
     }
 
     #[test]
