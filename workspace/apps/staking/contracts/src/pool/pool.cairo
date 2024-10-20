@@ -160,7 +160,7 @@ pub mod Pool {
             let self_contract = get_contract_address();
             erc20_dispatcher
                 .checked_transfer_from(
-                    sender: pool_member, recipient: self_contract, amount: amount.into()
+                    sender: caller_address, recipient: self_contract, amount: amount.into()
                 );
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             erc20_dispatcher
