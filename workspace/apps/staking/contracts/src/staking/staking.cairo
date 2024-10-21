@@ -5,13 +5,14 @@ pub mod Staking {
     use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW};
     use contracts::constants::MIN_DAYS_BETWEEN_INDEX_UPDATES;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
-    use contracts::staking::{StakerInfo, StakerPoolInfo, StakerInfoTrait, StakingContractInfo};
+    use contracts::staking::{StakerInfo, StakerPoolInfo, StakingContractInfo};
     use contracts::staking::{IStakingPool, IStakingPause, IStaking, IStakingConfig};
     use contracts::utils::{deploy_delegation_pool_contract, compute_commission_amount_rounded_down};
     use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up, day_of};
     use contracts::utils::compute_global_index_diff;
     use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
     use contracts::staking::objects::UndelegateIntentValueZero;
+    use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
     use contracts::staking::{Events, PauseEvents};
     use starknet::{ContractAddress, get_contract_address, get_caller_address, get_tx_info};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -58,7 +59,7 @@ pub mod Staking {
         global_index: Index,
         global_index_last_update_timestamp: TimeStamp,
         min_stake: Amount,
-        staker_info: Map<ContractAddress, Option<StakerInfo>>,
+        staker_info: Map<ContractAddress, Option<InternalStakerInfo>>,
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
         erc20_dispatcher: IERC20Dispatcher,
         total_stake: Amount,
@@ -176,7 +177,7 @@ pub mod Staking {
                 .write(
                     staker_address,
                     Option::Some(
-                        StakerInfo {
+                        InternalStakerInfo {
                             reward_address,
                             operational_address,
                             unstake_time: Option::None,
@@ -376,7 +377,7 @@ pub mod Staking {
         }
 
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
-            self.get_staker_info(:staker_address)
+            self.get_staker_info(:staker_address).into()
         }
 
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
@@ -710,7 +711,7 @@ pub mod Staking {
         fn send_rewards_to_staker(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: StakerInfo,
+            ref staker_info: InternalStakerInfo,
             erc20_dispatcher: IERC20Dispatcher
         ) {
             let reward_address = staker_info.reward_address;
@@ -727,7 +728,7 @@ pub mod Staking {
         fn send_rewards_to_delegation_pool(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: StakerInfo,
+            ref staker_info: InternalStakerInfo,
             erc20_dispatcher: IERC20Dispatcher
         ) {
             let mut pool_info = staker_info.get_pool_info_unchecked();
@@ -754,12 +755,14 @@ pub mod Staking {
             assert_with_err(!self.is_paused(), Error::CONTRACT_IS_PAUSED);
         }
 
-        fn get_staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
+        fn get_staker_info(
+            self: @ContractState, staker_address: ContractAddress
+        ) -> InternalStakerInfo {
             self.staker_info.read(staker_address).expect_with_err(Error::STAKER_NOT_EXISTS)
         }
 
         fn calculate_and_update_pool_rewards(
-            ref self: ContractState, interest: Index, ref staker_info: StakerInfo
+            ref self: ContractState, interest: Index, ref staker_info: InternalStakerInfo
         ) {
             if let Option::Some(mut pool_info) = staker_info.pool_info {
                 if (pool_info.amount.is_non_zero()) {
@@ -778,7 +781,9 @@ pub mod Staking {
         }
 
         fn transfer_to_pool_when_unstake(
-            ref self: ContractState, staker_address: ContractAddress, ref staker_info: StakerInfo
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            ref staker_info: InternalStakerInfo
         ) {
             if let Option::Some(pool_info) = staker_info.pool_info {
                 let erc20_dispatcher = self.erc20_dispatcher.read();
@@ -796,7 +801,9 @@ pub mod Staking {
         }
 
         fn remove_staker(
-            ref self: ContractState, staker_address: ContractAddress, staker_info: StakerInfo
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            staker_info: InternalStakerInfo
         ) {
             self.staker_info.write(staker_address, Option::None);
             self
@@ -833,7 +840,7 @@ pub mod Staking {
         /// - unclaimed_rewards_own
         /// - unclaimed_rewards
         /// - index
-        fn update_rewards(ref self: ContractState, ref staker_info: StakerInfo) {
+        fn update_rewards(ref self: ContractState, ref staker_info: InternalStakerInfo) {
             if (staker_info.unstake_time.is_some()) {
                 return;
             }
