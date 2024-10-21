@@ -20,6 +20,7 @@ use constants::{NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_POOL_M
 use constants::{OTHER_OPERATIONAL_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS};
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use contracts::staking::objects::UndelegateIntentValueZero;
+use contracts::staking::objects::InternalStakerInfoTrait;
 use contracts::event_test_utils;
 use contracts::types::Index;
 use event_test_utils::assert_pool_member_reward_claimed_event;
@@ -619,9 +620,7 @@ fn test_exit_delegation_pool_intent() {
         pool_dispatcher.pool_member_info(cfg.test_info.pool_member_address),
         expected_pool_member_info
     );
-    let mut expected_staker_info = StakerInfo {
-        amount_own: cfg.staker_info.amount_own, ..cfg.staker_info
-    };
+    let mut expected_staker_info: StakerInfo = cfg.staker_info.into();
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
         pool_info.amount = Zero::zero();
         pool_info.pool_contract = pool_contract;

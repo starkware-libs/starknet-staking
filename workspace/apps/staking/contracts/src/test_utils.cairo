@@ -2,10 +2,11 @@ use contracts::{staking::Staking, minting_curve::MintingCurve, reward_supplier::
 use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
 use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, DEFAULT_C_NUM, C_DENOM};
 use core::traits::Into;
-use contracts::staking::interface::{IStaking, StakerInfo, StakerPoolInfo};
+use contracts::staking::interface::{IStaking, StakerPoolInfo};
 use contracts::staking::interface::{StakingContractInfo, IStakingDispatcher};
 use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
 use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPauseDispatcherTrait};
+use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use core::num::traits::zero::Zero;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts::pool::Pool;
@@ -789,7 +790,7 @@ struct RewardSupplierInfo {
 
 #[derive(Drop, Copy)]
 pub(crate) struct StakingInitConfig {
-    pub staker_info: StakerInfo,
+    pub staker_info: InternalStakerInfo,
     pub pool_member_info: PoolMemberInfo,
     pub staking_contract_info: StakingContractInfo,
     pub minting_curve_contract_info: MintingCurveContractInfo,
@@ -799,7 +800,7 @@ pub(crate) struct StakingInitConfig {
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
     fn default() -> StakingInitConfig {
-        let staker_info = StakerInfo {
+        let staker_info = InternalStakerInfo {
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,

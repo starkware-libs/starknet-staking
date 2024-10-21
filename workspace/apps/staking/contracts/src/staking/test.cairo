@@ -30,6 +30,7 @@ use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatc
 use starknet::get_block_timestamp;
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use contracts::staking::objects::UndelegateIntentValueZero;
+use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use contracts::staking::interface::{IStakingPoolDispatcher};
 use contracts::staking::interface::{IStakingPoolDispatcherTrait};
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
@@ -89,7 +90,7 @@ fn test_stake() {
     let mut expected_staker_info = cfg.staker_info;
     expected_staker_info.pool_info = Option::None;
     let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    assert_eq!(expected_staker_info, staking_dispatcher.staker_info(:staker_address));
+    assert_eq!(expected_staker_info.into(), staking_dispatcher.staker_info(:staker_address));
 
     let staker_address_from_operational_address = load_from_simple_map(
         map_selector: selector!("operational_address_to_staker_address"),
@@ -131,7 +132,7 @@ fn test_update_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg
         .staker_info =
-            StakerInfo {
+            InternalStakerInfo {
                 pool_info: Option::Some(
                     StakerPoolInfo {
                         pool_contract: POOL_CONTRACT_ADDRESS(),
@@ -157,8 +158,7 @@ fn test_update_rewards() {
     );
     let unclaimed_rewards_own: Amount = staker_rewards + commission_amount;
     let unclaimed_rewards: Amount = pool_rewards_including_commission - commission_amount;
-    let expected_staker_info = StakerInfo {
-        index: staker_info.index,
+    let expected_staker_info = InternalStakerInfo {
         unclaimed_rewards_own,
         pool_info: Option::Some(
             StakerPoolInfo { unclaimed_rewards, ..staker_info.get_pool_info_unchecked() }
@@ -200,7 +200,7 @@ fn test_send_rewards_to_delegation_pool() {
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards, :token_address
     );
     let pool_balance_before_rewards = erc20_dispatcher.balance_of(account: pool_contract);
-    let expected_staker_info = StakerInfo {
+    let expected_staker_info = InternalStakerInfo {
         pool_info: Option::Some(
             StakerPoolInfo {
                 unclaimed_rewards: Zero::zero(), ..cfg.staker_info.get_pool_info_unchecked()
@@ -241,7 +241,7 @@ fn test_send_rewards_to_staker() {
     // Setup staker_info and expected results before sending rewards.
     let unclaimed_rewards_own = STAKER_UNCLAIMED_REWARDS;
     cfg.staker_info.unclaimed_rewards_own = unclaimed_rewards_own;
-    let expected_staker_info = StakerInfo {
+    let expected_staker_info = InternalStakerInfo {
         unclaimed_rewards_own: Zero::zero(), ..cfg.staker_info
     };
     cheat_reward_for_reward_supplier(
@@ -270,7 +270,9 @@ fn test_send_rewards_to_staker() {
 fn test_update_rewards_unstake_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
-    let staker_info_expected = StakerInfo { unstake_time: Option::Some(1), ..cfg.staker_info };
+    let staker_info_expected = InternalStakerInfo {
+        unstake_time: Option::Some(1), ..cfg.staker_info
+    };
     let mut staker_info = staker_info_expected;
     state.update_rewards(ref :staker_info);
     assert_eq!(staker_info, staker_info_expected);
@@ -851,7 +853,7 @@ fn test_unstake_action() {
     let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
     assert_eq!(staker_amount, cfg.staker_info.amount_own);
-    let actual_staker_info: Option<StakerInfo> = load_option_from_simple_map(
+    let actual_staker_info: Option<InternalStakerInfo> = load_option_from_simple_map(
         map_selector: selector!("staker_info"), key: staker_address, contract: staking_contract
     );
     assert!(actual_staker_info.is_none());
@@ -924,7 +926,7 @@ fn test_stake_pool_enabled() {
             .pool_contract;
         cfg.staker_info.pool_info = Option::Some(pool_info);
     };
-    let expected_staker_info = cfg.staker_info;
+    let expected_staker_info = cfg.staker_info.into();
     // Check that the staker info was updated correctly.
     assert_eq!(expected_staker_info, staking_dispatcher.staker_info(:staker_address));
     // Validate events.
