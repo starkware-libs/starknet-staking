@@ -23,7 +23,7 @@ use constants::{POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INI
 use constants::{BASE_MINT_AMOUNT, BUFFER, L1_STAKING_MINTER_ADDRESS};
 use constants::{STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS, STARKGATE_ADDRESS};
 use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN};
-use constants::{SECURITY_AGENT, APP_GOVERNER, GOVERNANCE_ADMIN, OPERATOR_CONTRACT_ADDRESS};
+use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN, OPERATOR_CONTRACT_ADDRESS};
 use constants::APP_ROLE_ADMIN;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
@@ -157,8 +157,8 @@ pub(crate) mod constants {
     pub fn SECURITY_AGENT() -> ContractAddress {
         contract_address_const::<'SECURITY_AGENT'>()
     }
-    pub fn APP_GOVERNER() -> ContractAddress {
-        contract_address_const::<'APP_GOVERNER'>()
+    pub fn TOKEN_ADMIN() -> ContractAddress {
+        contract_address_const::<'TOKEN_ADMIN'>()
     }
     pub fn APP_ROLE_ADMIN() -> ContractAddress {
         contract_address_const::<'APP_ROLE_ADMIN'>()
@@ -319,9 +319,9 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
         account: cfg.test_info.app_role_admin,
         governance_admin: cfg.test_info.governance_admin
     );
-    set_account_as_app_governer(
+    set_account_as_token_admin(
         contract: staking_contract,
-        account: cfg.test_info.app_governer,
+        account: cfg.test_info.token_admin,
         app_role_admin: cfg.test_info.app_role_admin
     );
 }
@@ -358,7 +358,7 @@ pub(crate) fn set_account_as_app_role_admin(
     roles_dispatcher.register_app_role_admin(:account);
 }
 
-pub(crate) fn set_account_as_app_governer(
+pub(crate) fn set_account_as_token_admin(
     contract: ContractAddress, account: ContractAddress, app_role_admin: ContractAddress
 ) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
@@ -384,9 +384,9 @@ pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractA
         account: cfg.test_info.app_role_admin,
         governance_admin: cfg.test_info.governance_admin
     );
-    set_account_as_app_governer(
+    set_account_as_token_admin(
         contract: minting_curve_contract_address,
-        account: cfg.test_info.app_governer,
+        account: cfg.test_info.token_admin,
         app_role_admin: cfg.test_info.app_role_admin
     );
     minting_curve_contract_address
@@ -775,7 +775,7 @@ pub(crate) struct TestInfo {
     pub pool_contract_admin: ContractAddress,
     pub security_admin: ContractAddress,
     pub security_agent: ContractAddress,
-    pub app_governer: ContractAddress,
+    pub token_admin: ContractAddress,
     pub app_role_admin: ContractAddress,
 }
 
@@ -850,7 +850,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
             security_admin: SECURITY_ADMIN(),
             security_agent: SECURITY_AGENT(),
-            app_governer: APP_GOVERNER(),
+            token_admin: TOKEN_ADMIN(),
             app_role_admin: APP_ROLE_ADMIN()
         };
         let reward_supplier = RewardSupplierInfo {
