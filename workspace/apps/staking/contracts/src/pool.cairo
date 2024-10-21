@@ -4,7 +4,7 @@ pub mod pool;
 
 //convenient reference
 pub use pool::Pool;
-pub use interface::{IPool, PoolMemberInfo, Events};
+pub use interface::{IPool, InternalPoolMemberInfo, PoolMemberInfo, Events};
 
 #[cfg(test)]
 mod test;

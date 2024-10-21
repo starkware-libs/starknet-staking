@@ -64,6 +64,32 @@ pub mod Events {
 }
 
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
+pub struct InternalPoolMemberInfo {
+    pub reward_address: ContractAddress,
+    pub amount: Amount,
+    pub index: Index,
+    pub unclaimed_rewards: Amount,
+    pub commission: Commission,
+    pub unpool_amount: Amount,
+    pub unpool_time: Option<u64>,
+}
+
+pub(crate) impl InternalPoolMemberInfoInto of Into<InternalPoolMemberInfo, PoolMemberInfo> {
+    #[inline(always)]
+    fn into(self: InternalPoolMemberInfo) -> PoolMemberInfo {
+        PoolMemberInfo {
+            reward_address: self.reward_address,
+            amount: self.amount,
+            index: self.index,
+            unclaimed_rewards: self.unclaimed_rewards,
+            commission: self.commission,
+            unpool_amount: self.unpool_amount,
+            unpool_time: self.unpool_time,
+        }
+    }
+}
+
+#[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub struct PoolMemberInfo {
     pub reward_address: ContractAddress,
     pub amount: Amount,

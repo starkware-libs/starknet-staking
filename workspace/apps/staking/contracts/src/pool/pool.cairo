@@ -3,7 +3,8 @@ pub mod Pool {
     use core::serde::Serde;
     use core::num::traits::zero::Zero;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
-    use contracts::pool::{interface::PoolContractInfo, IPool, PoolMemberInfo, Events};
+    use contracts::pool::{interface::PoolContractInfo, IPool, Events};
+    use contracts::pool::{InternalPoolMemberInfo, PoolMemberInfo};
     use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
     use core::option::OptionTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp};
@@ -48,7 +49,7 @@ pub mod Pool {
         #[substorage(v0)]
         roles: RolesComponent::Storage,
         staker_address: ContractAddress,
-        pool_member_info: Map<ContractAddress, Option<PoolMemberInfo>>,
+        pool_member_info: Map<ContractAddress, Option<InternalPoolMemberInfo>>,
         final_staker_index: Option<Index>,
         staking_pool_dispatcher: IStakingPoolDispatcher,
         erc20_dispatcher: IERC20Dispatcher,
@@ -123,7 +124,7 @@ pub mod Pool {
                 .write(
                     pool_member,
                     Option::Some(
-                        PoolMemberInfo {
+                        InternalPoolMemberInfo {
                             reward_address: reward_address,
                             amount: amount,
                             index: updated_index,
@@ -328,7 +329,7 @@ pub mod Pool {
                     pool_member_info
                 },
                 Option::None => {
-                    PoolMemberInfo {
+                    InternalPoolMemberInfo {
                         reward_address: switch_pool_data.reward_address,
                         amount,
                         index,
@@ -382,7 +383,7 @@ pub mod Pool {
         }
 
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
-            self.get_pool_member_info(:pool_member)
+            self.get_pool_member_info(:pool_member).into()
         }
 
         fn contract_parameters(self: @ContractState) -> PoolContractInfo {
@@ -415,7 +416,7 @@ pub mod Pool {
     pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
         fn get_pool_member_info(
             self: @ContractState, pool_member: ContractAddress
-        ) -> PoolMemberInfo {
+        ) -> InternalPoolMemberInfo {
             self
                 .pool_member_info
                 .read(pool_member)
@@ -453,7 +454,9 @@ pub mod Pool {
         /// - unclaimed_rewards
         /// - index
         fn update_rewards(
-            ref self: ContractState, ref pool_member_info: PoolMemberInfo, updated_index: Index
+            ref self: ContractState,
+            ref pool_member_info: InternalPoolMemberInfo,
+            updated_index: Index
         ) {
             let interest: Index = updated_index - pool_member_info.index;
             pool_member_info.index = updated_index;
@@ -469,7 +472,7 @@ pub mod Pool {
         }
 
         fn update_index_and_update_rewards(
-            ref self: ContractState, ref pool_member_info: PoolMemberInfo
+            ref self: ContractState, ref pool_member_info: InternalPoolMemberInfo
         ) {
             let updated_index = self.receive_index_and_funds_from_staker();
             self.update_rewards(ref :pool_member_info, :updated_index)
@@ -507,7 +510,7 @@ pub mod Pool {
         /// After calling this function, one must write the updated pool_member_info to the storage.
         fn send_rewards_to_member(
             ref self: ContractState,
-            ref pool_member_info: PoolMemberInfo,
+            ref pool_member_info: InternalPoolMemberInfo,
             pool_member: ContractAddress,
             erc20_dispatcher: IERC20Dispatcher
         ) {
