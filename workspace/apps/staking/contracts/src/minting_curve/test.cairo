@@ -50,7 +50,7 @@ fn test_set_c_num() {
     assert_eq!(old_c_num, minting_curve_dispatcher.contract_parameters().c_num);
     let new_c_num = old_c_num * 2;
     cheat_caller_address_once(
-        contract_address: minting_curve_contract, caller_address: cfg.test_info.app_governer
+        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
     assert_eq!(new_c_num, minting_curve_dispatcher.contract_parameters().c_num);
@@ -83,7 +83,7 @@ fn test_set_invalid_c_num() {
     };
     let new_c_num = cfg.minting_curve_contract_info.c_denom + 1;
     cheat_caller_address_once(
-        contract_address: minting_curve_contract, caller_address: cfg.test_info.app_governer
+        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }

@@ -1616,7 +1616,7 @@ fn test_set_min_stake() {
     assert_eq!(old_min_stake, staking_dispatcher.contract_parameters().min_stake);
     let new_min_stake = old_min_stake / 2;
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.app_governer
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin
     );
     staking_config_dispatcher.set_min_stake(min_stake: new_min_stake);
     assert_eq!(new_min_stake, staking_dispatcher.contract_parameters().min_stake);
@@ -1633,7 +1633,7 @@ fn test_set_exit_waiting_window() {
     assert_eq!(old_exit_wait_window, staking_dispatcher.contract_parameters().exit_wait_window);
     let new_exit_wait_window = SECONDS_IN_DAY * 7;
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.app_governer
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin
     );
     staking_config_dispatcher.set_exit_wait_window(exit_wait_window: new_exit_wait_window);
     assert_eq!(new_exit_wait_window, staking_dispatcher.contract_parameters().exit_wait_window);
@@ -1650,7 +1650,7 @@ fn test_set_reward_supplier() {
     assert_eq!(old_reward_supplier, staking_dispatcher.contract_parameters().reward_supplier);
     let new_reward_supplier = OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS();
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.app_governer
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin
     );
     staking_config_dispatcher.set_reward_supplier(reward_supplier: new_reward_supplier);
     assert_eq!(new_reward_supplier, staking_dispatcher.contract_parameters().reward_supplier);
