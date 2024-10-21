@@ -5,7 +5,7 @@ pub mod components;
 pub(crate) mod bit_mask;
 
 // Make the module be available in the starknet-contract target.
-#[cfg(target: 'starknet-contract')]
+#[cfg(target: 'test')]
 pub(crate) mod erc20_mocks;
 
 // Consts and other non-component utilities

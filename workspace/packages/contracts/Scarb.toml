@@ -19,3 +19,6 @@ test = "snforge test"
 [lib]
 
 [[target.starknet-contract]]
+
+[[test]]
+name = "contracts_commons_unittest"
