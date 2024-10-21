@@ -17,5 +17,10 @@ snforge_std.workspace = true
 [scripts]
 test = "snforge test"
 
+[lib]
+
 [[target.starknet-contract]]
+
+[[test]]
+name = "contracts_unittest"
 build-external-contracts = ["contracts_commons::erc20_mocks::DualCaseERC20Mock"]
