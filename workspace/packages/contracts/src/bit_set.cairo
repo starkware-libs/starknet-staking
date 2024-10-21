@@ -48,6 +48,18 @@ impl BitSetStorePacking<
     }
 }
 
+#[generate_trait]
+impl BitSetInternalImpl<
+    T, +BitAnd<T>, +BitMask<T>, +BitOr<T>, +BitXor<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
+> of BitSetInternalTrait<T> {
+    fn _check_in_bounds(self: @BitSet<T>, index: usize) -> Result<(), BitSetError> {
+        if index < *self.lower_bound || index >= *self.upper_bound {
+            return Result::Err(BitSetError::IndexOutOfBounds);
+        }
+        Result::Ok(())
+    }
+}
+
 pub trait BitSetTrait<T> {
     fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError>;
     fn set(ref self: BitSet<T>, index: usize, value: bool) -> Result<(), BitSetError>;
@@ -69,18 +81,14 @@ impl BitSetImpl<
     T, +BitAnd<T>, +BitMask<T>, +BitOr<T>, +BitXor<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
 > of BitSetTrait<T> {
     fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError> {
-        if index < *self.lower_bound || index >= *self.upper_bound {
-            return Result::Err(BitSetError::IndexOutOfBounds);
-        }
+        self._check_in_bounds(index)?;
         // Get the bit by applying bitwise AND with the mask.
         let mask = BitMask::<T>::bit_mask(index).expect('Index should be bounded.');
         Result::Ok(*self.bit_array & mask != Zero::zero())
     }
 
     fn set(ref self: BitSet<T>, index: usize, value: bool) -> Result<(), BitSetError> {
-        if index < self.lower_bound || index >= self.upper_bound {
-            return Result::Err(BitSetError::IndexOutOfBounds);
-        }
+        @self._check_in_bounds(index)?;
         if value {
             // Set the bit by applying bitwise OR with the mask.
             let mask = BitMask::<T>::bit_mask(index).expect('Index should be bounded.');
@@ -107,9 +115,7 @@ impl BitSetImpl<
     }
 
     fn toggle(ref self: BitSet<T>, index: usize) -> Result<(), BitSetError> {
-        if index < self.lower_bound || index >= self.upper_bound {
-            return Result::Err(BitSetError::IndexOutOfBounds);
-        }
+        @self._check_in_bounds(index)?;
         // Toggle the bit by applying bitwise XOR with the mask.
         let mask = BitMask::<T>::bit_mask(index).expect('Index should be bounded.');
         self.bit_array = self.bit_array ^ mask;
