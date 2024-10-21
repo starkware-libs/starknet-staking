@@ -9,6 +9,7 @@ use contracts_commons::bit_mask::{BitMask, PowOfTwo};
 #[derive(Debug, Drop, PartialEq)]
 pub enum BitSetError {
     IndexOutOfBounds,
+    InvalidBound,
 }
 
 #[derive(Debug, Drop, PartialEq)]
@@ -78,7 +79,16 @@ pub trait BitSetTrait<T> {
 }
 
 impl BitSetImpl<
-    T, +BitAnd<T>, +BitMask<T>, +BitOr<T>, +BitXor<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
+    T,
+    +BitAnd<T>,
+    +BitMask<T>,
+    +BitOr<T>,
+    +BitSize<T>,
+    +BitXor<T>,
+    +Copy<T>,
+    +Drop<T>,
+    +PartialEq<T>,
+    +Zero<T>
 > of BitSetTrait<T> {
     fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError> {
         self._check_in_bounds(index)?;
@@ -148,10 +158,18 @@ impl BitSetImpl<
     }
 
     fn set_lower_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError> {
+        if bound >= self.upper_bound {
+            return Result::Err(BitSetError::InvalidBound);
+        }
+        self.lower_bound = bound;
         Result::Ok(())
     }
 
     fn set_upper_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError> {
+        if bound <= self.lower_bound || bound > BitSize::<T>::bits() {
+            return Result::Err(BitSetError::InvalidBound);
+        }
+        self.upper_bound = bound;
         Result::Ok(())
     }
 
@@ -246,10 +264,12 @@ mod tests {
 
     #[test]
     fn test_get_out_of_bounds() {
-        let bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
-        // TODO: Add index below lower bound error assertion (after set_lower_bound is implemented).
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
         assert_eq!(bit_set.get(8), Result::Err(BitSetError::IndexOutOfBounds));
         assert_eq!(bit_set.get(9), Result::Err(BitSetError::IndexOutOfBounds));
+
+        bit_set.set_lower_bound(1).unwrap();
+        assert_eq!(bit_set.get(0), Result::Err(BitSetError::IndexOutOfBounds));
     }
 
     #[test]
@@ -271,10 +291,17 @@ mod tests {
         bit_set.set(1, false).unwrap();
         // assert nothing changed (0 -> 0).
         assert_eq!(bit_set, expected);
+    }
 
-        // TODO: Seperate into another test and add index below lower bound error assertion.
+
+    #[test]
+    fn test_set_out_of_bounds() {
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
         assert_eq!(bit_set.set(8, true), Result::Err(BitSetError::IndexOutOfBounds));
         assert_eq!(bit_set.set(9, true), Result::Err(BitSetError::IndexOutOfBounds));
+
+        bit_set.set_lower_bound(1).unwrap();
+        assert_eq!(bit_set.set(0, true), Result::Err(BitSetError::IndexOutOfBounds));
     }
 
     #[test]
@@ -289,8 +316,36 @@ mod tests {
     #[test]
     fn test_toggle_out_of_bounds() {
         let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
-        // TODO: Add index below lower bound error assertion (after set_lower_bound is implemented).
         assert_eq!(bit_set.toggle(8), Result::Err(BitSetError::IndexOutOfBounds));
         assert_eq!(bit_set.toggle(9), Result::Err(BitSetError::IndexOutOfBounds));
+
+        bit_set.set_lower_bound(1).unwrap();
+        assert_eq!(bit_set.toggle(0), Result::Err(BitSetError::IndexOutOfBounds));
+    }
+
+    #[test]
+    fn test_set_lower_bound() {
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        assert!(bit_set.get(0).is_ok());
+        bit_set.set_lower_bound(1).unwrap();
+        assert_eq!(bit_set.get(0), Result::Err(BitSetError::IndexOutOfBounds));
+        assert!(bit_set.get(1).is_ok());
+
+        assert_eq!(bit_set.set_lower_bound(8), Result::Err(BitSetError::InvalidBound));
+        assert_eq!(bit_set.set_lower_bound(9), Result::Err(BitSetError::InvalidBound));
+    }
+
+    #[test]
+    fn test_set_upper_bound() {
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        assert!(bit_set.get(4).is_ok());
+        bit_set.set_upper_bound(4).unwrap();
+        assert_eq!(bit_set.get(4), Result::Err(BitSetError::IndexOutOfBounds));
+        assert_eq!(bit_set.get(5), Result::Err(BitSetError::IndexOutOfBounds));
+        assert!(bit_set.get(3).is_ok());
+
+        assert_eq!(bit_set.set_upper_bound(9), Result::Err(BitSetError::InvalidBound));
+        bit_set.set_lower_bound(1).unwrap();
+        assert_eq!(bit_set.set_upper_bound(0), Result::Err(BitSetError::InvalidBound));
     }
 }
