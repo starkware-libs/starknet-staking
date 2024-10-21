@@ -377,7 +377,9 @@ pub mod Staking {
         }
 
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
-            self.get_staker_info(:staker_address).into()
+            let mut staker_info = self.get_staker_info(:staker_address);
+            self.update_rewards(ref :staker_info);
+            staker_info.into()
         }
 
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
@@ -762,7 +764,7 @@ pub mod Staking {
         }
 
         fn calculate_and_update_pool_rewards(
-            ref self: ContractState, interest: Index, ref staker_info: InternalStakerInfo
+            self: @ContractState, interest: Index, ref staker_info: InternalStakerInfo
         ) {
             if let Option::Some(mut pool_info) = staker_info.pool_info {
                 if (pool_info.amount.is_non_zero()) {
@@ -840,7 +842,7 @@ pub mod Staking {
         /// - unclaimed_rewards_own
         /// - unclaimed_rewards
         /// - index
-        fn update_rewards(ref self: ContractState, ref staker_info: InternalStakerInfo) {
+        fn update_rewards(self: @ContractState, ref staker_info: InternalStakerInfo) {
             if (staker_info.unstake_time.is_some()) {
                 return;
             }
