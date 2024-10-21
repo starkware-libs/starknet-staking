@@ -10,7 +10,7 @@ use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use core::num::traits::zero::Zero;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts::pool::Pool;
-use contracts::pool::interface::{PoolMemberInfo, IPoolDispatcher, IPoolDispatcherTrait};
+use contracts::pool::interface::{InternalPoolMemberInfo, IPoolDispatcher, IPoolDispatcherTrait};
 use contracts::minting_curve::interface::MintingCurveContractInfo;
 use starknet::{ContractAddress, ClassHash, Store};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
@@ -593,13 +593,15 @@ pub(crate) fn load_option_from_simple_map<
 
 pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
     key: K, contract: ContractAddress
-) -> Option<PoolMemberInfo> {
+) -> Option<InternalPoolMemberInfo> {
     let map_selector = selector!("pool_member_info");
     let mut keys = array![];
     key.serialize(ref keys);
     let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
     let mut raw_serialized_value = snforge_std::load(
-        target: contract, :storage_address, size: Store::<Option<PoolMemberInfo>>::size().into()
+        target: contract,
+        :storage_address,
+        size: Store::<Option<InternalPoolMemberInfo>>::size().into()
     );
     let idx = raw_serialized_value.pop_front().expect('Failed pop_front');
     if idx.is_zero() {
@@ -607,7 +609,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
     }
     assert!(idx == 1, "Invalid Option loaded from map");
     let mut span = raw_serialized_value.span();
-    let mut pool_member_info = PoolMemberInfo {
+    let mut pool_member_info = InternalPoolMemberInfo {
         reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed de reward'),
         amount: Serde::<Amount>::deserialize(ref span).expect('Failed de amount'),
         index: Serde::<Index>::deserialize(ref span).expect('Failed de index'),
@@ -791,7 +793,7 @@ struct RewardSupplierInfo {
 #[derive(Drop, Copy)]
 pub(crate) struct StakingInitConfig {
     pub staker_info: InternalStakerInfo,
-    pub pool_member_info: PoolMemberInfo,
+    pub pool_member_info: InternalPoolMemberInfo,
     pub staking_contract_info: StakingContractInfo,
     pub minting_curve_contract_info: MintingCurveContractInfo,
     pub test_info: TestInfo,
@@ -816,7 +818,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
                 }
             )
         };
-        let pool_member_info = PoolMemberInfo {
+        let pool_member_info = InternalPoolMemberInfo {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             amount: POOL_MEMBER_STAKE_AMOUNT,
             index: BASE_VALUE,
