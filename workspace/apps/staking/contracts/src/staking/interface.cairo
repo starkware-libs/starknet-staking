@@ -282,3 +282,25 @@ pub trait IStakingConfig<TContractState> {
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
 }
+
+pub mod ConfigEvents {
+    use starknet::ContractAddress;
+    use contracts::types::{Amount, TimeDelta};
+    #[derive(Drop, starknet::Event)]
+    pub struct MinimumStakeChanged {
+        pub old_min_stake: Amount,
+        pub new_min_stake: Amount
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ExitWaitWindowChanged {
+        pub old_exit_window: TimeDelta,
+        pub new_exit_window: TimeDelta
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct RewardSupplierChanged {
+        pub old_reward_supplier: ContractAddress,
+        pub new_reward_supplier: ContractAddress
+    }
+}

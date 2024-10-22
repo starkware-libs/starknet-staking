@@ -22,10 +22,10 @@ use event_test_utils::{assert_stake_balance_changed_event, assert_delete_staker_
 use event_test_utils::assert_staker_reward_address_change_event;
 use event_test_utils::{assert_new_delegation_pool_event, assert_commission_changed_event};
 use event_test_utils::assert_change_operational_address_event;
-use event_test_utils::assert_new_staker_event;
-use event_test_utils::assert_global_index_updated_event;
+use event_test_utils::{assert_new_staker_event, assert_minimum_stake_changed_event};
+use event_test_utils::{assert_global_index_updated_event, assert_exit_wait_window_changed_event};
 use event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
-use event_test_utils::assert_staker_reward_claimed_event;
+use event_test_utils::{assert_staker_reward_claimed_event, assert_reward_supplier_changed_event};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::get_block_timestamp;
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
@@ -1615,11 +1615,16 @@ fn test_set_min_stake() {
     let old_min_stake = cfg.staking_contract_info.min_stake;
     assert_eq!(old_min_stake, staking_dispatcher.contract_parameters().min_stake);
     let new_min_stake = old_min_stake / 2;
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin
     );
     staking_config_dispatcher.set_min_stake(min_stake: new_min_stake);
     assert_eq!(new_min_stake, staking_dispatcher.contract_parameters().min_stake);
+    // Validate the single MinimumStakeChanged event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_min_stake");
+    assert_minimum_stake_changed_event(spied_event: events[0], :old_min_stake, :new_min_stake);
 }
 
 #[test]
@@ -1629,14 +1634,21 @@ fn test_set_exit_waiting_window() {
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
-    let old_exit_wait_window = cfg.staking_contract_info.exit_wait_window;
-    assert_eq!(old_exit_wait_window, staking_dispatcher.contract_parameters().exit_wait_window);
-    let new_exit_wait_window = SECONDS_IN_DAY * 7;
+    let old_exit_window = cfg.staking_contract_info.exit_wait_window;
+    assert_eq!(old_exit_window, staking_dispatcher.contract_parameters().exit_wait_window);
+    let new_exit_window = SECONDS_IN_DAY * 7;
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin
     );
-    staking_config_dispatcher.set_exit_wait_window(exit_wait_window: new_exit_wait_window);
-    assert_eq!(new_exit_wait_window, staking_dispatcher.contract_parameters().exit_wait_window);
+    staking_config_dispatcher.set_exit_wait_window(exit_wait_window: new_exit_window);
+    assert_eq!(new_exit_window, staking_dispatcher.contract_parameters().exit_wait_window);
+    // Validate the single ExitWaitWindowChanged event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_exit_wait_window");
+    assert_exit_wait_window_changed_event(
+        spied_event: events[0], :old_exit_window, :new_exit_window
+    );
 }
 
 #[test]
@@ -1649,9 +1661,16 @@ fn test_set_reward_supplier() {
     let old_reward_supplier = cfg.staking_contract_info.reward_supplier;
     assert_eq!(old_reward_supplier, staking_dispatcher.contract_parameters().reward_supplier);
     let new_reward_supplier = OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS();
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin
     );
     staking_config_dispatcher.set_reward_supplier(reward_supplier: new_reward_supplier);
     assert_eq!(new_reward_supplier, staking_dispatcher.contract_parameters().reward_supplier);
+    // Validate the single RewardSupplierChanged event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_reward_supplier");
+    assert_reward_supplier_changed_event(
+        spied_event: events[0], :old_reward_supplier, :new_reward_supplier
+    );
 }

@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod MintingCurve {
     use core::num::traits::{WideMul, Sqrt};
-    use contracts::minting_curve::interface::{IMintingCurve, Events};
+    use contracts::minting_curve::interface::{IMintingCurve, Events, ConfigEvents};
     use contracts::minting_curve::interface::{IMintingCurveConfig, MintingCurveContractInfo};
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
     use contracts::errors::{Error, assert_with_err};
@@ -38,14 +38,15 @@ pub mod MintingCurve {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         #[flat]
         RolesEvent: RolesComponent::Event,
         #[flat]
         AccessControlEvent: AccessControlComponent::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
-        TotalSupplyChanged: Events::TotalSupplyChanged
+        TotalSupplyChanged: Events::TotalSupplyChanged,
+        MintingCapChanged: ConfigEvents::MintingCapChanged
     }
 
 
@@ -103,7 +104,9 @@ pub mod MintingCurve {
         fn set_c_num(ref self: ContractState, c_num: Inflation) {
             self.roles.only_token_admin();
             assert_with_err(c_num <= C_DENOM, Error::C_NUM_OUT_OF_RANGE);
+            let old_c = self.c_num.read();
             self.c_num.write(c_num);
+            self.emit(ConfigEvents::MintingCapChanged { old_c, new_c: c_num });
         }
     }
 

@@ -13,7 +13,7 @@ pub mod Staking {
     use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
     use contracts::staking::objects::UndelegateIntentValueZero;
     use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
-    use contracts::staking::{Events, PauseEvents};
+    use contracts::staking::{Events, PauseEvents, ConfigEvents};
     use starknet::{ContractAddress, get_contract_address, get_caller_address, get_tx_info};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -94,7 +94,10 @@ pub mod Staking {
         DeleteStaker: Events::DeleteStaker,
         RewardsSuppliedToDelegationPool: Events::RewardsSuppliedToDelegationPool,
         Paused: PauseEvents::Paused,
-        Unpaused: PauseEvents::Unpaused
+        Unpaused: PauseEvents::Unpaused,
+        MinimumStakeChanged: ConfigEvents::MinimumStakeChanged,
+        ExitWaitWindowChanged: ConfigEvents::ExitWaitWindowChanged,
+        RewardSupplierChanged: ConfigEvents::RewardSupplierChanged,
     }
 
     #[constructor]
@@ -673,19 +676,38 @@ pub mod Staking {
     impl StakingConfigImpl of IStakingConfig<ContractState> {
         fn set_min_stake(ref self: ContractState, min_stake: Amount) {
             self.roles.only_token_admin();
+            let old_min_stake = self.min_stake.read();
             self.min_stake.write(min_stake);
+            self
+                .emit(
+                    ConfigEvents::MinimumStakeChanged { old_min_stake, new_min_stake: min_stake }
+                );
         }
 
         fn set_exit_wait_window(ref self: ContractState, exit_wait_window: TimeDelta) {
             self.roles.only_token_admin();
+            let old_exit_window = self.exit_wait_window.read();
             self.exit_wait_window.write(exit_wait_window);
+            self
+                .emit(
+                    ConfigEvents::ExitWaitWindowChanged {
+                        old_exit_window, new_exit_window: exit_wait_window
+                    }
+                );
         }
 
         fn set_reward_supplier(ref self: ContractState, reward_supplier: ContractAddress) {
             self.roles.only_token_admin();
+            let old_reward_supplier = self.reward_supplier_dispatcher.read().contract_address;
             self
                 .reward_supplier_dispatcher
                 .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
+            self
+                .emit(
+                    ConfigEvents::RewardSupplierChanged {
+                        old_reward_supplier, new_reward_supplier: reward_supplier
+                    }
+                );
         }
     }
 

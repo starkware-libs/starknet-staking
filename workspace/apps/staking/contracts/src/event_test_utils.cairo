@@ -1,10 +1,12 @@
 use starknet::{ContractAddress};
 use contracts::staking::Events as StakingEvents;
+use contracts::staking::ConfigEvents as StakingConfigEvents;
 use contracts::staking::PauseEvents;
 use contracts::pool::Events as PoolEvents;
 use contracts::reward_supplier::Events as RewardSupplierEvents;
+use contracts::minting_curve::ConfigEvents as MintingCurveConfigEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
-use contracts::types::{Commission, TimeStamp, Index, Amount};
+use contracts::types::{Commission, TimeStamp, Index, Amount, Inflation};
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(
@@ -530,4 +532,78 @@ pub fn debug_dump_spied_events(ref spy: EventSpy) {
     >::serialize(@(spy.get_events().events), ref serialized);
     println!("{:?}", serialized);
     println!("[#events, (emitterAddress, #keys, keys..., #values, values...)...]");
+}
+
+pub fn assert_minting_cap_changed_event(
+    spied_event: @(ContractAddress, Event), old_c: Inflation, new_c: Inflation
+) {
+    let expected_event = @contracts::minting_curve::MintingCurve::Event::MintingCapChanged(
+        MintingCurveConfigEvents::MintingCapChanged { old_c, new_c }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!("MintingCapChanged{{old_c: {:?}, new_c: {:?}}}", old_c, new_c);
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+pub fn assert_minimum_stake_changed_event(
+    spied_event: @(ContractAddress, Event), old_min_stake: Amount, new_min_stake: Amount
+) {
+    let expected_event = @contracts::staking::Staking::Event::MinimumStakeChanged(
+        StakingConfigEvents::MinimumStakeChanged { old_min_stake, new_min_stake }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "MinimumStakeChanged{{old_min_stake: {:?}, new_min_stake: {:?}}}",
+            old_min_stake,
+            new_min_stake
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+pub fn assert_exit_wait_window_changed_event(
+    spied_event: @(ContractAddress, Event), old_exit_window: TimeStamp, new_exit_window: TimeStamp
+) {
+    let expected_event = @contracts::staking::Staking::Event::ExitWaitWindowChanged(
+        StakingConfigEvents::ExitWaitWindowChanged { old_exit_window, new_exit_window }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "ExitWaitWindowChanged{{old_exit_window: {:?}, new_exit_window: {:?}}}",
+            old_exit_window,
+            new_exit_window
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+pub fn assert_reward_supplier_changed_event(
+    spied_event: @(ContractAddress, Event),
+    old_reward_supplier: ContractAddress,
+    new_reward_supplier: ContractAddress
+) {
+    let expected_event = @contracts::staking::Staking::Event::RewardSupplierChanged(
+        StakingConfigEvents::RewardSupplierChanged { old_reward_supplier, new_reward_supplier }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "RewardSupplierChanged{{old_reward_supplier: {:?}, new_reward_supplier: {:?}}}",
+            old_reward_supplier,
+            new_reward_supplier
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
 }
