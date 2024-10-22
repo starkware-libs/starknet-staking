@@ -8,6 +8,8 @@ use contracts::test_utils::StakingInitConfig;
 use contracts::test_utils::constants::NON_TOKEN_ADMIN;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::types::Amount;
+use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
+use contracts::event_test_utils::{assert_number_of_events, assert_minting_cap_changed_event};
 
 #[test]
 fn test_yearly_mint() {
@@ -46,14 +48,19 @@ fn test_set_c_num() {
     let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
         contract_address: minting_curve_contract
     };
-    let old_c_num = cfg.minting_curve_contract_info.c_num;
-    assert_eq!(old_c_num, minting_curve_dispatcher.contract_parameters().c_num);
-    let new_c_num = old_c_num * 2;
+    let old_c = cfg.minting_curve_contract_info.c_num;
+    assert_eq!(old_c, minting_curve_dispatcher.contract_parameters().c_num);
+    let new_c = old_c * 2;
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin
     );
-    minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
-    assert_eq!(new_c_num, minting_curve_dispatcher.contract_parameters().c_num);
+    minting_curve_config_dispatcher.set_c_num(c_num: new_c);
+    assert_eq!(new_c, minting_curve_dispatcher.contract_parameters().c_num);
+    // Validate the single MintingCapChanged event.
+    let events = spy.get_events().emitted_by(contract_address: minting_curve_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_c_num");
+    assert_minting_cap_changed_event(spied_event: events[0], :old_c, :new_c);
 }
 
 #[test]

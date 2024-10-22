@@ -26,3 +26,13 @@ pub mod Events {
         pub new_total_supply: Amount
     }
 }
+
+pub mod ConfigEvents {
+    use contracts::types::Inflation;
+
+    #[derive(Drop, starknet::Event)]
+    pub struct MintingCapChanged {
+        pub old_c: Inflation,
+        pub new_c: Inflation
+    }
+}
