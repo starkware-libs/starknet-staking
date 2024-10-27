@@ -139,7 +139,6 @@ pub struct StakingContractInfo {
 }
 
 /// Public interface for the staking contract.
-/// This interface is exposed by the operator contract.
 #[starknet::interface]
 pub trait IStaking<TContractState> {
     fn stake(

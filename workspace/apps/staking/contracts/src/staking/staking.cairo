@@ -14,7 +14,7 @@ pub mod Staking {
     use contracts::staking::objects::UndelegateIntentValueZero;
     use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
     use contracts::staking::{Events, PauseEvents, ConfigEvents};
-    use starknet::{ContractAddress, get_contract_address, get_caller_address, get_tx_info};
+    use starknet::{ContractAddress, get_contract_address, get_caller_address};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -29,7 +29,6 @@ pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
-    use contracts_commons::components::roles::interface::{OPERATOR, SECURITY_ADMIN};
     use contracts::types::{Commission, TimeDelta, TimeStamp, Index, Amount};
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
@@ -112,8 +111,6 @@ pub mod Staking {
     ) {
         self.accesscontrol.initializer();
         self.roles.initializer(:governance_admin);
-        // Override default role admins.
-        self.accesscontrol.set_role_admin(role: OPERATOR, admin_role: SECURITY_ADMIN);
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);
@@ -139,10 +136,7 @@ pub mod Staking {
             commission: Commission,
         ) {
             self.general_prerequisites();
-            self.roles.only_operator();
-            // TODO: consider calling get_execution_info() and pass it to the role test for better
-            // performance (remove the additional syscall for get_caller_address()).
-            let staker_address = get_tx_info().account_contract_address;
+            let staker_address = get_caller_address();
             assert_with_err(self.staker_info.read(staker_address).is_none(), Error::STAKER_EXISTS);
             assert_with_err(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
@@ -215,8 +209,7 @@ pub mod Staking {
             ref self: ContractState, staker_address: ContractAddress, amount: Amount
         ) -> Amount {
             self.general_prerequisites();
-            self.roles.only_operator();
-            let caller_address = get_tx_info().account_contract_address;
+            let caller_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             assert_with_err(
@@ -259,9 +252,8 @@ pub mod Staking {
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             self.general_prerequisites();
-            self.roles.only_operator();
             let mut staker_info = self.get_staker_info(:staker_address);
-            let caller_address = get_tx_info().account_contract_address;
+            let caller_address = get_caller_address();
             let reward_address = staker_info.reward_address;
             assert_with_err(
                 caller_address == staker_address || caller_address == reward_address,
@@ -277,8 +269,7 @@ pub mod Staking {
 
         fn unstake_intent(ref self: ContractState) -> TimeStamp {
             self.general_prerequisites();
-            self.roles.only_operator();
-            let staker_address = get_tx_info().account_contract_address;
+            let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             self.update_rewards(ref :staker_info);
@@ -313,7 +304,6 @@ pub mod Staking {
 
         fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             self.general_prerequisites();
-            self.roles.only_operator();
             let mut staker_info = self.get_staker_info(:staker_address);
             let unstake_time = staker_info
                 .unstake_time
@@ -335,8 +325,7 @@ pub mod Staking {
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
             self.general_prerequisites();
-            self.roles.only_operator();
-            let staker_address = get_tx_info().account_contract_address;
+            let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             let old_address = staker_info.reward_address;
             staker_info.reward_address = reward_address;
@@ -353,8 +342,7 @@ pub mod Staking {
             ref self: ContractState, commission: Commission
         ) -> ContractAddress {
             self.general_prerequisites();
-            self.roles.only_operator();
-            let staker_address = get_tx_info().account_contract_address;
+            let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
             assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
@@ -417,12 +405,11 @@ pub mod Staking {
             ref self: ContractState, operational_address: ContractAddress
         ) {
             self.general_prerequisites();
-            self.roles.only_operator();
             assert_with_err(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
                 Error::OPERATIONAL_EXISTS
             );
-            let staker_address = get_tx_info().account_contract_address;
+            let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             self
                 .operational_address_to_staker_address
@@ -441,8 +428,7 @@ pub mod Staking {
 
         fn update_commission(ref self: ContractState, commission: Commission) {
             self.general_prerequisites();
-            self.roles.only_operator();
-            let staker_address = get_tx_info().account_contract_address;
+            let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let pool_info = staker_info.get_pool_info_unchecked();

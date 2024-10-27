@@ -12,7 +12,6 @@ pub mod staking;
 pub mod pool;
 pub mod minting_curve;
 pub mod reward_supplier;
-pub mod operator;
 
 // Consts and other non-component utilities
 pub mod errors;

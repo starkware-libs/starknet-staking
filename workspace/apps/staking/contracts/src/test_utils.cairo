@@ -23,7 +23,7 @@ use constants::{POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INI
 use constants::{BASE_MINT_AMOUNT, BUFFER, L1_STAKING_MINTER_ADDRESS};
 use constants::{STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS, STARKGATE_ADDRESS};
 use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN};
-use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN, OPERATOR_CONTRACT_ADDRESS};
+use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN};
 use constants::APP_ROLE_ADMIN;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
@@ -87,9 +87,6 @@ pub(crate) mod constants {
     }
     pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'STAKING_CONTRACT_ADDRESS'>()
-    }
-    pub fn OPERATOR_CONTRACT_ADDRESS() -> ContractAddress {
-        contract_address_const::<'OPERATOR_CONTRACT_ADDRESS'>()
     }
     pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress {
         contract_address_const::<'NOT_STAKING_CONTRACT_ADDRESS'>()
@@ -309,11 +306,6 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
         account: cfg.test_info.security_agent,
         security_admin: cfg.test_info.security_admin
     );
-    set_account_as_operator(
-        :staking_contract,
-        account: cfg.test_info.staker_address,
-        security_admin: cfg.test_info.security_admin
-    );
     set_account_as_app_role_admin(
         contract: staking_contract,
         account: cfg.test_info.app_role_admin,
@@ -340,14 +332,6 @@ pub(crate) fn set_account_as_security_agent(
     let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(contract_address: staking_contract, caller_address: security_admin);
     roles_dispatcher.register_security_agent(:account);
-}
-
-pub(crate) fn set_account_as_operator(
-    staking_contract: ContractAddress, account: ContractAddress, security_admin: ContractAddress
-) {
-    let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: security_admin);
-    roles_dispatcher.register_operator(:account);
 }
 
 pub(crate) fn set_account_as_app_role_admin(
@@ -408,25 +392,6 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
 
 pub(crate) fn declare_pool_contract() -> ClassHash {
     *snforge_std::declare("Pool").unwrap().contract_class().class_hash
-}
-
-pub(crate) fn deploy_operator_contract(cfg: StakingInitConfig) -> ContractAddress {
-    let mut calldata = ArrayTrait::new();
-    cfg.test_info.staking_contract.serialize(ref calldata);
-    cfg.test_info.security_admin.serialize(ref calldata);
-    let operator_contract = snforge_std::declare("Operator").unwrap().contract_class();
-    let (operator_contract_address, _) = operator_contract.deploy(@calldata).unwrap();
-    set_account_as_security_admin(
-        contract: operator_contract_address,
-        account: cfg.test_info.security_admin,
-        governance_admin: cfg.test_info.governance_admin
-    );
-    set_account_as_security_agent(
-        staking_contract: operator_contract_address,
-        account: cfg.test_info.security_agent,
-        security_admin: cfg.test_info.security_admin
-    );
-    operator_contract_address
 }
 
 pub(crate) fn fund(
@@ -512,10 +477,6 @@ pub(crate) fn stake_with_pool_enabled(
         .staker_info(cfg.test_info.staker_address)
         .get_pool_info_unchecked()
         .pool_contract;
-    // Set pool contract as operator.
-    set_account_as_operator(
-        :staking_contract, account: pool_contract, security_admin: cfg.test_info.security_admin
-    );
     pool_contract
 }
 
@@ -661,14 +622,6 @@ pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         storage_address: selector!("staking_dispatcher"),
         serialized_value: array![staking_contract.into()].span()
     );
-    // Deploy the operator contract. Add it as an operator of the staking.
-    let operator_contract = deploy_operator_contract(:cfg);
-    cfg.test_info.operator_contract = operator_contract;
-    set_account_as_operator(
-        staking_contract: staking_contract,
-        account: operator_contract,
-        security_admin: cfg.test_info.security_admin
-    );
 }
 
 pub fn cheat_reward_for_reward_supplier(
@@ -775,7 +728,6 @@ pub(crate) struct TestInfo {
     pub pool_member_initial_balance: Amount,
     pub pool_enabled: bool,
     pub staking_contract: ContractAddress,
-    pub operator_contract: ContractAddress,
     pub pool_contract_admin: ContractAddress,
     pub security_admin: ContractAddress,
     pub security_agent: ContractAddress,
@@ -850,7 +802,6 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pool_enabled: false,
             staking_contract: STAKING_CONTRACT_ADDRESS(),
-            operator_contract: OPERATOR_CONTRACT_ADDRESS(),
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
             security_admin: SECURITY_ADMIN(),
             security_agent: SECURITY_AGENT(),
