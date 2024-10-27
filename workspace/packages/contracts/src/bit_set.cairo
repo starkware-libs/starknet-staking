@@ -84,6 +84,7 @@ impl BitSetImpl<
     +BitOr<T>,
     +BitSize<T>,
     +BitXor<T>,
+    +Bounded<T>,
     +Copy<T>,
     +Drop<T>,
     +PartialEq<T>,
@@ -116,11 +117,11 @@ impl BitSetImpl<
     }
 
     fn clear(ref self: BitSet<T>) {
-        ()
+        self.bit_array = Zero::zero();
     }
 
     fn set_all(ref self: BitSet<T>) {
-        ()
+        self.bit_array = Bounded::MAX;
     }
 
     fn toggle(ref self: BitSet<T>, index: usize) -> Result<(), BitSetError> {
@@ -288,7 +289,6 @@ mod tests {
         assert_eq!(bit_set, expected);
     }
 
-
     #[test]
     fn test_set_out_of_bounds() {
         let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
@@ -342,5 +342,33 @@ mod tests {
         assert_eq!(bit_set.set_upper_bound(9), Result::Err(BitSetError::InvalidBound));
         bit_set.set_lower_bound(1).unwrap();
         assert_eq!(bit_set.set_upper_bound(0), Result::Err(BitSetError::InvalidBound));
+    }
+
+    #[test]
+    fn test_clear() {
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        assert!(bit_set.get(0).unwrap());
+        assert!(bit_set.get(5).unwrap());
+        assert!(bit_set.get(6).unwrap());
+        bit_set.clear();
+        assert!(!bit_set.get(0).unwrap());
+        assert!(!bit_set.get(5).unwrap());
+        assert!(!bit_set.get(6).unwrap());
+    }
+
+    #[test]
+    fn test_set_all() {
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        assert!(!bit_set.get(1).unwrap());
+        assert!(!bit_set.get(2).unwrap());
+        assert!(!bit_set.get(3).unwrap());
+        assert!(!bit_set.get(4).unwrap());
+        assert!(!bit_set.get(7).unwrap());
+        bit_set.set_all();
+        assert!(bit_set.get(1).unwrap());
+        assert!(bit_set.get(2).unwrap());
+        assert!(bit_set.get(3).unwrap());
+        assert!(bit_set.get(4).unwrap());
+        assert!(bit_set.get(7).unwrap());
     }
 }
