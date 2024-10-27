@@ -13,7 +13,7 @@ use test_utils::{deploy_staking_contract, approve, fund};
 use test_utils::{stake_with_pool_enabled, load_from_simple_map, load_option_from_simple_map};
 use test_utils::{general_contract_system_deployment, cheat_reward_for_reward_supplier};
 use test_utils::{create_rewards_for_pool_member, load_pool_member_info_from_map};
-use test_utils::{set_account_as_operator, enter_delegation_pool_for_testing_using_dispatcher};
+use test_utils::{enter_delegation_pool_for_testing_using_dispatcher};
 use contracts::test_utils::constants;
 use constants::{STAKER_ADDRESS, STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, DUMMY_ADDRESS};
 use constants::{OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, COMMISSION, STAKER_FINAL_INDEX};
@@ -766,11 +766,6 @@ fn test_switch_delegation_pool() {
     let switch_amount = cfg.pool_member_info.amount / 2;
     cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
-    set_account_as_operator(
-        :staking_contract,
-        account: cfg.test_info.staker_address,
-        security_admin: cfg.test_info.security_admin
-    );
     let to_staker_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 
     let unclaimed_rewards_member = create_rewards_for_pool_member(ref :cfg);

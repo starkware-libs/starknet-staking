@@ -1,5 +1,4 @@
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
-use contracts::operator::Operator::MAX_WHITELIST_SIZE;
 use contracts::constants::C_DENOM;
 use core::panics::panic_with_byte_array;
 
@@ -24,9 +23,6 @@ pub enum Error {
     AMOUNT_TOO_HIGH,
     AMOUNT_IS_ZERO,
     CANNOT_INCREASE_COMMISSION,
-    // Operator contract errors
-    NOT_WHITELISTED,
-    WHITELIST_FULL,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     COMMISSION_OUT_OF_RANGE,
@@ -82,10 +78,6 @@ pub impl ErrorImpl of ErrorTrait {
             Error::STAKER_EXISTS => "Staker already exists, use increase_stake instead",
             Error::STAKER_NOT_EXISTS => "Staker does not exist",
             Error::CALLER_CANNOT_INCREASE_STAKE => "Caller address should be staker address or reward address",
-            Error::NOT_WHITELISTED => "Caller is not in whitelist",
-            Error::WHITELIST_FULL => format!(
-                "Whitelist is limited to {} addresses", MAX_WHITELIST_SIZE
-            ),
             Error::INVALID_REWARD_ADDRESS => "Invalid reward address",
             Error::AMOUNT_TOO_HIGH => "Amount is too high",
             Error::AMOUNT_IS_ZERO => "Amount is zero",
