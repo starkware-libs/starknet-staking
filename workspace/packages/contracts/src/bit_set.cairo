@@ -74,7 +74,6 @@ pub trait BitSetTrait<T> {
     fn get_set_bits_indices(self: @BitSet<T>) -> Span<usize>;
     fn set_lower_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError>;
     fn set_upper_bound(ref self: BitSet<T>, bound: usize) -> Result<(), BitSetError>;
-    fn is_initialized(self: @BitSet<T>) -> bool;
     fn len(self: @BitSet<T>) -> usize;
 }
 
@@ -171,10 +170,6 @@ impl BitSetImpl<
         }
         self.upper_bound = bound;
         Result::Ok(())
-    }
-
-    fn is_initialized(self: @BitSet<T>) -> bool {
-        false
     }
 
     fn len(self: @BitSet<T>) -> usize {
