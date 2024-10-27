@@ -1,6 +1,6 @@
 use starknet::{ContractAddress, ClassHash};
 use contracts::errors::{Error, OptionAuxTrait};
-use contracts::types::{Commission, TimeDelta, Index, Amount};
+use contracts::types::{Commission, TimeDelta, Index, Amount, TimeStamp};
 
 pub mod Events {
     use starknet::ContractAddress;
@@ -114,7 +114,7 @@ pub struct StakerPoolInfo {
 pub struct StakerInfo {
     pub reward_address: ContractAddress,
     pub operational_address: ContractAddress,
-    pub unstake_time: Option<u64>,
+    pub unstake_time: Option<TimeStamp>,
     pub amount_own: Amount,
     pub index: Index,
     pub unclaimed_rewards_own: Amount,
@@ -154,10 +154,10 @@ pub trait IStaking<TContractState> {
         ref self: TContractState, staker_address: ContractAddress, amount: Amount
     ) -> Amount;
     fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> Amount;
-    fn unstake_intent(ref self: TContractState) -> u64;
+    fn unstake_intent(ref self: TContractState) -> TimeStamp;
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
-    fn set_open_for_delegation(ref self: TContractState, commission: u16) -> ContractAddress;
+    fn set_open_for_delegation(ref self: TContractState, commission: Commission) -> ContractAddress;
     fn staker_info(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
@@ -211,7 +211,7 @@ pub trait IStakingPool<TContractState> {
         staker_address: ContractAddress,
         identifier: felt252,
         amount: Amount,
-    ) -> u64;
+    ) -> TimeStamp;
 
     /// Transfers the removal intent amount back to the pool contract, and clears the intent.
     ///

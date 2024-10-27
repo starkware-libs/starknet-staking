@@ -275,7 +275,7 @@ pub mod Staking {
             amount
         }
 
-        fn unstake_intent(ref self: ContractState) -> u64 {
+        fn unstake_intent(ref self: ContractState) -> TimeStamp {
             self.general_prerequisites();
             self.roles.only_operator();
             let staker_address = get_tx_info().account_contract_address;
@@ -515,7 +515,7 @@ pub mod Staking {
             staker_address: ContractAddress,
             identifier: felt252,
             amount: Amount,
-        ) -> u64 {
+        ) -> TimeStamp {
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             let mut pool_info = staker_info.get_pool_info_unchecked();

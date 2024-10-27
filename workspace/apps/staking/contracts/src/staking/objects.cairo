@@ -14,7 +14,7 @@ pub struct UndelegateIntentKey {
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct UndelegateIntentValue {
-    pub unpool_time: u64,
+    pub unpool_time: TimeStamp,
     pub amount: Amount
 }
 

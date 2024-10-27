@@ -27,7 +27,7 @@ use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN, OPERATOR_CONTRACT
 use constants::APP_ROLE_ADMIN;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
-use contracts::types::{Commission, Index, Amount};
+use contracts::types::{Commission, Index, Amount, TimeStamp};
 
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
@@ -623,7 +623,9 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
         assert!(idx == 1, "Invalid Option loaded from map");
         pool_member_info
             .unpool_time =
-                Option::Some(Serde::<u64>::deserialize(ref span).expect('Failed de unpool_time'));
+                Option::Some(
+                    Serde::<TimeStamp>::deserialize(ref span).expect('Failed de unpool_time')
+                );
     }
     return Option::Some(pool_member_info);
 }
