@@ -3,7 +3,7 @@ pub mod StakingForOperatorMock {
     use contracts::staking::{IStaking, StakerInfo, StakingContractInfo};
     use starknet::{ContractAddress, get_execution_info, contract_address_const};
     use starknet::class_hash::class_hash_const;
-    use contracts::types::{Commission, Amount};
+    use contracts::types::{Commission, Amount, TimeStamp};
 
     #[storage]
     struct Storage {
@@ -44,7 +44,7 @@ pub mod StakingForOperatorMock {
             self.assert_execution_context();
             0
         }
-        fn unstake_intent(ref self: ContractState) -> u64 {
+        fn unstake_intent(ref self: ContractState) -> TimeStamp {
             self.assert_execution_context();
             0
         }

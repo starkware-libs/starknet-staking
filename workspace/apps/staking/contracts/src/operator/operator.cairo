@@ -15,7 +15,7 @@ pub mod Operator {
     use contracts::errors::{Error, ErrorTrait};
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use core::cmp::min;
-    use contracts::types::{Commission, Amount};
+    use contracts::types::{Commission, Amount, TimeStamp};
 
     pub const MAX_WHITELIST_SIZE: u64 = 100;
 
@@ -151,7 +151,7 @@ pub mod Operator {
             self.staking_dispatcher.read().claim_rewards(:staker_address)
         }
 
-        fn unstake_intent(ref self: ContractState) -> u64 {
+        fn unstake_intent(ref self: ContractState) -> TimeStamp {
             self.check_whitelist(get_caller_address());
             self.staking_dispatcher.read().unstake_intent()
         }
