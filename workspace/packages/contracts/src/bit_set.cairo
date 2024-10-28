@@ -50,9 +50,7 @@ impl BitSetStorePacking<
 }
 
 #[generate_trait]
-impl BitSetInternalImpl<
-    T, +BitAnd<T>, +BitMask<T>, +BitOr<T>, +BitXor<T>, +Copy<T>, +Drop<T>, +PartialEq<T>, +Zero<T>
-> of BitSetInternalTrait<T> {
+impl BitSetInternalImpl<T> of BitSetInternalTrait<T> {
     fn _check_in_bounds(self: @BitSet<T>, index: usize) -> Result<(), BitSetError> {
         if index < *self.lower_bound || index >= *self.upper_bound {
             return Result::Err(BitSetError::IndexOutOfBounds);
@@ -112,8 +110,18 @@ impl BitSetImpl<
         Result::Ok(())
     }
 
+    // TODO: Consider a better implementation
     fn count(self: @BitSet<T>) -> usize {
-        0
+        let mut count = 0;
+        let mut index = *self.lower_bound;
+        while index < *self.upper_bound {
+            let mask = BitMask::<T>::bit_mask(index).expect('Index should be bounded.');
+            if *self.bit_array & mask != Zero::zero() {
+                count += 1;
+            }
+            index += 1;
+        };
+        count
     }
 
     fn clear(ref self: BitSet<T>) {
@@ -132,16 +140,19 @@ impl BitSetImpl<
         Result::Ok(())
     }
 
+    // TODO: Consider a better implementation
     fn all(self: @BitSet<T>) -> bool {
-        false
+        self.count() == *self.upper_bound - *self.lower_bound
     }
 
+    // TODO: Consider a better implementation
     fn any(self: @BitSet<T>) -> bool {
-        false
+        self.count() > 0
     }
 
+    // TODO: Consider a better implementation
     fn none(self: @BitSet<T>) -> bool {
-        false
+        self.count() == 0
     }
 
     fn get_set_bits_indices(self: @BitSet<T>) -> Span<usize> {
@@ -209,6 +220,7 @@ impl SpanTryIntoBitSet<
 #[cfg(test)]
 mod tests {
     use core::starknet::storage_access::StorePacking;
+    use core::num::traits::Bounded;
     use super::{BitSet, BitSetTrait, BitSetError};
 
     const TESTED_BIT_ARRAY: u8 = 0b01100001;
@@ -370,5 +382,57 @@ mod tests {
         assert!(bit_set.get(3).unwrap());
         assert!(bit_set.get(4).unwrap());
         assert!(bit_set.get(7).unwrap());
+    }
+
+    #[test]
+    fn test_count() {
+        let bit_set: BitSet<u8> = 0_u8.into();
+        assert_eq!(bit_set.count(), 0);
+
+        let bit_set: BitSet<u8> = Bounded::<u8>::MAX.into();
+        assert_eq!(bit_set.count(), 8);
+
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        assert_eq!(bit_set.count(), 3);
+        bit_set.set_lower_bound(1).unwrap();
+        assert_eq!(bit_set.count(), 2);
+        bit_set.set_upper_bound(6).unwrap();
+        assert_eq!(bit_set.count(), 1);
+    }
+
+    #[test]
+    fn test_all() {
+        let bit_set: BitSet<u8> = 0_u8.into();
+        assert!(!bit_set.all());
+
+        let mut bit_set: BitSet<u8> = Bounded::<u8>::MAX.into();
+        assert!(bit_set.all());
+        bit_set.toggle(0).unwrap();
+        assert!(!bit_set.all());
+        bit_set.set_lower_bound(1).unwrap();
+        assert!(bit_set.all());
+    }
+
+    #[test]
+    fn test_none() {
+        let bit_set: BitSet<u8> = Bounded::<u8>::MAX.into();
+        assert!(!bit_set.none());
+
+        let mut bit_set: BitSet<u8> = 0_u8.into();
+        assert!(bit_set.none());
+        bit_set.toggle(0).unwrap();
+        assert!(!bit_set.none());
+        bit_set.set_lower_bound(1).unwrap();
+        assert!(bit_set.none());
+    }
+
+    #[test]
+    fn test_any() {
+        let mut bit_set: BitSet<u8> = 0_u8.into();
+        assert!(!bit_set.any());
+        bit_set.toggle(0).unwrap();
+        assert!(bit_set.any());
+        bit_set.set_lower_bound(1).unwrap();
+        assert!(!bit_set.any());
     }
 }

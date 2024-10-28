@@ -28,7 +28,7 @@
     - [staker\_info](#staker_info)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
-    - [calculate\_rewards](#update_rewards)
+    - [update\_rewards](#update_rewards)
     - [change\_operational\_address](#change_operational_address)
     - [update\_global\_index\_if\_needed](#update_global_index_if_needed)
     - [is\_paused](#is_paused)
@@ -60,7 +60,7 @@
     - [change\_reward\_address](#change_reward_address-1)
     - [pool\_member\_info](#pool_member_info)
     - [contract\_parameters](#contract_parameters-1)
-    - [calculate\_rewards](#update_rewards-1)
+    - [update\_rewards](#update_rewards-1)
   - [Events](#events-1)
     - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
     - [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
@@ -95,7 +95,6 @@
     - [MISSING\_UNSTAKE\_INTENT](#missing_unstake_intent)
     - [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
     - [UNEXPECTED\_BALANCE](#unexpected_balance)
-    - [ONLY\_OPERATOR](#only_operator)
     - [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
     - [CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#claim_rewards_from_unauthorized_address)
     - [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
@@ -407,18 +406,16 @@ Add a new staker to the stake.
 3. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_EXISTS](#staker_exists)
-4. [OPERATIONAL\_EXISTS](#operational_exists)
-5. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
-6. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
+2. [STAKER\_EXISTS](#staker_exists)
+3. [OPERATIONAL\_EXISTS](#operational_exists)
+4. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
+5. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller)  has operator role.
-3. Staker (caller) is not listed in the contract.
-4. `operational_address` is not listed in the contract.
-5. `amount` is above the minimum amount for staking.
-6. `commission` is not above the maximum commission for staking.
+2. Staker (caller) is not listed in the contract.
+3. `operational_address` is not listed in the contract.
+4. `amount` is above the minimum amount for staking.
+5. `commission` is not above the maximum commission for staking.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic  <!-- omit from toc -->
@@ -445,15 +442,13 @@ Return the updated total amount.
 [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-5. [CALLER\_CANNOT\_INCREASE\_STAKE](#caller_cannot_increase_stake)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+4. [CALLER\_CANNOT\_INCREASE\_STAKE](#caller_cannot_increase_stake)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. `caller_address` has operator role.
-3. Staker is listed in the contract.
-4. Staker is not in an exit window.
+2. Staker is listed in the contract.
+3. Staker is not in an exit window.
 #### access control <!-- omit from toc -->
 Only the staker address or rewards address for which the change is requested for.
 #### logic <!-- omit from toc -->
@@ -474,14 +469,12 @@ Return the time in which the staker will be able to unstake.
 2. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller) has operator role.
-3. Staker (caller) is listed in the contract.
-4. Staker (caller) is not in an exit window.
+2. Staker (caller) is listed in the contract.
+3. Staker (caller) is not in an exit window.
 #### access control <!-- omit from toc -->
 Only the staker address for which the operation is requested for.
 #### logic <!-- omit from toc -->
@@ -506,17 +499,15 @@ Return the amount of tokens transferred back to the staker.
 4. [Delete Staker](#delete-staker)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [MISSING\_UNSTAKE\_INTENT](#missing_unstake_intent)
-5. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
-6. [UNEXPECTED\_BALANCE](#unexpected_balance)
-7. [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [MISSING\_UNSTAKE\_INTENT](#missing_unstake_intent)
+4. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
+5. [UNEXPECTED\_BALANCE](#unexpected_balance)
+6. [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller) has operator role.
-3. Staker exist and requested to unstake.
-4. Enough time have passed from the unstake intent call.
+2. Staker exist and requested to unstake.
+3. Enough time have passed from the unstake intent call.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
@@ -540,13 +531,11 @@ Return the amount of tokens transferred to the reward address.
 1. [Staker Reward Claimed](#staker-reward-claimed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#claim_rewards_from_unauthorized_address)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#claim_rewards_from_unauthorized_address)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. `caller_address` has operator role.
-3. Staker is listed in the contract.
+2. Staker is listed in the contract.
 #### access control <!-- omit from toc -->
 Only staker address or reward address can execute.
 #### logic <!-- omit from toc -->
@@ -570,17 +559,15 @@ index: u128 - updated index
 1. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-5. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-6. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+5. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Pool contract (caller) has operator role.
-3. Staker is listed in the contract.
-4. Staker is not in an exit window.
-5. Staker has pool contract.
+2. Staker is listed in the contract.
+3. Staker is not in an exit window.
+4. Staker has pool contract.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
@@ -604,17 +591,15 @@ Return the time in which the pool member will be able to exit.
 1. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-5. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
-6. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+4. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+5. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Pool contract (caller) has operator role.
-3. Staker is listed in the contract.
-4. Staker has pool contract.
-5. Pooled amount is greater or equal then amount requested to remove.
+2. Staker is listed in the contract.
+3. Staker has pool contract.
+4. Pooled amount is greater or equal then amount requested to remove.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
@@ -635,13 +620,11 @@ Transfers the funds to the pool contract.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
+2. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. `caller_address` has operator role.
-3. Removal intent request with the given `identifier` have been sent before.
-4. Enough time have passed since the intent request.
+2. Removal intent request with the given `identifier` have been sent before.
+3. Enough time have passed since the intent request.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
@@ -665,20 +648,18 @@ Execute a pool member request to move from one staker's delegation pool to anoth
 1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
-4. [AMOUNT\_TOO\_HIGH](#amount_too_high)
-5. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-7. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-8. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
+2. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
+3. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+4. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+6. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+7. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Pool contract (caller) has operator role.
-3. `switched_amount` is not zero.
-4. Enough funds is in intent for switching.
-5. `to_staker` exist in the contract and is not in exit window.
-6. `to_pool` is the delegation pool contract for `to_staker`.
+2. `switched_amount` is not zero.
+3. Enough funds is in intent for switching.
+4. `to_staker` exist in the contract and is not in exit window.
+5. `to_pool` is the delegation pool contract for `to_staker`.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
@@ -700,12 +681,10 @@ Change the reward address for a staker.
 1. [Staker Reward Address Changed](#staker-reward-address-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller) has operator role.
-3. Staker (caller) exist in the contract.
+2. Staker (caller) exist in the contract.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
@@ -725,16 +704,14 @@ Return the pool address.
 1. [New Delegation Pool](#new-delegation-pool)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
-5. [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
+4. [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller) has operator role.
-3. Staker (caller) exist in the contract.
-4. `commission` is in valid range.
-5. Staker has no pool.
+2. Staker (caller) exist in the contract.
+3. `commission` is in valid range.
+4. Staker has no pool.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
@@ -755,17 +732,15 @@ Return the updated staker index.
 [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-5. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
-6. [AMOUNT\_TOO\_HIGH](#amount_too_high)
-7. [UNEXPECTED\_BALANCE](#unexpected_balance)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+4. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+5. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+6. [UNEXPECTED\_BALANCE](#unexpected_balance)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Pool contract (caller) has operator role.
-3. Staker exist in the contract.
-4. Delegation pool exist for the staker.
+2. Staker exist in the contract.
+3. Delegation pool exist for the staker.
 #### access control <!-- omit from toc -->
 Delegation pool contract of the given staker.
 #### logic <!-- omit from toc -->
@@ -852,12 +827,10 @@ Change the operational address for a staker.
 1. [Operational Address Changed](#operational-address-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller) has operator role.
-3. Staker (caller) exist in the contract.
+2. Staker (caller) exist in the contract.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
@@ -875,10 +848,8 @@ Return `true` if the index has been updated.
 1. [Global Index Updated](#global-index-updated)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [ONLY\_OPERATOR](#only_operator)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Caller has operator role.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
@@ -1105,7 +1076,6 @@ Inform of the intent to exit the stake. This will remove the funds from the stak
 2. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 3. [UNDELEGATE\_IN\_PROGRESS](#undelegate_in_progress)
 4. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-5. [ONLY\_OPERATOR](#only_operator)
 #### pre-condition <!-- omit from toc -->
 1. Pool member (caller) is listed in the contract.
 2. `amount` is lower or equal to the total amount of the pool member (caller). 
@@ -1137,7 +1107,6 @@ Return the amount of tokens transferred back to the pool member.
 2. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
 3. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
 4. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-5. [ONLY\_OPERATOR](#only_operator)
 #### pre-condition <!-- omit from toc -->
 1. Pool member exist and requested to unstake.
 2. Enough time have passed from the delegation pool exit intent call.
@@ -1164,9 +1133,8 @@ Return the amount transferred to the reward address.
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 2. [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
 3. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-4. [ONLY\_OPERATOR](#only_operator)
-5. [UNEXPECTED\_BALANCE](#unexpected_balance)
-6. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+4. [UNEXPECTED\_BALANCE](#unexpected_balance)
+5. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
 1. `pool_member` is listed in the contract.
 #### access control <!-- omit from toc -->
@@ -1197,9 +1165,8 @@ Return the amount left in exit window for the pool member in this pool.
 3. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
 4. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 5. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-6. [ONLY\_OPERATOR](#only_operator)
-7. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-8. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
+6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+7. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
 #### pre-condition <!-- omit from toc -->
 1. `amount` is not zero.
 2. Pool member (caller) is in exit window.
@@ -1536,9 +1503,6 @@ Any address can execute.
 
 ### UNEXPECTED_BALANCE
 "Unexpected balance."
-
-### ONLY_OPERATOR
-"ONLY_OPERATOR"
 
 ### FINAL_STAKER_INDEX_ALREADY_SET
 "Final staker index already set."
