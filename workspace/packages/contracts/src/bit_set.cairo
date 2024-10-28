@@ -185,7 +185,7 @@ impl BitSetImpl<
     }
 
     fn len(self: @BitSet<T>) -> usize {
-        0
+        *self.upper_bound - *self.lower_bound
     }
 }
 
@@ -434,5 +434,14 @@ mod tests {
         assert!(bit_set.any());
         bit_set.set_lower_bound(1).unwrap();
         assert!(!bit_set.any());
+    }
+
+    #[test]
+    fn test_len() {
+        let mut bit_set: BitSet<u8> = TESTED_BIT_ARRAY.into();
+        assert_eq!(bit_set.len(), 8);
+        bit_set.set_lower_bound(1).unwrap();
+        bit_set.set_upper_bound(7).unwrap();
+        assert_eq!(bit_set.len(), 6);
     }
 }
