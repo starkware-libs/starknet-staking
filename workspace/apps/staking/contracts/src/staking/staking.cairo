@@ -11,6 +11,7 @@ pub mod Staking {
     use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up, day_of};
     use contracts::utils::compute_global_index_diff;
     use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+    use contracts::staking::objects::UndelegateIntentValueTrait;
     use contracts::staking::objects::UndelegateIntentValueZero;
     use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
     use contracts::staking::{Events, PauseEvents, ConfigEvents};
@@ -511,7 +512,7 @@ pub mod Staking {
             let undelegate_intent_key = UndelegateIntentKey {
                 pool_contract: pool_info.pool_contract, identifier
             };
-            let undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
+            let undelegate_intent_value = self.get_pool_exit_intent(:undelegate_intent_key);
             let old_intent_amount = undelegate_intent_value.amount;
             let old_delegated_stake = pool_info.amount;
             let total_amount = old_intent_amount + old_delegated_stake;
@@ -555,7 +556,10 @@ pub mod Staking {
             self.general_prerequisites();
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
-            let undelegate_intent = self.pool_exit_intents.read(undelegate_intent_key);
+            let undelegate_intent = self.get_pool_exit_intent(:undelegate_intent_key);
+            if undelegate_intent.amount.is_zero() {
+                return;
+            }
             assert_with_err(
                 get_block_timestamp() >= undelegate_intent.unpool_time,
                 Error::INTENT_WINDOW_NOT_FINISHED
@@ -583,7 +587,7 @@ pub mod Staking {
             }
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
-            let mut undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
+            let mut undelegate_intent_value = self.get_pool_exit_intent(:undelegate_intent_key);
             assert_with_err(
                 undelegate_intent_value.is_non_zero(), Error::MISSING_UNDELEGATE_INTENT
             );
@@ -922,6 +926,15 @@ pub mod Staking {
         fn general_prerequisites(ref self: ContractState) {
             self.assert_is_unpaused();
             self.update_global_index_if_needed();
+        }
+
+        fn get_pool_exit_intent(
+            self: @ContractState, undelegate_intent_key: UndelegateIntentKey
+        ) -> UndelegateIntentValue {
+            let undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
+            // The following assertion serves as a sanity check.
+            undelegate_intent_value.assert_valid();
+            undelegate_intent_value
         }
     }
 }

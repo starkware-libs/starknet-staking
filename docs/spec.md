@@ -114,6 +114,7 @@
     - [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
     - [ONLY\_SECURITY\_AGENT](#only_security_agent)
     - [ONLY\_SECURITY\_ADMIN](#only_security_admin)
+    - [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -591,10 +592,11 @@ Return the time in which the pool member will be able to exit.
 1. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-3. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-4. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
-5. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+5. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+6. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker is listed in the contract.
@@ -620,7 +622,8 @@ Transfers the funds to the pool contract.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
+2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
+3. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Removal intent request with the given `identifier` have been sent before.
@@ -648,12 +651,13 @@ Execute a pool member request to move from one staker's delegation pool to anoth
 1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
-3. [AMOUNT\_TOO\_HIGH](#amount_too_high)
-4. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-6. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-7. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
+2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
+3. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
+4. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+5. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+7. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+8. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. `switched_amount` is not zero.
@@ -1560,6 +1564,9 @@ Any address can execute.
 
 ### ONLY_SECURITY_ADMIN
 "ONLY_SECURITY_ADMIN"
+
+### INVALID_UNDELEGATE_INTENT_VALUE
+"Invalid undelegate intent value"
 
 # Structs
 ### StakerPoolInfo
