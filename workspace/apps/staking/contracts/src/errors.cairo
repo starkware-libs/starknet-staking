@@ -38,6 +38,7 @@ pub enum Error {
     UNEXPECTED_BALANCE,
     STAKER_ALREADY_HAS_POOL,
     CONTRACT_IS_PAUSED,
+    INVALID_UNDELEGATE_INTENT_VALUE,
     // Pool contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
@@ -119,6 +120,7 @@ pub impl ErrorImpl of ErrorTrait {
             ),
             Error::INSUFFICIENT_BALANCE => "Insufficient ERC20 balance",
             Error::INSUFFICIENT_ALLOWANCE => "Insufficient ERC20 allowance",
+            Error::INVALID_UNDELEGATE_INTENT_VALUE => "Invalid undelegate intent value",
         }
     }
 }

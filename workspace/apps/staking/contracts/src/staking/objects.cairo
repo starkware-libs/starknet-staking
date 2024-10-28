@@ -1,6 +1,7 @@
 use starknet::{ContractAddress, get_block_timestamp};
 use contracts::staking::interface::{StakerPoolInfo, StakerInfo, StakerInfoTrait};
 use core::num::traits::Zero;
+use contracts::errors::{Error, assert_with_err};
 use contracts::types::{Amount, Index, TimeDelta, TimeStamp};
 use core::cmp::max;
 
@@ -70,5 +71,19 @@ pub(crate) impl InternalStakerInfoInto of Into<InternalStakerInfo, StakerInfo> {
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,
         }
+    }
+}
+
+#[generate_trait]
+pub impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
+    fn is_valid(self: @UndelegateIntentValue) -> bool {
+        // The value is valid if and only if unpool_time and amount are both zero or both non-zero.
+        let is_both_zero = self.unpool_time.is_zero() && self.amount.is_zero();
+        let is_both_non_zero = self.unpool_time.is_non_zero() && self.amount.is_non_zero();
+        return is_both_zero || is_both_non_zero;
+    }
+
+    fn assert_valid(self: @UndelegateIntentValue) {
+        assert_with_err(self.is_valid(), Error::INVALID_UNDELEGATE_INTENT_VALUE);
     }
 }

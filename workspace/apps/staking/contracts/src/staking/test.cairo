@@ -29,7 +29,7 @@ use event_test_utils::{assert_staker_reward_claimed_event, assert_reward_supplie
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::get_block_timestamp;
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
-use contracts::staking::objects::UndelegateIntentValueZero;
+use contracts::staking::objects::{UndelegateIntentValueTrait, UndelegateIntentValueZero};
 use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use contracts::staking::interface::{IStakingPoolDispatcher};
 use contracts::staking::interface::{IStakingPoolDispatcherTrait};
@@ -1613,4 +1613,19 @@ fn test_set_reward_supplier() {
     assert_reward_supplier_changed_event(
         spied_event: events[0], :old_reward_supplier, :new_reward_supplier
     );
+}
+
+#[test]
+fn test_undelegate_intent_value_is_valid() {
+    let mut undelegate_intent_value = UndelegateIntentValue { unpool_time: 0, amount: 0 };
+    assert_eq!(undelegate_intent_value.is_valid(), true);
+
+    undelegate_intent_value = UndelegateIntentValue { unpool_time: 0, amount: 1 };
+    assert_eq!(undelegate_intent_value.is_valid(), false);
+
+    undelegate_intent_value = UndelegateIntentValue { unpool_time: 1, amount: 0 };
+    assert_eq!(undelegate_intent_value.is_valid(), false);
+
+    undelegate_intent_value = UndelegateIntentValue { unpool_time: 1, amount: 1 };
+    assert_eq!(undelegate_intent_value.is_valid(), true);
 }
