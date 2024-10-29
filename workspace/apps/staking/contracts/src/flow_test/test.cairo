@@ -7,8 +7,8 @@ use snforge_std::cheatcodes::events::EventSpyTrait;
 use snforge_std::cheatcodes::message_to_l1::MessageToL1SpyTrait;
 use starknet::get_block_timestamp;
 use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
-
-use contracts::constants::{SECONDS_IN_DAY, STRK_IN_FRIS};
+use contracts_commons::constants::{SECONDS_IN_DAY};
+use contracts::constants::{STRK_IN_FRIS};
 use contracts::test_utils::constants::BASE_MINT_AMOUNT;
 use contracts::utils::{ceil_of_division, compute_threshold};
 
