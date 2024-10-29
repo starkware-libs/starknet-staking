@@ -24,7 +24,7 @@ use constants::{BASE_MINT_AMOUNT, BUFFER, L1_STAKING_MINTER_ADDRESS};
 use constants::{STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS, STARKGATE_ADDRESS};
 use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN};
 use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN};
-use constants::APP_ROLE_ADMIN;
+use constants::{APP_ROLE_ADMIN, UPGRADE_GOVERNOR};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
 use contracts::types::{Commission, Index, Amount, TimeStamp};
@@ -159,6 +159,9 @@ pub(crate) mod constants {
     }
     pub fn APP_ROLE_ADMIN() -> ContractAddress {
         contract_address_const::<'APP_ROLE_ADMIN'>()
+    }
+    pub fn UPGRADE_GOVERNOR() -> ContractAddress {
+        contract_address_const::<'UPGRADE_GOVERNOR'>()
     }
     pub fn STARKGATE_ADDRESS() -> ContractAddress {
         contract_address_const::<'STARKGATE_ADDRESS'>()
@@ -340,6 +343,14 @@ pub(crate) fn set_account_as_app_role_admin(
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
     cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
     roles_dispatcher.register_app_role_admin(:account);
+}
+
+pub(crate) fn set_account_as_upgrade_governor(
+    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
+    roles_dispatcher.register_upgrade_governor(:account);
 }
 
 pub(crate) fn set_account_as_token_admin(
@@ -733,6 +744,7 @@ pub(crate) struct TestInfo {
     pub security_agent: ContractAddress,
     pub token_admin: ContractAddress,
     pub app_role_admin: ContractAddress,
+    pub upgrade_governor: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -806,7 +818,8 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             security_admin: SECURITY_ADMIN(),
             security_agent: SECURITY_AGENT(),
             token_admin: TOKEN_ADMIN(),
-            app_role_admin: APP_ROLE_ADMIN()
+            app_role_admin: APP_ROLE_ADMIN(),
+            upgrade_governor: UPGRADE_GOVERNOR(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,
@@ -825,4 +838,3 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         }
     }
 }
-
