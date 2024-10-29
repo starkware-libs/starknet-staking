@@ -912,7 +912,9 @@ fn test_enter_delegation_pool_from_staking_contract() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     pool_dispatcher
         .enter_delegation_pool_from_staking_contract(:amount, index: updated_index, :data);
-    let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
+    let pool_member_info = load_pool_member_info_from_map(
+        key: pool_member, contract: pool_contract
+    );
     let updated_amount = amount * 2;
     let interest = updated_index - index;
     let rewards_including_commission = compute_rewards_rounded_down(:amount, :interest);
@@ -920,7 +922,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
         :rewards_including_commission,
         commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
-    let expected_pool_member_info = PoolMemberInfo {
+    let expected_pool_member_info = InternalPoolMemberInfo {
         reward_address,
         amount: updated_amount,
         index: updated_index,
@@ -929,7 +931,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
     };
-    assert_eq!(pool_member_info, expected_pool_member_info);
+    assert_eq!(pool_member_info, Option::Some(expected_pool_member_info));
 
     // Validate two PoolMemberBalanceChanged events.
     let events = spy.get_events().emitted_by(pool_contract).events;
