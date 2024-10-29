@@ -1,4 +1,5 @@
-use contracts::constants::{BASE_VALUE, SECONDS_IN_DAY};
+use contracts_commons::constants::{SECONDS_IN_DAY};
+use contracts::constants::{BASE_VALUE};
 use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait, get_contract_address};
 use starknet::syscalls::deploy_syscall;

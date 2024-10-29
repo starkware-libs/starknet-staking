@@ -1,5 +1,6 @@
 use core::option::OptionTrait;
-use contracts::constants::{BASE_VALUE, SECONDS_IN_DAY};
+use contracts_commons::constants::{SECONDS_IN_DAY};
+use contracts::constants::{BASE_VALUE};
 use contracts::staking::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
 use contracts::staking::Staking::InternalStakingFunctionsTrait;
 use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
