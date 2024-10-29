@@ -12,6 +12,7 @@ pub mod Pool {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
+    use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait, StakerInfo};
     use starknet::storage::Map;
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
@@ -383,7 +384,21 @@ pub mod Pool {
         }
 
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
-            self.get_pool_member_info(:pool_member).into()
+            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            let updated_index = {
+                if let Option::Some(final_index) = self.final_staker_index.read() {
+                    final_index
+                } else {
+                    self.staker_info().index
+                }
+            };
+
+            // Keep old commission, which the unclaimed rewards are calculated according to.
+            let commission = pool_member_info.commission;
+            self.update_rewards(ref :pool_member_info, :updated_index);
+            pool_member_info.commission = commission;
+
+            pool_member_info.into()
         }
 
         fn contract_parameters(self: @ContractState) -> PoolContractInfo {
@@ -454,9 +469,7 @@ pub mod Pool {
         /// - unclaimed_rewards
         /// - index
         fn update_rewards(
-            ref self: ContractState,
-            ref pool_member_info: InternalPoolMemberInfo,
-            updated_index: Index
+            self: @ContractState, ref pool_member_info: InternalPoolMemberInfo, updated_index: Index
         ) {
             let interest: Index = updated_index - pool_member_info.index;
             pool_member_info.index = updated_index;
@@ -472,7 +485,7 @@ pub mod Pool {
         }
 
         fn update_index_and_update_rewards(
-            ref self: ContractState, ref pool_member_info: InternalPoolMemberInfo
+            self: @ContractState, ref pool_member_info: InternalPoolMemberInfo
         ) {
             let updated_index = self.receive_index_and_funds_from_staker();
             self.update_rewards(ref :pool_member_info, :updated_index)
@@ -521,6 +534,12 @@ pub mod Pool {
             pool_member_info.unclaimed_rewards = Zero::zero();
 
             self.emit(Events::PoolMemberRewardClaimed { pool_member, reward_address, amount });
+        }
+
+        fn staker_info(self: @ContractState) -> StakerInfo {
+            let contract_address = self.staking_pool_dispatcher.read().contract_address;
+            let staking_dispatcher = IStakingDispatcher { contract_address };
+            staking_dispatcher.staker_info(staker_address: self.staker_address.read())
         }
     }
 }
