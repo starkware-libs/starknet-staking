@@ -3,12 +3,12 @@ pub mod Staking {
     use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
     use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW};
-    use contracts::constants::MIN_DAYS_BETWEEN_INDEX_UPDATES;
+    use contracts::constants::MIN_TIME_BETWEEN_INDEX_UPDATES;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
     use contracts::staking::{StakerInfo, StakerPoolInfo, StakingContractInfo};
     use contracts::staking::{IStakingPool, IStakingPause, IStaking, IStakingConfig};
     use contracts::utils::{deploy_delegation_pool_contract, compute_commission_amount_rounded_down};
-    use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up, day_of};
+    use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
     use contracts::utils::compute_global_index_diff;
     use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
     use contracts::staking::objects::UndelegateIntentValueTrait;
@@ -403,11 +403,7 @@ pub mod Staking {
 
         fn update_global_index_if_needed(ref self: ContractState) -> bool {
             self.assert_is_unpaused();
-            let current_timestmap = get_block_timestamp();
-            if day_of(current_timestmap)
-                - day_of(
-                    self.global_index_last_update_timestamp.read()
-                ) > MIN_DAYS_BETWEEN_INDEX_UPDATES {
+            if self.is_index_update_needed() {
                 self.update_global_index();
                 return true;
             }
@@ -910,6 +906,11 @@ pub mod Staking {
 
         fn remove_from_total_stake(ref self: ContractState, amount: Amount) {
             self.total_stake.write(self.total_stake.read() - amount);
+        }
+
+        fn is_index_update_needed(self: @ContractState) -> bool {
+            let time_diff = get_block_timestamp() - self.global_index_last_update_timestamp.read();
+            time_diff >= MIN_TIME_BETWEEN_INDEX_UPDATES
         }
 
         fn update_global_index(ref self: ContractState) {
