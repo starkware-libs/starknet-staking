@@ -1,5 +1,5 @@
 use core::option::OptionTrait;
-use contracts_commons::constants::{SECONDS_IN_DAY};
+use contracts_commons::constants::{DAY};
 use contracts::constants::{BASE_VALUE};
 use contracts::staking::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
 use contracts::staking::Staking::InternalStakingFunctionsTrait;
@@ -1248,7 +1248,7 @@ fn test_update_global_index_if_needed() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let mut spy = snforge_std::spy_events();
 
-    // Try to update global index. This shouldn't update the index because a day hasn't passed.
+    // Update global index (if enough time passed since last update).
     staking_dispatcher.update_global_index_if_needed();
     let global_index_after_first_update: Index = load_one_felt(
         target: staking_contract, storage_address: selector!("global_index")
@@ -1264,8 +1264,7 @@ fn test_update_global_index_if_needed() {
         .try_into()
         .expect('inflation not fit in u64');
     let global_index_last_update_timestamp = get_block_timestamp();
-    let global_index_current_update_timestamp = global_index_last_update_timestamp
-        + SECONDS_IN_DAY * 365;
+    let global_index_current_update_timestamp = global_index_last_update_timestamp + DAY * 365;
     start_cheat_block_timestamp_global(block_timestamp: global_index_current_update_timestamp);
     snforge_std::store(
         target: staking_contract,
@@ -1675,7 +1674,7 @@ fn test_set_exit_waiting_window() {
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let old_exit_window = cfg.staking_contract_info.exit_wait_window;
     assert_eq!(old_exit_window, staking_dispatcher.contract_parameters().exit_wait_window);
-    let new_exit_window = SECONDS_IN_DAY * 7;
+    let new_exit_window = DAY * 7;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin

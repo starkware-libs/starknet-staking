@@ -1,4 +1,4 @@
-use contracts_commons::constants::{SECONDS_IN_DAY, DAYS_IN_YEAR};
+use contracts_commons::constants::DAY;
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct TimeDelta {
@@ -59,10 +59,7 @@ pub impl TimeImpl of Time {
         TimeDelta { seconds: count }
     }
     fn days(count: u64) -> TimeDelta {
-        Self::seconds(count * SECONDS_IN_DAY)
-    }
-    fn years(count: u64) -> TimeDelta {
-        Self::seconds(count * (SECONDS_IN_DAY * DAYS_IN_YEAR))
+        Self::seconds(count * DAY)
     }
     fn now() -> TimeStamp {
         TimeStamp { seconds: starknet::get_block_timestamp() }
@@ -73,14 +70,14 @@ pub impl TimeImpl of Time {
         value
     }
     fn day(self: TimeStamp) -> u64 {
-        self.seconds / SECONDS_IN_DAY
+        self.seconds / DAY
     }
 }
 
 
 #[cfg(test)]
 mod tests {
-    use contracts_commons::constants::{SECONDS_IN_DAY, DAYS_IN_YEAR};
+    use contracts_commons::constants::DAY;
     use snforge_std::start_cheat_block_timestamp_global;
     use core::num::traits::zero::Zero;
     use super::{Time, TimeStamp, TimeDelta};
@@ -178,12 +175,6 @@ mod tests {
     #[test]
     fn test_time_days() {
         let time = Time::days(1);
-        assert_eq!(time.seconds, SECONDS_IN_DAY);
-    }
-
-    #[test]
-    fn test_time_years() {
-        let time = Time::years(1);
-        assert_eq!(time.seconds, SECONDS_IN_DAY * DAYS_IN_YEAR);
+        assert_eq!(time.seconds, DAY);
     }
 }

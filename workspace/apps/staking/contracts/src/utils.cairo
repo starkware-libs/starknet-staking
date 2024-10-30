@@ -1,4 +1,3 @@
-use contracts_commons::constants::{SECONDS_IN_DAY};
 use contracts::constants::{BASE_VALUE};
 use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait, get_contract_address};
@@ -8,7 +7,7 @@ use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
 use core::num::traits::zero::Zero;
 use core::num::traits::WideMul;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts::types::{Commission, TimeStamp, Index, Amount};
+use contracts::types::{Commission, Index, Amount};
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
@@ -124,10 +123,6 @@ pub fn u256_ceil_of_division(dividend: u256, divisor: u256) -> u256 {
 // Compute the threshold for requesting funds from L1 Staking Minter.
 pub fn compute_threshold(base_mint_amount: Amount) -> Amount {
     base_mint_amount / 2
-}
-
-pub fn day_of(timestamp: TimeStamp) -> TimeStamp {
-    timestamp / SECONDS_IN_DAY
 }
 
 #[generate_trait]
