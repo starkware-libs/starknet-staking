@@ -6,6 +6,11 @@ use core::starknet::storage_access::StorePacking;
 
 use contracts_commons::bit_mask::{BitMask, PowOfTwo};
 
+pub type BitSetU8 = BitSet<u8>;
+pub type BitSetU16 = BitSet<u16>;
+pub type BitSetU32 = BitSet<u32>;
+pub type BitSetU64 = BitSet<u64>;
+
 #[derive(Debug, Drop, PartialEq)]
 pub enum BitSetError {
     IndexOutOfBounds,
@@ -13,7 +18,7 @@ pub enum BitSetError {
 }
 
 #[derive(Debug, Drop, PartialEq)]
-pub struct BitSet<T> {
+struct BitSet<T> {
     // TODO: Consider eliminate size limitations.
     bit_array: T,
     // Inclusive.
