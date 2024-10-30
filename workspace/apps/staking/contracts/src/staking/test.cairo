@@ -1158,6 +1158,7 @@ fn test_switch_staking_delegation_pool() {
         storage_address: selector!("global_index"),
         serialized_value: array![updated_index.into()].span()
     );
+    let mut spy = snforge_std::spy_events();
     let caller_address = from_pool_contract;
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_pool_dispatcher
@@ -1230,6 +1231,28 @@ fn test_switch_staking_delegation_pool() {
         contract: staking_contract
     );
     assert_eq!(actual_undelegate_intent_value_after_switching, Zero::zero());
+    // Validate events.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 2, message: "switch_staking_delegation_pool"
+    );
+    let self_stake = to_staker_info.amount_own;
+    assert_stake_balance_changed_event(
+        spied_event: events[0],
+        staker_address: to_staker,
+        old_self_stake: self_stake,
+        old_delegated_stake: Zero::zero(),
+        new_self_stake: self_stake,
+        new_delegated_stake: switched_amount
+    );
+    assert_stake_balance_changed_event(
+        spied_event: events[1],
+        staker_address: to_staker,
+        old_self_stake: self_stake,
+        old_delegated_stake: switched_amount,
+        new_self_stake: self_stake,
+        new_delegated_stake: switched_amount * 2
+    );
 }
 
 
