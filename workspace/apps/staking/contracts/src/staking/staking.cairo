@@ -136,6 +136,7 @@ pub mod Staking {
             pool_enabled: bool,
             commission: Commission,
         ) {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
             assert_with_err(self.staker_info.read(staker_address).is_none(), Error::STAKER_EXISTS);
@@ -145,12 +146,14 @@ pub mod Staking {
             );
             assert_with_err(amount >= self.min_stake.read(), Error::AMOUNT_LESS_THAN_MIN_STAKE);
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
+            // Transfer funds from staker.
             let staking_contract = get_contract_address();
             let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
                 .checked_transfer_from(
                     sender: staker_address, recipient: staking_contract, amount: amount.into()
                 );
+            // If pool is enabled, deploy a pool contract.
             let pool_info = if pool_enabled {
                 let pool_contract = self
                     .deploy_delegation_pool_from_staking_contract(
@@ -170,6 +173,7 @@ pub mod Staking {
             } else {
                 Option::None
             };
+            // Create the record for the staker.
             self
                 .staker_info
                 .write(
@@ -186,8 +190,11 @@ pub mod Staking {
                         }
                     )
                 );
+            // Update the operational address mapping, which is a 1 to 1 mapping.
             self.operational_address_to_staker_address.write(operational_address, staker_address);
+            // Update total stake.
             self.add_to_total_stake(:amount);
+            // Emit events.
             self
                 .emit(
                     Events::NewStaker {
@@ -209,6 +216,7 @@ pub mod Staking {
         fn increase_stake(
             ref self: ContractState, staker_address: ContractAddress, amount: Amount
         ) -> Amount {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let caller_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
@@ -218,6 +226,7 @@ pub mod Staking {
                 Error::CALLER_CANNOT_INCREASE_STAKE
             );
             let old_self_stake = staker_info.amount_own;
+            // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
             let erc20_dispatcher = self.erc20_dispatcher.read();
             erc20_dispatcher
@@ -226,11 +235,14 @@ pub mod Staking {
                     recipient: staking_contract_address,
                     amount: amount.into()
                 );
+            // Update the the staker info before updating their staked amount.
             self.update_rewards(ref :staker_info);
+            // Update the staker's staked amount, and add to total_stake.
             staker_info.amount_own += amount;
             let mut staker_total_stake = staker_info.amount_own;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             self.add_to_total_stake(:amount);
+            // Emit events.
             let mut old_delegated_stake = Zero::zero();
             let mut new_delegated_stake = Zero::zero();
             if let Option::Some(pool_info) = staker_info.pool_info {
