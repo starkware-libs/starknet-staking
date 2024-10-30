@@ -2,7 +2,7 @@ use contracts::test_utils::StakingInitConfig;
 use contracts::flow_test::utils as flow_test_utils;
 use flow_test_utils::{SystemTrait, StakerTrait, StakingTrait, RewardSupplierTrait};
 use flow_test_utils::{TokenTrait, DelegatorTrait};
-use contracts_commons::constants::{DAY, WEEK};
+use contracts_commons::constants::{WEEK};
 use contracts::constants::{STRK_IN_FRIS};
 use core::num::traits::Zero;
 

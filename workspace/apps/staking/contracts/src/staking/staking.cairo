@@ -609,6 +609,7 @@ pub mod Staking {
             let to_staker_pool_contract = to_staker_pool_info.pool_contract;
             assert_with_err(to_pool == to_staker_pool_contract, Error::DELEGATION_POOL_MISMATCH);
 
+            let old_delegated_stake = to_staker_pool_info.amount;
             to_staker_pool_info.amount += switched_amount;
             to_staker_info.pool_info = Option::Some(to_staker_pool_info);
             self.staker_info.write(to_staker, Option::Some(to_staker_info));
@@ -624,6 +625,16 @@ pub mod Staking {
             to_pool_dispatcher
                 .enter_delegation_pool_from_staking_contract(
                     amount: switched_amount, index: to_staker_info.index, :data
+                );
+            self
+                .emit(
+                    Events::StakeBalanceChanged {
+                        staker_address: to_staker,
+                        old_self_stake: to_staker_info.amount_own,
+                        old_delegated_stake,
+                        new_self_stake: to_staker_info.amount_own,
+                        new_delegated_stake: to_staker_pool_info.amount
+                    }
                 );
         }
 

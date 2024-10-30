@@ -1,5 +1,5 @@
 use contracts::types::{TimeDelta, Inflation, Amount, Index};
-use contracts_commons::constants::{MINUTE, DAY, WEEK};
+use contracts_commons::constants::{MINUTE, WEEK};
 pub const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = 3 * WEEK;
 pub const BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
 pub const MIN_TIME_BETWEEN_INDEX_UPDATES: TimeDelta = 30 * MINUTE;
