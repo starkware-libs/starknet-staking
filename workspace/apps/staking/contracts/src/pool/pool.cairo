@@ -1,5 +1,6 @@
 #[starknet::contract]
 pub mod Pool {
+    use starknet::event::EventEmitter;
     use core::serde::Serde;
     use core::num::traits::zero::Zero;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
@@ -76,6 +77,7 @@ pub mod Pool {
         DeletePoolMember: Events::DeletePoolMember,
         NewPoolMember: Events::NewPoolMember,
         SwitchDelegationPool: Events::SwitchDelegationPool,
+        PoolMemberExitAction: Events::PoolMemberExitAction,
     }
 
 
@@ -227,6 +229,12 @@ pub mod Pool {
             assert_with_err(
                 get_block_timestamp() >= unpool_time, Error::INTENT_WINDOW_NOT_FINISHED
             );
+            self
+                .emit(
+                    Events::PoolMemberExitAction {
+                        pool_member, unpool_amount: pool_member_info.unpool_amount
+                    }
+                );
             // Clear intent and receive funds from staking contract if needed.
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             staking_pool_dispatcher

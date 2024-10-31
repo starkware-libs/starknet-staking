@@ -28,6 +28,7 @@ use event_test_utils::{assert_new_staker_event, assert_minimum_stake_changed_eve
 use event_test_utils::{assert_global_index_updated_event, assert_exit_wait_window_changed_event};
 use event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
 use event_test_utils::{assert_staker_reward_claimed_event, assert_reward_supplier_changed_event};
+use event_test_utils::assert_remove_from_delegation_pool_action_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::{get_block_timestamp, ContractAddress};
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
@@ -1074,6 +1075,7 @@ fn test_remove_from_delegation_pool_action() {
     );
     let pool_balance_before_action = erc20_dispatcher.balance_of(pool_contract);
 
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     staking_pool_dispatcher
         .remove_from_delegation_pool_action(identifier: cfg.test_info.pool_member_address.into());
@@ -1088,9 +1090,19 @@ fn test_remove_from_delegation_pool_action() {
     assert_eq!(actual_undelegate_intent_value_after_action, Zero::zero());
     // Check that the amount was transferred correctly.
     let pool_balance_after_action = erc20_dispatcher.balance_of(pool_contract);
-    // TODO: Test event emitted.
     assert_eq!(
         pool_balance_after_action, pool_balance_before_action + cfg.pool_member_info.amount.into()
+    );
+    // Validate RemoveFromDelegationPoolAction event, the second one is UpdateGlobalIndex.
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 2, message: "remove_from_delegation_pool_action"
+    );
+    assert_remove_from_delegation_pool_action_event(
+        spied_event: events[1],
+        :pool_contract,
+        identifier: cfg.test_info.pool_member_address.into(),
+        amount: cfg.pool_member_info.amount
     );
 }
 

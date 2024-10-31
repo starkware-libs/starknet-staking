@@ -99,7 +99,8 @@ pub mod Staking {
         MinimumStakeChanged: ConfigEvents::MinimumStakeChanged,
         ExitWaitWindowChanged: ConfigEvents::ExitWaitWindowChanged,
         RewardSupplierChanged: ConfigEvents::RewardSupplierChanged,
-        OperationalAddressDeclared: Events::OperationalAddressDeclared
+        OperationalAddressDeclared: Events::OperationalAddressDeclared,
+        RemoveFromDelegationPoolAction: Events::RemoveFromDelegationPoolAction
     }
 
     #[constructor]
@@ -594,7 +595,12 @@ pub mod Staking {
                 .checked_transfer(
                     recipient: pool_contract, amount: undelegate_intent.amount.into()
                 );
-            // TODO: Emit event.
+            self
+                .emit(
+                    Events::RemoveFromDelegationPoolAction {
+                        pool_contract, identifier, amount: undelegate_intent.amount
+                    }
+                );
         }
 
         fn switch_staking_delegation_pool(

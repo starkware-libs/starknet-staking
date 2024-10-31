@@ -14,6 +14,13 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
+    pub struct PoolMemberExitAction {
+        #[key]
+        pub pool_member: ContractAddress,
+        pub unpool_amount: Amount
+    }
+
+    #[derive(Drop, starknet::Event)]
     pub struct PoolMemberBalanceChanged {
         #[key]
         pub pool_member: ContractAddress,
