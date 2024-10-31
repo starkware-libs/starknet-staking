@@ -29,6 +29,7 @@
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
     - [update\_rewards](#update_rewards)
+    - [declare\_operational\_address](#declare_operational_address)
     - [change\_operational\_address](#change_operational_address)
     - [update\_global\_index\_if\_needed](#update_global_index_if_needed)
     - [is\_paused](#is_paused)
@@ -43,6 +44,7 @@
     - [Delete Staker](#delete-staker)
     - [Staker Reward Claimed](#staker-reward-claimed)
     - [Staker Reward Address Changed](#staker-reward-address-changed)
+    - [Operational Address Declared](#operational-address-declared)
     - [Operational Address Changed](#operational-address-changed)
     - [Global Index Updated](#global-index-updated)
     - [Paused](#paused)
@@ -115,6 +117,7 @@
     - [ONLY\_SECURITY\_AGENT](#only_security_agent)
     - [ONLY\_SECURITY\_ADMIN](#only_security_admin)
     - [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
+    - [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -818,6 +821,25 @@ Internal function.
 5. Update `unclaimed_rewards_own` with own rewards + pool rewards commission.
 6. Update `pool_info.unclaimed_rewards` with pool rewards without commission. 
 
+### declare_operational_address
+```rust
+fn declare_operational_address(
+    ref self: ContractState, 
+    staker_address: ContractAddress
+)
+```
+#### description <!-- omit from toc -->
+Allows `staker_address` to use the caller's address in the future, in `change_operational_address`.
+#### emits <!-- omit from toc -->
+1. [Operational Address Declared](#operational-address-declared)
+#### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+#### pre-condition <!-- omit from toc -->
+1. Staking contract is unpaused.
+#### access control <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. Set the caller as an eligible operational address, associated with `staker_address`.
+
 ### change_operational_address
 ```rust
 fn change_operational_address(
@@ -964,6 +986,12 @@ Only security admin.
 | staker_address | address | ✅     |
 | new_address    | address | ❌     |
 | old_address    | address | ❌     |
+
+### Operational Address Declared
+| data                | type    | keyed |
+| ------------------- | ------- | ----- |
+| operational_address | address |  ✅   |
+| staker_address      | address |  ✅   |
 
 ### Operational Address Changed
 | data           | type    | keyed |
@@ -1567,6 +1595,9 @@ Any address can execute.
 
 ### INVALID_UNDELEGATE_INTENT_VALUE
 "Invalid undelegate intent value"
+
+### OPERATIONAL_NOT_ELIGIBLE
+"Operational address had not been declared by staker"
 
 # Structs
 ### StakerPoolInfo

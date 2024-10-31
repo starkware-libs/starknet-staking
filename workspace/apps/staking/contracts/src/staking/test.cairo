@@ -23,12 +23,13 @@ use event_test_utils::{assert_stake_balance_changed_event, assert_delete_staker_
 use event_test_utils::assert_staker_reward_address_change_event;
 use event_test_utils::{assert_new_delegation_pool_event, assert_commission_changed_event};
 use event_test_utils::assert_change_operational_address_event;
+use event_test_utils::assert_declare_operational_address_event;
 use event_test_utils::{assert_new_staker_event, assert_minimum_stake_changed_event};
 use event_test_utils::{assert_global_index_updated_event, assert_exit_wait_window_changed_event};
 use event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
 use event_test_utils::{assert_staker_reward_claimed_event, assert_reward_supplier_changed_event};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use starknet::get_block_timestamp;
+use starknet::{get_block_timestamp, ContractAddress};
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use contracts::staking::objects::{UndelegateIntentValueTrait, UndelegateIntentValueZero};
 use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
@@ -1338,6 +1339,90 @@ fn test_pool_contract_admin_role() {
     assert!(!pool_contract_roles_dispatcher.is_governance_admin(account: DUMMY_ADDRESS()));
 }
 
+#[test]
+fn test_declare_operational_address() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+    let operational_address = cfg.staker_info.operational_address;
+    // Check map is empty before declare.
+    let bound_staker: ContractAddress = load_from_simple_map(
+        map_selector: selector!("eligible_operational_addresses"),
+        key: cfg.staker_info.operational_address,
+        contract: staking_contract
+    );
+    assert_eq!(bound_staker, Zero::zero());
+    // First declare
+    let mut spy = snforge_std::spy_events();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: operational_address
+    );
+    staking_dispatcher.declare_operational_address(:staker_address);
+    // Check map is updated after declare.
+    let bound_staker: ContractAddress = load_from_simple_map(
+        map_selector: selector!("eligible_operational_addresses"),
+        key: cfg.staker_info.operational_address,
+        contract: staking_contract
+    );
+    assert_eq!(bound_staker, staker_address);
+    // Second declare
+    let other_staker_address = OTHER_STAKER_ADDRESS();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: operational_address
+    );
+    staking_dispatcher.declare_operational_address(staker_address: other_staker_address);
+    // Check map is updated after declare.
+    let bound_staker: ContractAddress = load_from_simple_map(
+        map_selector: selector!("eligible_operational_addresses"),
+        key: cfg.staker_info.operational_address,
+        contract: staking_contract
+    );
+    assert_eq!(bound_staker, other_staker_address);
+    // Third declare with same operational and staker address - should not emit event or change map
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: operational_address
+    );
+    staking_dispatcher.declare_operational_address(staker_address: other_staker_address);
+    // Check map is updated after declare.
+    let bound_staker: ContractAddress = load_from_simple_map(
+        map_selector: selector!("eligible_operational_addresses"),
+        key: cfg.staker_info.operational_address,
+        contract: staking_contract
+    );
+    assert_eq!(bound_staker, other_staker_address);
+    // Fourth declare - set to zero
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: operational_address
+    );
+    staking_dispatcher.declare_operational_address(staker_address: Zero::zero());
+    // Check map is updated after declare.
+    let bound_staker: ContractAddress = load_from_simple_map(
+        map_selector: selector!("eligible_operational_addresses"),
+        key: cfg.staker_info.operational_address,
+        contract: staking_contract
+    );
+    assert_eq!(bound_staker, Zero::zero());
+    // Validate the OperationalAddressDeclared events.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 3, message: "declare_operational_address"
+    );
+    assert_declare_operational_address_event(
+        spied_event: events[0], :operational_address, :staker_address,
+    );
+    assert_declare_operational_address_event(
+        spied_event: events[1], :operational_address, staker_address: other_staker_address,
+    );
+    assert_declare_operational_address_event(
+        spied_event: events[2], :operational_address, staker_address: Zero::zero(),
+    );
+}
+
+#[test]
 fn test_change_operational_address() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -1349,19 +1434,26 @@ fn test_change_operational_address() {
     let staker_address = cfg.test_info.staker_address;
     let staker_info = staking_dispatcher.staker_info(:staker_address);
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let mut spy = snforge_std::spy_events();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: operational_address
+    );
+    staking_dispatcher.declare_operational_address(:staker_address);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.change_operational_address(:operational_address);
     let updated_staker_info = staking_dispatcher.staker_info(:staker_address);
     let expected_staker_info = StakerInfo { operational_address, ..staker_info };
     assert_eq!(updated_staker_info, expected_staker_info);
-    // Validate the single OperationalAddressChanged event.
+    // Validate the OperationalAddressDeclared and OperationalAddressChanged events.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 1, message: "change_operational_address"
+        actual: events.len(), expected: 2, message: "change_operational_address"
+    );
+    assert_declare_operational_address_event(
+        spied_event: events[0], :operational_address, :staker_address,
     );
     assert_change_operational_address_event(
-        spied_event: events[0],
+        spied_event: events[1],
         :staker_address,
         new_address: operational_address,
         old_address: cfg.staker_info.operational_address
@@ -1392,6 +1484,21 @@ fn test_change_operational_address_operational_address_exists() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.change_operational_address(:operational_address);
+}
+
+#[test]
+#[should_panic(expected: "Operational address had not been declared by staker")]
+fn test_change_operational_address_is_not_eligible() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+    let operational_address = OTHER_OPERATIONAL_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.change_operational_address(:operational_address);
 }
