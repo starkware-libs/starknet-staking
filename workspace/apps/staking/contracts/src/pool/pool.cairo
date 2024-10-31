@@ -75,6 +75,7 @@ pub mod Pool {
         PoolMemberRewardClaimed: Events::PoolMemberRewardClaimed,
         DeletePoolMember: Events::DeletePoolMember,
         NewPoolMember: Events::NewPoolMember,
+        SwitchDelegationPool: Events::SwitchDelegationPool,
     }
 
 
@@ -293,7 +294,12 @@ pub mod Pool {
             let switch_pool_data = SwitchPoolData { pool_member, reward_address };
             let mut serialized_data = array![];
             switch_pool_data.serialize(ref output: serialized_data);
-            // TODO: emit event
+            self
+                .emit(
+                    Events::SwitchDelegationPool {
+                        pool_member, new_delegation_pool: to_pool, amount
+                    }
+                );
             self
                 .staking_pool_dispatcher
                 .read()

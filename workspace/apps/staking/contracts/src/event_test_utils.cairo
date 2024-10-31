@@ -472,6 +472,29 @@ pub(crate) fn assert_delete_pool_member_event(
     }
 }
 
+pub(crate) fn assert_switch_delegation_pool_event(
+    spied_event: @(ContractAddress, Event),
+    pool_member: ContractAddress,
+    new_delegation_pool: ContractAddress,
+    amount: Amount
+) {
+    let expected_event = @contracts::pool::Pool::Event::SwitchDelegationPool(
+        PoolEvents::SwitchDelegationPool { pool_member, new_delegation_pool, amount }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "SwitchDelegationPool{{pool_member: {:?}, new_delegation_pool: {:?}, amount: {}}}",
+            pool_member,
+            new_delegation_pool,
+            amount
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub(crate) fn assert_new_pool_member_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
