@@ -39,6 +39,7 @@ pub enum Error {
     STAKER_ALREADY_HAS_POOL,
     CONTRACT_IS_PAUSED,
     INVALID_UNDELEGATE_INTENT_VALUE,
+    OPERATIONAL_NOT_ELIGIBLE,
     // Pool contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
@@ -84,6 +85,7 @@ pub impl ErrorImpl of ErrorTrait {
             Error::AMOUNT_IS_ZERO => "Amount is zero",
             Error::INTENT_WINDOW_NOT_FINISHED => "Intent window is not finished",
             Error::OPERATIONAL_EXISTS => "Operational address already exists",
+            Error::OPERATIONAL_NOT_ELIGIBLE => "Operational address had not been declared by staker",
             Error::AMOUNT_LESS_THAN_MIN_STAKE => "Amount is less than min stake - try again with enough funds",
             Error::COMMISSION_OUT_OF_RANGE => format!(
                 "Commission is out of range, expected to be 0-{}", COMMISSION_DENOMINATOR

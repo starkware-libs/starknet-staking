@@ -61,6 +61,7 @@ pub mod Staking {
         min_stake: Amount,
         staker_info: Map<ContractAddress, Option<InternalStakerInfo>>,
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
+        eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
         erc20_dispatcher: IERC20Dispatcher,
         total_stake: Amount,
         pool_contract_class_hash: ClassHash,
@@ -98,6 +99,7 @@ pub mod Staking {
         MinimumStakeChanged: ConfigEvents::MinimumStakeChanged,
         ExitWaitWindowChanged: ConfigEvents::ExitWaitWindowChanged,
         RewardSupplierChanged: ConfigEvents::RewardSupplierChanged,
+        OperationalAddressDeclared: Events::OperationalAddressDeclared
     }
 
     #[constructor]
@@ -420,6 +422,10 @@ pub mod Staking {
             );
             let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
+            assert_with_err(
+                self.eligible_operational_addresses.read(operational_address) == staker_address,
+                Error::OPERATIONAL_NOT_ELIGIBLE
+            );
             self
                 .operational_address_to_staker_address
                 .write(staker_info.operational_address, Zero::zero());
@@ -433,6 +439,16 @@ pub mod Staking {
                         staker_address, new_address: operational_address, old_address
                     }
                 );
+        }
+
+        fn declare_operational_address(ref self: ContractState, staker_address: ContractAddress) {
+            self.general_prerequisites();
+            let operational_address = get_caller_address();
+            if self.eligible_operational_addresses.read(operational_address) == staker_address {
+                return;
+            }
+            self.eligible_operational_addresses.write(operational_address, staker_address);
+            self.emit(Events::OperationalAddressDeclared { operational_address, staker_address });
         }
 
         fn update_commission(ref self: ContractState, commission: Commission) {

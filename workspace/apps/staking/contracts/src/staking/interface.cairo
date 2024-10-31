@@ -60,6 +60,14 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
+    pub struct OperationalAddressDeclared {
+        #[key]
+        pub operational_address: ContractAddress,
+        #[key]
+        pub staker_address: ContractAddress
+    }
+
+    #[derive(Drop, starknet::Event)]
     pub struct OperationalAddressChanged {
         #[key]
         pub staker_address: ContractAddress,
@@ -161,6 +169,7 @@ pub trait IStaking<TContractState> {
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
+    fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
     fn update_commission(ref self: TContractState, commission: Commission);
     fn is_paused(self: @TContractState) -> bool;
