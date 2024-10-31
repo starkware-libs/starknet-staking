@@ -120,6 +120,25 @@ pub fn assert_pool_member_exit_intent_event(
     }
 }
 
+pub fn assert_pool_member_exit_action_event(
+    spied_event: @(ContractAddress, Event), pool_member: ContractAddress, unpool_amount: Amount
+) {
+    let expected_event = @contracts::pool::Pool::Event::PoolMemberExitAction(
+        PoolEvents::PoolMemberExitAction { pool_member, unpool_amount }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "PoolMemberExitAction{{pool_member: {:?}, unpool_amount: {}}}",
+            pool_member,
+            unpool_amount
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub fn assert_pool_member_reward_claimed_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
@@ -266,6 +285,29 @@ pub fn assert_new_delegation_pool_event(
             staker_address,
             pool_contract,
             commission
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+pub fn assert_remove_from_delegation_pool_action_event(
+    spied_event: @(ContractAddress, Event),
+    pool_contract: ContractAddress,
+    identifier: felt252,
+    amount: Amount
+) {
+    let expected_event = @contracts::staking::Staking::Event::RemoveFromDelegationPoolAction(
+        StakingEvents::RemoveFromDelegationPoolAction { pool_contract, identifier, amount }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "RemoveFromDelegationPoolAction{{pool_contract: {:?}, identifier: {}, amount: {}}}",
+            pool_contract,
+            identifier,
+            amount
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }

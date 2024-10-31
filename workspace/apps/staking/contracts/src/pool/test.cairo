@@ -26,7 +26,7 @@ use contracts::event_test_utils;
 use contracts::types::Index;
 use event_test_utils::assert_pool_member_reward_claimed_event;
 use event_test_utils::{assert_final_index_set_event, assert_new_pool_member_event};
-use event_test_utils::assert_pool_member_exit_intent_event;
+use event_test_utils::{assert_pool_member_exit_intent_event, assert_pool_member_exit_action_event};
 use event_test_utils::{assert_delete_pool_member_event, assert_switch_delegation_pool_event};
 use event_test_utils::assert_number_of_events;
 use event_test_utils::assert_delegation_pool_member_balance_changed_event;
@@ -733,19 +733,24 @@ fn test_exit_delegation_pool_action() {
         reward_account_balance_after,
         reward_account_balance_before + unclaimed_rewards_member.into()
     );
-    // Validate the PoolMemberRewardClaimed and DeletePoolMember event.
+    // Validate the PoolMemberExitAction, PoolMemberRewardClaimed and DeletePoolMember events.
     let events = spy.get_events().emitted_by(contract_address: pool_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 2, message: "exit_delegation_pool_action"
+        actual: events.len(), expected: 3, message: "exit_delegation_pool_action"
+    );
+    assert_pool_member_exit_action_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        unpool_amount: delegate_amount
     );
     assert_pool_member_reward_claimed_event(
-        spied_event: events[0],
+        spied_event: events[1],
         pool_member: cfg.test_info.pool_member_address,
         reward_address: cfg.pool_member_info.reward_address,
         amount: unclaimed_rewards_member
     );
     assert_delete_pool_member_event(
-        spied_event: events[1],
+        spied_event: events[2],
         pool_member: cfg.test_info.pool_member_address,
         reward_address: cfg.pool_member_info.reward_address,
     );
