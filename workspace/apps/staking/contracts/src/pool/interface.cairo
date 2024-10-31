@@ -61,6 +61,15 @@ pub mod Events {
         pub reward_address: ContractAddress,
         pub amount: Amount
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct SwitchDelegationPool {
+        #[key]
+        pub pool_member: ContractAddress,
+        #[key]
+        pub new_delegation_pool: ContractAddress,
+        pub amount: Amount
+    }
 }
 
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
