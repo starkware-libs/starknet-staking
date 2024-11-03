@@ -955,17 +955,17 @@ fn test_remove_from_delegation_pool_intent() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
 
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let old_delegated_stake = staking_dispatcher
+    let initial_delegated_stake = staking_dispatcher
         .staker_info(cfg.test_info.staker_address)
         .get_pool_info_unchecked()
         .amount;
     let old_total_stake = staking_dispatcher.get_total_stake();
     let mut spy = snforge_std::spy_events();
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    let intent_amount = cfg.pool_member_info.amount / 2;
+    let mut intent_amount = cfg.pool_member_info.amount / 2;
 
-    // Change global index.
-    let global_index = cfg.staker_info.index * 2;
+    // Increase index.
+    let mut global_index = cfg.staker_info.index * 2;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -986,22 +986,22 @@ fn test_remove_from_delegation_pool_intent() {
         amount: cfg.staker_info.amount_own, :interest
     );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: old_delegated_stake, :interest
+        amount: initial_delegated_stake, :interest
     );
     let commission_amount = compute_commission_amount_rounded_down(
         rewards_including_commission: pool_rewards_including_commission,
         commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
-    let staker_unclaimed_rewards = staker_rewards + commission_amount;
-    let pool_unclaimed_rewards = pool_rewards_including_commission - commission_amount;
-    let new_delegated_stake = old_delegated_stake - intent_amount;
-    let expected_staker_info = InternalStakerInfo {
+    let mut staker_unclaimed_rewards = staker_rewards + commission_amount;
+    let mut pool_unclaimed_rewards = pool_rewards_including_commission - commission_amount;
+    let mut cur_delegated_stake = initial_delegated_stake - intent_amount;
+    let mut expected_staker_info = InternalStakerInfo {
         unclaimed_rewards_own: staker_unclaimed_rewards,
         index: global_index,
         pool_info: Option::Some(
             StakerPoolInfo {
                 pool_contract,
-                amount: new_delegated_stake,
+                amount: cur_delegated_stake,
                 unclaimed_rewards: pool_unclaimed_rewards,
                 ..cfg.staker_info.get_pool_info_unchecked()
             }
@@ -1041,9 +1041,98 @@ fn test_remove_from_delegation_pool_intent() {
         spied_event: events[0],
         staker_address: cfg.test_info.staker_address,
         old_self_stake: cfg.staker_info.amount_own,
-        :old_delegated_stake,
+        old_delegated_stake: initial_delegated_stake,
         new_self_stake: cfg.staker_info.amount_own,
-        :new_delegated_stake
+        new_delegated_stake: cur_delegated_stake
+    );
+
+    // Decrease intent amount.
+    intent_amount = intent_amount / 2;
+
+    // Increase index.
+    global_index = global_index * 2;
+    snforge_std::store(
+        target: staking_contract,
+        storage_address: selector!("global_index"),
+        serialized_value: array![global_index.into()].span()
+    );
+
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
+    staking_pool_dispatcher
+        .remove_from_delegation_pool_intent(
+            staker_address: cfg.test_info.staker_address,
+            identifier: cfg.test_info.pool_member_address.into(),
+            amount: intent_amount
+        );
+
+    // Validate that the staker info is updated.
+    let interest = global_index - expected_staker_info.index;
+    let staker_rewards = compute_rewards_rounded_down(
+        amount: expected_staker_info.amount_own, :interest
+    );
+    let pool_rewards_including_commission = compute_rewards_rounded_up(
+        amount: cur_delegated_stake, :interest
+    );
+    let commission_amount = compute_commission_amount_rounded_down(
+        rewards_including_commission: pool_rewards_including_commission,
+        commission: expected_staker_info.get_pool_info_unchecked().commission
+    );
+    staker_unclaimed_rewards = staker_unclaimed_rewards + staker_rewards + commission_amount;
+    pool_unclaimed_rewards = pool_unclaimed_rewards
+        + pool_rewards_including_commission
+        - commission_amount;
+    let prev_delegated_stake = cur_delegated_stake;
+    cur_delegated_stake = initial_delegated_stake - intent_amount;
+    expected_staker_info =
+        InternalStakerInfo {
+            unclaimed_rewards_own: staker_unclaimed_rewards,
+            index: global_index,
+            pool_info: Option::Some(
+                StakerPoolInfo {
+                    pool_contract,
+                    amount: cur_delegated_stake,
+                    unclaimed_rewards: pool_unclaimed_rewards,
+                    ..expected_staker_info.get_pool_info_unchecked()
+                }
+            ),
+            ..expected_staker_info
+        };
+    assert_eq!(
+        staking_dispatcher.staker_info(cfg.test_info.staker_address), expected_staker_info.into()
+    );
+
+    // Validate that the total stake is updated.
+    let expected_total_stake = old_total_stake - intent_amount;
+    assert_eq!(staking_dispatcher.get_total_stake(), expected_total_stake);
+
+    // Validate that the data written in the exit intents map is updated.
+    let undelegate_intent_key = UndelegateIntentKey {
+        pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
+    };
+    let actual_undelegate_intent_value = load_from_simple_map(
+        map_selector: selector!("pool_exit_intents"),
+        key: undelegate_intent_key,
+        contract: staking_contract
+    );
+    let expected_unpool_time = get_block_timestamp()
+        + staking_dispatcher.contract_parameters().exit_wait_window;
+    let expected_undelegate_intent_value = UndelegateIntentValue {
+        unpool_time: expected_unpool_time, amount: intent_amount
+    };
+    assert_eq!(actual_undelegate_intent_value, expected_undelegate_intent_value);
+
+    // Validate StakeBalanceChanged event.
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 2, message: "remove_from_delegation_pool_intent"
+    );
+    assert_stake_balance_changed_event(
+        spied_event: events[1],
+        staker_address: cfg.test_info.staker_address,
+        old_self_stake: cfg.staker_info.amount_own,
+        old_delegated_stake: prev_delegated_stake,
+        new_self_stake: expected_staker_info.amount_own,
+        new_delegated_stake: cur_delegated_stake
     );
 }
 
