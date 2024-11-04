@@ -140,6 +140,7 @@ name = "perpetuals"
 version = "0.1.0"
 dependencies = [
  "contracts_commons",
+ "openzeppelin",
  "snforge_std",
 ]
 
