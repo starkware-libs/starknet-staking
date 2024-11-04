@@ -3,7 +3,7 @@ pub mod bit_set;
 pub mod components;
 
 pub mod constants;
-pub mod safe_types;
+pub mod types;
 
 pub(crate) mod bit_mask;
 
