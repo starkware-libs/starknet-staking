@@ -6,7 +6,7 @@ pub mod RewardSupplier {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::syscalls::{send_message_to_l1_syscall};
-    use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
+    use starknet::{get_caller_address, get_contract_address};
     use starknet::SyscallResultTrait;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
@@ -19,7 +19,8 @@ pub mod RewardSupplier {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts::types::{TimeStamp, Amount};
+    use contracts::types::Amount;
+    use contracts_commons::types::time::{TimeStamp, Time};
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -85,7 +86,7 @@ pub mod RewardSupplier {
         self.roles.initializer(:governance_admin);
         self.staking_contract.write(staking_contract);
         self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
-        self.last_timestamp.write(get_block_timestamp());
+        self.last_timestamp.write(Time::now());
         // Initialize unclaimed_rewards with 1 strk to make up for round ups of pool rewards
         // calculation in the staking contract.
         self.unclaimed_rewards.write(STRK_IN_FRIS);
@@ -167,9 +168,9 @@ pub mod RewardSupplier {
             let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
             let yearly_mint = minting_curve_dispatcher.yearly_mint();
             let last_timestamp = self.last_timestamp.read();
-            let current_time = get_block_timestamp();
+            let current_time = Time::now();
             self.last_timestamp.write(current_time);
-            let seconds_diff = current_time - last_timestamp;
+            let seconds_diff: u64 = current_time.sub(last_timestamp).into();
             yearly_mint * seconds_diff.into() / SECONDS_IN_YEAR
         }
 

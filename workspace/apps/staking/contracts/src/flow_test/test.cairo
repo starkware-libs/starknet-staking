@@ -4,6 +4,7 @@ use flow_test_utils::{SystemTrait, StakerTrait, StakingTrait, RewardSupplierTrai
 use flow_test_utils::{TokenTrait, DelegatorTrait};
 use contracts_commons::constants::{WEEK};
 use contracts::constants::{STRK_IN_FRIS};
+use contracts_commons::types::time::{Time, TimeDelta};
 use core::num::traits::Zero;
 
 /// Flow - Basic Stake:
@@ -21,7 +22,7 @@ fn basic_stake_flow_test() {
     let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
-    let one_week = 1 * WEEK;
+    let one_week = TimeDelta { seconds: 1 * WEEK };
     let staker = system.new_staker(amount: stake_amount * 2);
     staker.stake(amount: stake_amount, pool_enabled: true, commission: 200);
     system.advance_time(time: one_week);
@@ -44,7 +45,7 @@ fn basic_stake_flow_test() {
     system.advance_time(time: one_week);
 
     staker.exit_intent();
-    system.advance_time(time: 3 * one_week);
+    system.advance_time(time: one_week.mul(3));
 
     delegator.exit_action(:pool);
     staker.exit_action();

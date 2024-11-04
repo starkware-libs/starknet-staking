@@ -27,7 +27,8 @@ use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN};
 use constants::{APP_ROLE_ADMIN, UPGRADE_GOVERNOR};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::test_address;
-use contracts::types::{Commission, Index, Amount, TimeStamp};
+use contracts::types::{Commission, Index, Amount};
+use contracts_commons::types::time::TimeStamp;
 
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};

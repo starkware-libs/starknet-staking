@@ -1,10 +1,12 @@
 use starknet::{ContractAddress, ClassHash};
 use contracts::errors::{Error, OptionAuxTrait};
-use contracts::types::{Commission, TimeDelta, Index, Amount, TimeStamp};
+use contracts::types::{Commission, Index, Amount};
+use contracts_commons::types::time::{TimeStamp, TimeDelta};
 
 pub mod Events {
     use starknet::ContractAddress;
-    use contracts::types::{Commission, TimeStamp, Index, Amount};
+    use contracts::types::{Commission, Index, Amount};
+    use contracts_commons::types::time::TimeStamp;
     #[derive(Drop, starknet::Event)]
     pub struct StakeBalanceChanged {
         #[key]
@@ -302,7 +304,8 @@ pub trait IStakingConfig<TContractState> {
 
 pub mod ConfigEvents {
     use starknet::ContractAddress;
-    use contracts::types::{Amount, TimeDelta};
+    use contracts::types::Amount;
+    use contracts_commons::types::time::TimeDelta;
     #[derive(Drop, starknet::Event)]
     pub struct MinimumStakeChanged {
         pub old_min_stake: Amount,
