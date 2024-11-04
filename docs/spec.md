@@ -465,7 +465,7 @@ fn unstake_intent(ref self: ContractState) -> u64
 ```
 #### description <!-- omit from toc -->
 Inform of the intent to exit the stake. 
-This will remove the funds from the stake, pausing rewards collection for the staker and it's pool members (if exist).
+This will remove the funds from the stake, pausing rewards collection for the staker and its pool members (if exist).
 This will also start the exit window timeout.
 Return the time in which the staker will be able to unstake.
 #### emits <!-- omit from toc -->
@@ -493,7 +493,7 @@ fn unstake_action(
 ) -> u128
 ```
 #### description <!-- omit from toc -->
-Executes the intent to exit the stake if enough time have passed.
+Executes the intent to exit the stake if enough time has passed.
 Transfers the funds back to the staker.
 Return the amount of tokens transferred back to the staker.
 #### emits <!-- omit from toc -->
@@ -510,8 +510,8 @@ Return the amount of tokens transferred back to the staker.
 6. [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker exist and requested to unstake.
-3. Enough time have passed from the unstake intent call.
+2. Staker exists and requested to unstake.
+3. Enough time has passed from the unstake intent call.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
@@ -620,7 +620,7 @@ fn remove_from_delegation_pool_action(
 )
 ```
 #### description <!-- omit from toc -->
-Execute the intent to remove funds from pool if enough time have passed.
+Execute the intent to remove funds from pool if enough time has passed.
 Transfers the funds to the pool contract.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
@@ -630,7 +630,7 @@ Transfers the funds to the pool contract.
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Removal intent request with the given `identifier` have been sent before.
-3. Enough time have passed since the intent request.
+3. Enough time has passed since the intent request.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
@@ -665,7 +665,7 @@ Execute a pool member request to move from one staker's delegation pool to anoth
 1. Staking contract is unpaused.
 2. `switched_amount` is not zero.
 3. Enough funds is in intent for switching.
-4. `to_staker` exist in the contract and is not in exit window.
+4. `to_staker` exists in the contract and is not in exit window.
 5. `to_pool` is the delegation pool contract for `to_staker`.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
@@ -691,7 +691,7 @@ Change the reward address for a staker.
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller) exist in the contract.
+2. Staker (caller) exists in the contract.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
@@ -716,7 +716,7 @@ Return the pool address.
 4. [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller) exist in the contract.
+2. Staker (caller) exists in the contract.
 3. `commission` is in valid range.
 4. Staker has no pool.
 #### access control <!-- omit from toc -->
@@ -746,8 +746,8 @@ Return the updated staker index.
 6. [UNEXPECTED\_BALANCE](#unexpected_balance)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker exist in the contract.
-3. Delegation pool exist for the staker.
+2. Staker exists in the contract.
+3. Delegation pool exists for the staker.
 #### access control <!-- omit from toc -->
 Delegation pool contract of the given staker.
 #### logic <!-- omit from toc -->
@@ -767,7 +767,7 @@ Return [StakerInfo](#stakerinfo) of the given staker.
 #### errors <!-- omit from toc -->
 3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
-1. Staker exist in the contract.
+1. Staker exists in the contract.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
@@ -856,7 +856,7 @@ Change the operational address for a staker.
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker (caller) exist in the contract.
+2. Staker (caller) exists in the contract.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
@@ -1050,7 +1050,7 @@ Add a new pool member to the delegation pool.
 Only a non-listed pool member address.
 #### logic <!-- omit from toc -->
 1. Transfer funds from pool member to pool contract.
-2. Approve transferal from pool contract to staking contract.
+2. Approve transfer from pool contract to staking contract.
 3. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
 4. Get current index from staking contract.
 5. Create entry for pool member.
@@ -1129,7 +1129,7 @@ fn exit_delegation_pool_action(
 ) -> u128
 ```
 #### description <!-- omit from toc -->
-Executes the intent to exit the stake if enough time have passed. Transfers the funds back to the pool member.
+Executes the intent to exit the stake if enough time has passed. Transfers the funds back to the pool member.
 Return the amount of tokens transferred back to the pool member.
 #### emits <!-- omit from toc -->
 1. [Pool Member Reward Claimed](#pool-member-reward-claimed)
@@ -1141,7 +1141,7 @@ Return the amount of tokens transferred back to the pool member.
 4. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 #### pre-condition <!-- omit from toc -->
 1. Pool member exist and requested to unstake.
-2. Enough time have passed from the delegation pool exit intent call.
+2. Enough time has passed from the delegation pool exit intent call.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
@@ -1203,7 +1203,7 @@ Return the amount left in exit window for the pool member in this pool.
 1. `amount` is not zero.
 2. Pool member (caller) is in exit window.
 3. Pool member's amount is greater or equal to the amount requested.
-4. `to_staker` exist in the staking contract and is not in an exit window.
+4. `to_staker` exists in the staking contract and is not in an exit window.
 5. `to_pool` is the delegation pool contract for `to_staker`.
 #### access control <!-- omit from toc -->
 Only pool member can execute.
@@ -1278,7 +1278,7 @@ Change the reward address for a pool member.
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 #### pre-condition <!-- omit from toc -->
-1. Pool member exist in the contract.
+1. Pool member exists in the contract.
 #### access control <!-- omit from toc -->
 Only pool member can execute.
 #### logic <!-- omit from toc -->
@@ -1297,7 +1297,7 @@ Return [PoolMemberInfo](#poolmemberinfo) of the given pool member.
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 #### pre-condition <!-- omit from toc -->
-1. Pool member exist in the contract.
+1. Pool member exists in the contract.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
