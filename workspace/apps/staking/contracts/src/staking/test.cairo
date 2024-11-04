@@ -30,7 +30,7 @@ use event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
 use event_test_utils::{assert_staker_reward_claimed_event, assert_reward_supplier_changed_event};
 use event_test_utils::assert_remove_from_delegation_pool_action_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use starknet::{get_block_timestamp, ContractAddress};
+use starknet::ContractAddress;
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use contracts::staking::objects::{UndelegateIntentValueTrait, UndelegateIntentValueZero};
 use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
@@ -49,6 +49,7 @@ use contracts::pool::Pool::SwitchPoolData;
 use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts::types::{Index, Amount};
+use contracts_commons::types::time::{TimeStamp, Time, TimeDelta};
 use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
 
 #[test]
@@ -274,7 +275,7 @@ fn test_update_rewards_unstake_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     let staker_info_expected = InternalStakerInfo {
-        unstake_time: Option::Some(1), ..cfg.staker_info
+        unstake_time: Option::Some(TimeStamp { seconds: 1 }), ..cfg.staker_info
     };
     let mut staker_info = staker_info_expected;
     state.update_rewards(ref :staker_info);
@@ -742,9 +743,8 @@ fn test_unstake_intent() {
     let mut spy = snforge_std::spy_events();
     let unstake_time = staking_dispatcher.unstake_intent();
     let staker_info = staking_dispatcher.staker_info(:staker_address);
-    let expected_time = get_block_timestamp()
-        + staking_dispatcher.contract_parameters().exit_wait_window;
-    assert_eq!((staker_info.unstake_time).unwrap(), unstake_time);
+    let expected_time = Time::now().add(staking_dispatcher.contract_parameters().exit_wait_window);
+    assert_eq!(staker_info.unstake_time.unwrap(), unstake_time);
     assert_eq!(unstake_time, expected_time);
     assert_eq!(staking_dispatcher.get_total_stake(), Zero::zero());
     // Validate StakerExitIntent and StakeBalanceChanged events.
@@ -818,7 +818,7 @@ fn test_unstake_action() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let unstake_time = staking_dispatcher.unstake_intent();
     // Advance time to enable unstake_action.
-    start_cheat_block_timestamp_global(block_timestamp: unstake_time + 1);
+    start_cheat_block_timestamp_global(block_timestamp: unstake_time.add(Time::seconds(1)).into());
     let unclaimed_rewards_own = staking_dispatcher
         .staker_info(:staker_address)
         .unclaimed_rewards_own;
@@ -1025,8 +1025,8 @@ fn test_remove_from_delegation_pool_intent() {
         key: undelegate_intent_key,
         contract: staking_contract
     );
-    let expected_unpool_time = get_block_timestamp()
-        + staking_dispatcher.contract_parameters().exit_wait_window;
+    let expected_unpool_time = Time::now()
+        .add(staking_dispatcher.contract_parameters().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time, amount: intent_amount
     };
@@ -1114,8 +1114,8 @@ fn test_remove_from_delegation_pool_intent() {
         key: undelegate_intent_key,
         contract: staking_contract
     );
-    let expected_unpool_time = get_block_timestamp()
-        + staking_dispatcher.contract_parameters().exit_wait_window;
+    let expected_unpool_time = Time::now()
+        .add(staking_dispatcher.contract_parameters().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time, amount: intent_amount
     };
@@ -1159,8 +1159,9 @@ fn test_remove_from_delegation_pool_action() {
         );
     // Remove from delegation pool action, and then check that the intent was removed correctly.
     start_cheat_block_timestamp_global(
-        block_timestamp: get_block_timestamp()
-            + staking_dispatcher.contract_parameters().exit_wait_window
+        block_timestamp: Time::now()
+            .add(staking_dispatcher.contract_parameters().exit_wait_window)
+            .into()
     );
     let pool_balance_before_action = erc20_dispatcher.balance_of(pool_contract);
 
@@ -1388,9 +1389,12 @@ fn test_update_global_index_if_needed() {
         / cfg.minting_curve_contract_info.c_denom.into())
         .try_into()
         .expect('inflation not fit in u64');
-    let global_index_last_update_timestamp = get_block_timestamp();
-    let global_index_current_update_timestamp = global_index_last_update_timestamp + DAY * 365;
-    start_cheat_block_timestamp_global(block_timestamp: global_index_current_update_timestamp);
+    let global_index_last_update_timestamp = Time::now();
+    let global_index_current_update_timestamp = global_index_last_update_timestamp
+        .add(Time::days(365));
+    start_cheat_block_timestamp_global(
+        block_timestamp: global_index_current_update_timestamp.into()
+    );
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("total_stake"),
@@ -1905,7 +1909,7 @@ fn test_set_exit_waiting_window() {
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let old_exit_window = cfg.staking_contract_info.exit_wait_window;
     assert_eq!(old_exit_window, staking_dispatcher.contract_parameters().exit_wait_window);
-    let new_exit_window = DAY * 7;
+    let new_exit_window = TimeDelta { seconds: DAY * 7 };
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin
@@ -1946,15 +1950,20 @@ fn test_set_reward_supplier() {
 
 #[test]
 fn test_undelegate_intent_value_is_valid() {
-    let mut undelegate_intent_value = UndelegateIntentValue { unpool_time: 0, amount: 0 };
+    let mut undelegate_intent_value = UndelegateIntentValue {
+        unpool_time: TimeStamp { seconds: 0 }, amount: 0
+    };
     assert_eq!(undelegate_intent_value.is_valid(), true);
 
-    undelegate_intent_value = UndelegateIntentValue { unpool_time: 0, amount: 1 };
+    undelegate_intent_value =
+        UndelegateIntentValue { unpool_time: TimeStamp { seconds: 0 }, amount: 1 };
     assert_eq!(undelegate_intent_value.is_valid(), false);
 
-    undelegate_intent_value = UndelegateIntentValue { unpool_time: 1, amount: 0 };
+    undelegate_intent_value =
+        UndelegateIntentValue { unpool_time: TimeStamp { seconds: 1 }, amount: 0 };
     assert_eq!(undelegate_intent_value.is_valid(), false);
 
-    undelegate_intent_value = UndelegateIntentValue { unpool_time: 1, amount: 1 };
+    undelegate_intent_value =
+        UndelegateIntentValue { unpool_time: TimeStamp { seconds: 1 }, amount: 1 };
     assert_eq!(undelegate_intent_value.is_valid(), true);
 }

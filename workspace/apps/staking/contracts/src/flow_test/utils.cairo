@@ -8,7 +8,7 @@ use contracts::reward_supplier::interface::{
 use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
 use core::num::traits::zero::Zero;
 use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
-use starknet::{ContractAddress, ClassHash, get_block_timestamp};
+use starknet::{ContractAddress, ClassHash};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use contracts::test_utils::constants::{NAME, SYMBOL};
@@ -18,7 +18,8 @@ use contracts::test_utils::set_account_as_token_admin;
 use contracts::test_utils::StakingInitConfig;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::start_cheat_block_timestamp_global;
-use contracts::types::{Commission, Amount, TimeStamp};
+use contracts::types::{Commission, Amount};
+use contracts_commons::types::time::{TimeStamp, TimeDelta, Time};
 
 /// The `TokenConfig` struct is used to configure the initial settings for a token contract.
 /// It includes the initial supply of tokens and the owner's address.
@@ -437,8 +438,8 @@ pub impl SystemImpl of SystemTrait {
     }
 
     /// Advances the block timestamp by the specified amount of time.
-    fn advance_time(ref self: SystemState, time: TimeStamp) {
-        start_cheat_block_timestamp_global(block_timestamp: get_block_timestamp() + time);
+    fn advance_time(ref self: SystemState, time: TimeDelta) {
+        start_cheat_block_timestamp_global(block_timestamp: Time::now().add(time).into());
     }
 }
 

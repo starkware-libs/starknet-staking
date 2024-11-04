@@ -8,7 +8,7 @@ pub mod Pool {
     use contracts::pool::{InternalPoolMemberInfo, PoolMemberInfo};
     use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
     use core::option::OptionTrait;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp};
+    use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
@@ -20,7 +20,8 @@ pub mod Pool {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts::utils::CheckedIERC20DispatcherTrait;
-    use contracts::types::{Commission, TimeStamp, Index, Amount};
+    use contracts::types::{Commission, Index, Amount};
+    use contracts_commons::types::time::{TimeStamp, Time};
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -226,9 +227,7 @@ pub mod Pool {
             let unpool_time = pool_member_info
                 .unpool_time
                 .expect_with_err(Error::MISSING_UNDELEGATE_INTENT);
-            assert_with_err(
-                get_block_timestamp() >= unpool_time, Error::INTENT_WINDOW_NOT_FINISHED
-            );
+            assert_with_err(Time::now() >= unpool_time, Error::INTENT_WINDOW_NOT_FINISHED);
             self
                 .emit(
                     Events::PoolMemberExitAction {
@@ -522,7 +521,7 @@ pub mod Pool {
                     self.get_pool_member_info(:pool_member).unpool_time.is_none(),
                     Error::UNDELEGATE_IN_PROGRESS
                 );
-                return get_block_timestamp();
+                return Time::now();
             }
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             let staker_address = self.staker_address.read();

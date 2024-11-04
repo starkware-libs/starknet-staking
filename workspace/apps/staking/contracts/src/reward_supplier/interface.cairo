@@ -1,5 +1,6 @@
 use starknet::{ContractAddress, EthAddress};
-use contracts::types::{TimeStamp, Amount};
+use contracts::types::Amount;
+use contracts_commons::types::time::TimeStamp;
 
 #[starknet::interface]
 pub trait IRewardSupplier<TContractState> {
@@ -25,7 +26,9 @@ pub struct RewardSupplierInfo {
 }
 
 pub mod Events {
-    use contracts::types::{TimeStamp, Amount};
+    use contracts::types::Amount;
+    use contracts_commons::types::time::TimeStamp;
+
     #[derive(Drop, starknet::Event)]
     pub struct MintRequest {
         pub total_amount: Amount,

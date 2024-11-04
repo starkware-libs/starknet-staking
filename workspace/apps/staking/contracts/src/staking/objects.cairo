@@ -1,8 +1,9 @@
-use starknet::{ContractAddress, get_block_timestamp};
+use starknet::ContractAddress;
 use contracts::staking::interface::{StakerPoolInfo, StakerInfo, StakerInfoTrait};
 use core::num::traits::Zero;
 use contracts::errors::{Error, assert_with_err};
-use contracts::types::{Amount, Index, TimeDelta, TimeStamp};
+use contracts::types::{Amount, Index};
+use contracts_commons::types::time::{TimeStamp, TimeDelta, Time};
 use core::cmp::max;
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
@@ -37,7 +38,7 @@ pub impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentVa
 pub(crate) struct InternalStakerInfo {
     pub(crate) reward_address: ContractAddress,
     pub(crate) operational_address: ContractAddress,
-    pub(crate) unstake_time: Option<u64>,
+    pub(crate) unstake_time: Option<TimeStamp>,
     pub(crate) amount_own: Amount,
     pub(crate) index: Index,
     pub(crate) unclaimed_rewards_own: Amount,
@@ -48,9 +49,9 @@ pub(crate) struct InternalStakerInfo {
 pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
     fn compute_unpool_time(self: @InternalStakerInfo, exit_wait_window: TimeDelta) -> TimeStamp {
         if let Option::Some(unstake_time) = *self.unstake_time {
-            return max(unstake_time, get_block_timestamp());
+            return max(unstake_time, Time::now());
         }
-        get_block_timestamp() + exit_wait_window
+        Time::now().add(exit_wait_window)
     }
 
     fn get_pool_info_unchecked(self: InternalStakerInfo) -> StakerPoolInfo {

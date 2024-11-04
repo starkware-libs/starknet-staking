@@ -6,7 +6,8 @@ use contracts::pool::Events as PoolEvents;
 use contracts::reward_supplier::Events as RewardSupplierEvents;
 use contracts::minting_curve::ConfigEvents as MintingCurveConfigEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
-use contracts::types::{Commission, TimeStamp, Index, Amount, Inflation};
+use contracts::types::{Commission, Index, Amount, Inflation};
+use contracts_commons::types::time::{TimeDelta, TimeStamp};
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(
@@ -35,7 +36,7 @@ pub fn assert_staker_exit_intent_event(
         let details = format!(
             "StakerExitIntent{{staker_address: {:?}, exit_timestamp: {}, amount: {}}}",
             staker_address,
-            exit_timestamp,
+            exit_timestamp.seconds,
             amount
         );
         panic_with_event_details(:expected_emitted_by, :details);
@@ -113,7 +114,7 @@ pub fn assert_pool_member_exit_intent_event(
         let details = format!(
             "PoolMemberExitIntent{{pool_member: {:?}, exit_timestamp: {}, amount: {}}}",
             pool_member,
-            exit_timestamp,
+            exit_timestamp.seconds,
             amount
         );
         panic_with_event_details(:expected_emitted_by, :details);
@@ -260,8 +261,8 @@ pub fn assert_global_index_updated_event(
             "GlobalIndexUpdated{{old_index: {}, new_index: {}, global_index_last_update_timestamp: {}, global_index_current_update_timestamp: {}}}",
             old_index,
             new_index,
-            global_index_last_update_timestamp,
-            global_index_current_update_timestamp
+            global_index_last_update_timestamp.seconds,
+            global_index_current_update_timestamp.seconds
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -441,8 +442,8 @@ pub(crate) fn assert_calculated_rewards_event(
     if !emitted {
         let details = format!(
             "CalculatedRewards{{last_timestamp: {}, new_timestamp: {}, rewards_calculated: {}}}",
-            last_timestamp,
-            new_timestamp,
+            last_timestamp.seconds,
+            new_timestamp.seconds,
             rewards_calculated
         );
         panic_with_event_details(:expected_emitted_by, :details);
@@ -655,7 +656,7 @@ pub fn assert_minimum_stake_changed_event(
 }
 
 pub fn assert_exit_wait_window_changed_event(
-    spied_event: @(ContractAddress, Event), old_exit_window: TimeStamp, new_exit_window: TimeStamp
+    spied_event: @(ContractAddress, Event), old_exit_window: TimeDelta, new_exit_window: TimeDelta
 ) {
     let expected_event = @contracts::staking::Staking::Event::ExitWaitWindowChanged(
         StakingConfigEvents::ExitWaitWindowChanged { old_exit_window, new_exit_window }

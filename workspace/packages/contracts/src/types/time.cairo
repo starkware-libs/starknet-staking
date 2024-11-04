@@ -1,4 +1,5 @@
 use contracts_commons::constants::DAY;
+use core::traits::Into;
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct TimeDelta {
@@ -23,6 +24,19 @@ impl TimeDeltaAdd of Add<TimeDelta> {
 impl TimeDeltaSub of Sub<TimeDelta> {
     fn sub(lhs: TimeDelta, rhs: TimeDelta) -> TimeDelta {
         TimeDelta { seconds: lhs.seconds - rhs.seconds }
+    }
+}
+impl TimeDeltaIntoU64 of Into<TimeDelta, u64> {
+    fn into(self: TimeDelta) -> u64 {
+        self.seconds
+    }
+}
+impl TimeDeltaPartialOrd of PartialOrd<TimeDelta> {
+    fn lt(lhs: TimeDelta, rhs: TimeDelta) -> bool {
+        lhs.seconds < rhs.seconds
+    }
+    fn le(lhs: TimeDelta, rhs: TimeDelta) -> bool {
+        lhs.seconds <= rhs.seconds
     }
 }
 
@@ -52,6 +66,11 @@ impl TimeStampPartialOrd of PartialOrd<TimeStamp> {
         lhs.seconds < rhs.seconds
     }
 }
+impl TimeStampInto of Into<TimeStamp, u64> {
+    fn into(self: TimeStamp) -> u64 {
+        self.seconds
+    }
+}
 
 #[generate_trait]
 pub impl TimeImpl of Time {
@@ -68,6 +87,12 @@ pub impl TimeImpl of Time {
         let mut value = self;
         value += delta;
         value
+    }
+    fn sub(self: TimeStamp, other: TimeStamp) -> TimeDelta {
+        TimeDelta { seconds: self.seconds - other.seconds }
+    }
+    fn mul(self: TimeDelta, multiplier: u64) -> TimeDelta {
+        TimeDelta { seconds: self.seconds * multiplier }
     }
     fn day(self: TimeStamp) -> u64 {
         self.seconds / DAY
@@ -101,6 +126,13 @@ mod tests {
     }
 
     #[test]
+    fn test_timedelta_mul() {
+        let delta = Time::days(1);
+        let delta2 = delta.mul(2);
+        assert_eq!(delta2, Time::days(2));
+    }
+
+    #[test]
     fn test_timedelta_zero() {
         let delta = Time::days(0);
         assert_eq!(delta, Zero::zero());
@@ -113,6 +145,36 @@ mod tests {
         let delta3 = delta1 + Time::days(1);
         assert!(delta1 == delta2);
         assert!(delta1 != delta3);
+    }
+
+    #[test]
+    fn test_timedelta_into() {
+        let delta = Time::days(1);
+        assert_eq!(delta.into(), Time::days(1).seconds);
+    }
+
+    #[test]
+    fn test_timedelta_lt() {
+        let delta1 = TimeDelta { seconds: 1 };
+        let delta2 = TimeDelta { seconds: 2 };
+        assert!(delta1 != delta2);
+        assert!(delta1 < delta2);
+        assert!(!(delta1 == delta2));
+        assert!(!(delta1 > delta2));
+    }
+
+    fn test_timedelta_le() {
+        let delta1 = TimeDelta { seconds: 1 };
+        let delta2 = TimeDelta { seconds: 2 };
+        assert!(delta1 != delta2);
+        assert!(delta1 <= delta2);
+        assert!(!(delta1 >= delta2));
+        assert!(!(delta1 == delta2));
+        let delta3 = TimeDelta { seconds: 1 };
+        assert!(delta1 <= delta3);
+        assert!(delta1 >= delta3);
+        assert!(!(delta1 != delta3));
+        assert!(delta1 == delta3);
     }
 
     #[test]
@@ -129,6 +191,20 @@ mod tests {
         let time3 = time1.add(Time::days(1));
         assert!(time1 == time2);
         assert!(time1 != time3);
+    }
+
+    #[test]
+    fn test_timestamp_into() {
+        let time = Time::days(1);
+        assert_eq!(time.into(), Time::days(1).seconds);
+    }
+
+    #[test]
+    fn test_timestamp_sub() {
+        let time1 = TimeStamp { seconds: 2 };
+        let time2 = TimeStamp { seconds: 1 };
+        let delta = time1.sub(time2);
+        assert_eq!(delta, Time::seconds(1));
     }
 
     #[test]

@@ -2,14 +2,12 @@ use core::option::OptionTrait;
 use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo};
 use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
 use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
-use starknet::get_block_timestamp;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::test_utils;
 use contracts::test_utils::constants::NOT_STARKGATE_ADDRESS;
 use test_utils::{deploy_mock_erc20_contract, StakingInitConfig, deploy_staking_contract};
 use test_utils::{stake_for_testing_using_dispatcher, initialize_reward_supplier_state_from_cfg};
 use test_utils::{deploy_minting_curve_contract, fund, general_contract_system_deployment};
-use contracts::reward_supplier::RewardSupplier::SECONDS_IN_YEAR;
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use core::num::traits::{Zero, Sqrt};
 use contracts_commons::test_utils::{cheat_caller_address_once};
@@ -21,6 +19,7 @@ use snforge_std::cheatcodes::message_to_l1::{spy_messages_to_l1, MessageToL1};
 use snforge_std::cheatcodes::message_to_l1::MessageToL1SpyAssertionsTrait;
 use contracts::constants::STRK_IN_FRIS;
 use contracts::types::Amount;
+use contracts_commons::types::time::Time;
 
 #[test]
 fn test_reward_supplier_constructor() {
@@ -42,7 +41,7 @@ fn test_reward_supplier_constructor() {
         cfg.reward_supplier.minting_curve_contract
     );
     assert_eq!(state.l1_staking_minter.read(), cfg.reward_supplier.l1_staking_minter);
-    assert_eq!(state.last_timestamp.read(), get_block_timestamp());
+    assert_eq!(state.last_timestamp.read(), Time::now());
     assert_eq!(state.unclaimed_rewards.read(), STRK_IN_FRIS);
 }
 
@@ -109,10 +108,7 @@ fn test_calculate_staking_rewards() {
         amount: balance,
         :token_address
     );
-    start_cheat_block_timestamp_global(
-        block_timestamp: get_block_timestamp()
-            + SECONDS_IN_YEAR.try_into().expect('does not fit in')
-    );
+    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(Time::days(365)).into());
     cheat_caller_address_once(contract_address: test_address(), caller_address: staking_contract);
     let mut spy = snforge_std::spy_events();
     let mut msgs_to_l1 = spy_messages_to_l1();
@@ -171,8 +167,8 @@ fn test_contract_parameters() {
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
     // Change the block_timestamp so the contract_parameters() won't return zero for all fields.
-    let block_timestamp = get_block_timestamp() + 1;
-    start_cheat_block_timestamp_global(:block_timestamp);
+    let block_timestamp = Time::now().add(Time::seconds(1));
+    start_cheat_block_timestamp_global(block_timestamp: block_timestamp.into());
     let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     let expected_info = RewardSupplierInfo {
         last_timestamp: block_timestamp,
@@ -197,10 +193,7 @@ fn test_on_receive() {
     let balance = Zero::zero();
     let credit = balance
         + reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount;
-    start_cheat_block_timestamp_global(
-        block_timestamp: get_block_timestamp()
-            + SECONDS_IN_YEAR.try_into().expect('does not fit in')
-    );
+    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(Time::days(365)).into());
     cheat_caller_address_once(
         contract_address: reward_supplier_contract, caller_address: staking_contract
     );

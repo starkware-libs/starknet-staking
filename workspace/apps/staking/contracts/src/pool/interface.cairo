@@ -1,9 +1,11 @@
 use starknet::ContractAddress;
-use contracts::types::{Commission, Index, Amount, TimeStamp};
+use contracts::types::{Commission, Index, Amount};
+use contracts_commons::types::time::TimeStamp;
 
 pub mod Events {
     use starknet::ContractAddress;
-    use contracts::types::{TimeStamp, Index, Amount};
+    use contracts::types::{Index, Amount};
+    use contracts_commons::types::time::TimeStamp;
 
     #[derive(Drop, starknet::Event)]
     pub struct PoolMemberExitIntent {
@@ -87,7 +89,7 @@ pub struct InternalPoolMemberInfo {
     pub unclaimed_rewards: Amount,
     pub commission: Commission,
     pub unpool_amount: Amount,
-    pub unpool_time: Option<u64>,
+    pub unpool_time: Option<TimeStamp>,
 }
 
 pub(crate) impl InternalPoolMemberInfoInto of Into<InternalPoolMemberInfo, PoolMemberInfo> {

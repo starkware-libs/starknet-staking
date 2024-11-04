@@ -20,7 +20,6 @@ pub mod Staking {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use contracts::utils::CheckedIERC20DispatcherTrait;
-    use starknet::get_block_timestamp;
     use starknet::class_hash::ClassHash;
     use contracts::pool::interface::{IPoolDispatcherTrait, IPoolDispatcher};
     use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
@@ -30,7 +29,8 @@ pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
-    use contracts::types::{Commission, TimeDelta, TimeStamp, Index, Amount};
+    use contracts::types::{Commission, Index, Amount};
+    use contracts_commons::types::time::{TimeDelta, Time, TimeStamp};
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
 
@@ -124,7 +124,7 @@ pub mod Staking {
             .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
         self.pool_contract_admin.write(pool_contract_admin);
         self.global_index.write(BASE_VALUE);
-        self.global_index_last_update_timestamp.write(get_block_timestamp());
+        self.global_index_last_update_timestamp.write(Time::now());
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
     }
@@ -289,8 +289,7 @@ pub mod Staking {
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             self.update_rewards(ref :staker_info);
-            let current_time = get_block_timestamp();
-            let unstake_time = current_time + self.exit_wait_window.read();
+            let unstake_time = Time::now().add(self.exit_wait_window.read());
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             let mut amount_pool = Zero::zero();
@@ -324,9 +323,7 @@ pub mod Staking {
             let unstake_time = staker_info
                 .unstake_time
                 .expect_with_err(Error::MISSING_UNSTAKE_INTENT);
-            assert_with_err(
-                get_block_timestamp() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED
-            );
+            assert_with_err(Time::now() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED);
             let erc20_dispatcher = self.erc20_dispatcher.read();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :erc20_dispatcher);
             // Transfer stake to staker.
@@ -586,8 +583,7 @@ pub mod Staking {
                 return;
             }
             assert_with_err(
-                get_block_timestamp() >= undelegate_intent.unpool_time,
-                Error::INTENT_WINDOW_NOT_FINISHED
+                Time::now() >= undelegate_intent.unpool_time, Error::INTENT_WINDOW_NOT_FINISHED
             );
             self.clear_undelegate_intent(:undelegate_intent_key);
             let erc20_dispatcher = self.erc20_dispatcher.read();
@@ -918,7 +914,7 @@ pub mod Staking {
             commission: Commission,
         ) -> ContractAddress {
             let class_hash = self.pool_contract_class_hash.read();
-            let contract_address_salt: felt252 = get_block_timestamp().into();
+            let contract_address_salt: felt252 = Time::now().seconds.into();
             let admin = self.pool_contract_admin.read();
             let pool_contract = deploy_delegation_pool_contract(
                 :class_hash,
@@ -942,7 +938,7 @@ pub mod Staking {
         }
 
         fn is_index_update_needed(self: @ContractState) -> bool {
-            let time_diff = get_block_timestamp() - self.global_index_last_update_timestamp.read();
+            let time_diff = Time::now().sub(self.global_index_last_update_timestamp.read());
             time_diff >= MIN_TIME_BETWEEN_INDEX_UPDATES
         }
 
@@ -955,7 +951,7 @@ pub mod Staking {
             let new_index = old_index + global_index_diff;
             self.global_index.write(new_index);
             let global_index_last_update_timestamp = self.global_index_last_update_timestamp.read();
-            let global_index_current_update_timestamp = get_block_timestamp();
+            let global_index_current_update_timestamp = Time::now();
             self.global_index_last_update_timestamp.write(global_index_current_update_timestamp);
             self
                 .emit(
