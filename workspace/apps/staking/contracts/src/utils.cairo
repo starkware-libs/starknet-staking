@@ -125,6 +125,15 @@ pub fn compute_threshold(base_mint_amount: Amount) -> Amount {
     base_mint_amount / 2
 }
 
+/// Returns `|a - b|`.
+pub fn abs_diff<T, +PartialOrd<T>, +Sub<T>, +Drop<T>, +Copy<T>>(a: T, b: T) -> T {
+    if a > b {
+        a - b
+    } else {
+        b - a
+    }
+}
+
 #[generate_trait]
 pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
     fn checked_transfer_from(

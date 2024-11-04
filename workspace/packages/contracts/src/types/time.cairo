@@ -1,4 +1,4 @@
-use contracts_commons::constants::DAY;
+use contracts_commons::constants::{DAY, WEEK};
 use core::traits::Into;
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
@@ -79,6 +79,9 @@ pub impl TimeImpl of Time {
     }
     fn days(count: u64) -> TimeDelta {
         Self::seconds(count * DAY)
+    }
+    fn weeks(count: u64) -> TimeDelta {
+        Self::seconds(count * WEEK)
     }
     fn now() -> TimeStamp {
         TimeStamp { seconds: starknet::get_block_timestamp() }

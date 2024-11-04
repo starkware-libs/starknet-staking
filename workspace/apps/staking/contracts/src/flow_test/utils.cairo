@@ -168,6 +168,10 @@ pub impl StakingImpl of StakingTrait {
     fn get_min_stake(self: StakingState) -> Amount {
         self.dispatcher().contract_parameters().try_into().unwrap().min_stake
     }
+
+    fn get_exit_wait_window(self: StakingState) -> TimeDelta {
+        self.dispatcher().contract_parameters().exit_wait_window
+    }
 }
 
 /// The `MintingCurveRoles` struct represents the various roles involved in the minting curve
@@ -521,6 +525,20 @@ pub impl StakerImpl of StakerTrait {
             contract_address: self.staker.staking.address, caller_address: self.staker.address
         );
         self.staker.staking.dispatcher().unstake_action(staker_address: self.staker.address)
+    }
+
+    fn set_open_for_delegation(self: Staker, commission: Commission) -> ContractAddress {
+        cheat_caller_address_once(
+            contract_address: self.staker.staking.address, caller_address: self.staker.address
+        );
+        self.staker.staking.dispatcher().set_open_for_delegation(:commission)
+    }
+
+    fn claim_rewards(self: Staker) -> Amount {
+        cheat_caller_address_once(
+            contract_address: self.staker.staking.address, caller_address: self.staker.address
+        );
+        self.staker.staking.dispatcher().claim_rewards(staker_address: self.staker.address)
     }
 }
 
