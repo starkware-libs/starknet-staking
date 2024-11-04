@@ -9,7 +9,7 @@ import "starkware/solidity/interfaces/ContractInitializer.sol";
 /**
   This contract contains the code commonly needed for a contract to be deployed behind
   an upgradability proxy.
-  It perform the required semantics of the proxy pattern,
+  It performs the required semantics of the proxy pattern,
   but in a generic manner.
   Instantiation of the Governance and of the ContractInitializer, that are the app specific
   part of initialization, has to be done by the using contract.
@@ -17,7 +17,7 @@ import "starkware/solidity/interfaces/ContractInitializer.sol";
 abstract contract ProxySupport is MGovernance, BlockDirectCall, ContractInitializer {
     using Addresses for address;
 
-    // The two function below (isFrozen & initialize) needed to bind to the Proxy.
+    // The two functions below (isFrozen & initialize) are needed to bind to the Proxy.
     function isFrozen() external view virtual returns (bool) {
         return false;
     }
@@ -29,7 +29,7 @@ abstract contract ProxySupport is MGovernance, BlockDirectCall, ContractInitiali
       1. This function cannot be called directly on the deployed contract, but only via
          delegate call.
       2. If an EIC is provided - init is passed onto EIC and the standard init flow is skipped.
-         This true for both first intialization or a later one.
+         This is true for both first initialization or a later one.
       3. The data passed to this function is as follows:
          [sub_contracts addresses, eic address, initData].
 
