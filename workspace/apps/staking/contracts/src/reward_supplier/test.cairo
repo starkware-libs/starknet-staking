@@ -262,3 +262,28 @@ fn test_on_receive_caller_not_starkgate() {
             message: array![].span()
         );
 }
+
+#[test]
+#[should_panic(expected: "UNEXPECTED_TOKEN")]
+fn test_on_receive_unexpected_token() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier_contract = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier_contract
+    };
+    cheat_caller_address_once(
+        contract_address: reward_supplier_contract,
+        caller_address: cfg.reward_supplier.starkgate_address
+    );
+
+    // We assign a different address to the l2_token field.
+    let not_l2_token = cfg.reward_supplier.minting_curve_contract;
+    reward_supplier_dispatcher
+        .on_receive(
+            l2_token: not_l2_token,
+            amount: cfg.reward_supplier.base_mint_amount.into(),
+            depositor: cfg.reward_supplier.l1_staking_minter.try_into().expect('not EthAddress'),
+            message: array![].span()
+        );
+}

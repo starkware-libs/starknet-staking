@@ -59,6 +59,7 @@ pub enum Error {
     C_NUM_OUT_OF_RANGE,
     // Reward Supplier contract errors
     ON_RECEIVE_NOT_FROM_STARKGATE,
+    UNEXPECTED_TOKEN,
 }
 
 #[generate_trait]
@@ -123,6 +124,7 @@ pub impl ErrorImpl of ErrorTrait {
             Error::INSUFFICIENT_BALANCE => "Insufficient ERC20 balance",
             Error::INSUFFICIENT_ALLOWANCE => "Insufficient ERC20 allowance",
             Error::INVALID_UNDELEGATE_INTENT_VALUE => "Invalid undelegate intent value",
+            Error::UNEXPECTED_TOKEN => "UNEXPECTED_TOKEN",
         }
     }
 }
