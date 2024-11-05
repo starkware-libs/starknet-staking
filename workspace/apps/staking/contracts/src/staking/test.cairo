@@ -1,6 +1,7 @@
 use core::option::OptionTrait;
 use contracts_commons::constants::{DAY};
 use contracts::constants::{BASE_VALUE};
+use contracts::errors::{Error, ErrorTrait};
 use contracts::staking::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
 use contracts::staking::Staking::InternalStakingFunctionsTrait;
 use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
@@ -11,7 +12,7 @@ use test_utils::{fund, approve, deploy_staking_contract, stake_with_pool_enabled
 use test_utils::{enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map};
 use test_utils::{load_from_simple_map, load_one_felt, stake_for_testing_using_dispatcher};
 use test_utils::{general_contract_system_deployment, cheat_reward_for_reward_supplier};
-use test_utils::deploy_reward_supplier_contract;
+use test_utils::{assert_panic_with_error, deploy_reward_supplier_contract, store_to_simple_map};
 use test_utils::constants;
 use constants::{DUMMY_ADDRESS, POOL_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS};
 use constants::{NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER};
@@ -37,6 +38,7 @@ use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use contracts::staking::interface::{IStakingPoolDispatcher};
 use contracts::staking::interface::{IStakingPoolDispatcherTrait};
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+use contracts::staking::interface::{IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait};
 use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
@@ -1134,6 +1136,74 @@ fn test_remove_from_delegation_pool_intent() {
         new_self_stake: expected_staker_info.amount_own,
         new_delegated_stake: cur_delegated_stake
     );
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_remove_from_delegation_pool_intent_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
+        contract_address: staking_contract
+    };
+    let staker_address = cfg.test_info.staker_address;
+    let identifier = cfg.test_info.pool_member_address.into();
+    let amount = 1;
+
+    // Should catch STAKER_NOT_EXISTS.
+    let result = staking_pool_safe_dispatcher
+        .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.message());
+
+    // Should catch MISSING_POOL_CONTRACT.
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let result = staking_pool_safe_dispatcher
+        .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
+    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.message());
+
+    // Should catch CALLER_IS_NOT_POOL_CONTRACT.
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let commission = cfg.staker_info.get_pool_info_unchecked().commission;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let pool_contract = staking_dispatcher.set_open_for_delegation(:commission);
+    let result = staking_pool_safe_dispatcher
+        .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.message());
+
+    // Should catch INVALID_UNDELEGATE_INTENT_VALUE.
+    let undelegate_intent_key = UndelegateIntentKey {
+        pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
+    };
+    let invalid_undelegate_intent_value = UndelegateIntentValue {
+        unpool_time: TimeStamp { seconds: 1 }, amount: 0
+    };
+    store_to_simple_map(
+        map_selector: selector!("pool_exit_intents"),
+        key: undelegate_intent_key,
+        contract: staking_contract,
+        value: invalid_undelegate_intent_value
+    );
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
+    let result = staking_pool_safe_dispatcher
+        .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
+    assert_panic_with_error(
+        :result, expected_error: Error::INVALID_UNDELEGATE_INTENT_VALUE.message()
+    );
+
+    // Should catch AMOUNT_TOO_HIGH.
+    let valid_undelegate_intent_value: UndelegateIntentValue = Zero::zero();
+    store_to_simple_map(
+        map_selector: selector!("pool_exit_intents"),
+        key: undelegate_intent_key,
+        contract: staking_contract,
+        value: valid_undelegate_intent_value
+    );
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
+    let result = staking_pool_safe_dispatcher
+        .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.message());
 }
 
 #[test]

@@ -27,6 +27,7 @@ use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN};
 use constants::{APP_ROLE_ADMIN, UPGRADE_GOVERNOR};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts_commons::constants::{NAME, SYMBOL};
+use snforge_std::byte_array::try_deserialize_bytearray_error;
 use snforge_std::test_address;
 use contracts::types::{Commission, Index, Amount};
 use contracts_commons::types::time::TimeStamp;
@@ -537,6 +538,28 @@ pub(crate) fn load_from_simple_map<K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V
     Serde::<V>::deserialize(ref span).expect('Failed deserialize')
 }
 
+/// *****WARNING*****
+/// This function only works on simple data types or structs that have no special implementations
+/// for Hash, Store, or Serde traits. It also won't work on any standard enum.
+/// This statement applies to both key and value.
+/// The trait used to serialize and deserialize the key for the address calculation is Hash trait.
+/// The trait used to serialize and deserialize the value for the storage is Store trait.
+/// The trait used to serialize and deserialize the key and value in this function is Serde trait.
+/// Note: It could work for non-simple types that implement Hash, Store and Serde the same way.
+pub(crate) fn store_to_simple_map<
+    K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<V>, +Drop<V>
+>(
+    map_selector: felt252, key: K, contract: ContractAddress, value: V
+) {
+    let mut keys = array![];
+    key.serialize(ref keys);
+    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
+    let mut serialized_value = array![];
+    value.serialize(ref serialized_value);
+    let serialized_value = serialized_value.span();
+    snforge_std::store(target: contract, :storage_address, :serialized_value);
+}
+
 // This only works for shallow Option. i.e. if within V there is an Option, this will fail.
 pub(crate) fn load_option_from_simple_map<
     K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<Option<V>>
@@ -721,6 +744,28 @@ pub fn add_reward_for_reward_supplier(
         storage_address: selector!("unclaimed_rewards"),
         serialized_value: array![current_unclaimed_rewards + reward.into()].span()
     );
+}
+
+pub fn assert_panic_with_error<T, +Drop<T>>(
+    result: Result<T, Array<felt252>>, expected_error: ByteArray
+) {
+    match result {
+        Result::Ok(_) => panic!("Expected to fail with: {}", expected_error),
+        Result::Err(error_data) => assert_expected_error(
+            error_data: error_data.span(), expected_error: expected_error
+        ),
+    };
+}
+
+pub fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArray) {
+    match try_deserialize_bytearray_error(error_data) {
+        Result::Ok(error) => assert_eq!(error, expected_error),
+        Result::Err(_) => panic!(
+            "Failed to deserialize error data: {:?}.\nExpect to panic with {}.",
+            error_data,
+            expected_error
+        ),
+    }
 }
 
 #[derive(Drop, Copy)]
