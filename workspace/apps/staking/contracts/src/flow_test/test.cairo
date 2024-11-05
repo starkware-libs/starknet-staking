@@ -25,6 +25,9 @@ fn basic_stake_flow_test() {
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let one_week = Time::weeks(1);
+    let initial_reward_supplier_balance = system
+        .token
+        .balance_of(account: system.reward_supplier.address);
     let staker = system.new_staker(amount: stake_amount * 2);
     staker.stake(amount: stake_amount, pool_enabled: true, commission: 200);
     system.advance_time(time: one_week);
@@ -47,7 +50,7 @@ fn basic_stake_flow_test() {
     system.advance_time(time: one_week);
 
     staker.exit_intent();
-    system.advance_time(time: one_week.mul(3));
+    system.advance_time(time: system.staking.get_exit_wait_window());
 
     delegator.exit_action(:pool);
     staker.exit_action();
@@ -58,7 +61,14 @@ fn basic_stake_flow_test() {
     assert_eq!(system.token.balance_of(account: delegator.delegator.address), stake_amount);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
-    assert!(system.reward_supplier.get_unclaimed_rewards() - STRK_IN_FRIS < 100);
+    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert_eq!(
+        initial_reward_supplier_balance,
+        system.token.balance_of(account: system.reward_supplier.address)
+            + system.token.balance_of(account: staker.reward.address)
+            + system.token.balance_of(account: delegator.reward.address)
+            + system.token.balance_of(account: pool)
+    );
 }
 
 /// Flow:
