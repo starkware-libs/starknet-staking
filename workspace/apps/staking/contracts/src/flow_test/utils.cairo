@@ -9,64 +9,15 @@ use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
 use core::num::traits::zero::Zero;
 use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use starknet::{ContractAddress, ClassHash};
-use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
-use contracts::test_utils::constants::{NAME, SYMBOL};
 use contracts::test_utils::{set_account_as_upgrade_governor, set_account_as_security_admin};
 use contracts::test_utils::{set_account_as_security_agent, set_account_as_app_role_admin};
 use contracts::test_utils::set_account_as_token_admin;
 use contracts::test_utils::StakingInitConfig;
-use contracts_commons::test_utils::cheat_caller_address_once;
+use contracts_commons::test_utils::{cheat_caller_address_once, TokenState, TokenConfig, TokenTrait};
 use snforge_std::start_cheat_block_timestamp_global;
 use contracts::types::{Commission, Amount};
 use contracts_commons::types::time::{TimeStamp, TimeDelta, Time};
-
-/// The `TokenConfig` struct is used to configure the initial settings for a token contract.
-/// It includes the initial supply of tokens and the owner's address.
-#[derive(Drop, Copy)]
-pub struct TokenConfig {
-    pub initial_supply: u256,
-    pub owner: ContractAddress
-}
-
-/// The `TokenState` struct represents the state of a token contract.
-/// It includes the contract address and the owner's address.
-#[derive(Drop, Copy)]
-pub struct TokenState {
-    pub address: ContractAddress,
-    pub owner: ContractAddress
-}
-
-#[generate_trait]
-pub impl TokenImpl of TokenTrait {
-    fn deploy(self: TokenConfig) -> TokenState {
-        let mut calldata = ArrayTrait::new();
-        NAME().serialize(ref calldata);
-        SYMBOL().serialize(ref calldata);
-        self.initial_supply.serialize(ref calldata);
-        self.owner.serialize(ref calldata);
-        let token_contract = snforge_std::declare("DualCaseERC20Mock").unwrap().contract_class();
-        let (address, _) = token_contract.deploy(@calldata).unwrap();
-        TokenState { address, owner: self.owner }
-    }
-
-    fn fund(self: TokenState, recipient: ContractAddress, amount: Amount) {
-        let erc20_dispatcher = IERC20Dispatcher { contract_address: self.address };
-        cheat_caller_address_once(contract_address: self.address, caller_address: self.owner);
-        erc20_dispatcher.transfer(recipient: recipient, amount: amount.into());
-    }
-
-    fn approve(self: TokenState, owner: ContractAddress, spender: ContractAddress, amount: Amount) {
-        let erc20_dispatcher = IERC20Dispatcher { contract_address: self.address };
-        cheat_caller_address_once(contract_address: self.address, caller_address: owner);
-        erc20_dispatcher.approve(spender: spender, amount: amount.into());
-    }
-
-    fn balance_of(self: TokenState, account: ContractAddress) -> Amount {
-        let erc20_dispatcher = IERC20Dispatcher { contract_address: self.address };
-        erc20_dispatcher.balance_of(account: account).try_into().unwrap()
-    }
-}
 
 /// The `StakingRoles` struct represents the various roles involved in the staking contract.
 /// It includes addresses for different administrative and security roles.
