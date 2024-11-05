@@ -3,9 +3,8 @@ use contracts::flow_test::utils as flow_test_utils;
 use contracts_commons::test_utils::{TokenTrait};
 use flow_test_utils::{SystemTrait, StakerTrait, StakingTrait, RewardSupplierTrait};
 use flow_test_utils::{DelegatorTrait};
-use contracts_commons::constants::{WEEK};
 use contracts::constants::{STRK_IN_FRIS};
-use contracts_commons::types::time::{Time, TimeDelta};
+use contracts_commons::types::time::Time;
 use core::num::traits::Zero;
 use contracts::utils::abs_diff;
 
