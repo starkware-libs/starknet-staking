@@ -139,9 +139,14 @@ pub mod RewardSupplier {
             depositor: EthAddress,
             message: Span<felt252>
         ) {
+            // These messages accepted only from the token bridge.
             assert_with_err(
                 get_caller_address() == self.starkgate_address.read(),
                 Error::ON_RECEIVE_NOT_FROM_STARKGATE
+            );
+            // The bridge may serve multiple tokens, only the correct token may be received.
+            assert_with_err(
+                l2_token == self.erc20_dispatcher.read().contract_address, Error::UNEXPECTED_TOKEN
             );
             let amount_low: Amount = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
