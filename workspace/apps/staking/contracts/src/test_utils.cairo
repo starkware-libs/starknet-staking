@@ -16,7 +16,7 @@ use starknet::{ContractAddress, ClassHash, Store};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use contracts::staking::Staking::ContractState;
-use constants::{NAME, SYMBOL, INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_INITIAL_BALANCE};
+use constants::{INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_INITIAL_BALANCE};
 use constants::{STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS};
 use constants::{TOKEN_ADDRESS, COMMISSION, POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT};
 use constants::{POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE};
@@ -26,6 +26,7 @@ use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_
 use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN};
 use constants::{APP_ROLE_ADMIN, UPGRADE_GOVERNOR};
 use contracts_commons::test_utils::cheat_caller_address_once;
+use contracts_commons::constants::{NAME, SYMBOL};
 use snforge_std::test_address;
 use contracts::types::{Commission, Index, Amount};
 use contracts_commons::types::time::TimeStamp;
@@ -135,13 +136,6 @@ pub(crate) mod constants {
     }
     pub fn TOKEN_ADDRESS() -> ContractAddress {
         contract_address_const::<'TOKEN_ADDRESS'>()
-    }
-    pub fn NAME() -> ByteArray {
-        "NAME"
-    }
-
-    pub fn SYMBOL() -> ByteArray {
-        "SYMBOL"
     }
     pub fn DUMMY_CLASS_HASH() -> ClassHash {
         class_hash_const::<'DUMMY'>()
