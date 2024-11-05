@@ -87,7 +87,7 @@ fn test_send_rewards_to_member() {
     let token_address = deploy_mock_erc20_contract(
         cfg.test_info.initial_supply, cfg.test_info.owner_address
     );
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let mut state = initialize_pool_state(
         staker_address: cfg.test_info.staker_address,
         staking_contract: STAKING_CONTRACT_ADDRESS(),
@@ -103,7 +103,7 @@ fn test_send_rewards_to_member() {
         amount: unclaimed_rewards,
         :token_address
     );
-    let member_balance_before_rewards = erc20_dispatcher
+    let member_balance_before_rewards = token_dispatcher
         .balance_of(account: cfg.pool_member_info.reward_address);
     let expected_pool_member_info = InternalPoolMemberInfo {
         unclaimed_rewards: Zero::zero(), ..cfg.pool_member_info
@@ -113,11 +113,11 @@ fn test_send_rewards_to_member() {
         .send_rewards_to_member(
             ref pool_member_info: cfg.pool_member_info,
             pool_member: cfg.test_info.pool_member_address,
-            :erc20_dispatcher
+            :token_dispatcher
         );
     // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
     assert_eq!(expected_pool_member_info, cfg.pool_member_info);
-    let member_balance_after_rewards = erc20_dispatcher
+    let member_balance_after_rewards = token_dispatcher
         .balance_of(account: cfg.pool_member_info.reward_address);
     assert_eq!(
         member_balance_after_rewards, member_balance_before_rewards + unclaimed_rewards.into()
@@ -155,10 +155,10 @@ fn test_enter_delegation_pool() {
         expected_pool_member_info
     );
     // Check that all the pool amount was transferred to the staking contract.
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let balance = erc20_dispatcher.balance_of(staking_contract);
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let balance = token_dispatcher.balance_of(staking_contract);
     assert_eq!(balance, cfg.staker_info.amount_own.into() + cfg.pool_member_info.amount.into());
-    let balance = erc20_dispatcher.balance_of(pool_contract);
+    let balance = token_dispatcher.balance_of(pool_contract);
     assert_eq!(balance, 0);
     // Check that the staker info was updated correctly.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -577,8 +577,8 @@ fn test_claim_rewards() {
         .claim_rewards(pool_member: cfg.test_info.pool_member_address);
     let expected_reward = rewards_including_commission - commission_amount;
     assert_eq!(actual_reward, expected_reward);
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let balance = erc20_dispatcher.balance_of(cfg.pool_member_info.reward_address);
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let balance = token_dispatcher.balance_of(cfg.pool_member_info.reward_address);
     assert_eq!(balance, actual_reward.into());
     // Validate the single PoolMemberRewardClaimed event.
     let events = spy.get_events().emitted_by(pool_contract).events;
@@ -674,7 +674,7 @@ fn test_exit_delegation_pool_action() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     // Change global index and exit delegation pool intent.
     let index_before = cfg.pool_member_info.index;
     let updated_index = cfg.pool_member_info.index * 2;
@@ -702,8 +702,8 @@ fn test_exit_delegation_pool_action() {
     );
     pool_dispatcher.exit_delegation_pool_intent(amount: delegate_amount);
 
-    let balance_before_action = erc20_dispatcher.balance_of(cfg.test_info.pool_member_address);
-    let reward_account_balance_before = erc20_dispatcher
+    let balance_before_action = token_dispatcher.balance_of(cfg.test_info.pool_member_address);
+    let reward_account_balance_before = token_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
     start_cheat_block_timestamp_global(
         block_timestamp: Time::now()
@@ -725,8 +725,8 @@ fn test_exit_delegation_pool_action() {
         contract: pool_contract
     );
     assert!(pool_member.is_none());
-    let balance_after_action = erc20_dispatcher.balance_of(cfg.test_info.pool_member_address);
-    let reward_account_balance_after = erc20_dispatcher
+    let balance_after_action = token_dispatcher.balance_of(cfg.test_info.pool_member_address);
+    let reward_account_balance_after = token_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
     assert_eq!(balance_after_action, balance_before_action + cfg.pool_member_info.amount.into());
     assert_eq!(
@@ -761,7 +761,7 @@ fn test_switch_delegation_pool() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
@@ -773,7 +773,7 @@ fn test_switch_delegation_pool() {
     let to_staker_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 
     let unclaimed_rewards_member = create_rewards_for_pool_member(ref :cfg);
-    let reward_account_balance_before = erc20_dispatcher
+    let reward_account_balance_before = token_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
 
     cheat_caller_address(
@@ -816,7 +816,7 @@ fn test_switch_delegation_pool() {
     );
     assert_eq!(amount_left, 0);
     assert!(actual_pool_member_info.is_none());
-    let reward_account_balance_after = erc20_dispatcher
+    let reward_account_balance_after = token_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
     assert_eq!(
         reward_account_balance_after,

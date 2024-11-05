@@ -55,7 +55,7 @@ pub mod Pool {
         pool_member_info: Map<ContractAddress, Option<InternalPoolMemberInfo>>,
         final_staker_index: Option<Index>,
         staking_pool_dispatcher: IStakingPoolDispatcher,
-        erc20_dispatcher: IERC20Dispatcher,
+        token_dispatcher: IERC20Dispatcher,
         commission: Commission,
     }
 
@@ -97,7 +97,7 @@ pub mod Pool {
         self
             .staking_pool_dispatcher
             .write(IStakingPoolDispatcher { contract_address: staking_contract });
-        self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
+        self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.commission.write(commission);
     }
 
@@ -112,14 +112,14 @@ pub mod Pool {
                 self.pool_member_info.read(pool_member).is_none(), Error::POOL_MEMBER_EXISTS
             );
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
-            let erc20_dispatcher = self.erc20_dispatcher.read();
+            let token_dispatcher = self.token_dispatcher.read();
             let self_contract = get_contract_address();
-            erc20_dispatcher
+            token_dispatcher
                 .checked_transfer_from(
                     sender: pool_member, recipient: self_contract, amount: amount.into()
                 );
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
-            erc20_dispatcher
+            token_dispatcher
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
             let staker_address = self.staker_address.read();
             let updated_index = staking_pool_dispatcher
@@ -162,14 +162,14 @@ pub mod Pool {
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
                 Error::CALLER_CANNOT_ADD_TO_POOL
             );
-            let erc20_dispatcher = self.erc20_dispatcher.read();
+            let token_dispatcher = self.token_dispatcher.read();
             let self_contract = get_contract_address();
-            erc20_dispatcher
+            token_dispatcher
                 .checked_transfer_from(
                     sender: caller_address, recipient: self_contract, amount: amount.into()
                 );
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
-            erc20_dispatcher
+            token_dispatcher
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
             let updated_index = staking_pool_dispatcher
                 .add_stake_from_pool(staker_address: self.staker_address.read(), :amount);
@@ -239,13 +239,13 @@ pub mod Pool {
             staking_pool_dispatcher
                 .remove_from_delegation_pool_action(identifier: pool_member.into());
 
-            let erc20_dispatcher = self.erc20_dispatcher.read();
+            let token_dispatcher = self.token_dispatcher.read();
             // Claim rewards.
-            self.send_rewards_to_member(ref :pool_member_info, :pool_member, :erc20_dispatcher);
+            self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
             // Transfer delegated amount to the pool member.
             let unpool_amount = pool_member_info.unpool_amount;
             pool_member_info.unpool_amount = Zero::zero();
-            erc20_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
+            token_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
             if pool_member_info.amount.is_zero() {
                 self.remove_pool_member(:pool_member);
             } else {
@@ -265,8 +265,8 @@ pub mod Pool {
             );
             self.update_index_and_update_rewards(ref :pool_member_info);
             let rewards = pool_member_info.unclaimed_rewards;
-            let erc20_dispatcher = self.erc20_dispatcher.read();
-            self.send_rewards_to_member(ref :pool_member_info, :pool_member, :erc20_dispatcher);
+            let token_dispatcher = self.token_dispatcher.read();
+            self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             rewards
         }
@@ -288,8 +288,8 @@ pub mod Pool {
             pool_member_info.unpool_amount -= amount;
             if pool_member_info.unpool_amount.is_zero() && pool_member_info.amount.is_zero() {
                 // Claim rewards.
-                let erc20_dispatcher = self.erc20_dispatcher.read();
-                self.send_rewards_to_member(ref :pool_member_info, :pool_member, :erc20_dispatcher);
+                let token_dispatcher = self.token_dispatcher.read();
+                self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
                 self.remove_pool_member(:pool_member);
             } else {
                 // One of pool_member_info.unpool_amount or pool_member_info.amount is non-zero.
@@ -419,7 +419,7 @@ pub mod Pool {
                 staker_address: self.staker_address.read(),
                 final_staker_index: self.final_staker_index.read(),
                 staking_contract: self.staking_pool_dispatcher.read().contract_address,
-                token_address: self.erc20_dispatcher.read().contract_address,
+                token_address: self.token_dispatcher.read().contract_address,
                 commission: self.commission.read(),
             }
         }
@@ -538,12 +538,12 @@ pub mod Pool {
             ref self: ContractState,
             ref pool_member_info: InternalPoolMemberInfo,
             pool_member: ContractAddress,
-            erc20_dispatcher: IERC20Dispatcher
+            token_dispatcher: IERC20Dispatcher
         ) {
             let reward_address = pool_member_info.reward_address;
             let amount = pool_member_info.unclaimed_rewards;
 
-            erc20_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
+            token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
             pool_member_info.unclaimed_rewards = Zero::zero();
 
             self.emit(Events::PoolMemberRewardClaimed { pool_member, reward_address, amount });
