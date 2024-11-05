@@ -35,21 +35,30 @@ use starknet::ContractAddress;
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use contracts::staking::objects::{UndelegateIntentValueTrait, UndelegateIntentValueZero};
 use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
-use contracts::staking::interface::{IStakingPoolDispatcher};
-use contracts::staking::interface::{IStakingPoolDispatcherTrait};
+use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::staking::interface::{IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait};
+use contracts::staking::staking_tester::{IStakingTesterDispatcher, IStakingTesterDispatcherTrait};
 use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
+use starknet::contract_address_const;
 use contracts::staking::interface::StakingContractInfo;
-use snforge_std::{cheat_caller_address, CheatSpan, cheat_account_contract_address};
+use snforge_std::{declare, DeclareResultTrait};
+use snforge_std::{
+    cheat_block_timestamp, cheat_caller_address, CheatSpan, cheat_account_contract_address
+};
 use snforge_std::start_cheat_block_timestamp_global;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::pool::Pool::SwitchPoolData;
 use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+use contracts_commons::components::replaceability::interface::EICData;
+use contracts_commons::components::replaceability::interface::{
+    IReplaceableDispatcher, IReplaceableDispatcherTrait
+};
+use contracts_commons::components::replaceability::interface::ImplementationData;
 use contracts::types::{Index, Amount};
 use contracts_commons::types::time::{TimeStamp, Time, TimeDelta};
 use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
@@ -2037,3 +2046,119 @@ fn test_undelegate_intent_value_is_valid() {
         UndelegateIntentValue { unpool_time: TimeStamp { seconds: 1 }, amount: 1 };
     assert_eq!(undelegate_intent_value.is_valid(), true);
 }
+
+#[test]
+fn test_replace_staking_with_eic() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+
+    let upg_gov = cfg.test_info.upgrade_governor;
+    let gov_admin = cfg.test_info.governance_admin;
+    let staking_contract = cfg.test_info.staking_contract;
+    // Advance current time to be non-zero (to prevent known test issues).
+    cheat_block_timestamp(staking_contract, 1, CheatSpan::Indefinite);
+
+    let eic_contract = declare("AlignUpgVars").unwrap().contract_class();
+    let new_impl = declare("StakingTester").unwrap().contract_class();
+    let new_impl_clash = *new_impl.class_hash;
+
+    let new_clash_no_eic = ImplementationData {
+        impl_hash: new_impl_clash, eic_data: Option::None(()), final: false
+    };
+
+    let staking = IStakingDispatcher { contract_address: staking_contract };
+    let init_stakinfo = staking.contract_parameters();
+
+    // Take care of permissiosn and caller address to be upg gov.
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: gov_admin,
+        span: CheatSpan::TargetCalls(1)
+    );
+    let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
+    roles_dispatcher.register_upgrade_governor(account: upg_gov);
+    cheat_caller_address(
+        contract_address: staking_contract, caller_address: upg_gov, span: CheatSpan::Indefinite
+    );
+    let replaceable_dispatcher = IReplaceableDispatcher { contract_address: staking_contract };
+
+    // Replace 1 - No EIC - token_dispatcher is still empty. other unchanged too.
+    replaceable_dispatcher.add_new_implementation(implementation_data: new_clash_no_eic);
+    replaceable_dispatcher.replace_to(implementation_data: new_clash_no_eic);
+    let tester = IStakingTesterDispatcher { contract_address: staking_contract };
+
+    // Expectation - nothing changed.
+    assert_eq!(tester.token_address(), contract_address_const::<0>());
+    assert_eq!(tester.pool_class_hash(), init_stakinfo.pool_contract_class_hash);
+
+    // Replace 2 - w/EIC - no params.
+    let calldata_0_0 = array![0, 0];
+    let eic_data_0_0 = EICData {
+        eic_hash: *eic_contract.class_hash, eic_init_data: calldata_0_0.span()
+    };
+    let implementation_data_0_0 = ImplementationData {
+        impl_hash: new_impl_clash, eic_data: Option::Some(eic_data_0_0), final: false
+    };
+    replaceable_dispatcher.add_new_implementation(implementation_data: implementation_data_0_0);
+    replaceable_dispatcher.replace_to(implementation_data: implementation_data_0_0);
+
+    // Exectation only token address changed.
+    assert_eq!(tester.token_address(), init_stakinfo.token_address);
+    assert_eq!(tester.pool_class_hash(), init_stakinfo.pool_contract_class_hash);
+
+    let new_class_hash = 654321;
+    let new_admin = 123456;
+    let class_hash_22 = 22;
+    let new_admin_33 = 33;
+
+    // Replace 3 - w/EIC - only pool admin.
+    let calldata_0_16 = array![0, new_admin];
+    let eic_data_0_16 = EICData {
+        eic_hash: *eic_contract.class_hash, eic_init_data: calldata_0_16.span()
+    };
+    let implementation_data_0_16 = ImplementationData {
+        impl_hash: new_impl_clash, eic_data: Option::Some(eic_data_0_16), final: false
+    };
+    replaceable_dispatcher.add_new_implementation(implementation_data: implementation_data_0_16);
+    replaceable_dispatcher.replace_to(implementation_data: implementation_data_0_16);
+
+    // Expected - eic migrated token_address onto token_dispatcher
+    // pool_admin changed, pool_clash remained.
+    assert_eq!(tester.token_address(), init_stakinfo.token_address);
+    assert_eq!(tester.pool_class_hash(), init_stakinfo.pool_contract_class_hash);
+    assert_eq!(tester.pool_admin(), new_admin.try_into().expect(''));
+
+    // Replace 4 - w/EIC - only pool clash.
+    let calldata_61_0 = array![new_class_hash, 0];
+    let eic_data_61_0 = EICData {
+        eic_hash: *eic_contract.class_hash, eic_init_data: calldata_61_0.span()
+    };
+    let implementation_data_61_0 = ImplementationData {
+        impl_hash: new_impl_clash, eic_data: Option::Some(eic_data_61_0), final: false
+    };
+
+    replaceable_dispatcher.add_new_implementation(implementation_data: implementation_data_61_0);
+    replaceable_dispatcher.replace_to(implementation_data: implementation_data_61_0);
+
+    // Expected - token, pool admin remained, pool clash changed.
+    assert_eq!(tester.token_address(), init_stakinfo.token_address);
+    assert_eq!(tester.pool_class_hash(), new_class_hash.try_into().expect(''));
+    assert_eq!(tester.pool_admin(), new_admin.try_into().expect(''));
+
+    // Replace 5 - w/EIC - replace both pool admin and pool clash.
+    let calldata_22_33 = array![class_hash_22, new_admin_33];
+    let eic_data_22_33 = EICData {
+        eic_hash: *eic_contract.class_hash, eic_init_data: calldata_22_33.span()
+    };
+    let implementation_data_22_33 = ImplementationData {
+        impl_hash: new_impl_clash, eic_data: Option::Some(eic_data_22_33), final: false
+    };
+    replaceable_dispatcher.add_new_implementation(implementation_data: implementation_data_22_33);
+    replaceable_dispatcher.replace_to(implementation_data: implementation_data_22_33);
+
+    // Expected - token remained, pool admin & pool clash changed.
+    assert_eq!(tester.token_address(), init_stakinfo.token_address);
+    assert_eq!(tester.pool_class_hash(), class_hash_22.try_into().expect(''));
+    assert_eq!(tester.pool_admin(), new_admin_33.try_into().expect(''));
+}
+

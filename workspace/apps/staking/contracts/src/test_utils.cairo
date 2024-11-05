@@ -768,6 +768,12 @@ pub fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArra
     }
 }
 
+fn set_caller_as_upgrade_governor(contract_address: ContractAddress, caller: ContractAddress) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract_address };
+    cheat_caller_address_once(:contract_address, caller_address: caller);
+    roles_dispatcher.register_upgrade_governor(account: caller);
+}
+
 #[derive(Drop, Copy)]
 pub(crate) struct TestInfo {
     pub staker_address: ContractAddress,
