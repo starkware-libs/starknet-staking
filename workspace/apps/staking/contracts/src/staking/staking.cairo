@@ -62,7 +62,7 @@ pub mod Staking {
         staker_info: Map<ContractAddress, Option<InternalStakerInfo>>,
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
         eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
-        erc20_dispatcher: IERC20Dispatcher,
+        token_dispatcher: IERC20Dispatcher,
         total_stake: Amount,
         pool_contract_class_hash: ClassHash,
         pool_exit_intents: Map<UndelegateIntentKey, UndelegateIntentValue>,
@@ -116,7 +116,7 @@ pub mod Staking {
         self.accesscontrol.initializer();
         self.roles.initializer(:governance_admin);
         self.replaceability.upgrade_delay.write(Zero::zero());
-        self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
+        self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);
         self.pool_contract_class_hash.write(pool_contract_class_hash);
         self
@@ -151,8 +151,8 @@ pub mod Staking {
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
             // Transfer funds from staker.
             let staking_contract = get_contract_address();
-            let erc20_dispatcher = self.erc20_dispatcher.read();
-            erc20_dispatcher
+            let token_dispatcher = self.token_dispatcher.read();
+            token_dispatcher
                 .checked_transfer_from(
                     sender: staker_address, recipient: staking_contract, amount: amount.into()
                 );
@@ -162,7 +162,7 @@ pub mod Staking {
                     .deploy_delegation_pool_from_staking_contract(
                         :staker_address,
                         :staking_contract,
-                        token_address: erc20_dispatcher.contract_address,
+                        token_address: token_dispatcher.contract_address,
                         :commission
                     );
                 Option::Some(
@@ -231,8 +231,8 @@ pub mod Staking {
             let old_self_stake = staker_info.amount_own;
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
-            let erc20_dispatcher = self.erc20_dispatcher.read();
-            erc20_dispatcher
+            let token_dispatcher = self.token_dispatcher.read();
+            token_dispatcher
                 .checked_transfer_from(
                     sender: caller_address,
                     recipient: staking_contract_address,
@@ -277,8 +277,8 @@ pub mod Staking {
             );
             self.update_rewards(ref :staker_info);
             let amount = staker_info.unclaimed_rewards_own;
-            let erc20_dispatcher = self.erc20_dispatcher.read();
-            self.send_rewards_to_staker(:staker_address, ref :staker_info, :erc20_dispatcher);
+            let token_dispatcher = self.token_dispatcher.read();
+            self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             amount
         }
@@ -324,11 +324,11 @@ pub mod Staking {
                 .unstake_time
                 .expect_with_err(Error::MISSING_UNSTAKE_INTENT);
             assert_with_err(Time::now() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED);
-            let erc20_dispatcher = self.erc20_dispatcher.read();
-            self.send_rewards_to_staker(:staker_address, ref :staker_info, :erc20_dispatcher);
+            let token_dispatcher = self.token_dispatcher.read();
+            self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
             // Transfer stake to staker.
             let staker_amount = staker_info.amount_own;
-            erc20_dispatcher
+            token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
 
             self.transfer_to_pool_when_unstake(:staker_address, ref :staker_info);
@@ -363,7 +363,7 @@ pub mod Staking {
                 .deploy_delegation_pool_from_staking_contract(
                     :staker_address,
                     staking_contract: get_contract_address(),
-                    token_address: self.erc20_dispatcher.read().contract_address,
+                    token_address: self.token_dispatcher.read().contract_address,
                     :commission
                 );
             staker_info
@@ -389,7 +389,7 @@ pub mod Staking {
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
             StakingContractInfo {
                 min_stake: self.min_stake.read(),
-                token_address: self.erc20_dispatcher.read().contract_address,
+                token_address: self.token_dispatcher.read().contract_address,
                 global_index: self.global_index.read(),
                 pool_contract_class_hash: self.pool_contract_class_hash.read(),
                 reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
@@ -496,8 +496,8 @@ pub mod Staking {
                 pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
 
-            let erc20_dispatcher = self.erc20_dispatcher.read();
-            erc20_dispatcher
+            let token_dispatcher = self.token_dispatcher.read();
+            token_dispatcher
                 .checked_transfer_from(
                     sender: pool_contract, recipient: get_contract_address(), amount: amount.into()
                 );
@@ -586,8 +586,8 @@ pub mod Staking {
                 Time::now() >= undelegate_intent.unpool_time, Error::INTENT_WINDOW_NOT_FINISHED
             );
             self.clear_undelegate_intent(:undelegate_intent_key);
-            let erc20_dispatcher = self.erc20_dispatcher.read();
-            erc20_dispatcher
+            let token_dispatcher = self.token_dispatcher.read();
+            token_dispatcher
                 .checked_transfer(
                     recipient: pool_contract, amount: undelegate_intent.amount.into()
                 );
@@ -668,10 +668,10 @@ pub mod Staking {
             self.update_rewards(ref :staker_info);
             // The function update_rewards updated the index in staker_info.
             let updated_index = staker_info.index;
-            let erc20_dispatcher = self.erc20_dispatcher.read();
+            let token_dispatcher = self.token_dispatcher.read();
             self
                 .send_rewards_to_delegation_pool(
-                    :staker_address, ref :staker_info, :erc20_dispatcher
+                    :staker_address, ref :staker_info, :token_dispatcher
                 );
             self.staker_info.write(staker_address, Option::Some(staker_info));
             updated_index
@@ -744,16 +744,16 @@ pub mod Staking {
             self: @ContractState,
             reward_address: ContractAddress,
             amount: Amount,
-            erc20_dispatcher: IERC20Dispatcher
+            token_dispatcher: IERC20Dispatcher
         ) {
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
-            let balance_before = erc20_dispatcher.balance_of(account: get_contract_address());
+            let balance_before = token_dispatcher.balance_of(account: get_contract_address());
             reward_supplier_dispatcher.claim_rewards(:amount);
-            let balance_after = erc20_dispatcher.balance_of(account: get_contract_address());
+            let balance_after = token_dispatcher.balance_of(account: get_contract_address());
             assert_with_err(
                 balance_after - balance_before == amount.into(), Error::UNEXPECTED_BALANCE
             );
-            erc20_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
+            token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
         }
 
         /// Sends the rewards to `staker_address`'s reward address.
@@ -763,12 +763,12 @@ pub mod Staking {
             ref self: ContractState,
             staker_address: ContractAddress,
             ref staker_info: InternalStakerInfo,
-            erc20_dispatcher: IERC20Dispatcher
+            token_dispatcher: IERC20Dispatcher
         ) {
             let reward_address = staker_info.reward_address;
             let amount = staker_info.unclaimed_rewards_own;
 
-            self.send_rewards(:reward_address, :amount, :erc20_dispatcher);
+            self.send_rewards(:reward_address, :amount, :token_dispatcher);
             staker_info.unclaimed_rewards_own = Zero::zero();
 
             self.emit(Events::StakerRewardClaimed { staker_address, reward_address, amount });
@@ -780,13 +780,13 @@ pub mod Staking {
             ref self: ContractState,
             staker_address: ContractAddress,
             ref staker_info: InternalStakerInfo,
-            erc20_dispatcher: IERC20Dispatcher
+            token_dispatcher: IERC20Dispatcher
         ) {
             let mut pool_info = staker_info.get_pool_info_unchecked();
             let pool_address = pool_info.pool_contract;
             let amount = pool_info.unclaimed_rewards;
 
-            self.send_rewards(reward_address: pool_address, :amount, :erc20_dispatcher);
+            self.send_rewards(reward_address: pool_address, :amount, :token_dispatcher);
             pool_info.unclaimed_rewards = Zero::zero();
             staker_info.pool_info = Option::Some(pool_info);
 
@@ -837,12 +837,12 @@ pub mod Staking {
             ref staker_info: InternalStakerInfo
         ) {
             if let Option::Some(pool_info) = staker_info.pool_info {
-                let erc20_dispatcher = self.erc20_dispatcher.read();
+                let token_dispatcher = self.token_dispatcher.read();
                 self
                     .send_rewards_to_delegation_pool(
-                        :staker_address, ref :staker_info, :erc20_dispatcher
+                        :staker_address, ref :staker_info, :token_dispatcher
                     );
-                erc20_dispatcher
+                token_dispatcher
                     .checked_transfer(
                         recipient: pool_info.pool_contract, amount: pool_info.amount.into()
                     );

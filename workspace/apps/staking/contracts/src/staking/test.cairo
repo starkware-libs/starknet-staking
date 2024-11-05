@@ -42,7 +42,6 @@ use contracts::staking::staking_tester::{IStakingTesterDispatcher, IStakingTeste
 use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::Zero;
-use starknet::contract_address_const;
 use contracts::staking::interface::StakingContractInfo;
 use snforge_std::{declare, DeclareResultTrait};
 use snforge_std::{
@@ -69,7 +68,7 @@ fn test_constructor() {
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     assert_eq!(state.min_stake.read(), cfg.staking_contract_info.min_stake);
     assert_eq!(
-        state.erc20_dispatcher.read().contract_address, cfg.staking_contract_info.token_address
+        state.token_dispatcher.read().contract_address, cfg.staking_contract_info.token_address
     );
     let contract_global_index = state.global_index.read();
     assert_eq!(BASE_VALUE, contract_global_index);
@@ -104,7 +103,7 @@ fn test_stake() {
     // Check that the staker info was updated correctly.
     let mut expected_staker_info = cfg.staker_info;
     expected_staker_info.pool_info = Option::None;
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     assert_eq!(expected_staker_info.into(), staking_dispatcher.staker_info(:staker_address));
 
     let staker_address_from_operational_address = load_from_simple_map(
@@ -117,10 +116,10 @@ fn test_stake() {
 
     // Check that the staker's tokens were transferred to the Staking contract.
     assert_eq!(
-        erc20_dispatcher.balance_of(staker_address),
+        token_dispatcher.balance_of(staker_address),
         (cfg.test_info.staker_initial_balance - cfg.staker_info.amount_own).into()
     );
-    assert_eq!(erc20_dispatcher.balance_of(staking_contract), cfg.staker_info.amount_own.into());
+    assert_eq!(token_dispatcher.balance_of(staking_contract), cfg.staker_info.amount_own.into());
     assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own);
     // Validate StakeBalanceChanged and NewStaker event.
     let events = spy.get_events().emitted_by(staking_contract).events;
@@ -192,7 +191,7 @@ fn test_send_rewards_to_delegation_pool() {
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     cfg.test_info.staking_contract = snforge_std::test_address();
     let token_address = cfg.staking_contract_info.token_address;
-    let erc20_dispatcher = IERC20Dispatcher {
+    let token_dispatcher = IERC20Dispatcher {
         contract_address: cfg.staking_contract_info.token_address
     };
     // Deploy reward supplier contract.
@@ -214,7 +213,7 @@ fn test_send_rewards_to_delegation_pool() {
     cheat_reward_for_reward_supplier(
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards, :token_address
     );
-    let pool_balance_before_rewards = erc20_dispatcher.balance_of(account: pool_contract);
+    let pool_balance_before_rewards = token_dispatcher.balance_of(account: pool_contract);
     let expected_staker_info = InternalStakerInfo {
         pool_info: Option::Some(
             StakerPoolInfo {
@@ -228,11 +227,11 @@ fn test_send_rewards_to_delegation_pool() {
         .send_rewards_to_delegation_pool(
             staker_address: cfg.test_info.staker_address,
             ref staker_info: cfg.staker_info,
-            :erc20_dispatcher
+            :token_dispatcher
         );
     // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
     assert_eq!(expected_staker_info, cfg.staker_info);
-    let pool_balance_after_rewards = erc20_dispatcher.balance_of(account: pool_contract);
+    let pool_balance_after_rewards = token_dispatcher.balance_of(account: pool_contract);
     assert_eq!(pool_balance_after_rewards, pool_balance_before_rewards + unclaimed_rewards.into());
 }
 
@@ -244,7 +243,7 @@ fn test_send_rewards_to_staker() {
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     cfg.test_info.staking_contract = snforge_std::test_address();
     let token_address = cfg.staking_contract_info.token_address;
-    let erc20_dispatcher = IERC20Dispatcher {
+    let token_dispatcher = IERC20Dispatcher {
         contract_address: cfg.staking_contract_info.token_address
     };
     // Deploy reward supplier contract.
@@ -262,18 +261,18 @@ fn test_send_rewards_to_staker() {
     cheat_reward_for_reward_supplier(
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards_own, :token_address
     );
-    let staker_balance_before_rewards = erc20_dispatcher
+    let staker_balance_before_rewards = token_dispatcher
         .balance_of(account: cfg.staker_info.reward_address);
     // Send rewards to staker's reward address.
     state
         .send_rewards_to_staker(
             staker_address: cfg.test_info.staker_address,
             ref staker_info: cfg.staker_info,
-            :erc20_dispatcher
+            :token_dispatcher
         );
     // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
     assert_eq!(expected_staker_info, cfg.staker_info);
-    let staker_balance_after_rewards = erc20_dispatcher
+    let staker_balance_after_rewards = token_dispatcher
         .balance_of(account: cfg.staker_info.reward_address);
     assert_eq!(
         staker_balance_after_rewards, staker_balance_before_rewards + unclaimed_rewards_own.into()
@@ -402,8 +401,8 @@ fn test_claim_delegation_pool_rewards() {
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     staking_pool_dispatcher
         .claim_delegation_pool_rewards(staker_address: cfg.test_info.staker_address);
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    assert_eq!(erc20_dispatcher.balance_of(pool_contract), unclaimed_rewards_pool.into());
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    assert_eq!(token_dispatcher.balance_of(pool_contract), unclaimed_rewards_pool.into());
 
     // Validate the single RewardsSuppliedToDelegationPool event.
     let events = spy.get_events().emitted_by(staking_contract).events;
@@ -700,8 +699,8 @@ fn test_claim_rewards() {
     let new_staker_info = staking_disaptcher.staker_info(:staker_address);
     assert_eq!(new_staker_info.unclaimed_rewards_own, 0);
 
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let balance = erc20_dispatcher.balance_of(cfg.staker_info.reward_address);
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let balance = token_dispatcher.balance_of(cfg.staker_info.reward_address);
     assert_eq!(balance, reward.into());
     // Validate the single StakerRewardClaimed event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
@@ -1224,7 +1223,7 @@ fn test_remove_from_delegation_pool_action() {
 
     // Stake and enter delegation pool.
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
@@ -1242,7 +1241,7 @@ fn test_remove_from_delegation_pool_action() {
             .add(staking_dispatcher.contract_parameters().exit_wait_window)
             .into()
     );
-    let pool_balance_before_action = erc20_dispatcher.balance_of(pool_contract);
+    let pool_balance_before_action = token_dispatcher.balance_of(pool_contract);
 
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
@@ -1258,7 +1257,7 @@ fn test_remove_from_delegation_pool_action() {
     );
     assert_eq!(actual_undelegate_intent_value_after_action, Zero::zero());
     // Check that the amount was transferred correctly.
-    let pool_balance_after_action = erc20_dispatcher.balance_of(pool_contract);
+    let pool_balance_after_action = token_dispatcher.balance_of(pool_contract);
     assert_eq!(
         pool_balance_after_action, pool_balance_before_action + cfg.pool_member_info.amount.into()
     );
@@ -1286,15 +1285,15 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     );
     // Deploy staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     let caller_address = CALLER_ADDRESS();
     // Remove from delegation pool action, and check it returns 0 and does not change balance.
-    let staking_balance_before_action = erc20_dispatcher.balance_of(staking_contract);
+    let staking_balance_before_action = token_dispatcher.balance_of(staking_contract);
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_pool_dispatcher.remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
     // TODO: Test event emitted.
-    let staking_balance_after_action = erc20_dispatcher.balance_of(staking_contract);
+    let staking_balance_after_action = token_dispatcher.balance_of(staking_contract);
     assert_eq!(staking_balance_after_action, staking_balance_before_action);
 }
 
@@ -2088,7 +2087,8 @@ fn test_replace_staking_with_eic() {
     let tester = IStakingTesterDispatcher { contract_address: staking_contract };
 
     // Expectation - nothing changed.
-    assert_eq!(tester.token_address(), contract_address_const::<0>());
+    // Next assert works when upgrading from a staking contract that still has erc20_dispatcher.
+    // assert_eq!(tester.token_address(), contract_address_const::<0>());
     assert_eq!(tester.pool_class_hash(), init_stakinfo.pool_contract_class_hash);
 
     // Replace 2 - w/EIC - no params.

@@ -407,17 +407,17 @@ pub(crate) fn fund(
     amount: Amount,
     token_address: ContractAddress
 ) {
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     cheat_caller_address_once(contract_address: token_address, caller_address: sender);
-    erc20_dispatcher.transfer(:recipient, amount: amount.into());
+    token_dispatcher.transfer(:recipient, amount: amount.into());
 }
 
 pub(crate) fn approve(
     owner: ContractAddress, spender: ContractAddress, amount: Amount, token_address: ContractAddress
 ) {
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     cheat_caller_address_once(contract_address: token_address, caller_address: owner);
-    erc20_dispatcher.approve(:spender, amount: amount.into());
+    token_dispatcher.approve(:spender, amount: amount.into());
 }
 
 pub(crate) fn fund_and_approve_for_stake(
