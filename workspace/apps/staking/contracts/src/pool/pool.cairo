@@ -412,6 +412,15 @@ pub mod Pool {
             pool_member_info.into()
         }
 
+        fn option_pool_member_info(
+            self: @ContractState, pool_member: ContractAddress
+        ) -> Option<PoolMemberInfo> {
+            if self.pool_member_info.read(pool_member).is_none() {
+                return Option::None;
+            }
+            Option::Some(self.pool_member_info(pool_member))
+        }
+
         fn contract_parameters(self: @ContractState) -> PoolContractInfo {
             PoolContractInfo {
                 staker_address: self.staker_address.read(),
