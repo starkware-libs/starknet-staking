@@ -18,7 +18,6 @@ pub mod Pool {
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts::utils::CheckedIERC20DispatcherTrait;
     use contracts::types::{Commission, Index, Amount};
     use contracts_commons::types::time::{TimeStamp, Time};
@@ -90,8 +89,7 @@ pub mod Pool {
         token_address: ContractAddress,
         commission: Commission
     ) {
-        self.accesscontrol.initializer();
-        self.roles.initializer(governance_admin: staking_contract);
+        self.roles.initialize(governance_admin: staking_contract);
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.staker_address.write(staker_address);
         self
