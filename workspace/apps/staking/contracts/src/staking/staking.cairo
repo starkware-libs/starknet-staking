@@ -147,13 +147,15 @@ pub mod Staking {
             );
             assert_with_err(amount >= self.min_stake.read(), Error::AMOUNT_LESS_THAN_MIN_STAKE);
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
-            // Transfer funds from staker.
+
+            // Transfer funds from staker. Sufficient approvals is a pre-condition.
             let staking_contract = get_contract_address();
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher
                 .checked_transfer_from(
                     sender: staker_address, recipient: staking_contract, amount: amount.into()
                 );
+
             // If pool is enabled, deploy a pool contract.
             let pool_info = if pool_enabled {
                 let pool_contract = self
@@ -174,6 +176,7 @@ pub mod Staking {
             } else {
                 Option::None
             };
+
             // Create the record for the staker.
             self
                 .staker_info
@@ -191,10 +194,13 @@ pub mod Staking {
                         }
                     )
                 );
+
             // Update the operational address mapping, which is a 1 to 1 mapping.
             self.operational_address_to_staker_address.write(operational_address, staker_address);
+
             // Update total stake.
             self.add_to_total_stake(:amount);
+
             // Emit events.
             self
                 .emit(
@@ -226,7 +232,12 @@ pub mod Staking {
                 caller_address == staker_address || caller_address == staker_info.reward_address,
                 Error::CALLER_CANNOT_INCREASE_STAKE
             );
+
+            // Update the staker info to account for accumulated rewards, before updating their
+            // staked amount.
             let old_self_stake = staker_info.amount_own;
+            self.update_rewards(ref :staker_info);
+
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
             let token_dispatcher = self.token_dispatcher.read();
@@ -236,13 +247,13 @@ pub mod Staking {
                     recipient: staking_contract_address,
                     amount: amount.into()
                 );
-            // Update the the staker info before updating their staked amount.
-            self.update_rewards(ref :staker_info);
-            // Update the staker's staked amount, and add to total_stake.
+
+            // Update staker's staked amount, and total stake.
             staker_info.amount_own += amount;
             let mut staker_total_stake = staker_info.amount_own;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             self.add_to_total_stake(:amount);
+
             // Emit events.
             let mut old_delegated_stake = Zero::zero();
             let mut new_delegated_stake = Zero::zero();
