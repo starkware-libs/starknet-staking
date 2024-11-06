@@ -54,8 +54,8 @@ pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
         Time::now().add(exit_wait_window)
     }
 
-    fn get_pool_info_unchecked(self: InternalStakerInfo) -> StakerPoolInfo {
-        let staker_info: StakerInfo = self.into();
+    fn get_pool_info_unchecked(self: @InternalStakerInfo) -> StakerPoolInfo {
+        let staker_info: StakerInfo = (*self).into();
         return staker_info.get_pool_info_unchecked();
     }
 }

@@ -29,6 +29,15 @@ pub fn u128_mul_wide_and_ceil_div_unsafe(lhs: u128, rhs: u128, div: u128, error:
     u256_ceil_of_division(x, div.into()).try_into().expect_with_err(error)
 }
 
+/// Computes the new delegated stake based on changing in the intent amount.
+pub fn compute_new_delegated_stake(
+    old_delegated_stake: Amount, old_intent_amount: Amount, new_intent_amount: Amount
+) -> Amount {
+    let total_amount = old_intent_amount + old_delegated_stake;
+    assert_with_err(new_intent_amount <= total_amount, Error::AMOUNT_TOO_HIGH);
+    total_amount - new_intent_amount
+}
+
 pub fn deploy_delegation_pool_contract(
     class_hash: ClassHash,
     contract_address_salt: felt252,
