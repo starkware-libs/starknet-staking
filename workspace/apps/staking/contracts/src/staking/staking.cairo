@@ -267,6 +267,7 @@ pub mod Staking {
         }
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> Amount {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             let caller_address = get_caller_address();
@@ -275,7 +276,10 @@ pub mod Staking {
                 caller_address == staker_address || caller_address == reward_address,
                 Error::CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
             );
+
             self.update_rewards(ref :staker_info);
+
+            // Transfer rewards to staker's reward address and write updated staker info to storage.
             let amount = staker_info.unclaimed_rewards_own;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
@@ -284,20 +288,28 @@ pub mod Staking {
         }
 
         fn unstake_intent(ref self: ContractState) -> TimeStamp {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
+
+            // Updating rewards last time for the staker, as they're about to exit.
             self.update_rewards(ref :staker_info);
+            // Set the unstake time.
             let unstake_time = Time::now().add(self.exit_wait_window.read());
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, Option::Some(staker_info));
+
+            // Write off the staker's stake and delegated stake from the total stake.
             let mut amount_pool = Zero::zero();
             if let Option::Some(pool_info) = staker_info.pool_info {
                 amount_pool = pool_info.amount;
             }
             let amount = staker_info.amount_own + amount_pool;
             self.remove_from_total_stake(:amount);
+
+            // Emit events.
             self
                 .emit(
                     Events::StakerExitIntent {
@@ -318,15 +330,20 @@ pub mod Staking {
         }
 
         fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> Amount {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
             let unstake_time = staker_info
                 .unstake_time
                 .expect_with_err(Error::MISSING_UNSTAKE_INTENT);
             assert_with_err(Time::now() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED);
+
+            // Send rewards to staker's reward address.
+            // We must do it here and now because staker_info is about to be erased.
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
-            // Transfer stake to staker.
+
+            // Return stake to staker, return delegated stake to pool, and remove staker.
             let staker_amount = staker_info.amount_own;
             token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
@@ -337,12 +354,17 @@ pub mod Staking {
         }
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             let old_address = staker_info.reward_address;
+
+            // Update new reward address.
             staker_info.reward_address = reward_address;
             self.staker_info.write(staker_address, Option::Some(staker_info));
+
+            // Emit event.
             self
                 .emit(
                     Events::StakerRewardAddressChanged {
@@ -354,11 +376,14 @@ pub mod Staking {
         fn set_open_for_delegation(
             ref self: ContractState, commission: Commission
         ) -> ContractAddress {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.get_staker_info(:staker_address);
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
             assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
+
+            // Deploy delegation pool contract.
             let pool_contract = self
                 .deploy_delegation_pool_from_staking_contract(
                     :staker_address,
@@ -366,6 +391,9 @@ pub mod Staking {
                     token_address: self.token_dispatcher.read().contract_address,
                     :commission
                 );
+
+            // Update staker info. The reason we don't update_rewards in this function is because
+            // the delegated stake starts at 0.
             staker_info
                 .pool_info =
                     Option::Some(
@@ -380,6 +408,7 @@ pub mod Staking {
             pool_contract
         }
 
+        // This function provides the staker info (with projected rewards).
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let mut staker_info = self.get_staker_info(:staker_address);
             self.update_rewards(ref :staker_info);
@@ -943,16 +972,25 @@ pub mod Staking {
         }
 
         fn update_global_index(ref self: ContractState) {
+            // Get the new system-wide rewards accrued since last update.
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             let staking_rewards = reward_supplier_dispatcher.calculate_staking_rewards();
+
+            // Update. the global index.
+            // The index difference reflects the interest rate for the time since last update.
+            // see `compute_global_index_diff()` for more details.
             let total_stake = self.get_total_stake();
             let global_index_diff = compute_global_index_diff(:staking_rewards, :total_stake);
             let old_index = self.global_index.read();
             let new_index = old_index + global_index_diff;
             self.global_index.write(new_index);
+
+            // Update global index timestamp.
             let global_index_last_update_timestamp = self.global_index_last_update_timestamp.read();
             let global_index_current_update_timestamp = Time::now();
             self.global_index_last_update_timestamp.write(global_index_current_update_timestamp);
+
+            // Emit event.
             self
                 .emit(
                     Events::GlobalIndexUpdated {
