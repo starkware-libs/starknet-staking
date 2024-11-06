@@ -135,6 +135,65 @@ fn set_open_for_delegation_flow_test() {
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
+/// Staker exit_intent
+/// Staker exit_action
+/// Delegator partially exit_intent - cover calculating rewards using `final_staker_index`
+/// Delegator exit_action
+/// Delegator exit_intent
+/// Delegator exit_action
+#[test]
+fn delegator_intent_after_staker_action_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount * 2);
+    let initial_reward_supplier_balance = system
+        .token
+        .balance_of(account: system.reward_supplier.address);
+    let commission = 200;
+    let one_week = Time::weeks(1);
+
+    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_time(time: one_week);
+
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: stake_amount);
+    delegator.delegate(:pool, amount: stake_amount);
+    system.advance_time(time: one_week);
+
+    staker.exit_intent();
+    system.advance_time(time: system.staking.get_exit_wait_window());
+
+    staker.exit_action();
+    system.advance_time(time: one_week);
+
+    delegator.exit_intent(:pool, amount: stake_amount / 2);
+    system.advance_time(time: one_week);
+    delegator.exit_action(:pool);
+
+    delegator.exit_intent(:pool, amount: stake_amount / 2);
+    delegator.exit_action(:pool);
+
+    assert!(system.token.balance_of(account: system.staking.address).is_zero());
+    assert!(system.token.balance_of(account: pool) < 100);
+    assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount * 2);
+    assert_eq!(system.token.balance_of(account: delegator.delegator.address), stake_amount);
+    assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+    assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
+    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert_eq!(
+        initial_reward_supplier_balance,
+        system.token.balance_of(account: system.reward_supplier.address)
+            + system.token.balance_of(account: staker.reward.address)
+            + system.token.balance_of(account: delegator.reward.address)
+            + system.token.balance_of(account: pool)
+    );
+}
+
+/// Flow:
+/// Staker Stake
+/// Delegator delegate
 /// Delegator exit_intent partial amount
 /// Delegator exit_intent with lower amount - cover lowering partial undelegate
 /// Delegator exit_intent with zero amount - cover clearing an intent
