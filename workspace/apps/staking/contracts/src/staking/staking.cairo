@@ -9,7 +9,7 @@ pub mod Staking {
     use contracts::staking::{IStakingPool, IStakingPause, IStaking, IStakingConfig};
     use contracts::utils::{deploy_delegation_pool_contract, compute_commission_amount_rounded_down};
     use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
-    use contracts::utils::compute_global_index_diff;
+    use contracts::utils::{compute_global_index_diff, compute_new_delegated_stake};
     use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
     use contracts::staking::objects::UndelegateIntentValueTrait;
     use contracts::staking::objects::UndelegateIntentValueZero;
@@ -554,51 +554,42 @@ pub mod Staking {
         ) -> TimeStamp {
             self.general_prerequisites();
             let mut staker_info = self.get_staker_info(:staker_address);
-            let mut pool_info = staker_info.get_pool_info_unchecked();
-            assert_with_err(
-                pool_info.pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
-            );
-            let undelegate_intent_key = UndelegateIntentKey {
-                pool_contract: pool_info.pool_contract, identifier
-            };
-            let undelegate_intent_value = self.get_pool_exit_intent(:undelegate_intent_key);
-            let old_intent_amount = undelegate_intent_value.amount;
-            let old_delegated_stake = pool_info.amount;
-            let total_amount = old_intent_amount + old_delegated_stake;
-            assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
-            let new_delegated_stake = total_amount - amount;
-            pool_info.amount = new_delegated_stake;
             self.update_rewards(ref :staker_info);
-            let unpool_time = staker_info
-                .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
-            if (staker_info.unstake_time.is_none()) {
-                // Change total stake only if the staker is not in the unstake process.
-                if new_delegated_stake < old_delegated_stake {
-                    self.remove_from_total_stake(amount: old_delegated_stake - new_delegated_stake);
-                } else {
-                    self.add_to_total_stake(amount: new_delegated_stake - old_delegated_stake);
-                }
-            }
-            staker_info.pool_info = Option::Some(pool_info);
-            self.staker_info.write(staker_address, Option::Some(staker_info));
-            if amount.is_zero() {
-                self.clear_undelegate_intent(:undelegate_intent_key);
-            } else {
-                self
-                    .pool_exit_intents
-                    .write(undelegate_intent_key, UndelegateIntentValue { amount, unpool_time });
-            }
+            self.assert_caller_is_pool_contract(staker_info: @staker_info);
+
+            let (old_delegated_stake, pool_contract) = {
+                let pool_info = staker_info.get_pool_info_unchecked();
+                (pool_info.amount, pool_info.pool_contract)
+            };
+            let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             self
-                .emit(
-                    Events::StakeBalanceChanged {
-                        staker_address,
-                        old_self_stake: staker_info.amount_own,
-                        old_delegated_stake,
-                        new_self_stake: staker_info.amount_own,
-                        new_delegated_stake: pool_info.amount
-                    }
+                .update_delegated_stake(
+                    ref :staker_info,
+                    old_intent_amount: self.get_pool_exit_intent(:undelegate_intent_key).amount,
+                    new_intent_amount: amount
                 );
-            unpool_time
+            self
+                .update_undelegate_intent_value(
+                    :staker_info, :undelegate_intent_key, new_intent_amount: amount
+                );
+
+            // Do not emit `StakeBalanceChanged` event when the staker is in the process of
+            // unstaking, as an event has already been emitted when the staker initiated the unstake
+            // intent, indicating that the staked amount and delegated amount are zero.
+            if staker_info.unstake_time.is_none() {
+                self
+                    .emit(
+                        Events::StakeBalanceChanged {
+                            staker_address,
+                            old_self_stake: staker_info.amount_own,
+                            old_delegated_stake,
+                            new_self_stake: staker_info.amount_own,
+                            new_delegated_stake: staker_info.get_pool_info_unchecked().amount
+                        }
+                    );
+            }
+            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self.get_pool_exit_intent(:undelegate_intent_key).unpool_time
         }
 
         fn remove_from_delegation_pool_action(ref self: ContractState, identifier: felt252) {
@@ -956,6 +947,17 @@ pub mod Staking {
             pool_contract
         }
 
+        // Adjusts the total stake based on changes in the delegated amount.
+        fn update_total_stake_according_to_delegated_stake_changes(
+            ref self: ContractState, old_delegated_stake: Amount, new_delegated_stake: Amount
+        ) {
+            if new_delegated_stake < old_delegated_stake {
+                self.remove_from_total_stake(amount: old_delegated_stake - new_delegated_stake);
+            } else {
+                self.add_to_total_stake(amount: new_delegated_stake - old_delegated_stake);
+            }
+        }
+
         fn add_to_total_stake(ref self: ContractState, amount: Amount) {
             self.total_stake.write(self.total_stake.read() + amount);
         }
@@ -1013,6 +1015,57 @@ pub mod Staking {
             // The following assertion serves as a sanity check.
             undelegate_intent_value.assert_valid();
             undelegate_intent_value
+        }
+
+        fn assert_caller_is_pool_contract(self: @ContractState, staker_info: @InternalStakerInfo) {
+            let pool_info = staker_info.get_pool_info_unchecked();
+            assert_with_err(
+                get_caller_address() == pool_info.pool_contract, Error::CALLER_IS_NOT_POOL_CONTRACT
+            );
+        }
+
+        /// Updates the delegated stake amount in the given `staker_info` according to changes in
+        /// the intent amount. Also updates the total stake accordingly.
+        fn update_delegated_stake(
+            ref self: ContractState,
+            ref staker_info: InternalStakerInfo,
+            old_intent_amount: Amount,
+            new_intent_amount: Amount,
+        ) {
+            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let old_delegated_stake = pool_info.amount;
+            let new_delegated_stake = compute_new_delegated_stake(
+                :old_delegated_stake, :old_intent_amount, :new_intent_amount
+            );
+
+            // Do not update the total stake when the staker is in the process of unstaking,
+            // since its delegated stake is already excluded from the total stake.
+            if staker_info.unstake_time.is_none() {
+                self
+                    .update_total_stake_according_to_delegated_stake_changes(
+                        :old_delegated_stake, :new_delegated_stake
+                    )
+            }
+            pool_info.amount = new_delegated_stake;
+            staker_info.pool_info = Option::Some(pool_info);
+        }
+
+        /// Updates undelegate intent value with the given `new_intent_amount` and an updated unpool
+        /// time.
+        fn update_undelegate_intent_value(
+            ref self: ContractState,
+            staker_info: InternalStakerInfo,
+            undelegate_intent_key: UndelegateIntentKey,
+            new_intent_amount: Amount,
+        ) {
+            let undelegate_intent_value = if new_intent_amount.is_zero() {
+                Zero::zero()
+            } else {
+                let unpool_time = staker_info
+                    .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
+                UndelegateIntentValue { amount: new_intent_amount, unpool_time }
+            };
+            self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
         }
     }
 }

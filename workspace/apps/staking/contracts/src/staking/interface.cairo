@@ -225,6 +225,9 @@ pub trait IStakingPool<TContractState> {
     ///   and total_stake will be *decreased* by the difference between the new and the old amount.
     /// * If the amount to be removed is smaller in the previous intent, the staker's pooled amount
     ///   and total_stake will be *increased* by the difference between the old and the new amount.
+    ///
+    /// If the amount to be removed is zero, any existing intent associated with this `identifier`
+    /// will be removed, and the returned unpool time will be zero.
     fn remove_from_delegation_pool_intent(
         ref self: TContractState,
         staker_address: ContractAddress,
