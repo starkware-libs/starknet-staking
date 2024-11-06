@@ -28,7 +28,6 @@ pub mod Staking {
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use contracts::types::{Commission, Index, Amount};
     use contracts_commons::types::time::{TimeDelta, Time, TimeStamp};
 
@@ -113,8 +112,7 @@ pub mod Staking {
         pool_contract_admin: ContractAddress,
         governance_admin: ContractAddress
     ) {
-        self.accesscontrol.initializer();
-        self.roles.initializer(:governance_admin);
+        self.roles.initialize(:governance_admin);
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);

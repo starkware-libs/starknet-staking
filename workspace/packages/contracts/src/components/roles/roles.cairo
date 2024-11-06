@@ -187,10 +187,12 @@ pub mod RolesComponent {
         fn remove_governance_admin(
             ref self: ComponentState<TContractState>, account: ContractAddress
         ) {
+            let caller_address = get_caller_address();
+
+            // Governance admin musn't remove itself, to avoid losing governance.
+            assert(account != caller_address, GOV_ADMIN_CANNOT_RENOUNCE);
             let event = Event::GovernanceAdminRemoved(
-                GovernanceAdminRemoved {
-                    removed_account: account, removed_by: get_caller_address()
-                }
+                GovernanceAdminRemoved { removed_account: account, removed_by: caller_address }
             );
             self._revoke_role_and_emit(role: GOVERNANCE_ADMIN, :account, :event);
         }
@@ -299,12 +301,11 @@ pub mod RolesComponent {
         // The following internal method is unprotected and should only be used from the containing
         // contract's constructor (or, in context of tests, from the setup method).
         // It should be called after the initialization of the access_control component.
-        fn initializer(
-            ref self: ComponentState<TContractState>, governance_admin: ContractAddress
-        ) {
+        fn initialize(ref self: ComponentState<TContractState>, governance_admin: ContractAddress) {
             let mut access_comp = get_dep_component_mut!(ref self, Access);
             let un_initialized = access_comp.get_role_admin(role: GOVERNANCE_ADMIN).is_zero();
             assert(un_initialized, ALREADY_INITIALIZED);
+            access_comp.initializer();
             access_comp._grant_role(role: GOVERNANCE_ADMIN, account: governance_admin);
             access_comp.set_role_admin(role: APP_GOVERNOR, admin_role: APP_ROLE_ADMIN);
             access_comp.set_role_admin(role: APP_ROLE_ADMIN, admin_role: GOVERNANCE_ADMIN);

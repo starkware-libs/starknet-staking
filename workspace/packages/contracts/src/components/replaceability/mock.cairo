@@ -4,7 +4,6 @@ pub(crate) mod ReplaceabilityMock {
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
-    use AccessControlComponent::InternalTrait as AccessControlInternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::ContractAddress;
 
@@ -36,8 +35,7 @@ pub(crate) mod ReplaceabilityMock {
 
     #[constructor]
     fn constructor(ref self: ContractState, upgrade_delay: u64, governance_admin: ContractAddress) {
-        self.accesscontrol.initializer();
-        self.roles.initializer(:governance_admin);
+        self.roles.initialize(:governance_admin);
         self.replaceability.upgrade_delay.write(upgrade_delay);
     }
 
