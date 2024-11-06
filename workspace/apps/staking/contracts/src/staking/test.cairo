@@ -2162,3 +2162,22 @@ fn test_replace_staking_with_eic() {
     assert_eq!(tester.pool_admin(), new_admin_33.try_into().expect(''));
 }
 
+#[test]
+fn test_option_staker_info() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    // Check before staker enters.
+    let option_staker_info = staking_dispatcher.option_staker_info(:staker_address);
+    assert!(option_staker_info.is_none());
+    // Check after staker enters.
+    let mut expected_staker_info = cfg.staker_info;
+    expected_staker_info.pool_info = Option::None;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let option_staker_info = staking_dispatcher.option_staker_info(:staker_address);
+    assert_eq!(option_staker_info, Option::Some(expected_staker_info.into()));
+}
+

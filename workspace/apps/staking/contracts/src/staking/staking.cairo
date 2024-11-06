@@ -413,6 +413,15 @@ pub mod Staking {
             staker_info.into()
         }
 
+        fn option_staker_info(
+            self: @ContractState, staker_address: ContractAddress
+        ) -> Option<StakerInfo> {
+            if self.staker_info.read(staker_address).is_none() {
+                return Option::None;
+            }
+            Option::Some(self.staker_info(:staker_address))
+        }
+
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
             StakingContractInfo {
                 min_stake: self.min_stake.read(),
