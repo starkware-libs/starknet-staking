@@ -30,6 +30,9 @@ pub mod Staking {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts::types::{Commission, Index, Amount};
     use contracts_commons::types::time::{TimeDelta, Time, TimeStamp};
+    use contracts_commons::interfaces::identity::Identity;
+    pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
+    pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
 
@@ -125,6 +128,17 @@ pub mod Staking {
         self.global_index_last_update_timestamp.write(Time::now());
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
+    }
+
+    #[abi(embed_v0)]
+    impl _Identity of Identity<ContractState> {
+        fn identify(self: @ContractState) -> felt252 {
+            CONTRACT_IDENTITY
+        }
+
+        fn version(self: @ContractState) -> felt252 {
+            CONTRACT_VERSION
+        }
     }
 
     #[abi(embed_v0)]

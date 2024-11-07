@@ -21,6 +21,9 @@ pub mod Pool {
     use contracts::utils::CheckedIERC20DispatcherTrait;
     use contracts::types::{Commission, Index, Amount};
     use contracts_commons::types::time::{TimeStamp, Time};
+    use contracts_commons::interfaces::identity::Identity;
+    pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
+    pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -97,6 +100,17 @@ pub mod Pool {
             .write(IStakingPoolDispatcher { contract_address: staking_contract });
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.commission.write(commission);
+    }
+
+    #[abi(embed_v0)]
+    impl _Identity of Identity<ContractState> {
+        fn identify(self: @ContractState) -> felt252 {
+            CONTRACT_IDENTITY
+        }
+
+        fn version(self: @ContractState) -> felt252 {
+            CONTRACT_VERSION
+        }
     }
 
     #[abi(embed_v0)]

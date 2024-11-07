@@ -5,6 +5,8 @@ use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait}
 use contracts::staking::interface::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
 use contracts::pool::interface::{IPool, IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
 use contracts::pool::{Pool::{SwitchPoolData, InternalPoolFunctionsTrait}};
+use contracts::pool::Pool::CONTRACT_IDENTITY as pool_identity;
+use contracts::pool::Pool::CONTRACT_VERSION as pool_version;
 use contracts::pool::{InternalPoolMemberInfo, PoolMemberInfo};
 use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
 use contracts::test_utils;
@@ -36,8 +38,20 @@ use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatc
 use snforge_std::{cheat_caller_address, CheatSpan};
 use snforge_std::{test_address, start_cheat_block_timestamp_global};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use contracts_commons::test_utils::cheat_caller_address_once;
+use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
 
+#[test]
+fn test_identity() {
+    let cfg: StakingInitConfig = Default::default();
+    // Deploy the token contract.
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    // Deploy the staking contract, stake, and enter delegation pool.
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    check_identity(pool_contract, pool_identity, pool_version);
+}
 
 #[test]
 fn test_update_rewards() {

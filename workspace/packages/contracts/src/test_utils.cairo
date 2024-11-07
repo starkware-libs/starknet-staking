@@ -1,4 +1,5 @@
 use contracts_commons::constants::{NAME, SYMBOL};
+use contracts_commons::interfaces::identity::{IdentityDispatcher, IdentityDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use snforge_std::{CheatSpan, cheat_caller_address, cheat_account_contract_address};
@@ -27,6 +28,15 @@ pub fn cheat_caller_address_once(
     );
 }
 
+pub fn check_identity(
+    target: ContractAddress, expected_identity: felt252, expected_version: felt252
+) {
+    let identitier = IdentityDispatcher { contract_address: target };
+    let identity = identitier.identify();
+    let version = identitier.version();
+    assert_eq!(expected_identity, identity);
+    assert_eq!(expected_version, version);
+}
 
 /// The `TokenConfig` struct is used to configure the initial settings for a token contract.
 /// It includes the initial supply of tokens and the owner's address.

@@ -2,6 +2,14 @@ use core::option::OptionTrait;
 use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo};
 use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
 use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
+use contracts::staking::Staking::CONTRACT_IDENTITY as staking_identity;
+use contracts::staking::Staking::CONTRACT_VERSION as staking_version;
+use contracts::reward_supplier::RewardSupplier::CONTRACT_IDENTITY as reward_supplier_identity;
+use contracts::reward_supplier::RewardSupplier::CONTRACT_VERSION as reward_supplier_version;
+use contracts::minting_curve::MintingCurve::CONTRACT_IDENTITY as mint_curve_identity;
+use contracts::minting_curve::MintingCurve::CONTRACT_VERSION as mint_curve_version;
+use contracts::pool::Pool::CONTRACT_IDENTITY as pool_identity;
+use contracts::pool::Pool::CONTRACT_VERSION as pool_version;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::test_utils;
 use contracts::test_utils::constants::NOT_STARKGATE_ADDRESS;
@@ -10,7 +18,7 @@ use test_utils::{stake_for_testing_using_dispatcher, initialize_reward_supplier_
 use test_utils::{deploy_minting_curve_contract, fund, general_contract_system_deployment};
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use core::num::traits::{Zero, Sqrt};
-use contracts_commons::test_utils::{cheat_caller_address_once};
+use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
 use contracts::utils::{ceil_of_division, compute_threshold};
 use contracts::event_test_utils::assert_calculated_rewards_event;
 use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event};
@@ -20,6 +28,33 @@ use snforge_std::cheatcodes::message_to_l1::MessageToL1SpyAssertionsTrait;
 use contracts::constants::STRK_IN_FRIS;
 use contracts::types::Amount;
 use contracts_commons::types::time::Time;
+
+
+#[test]
+fn test_identity() {
+    assert_eq!(staking_identity, 'Staking Core Contract');
+    assert_eq!(reward_supplier_identity, 'Reward Supplier');
+    assert_eq!(mint_curve_identity, 'Minting Curve');
+    assert_eq!(pool_identity, 'Staking Delegation Pool');
+
+    assert_eq!(staking_version, '1.0.0');
+    assert_eq!(reward_supplier_version, '1.0.0');
+    assert_eq!(mint_curve_version, '1.0.0');
+    assert_eq!(pool_version, '1.0.0');
+
+    // Test identity on deployed instances.
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+
+    let minting_curve = cfg.reward_supplier.minting_curve_contract;
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let staking = cfg.test_info.staking_contract;
+
+    check_identity(staking, staking_identity, staking_version);
+    check_identity(reward_supplier, reward_supplier_identity, reward_supplier_version);
+    check_identity(minting_curve, mint_curve_identity, mint_curve_version);
+    // Pool contract identity checked elsewhere.
+}
 
 #[test]
 fn test_reward_supplier_constructor() {

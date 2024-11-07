@@ -1,6 +1,7 @@
 pub mod bit_set;
 
 pub mod components;
+pub mod interfaces;
 
 pub mod constants;
 pub mod types;
