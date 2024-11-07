@@ -1,0 +1,17 @@
+[workspace]
+members = ["workspace/apps/staking/contracts", "workspace/packages/contracts"]
+
+
+[workspace.dependencies]
+starknet = "2.8.4"
+assert_macros = "2.8.4"
+openzeppelin = "0.18.0"
+snforge_std = "0.32.0"
+
+[scripts]
+test = "snforge test"
+
+[profile.dev.cairo]
+unstable-add-statements-code-locations-debug-info = true
+unstable-add-statements-functions-debug-info = true
+inlining-strategy = "avoid"
