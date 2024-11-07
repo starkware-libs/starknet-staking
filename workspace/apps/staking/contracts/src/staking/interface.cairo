@@ -177,7 +177,7 @@ pub trait IStaking<TContractState> {
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn set_open_for_delegation(ref self: TContractState, commission: Commission) -> ContractAddress;
     fn staker_info(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
-    fn option_staker_info(
+    fn get_staker_info(
         self: @TContractState, staker_address: ContractAddress
     ) -> Option<StakerInfo>;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;

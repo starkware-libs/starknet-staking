@@ -240,7 +240,7 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let caller_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             assert_with_err(
                 caller_address == staker_address || caller_address == staker_info.reward_address,
@@ -292,7 +292,7 @@ pub mod Staking {
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             // Prerequisites and asserts.
             self.general_prerequisites();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             let caller_address = get_caller_address();
             let reward_address = staker_info.reward_address;
             assert_with_err(
@@ -314,7 +314,7 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
 
             // Updating rewards last time for the staker, as they're about to exit.
@@ -355,7 +355,7 @@ pub mod Staking {
         fn unstake_action(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             // Prerequisites and asserts.
             self.general_prerequisites();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             let unstake_time = staker_info
                 .unstake_time
                 .expect_with_err(Error::MISSING_UNSTAKE_INTENT);
@@ -380,7 +380,7 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             let old_address = staker_info.reward_address;
 
             // Update new reward address.
@@ -402,7 +402,7 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
             assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
 
@@ -433,12 +433,12 @@ pub mod Staking {
 
         // This function provides the staker info (with projected rewards).
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             self.update_rewards(ref :staker_info);
             staker_info.into()
         }
 
-        fn option_staker_info(
+        fn get_staker_info(
             self: @ContractState, staker_address: ContractAddress
         ) -> Option<StakerInfo> {
             if self.staker_info.read(staker_address).is_none() {
@@ -480,7 +480,7 @@ pub mod Staking {
                 Error::OPERATIONAL_EXISTS
             );
             let staker_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(
                 self.eligible_operational_addresses.read(operational_address) == staker_address,
                 Error::OPERATIONAL_NOT_ELIGIBLE
@@ -513,7 +513,7 @@ pub mod Staking {
         fn update_commission(ref self: ContractState, commission: Commission) {
             self.general_prerequisites();
             let staker_address = get_caller_address();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let pool_info = staker_info.get_pool_info_unchecked();
             let pool_contract = pool_info.pool_contract;
@@ -548,7 +548,7 @@ pub mod Staking {
             ref self: ContractState, staker_address: ContractAddress, amount: Amount
         ) -> Index {
             self.general_prerequisites();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             self.update_rewards(ref :staker_info);
             let mut pool_info = staker_info.get_pool_info_unchecked();
@@ -587,7 +587,7 @@ pub mod Staking {
             amount: Amount,
         ) -> TimeStamp {
             self.general_prerequisites();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             self.update_rewards(ref :staker_info);
             self.assert_caller_is_pool_contract(staker_info: @staker_info);
 
@@ -672,7 +672,7 @@ pub mod Staking {
             assert_with_err(
                 undelegate_intent_value.amount >= switched_amount, Error::AMOUNT_TOO_HIGH
             );
-            let mut to_staker_info = self.get_staker_info(staker_address: to_staker);
+            let mut to_staker_info = self.internal_staker_info(staker_address: to_staker);
             self.update_rewards(ref staker_info: to_staker_info);
             assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let mut to_staker_pool_info = to_staker_info.get_pool_info_unchecked();
@@ -712,7 +712,7 @@ pub mod Staking {
             ref self: ContractState, staker_address: ContractAddress
         ) -> Index {
             self.general_prerequisites();
-            let mut staker_info = self.get_staker_info(:staker_address);
+            let mut staker_info = self.internal_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info_unchecked().pool_contract;
             assert_with_err(
                 pool_address == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
@@ -858,7 +858,7 @@ pub mod Staking {
             assert_with_err(!self.is_paused(), Error::CONTRACT_IS_PAUSED);
         }
 
-        fn get_staker_info(
+        fn internal_staker_info(
             self: @ContractState, staker_address: ContractAddress
         ) -> InternalStakerInfo {
             self.staker_info.read(staker_address).expect_with_err(Error::STAKER_NOT_EXISTS)

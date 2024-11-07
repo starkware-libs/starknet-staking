@@ -1161,7 +1161,7 @@ fn test_partial_undelegate() {
 }
 
 #[test]
-fn test_option_pool_member_info() {
+fn test_get_pool_member_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
@@ -1170,11 +1170,11 @@ fn test_option_pool_member_info() {
     let pool_member = cfg.test_info.pool_member_address;
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    let option_pool_member_info = pool_dispatcher.option_pool_member_info(:pool_member);
+    let option_pool_member_info = pool_dispatcher.get_pool_member_info(:pool_member);
     assert!(option_pool_member_info.is_none());
     // Check after enter the pool.
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
-    let option_pool_member_info = pool_dispatcher.option_pool_member_info(:pool_member);
+    let option_pool_member_info = pool_dispatcher.get_pool_member_info(:pool_member);
     assert_eq!(option_pool_member_info, Option::Some(expected_pool_member_info));
 }
