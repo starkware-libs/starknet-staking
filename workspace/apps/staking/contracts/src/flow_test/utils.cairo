@@ -120,6 +120,10 @@ pub impl StakingImpl of StakingTrait {
         self.dispatcher().contract_parameters().try_into().unwrap().min_stake
     }
 
+    fn get_total_stake(self: StakingState) -> Amount {
+        self.dispatcher().get_total_stake()
+    }
+
     fn get_exit_wait_window(self: StakingState) -> TimeDelta {
         self.dispatcher().contract_parameters().exit_wait_window
     }
