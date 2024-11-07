@@ -546,5 +546,11 @@ pub impl DelegatorImpl of DelegatorTrait {
         let pool_dispatcher = IPoolDispatcher { contract_address: from_pool };
         pool_dispatcher.switch_delegation_pool(:to_staker, :to_pool, :amount);
     }
+
+    fn claim_rewards(self: Delegator, pool: ContractAddress) -> Amount {
+        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.claim_rewards(pool_member: self.delegator.address)
+    }
 }
 
