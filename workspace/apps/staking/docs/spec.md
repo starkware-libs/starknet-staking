@@ -1491,7 +1491,7 @@ fn on_receive(
     amount: u256,
     depositor: EthAddress,
     message: Span<felt252>
-)
+) -> bool
 ```
 #### description <!-- omit from toc -->
 Get notified by StarkGate `amount` was transferred from L1.

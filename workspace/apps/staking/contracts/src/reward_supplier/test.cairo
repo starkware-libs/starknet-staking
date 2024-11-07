@@ -258,17 +258,19 @@ fn test_on_receive() {
                 contract_address: reward_supplier_contract,
                 caller_address: cfg.reward_supplier.starkgate_address
             );
-            reward_supplier_dispatcher
-                .on_receive(
-                    l2_token: token_address,
-                    amount: base_mint_amount.into(),
-                    depositor: cfg
-                        .reward_supplier
-                        .l1_staking_minter
-                        .try_into()
-                        .expect('not EthAddress'),
-                    message: array![].span()
-                );
+            assert!(
+                reward_supplier_dispatcher
+                    .on_receive(
+                        l2_token: token_address,
+                        amount: base_mint_amount.into(),
+                        depositor: cfg
+                            .reward_supplier
+                            .l1_staking_minter
+                            .try_into()
+                            .expect('not EthAddress'),
+                        message: array![].span()
+                    )
+            );
             expected_l1_pending_requested_amount -= base_mint_amount;
             assert_eq!(
                 reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
