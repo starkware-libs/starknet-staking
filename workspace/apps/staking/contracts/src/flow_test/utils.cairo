@@ -552,5 +552,13 @@ pub impl DelegatorImpl of DelegatorTrait {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.claim_rewards(pool_member: self.delegator.address)
     }
+
+    fn change_reward_address(
+        self: Delegator, pool: ContractAddress, reward_address: ContractAddress
+    ) {
+        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.change_reward_address(:reward_address);
+    }
 }
 
