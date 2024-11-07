@@ -33,7 +33,7 @@ fn test_reward_supplier_constructor() {
     cfg.test_info.staking_contract = staking_contract;
     let state = @initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     assert_eq!(state.staking_contract.read(), cfg.test_info.staking_contract);
-    assert_eq!(state.erc20_dispatcher.read().contract_address, token_address);
+    assert_eq!(state.token_dispatcher.read().contract_address, token_address);
     assert_eq!(state.l1_pending_requested_amount.read(), Zero::zero());
     assert_eq!(state.base_mint_amount.read(), cfg.reward_supplier.base_mint_amount);
     assert_eq!(
@@ -73,10 +73,10 @@ fn test_claim_rewards() {
     state.claim_rewards(:amount);
     // Validate that the rewards were claimed.
     assert_eq!(state.unclaimed_rewards.read(), Zero::zero());
-    let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let staking_balance = erc20_dispatcher.balance_of(account: staking_contract);
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_balance = token_dispatcher.balance_of(account: staking_contract);
     assert_eq!(staking_balance, amount.into() * 2);
-    let reward_supplier_balance = erc20_dispatcher.balance_of(account: test_address());
+    let reward_supplier_balance = token_dispatcher.balance_of(account: test_address());
     assert_eq!(reward_supplier_balance, Zero::zero());
 }
 

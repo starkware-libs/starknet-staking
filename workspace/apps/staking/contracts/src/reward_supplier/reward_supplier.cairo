@@ -52,7 +52,7 @@ pub mod RewardSupplier {
         base_mint_amount: Amount,
         minting_curve_dispatcher: IMintingCurveDispatcher,
         staking_contract: ContractAddress,
-        erc20_dispatcher: IERC20Dispatcher,
+        token_dispatcher: IERC20Dispatcher,
         l1_staking_minter: felt252,
         starkgate_address: ContractAddress,
     }
@@ -85,7 +85,7 @@ pub mod RewardSupplier {
     ) {
         self.roles.initialize(:governance_admin);
         self.staking_contract.write(staking_contract);
-        self.erc20_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
+        self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.last_timestamp.write(Time::now());
         // Initialize unclaimed_rewards with 1 strk to make up for round ups of pool rewards
         // calculation in the staking contract.
@@ -128,8 +128,8 @@ pub mod RewardSupplier {
             let unclaimed_rewards = self.unclaimed_rewards.read();
             assert_with_err(unclaimed_rewards >= amount, Error::AMOUNT_TOO_HIGH);
             self.unclaimed_rewards.write(unclaimed_rewards - amount);
-            let erc20_dispatcher = self.erc20_dispatcher.read();
-            erc20_dispatcher.checked_transfer(recipient: staking_contract, amount: amount.into());
+            let token_dispatcher = self.token_dispatcher.read();
+            token_dispatcher.checked_transfer(recipient: staking_contract, amount: amount.into());
         }
 
         fn on_receive(
@@ -146,7 +146,7 @@ pub mod RewardSupplier {
             );
             // The bridge may serve multiple tokens, only the correct token may be received.
             assert_with_err(
-                l2_token == self.erc20_dispatcher.read().contract_address, Error::UNEXPECTED_TOKEN
+                l2_token == self.token_dispatcher.read().contract_address, Error::UNEXPECTED_TOKEN
             );
             let amount_low: Amount = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
@@ -187,8 +187,8 @@ pub mod RewardSupplier {
         }
 
         fn request_funds_if_needed(ref self: ContractState, unclaimed_rewards: Amount) {
-            let erc20_dispatcher = self.erc20_dispatcher.read();
-            let balance: Amount = erc20_dispatcher
+            let token_dispatcher = self.token_dispatcher.read();
+            let balance: Amount = token_dispatcher
                 .balance_of(account: get_contract_address())
                 .try_into()
                 .expect_with_err(Error::BALANCE_ISNT_AMOUNT_TYPE);
