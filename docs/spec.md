@@ -26,6 +26,7 @@
     - [set\_open\_for\_delegation](#set_open_for_delegation)
     - [claim\_delegation\_pool\_rewards](#claim_delegation_pool_rewards)
     - [staker\_info](#staker_info)
+    - [get\_staker\_info](#get_staker_info)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
     - [update\_rewards](#update_rewards)
@@ -61,6 +62,7 @@
     - [set\_final\_staker\_index](#set_final_staker_index)
     - [change\_reward\_address](#change_reward_address-1)
     - [pool\_member\_info](#pool_member_info)
+    - [get\_pool\_member\_info](#get_pool_member_info)
     - [contract\_parameters](#contract_parameters-1)
     - [update\_rewards](#update_rewards-1)
   - [Events](#events-1)
@@ -170,6 +172,7 @@ classDiagram
     set_open_for_delegation()
     claim_delegation_pool_rewards()
     staker_info()
+    get_staker_info()
     contract_parameters()
     update_rewards()
     get_total_stake()
@@ -188,6 +191,7 @@ classDiagram
     claim_rewards()
     change_reward_address()
     pool_member_info()
+    get_pool_member_info()
     contract_parameters()
     switch_delegation_pool()
     enter_delegation_pool_from_staking_contract()
@@ -773,6 +777,23 @@ Any address can execute.
 #### logic <!-- omit from toc -->
 1. Return Staker's info.
 
+### get_staker_info
+```rust
+fn get_staker_info(
+  self: @ContractState, 
+  staker_address: ContractAddress
+) -> Option<StakerInfo>
+```
+#### description <!-- omit from toc -->
+Returns Option<[StakerInfo](#stakerinfo)> of the given staker without throwing an error or panicking.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Returns `Option::Some` with [StakerInfo](#stakerinfo) if exists, otherwise `Option::None`.
+
 ### contract_parameters
 ```rust
 fn contract_parameters(self: @ContractState) -> StakingContractInfo
@@ -1302,6 +1323,23 @@ Return [PoolMemberInfo](#poolmemberinfo) of the given pool member.
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. Return Pool member info.
+
+### get_pool_member_info
+```rust
+fn get_pool_member_info(
+  self: @ContractState, 
+  pool_member: ContractAddress
+) -> Option<>PoolMemberInfo
+```
+#### description <!-- omit from toc -->
+Return Option<[PoolMemberInfo](#poolmemberinfo)> of the given pool member without throwing an error or panicking.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Returns `Option::Some` with [PoolMemberInfo](#poolmemberinfo) if exists, otherwise `Option::None`.
 
 ### contract_parameters
 ```rust

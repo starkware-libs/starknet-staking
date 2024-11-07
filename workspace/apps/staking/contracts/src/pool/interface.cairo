@@ -152,7 +152,7 @@ pub trait IPool<TContractState> {
     fn set_final_staker_index(ref self: TContractState, final_staker_index: Index);
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn pool_member_info(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
-    fn option_pool_member_info(
+    fn get_pool_member_info(
         self: @TContractState, pool_member: ContractAddress
     ) -> Option<PoolMemberInfo>;
     fn contract_parameters(self: @TContractState) -> PoolContractInfo;

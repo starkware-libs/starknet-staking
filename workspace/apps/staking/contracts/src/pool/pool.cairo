@@ -168,7 +168,7 @@ pub mod Pool {
             ref self: ContractState, pool_member: ContractAddress, amount: Amount
         ) -> Amount {
             self.assert_staker_is_active();
-            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
             assert_with_err(
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
@@ -202,7 +202,7 @@ pub mod Pool {
 
         fn exit_delegation_pool_intent(ref self: ContractState, amount: Amount) {
             let pool_member = get_caller_address();
-            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
             assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
             let old_delegated_stake = pool_member_info.amount;
@@ -235,7 +235,7 @@ pub mod Pool {
         fn exit_delegation_pool_action(
             ref self: ContractState, pool_member: ContractAddress
         ) -> Amount {
-            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let unpool_time = pool_member_info
                 .unpool_time
                 .expect_with_err(Error::MISSING_UNDELEGATE_INTENT);
@@ -268,7 +268,7 @@ pub mod Pool {
         }
 
         fn claim_rewards(ref self: ContractState, pool_member: ContractAddress) -> Amount {
-            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
             let reward_address = pool_member_info.reward_address;
             assert_with_err(
@@ -291,7 +291,7 @@ pub mod Pool {
         ) -> Amount {
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             let pool_member = get_caller_address();
-            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             assert_with_err(
                 pool_member_info.unpool_time.is_some(), Error::MISSING_UNDELEGATE_INTENT
             );
@@ -396,7 +396,7 @@ pub mod Pool {
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
             let pool_member = get_caller_address();
-            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let old_address = pool_member_info.reward_address;
             pool_member_info.reward_address = reward_address;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
@@ -409,7 +409,7 @@ pub mod Pool {
         }
 
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
-            let mut pool_member_info = self.get_pool_member_info(:pool_member);
+            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let updated_index = {
                 if let Option::Some(final_index) = self.final_staker_index.read() {
                     final_index
@@ -426,7 +426,7 @@ pub mod Pool {
             pool_member_info.into()
         }
 
-        fn option_pool_member_info(
+        fn get_pool_member_info(
             self: @ContractState, pool_member: ContractAddress
         ) -> Option<PoolMemberInfo> {
             if self.pool_member_info.read(pool_member).is_none() {
@@ -463,7 +463,7 @@ pub mod Pool {
 
     #[generate_trait]
     pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
-        fn get_pool_member_info(
+        fn internal_pool_member_info(
             self: @ContractState, pool_member: ContractAddress
         ) -> InternalPoolMemberInfo {
             self
@@ -473,7 +473,7 @@ pub mod Pool {
         }
 
         fn remove_pool_member(ref self: ContractState, pool_member: ContractAddress) {
-            let pool_member_info = self.get_pool_member_info(:pool_member);
+            let pool_member_info = self.internal_pool_member_info(:pool_member);
             self.pool_member_info.write(pool_member, Option::None);
             self
                 .emit(
@@ -539,7 +539,7 @@ pub mod Pool {
             if !self.is_staker_active() {
                 // Don't allow intent if an intent is already in progress and the staker is erased.
                 assert_with_err(
-                    self.get_pool_member_info(:pool_member).unpool_time.is_none(),
+                    self.internal_pool_member_info(:pool_member).unpool_time.is_none(),
                     Error::UNDELEGATE_IN_PROGRESS
                 );
                 return Time::now();
