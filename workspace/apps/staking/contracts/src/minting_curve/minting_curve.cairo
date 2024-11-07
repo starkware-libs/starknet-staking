@@ -12,6 +12,9 @@ pub mod MintingCurve {
     use openzeppelin::introspection::src5::SRC5Component;
     use contracts::constants::{DEFAULT_C_NUM, C_DENOM};
     use contracts::types::{Inflation, Amount};
+    use contracts_commons::interfaces::identity::Identity;
+    pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
+    pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
@@ -62,6 +65,17 @@ pub mod MintingCurve {
         self.total_supply.write(total_supply);
         self.l1_staking_minter_address.write(l1_staking_minter_address);
         self.c_num.write(DEFAULT_C_NUM);
+    }
+
+    #[abi(embed_v0)]
+    impl _Identity of Identity<ContractState> {
+        fn identify(self: @ContractState) -> felt252 {
+            CONTRACT_IDENTITY
+        }
+
+        fn version(self: @ContractState) -> felt252 {
+            CONTRACT_VERSION
+        }
     }
 
     #[l1_handler]

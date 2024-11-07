@@ -21,6 +21,9 @@ pub mod RewardSupplier {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts::types::Amount;
     use contracts_commons::types::time::{TimeStamp, Time};
+    use contracts_commons::interfaces::identity::Identity;
+    pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
+    pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -97,6 +100,17 @@ pub mod RewardSupplier {
             .write(IMintingCurveDispatcher { contract_address: minting_curve_contract });
         self.l1_staking_minter.write(l1_staking_minter);
         self.starkgate_address.write(starkgate_address);
+    }
+
+    #[abi(embed_v0)]
+    impl _Identity of Identity<ContractState> {
+        fn identify(self: @ContractState) -> felt252 {
+            CONTRACT_IDENTITY
+        }
+
+        fn version(self: @ContractState) -> felt252 {
+            CONTRACT_VERSION
+        }
     }
 
     #[abi(embed_v0)]
