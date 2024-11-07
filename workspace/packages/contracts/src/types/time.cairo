@@ -97,6 +97,9 @@ pub impl TimeImpl of Time {
     fn mul(self: TimeDelta, multiplier: u64) -> TimeDelta {
         TimeDelta { seconds: self.seconds * multiplier }
     }
+    fn div(self: TimeDelta, divider: u64) -> TimeDelta {
+        TimeDelta { seconds: self.seconds / divider }
+    }
     fn day(self: TimeStamp) -> u64 {
         self.seconds / DAY
     }
