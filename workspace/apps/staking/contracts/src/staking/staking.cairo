@@ -58,19 +58,33 @@ pub mod Staking {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        // The global index of the staking system. This is used to calculate the accrued interest.
         global_index: Index,
+        // The timestamp of the last global index update.
         global_index_last_update_timestamp: TimeStamp,
+        // Minimum amount of initial stake.
         min_stake: Amount,
+        // Map staker address to their staker info.
         staker_info: Map<ContractAddress, Option<InternalStakerInfo>>,
+        // Map operational address to staker address, as it must be a 1 to 1 mapping.
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
+        // Map potential operational address to eligibe staker address.
         eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
+        // A dispatcher of the token contract.
         token_dispatcher: IERC20Dispatcher,
+        // The total stake in the system.
         total_stake: Amount,
+        // The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
+        // Undelegate intents from pool contracts.
         pool_exit_intents: Map<UndelegateIntentKey, UndelegateIntentValue>,
+        // A dispatcher of the reward supplier contract.
         reward_supplier_dispatcher: IRewardSupplierDispatcher,
+        // Initial governor address of the spinned-off delegation pool contract.
         pool_contract_admin: ContractAddress,
+        // Storage of the `pause` flag state.
         is_paused: bool,
+        // Required delay (in seconds) between unstake intent and unstake action.
         exit_wait_window: TimeDelta,
     }
 
@@ -303,6 +317,8 @@ pub mod Staking {
             self.update_rewards(ref :staker_info);
 
             // Transfer rewards to staker's reward address and write updated staker info to storage.
+            // Note: `send_rewards_to_staker` alters `staker_info` thus commit to storage is
+            // performed only after that.
             let amount = staker_info.unclaimed_rewards_own;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
@@ -319,6 +335,7 @@ pub mod Staking {
 
             // Updating rewards last time for the staker, as they're about to exit.
             self.update_rewards(ref :staker_info);
+
             // Set the unstake time.
             let unstake_time = Time::now().add(self.exit_wait_window.read());
             staker_info.unstake_time = Option::Some(unstake_time);
@@ -362,7 +379,7 @@ pub mod Staking {
             assert_with_err(Time::now() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED);
 
             // Send rewards to staker's reward address.
-            // We must do it here and now because staker_info is about to be erased.
+            // It must be part of this function's flow because staker_info is about to be erased.
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
 
@@ -383,7 +400,7 @@ pub mod Staking {
             let mut staker_info = self.internal_staker_info(:staker_address);
             let old_address = staker_info.reward_address;
 
-            // Update new reward address.
+            // Update reward_address and commit to storage.
             staker_info.reward_address = reward_address;
             self.staker_info.write(staker_address, Option::Some(staker_info));
 
@@ -415,8 +432,8 @@ pub mod Staking {
                     :commission
                 );
 
-            // Update staker info. The reason we don't update_rewards in this function is because
-            // the delegated stake starts at 0.
+            // Update staker info and commit to storage.
+            // No need to update rewards as there is no change in staked amount (own or delegated).
             staker_info
                 .pool_info =
                     Option::Some(
@@ -474,6 +491,7 @@ pub mod Staking {
         fn change_operational_address(
             ref self: ContractState, operational_address: ContractAddress
         ) {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             assert_with_err(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
@@ -485,6 +503,8 @@ pub mod Staking {
                 self.eligible_operational_addresses.read(operational_address) == staker_address,
                 Error::OPERATIONAL_NOT_ELIGIBLE
             );
+
+            // Set operational address and write to storage.
             self
                 .operational_address_to_staker_address
                 .write(staker_info.operational_address, Zero::zero());
@@ -492,6 +512,8 @@ pub mod Staking {
             staker_info.operational_address = operational_address;
             self.staker_info.write(staker_address, Option::Some(staker_info));
             self.operational_address_to_staker_address.write(operational_address, staker_address);
+
+            // Emit event.
             self
                 .emit(
                     Events::OperationalAddressChanged {
@@ -511,6 +533,7 @@ pub mod Staking {
         }
 
         fn update_commission(ref self: ContractState, commission: Commission) {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
@@ -522,13 +545,19 @@ pub mod Staking {
                 return;
             }
             assert_with_err(commission < old_commission, Error::CANNOT_INCREASE_COMMISSION);
+
+            // Update rewards using the existing commission before changing the commission.
             self.update_rewards(ref :staker_info);
+
+            // Update commission in this contract, and in the associated pool contract.
             let mut pool_info = staker_info.get_pool_info_unchecked();
             pool_info.commission = commission;
             staker_info.pool_info = Option::Some(pool_info);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
             pool_dispatcher.update_commission_from_staking_contract(:commission);
+
+            // Emit event.
             self
                 .emit(
                     Events::CommissionChanged {
@@ -547,6 +576,7 @@ pub mod Staking {
         fn add_stake_from_pool(
             ref self: ContractState, staker_address: ContractAddress, amount: Amount
         ) -> Index {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -557,16 +587,22 @@ pub mod Staking {
                 pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
 
+            // Transfer funds from the pool contract to the staking contract.
+            // Sufficient approval is a pre-condition.
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher
                 .checked_transfer_from(
                     sender: pool_contract, recipient: get_contract_address(), amount: amount.into()
                 );
+
+            // Update the staker's staked amount, and add to total_stake.
             let old_delegated_stake = pool_info.amount;
             pool_info.amount += amount;
             staker_info.pool_info = Option::Some(pool_info);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             self.add_to_total_stake(:amount);
+
+            // Emit event.
             self
                 .emit(
                     Events::StakeBalanceChanged {
@@ -577,6 +613,7 @@ pub mod Staking {
                         new_delegated_stake: pool_info.amount
                     }
                 );
+
             staker_info.index
         }
 
@@ -586,6 +623,7 @@ pub mod Staking {
             identifier: felt252,
             amount: Amount,
         ) -> TimeStamp {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             self.update_rewards(ref :staker_info);
@@ -595,6 +633,8 @@ pub mod Staking {
                 let pool_info = staker_info.get_pool_info_unchecked();
                 (pool_info.amount, pool_info.pool_contract)
             };
+
+            // Update the delegated stake according to the new intent.
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             self
                 .update_delegated_stake(
@@ -607,9 +647,9 @@ pub mod Staking {
                     :staker_info, :undelegate_intent_key, new_intent_amount: amount
                 );
 
-            // Do not emit `StakeBalanceChanged` event when the staker is in the process of
-            // unstaking, as an event has already been emitted when the staker initiated the unstake
-            // intent, indicating that the staked amount and delegated amount are zero.
+            // If the staker is in the process of unstaking (intent called),
+            // an event indicating the staked amount (own and delegated) to be zero
+            // had already been emitted, thus unneeded now.
             if staker_info.unstake_time.is_none() {
                 self
                     .emit(
@@ -622,11 +662,14 @@ pub mod Staking {
                         }
                     );
             }
+
             self.staker_info.write(staker_address, Option::Some(staker_info));
+
             self.get_pool_exit_intent(:undelegate_intent_key).unpool_time
         }
 
         fn remove_from_delegation_pool_action(ref self: ContractState, identifier: felt252) {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
@@ -637,12 +680,16 @@ pub mod Staking {
             assert_with_err(
                 Time::now() >= undelegate_intent.unpool_time, Error::INTENT_WINDOW_NOT_FINISHED
             );
+
+            // Clear the intent, and transfer the intent amount to the pool contract.
             self.clear_undelegate_intent(:undelegate_intent_key);
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher
                 .checked_transfer(
                     recipient: pool_contract, amount: undelegate_intent.amount.into()
                 );
+
+            // Emit event.
             self
                 .emit(
                     Events::RemoveFromDelegationPoolAction {
@@ -659,6 +706,7 @@ pub mod Staking {
             data: Span<felt252>,
             identifier: felt252
         ) {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             if switched_amount.is_zero() {
                 return;
@@ -672,30 +720,39 @@ pub mod Staking {
             assert_with_err(
                 undelegate_intent_value.amount >= switched_amount, Error::AMOUNT_TOO_HIGH
             );
+
+            // Update rewards for `to_staker` before editing the staker_info.
             let mut to_staker_info = self.internal_staker_info(staker_address: to_staker);
             self.update_rewards(ref staker_info: to_staker_info);
+
+            // More asserts.
             assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             let mut to_staker_pool_info = to_staker_info.get_pool_info_unchecked();
             let to_staker_pool_contract = to_staker_pool_info.pool_contract;
             assert_with_err(to_pool == to_staker_pool_contract, Error::DELEGATION_POOL_MISMATCH);
 
+            // Update `to_staker`'s delegated stake amount, and add to total stake.
             let old_delegated_stake = to_staker_pool_info.amount;
             to_staker_pool_info.amount += switched_amount;
             to_staker_info.pool_info = Option::Some(to_staker_pool_info);
             self.staker_info.write(to_staker, Option::Some(to_staker_info));
             self.add_to_total_stake(amount: switched_amount);
 
+            // Update the undelegate intent. If the amount is zero, clear the intent.
             undelegate_intent_value.amount -= switched_amount;
             if undelegate_intent_value.amount.is_zero() {
                 self.clear_undelegate_intent(:undelegate_intent_key);
             } else {
                 self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
             }
+
+            // Notify `to_pool` about the new delegation.
             let to_pool_dispatcher = IPoolDispatcher { contract_address: to_pool };
             to_pool_dispatcher
                 .enter_delegation_pool_from_staking_contract(
                     amount: switched_amount, index: to_staker_info.index, :data
                 );
+            // Emit event.
             self
                 .emit(
                     Events::StakeBalanceChanged {
@@ -711,14 +768,19 @@ pub mod Staking {
         fn claim_delegation_pool_rewards(
             ref self: ContractState, staker_address: ContractAddress
         ) -> Index {
+            // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info_unchecked().pool_contract;
             assert_with_err(
                 pool_address == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT
             );
+
             self.update_rewards(ref :staker_info);
-            // The function update_rewards updated the index in staker_info.
+
+            // Send rewards to pool contract, and commit to storage.
+            // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
+            // is performed only after that.
             let updated_index = staker_info.index;
             let token_dispatcher = self.token_dispatcher.read();
             self
@@ -726,6 +788,7 @@ pub mod Staking {
                     :staker_address, ref :staker_info, :token_dispatcher
                 );
             self.staker_info.write(staker_address, Option::Some(staker_info));
+
             updated_index
         }
     }
