@@ -94,13 +94,12 @@ pub fn compute_global_index_diff(staking_rewards: Amount, total_stake: Amount) -
     if total_stake.is_zero() {
         return 0;
     }
-    let diff = u128_mul_wide_and_div_unsafe(
+    u128_mul_wide_and_div_unsafe(
         lhs: staking_rewards,
         rhs: BASE_VALUE,
         div: total_stake,
         error: Error::GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW,
-    );
-    diff.try_into().expect_with_err(Error::GLOBAL_INDEX_DIFF_NOT_INDEX_TYPE)
+    )
 }
 
 // Compute the rewards from the amount and interest.
@@ -179,7 +178,7 @@ mod tests {
             lhs: MAX_U64, rhs: MAX_U64, div: MAX_U64, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
         assert!(num == MAX_U64, "MAX_U64*MAX_U64/MAX_U64 calcaulated wrong");
-        let max_u33: u64 = 0x1_FFFF_FFFF; // 2**33 -1 
+        let max_u33: u64 = 0x1_FFFF_FFFF; // 2**33 -1
         // The following calculation is (2**33-1)*(2**33+1)/4 == (2**66-1)/4,
         // Which is MAX_U64 (== 2**64-1) when rounded down.
         let num = u64_mul_wide_and_div_unsafe(
@@ -214,7 +213,7 @@ mod tests {
     #[test]
     #[should_panic(expected: "Interest is too large, expected to fit in u128")]
     fn u64_mul_wide_and_ceil_div_unsafe_test_panic() {
-        let max_u33: u64 = 0x1_FFFF_FFFF; // 2**33 -1 
+        let max_u33: u64 = 0x1_FFFF_FFFF; // 2**33 -1
         // The following calculation is ceil((2**33-1)*(2**33+1)/4) == ceil((2**66-1)/4),
         // Which is MAX_U64+1 (== 2**64) when rounded up.
         u64_mul_wide_and_ceil_div_unsafe(

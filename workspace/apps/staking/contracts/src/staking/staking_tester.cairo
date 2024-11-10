@@ -11,7 +11,7 @@ pub trait IStakingTester<TContractState> {
 pub mod StakingTester {
     use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
-    use contracts::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW};
+    use contracts::constants::DEFAULT_EXIT_WAIT_WINDOW;
     use contracts::constants::MIN_TIME_BETWEEN_INDEX_UPDATES;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
     use contracts::staking::{StakerInfo, StakerPoolInfo, StakingContractInfo};
@@ -130,7 +130,7 @@ pub mod StakingTester {
             .reward_supplier_dispatcher
             .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
         self.pool_contract_admin.write(pool_contract_admin);
-        self.global_index.write(BASE_VALUE);
+        self.global_index.write(Zero::zero());
         self.global_index_last_update_timestamp.write(Time::now());
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
@@ -835,6 +835,10 @@ pub mod StakingTester {
             assert_with_err(!self.is_paused(), Error::CONTRACT_IS_PAUSED);
         }
 
+        fn assert_caller_is_not_zero(self: @ContractState) {
+            assert_with_err(get_caller_address().is_non_zero(), Error::CALLER_IS_ZERO_ADDRESS);
+        }
+
         fn internal_staker_info(
             self: @ContractState, staker_address: ContractAddress
         ) -> InternalStakerInfo {
@@ -996,6 +1000,7 @@ pub mod StakingTester {
         /// Wrap initial operations required in any public staking function.
         fn general_prerequisites(ref self: ContractState) {
             self.assert_is_unpaused();
+            self.assert_caller_is_not_zero();
             self.update_global_index_if_needed();
         }
 

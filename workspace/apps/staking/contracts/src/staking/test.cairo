@@ -13,7 +13,7 @@ use test_utils::{enter_delegation_pool_for_testing_using_dispatcher, load_option
 use test_utils::{load_from_simple_map, load_one_felt, stake_for_testing_using_dispatcher};
 use test_utils::{general_contract_system_deployment, cheat_reward_for_reward_supplier};
 use test_utils::{assert_panic_with_error, deploy_reward_supplier_contract, store_to_simple_map};
-use test_utils::constants;
+use test_utils::{constants, stake_from_zero_address};
 use constants::{DUMMY_ADDRESS, POOL_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS};
 use constants::{NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER};
 use constants::{OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS};
@@ -71,7 +71,7 @@ fn test_constructor() {
         state.token_dispatcher.read().contract_address, cfg.staking_contract_info.token_address
     );
     let contract_global_index = state.global_index.read();
-    assert_eq!(BASE_VALUE, contract_global_index);
+    assert_eq!(Zero::zero(), contract_global_index);
     let staker_address = state
         .operational_address_to_staker_address
         .read(cfg.staker_info.operational_address);
@@ -375,7 +375,7 @@ fn test_claim_delegation_pool_rewards() {
     // Stake with pool enabled.
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     // Update index in staking contract.
-    let updated_index = cfg.staker_info.index * 2;
+    let updated_index = cfg.staker_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -683,7 +683,7 @@ fn test_claim_rewards() {
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
-        serialized_value: array![(cfg.staker_info.index).into() * 2].span()
+        serialized_value: array![(cfg.staker_info.index + BASE_VALUE).into()].span()
     );
     // Funds reward supplier and set his unclaimed rewards.
     let expected_reward = cfg.staker_info.amount_own;
@@ -975,7 +975,7 @@ fn test_remove_from_delegation_pool_intent() {
     let mut intent_amount = cfg.pool_member_info.amount / 2;
 
     // Increase index.
-    let mut global_index = cfg.staker_info.index * 2;
+    let mut global_index = cfg.staker_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -1060,7 +1060,7 @@ fn test_remove_from_delegation_pool_intent() {
     intent_amount = intent_amount / 2;
 
     // Increase index.
-    global_index = global_index * 2;
+    global_index = global_index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -1333,7 +1333,7 @@ fn test_switch_staking_delegation_pool() {
     switch_pool_data.serialize(ref output: serialized_data);
 
     let switched_amount = cfg.pool_member_info.amount / 2;
-    let updated_index = cfg.staker_info.index * 2;
+    let updated_index = cfg.staker_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -2179,5 +2179,17 @@ fn test_get_staker_info() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let option_staker_info = staking_dispatcher.get_staker_info(:staker_address);
     assert_eq!(option_staker_info, Option::Some(expected_staker_info.into()));
+}
+
+
+#[test]
+#[should_panic(expected: "Zero address caller is not allowed")]
+fn test_assert_caller_is_not_zero() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    cfg.test_info.staker_address = Zero::zero();
+    stake_from_zero_address(:cfg, :token_address, :staking_contract);
 }
 
