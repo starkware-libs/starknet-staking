@@ -6,6 +6,7 @@ pub mod MintingCurve {
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
     use contracts::errors::{Error, assert_with_err};
     use starknet::{ContractAddress};
+    use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -16,9 +17,14 @@ pub mod MintingCurve {
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
+    component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
+
+    #[abi(embed_v0)]
+    impl ReplaceabilityImpl =
+        ReplaceabilityComponent::ReplaceabilityImpl<ContractState>;
 
     #[abi(embed_v0)]
     impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
@@ -27,20 +33,28 @@ pub mod MintingCurve {
     #[storage]
     struct Storage {
         #[substorage(v0)]
+        replaceability: ReplaceabilityComponent::Storage,
+        #[substorage(v0)]
         roles: RolesComponent::Storage,
         #[substorage(v0)]
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staking_dispatcher: IStakingDispatcher,
+        // Total supply of the token in L1. This is updated by the L1 reward supplier.
         total_supply: Amount,
+        // L1 reward supplier.
         l1_staking_minter_address: felt252,
+        // The numerator of the inflation rate. The denominator is C_DENOM. C_NUM / C_DENOM is the
+        // fraction of the total supply that can be minted in a year.
         c_num: Inflation
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
+        #[flat]
+        ReplaceabilityEvent: ReplaceabilityComponent::Event,
         #[flat]
         RolesEvent: RolesComponent::Event,
         #[flat]
@@ -78,6 +92,7 @@ pub mod MintingCurve {
         }
     }
 
+    // Message updating the total supply, sent by the L1 reward supplier.
     #[l1_handler]
     fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: Amount) {
         assert_with_err(
@@ -98,6 +113,9 @@ pub mod MintingCurve {
         /// - M: Yearly mint rate (%)
         /// - C: Max theoretical inflation (%)
         /// - S: Staking rate of total supply (%)
+        ///
+        /// If C, S and M are given as a fractions (instead of percentages), we get:
+        ///   M = C * sqrt(S).
         fn yearly_mint(self: @ContractState) -> Amount {
             let total_supply = self.total_supply.read();
             let staking_dispatcher = self.staking_dispatcher.read();
@@ -113,11 +131,16 @@ pub mod MintingCurve {
 
     #[abi(embed_v0)]
     impl IMintingCurveConfigImpl of IMintingCurveConfig<ContractState> {
+        // Set the maximum inflation rate that can be minted in a year.
+        // c_num is the numerator of the fraction c_num / C_DENOM (currently C_DENOM = 10,000).
+        // If you wish to set the inflation rate to 1.7%, you should set c_num to 170.
         fn set_c_num(ref self: ContractState, c_num: Inflation) {
             self.roles.only_token_admin();
             assert_with_err(c_num <= C_DENOM, Error::C_NUM_OUT_OF_RANGE);
+
             let old_c = self.c_num.read();
             self.c_num.write(c_num);
+
             self.emit(ConfigEvents::MintingCapChanged { old_c, new_c: c_num });
         }
     }
