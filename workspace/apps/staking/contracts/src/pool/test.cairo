@@ -1,6 +1,7 @@
 use core::num::traits::zero::Zero;
 use core::serde::Serde;
 use core::option::OptionTrait;
+use contracts::constants::{BASE_VALUE};
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::staking::interface::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
 use contracts::pool::interface::{IPool, IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
@@ -66,7 +67,7 @@ fn test_update_rewards() {
         commission: cfg.staker_info.get_pool_info_unchecked().commission
     );
 
-    let updated_index: Index = cfg.staker_info.index * 2;
+    let updated_index: Index = cfg.staker_info.index + BASE_VALUE;
     let mut pool_member_info = InternalPoolMemberInfo {
         reward_address: cfg.staker_info.reward_address,
         amount: cfg.staker_info.amount_own,
@@ -88,7 +89,7 @@ fn test_update_rewards() {
     state.update_rewards(ref :pool_member_info, :updated_index);
 
     let mut expected_pool_member_info = InternalPoolMemberInfo {
-        index: cfg.staker_info.index * 2, unclaimed_rewards, ..pool_member_info
+        index: cfg.staker_info.index + BASE_VALUE, unclaimed_rewards, ..pool_member_info
     };
     assert_eq!(pool_member_info, expected_pool_member_info);
 }
@@ -241,7 +242,7 @@ fn test_add_to_delegation_pool() {
 
     // Change global index.
     let index_before = first_pool_member_info.index;
-    let updated_index = first_pool_member_info.index * 2;
+    let updated_index = first_pool_member_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -358,7 +359,7 @@ fn test_add_to_delegation_pool_from_reward_address() {
     let pool_member_info = cfg.pool_member_info;
 
     let index_before = pool_member_info.index;
-    let updated_index = pool_member_info.index * 2;
+    let updated_index = pool_member_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -567,7 +568,7 @@ fn test_claim_rewards() {
     );
     // Update index for testing.
     // TODO: Wrap in a function.
-    let updated_index: Index = cfg.staker_info.index * 2;
+    let updated_index: Index = cfg.staker_info.index + BASE_VALUE;
     snforge_std::store(
         staking_contract, selector!("global_index"), array![updated_index.into()].span()
     );
@@ -691,7 +692,7 @@ fn test_exit_delegation_pool_action() {
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     // Change global index and exit delegation pool intent.
     let index_before = cfg.pool_member_info.index;
-    let updated_index = cfg.pool_member_info.index * 2;
+    let updated_index = cfg.pool_member_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -933,7 +934,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
     assert_eq!(pool_member_info, expected_pool_member_info);
 
     // Enter with an existing pool member.
-    let updated_index = index * 2;
+    let updated_index = index + BASE_VALUE;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     pool_dispatcher
         .enter_delegation_pool_from_staking_contract(:amount, index: updated_index, :data);

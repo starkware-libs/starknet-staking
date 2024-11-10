@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
-use contracts::staking::interface::{StakerPoolInfo, StakerInfo, StakerInfoTrait};
+use contracts::staking::interface::{StakerPoolInfo, StakerInfo};
 use core::num::traits::Zero;
-use contracts::errors::{Error, assert_with_err};
+use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
 use contracts::types::{Amount, Index};
 use contracts_commons::types::time::{TimeStamp, TimeDelta, Time};
 use core::cmp::max;
@@ -55,8 +55,7 @@ pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
     }
 
     fn get_pool_info_unchecked(self: @InternalStakerInfo) -> StakerPoolInfo {
-        let staker_info: StakerInfo = (*self).into();
-        return staker_info.get_pool_info_unchecked();
+        (*self.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 }
 
@@ -79,9 +78,7 @@ pub(crate) impl InternalStakerInfoInto of Into<InternalStakerInfo, StakerInfo> {
 pub impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
     fn is_valid(self: @UndelegateIntentValue) -> bool {
         // The value is valid if and only if unpool_time and amount are both zero or both non-zero.
-        let is_both_zero = self.unpool_time.is_zero() && self.amount.is_zero();
-        let is_both_non_zero = self.unpool_time.is_non_zero() && self.amount.is_non_zero();
-        return is_both_zero || is_both_non_zero;
+        self.unpool_time.is_zero() == self.amount.is_zero()
     }
 
     fn assert_valid(self: @UndelegateIntentValue) {

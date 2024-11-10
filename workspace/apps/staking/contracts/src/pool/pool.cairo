@@ -243,7 +243,7 @@ pub mod Pool {
             self.update_index_and_update_rewards(ref :pool_member_info);
             let unpool_time = self.undelegate_from_staking_contract_intent(:pool_member, :amount);
 
-            // Edit the pool member's to reflect the removal intent, and write to storage.
+            // Edit the pool member to reflect the removal intent, and write to storage.
             if amount.is_zero() {
                 pool_member_info.unpool_time = Option::None;
             } else {
@@ -590,6 +590,7 @@ pub mod Pool {
         /// Fields that are changed in pool_member_info:
         /// - unclaimed_rewards
         /// - index
+        /// - commission
         fn update_rewards(
             self: @ContractState, ref pool_member_info: InternalPoolMemberInfo, updated_index: Index
         ) {

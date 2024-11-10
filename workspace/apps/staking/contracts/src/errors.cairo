@@ -40,6 +40,7 @@ pub enum Error {
     CONTRACT_IS_PAUSED,
     INVALID_UNDELEGATE_INTENT_VALUE,
     OPERATIONAL_NOT_ELIGIBLE,
+    CALLER_IS_ZERO_ADDRESS,
     // Pool contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
@@ -125,6 +126,7 @@ pub impl ErrorImpl of ErrorTrait {
             Error::INSUFFICIENT_ALLOWANCE => "Insufficient ERC20 allowance",
             Error::INVALID_UNDELEGATE_INTENT_VALUE => "Invalid undelegate intent value",
             Error::UNEXPECTED_TOKEN => "UNEXPECTED_TOKEN",
+            Error::CALLER_IS_ZERO_ADDRESS => "Zero address caller is not allowed",
         }
     }
 }

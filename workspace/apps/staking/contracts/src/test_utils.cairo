@@ -474,6 +474,23 @@ pub(crate) fn stake_for_testing_using_dispatcher(
         );
 }
 
+pub(crate) fn stake_from_zero_address(
+    cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress
+) {
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address
+    );
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher
+        .stake(
+            cfg.staker_info.reward_address,
+            cfg.staker_info.operational_address,
+            cfg.staker_info.amount_own,
+            cfg.test_info.pool_enabled,
+            cfg.staker_info.get_pool_info_unchecked().commission
+        );
+}
+
 pub(crate) fn stake_with_pool_enabled(
     mut cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress
 ) -> ContractAddress {
@@ -674,7 +691,7 @@ pub fn cheat_reward_for_reward_supplier(
 
 pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> Amount {
     let index_before = cfg.pool_member_info.index;
-    cfg.pool_member_info.index *= 2;
+    cfg.pool_member_info.index += BASE_VALUE;
     let updated_index = cfg.pool_member_info.index;
     change_global_index(ref :cfg, index: updated_index);
 
@@ -819,7 +836,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
             amount_own: STAKE_AMOUNT,
-            index: BASE_VALUE,
+            index: Zero::zero(),
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(
                 StakerPoolInfo {
@@ -833,7 +850,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         let pool_member_info = InternalPoolMemberInfo {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             amount: POOL_MEMBER_STAKE_AMOUNT,
-            index: BASE_VALUE,
+            index: Zero::zero(),
             unclaimed_rewards: Zero::zero(),
             commission: COMMISSION,
             unpool_time: Option::None,
@@ -842,7 +859,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         let staking_contract_info = StakingContractInfo {
             min_stake: MIN_STAKE,
             token_address: TOKEN_ADDRESS(),
-            global_index: BASE_VALUE,
+            global_index: Zero::zero(),
             pool_contract_class_hash: declare_pool_contract(),
             reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW
