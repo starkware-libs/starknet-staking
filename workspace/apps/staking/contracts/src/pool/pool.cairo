@@ -54,10 +54,15 @@ pub mod Pool {
         #[substorage(v0)]
         roles: RolesComponent::Storage,
         staker_address: ContractAddress,
+        // Map pool member to their pool member info.
         pool_member_info: Map<ContractAddress, Option<InternalPoolMemberInfo>>,
+        // Holds the final staker index, in case the staker was erased from the staking contract.
         final_staker_index: Option<Index>,
+        // Dispatcher for the staking contract's pool functions.
         staking_pool_dispatcher: IStakingPoolDispatcher,
+        // Dispatcher for the token contract.
         token_dispatcher: IERC20Dispatcher,
+        // The commission rate for the pool, in BPS.
         commission: Commission,
     }
 
@@ -118,24 +123,34 @@ pub mod Pool {
         fn enter_delegation_pool(
             ref self: ContractState, reward_address: ContractAddress, amount: Amount
         ) {
+            // Asserts.
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
             assert_with_err(
                 self.pool_member_info.read(pool_member).is_none(), Error::POOL_MEMBER_EXISTS
             );
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
+
+            // Transfer funds from delegator. Sufficient approvals is a pre-condition.
             let token_dispatcher = self.token_dispatcher.read();
             let self_contract = get_contract_address();
             token_dispatcher
                 .checked_transfer_from(
                     sender: pool_member, recipient: self_contract, amount: amount.into()
                 );
+
+            // Approve staking contract to transfer funds from the pool.
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             token_dispatcher
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
+
+            // Notify the staking contract of the new delegated stake.
+            // This will complete the fund transfer to the staking contract.
             let staker_address = self.staker_address.read();
             let updated_index = staking_pool_dispatcher
                 .add_stake_from_pool(:staker_address, :amount);
+
+            // Create the pool member record.
             self
                 .pool_member_info
                 .write(
@@ -152,6 +167,8 @@ pub mod Pool {
                         }
                     )
                 );
+
+            // Emit events.
             self
                 .emit(
                     Events::NewPoolMember { pool_member, staker_address, reward_address, amount }
@@ -167,6 +184,7 @@ pub mod Pool {
         fn add_to_delegation_pool(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount
         ) -> Amount {
+            // Asserts.
             self.assert_staker_is_active();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
@@ -174,21 +192,33 @@ pub mod Pool {
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
                 Error::CALLER_CANNOT_ADD_TO_POOL
             );
+
+            // Transfer funds from delegator. Sufficient approvals is a pre-condition.
             let token_dispatcher = self.token_dispatcher.read();
             let self_contract = get_contract_address();
             token_dispatcher
                 .checked_transfer_from(
                     sender: caller_address, recipient: self_contract, amount: amount.into()
                 );
+
+            // Approve staking contract to transfer funds from the pool.
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             token_dispatcher
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
+
+            // Notify the staking contract of the new delegated stake, and receive updated index.
+            // This will complete the fund transfer to the staking contract.
             let updated_index = staking_pool_dispatcher
                 .add_stake_from_pool(staker_address: self.staker_address.read(), :amount);
+
+            // Update the pool member's record to account for accrued rewards and increased stake,
+            // and commit record to storage.
             self.update_rewards(ref :pool_member_info, :updated_index);
             let old_delegated_stake = pool_member_info.amount;
             pool_member_info.amount += amount;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+
+            // Emit events.
             self
                 .emit(
                     Events::PoolMemberBalanceChanged {
@@ -197,17 +227,23 @@ pub mod Pool {
                         new_delegated_stake: pool_member_info.amount
                     }
                 );
+
             pool_member_info.amount
         }
 
         fn exit_delegation_pool_intent(ref self: ContractState, amount: Amount) {
+            // Asserts.
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
             assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
             let old_delegated_stake = pool_member_info.amount;
+
+            // Update rewards and notify the staking contract of the removal intent.
             self.update_index_and_update_rewards(ref :pool_member_info);
             let unpool_time = self.undelegate_from_staking_contract_intent(:pool_member, :amount);
+
+            // Edit the pool member's to reflect the removal intent, and write to storage.
             if amount.is_zero() {
                 pool_member_info.unpool_time = Option::None;
             } else {
@@ -216,6 +252,8 @@ pub mod Pool {
             pool_member_info.unpool_amount = amount;
             pool_member_info.amount = total_amount - amount;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+
+            // Emit events.
             self
                 .emit(
                     Events::PoolMemberExitIntent {
@@ -235,39 +273,48 @@ pub mod Pool {
         fn exit_delegation_pool_action(
             ref self: ContractState, pool_member: ContractAddress
         ) -> Amount {
+            // Asserts.
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let unpool_time = pool_member_info
                 .unpool_time
                 .expect_with_err(Error::MISSING_UNDELEGATE_INTENT);
             assert_with_err(Time::now() >= unpool_time, Error::INTENT_WINDOW_NOT_FINISHED);
+
+            // Emit event.
             self
                 .emit(
                     Events::PoolMemberExitAction {
                         pool_member, unpool_amount: pool_member_info.unpool_amount
                     }
                 );
-            // Clear intent and receive funds from staking contract if needed.
+
+            // Perform removal action in the staking contract, receiving funds if needed.
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             staking_pool_dispatcher
                 .remove_from_delegation_pool_action(identifier: pool_member.into());
 
+            // Transfer rewards to delegator's reward address.
             let token_dispatcher = self.token_dispatcher.read();
-            // Claim rewards.
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
+
             // Transfer delegated amount to the pool member.
             let unpool_amount = pool_member_info.unpool_amount;
             pool_member_info.unpool_amount = Zero::zero();
             token_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
+
+            // Write the updated pool member info to storage (remove if needed).
             if pool_member_info.amount.is_zero() {
                 self.remove_pool_member(:pool_member);
             } else {
                 pool_member_info.unpool_time = Option::None;
                 self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             }
+
             unpool_amount
         }
 
         fn claim_rewards(ref self: ContractState, pool_member: ContractAddress) -> Amount {
+            // Asserts.
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
             let reward_address = pool_member_info.reward_address;
@@ -275,11 +322,14 @@ pub mod Pool {
                 caller_address == pool_member || caller_address == reward_address,
                 Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
             );
+
+            // Update index and rewards, send them to the pool member and commit to storage.
             self.update_index_and_update_rewards(ref :pool_member_info);
             let rewards = pool_member_info.unclaimed_rewards;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+
             rewards
         }
 
@@ -289,6 +339,7 @@ pub mod Pool {
             to_pool: ContractAddress,
             amount: Amount
         ) -> Amount {
+            // Asserts.
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
@@ -297,28 +348,27 @@ pub mod Pool {
             );
             assert_with_err(pool_member_info.unpool_amount >= amount, Error::AMOUNT_TOO_HIGH);
             let reward_address = pool_member_info.reward_address;
+
+            // Update pool_member_info and write to storage.
             pool_member_info.unpool_amount -= amount;
             if pool_member_info.unpool_amount.is_zero() && pool_member_info.amount.is_zero() {
-                // Claim rewards.
+                // Both unpool_amount and amount are zero, send rewards and remove pool member.
                 let token_dispatcher = self.token_dispatcher.read();
                 self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
                 self.remove_pool_member(:pool_member);
             } else {
                 // One of pool_member_info.unpool_amount or pool_member_info.amount is non-zero.
                 if pool_member_info.unpool_amount.is_zero() {
+                    // unpool_amount is zero, clear unpool_time.
                     pool_member_info.unpool_time = Option::None;
                 }
                 self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
             }
+
+            // Serialize the switch pool data and invoke the staking contract to switch pool.
             let switch_pool_data = SwitchPoolData { pool_member, reward_address };
             let mut serialized_data = array![];
             switch_pool_data.serialize(ref output: serialized_data);
-            self
-                .emit(
-                    Events::SwitchDelegationPool {
-                        pool_member, new_delegation_pool: to_pool, amount
-                    }
-                );
             self
                 .staking_pool_dispatcher
                 .read()
@@ -329,23 +379,41 @@ pub mod Pool {
                     data: serialized_data.span(),
                     identifier: pool_member.into()
                 );
+
+            // Emit event.
+            self
+                .emit(
+                    Events::SwitchDelegationPool {
+                        pool_member, new_delegation_pool: to_pool, amount
+                    }
+                );
+
             pool_member_info.unpool_amount
         }
 
+        /// This function is called by the staking contract to enter the pool during a pool switch.
         fn enter_delegation_pool_from_staking_contract(
             ref self: ContractState, amount: Amount, index: Index, data: Span<felt252>
         ) {
+            // Asserts.
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             assert_with_err(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
+
+            // Deserialize the switch pool data.
             let mut serialized = data;
             let switch_pool_data: SwitchPoolData = Serde::deserialize(ref :serialized)
                 .expect_with_err(Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED);
             let pool_member = switch_pool_data.pool_member;
+
+            // Create or update the pool member info, depending on whether the pool member exists,
+            // and then commit to storage.
             let pool_member_info = match self.pool_member_info.read(pool_member) {
                 Option::Some(mut pool_member_info) => {
+                    // Pool member already exists. Need to update pool_member_info to account for
+                    // the accrued rewards and then update the delegated amount.
                     assert_with_err(
                         pool_member_info.reward_address == switch_pool_data.reward_address,
                         Error::REWARD_ADDRESS_MISMATCH
@@ -355,6 +423,7 @@ pub mod Pool {
                     pool_member_info
                 },
                 Option::None => {
+                    // Pool member does not exist. Create a new record.
                     InternalPoolMemberInfo {
                         reward_address: switch_pool_data.reward_address,
                         amount,
@@ -367,6 +436,8 @@ pub mod Pool {
                 }
             };
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+
+            // Emit event.
             self
                 .emit(
                     Events::PoolMemberBalanceChanged {
@@ -377,7 +448,10 @@ pub mod Pool {
                 );
         }
 
+        /// This function is called by the staking contract to notify the pool that the staker has
+        /// been erased from the staking contract.
         fn set_final_staker_index(ref self: ContractState, final_staker_index: Index) {
+            // Asserts.
             assert_with_err(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
@@ -385,7 +459,11 @@ pub mod Pool {
             assert_with_err(
                 self.final_staker_index.read().is_none(), Error::FINAL_STAKER_INDEX_ALREADY_SET
             );
+
+            // All future functionality that requires the staker index, will use this final index.
             self.final_staker_index.write(Option::Some(final_staker_index));
+
+            // Emit event.
             self
                 .emit(
                     Events::FinalIndexSet {
@@ -398,8 +476,12 @@ pub mod Pool {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let old_address = pool_member_info.reward_address;
+
+            // Update reward_address and commit to storage.
             pool_member_info.reward_address = reward_address;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+
+            // Emit event.
             self
                 .emit(
                     Events::PoolMemberRewardAddressChanged {
@@ -408,8 +490,11 @@ pub mod Pool {
                 );
         }
 
+        // This function provides the pool member info (with projected rewards).
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
+
+            // Retrieve the staker's index before calculating the rewards.
             let updated_index = {
                 if let Option::Some(final_index) = self.final_staker_index.read() {
                     final_index
@@ -418,7 +503,8 @@ pub mod Pool {
                 }
             };
 
-            // Keep old commission, which the unclaimed rewards are calculated according to.
+            // Update rewards to show the viewer the accurate pending rewards.
+            // The commission must be reversed to the original value.
             let commission = pool_member_info.commission;
             self.update_rewards(ref :pool_member_info, :updated_index);
             pool_member_info.commission = commission;
@@ -448,6 +534,7 @@ pub mod Pool {
         fn update_commission_from_staking_contract(
             ref self: ContractState, commission: Commission
         ) {
+            // Asserts.
             let old_commission = self.commission.read();
             if commission == old_commission {
                 return;
@@ -457,6 +544,7 @@ pub mod Pool {
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
+
             self.commission.write(commission);
         }
     }
