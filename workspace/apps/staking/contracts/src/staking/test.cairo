@@ -30,6 +30,7 @@ use event_test_utils::{assert_global_index_updated_event, assert_exit_wait_windo
 use event_test_utils::assert_rewards_supplied_to_delegation_pool_event;
 use event_test_utils::{assert_staker_reward_claimed_event, assert_reward_supplier_changed_event};
 use event_test_utils::assert_remove_from_delegation_pool_action_event;
+use event_test_utils::assert_remove_from_delegation_pool_intent_event;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use starknet::ContractAddress;
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
@@ -1027,9 +1028,8 @@ fn test_remove_from_delegation_pool_intent() {
     assert_eq!(staking_dispatcher.get_total_stake(), expected_total_stake);
 
     // Validate that the data written in the exit intents map is updated.
-    let undelegate_intent_key = UndelegateIntentKey {
-        pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
-    };
+    let identifier: felt252 = cfg.test_info.pool_member_address.into();
+    let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
     let actual_undelegate_intent_value = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),
         key: undelegate_intent_key,
@@ -1042,13 +1042,21 @@ fn test_remove_from_delegation_pool_intent() {
     };
     assert_eq!(actual_undelegate_intent_value, expected_undelegate_intent_value);
 
-    // Validate StakeBalanceChanged event.
+    // Validate StakeBalanceChanged and RemoveFromDelegationPoolIntent events.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 1, message: "remove_from_delegation_pool_intent"
+        actual: events.len(), expected: 2, message: "remove_from_delegation_pool_intent"
+    );
+    assert_remove_from_delegation_pool_intent_event(
+        spied_event: events[0],
+        staker_address: cfg.test_info.staker_address,
+        :pool_contract,
+        :identifier,
+        old_intent_amount: Zero::zero(),
+        new_intent_amount: intent_amount
     );
     assert_stake_balance_changed_event(
-        spied_event: events[0],
+        spied_event: events[1],
         staker_address: cfg.test_info.staker_address,
         old_self_stake: cfg.staker_info.amount_own,
         old_delegated_stake: initial_delegated_stake,
@@ -1057,7 +1065,8 @@ fn test_remove_from_delegation_pool_intent() {
     );
 
     // Decrease intent amount.
-    intent_amount = intent_amount / 2;
+    let old_intent_amount = intent_amount;
+    let new_intent_amount = old_intent_amount / 2;
 
     // Increase index.
     global_index = global_index + BASE_VALUE;
@@ -1072,7 +1081,7 @@ fn test_remove_from_delegation_pool_intent() {
         .remove_from_delegation_pool_intent(
             staker_address: cfg.test_info.staker_address,
             identifier: cfg.test_info.pool_member_address.into(),
-            amount: intent_amount
+            amount: new_intent_amount
         );
 
     // Validate that the staker info is updated.
@@ -1092,7 +1101,7 @@ fn test_remove_from_delegation_pool_intent() {
         + pool_rewards_including_commission
         - commission_amount;
     let prev_delegated_stake = cur_delegated_stake;
-    cur_delegated_stake = initial_delegated_stake - intent_amount;
+    cur_delegated_stake = initial_delegated_stake - new_intent_amount;
     expected_staker_info =
         InternalStakerInfo {
             unclaimed_rewards_own: staker_unclaimed_rewards,
@@ -1112,7 +1121,7 @@ fn test_remove_from_delegation_pool_intent() {
     );
 
     // Validate that the total stake is updated.
-    let expected_total_stake = old_total_stake - intent_amount;
+    let expected_total_stake = old_total_stake - new_intent_amount;
     assert_eq!(staking_dispatcher.get_total_stake(), expected_total_stake);
 
     // Validate that the data written in the exit intents map is updated.
@@ -1127,14 +1136,22 @@ fn test_remove_from_delegation_pool_intent() {
     let expected_unpool_time = Time::now()
         .add(staking_dispatcher.contract_parameters().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
-        unpool_time: expected_unpool_time, amount: intent_amount
+        unpool_time: expected_unpool_time, amount: new_intent_amount
     };
     assert_eq!(actual_undelegate_intent_value, expected_undelegate_intent_value);
 
-    // Validate StakeBalanceChanged event.
+    // Validate StakeBalanceChanged and RemoveFromDelegationPoolIntent events.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 2, message: "remove_from_delegation_pool_intent"
+        actual: events.len(), expected: 3, message: "remove_from_delegation_pool_intent"
+    );
+    assert_remove_from_delegation_pool_intent_event(
+        spied_event: events[0],
+        staker_address: cfg.test_info.staker_address,
+        :pool_contract,
+        :identifier,
+        :old_intent_amount,
+        :new_intent_amount
     );
     assert_stake_balance_changed_event(
         spied_event: events[1],
