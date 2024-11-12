@@ -1,3 +1,4 @@
+use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::interfaces::identity::{IdentityDispatcher, IdentityDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
@@ -17,6 +18,53 @@ pub fn cheat_account_contract_address_once(
     cheat_account_contract_address(
         :contract_address, account_contract_address: caller_address, span: CheatSpan::TargetCalls(1)
     );
+}
+
+
+pub fn set_caller_as_upgrade_governor(contract: ContractAddress, caller: ContractAddress) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: caller);
+    roles_dispatcher.register_upgrade_governor(account: caller);
+}
+
+pub fn set_account_as_security_admin(
+    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
+    roles_dispatcher.register_security_admin(:account);
+}
+
+pub fn set_account_as_security_agent(
+    contract: ContractAddress, account: ContractAddress, security_admin: ContractAddress
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: security_admin);
+    roles_dispatcher.register_security_agent(:account);
+}
+
+pub fn set_account_as_app_role_admin(
+    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
+    roles_dispatcher.register_app_role_admin(:account);
+}
+
+pub fn set_account_as_upgrade_governor(
+    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
+    roles_dispatcher.register_upgrade_governor(:account);
+}
+
+pub fn set_account_as_token_admin(
+    contract: ContractAddress, account: ContractAddress, app_role_admin: ContractAddress
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: app_role_admin);
+    roles_dispatcher.register_token_admin(:account);
 }
 
 pub fn cheat_caller_address_once(
