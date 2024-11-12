@@ -29,6 +29,7 @@
     - [get\_staker\_info](#get_staker_info)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
+    - [get\_pool\_exit\_intent](#get_pool_exit_intent)
     - [update\_rewards](#update_rewards)
     - [declare\_operational\_address](#declare_operational_address)
     - [change\_operational\_address](#change_operational_address)
@@ -138,6 +139,8 @@
     - [PoolMemberInfo](#poolmemberinfo)
     - [PoolContractInfo](#poolcontractinfo)
     - [RewardSupplierInfo](#rewardsupplierinfo)
+    - [UndelegateIntentKey](#undelegateintentkey)
+    - [UndelegateIntentValue](#undelegateintentvalue)
 
 </details>
 
@@ -187,6 +190,7 @@ classDiagram
     contract_parameters()
     update_rewards()
     get_total_stake()
+    get_pool_exit_intent()
     set_min_stake()
     set_exit_wait_window()
     set_reward_supplier()
@@ -834,6 +838,20 @@ Return the total stake amount.
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 
+### get_pool_exit_intent
+```rust
+fn get_pool_exit_intent(
+    self: @TContractState,
+    undelegate_intent_key: UndelegateIntentKey
+    ) -> UndelegateIntentValue
+```
+#### description <!-- omit from toc -->
+Return the [UndelegateIntentValue](#undelegateintentvalue).
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+#### logic <!-- omit from toc -->
 
 ### update_rewards
 >**note:** internal logic
@@ -1786,3 +1804,15 @@ Only token admin.
 | last_timestamp                | u64       |
 | unclaimed_rewards             | u128      |
 | l1_pending_requested_amount   | u128      |
+
+### UndelegateIntentKey
+| name                          | type      |
+| ----------------------------- | --------- |
+| pool_contract                 | address       |
+| identifier                    | felt252      |
+
+### UndelegateIntentValue
+| name                          | type      |
+| ----------------------------- | --------- |
+| unpool_time                   | u64       |
+| amount                        | u128      |

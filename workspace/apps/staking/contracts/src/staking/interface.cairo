@@ -2,6 +2,7 @@ use starknet::{ContractAddress, ClassHash};
 use contracts::errors::{Error, OptionAuxTrait};
 use contracts::types::{Commission, Index, Amount};
 use contracts_commons::types::time::{TimeStamp, TimeDelta};
+use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 
 pub mod Events {
     use starknet::ContractAddress;
@@ -194,6 +195,9 @@ pub trait IStaking<TContractState> {
     ) -> Option<StakerInfo>;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
+    fn get_pool_exit_intent(
+        self: @TContractState, undelegate_intent_key: UndelegateIntentKey
+    ) -> UndelegateIntentValue;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
