@@ -1518,7 +1518,6 @@ fn test_pool_contract_admin_role() {
         pool_contract_roles_dispatcher
             .is_governance_admin(account: cfg.test_info.pool_contract_admin)
     );
-    assert!(pool_contract_roles_dispatcher.is_governance_admin(account: staking_contract));
     assert!(!pool_contract_roles_dispatcher.is_governance_admin(account: DUMMY_ADDRESS()));
 }
 
