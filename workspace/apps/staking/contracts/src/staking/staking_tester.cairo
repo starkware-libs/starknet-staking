@@ -417,6 +417,15 @@ pub mod StakingTester {
             self.total_stake.read()
         }
 
+        fn get_pool_exit_intent(
+            self: @ContractState, undelegate_intent_key: UndelegateIntentKey
+        ) -> UndelegateIntentValue {
+            let undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
+            // The following assertion serves as a sanity check.
+            undelegate_intent_value.assert_valid();
+            undelegate_intent_value
+        }
+
         fn update_global_index_if_needed(ref self: ContractState) -> bool {
             self.assert_is_unpaused();
             if self.is_index_update_needed() {
@@ -1002,15 +1011,6 @@ pub mod StakingTester {
             self.assert_is_unpaused();
             self.assert_caller_is_not_zero();
             self.update_global_index_if_needed();
-        }
-
-        fn get_pool_exit_intent(
-            self: @ContractState, undelegate_intent_key: UndelegateIntentKey
-        ) -> UndelegateIntentValue {
-            let undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
-            // The following assertion serves as a sanity check.
-            undelegate_intent_value.assert_valid();
-            undelegate_intent_value
         }
     }
 }

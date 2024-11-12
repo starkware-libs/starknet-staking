@@ -2243,3 +2243,43 @@ fn test_assert_caller_is_not_zero() {
     stake_from_zero_address(:cfg, :token_address, :staking_contract);
 }
 
+#[test]
+fn test_get_pool_exit_intent() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    let pool_member = cfg.test_info.pool_member_address;
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    let exit_wait_window = staking_dispatcher.contract_parameters().exit_wait_window;
+    // Before intent
+    let undelegate_intent_key = UndelegateIntentKey {
+        pool_contract, identifier: pool_member.into()
+    };
+    let undelegate_intent_value = staking_dispatcher.get_pool_exit_intent(:undelegate_intent_key);
+    assert_eq!(undelegate_intent_value, Zero::zero());
+    // After intent
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
+    pool_dispatcher.exit_delegation_pool_intent(amount: 2);
+    let undelegate_intent_value = staking_dispatcher.get_pool_exit_intent(:undelegate_intent_key);
+    let expected = UndelegateIntentValue {
+        unpool_time: Time::now().add(exit_wait_window), amount: 2
+    };
+    assert_eq!(undelegate_intent_value, expected);
+    // Edit intent
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
+    pool_dispatcher.exit_delegation_pool_intent(amount: 1);
+    let undelegate_intent_value = staking_dispatcher.get_pool_exit_intent(:undelegate_intent_key);
+    let expected = UndelegateIntentValue {
+        unpool_time: Time::now().add(exit_wait_window), amount: 1
+    };
+    assert_eq!(undelegate_intent_value, expected);
+    // Cancel intent
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
+    pool_dispatcher.exit_delegation_pool_intent(amount: 0);
+    let undelegate_intent_value = staking_dispatcher.get_pool_exit_intent(:undelegate_intent_key);
+    assert_eq!(undelegate_intent_value, Zero::zero());
+}
