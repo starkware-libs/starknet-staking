@@ -720,8 +720,10 @@ pub mod Staking {
             if switched_amount.is_zero() {
                 return;
             }
-            let pool_contract = get_caller_address();
-            let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
+            let from_pool = get_caller_address();
+            let undelegate_intent_key = UndelegateIntentKey {
+                pool_contract: from_pool, identifier
+            };
             let mut undelegate_intent_value = self.get_pool_exit_intent(:undelegate_intent_key);
             assert_with_err(
                 undelegate_intent_value.is_non_zero(), Error::MISSING_UNDELEGATE_INTENT
@@ -729,6 +731,7 @@ pub mod Staking {
             assert_with_err(
                 switched_amount <= undelegate_intent_value.amount, Error::AMOUNT_TOO_HIGH
             );
+            assert_with_err(to_pool != from_pool, Error::SELF_SWITCH_NOT_ALLOWED);
 
             // Update rewards for `to_staker` before editing the staker_info.
             let mut to_staker_info = self.internal_staker_info(staker_address: to_staker);

@@ -41,6 +41,7 @@ pub enum Error {
     INVALID_UNDELEGATE_INTENT_VALUE,
     OPERATIONAL_NOT_ELIGIBLE,
     CALLER_IS_ZERO_ADDRESS,
+    SELF_SWITCH_NOT_ALLOWED,
     // Pool contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
@@ -127,6 +128,7 @@ pub impl ErrorImpl of ErrorTrait {
             Error::INVALID_UNDELEGATE_INTENT_VALUE => "Invalid undelegate intent value",
             Error::UNEXPECTED_TOKEN => "UNEXPECTED_TOKEN",
             Error::CALLER_IS_ZERO_ADDRESS => "Zero address caller is not allowed",
+            Error::SELF_SWITCH_NOT_ALLOWED => "SELF_SWITCH_NOT_ALLOWED",
         }
     }
 }
