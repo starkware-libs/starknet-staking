@@ -50,6 +50,8 @@
     - [Staker Reward Address Changed](#staker-reward-address-changed)
     - [Operational Address Declared](#operational-address-declared)
     - [Operational Address Changed](#operational-address-changed)
+    - [Remove From Delegation Pool Intent](#remove-from-delegation-pool-intent)
+    - [Remove From Delegation Pool Action](#remove-from-delegation-pool-action)
     - [Global Index Updated](#global-index-updated)
     - [Paused](#paused)
     - [Unpaused](#unpaused)
@@ -608,7 +610,8 @@ fn remove_from_delegation_pool_intent(
 Inform the staker that an amount will be reduced from the delegation pool.
 Return the time in which the pool member will be able to exit.
 #### emits <!-- omit from toc -->
-1. [Stake Balance Changed](#stake-balance-changed)
+1. [Remove From Delegation Pool Intent](#remove-from-delegation-pool-intent)
+2. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
@@ -639,6 +642,7 @@ fn remove_from_delegation_pool_action(
 Execute the intent to remove funds from pool if enough time have passed.
 Transfers the funds to the pool contract.
 #### emits <!-- omit from toc -->
+1. [Remove From Delegation Pool Action](#remove-from-delegation-pool-action)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
@@ -1077,6 +1081,22 @@ Only token admin.
 | staker_address | address | ✅     |
 | new_address    | address | ❌     |
 | old_address    | address | ❌     |
+
+### Remove From Delegation Pool Intent
+| data              | type    | keyed  |
+| ----------------- | ------- | ------ |
+| staker_address    | address | ✅     |
+| pool_contract     | address | ✅     |
+| identifier        | felt252 | ✅     |
+| old_intent_amount | u128    | ❌     |
+| new_intent_amount | u128    | ❌     |
+
+### Remove From Delegation Pool Action
+| data              | type    | keyed  |
+| ----------------- | ------- | ------ |
+| pool_contract     | address | ✅     |
+| identifier        | felt252 | ✅     |
+| amount            | u128    | ❌     |
 
 ### Global Index Updated
 | data                                  | type | keyed |

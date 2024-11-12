@@ -112,6 +112,18 @@ pub mod Events {
     }
 
     #[derive(Drop, starknet::Event)]
+    pub struct RemoveFromDelegationPoolIntent {
+        #[key]
+        pub staker_address: ContractAddress,
+        #[key]
+        pub pool_contract: ContractAddress,
+        #[key]
+        pub identifier: felt252,
+        pub old_intent_amount: Amount,
+        pub new_intent_amount: Amount
+    }
+
+    #[derive(Drop, starknet::Event)]
     pub struct RemoveFromDelegationPoolAction {
         #[key]
         pub pool_contract: ContractAddress,

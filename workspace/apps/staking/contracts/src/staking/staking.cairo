@@ -116,7 +116,8 @@ pub mod Staking {
         ExitWaitWindowChanged: ConfigEvents::ExitWaitWindowChanged,
         RewardSupplierChanged: ConfigEvents::RewardSupplierChanged,
         OperationalAddressDeclared: Events::OperationalAddressDeclared,
-        RemoveFromDelegationPoolAction: Events::RemoveFromDelegationPoolAction
+        RemoveFromDelegationPoolIntent: Events::RemoveFromDelegationPoolIntent,
+        RemoveFromDelegationPoolAction: Events::RemoveFromDelegationPoolAction,
     }
 
     #[constructor]
@@ -648,17 +649,24 @@ pub mod Staking {
 
             // Update the delegated stake according to the new intent.
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
-            self
-                .update_delegated_stake(
-                    ref :staker_info,
-                    old_intent_amount: self.get_pool_exit_intent(:undelegate_intent_key).amount,
-                    new_intent_amount: amount
-                );
+            let old_intent_amount = self.get_pool_exit_intent(:undelegate_intent_key).amount;
+            let new_intent_amount = amount;
+            self.update_delegated_stake(ref :staker_info, :old_intent_amount, :new_intent_amount);
             self
                 .update_undelegate_intent_value(
-                    :staker_info, :undelegate_intent_key, new_intent_amount: amount
+                    :staker_info, :undelegate_intent_key, :new_intent_amount
                 );
 
+            self
+                .emit(
+                    Events::RemoveFromDelegationPoolIntent {
+                        staker_address,
+                        pool_contract,
+                        identifier,
+                        old_intent_amount,
+                        new_intent_amount
+                    }
+                );
             // If the staker is in the process of unstaking (intent called),
             // an event indicating the staked amount (own and delegated) to be zero
             // had already been emitted, thus unneeded now.
