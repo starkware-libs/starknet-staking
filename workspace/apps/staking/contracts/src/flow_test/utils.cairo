@@ -145,14 +145,14 @@ pub struct MintingCurveRoles {
 ///
 /// # Fields
 /// - `initial_supply` (Amount): The initial supply of tokens to be minted.
-/// - `governance_admin` (ContractAddress): The address of the governance administrator.
-/// - `l1_staking_minter` (felt252): The address of the L1 staking minter.
-/// - `roles` (MintingCurveRoles): The roles involved in the minting curve contract.
+/// - `governance_admin` (ContractAddress).
+/// - `l1_reward_supplier` (felt252).
+/// - `roles` (MintingCurveRoles).
 #[derive(Drop, Copy)]
 pub struct MintingCurveConfig {
     pub initial_supply: Amount,
     pub governance_admin: ContractAddress,
-    pub l1_staking_minter: felt252,
+    pub l1_reward_supplier: felt252,
     pub roles: MintingCurveRoles,
 }
 
@@ -171,7 +171,7 @@ impl MintingCurveImpl of MintingCurveTrait {
         let mut calldata = ArrayTrait::new();
         staking.address.serialize(ref calldata);
         self.initial_supply.serialize(ref calldata);
-        self.l1_staking_minter.serialize(ref calldata);
+        self.l1_reward_supplier.serialize(ref calldata);
         self.governance_admin.serialize(ref calldata);
         let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap().contract_class();
         let (minting_curve_contract_address, _) = minting_curve_contract.deploy(@calldata).unwrap();
@@ -221,14 +221,14 @@ pub struct RewardSupplierRoles {
 ///
 /// # Fields
 /// - `base_mint_amount` (Amount): The base amount of tokens to be minted.
-/// - `l1_staking_minter` (felt252): The address of the L1 staking minter.
+/// - `l1_reward_supplier` (felt252).
 /// - `starkgate_address` (ContractAddress): The address of the StarkGate contract.
 /// - `governance_admin` (ContractAddress): The address of the governance administrator.
 /// - `roles` (RewardSupplierRoles): The roles involved in the reward supplier contract.
 #[derive(Drop, Copy)]
 pub struct RewardSupplierConfig {
     pub base_mint_amount: Amount,
-    pub l1_staking_minter: felt252,
+    pub l1_reward_supplier: felt252,
     pub starkgate_address: ContractAddress,
     pub governance_admin: ContractAddress,
     pub roles: RewardSupplierRoles
@@ -256,7 +256,7 @@ pub impl RewardSupplierImpl of RewardSupplierTrait {
         minting_curve.address.serialize(ref calldata);
         staking.address.serialize(ref calldata);
         token.address.serialize(ref calldata);
-        self.l1_staking_minter.serialize(ref calldata);
+        self.l1_reward_supplier.serialize(ref calldata);
         self.starkgate_address.serialize(ref calldata);
         self.governance_admin.serialize(ref calldata);
         let reward_supplier_contract = snforge_std::declare("RewardSupplier")
@@ -338,7 +338,7 @@ pub impl SystemImpl of SystemTrait {
         let minting_curve = MintingCurveConfig {
             initial_supply: cfg.test_info.initial_supply.try_into().unwrap(),
             governance_admin: cfg.test_info.governance_admin,
-            l1_staking_minter: cfg.reward_supplier.l1_staking_minter,
+            l1_reward_supplier: cfg.reward_supplier.l1_reward_supplier,
             roles: MintingCurveRoles {
                 upgrade_governor: cfg.test_info.upgrade_governor,
                 app_role_admin: cfg.test_info.app_role_admin,
@@ -347,7 +347,7 @@ pub impl SystemImpl of SystemTrait {
         };
         let reward_supplier = RewardSupplierConfig {
             base_mint_amount: cfg.reward_supplier.base_mint_amount,
-            l1_staking_minter: cfg.reward_supplier.l1_staking_minter,
+            l1_reward_supplier: cfg.reward_supplier.l1_reward_supplier,
             starkgate_address: cfg.reward_supplier.starkgate_address,
             governance_admin: cfg.test_info.governance_admin,
             roles: RewardSupplierRoles { upgrade_governor: cfg.test_info.upgrade_governor }

@@ -244,7 +244,7 @@ classDiagram
     minting_curve_dispatcher,
     staking_contract,
     erc20_dispatcher,
-    l1_staking_minter,
+    l1_reward_supplier,
     calculate_staking_rewards()
     claim_rewards()
     on_receive()
@@ -253,7 +253,7 @@ classDiagram
   class MintingCurve {
     staking_dispatcher,
     total_supply,
-    l1_staking_minter_address,
+    l1_reward_supplier,
     yearly_mint()
     set_c_num()
   }

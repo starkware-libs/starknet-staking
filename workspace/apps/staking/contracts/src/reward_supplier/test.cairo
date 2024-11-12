@@ -75,7 +75,7 @@ fn test_reward_supplier_constructor() {
         state.minting_curve_dispatcher.read().contract_address,
         cfg.reward_supplier.minting_curve_contract
     );
-    assert_eq!(state.l1_staking_minter.read(), cfg.reward_supplier.l1_staking_minter);
+    assert_eq!(state.l1_reward_supplier.read(), cfg.reward_supplier.l1_reward_supplier);
     assert_eq!(state.last_timestamp.read(), Time::now());
     assert_eq!(state.unclaimed_rewards.read(), STRK_IN_FRIS);
 }
@@ -184,7 +184,7 @@ fn test_calculate_staking_rewards() {
                     MessageToL1 {
                         to_address: cfg
                             .reward_supplier
-                            .l1_staking_minter
+                            .l1_reward_supplier
                             .try_into()
                             .expect('not EthAddress'),
                         payload: array![base_mint_amount.into()]
@@ -246,8 +246,7 @@ fn test_on_receive() {
     );
     for _ in 0
         ..num_msgs {
-            // Transfer base_mint_amount to the reward supplier contract as it received from l1
-            // staking minter.
+            // Transfer base_mint_amount to the reward supplier.
             fund(
                 sender: cfg.test_info.owner_address,
                 recipient: reward_supplier_contract,
@@ -265,7 +264,7 @@ fn test_on_receive() {
                         amount: base_mint_amount.into(),
                         depositor: cfg
                             .reward_supplier
-                            .l1_staking_minter
+                            .l1_reward_supplier
                             .try_into()
                             .expect('not EthAddress'),
                         message: array![].span()
@@ -295,7 +294,7 @@ fn test_on_receive_caller_not_starkgate() {
         .on_receive(
             l2_token: cfg.staking_contract_info.token_address,
             amount: cfg.reward_supplier.base_mint_amount.into(),
-            depositor: cfg.reward_supplier.l1_staking_minter.try_into().expect('not EthAddress'),
+            depositor: cfg.reward_supplier.l1_reward_supplier.try_into().expect('not EthAddress'),
             message: array![].span()
         );
 }
@@ -320,7 +319,7 @@ fn test_on_receive_unexpected_token() {
         .on_receive(
             l2_token: not_l2_token,
             amount: cfg.reward_supplier.base_mint_amount.into(),
-            depositor: cfg.reward_supplier.l1_staking_minter.try_into().expect('not EthAddress'),
+            depositor: cfg.reward_supplier.l1_reward_supplier.try_into().expect('not EthAddress'),
             message: array![].span()
         );
 }

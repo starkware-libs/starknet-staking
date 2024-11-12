@@ -13,6 +13,8 @@ pub(crate) mod AlignUpgVars {
         token_dispatcher: ContractAddress,
         pool_contract_class_hash: ClassHash,
         pool_contract_admin: ContractAddress,
+        l1_staking_minter: felt252,
+        l1_reward_supplier: felt252,
     }
 
     #[abi(embed_v0)]
@@ -39,6 +41,14 @@ pub(crate) mod AlignUpgVars {
             // in this case, we must not replace it.
             if self.token_dispatcher.read() == Zero::zero() {
                 self.token_dispatcher.write(current_dispatcher_address);
+            }
+
+            // 4. If applicable, copy l1_staking_minter to l1_reward_supplier.
+            let current_l1_address = self.l1_staking_minter.read();
+            // If current_l1_address is not empty we assume it's already set correctly.
+            // in this case, we must not replace it.
+            if self.l1_reward_supplier.read() == Zero::zero() {
+                self.l1_reward_supplier.write(current_l1_address);
             }
         }
     }

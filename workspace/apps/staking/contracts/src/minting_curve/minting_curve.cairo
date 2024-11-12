@@ -44,7 +44,7 @@ pub mod MintingCurve {
         // Total supply of the token in L1. This is updated by the L1 reward supplier.
         total_supply: Amount,
         // L1 reward supplier.
-        l1_staking_minter_address: felt252,
+        l1_reward_supplier: felt252,
         // The numerator of the inflation rate. The denominator is C_DENOM. C_NUM / C_DENOM is the
         // fraction of the total supply that can be minted in a year.
         c_num: Inflation
@@ -71,13 +71,13 @@ pub mod MintingCurve {
         ref self: ContractState,
         staking_contract: ContractAddress,
         total_supply: Amount,
-        l1_staking_minter_address: felt252,
+        l1_reward_supplier: felt252,
         governance_admin: ContractAddress
     ) {
         self.roles.initialize(:governance_admin);
         self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
         self.total_supply.write(total_supply);
-        self.l1_staking_minter_address.write(l1_staking_minter_address);
+        self.l1_reward_supplier.write(l1_reward_supplier);
         self.c_num.write(DEFAULT_C_NUM);
     }
 
@@ -96,8 +96,7 @@ pub mod MintingCurve {
     #[l1_handler]
     fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: Amount) {
         assert_with_err(
-            from_address == self.l1_staking_minter_address.read(),
-            Error::UNAUTHORIZED_MESSAGE_SENDER
+            from_address == self.l1_reward_supplier.read(), Error::UNAUTHORIZED_MESSAGE_SENDER
         );
         let old_total_supply = self.total_supply.read();
         self.total_supply.write(total_supply);

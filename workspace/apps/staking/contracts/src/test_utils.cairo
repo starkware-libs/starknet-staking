@@ -20,7 +20,7 @@ use constants::{INITIAL_SUPPLY, OWNER_ADDRESS, MIN_STAKE, STAKER_INITIAL_BALANCE
 use constants::{STAKE_AMOUNT, STAKER_ADDRESS, OPERATIONAL_ADDRESS, STAKER_REWARD_ADDRESS};
 use constants::{TOKEN_ADDRESS, COMMISSION, POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT};
 use constants::{POOL_MEMBER_ADDRESS, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_INITIAL_BALANCE};
-use constants::{BASE_MINT_AMOUNT, BUFFER, L1_STAKING_MINTER_ADDRESS};
+use constants::{BASE_MINT_AMOUNT, BUFFER, L1_REWARD_SUPPLIER};
 use constants::{STAKING_CONTRACT_ADDRESS, MINTING_CONTRACT_ADDRESS, STARKGATE_ADDRESS};
 use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_ADMIN};
 use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN};
@@ -47,7 +47,7 @@ pub(crate) mod constants {
     pub const STAKER_FINAL_INDEX: Index = 10;
     pub const BASE_MINT_AMOUNT: Amount = 8000000000000000;
     pub const BUFFER: Amount = 1000000000000;
-    pub const L1_STAKING_MINTER_ADDRESS: felt252 = 'L1_MINTER';
+    pub const L1_REWARD_SUPPLIER: felt252 = 'L1_REWARD_SUPPLIER';
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
     pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
     pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
@@ -227,12 +227,12 @@ pub(crate) fn initialize_pool_state(
 pub(crate) fn initialize_minting_curve_state(
     staking_contract: ContractAddress,
     total_supply: Amount,
-    l1_staking_minter_address: felt252,
+    l1_reward_supplier: felt252,
     governance_admin: ContractAddress
 ) -> MintingCurve::ContractState {
     let mut state = MintingCurve::contract_state_for_testing();
     MintingCurve::constructor(
-        ref state, :staking_contract, :total_supply, :l1_staking_minter_address, :governance_admin
+        ref state, :staking_contract, :total_supply, :l1_reward_supplier, :governance_admin
     );
     state
 }
@@ -245,7 +245,7 @@ pub(crate) fn initialize_reward_supplier_state_from_cfg(
         minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
         staking_contract: cfg.test_info.staking_contract,
         :token_address,
-        l1_staking_minter: cfg.reward_supplier.l1_staking_minter,
+        l1_reward_supplier: cfg.reward_supplier.l1_reward_supplier,
         starkgate_address: cfg.reward_supplier.starkgate_address,
         governance_admin: cfg.test_info.governance_admin
     )
@@ -255,7 +255,7 @@ pub(crate) fn initialize_reward_supplier_state(
     minting_curve_contract: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
-    l1_staking_minter: felt252,
+    l1_reward_supplier: felt252,
     starkgate_address: ContractAddress,
     governance_admin: ContractAddress
 ) -> RewardSupplier::ContractState {
@@ -266,7 +266,7 @@ pub(crate) fn initialize_reward_supplier_state(
         :minting_curve_contract,
         :staking_contract,
         :token_address,
-        :l1_staking_minter,
+        :l1_reward_supplier,
         :starkgate_address,
         :governance_admin
     );
@@ -374,7 +374,7 @@ pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractA
         .expect('initial supply does not fit');
     cfg.test_info.staking_contract.serialize(ref calldata);
     initial_supply.serialize(ref calldata);
-    cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
+    cfg.reward_supplier.l1_reward_supplier.serialize(ref calldata);
     cfg.test_info.governance_admin.serialize(ref calldata);
     let minting_curve_contract = snforge_std::declare("MintingCurve").unwrap().contract_class();
     let (minting_curve_contract_address, _) = minting_curve_contract.deploy(@calldata).unwrap();
@@ -397,7 +397,7 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     cfg.reward_supplier.minting_curve_contract.serialize(ref calldata);
     cfg.test_info.staking_contract.serialize(ref calldata);
     cfg.staking_contract_info.token_address.serialize(ref calldata);
-    cfg.reward_supplier.l1_staking_minter.serialize(ref calldata);
+    cfg.reward_supplier.l1_reward_supplier.serialize(ref calldata);
     cfg.reward_supplier.starkgate_address.serialize(ref calldata);
     cfg.test_info.governance_admin.serialize(ref calldata);
     let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap().contract_class();
@@ -822,7 +822,7 @@ pub(crate) struct TestInfo {
 struct RewardSupplierInfo {
     pub base_mint_amount: Amount,
     pub minting_curve_contract: ContractAddress,
-    pub l1_staking_minter: felt252,
+    pub l1_reward_supplier: felt252,
     pub buffer: Amount,
     pub starkgate_address: ContractAddress,
 }
@@ -895,7 +895,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,
             minting_curve_contract: MINTING_CONTRACT_ADDRESS(),
-            l1_staking_minter: L1_STAKING_MINTER_ADDRESS,
+            l1_reward_supplier: L1_REWARD_SUPPLIER,
             buffer: BUFFER,
             starkgate_address: STARKGATE_ADDRESS(),
         };
