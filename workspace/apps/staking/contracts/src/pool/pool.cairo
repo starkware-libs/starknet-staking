@@ -95,9 +95,10 @@ pub mod Pool {
         staker_address: ContractAddress,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
-        commission: Commission
+        commission: Commission,
+        governance_admin: ContractAddress
     ) {
-        self.roles.initialize(governance_admin: staking_contract);
+        self.roles.initialize(:governance_admin);
         self.replaceability.upgrade_delay.write(Zero::zero());
         self.staker_address.write(staker_address);
         self

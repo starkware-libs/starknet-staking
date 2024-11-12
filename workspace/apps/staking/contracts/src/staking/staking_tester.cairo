@@ -948,7 +948,7 @@ pub mod StakingTester {
         ) -> ContractAddress {
             let class_hash = self.pool_contract_class_hash.read();
             let contract_address_salt: felt252 = Time::now().seconds.into();
-            let admin = self.pool_contract_admin.read();
+            let governance_admin = self.pool_contract_admin.read();
             let pool_contract = deploy_delegation_pool_contract(
                 :class_hash,
                 :contract_address_salt,
@@ -956,7 +956,7 @@ pub mod StakingTester {
                 :staking_contract,
                 :token_address,
                 :commission,
-                :admin
+                :governance_admin
             );
             self.emit(Events::NewDelegationPool { staker_address, pool_contract, commission });
             pool_contract

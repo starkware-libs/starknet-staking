@@ -21,7 +21,7 @@ use contracts::test_utils::constants;
 use constants::{STAKER_ADDRESS, STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS, DUMMY_ADDRESS};
 use constants::{OTHER_REWARD_ADDRESS, NON_POOL_MEMBER_ADDRESS, COMMISSION, STAKER_FINAL_INDEX};
 use constants::{NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_POOL_MEMBER_ADDRESS};
-use constants::{OTHER_OPERATIONAL_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS};
+use constants::{OTHER_OPERATIONAL_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS, POOL_CONTRACT_ADMIN};
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use contracts::staking::objects::UndelegateIntentValueZero;
 use contracts::staking::objects::InternalStakerInfoTrait;
@@ -64,7 +64,8 @@ fn test_update_rewards() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: STAKING_CONTRACT_ADDRESS(),
         :token_address,
-        commission: cfg.staker_info.get_pool_info_unchecked().commission
+        commission: cfg.staker_info.get_pool_info_unchecked().commission,
+        governance_admin: cfg.test_info.pool_contract_admin
     );
 
     let updated_index: Index = cfg.staker_info.index + BASE_VALUE;
@@ -107,7 +108,8 @@ fn test_send_rewards_to_member() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: STAKING_CONTRACT_ADDRESS(),
         :token_address,
-        commission: cfg.staker_info.get_pool_info_unchecked().commission
+        commission: cfg.staker_info.get_pool_info_unchecked().commission,
+        governance_admin: cfg.test_info.pool_contract_admin
     );
     // Setup pool_member_info and expected results before sending rewards.
     let unclaimed_rewards = POOL_MEMBER_UNCLAIMED_REWARDS;
@@ -409,7 +411,8 @@ fn test_assert_staker_is_active() {
         staker_address: STAKER_ADDRESS(),
         staking_contract: STAKING_CONTRACT_ADDRESS(),
         token_address: TOKEN_ADDRESS(),
-        commission: COMMISSION
+        commission: COMMISSION,
+        governance_admin: POOL_CONTRACT_ADMIN()
     );
     assert!(state.final_staker_index.read().is_none());
     state.assert_staker_is_active();
@@ -422,7 +425,8 @@ fn test_assert_staker_is_active_panic() {
         staker_address: STAKER_ADDRESS(),
         staking_contract: STAKING_CONTRACT_ADDRESS(),
         token_address: TOKEN_ADDRESS(),
-        commission: COMMISSION
+        commission: COMMISSION,
+        governance_admin: POOL_CONTRACT_ADMIN()
     );
     state.final_staker_index.write(Option::Some(5));
     state.assert_staker_is_active();
@@ -435,7 +439,8 @@ fn test_set_final_staker_index() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: STAKING_CONTRACT_ADDRESS(),
         token_address: cfg.staking_contract_info.token_address,
-        commission: cfg.staker_info.get_pool_info_unchecked().commission
+        commission: cfg.staker_info.get_pool_info_unchecked().commission,
+        governance_admin: cfg.test_info.pool_contract_admin
     );
     cheat_caller_address_once(
         contract_address: test_address(), caller_address: STAKING_CONTRACT_ADDRESS()
@@ -462,7 +467,8 @@ fn test_set_final_staker_index_caller_is_not_staking_contract() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: STAKING_CONTRACT_ADDRESS(),
         token_address: cfg.staking_contract_info.token_address,
-        commission: cfg.staker_info.get_pool_info_unchecked().commission
+        commission: cfg.staker_info.get_pool_info_unchecked().commission,
+        governance_admin: cfg.test_info.pool_contract_admin
     );
     cheat_caller_address_once(
         contract_address: test_address(), caller_address: NOT_STAKING_CONTRACT_ADDRESS()
@@ -478,7 +484,8 @@ fn test_set_final_staker_index_already_set() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: STAKING_CONTRACT_ADDRESS(),
         token_address: cfg.staking_contract_info.token_address,
-        commission: cfg.staker_info.get_pool_info_unchecked().commission
+        commission: cfg.staker_info.get_pool_info_unchecked().commission,
+        governance_admin: cfg.test_info.pool_contract_admin
     );
     cheat_caller_address(
         contract_address: test_address(),
@@ -541,7 +548,8 @@ fn test_change_reward_address_pool_member_not_exist() {
         staker_address: cfg.test_info.staker_address,
         :staking_contract,
         :token_address,
-        commission: cfg.staker_info.get_pool_info_unchecked().commission
+        commission: cfg.staker_info.get_pool_info_unchecked().commission,
+        governance_admin: cfg.test_info.pool_contract_admin
     );
     cheat_caller_address_once(
         contract_address: test_address(), caller_address: NON_POOL_MEMBER_ADDRESS()
@@ -871,7 +879,8 @@ fn test_claim_rewards_pool_member_not_exist() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: STAKING_CONTRACT_ADDRESS(),
         :token_address,
-        commission: cfg.staker_info.get_pool_info_unchecked().commission
+        commission: cfg.staker_info.get_pool_info_unchecked().commission,
+        governance_admin: cfg.test_info.pool_contract_admin
     );
     state.claim_rewards(pool_member: NON_POOL_MEMBER_ADDRESS());
 }
