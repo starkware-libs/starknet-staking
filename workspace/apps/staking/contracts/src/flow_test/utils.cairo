@@ -10,9 +10,9 @@ use core::num::traits::zero::Zero;
 use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use starknet::{ContractAddress, ClassHash};
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
-use contracts::test_utils::{set_account_as_upgrade_governor, set_account_as_security_admin};
-use contracts::test_utils::{set_account_as_security_agent, set_account_as_app_role_admin};
-use contracts::test_utils::set_account_as_token_admin;
+use contracts_commons::test_utils::{set_account_as_upgrade_governor, set_account_as_security_admin};
+use contracts_commons::test_utils::{set_account_as_security_agent, set_account_as_app_role_admin};
+use contracts_commons::test_utils::set_account_as_token_admin;
 use contracts::test_utils::StakingInitConfig;
 use contracts_commons::test_utils::{cheat_caller_address_once, TokenState, TokenConfig, TokenTrait};
 use snforge_std::start_cheat_block_timestamp_global;
@@ -95,7 +95,7 @@ pub impl StakingImpl of StakingTrait {
             governance_admin: self.governance_admin
         );
         set_account_as_security_agent(
-            staking_contract: self.address,
+            contract: self.address,
             account: self.roles.security_agent,
             security_admin: self.roles.security_admin
         );

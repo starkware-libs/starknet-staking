@@ -8,7 +8,6 @@ use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
 use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPauseDispatcherTrait};
 use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use core::num::traits::zero::Zero;
-use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts::pool::Pool;
 use contracts::pool::interface::{InternalPoolMemberInfo, IPoolDispatcher, IPoolDispatcherTrait};
 use contracts::minting_curve::interface::MintingCurveContractInfo;
@@ -26,6 +25,8 @@ use constants::{REWARD_SUPPLIER_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, SECURITY_
 use constants::{SECURITY_AGENT, TOKEN_ADMIN, GOVERNANCE_ADMIN};
 use constants::{APP_ROLE_ADMIN, UPGRADE_GOVERNOR};
 use contracts_commons::test_utils::cheat_caller_address_once;
+use contracts_commons::test_utils::{set_account_as_token_admin, set_account_as_security_admin};
+use contracts_commons::test_utils::{set_account_as_security_agent, set_account_as_app_role_admin};
 use contracts_commons::constants::{NAME, SYMBOL};
 use snforge_std::byte_array::try_deserialize_bytearray_error;
 use snforge_std::test_address;
@@ -309,7 +310,7 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
         governance_admin: cfg.test_info.governance_admin
     );
     set_account_as_security_agent(
-        :staking_contract,
+        contract: staking_contract,
         account: cfg.test_info.security_agent,
         security_admin: cfg.test_info.security_admin
     );
@@ -323,46 +324,6 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
         account: cfg.test_info.token_admin,
         app_role_admin: cfg.test_info.app_role_admin
     );
-}
-
-pub(crate) fn set_account_as_security_admin(
-    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
-) {
-    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
-    cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
-    roles_dispatcher.register_security_admin(:account);
-}
-
-pub(crate) fn set_account_as_security_agent(
-    staking_contract: ContractAddress, account: ContractAddress, security_admin: ContractAddress
-) {
-    let roles_dispatcher = IRolesDispatcher { contract_address: staking_contract };
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: security_admin);
-    roles_dispatcher.register_security_agent(:account);
-}
-
-pub(crate) fn set_account_as_app_role_admin(
-    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
-) {
-    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
-    cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
-    roles_dispatcher.register_app_role_admin(:account);
-}
-
-pub(crate) fn set_account_as_upgrade_governor(
-    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
-) {
-    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
-    cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
-    roles_dispatcher.register_upgrade_governor(:account);
-}
-
-pub(crate) fn set_account_as_token_admin(
-    contract: ContractAddress, account: ContractAddress, app_role_admin: ContractAddress
-) {
-    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
-    cheat_caller_address_once(contract_address: contract, caller_address: app_role_admin);
-    roles_dispatcher.register_token_admin(:account);
 }
 
 pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractAddress {
@@ -791,12 +752,6 @@ pub fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArra
             expected_error
         ),
     }
-}
-
-fn set_caller_as_upgrade_governor(contract_address: ContractAddress, caller: ContractAddress) {
-    let roles_dispatcher = IRolesDispatcher { contract_address: contract_address };
-    cheat_caller_address_once(:contract_address, caller_address: caller);
-    roles_dispatcher.register_upgrade_governor(account: caller);
 }
 
 #[derive(Drop, Copy)]
