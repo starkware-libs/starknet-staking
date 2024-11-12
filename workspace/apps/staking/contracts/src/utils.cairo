@@ -126,7 +126,7 @@ pub fn u256_ceil_of_division(dividend: u256, divisor: u256) -> u256 {
     (dividend + divisor - 1) / divisor
 }
 
-// Compute the threshold for requesting funds from L1 Staking Minter.
+// Compute the threshold for requesting funds from L1 Reward Supplier.
 pub fn compute_threshold(base_mint_amount: Amount) -> Amount {
     base_mint_amount / 2
 }

@@ -61,7 +61,7 @@ pub mod RewardSupplier {
         staking_contract: ContractAddress,
         token_dispatcher: IERC20Dispatcher,
         // L1 reward supplier contract.
-        l1_staking_minter: felt252,
+        l1_reward_supplier: felt252,
         // Token bridge address.
         starkgate_address: ContractAddress,
     }
@@ -88,7 +88,7 @@ pub mod RewardSupplier {
         minting_curve_contract: ContractAddress,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
-        l1_staking_minter: felt252,
+        l1_reward_supplier: felt252,
         starkgate_address: ContractAddress,
         governance_admin: ContractAddress
     ) {
@@ -104,7 +104,7 @@ pub mod RewardSupplier {
         self
             .minting_curve_dispatcher
             .write(IMintingCurveDispatcher { contract_address: minting_curve_contract });
-        self.l1_staking_minter.write(l1_staking_minter);
+        self.l1_reward_supplier.write(l1_reward_supplier);
         self.starkgate_address.write(starkgate_address);
     }
 
@@ -251,7 +251,7 @@ pub mod RewardSupplier {
                 let num_msgs = ceil_of_division(dividend: diff, divisor: base_mint_amount);
                 let total_amount = num_msgs * base_mint_amount;
                 for _ in 0..num_msgs {
-                    self.send_mint_request_to_l1_staking_minter();
+                    self.send_mint_request_to_l1_reward_supplier();
                 };
                 self.emit(Events::MintRequest { total_amount, num_msgs });
                 l1_pending_requested_amount += total_amount;
@@ -261,9 +261,9 @@ pub mod RewardSupplier {
             self.l1_pending_requested_amount.write(l1_pending_requested_amount);
         }
 
-        fn send_mint_request_to_l1_staking_minter(self: @ContractState) {
+        fn send_mint_request_to_l1_reward_supplier(self: @ContractState) {
             let payload = array![self.base_mint_amount.read().into()].span();
-            let to_address = self.l1_staking_minter.read();
+            let to_address = self.l1_reward_supplier.read();
             send_message_to_l1_syscall(:to_address, :payload).unwrap_syscall();
         }
     }
