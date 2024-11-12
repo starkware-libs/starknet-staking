@@ -1671,6 +1671,23 @@ fn test_change_operational_address_operational_address_exists() {
 }
 
 #[test]
+#[should_panic(expected: "Unstake is in progress, staker is in an exit window")]
+fn test_change_operational_address_unstake_in_progress() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+    let operational_address = OTHER_OPERATIONAL_ADDRESS();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.unstake_intent();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.change_operational_address(:operational_address);
+}
+
+#[test]
 #[should_panic(expected: "Operational address had not been declared by staker")]
 fn test_change_operational_address_is_not_eligible() {
     let mut cfg: StakingInitConfig = Default::default();
@@ -1921,6 +1938,23 @@ fn test_set_open_for_delegation_commission_out_of_range() {
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address
     );
     staking_dispatcher.set_open_for_delegation(commission: COMMISSION_DENOMINATOR + 1);
+}
+
+#[test]
+#[should_panic(expected: "Unstake is in progress, staker is in an exit window")]
+fn test_set_open_for_delegation_unstake_in_progress() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.unstake_intent();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_open_for_delegation(commission: COMMISSION_DENOMINATOR - 1);
 }
 
 #[test]

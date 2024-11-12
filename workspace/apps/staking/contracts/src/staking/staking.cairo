@@ -421,6 +421,7 @@ pub mod Staking {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
+            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
             assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
 
@@ -500,6 +501,7 @@ pub mod Staking {
             );
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
+            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             assert_with_err(
                 self.eligible_operational_addresses.read(operational_address) == staker_address,
                 Error::OPERATIONAL_NOT_ELIGIBLE
