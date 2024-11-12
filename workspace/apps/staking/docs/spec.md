@@ -781,7 +781,7 @@ fn staker_info(
 Return [StakerInfo](#stakerinfo) of the given staker.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.
 #### access control <!-- omit from toc -->
