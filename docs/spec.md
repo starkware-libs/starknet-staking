@@ -36,6 +36,9 @@
     - [is\_paused](#is_paused)
     - [pause](#pause)
     - [unpause](#unpause)
+    - [set\_min\_stake](#set_min_stake)
+    - [set\_exit\_wait\_window](#set_exit_wait_window)
+    - [set\_reward\_supplier](#set_reward_supplier)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
@@ -50,6 +53,9 @@
     - [Global Index Updated](#global-index-updated)
     - [Paused](#paused)
     - [Unpaused](#unpaused)
+    - [Minimum Stake Changed](#minimum-stake-changed)
+    - [Exit Wait Window Changed](#exit-wait-window-changed)
+    - [Reward Supplier Changed](#reward-supplier-changed)
 - [Delegation pool contract](#delegation-pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -85,8 +91,10 @@
 - [Minting Curve Contract](#minting-curve-contract)
   - [Functions](#functions-3)
     - [yearly\_mint](#yearly_mint)
+    - [set\_c\_num](#set_c_num)
   - [Events](#events-3)
     - [Total Supply Changed](#total-supply-changed)
+    - [Minting Cap Changed](#minting-cap-changed)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -118,6 +126,7 @@
     - [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
     - [ONLY\_SECURITY\_AGENT](#only_security_agent)
     - [ONLY\_SECURITY\_ADMIN](#only_security_admin)
+    - [ONLY\_TOKEN\_ADMIN](#only_token_admin)
     - [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
     - [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
 - [Structs](#structs)
@@ -176,7 +185,9 @@ classDiagram
     contract_parameters()
     update_rewards()
     get_total_stake()
-
+    set_min_stake()
+    set_exit_wait_window()
+    set_reward_supplier()
   }
   class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
@@ -242,6 +253,7 @@ classDiagram
     total_supply,
     l1_staking_minter_address,
     yearly_mint()
+    set_c_num()
   }
   StakingContract o-- StakerInfo
   StakerInfo o-- StakerPoolInfo
@@ -769,7 +781,7 @@ fn staker_info(
 Return [StakerInfo](#stakerinfo) of the given staker.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.
 #### access control <!-- omit from toc -->
@@ -946,6 +958,51 @@ Unpause the staking contract.
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only security admin.
+#### logic <!-- omit from toc -->
+
+### set_min_stake
+```rust
+fn set_min_stake(ref self: ContractState, min_stake: Amount)
+```
+#### description <!-- omit from toc -->
+Set the minimum stake.
+#### emits <!-- omit from toc -->
+1. [Minimum Stake Changed](#minimum-stake-changed)
+#### errors <!-- omit from toc -->
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only token admin.
+#### logic <!-- omit from toc -->
+
+### set_exit_wait_window
+```rust
+fn set_exit_wait_window(ref self: ContractState, exit_wait_window: TimeDelta)
+```
+#### description <!-- omit from toc -->
+Set the exit wait window.
+#### emits <!-- omit from toc -->
+1. [Exit Wait Window Changed](#exit-wait-window-changed)
+#### errors <!-- omit from toc -->
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only token admin.
+#### logic <!-- omit from toc -->
+
+### set_reward_supplier
+```rust
+fn set_reward_supplier(ref self: ContractState, reward_supplier: ContractAddress)
+```
+#### description <!-- omit from toc -->
+Set the reward supplier.
+#### emits <!-- omit from toc -->
+1. [Reward Supplier Changed](#reward-supplier-changed)
+#### errors <!-- omit from toc -->
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only token admin.
 #### logic <!-- omit from toc -->
 
 ## Events
@@ -1533,6 +1590,21 @@ Return the amount to be minted in a year given the current total stake in the st
 #### access control <!-- omit from toc -->
 Any address can execute.
 
+### set_c_num
+```rust
+fn set_c_num(ref self: ContractState, c_num: Inflation) 
+```
+#### description <!-- omit from toc -->
+Set the miniting cap.
+#### emits <!-- omit from toc -->
+1. [Minting Cap Changed](#minting-cap-changed)
+#### errors <!-- omit from toc -->
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only token admin.
+#### logic <!-- omit from toc -->
+
 ## Events
 ### Total Supply Changed
 | data                 | type | keyed |
@@ -1630,6 +1702,9 @@ Any address can execute.
 
 ### ONLY_SECURITY_ADMIN
 "ONLY_SECURITY_ADMIN"
+
+### ONLY_TOKEN_ADMIN
+"ONLY_TOKEN_ADMIN"
 
 ### INVALID_UNDELEGATE_INTENT_VALUE
 "Invalid undelegate intent value"

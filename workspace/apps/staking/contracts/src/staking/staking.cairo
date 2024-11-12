@@ -451,12 +451,15 @@ pub mod Staking {
         }
 
         // This function provides the staker info (with projected rewards).
+        // If the staker does not exist, it panics.
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let mut staker_info = self.internal_staker_info(:staker_address);
             self.update_rewards(ref :staker_info);
             staker_info.into()
         }
 
+        // This function provides the staker info (with projected rewards) wrapped in an Option.
+        // If the staker does not exist, it returns None.
         fn get_staker_info(
             self: @ContractState, staker_address: ContractAddress
         ) -> Option<StakerInfo> {
