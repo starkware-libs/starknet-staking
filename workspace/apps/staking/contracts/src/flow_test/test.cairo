@@ -3,7 +3,7 @@ use contracts::flow_test::utils as flow_test_utils;
 use contracts_commons::test_utils::{TokenTrait};
 use flow_test_utils::{SystemTrait, StakerTrait, StakingTrait, RewardSupplierTrait};
 use flow_test_utils::{DelegatorTrait};
-use contracts::constants::{STRK_IN_FRIS};
+use contracts::constants::STRK_IN_FRIS;
 use contracts_commons::types::time::Time;
 use core::num::traits::Zero;
 use contracts::utils::abs_diff;
@@ -838,5 +838,96 @@ fn flow_4_switch_member_back_and_forth_test() {
             + system.token.balance_of(account: delegator_Y.reward.address)
             + system.token.balance_of(account: pool_A)
             + system.token.balance_of(account: pool_B)
+    );
+}
+
+/// flow:
+/// Staker stake
+/// First delegator delegate
+/// Second delegator delegate
+/// First delegator add_to_delegation_pool
+/// Second delegator add_to_delegation_pool
+/// First delegator exit_intent
+/// First delegator exit_action
+/// Second delegator exit_intent
+/// Second delegator exit_action
+/// Staker exit_intent
+/// Staker exit_action
+#[test]
+fn delegators_add_to_delegation_pool_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let initial_reward_supplier_balance = system
+        .token
+        .balance_of(account: system.reward_supplier.address);
+    let commission = 200;
+    let one_week = Time::weeks(1);
+
+    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_time(time: one_week);
+
+    let pool = system.staking.get_pool(:staker);
+    let delegator_amount = stake_amount;
+
+    let first_delegator = system.new_delegator(amount: delegator_amount);
+    first_delegator.delegate(:pool, amount: delegator_amount / 2);
+    system.advance_time(time: one_week);
+
+    let second_delegator = system.new_delegator(amount: delegator_amount);
+    second_delegator.delegate(:pool, amount: delegator_amount / 2);
+    system.advance_time(time: one_week);
+
+    first_delegator.add_to_delegation_pool(pool: pool, amount: delegator_amount / 2);
+    system.advance_time(time: one_week);
+
+    second_delegator.add_to_delegation_pool(pool: pool, amount: delegator_amount / 2);
+    system.advance_time(time: one_week);
+
+    first_delegator.exit_intent(:pool, amount: delegator_amount);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    first_delegator.exit_action(:pool);
+
+    second_delegator.exit_intent(:pool, amount: delegator_amount);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    second_delegator.exit_action(:pool);
+
+    staker.exit_intent();
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    staker.exit_action();
+
+    // Post clearance checks:
+
+    // 1. Token balance virtually zero on stakers. Zero on staking contract.
+    assert!(system.token.balance_of(account: system.staking.address).is_zero());
+    assert!(system.token.balance_of(account: pool) < 100);
+
+    // 2. Stakers and delegator balances are the staked amounts.
+    assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
+    assert_eq!(
+        system.token.balance_of(account: first_delegator.delegator.address), delegator_amount
+    );
+    assert_eq!(
+        system.token.balance_of(account: second_delegator.delegator.address), delegator_amount
+    );
+
+    // 3. Reward addresses have some balance for all stakers & delegators.
+    assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+    assert!(system.token.balance_of(account: first_delegator.reward.address).is_non_zero());
+    assert!(system.token.balance_of(account: first_delegator.reward.address).is_non_zero());
+
+    // 4. Virtually all rewards awarded were claimed.
+    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+
+    // 5. Rewards funds are well accounted for.
+    assert_eq!(
+        initial_reward_supplier_balance,
+        system.token.balance_of(account: system.reward_supplier.address)
+            + system.token.balance_of(account: staker.reward.address)
+            + system.token.balance_of(account: first_delegator.reward.address)
+            + system.token.balance_of(account: second_delegator.reward.address)
+            + system.token.balance_of(account: pool)
     );
 }

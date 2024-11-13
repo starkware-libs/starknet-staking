@@ -22,7 +22,7 @@ pub enum Error {
     INTENT_WINDOW_NOT_FINISHED,
     AMOUNT_TOO_HIGH,
     AMOUNT_IS_ZERO,
-    CANNOT_INCREASE_COMMISSION,
+    INVALID_COMMISSION,
     // Staking contract errors
     AMOUNT_LESS_THAN_MIN_STAKE,
     COMMISSION_OUT_OF_RANGE,
@@ -118,7 +118,7 @@ pub impl ErrorImpl of ErrorTrait {
             Error::GLOBAL_INDEX_DIFF_NOT_INDEX_TYPE => "Global index diff does not fit in u128",
             Error::GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW => "Overflow during computation global index diff",
             Error::UNEXPECTED_BALANCE => "Unexpected balance",
-            Error::CANNOT_INCREASE_COMMISSION => "Commission cannot be increased",
+            Error::INVALID_COMMISSION => "Commission can only be decreased",
             Error::STAKER_ALREADY_HAS_POOL => "Staker already has a pool",
             Error::CONTRACT_IS_PAUSED => "Contract is paused",
             Error::C_NUM_OUT_OF_RANGE => format!("C Numerator out of range (0-{})", MAX_C_NUM),

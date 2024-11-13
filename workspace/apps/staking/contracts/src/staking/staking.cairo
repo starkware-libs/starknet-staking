@@ -561,10 +561,7 @@ pub mod Staking {
                 (pool_info.pool_contract, pool_info.commission)
             };
 
-            if commission == old_commission {
-                return;
-            }
-            assert_with_err(commission < old_commission, Error::CANNOT_INCREASE_COMMISSION);
+            assert_with_err(commission < old_commission, Error::INVALID_COMMISSION);
 
             // Update rewards using the existing commission before changing the commission.
             self.update_rewards(ref :staker_info);
@@ -755,9 +752,15 @@ pub mod Staking {
             let old_intent_amount = undelegate_intent_value.amount;
             assert_with_err(to_pool != from_pool, Error::SELF_SWITCH_NOT_ALLOWED);
 
-            // Update rewards for `to_staker` before editing the staker_info.
+            // Update rewards for `to_staker` before editing the staker_info, and send them to the
+            // pool.
             let mut to_staker_info = self.internal_staker_info(staker_address: to_staker);
             self.update_rewards(ref staker_info: to_staker_info);
+            let token_dispatcher = self.token_dispatcher.read();
+            self
+                .send_rewards_to_delegation_pool(
+                    staker_address: to_staker, ref staker_info: to_staker_info, :token_dispatcher
+                );
 
             // More asserts.
             assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
@@ -786,6 +789,7 @@ pub mod Staking {
                 .enter_delegation_pool_from_staking_contract(
                     amount: switched_amount, index: to_staker_info.index, :data
                 );
+
             // Emit event.
             self
                 .emit(

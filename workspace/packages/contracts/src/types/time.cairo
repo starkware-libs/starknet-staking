@@ -100,9 +100,6 @@ pub impl TimeImpl of Time {
     fn div(self: TimeDelta, divider: u64) -> TimeDelta {
         TimeDelta { seconds: self.seconds / divider }
     }
-    fn day(self: TimeStamp) -> u64 {
-        self.seconds / DAY
-    }
 }
 
 
@@ -245,13 +242,6 @@ mod tests {
         let seconds = 42;
         let time = Time::seconds(seconds);
         assert_eq!(time.seconds, seconds);
-    }
-
-    #[test]
-    fn test_time_day() {
-        let mut time: TimeStamp = Zero::zero();
-        time += Time::days(5);
-        assert_eq!(time.day(), 5);
     }
 
     #[test]

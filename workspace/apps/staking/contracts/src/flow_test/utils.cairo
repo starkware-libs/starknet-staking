@@ -362,7 +362,10 @@ pub impl SystemImpl of SystemTrait {
         let minting_curve = self.minting_curve.deploy(:staking);
         let reward_supplier = self.reward_supplier.deploy(:minting_curve, :staking, :token);
         // Fund reward supplier
-        token.fund(recipient: reward_supplier.address, amount: 100000000000000);
+        token
+            .fund(
+                recipient: reward_supplier.address, amount: self.minting_curve.initial_supply / 10
+            );
         // Set reward_supplier in staking
         let contract_address = staking.address;
         let staking_config_dispatcher = IStakingConfigDispatcher { contract_address };
@@ -563,6 +566,13 @@ pub impl DelegatorImpl of DelegatorTrait {
         cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.change_reward_address(:reward_address);
+    }
+
+    fn add_to_delegation_pool(self: Delegator, pool: ContractAddress, amount: Amount) {
+        self.delegator.approve(spender: pool, :amount);
+        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.add_to_delegation_pool(pool_member: self.delegator.address, :amount);
     }
 }
 

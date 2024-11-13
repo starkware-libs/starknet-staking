@@ -37,16 +37,17 @@ pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
     use starknet::class_hash::{ClassHash, class_hash_const};
     use contracts::types::{Commission, Index, Amount};
+    use contracts::constants::STRK_IN_FRIS;
 
-    pub const STAKER_INITIAL_BALANCE: Amount = 10000000000;
-    pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000000000;
-    pub const INITIAL_SUPPLY: u256 = 10000000000000000;
-    pub const MIN_STAKE: Amount = 100000;
-    pub const STAKE_AMOUNT: Amount = 200000;
-    pub const POOL_MEMBER_STAKE_AMOUNT: Amount = 100000;
+    pub const STAKER_INITIAL_BALANCE: Amount = 1000000 * STRK_IN_FRIS;
+    pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000 * STRK_IN_FRIS;
+    pub const INITIAL_SUPPLY: Amount = 10000000000 * STRK_IN_FRIS;
+    pub const MIN_STAKE: Amount = 20000 * STRK_IN_FRIS;
+    pub const STAKE_AMOUNT: Amount = 100000 * STRK_IN_FRIS;
+    pub const POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * STRK_IN_FRIS;
     pub const COMMISSION: Commission = 500;
     pub const STAKER_FINAL_INDEX: Index = 10;
-    pub const BASE_MINT_AMOUNT: Amount = 8000000000000000;
+    pub const BASE_MINT_AMOUNT: Amount = 1_300_000 * STRK_IN_FRIS;
     pub const BUFFER: Amount = 1000000000000;
     pub const L1_REWARD_SUPPLIER: felt252 = 'L1_REWARD_SUPPLIER';
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
@@ -835,7 +836,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             pool_member_address: POOL_MEMBER_ADDRESS(),
             owner_address: OWNER_ADDRESS(),
             governance_admin: GOVERNANCE_ADMIN(),
-            initial_supply: INITIAL_SUPPLY,
+            initial_supply: INITIAL_SUPPLY.into(),
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pool_enabled: false,

@@ -1433,11 +1433,17 @@ fn test_switch_staking_delegation_pool() {
     // Validate events.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 4, message: "switch_staking_delegation_pool"
+        actual: events.len(), expected: 6, message: "switch_staking_delegation_pool"
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[0],
+        staker_address: cfg.test_info.staker_address,
+        pool_address: to_pool_contract,
+        amount: unclaimed_rewards_pool
     );
     let self_stake = to_staker_info.amount_own;
     assert_stake_balance_changed_event(
-        spied_event: events[0],
+        spied_event: events[1],
         staker_address: to_staker,
         old_self_stake: self_stake,
         old_delegated_stake: Zero::zero(),
@@ -1445,14 +1451,20 @@ fn test_switch_staking_delegation_pool() {
         new_delegated_stake: switched_amount
     );
     assert_change_delegation_pool_intent_event(
-        spied_event: events[1],
+        spied_event: events[2],
         pool_contract: from_pool_contract,
         identifier: pool_member.into(),
         old_intent_amount: cfg.pool_member_info.amount,
         new_intent_amount: cfg.pool_member_info.amount - switched_amount
     );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[3],
+        staker_address: cfg.test_info.staker_address,
+        pool_address: to_pool_contract,
+        amount: unclaimed_rewards_pool
+    );
     assert_stake_balance_changed_event(
-        spied_event: events[2],
+        spied_event: events[4],
         staker_address: to_staker,
         old_self_stake: self_stake,
         old_delegated_stake: switched_amount,
@@ -1460,7 +1472,7 @@ fn test_switch_staking_delegation_pool() {
         new_delegated_stake: switched_amount * 2
     );
     assert_change_delegation_pool_intent_event(
-        spied_event: events[3],
+        spied_event: events[5],
         pool_contract: from_pool_contract,
         identifier: pool_member.into(),
         old_intent_amount: cfg.pool_member_info.amount - switched_amount,
@@ -1859,7 +1871,7 @@ fn test_update_commission_caller_not_staker() {
 }
 
 #[test]
-#[should_panic(expected: "Commission cannot be increased")]
+#[should_panic(expected: "Commission can only be decreased")]
 fn test_update_commission_with_higher_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -1876,6 +1888,7 @@ fn test_update_commission_with_higher_commission() {
 }
 
 #[test]
+#[should_panic(expected: "Commission can only be decreased")]
 fn test_update_commission_with_same_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(

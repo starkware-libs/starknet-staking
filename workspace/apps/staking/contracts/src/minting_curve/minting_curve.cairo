@@ -99,15 +99,22 @@ pub mod MintingCurve {
             from_address == self.l1_reward_supplier.read(), Error::UNAUTHORIZED_MESSAGE_SENDER
         );
         let old_total_supply = self.total_supply.read();
-        self.total_supply.write(total_supply);
-        self.emit(Events::TotalSupplyChanged { old_total_supply, new_total_supply: total_supply });
+        // Note that the total supply may only increase.
+        // Check that total_supply > old_total_supply to handle possible message reordering.
+        if total_supply > old_total_supply {
+            self.total_supply.write(total_supply);
+            self
+                .emit(
+                    Events::TotalSupplyChanged { old_total_supply, new_total_supply: total_supply }
+                );
+        }
     }
 
     #[abi(embed_v0)]
     impl MintingImpl of IMintingCurve<ContractState> {
-        /// Return yearly mint amount.
+        /// Return yearly mint amount (M * total_supply).
         /// To calculate the amount, we utilize the minting curve formula (which is in percentage):
-        /// M = (C / 10) * sqrt(S)
+        ///   M = (C / 10) * sqrt(S),
         /// where:
         /// - M: Yearly mint rate (%)
         /// - C: Max theoretical inflation (%)
@@ -146,19 +153,15 @@ pub mod MintingCurve {
 
     #[generate_trait]
     impl InternalMintingCurveImpl of InternalMintingCurveTrait {
-        /// yearly_mint = (M / 100) * total_supply
-        /// Equivalent to: C / 100 * sqrt(total_stake * total_supply)
+        /// Returns the yearly mint (see comment in `yearly_mint`):
+        ///   yearly_mint = M * total_supply = C * sqrt(total_stake * total_supply),
+        /// where M and C are given as fractions.
         /// Note: Differences are negligible at this scale.
         fn compute_yearly_mint(
             self: @ContractState, total_stake: Amount, total_supply: Amount
         ) -> Amount {
-            let product: u256 = total_stake.wide_mul(total_supply);
-            let unadjusted_mint_amount: Amount = product.sqrt();
-            self.multiply_by_max_inflation(amount: unadjusted_mint_amount)
-        }
-
-        fn multiply_by_max_inflation(self: @ContractState, amount: Amount) -> Amount {
-            self.c_num.read().into() * amount / C_DENOM.into()
+            let stake_times_supply: u256 = total_stake.wide_mul(total_supply);
+            self.c_num.read().into() * stake_times_supply.sqrt() / C_DENOM.into()
         }
     }
 }
