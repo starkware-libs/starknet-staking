@@ -485,7 +485,7 @@ pub mod StakingTester {
             if commission == old_commission {
                 return;
             }
-            assert_with_err(commission < old_commission, Error::CANNOT_INCREASE_COMMISSION);
+            assert_with_err(commission < old_commission, Error::INVALID_COMMISSION);
             self.update_rewards(ref :staker_info);
             let mut pool_info = staker_info.get_pool_info_unchecked();
             pool_info.commission = commission;

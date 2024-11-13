@@ -216,7 +216,6 @@ fn test_contract_parameters() {
 #[test]
 fn test_on_receive() {
     let mut cfg: StakingInitConfig = Default::default();
-    cfg.test_info.initial_supply *= 1000;
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;

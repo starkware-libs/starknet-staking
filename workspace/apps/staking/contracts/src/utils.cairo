@@ -1,4 +1,4 @@
-use contracts::constants::{BASE_VALUE};
+use contracts::constants::{BASE_VALUE, STRK_IN_FRIS};
 use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait, get_contract_address};
 use starknet::syscalls::deploy_syscall;
@@ -89,8 +89,9 @@ pub fn compute_commission_amount_rounded_up(
 }
 
 pub fn compute_global_index_diff(staking_rewards: Amount, total_stake: Amount) -> Index {
-    if total_stake.is_zero() {
-        return 0;
+    // Return zero if the total stake is too small, to avoid overflow below.
+    if total_stake < STRK_IN_FRIS {
+        return Zero::zero();
     }
     u128_mul_wide_and_div_unsafe(
         lhs: staking_rewards,
@@ -163,11 +164,11 @@ pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
 
 #[cfg(test)]
 mod tests {
+    use core::num::traits::zero::Zero;
     use super::{Error, MAX_U64, MAX_U128};
-    use super::{
-        u64_mul_wide_and_div_unsafe, u64_mul_wide_and_ceil_div_unsafe, u128_mul_wide_and_div_unsafe,
-        u128_mul_wide_and_ceil_div_unsafe
-    };
+    use super::{u64_mul_wide_and_div_unsafe, u64_mul_wide_and_ceil_div_unsafe};
+    use super::{u128_mul_wide_and_div_unsafe, u128_mul_wide_and_ceil_div_unsafe};
+    use super::{compute_global_index_diff, STRK_IN_FRIS, BASE_VALUE};
     const TEST_NUM: u64 = 100000000000;
 
     #[test]
@@ -260,6 +261,12 @@ mod tests {
         u128_mul_wide_and_ceil_div_unsafe(
             lhs: max_u65, rhs: (max_u65 + 2), div: 4, error: Error::INTEREST_ISNT_INDEX_TYPE
         );
+    }
+
+    #[test]
+    fn test_compute_global_index_diff() {
+        assert!(compute_global_index_diff(STRK_IN_FRIS, STRK_IN_FRIS) == BASE_VALUE);
+        assert!(compute_global_index_diff(STRK_IN_FRIS, STRK_IN_FRIS - 1) == Zero::zero());
     }
 }
 

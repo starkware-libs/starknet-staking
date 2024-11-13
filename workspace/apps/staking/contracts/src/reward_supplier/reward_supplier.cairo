@@ -96,7 +96,7 @@ pub mod RewardSupplier {
         self.staking_contract.write(staking_contract);
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.last_timestamp.write(Time::now());
-        // Initialize unclaimed_rewards with 1 strk to make up for round ups of pool rewards
+        // Initialize unclaimed_rewards with 1 STRK to make up for round ups of pool rewards.
         // calculation in the staking contract.
         self.unclaimed_rewards.write(STRK_IN_FRIS);
         self.l1_pending_requested_amount.write(Zero::zero());
@@ -129,11 +129,12 @@ pub mod RewardSupplier {
             assert_with_err(
                 get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
+
             // Read the last timestamp before it's updated in update_rewards.
             let last_timestamp = self.last_timestamp.read();
 
             // Calculate the rewards and update the unclaimed rewards.
-            let rewards = self.update_rewards();
+            let rewards = self.update_timestamp_and_calculate_rewards();
             let new_timestamp = self.last_timestamp.read();
             let unclaimed_rewards = self.update_unclaimed_rewards(:rewards);
 
@@ -159,7 +160,7 @@ pub mod RewardSupplier {
                 get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT
             );
             let unclaimed_rewards = self.unclaimed_rewards.read();
-            assert_with_err(unclaimed_rewards >= amount, Error::AMOUNT_TOO_HIGH);
+            assert_with_err(amount <= unclaimed_rewards, Error::AMOUNT_TOO_HIGH);
 
             // Update unclaimed_rewards and transfer the requested rewards to the staking contract.
             self.unclaimed_rewards.write(unclaimed_rewards - amount);
@@ -175,6 +176,9 @@ pub mod RewardSupplier {
             depositor: EthAddress,
             message: Span<felt252>
         ) -> bool {
+            // Note that the deposit can be done by anyone (not just the L1 reward supplier), so
+            // depositor is not checked.
+
             // These messages accepted only from the token bridge.
             assert_with_err(
                 get_caller_address() == self.starkgate_address.read(),
@@ -184,12 +188,12 @@ pub mod RewardSupplier {
             assert_with_err(
                 l2_token == self.token_dispatcher.read().contract_address, Error::UNEXPECTED_TOKEN
             );
-            let amount_low: Amount = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
+            let amount_u128: Amount = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
-            if amount_low > l1_pending_requested_amount {
+            if amount_u128 > l1_pending_requested_amount {
                 self.l1_pending_requested_amount.write(Zero::zero());
             } else {
-                l1_pending_requested_amount -= amount_low;
+                l1_pending_requested_amount -= amount_u128;
                 self.l1_pending_requested_amount.write(l1_pending_requested_amount);
             }
             true
@@ -207,7 +211,7 @@ pub mod RewardSupplier {
     #[generate_trait]
     pub impl InternalRewardSupplierFunctions of InternalRewardSupplierFunctionsTrait {
         // Returns the reward since the last timestamp, and updates the last timestamp.
-        fn update_rewards(ref self: ContractState) -> Amount {
+        fn update_timestamp_and_calculate_rewards(ref self: ContractState) -> Amount {
             // Receive yearly rewards from the minting curve contract.
             let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
             let yearly_mint = minting_curve_dispatcher.yearly_mint();
@@ -221,6 +225,7 @@ pub mod RewardSupplier {
             let seconds_diff: u64 = current_time.sub(last_timestamp).into();
             yearly_mint * seconds_diff.into() / SECONDS_IN_YEAR
         }
+
         fn update_unclaimed_rewards(ref self: ContractState, rewards: Amount) -> Amount {
             let mut unclaimed_rewards = self.unclaimed_rewards.read();
             unclaimed_rewards += rewards;
@@ -243,7 +248,7 @@ pub mod RewardSupplier {
             let credit = balance + l1_pending_requested_amount;
             let debit = unclaimed_rewards;
 
-            // If there isn't enough credit to cover the debit + threshold, request enough funds.
+            // If there isn't enough credit to cover the debit + threshold, request funds.
             let base_mint_amount = self.base_mint_amount.read();
             let threshold = compute_threshold(base_mint_amount);
             if credit < debit + threshold {
@@ -262,7 +267,7 @@ pub mod RewardSupplier {
         }
 
         fn send_mint_request_to_l1_reward_supplier(self: @ContractState) {
-            let payload = array![self.base_mint_amount.read().into()].span();
+            let payload: Span<felt252> = array![self.base_mint_amount.read().into()].span();
             let to_address = self.l1_reward_supplier.read();
             send_message_to_l1_syscall(:to_address, :payload).unwrap_syscall();
         }
