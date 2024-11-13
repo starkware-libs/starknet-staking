@@ -2,7 +2,7 @@
 pub mod Staking {
     use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
-    use contracts::constants::DEFAULT_EXIT_WAIT_WINDOW;
+    use contracts::constants::{DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
     use contracts::constants::MIN_TIME_BETWEEN_INDEX_UPDATES;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
     use contracts::staking::{StakerInfo, StakerPoolInfo, StakingContractInfo};
@@ -860,6 +860,7 @@ pub mod Staking {
 
         fn set_exit_wait_window(ref self: ContractState, exit_wait_window: TimeDelta) {
             self.roles.only_token_admin();
+            assert_with_err(exit_wait_window <= MAX_EXIT_WAIT_WINDOW, Error::ILLEGAL_EXIT_DURATION);
             let old_exit_window = self.exit_wait_window.read();
             self.exit_wait_window.write(exit_wait_window);
             self

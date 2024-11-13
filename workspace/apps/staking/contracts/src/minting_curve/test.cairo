@@ -10,6 +10,7 @@ use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts::types::Amount;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use contracts::event_test_utils::{assert_number_of_events, assert_minting_cap_changed_event};
+use contracts::constants::MAX_C_NUM;
 
 #[test]
 fn test_yearly_mint() {
@@ -80,7 +81,7 @@ fn test_set_c_num_unauthorized() {
 }
 
 #[test]
-#[should_panic(expected: "C numerator is out of range, expected to be 0-10000")]
+#[should_panic(expected: "C Numerator out of range (0-500)")]
 fn test_set_invalid_c_num() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -94,6 +95,38 @@ fn test_set_invalid_c_num() {
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }
+
+#[test]
+#[should_panic(expected: "C Numerator out of range (0-500)")]
+fn test_set_c_num_over_limit() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+    let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
+        contract_address: minting_curve_contract
+    };
+    let new_c_num = MAX_C_NUM + 1;
+    cheat_caller_address_once(
+        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin
+    );
+    minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
+}
+
+#[test]
+fn test_set_max_c_num() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+    let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
+        contract_address: minting_curve_contract
+    };
+    let new_c_num = MAX_C_NUM;
+    cheat_caller_address_once(
+        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin
+    );
+    minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
+}
+
 #[test]
 fn test_contract_parameters() {
     let mut cfg: StakingInitConfig = Default::default();
