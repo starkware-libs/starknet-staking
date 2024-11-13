@@ -132,6 +132,16 @@ pub mod Events {
         pub identifier: felt252,
         pub amount: Amount
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ChangeDelegationPoolIntent {
+        #[key]
+        pub pool_contract: ContractAddress,
+        #[key]
+        pub identifier: felt252,
+        pub old_intent_amount: Amount,
+        pub new_intent_amount: Amount
+    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
