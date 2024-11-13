@@ -622,7 +622,6 @@ fn two_delegators_full_intent_flow_test() {
 /// Second staker Stake.
 /// Delegator partially intent in first staker.
 /// Delegator switch from first staker's pool to second staker's pool.
-/// Delegator switch from first staker's pool to first staker's pool.
 /// Delegator exit_action in first staker.
 /// Delegator exit_intent in second staker.
 /// Delegator switch from second staker's pool to first staker's pool.
