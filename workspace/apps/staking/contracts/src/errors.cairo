@@ -1,5 +1,5 @@
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
-use contracts::constants::C_DENOM;
+use contracts::constants::MAX_C_NUM;
 use core::panics::panic_with_byte_array;
 
 #[derive(Drop)]
@@ -42,6 +42,7 @@ pub enum Error {
     OPERATIONAL_NOT_ELIGIBLE,
     CALLER_IS_ZERO_ADDRESS,
     SELF_SWITCH_NOT_ALLOWED,
+    ILLEGAL_EXIT_DURATION,
     // Pool contract errors
     POOL_MEMBER_DOES_NOT_EXIST,
     STAKER_INACTIVE,
@@ -120,15 +121,14 @@ pub impl ErrorImpl of ErrorTrait {
             Error::CANNOT_INCREASE_COMMISSION => "Commission cannot be increased",
             Error::STAKER_ALREADY_HAS_POOL => "Staker already has a pool",
             Error::CONTRACT_IS_PAUSED => "Contract is paused",
-            Error::C_NUM_OUT_OF_RANGE => format!(
-                "C numerator is out of range, expected to be 0-{}", C_DENOM
-            ),
+            Error::C_NUM_OUT_OF_RANGE => format!("C Numerator out of range (0-{})", MAX_C_NUM),
             Error::INSUFFICIENT_BALANCE => "Insufficient ERC20 balance",
             Error::INSUFFICIENT_ALLOWANCE => "Insufficient ERC20 allowance",
             Error::INVALID_UNDELEGATE_INTENT_VALUE => "Invalid undelegate intent value",
             Error::UNEXPECTED_TOKEN => "UNEXPECTED_TOKEN",
             Error::CALLER_IS_ZERO_ADDRESS => "Zero address caller is not allowed",
             Error::SELF_SWITCH_NOT_ALLOWED => "SELF_SWITCH_NOT_ALLOWED",
+            Error::ILLEGAL_EXIT_DURATION => "ILLEGAL_EXIT_DURATION",
         }
     }
 }

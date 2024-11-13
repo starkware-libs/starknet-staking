@@ -1,6 +1,6 @@
 use core::option::OptionTrait;
 use contracts_commons::constants::{DAY};
-use contracts::constants::{BASE_VALUE};
+use contracts::constants::{BASE_VALUE, MAX_EXIT_WAIT_WINDOW};
 use contracts::errors::{Error, ErrorTrait};
 use contracts::staking::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
 use contracts::staking::Staking::InternalStakingFunctionsTrait;
@@ -2050,6 +2050,34 @@ fn test_set_exit_waiting_window() {
     assert_exit_wait_window_changed_event(
         spied_event: events[0], :old_exit_window, :new_exit_window
     );
+}
+
+#[test]
+fn test_set_max_exit_waiting_duration() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let new_exit_window = MAX_EXIT_WAIT_WINDOW;
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin
+    );
+    staking_config_dispatcher.set_exit_wait_window(exit_wait_window: new_exit_window);
+}
+
+#[test]
+#[should_panic(expected: "ILLEGAL_EXIT_DURATION")]
+fn test_set_too_long_exit_duration() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let mut new_exit_window: TimeDelta = MAX_EXIT_WAIT_WINDOW;
+    new_exit_window.seconds += 1;
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin
+    );
+    staking_config_dispatcher.set_exit_wait_window(exit_wait_window: new_exit_window);
 }
 
 #[test]

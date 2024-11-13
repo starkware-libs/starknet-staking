@@ -11,7 +11,7 @@ pub mod MintingCurve {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use contracts::constants::{DEFAULT_C_NUM, C_DENOM};
+    use contracts::constants::{DEFAULT_C_NUM, C_DENOM, MAX_C_NUM};
     use contracts::types::{Inflation, Amount};
     use contracts_commons::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
@@ -135,7 +135,7 @@ pub mod MintingCurve {
         // If you wish to set the inflation rate to 1.7%, you should set c_num to 170.
         fn set_c_num(ref self: ContractState, c_num: Inflation) {
             self.roles.only_token_admin();
-            assert_with_err(c_num <= C_DENOM, Error::C_NUM_OUT_OF_RANGE);
+            assert_with_err(c_num <= MAX_C_NUM, Error::C_NUM_OUT_OF_RANGE);
 
             let old_c = self.c_num.read();
             self.c_num.write(c_num);
