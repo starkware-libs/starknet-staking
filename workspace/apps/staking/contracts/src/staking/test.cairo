@@ -24,6 +24,7 @@ use event_test_utils::{assert_stake_balance_changed_event, assert_delete_staker_
 use event_test_utils::assert_staker_reward_address_change_event;
 use event_test_utils::{assert_new_delegation_pool_event, assert_commission_changed_event};
 use event_test_utils::assert_change_operational_address_event;
+use event_test_utils::assert_change_delegation_pool_intent_event;
 use event_test_utils::assert_declare_operational_address_event;
 use event_test_utils::{assert_new_staker_event, assert_minimum_stake_changed_event};
 use event_test_utils::{assert_global_index_updated_event, assert_exit_wait_window_changed_event};
@@ -1432,7 +1433,7 @@ fn test_switch_staking_delegation_pool() {
     // Validate events.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 2, message: "switch_staking_delegation_pool"
+        actual: events.len(), expected: 4, message: "switch_staking_delegation_pool"
     );
     let self_stake = to_staker_info.amount_own;
     assert_stake_balance_changed_event(
@@ -1443,13 +1444,27 @@ fn test_switch_staking_delegation_pool() {
         new_self_stake: self_stake,
         new_delegated_stake: switched_amount
     );
-    assert_stake_balance_changed_event(
+    assert_change_delegation_pool_intent_event(
         spied_event: events[1],
+        pool_contract: from_pool_contract,
+        identifier: pool_member.into(),
+        old_intent_amount: cfg.pool_member_info.amount,
+        new_intent_amount: cfg.pool_member_info.amount - switched_amount
+    );
+    assert_stake_balance_changed_event(
+        spied_event: events[2],
         staker_address: to_staker,
         old_self_stake: self_stake,
         old_delegated_stake: switched_amount,
         new_self_stake: self_stake,
         new_delegated_stake: switched_amount * 2
+    );
+    assert_change_delegation_pool_intent_event(
+        spied_event: events[3],
+        pool_contract: from_pool_contract,
+        identifier: pool_member.into(),
+        old_intent_amount: cfg.pool_member_info.amount - switched_amount,
+        new_intent_amount: Zero::zero()
     );
 }
 

@@ -567,6 +567,33 @@ pub(crate) fn assert_switch_delegation_pool_event(
     }
 }
 
+pub(crate) fn assert_change_delegation_pool_intent_event(
+    spied_event: @(ContractAddress, Event),
+    pool_contract: ContractAddress,
+    identifier: felt252,
+    old_intent_amount: Amount,
+    new_intent_amount: Amount
+) {
+    let expected_event = @contracts::staking::Staking::Event::ChangeDelegationPoolIntent(
+        StakingEvents::ChangeDelegationPoolIntent {
+            pool_contract, identifier, old_intent_amount, new_intent_amount
+        }
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "ChangeDelegationPoolIntent{{pool_contract: {:?}, identifier: {}, old_intent_amount: {}, new_intent_amount: {}}}",
+            pool_contract,
+            identifier,
+            old_intent_amount,
+            new_intent_amount
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
 pub(crate) fn assert_new_pool_member_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,

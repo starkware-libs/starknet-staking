@@ -46,6 +46,7 @@
     - [New Staker](#new-staker)
     - [Staker Exit intent](#staker-exit-intent)
     - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
+    - [Change Delegation Pool Intent](#change-delegation-pool-intent)
     - [Delete Staker](#delete-staker)
     - [Staker Reward Claimed](#staker-reward-claimed)
     - [Staker Reward Address Changed](#staker-reward-address-changed)
@@ -675,7 +676,8 @@ fn switch_staking_delegation_pool(
 #### description <!-- omit from toc -->
 Execute a pool member request to move from one staker's delegation pool to another staker's delegation pool.
 #### emits <!-- omit from toc -->
-1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
+1. [Stake Balance Changed](#stake-balance-changed)
+2. [Change Delegation Pool Intent](#change-delegation-pool-intent)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
@@ -1064,6 +1066,14 @@ Only token admin.
 | staker_address | address | ✅     |
 | pool_address   | address | ✅     |
 | amount         | u128    | ❌     |
+
+### Change Delegation Pool Intent
+| data              | type    | keyed |
+| ----------------- | ------- | ----- |
+| pool_contract     | address | ✅     |
+| identifier        | felt252 | ✅     |
+| old_intent_amount | address | ❌     |
+| new_intent_amount | u128    | ❌     |
 
 ### Delete Staker
 | data                | type            | keyed |
