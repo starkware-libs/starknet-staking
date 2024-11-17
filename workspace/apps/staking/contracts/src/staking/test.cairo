@@ -17,7 +17,7 @@ use test_utils::{constants, stake_from_zero_address};
 use constants::{DUMMY_ADDRESS, POOL_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS};
 use constants::{NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER};
 use constants::{OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS};
-use constants::{POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_UNCLAIMED_REWARDS};
+use constants::{POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_UNCLAIMED_REWARDS, NON_TOKEN_ADMIN};
 use contracts::event_test_utils;
 use event_test_utils::{assert_number_of_events, assert_staker_exit_intent_event};
 use event_test_utils::{assert_stake_balance_changed_event, assert_delete_staker_event};
@@ -2089,6 +2089,19 @@ fn test_set_min_stake() {
 }
 
 #[test]
+#[should_panic(expected: 'ONLY_TOKEN_ADMIN')]
+fn test_set_min_stake_not_token_admin() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let min_stake = cfg.staking_contract_info.min_stake;
+    let non_token_admin = NON_TOKEN_ADMIN();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: non_token_admin);
+    staking_config_dispatcher.set_min_stake(:min_stake);
+}
+
+#[test]
 fn test_set_exit_waiting_window() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -2110,6 +2123,19 @@ fn test_set_exit_waiting_window() {
     assert_exit_wait_window_changed_event(
         spied_event: events[0], :old_exit_window, :new_exit_window
     );
+}
+
+#[test]
+#[should_panic(expected: 'ONLY_TOKEN_ADMIN')]
+fn test_set_exit_waiting_window_not_token_admin() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let exit_wait_window = cfg.staking_contract_info.exit_wait_window;
+    let non_token_admin = NON_TOKEN_ADMIN();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: non_token_admin);
+    staking_config_dispatcher.set_exit_wait_window(:exit_wait_window);
 }
 
 #[test]
@@ -2162,6 +2188,19 @@ fn test_set_reward_supplier() {
     assert_reward_supplier_changed_event(
         spied_event: events[0], :old_reward_supplier, :new_reward_supplier
     );
+}
+
+#[test]
+#[should_panic(expected: 'ONLY_TOKEN_ADMIN')]
+fn test_set_reward_supplier_not_token_admin() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let non_token_admin = NON_TOKEN_ADMIN();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: non_token_admin);
+    staking_config_dispatcher.set_reward_supplier(:reward_supplier);
 }
 
 #[test]
