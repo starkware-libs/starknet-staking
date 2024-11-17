@@ -7,6 +7,7 @@ use contracts::test_utils::{StakingInitConfig, general_contract_system_deploymen
 use contracts::test_utils::{load_one_felt, pause_staking_contract};
 use contracts::test_utils::stake_for_testing_using_dispatcher;
 use contracts::test_utils::constants::{DUMMY_IDENTIFIER, DUMMY_ADDRESS};
+use contracts::test_utils::constants::{NON_SECURITY_AGENT, NON_SECURITY_ADMIN};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 
@@ -85,6 +86,34 @@ fn test_already_paused_and_unpaused() {
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "pause");
     assert_paused_event(spied_event: events[0], account: cfg.test_info.security_agent);
+}
+
+#[test]
+#[should_panic(expected: 'ONLY_SECURITY_AGENT')]
+fn test_pause_not_security_agent() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
+    let non_security_agent = NON_SECURITY_AGENT();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: non_security_agent
+    );
+    staking_pause_dispatcher.pause();
+}
+
+#[test]
+#[should_panic(expected: 'ONLY_SECURITY_ADMIN')]
+fn test_unpause_not_security_admin() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
+    let non_security_admin = NON_SECURITY_ADMIN();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: non_security_admin
+    );
+    staking_pause_dispatcher.unpause();
 }
 
 #[test]
@@ -204,6 +233,18 @@ fn test_declare_operational_address_when_paused() {
         contract_address: cfg.test_info.staking_contract
     };
     staking_dispatcher.declare_operational_address(staker_address: DUMMY_ADDRESS());
+}
+
+#[test]
+#[should_panic(expected: "Contract is paused")]
+fn test_update_commission_when_paused() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    pause_staking_contract(:cfg);
+    let staking_dispatcher = IStakingDispatcher {
+        contract_address: cfg.test_info.staking_contract
+    };
+    staking_dispatcher.update_commission(commission: 0);
 }
 
 #[test]
