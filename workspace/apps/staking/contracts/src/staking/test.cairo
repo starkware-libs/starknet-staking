@@ -952,10 +952,7 @@ fn test_add_stake_from_pool() {
     assert!(true);
 }
 
-// TODO: Create tests that cover all panic scenarios for remove_from_delegation_pool_intent.
-// This test should pass upon correct implementation of remove_from_delegation_pool_intent.
 #[test]
-#[ignore]
 fn test_remove_from_delegation_pool_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -1144,10 +1141,10 @@ fn test_remove_from_delegation_pool_intent() {
     // Validate StakeBalanceChanged and RemoveFromDelegationPoolIntent events.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 3, message: "remove_from_delegation_pool_intent"
+        actual: events.len(), expected: 4, message: "remove_from_delegation_pool_intent"
     );
     assert_remove_from_delegation_pool_intent_event(
-        spied_event: events[0],
+        spied_event: events[2],
         staker_address: cfg.test_info.staker_address,
         :pool_contract,
         :identifier,
@@ -1155,7 +1152,7 @@ fn test_remove_from_delegation_pool_intent() {
         :new_intent_amount
     );
     assert_stake_balance_changed_event(
-        spied_event: events[1],
+        spied_event: events[3],
         staker_address: cfg.test_info.staker_address,
         old_self_stake: cfg.staker_info.amount_own,
         old_delegated_stake: prev_delegated_stake,
