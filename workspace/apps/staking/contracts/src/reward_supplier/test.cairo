@@ -199,6 +199,22 @@ fn test_calculate_staking_rewards() {
 }
 
 #[test]
+#[should_panic(expected: "Caller is not staking contract")]
+fn test_calculate_staking_rewards_caller_not_staking() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier_contract = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier_contract
+    };
+    let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS();
+    cheat_caller_address_once(
+        contract_address: reward_supplier_contract, caller_address: not_staking_contract
+    );
+    reward_supplier_dispatcher.calculate_staking_rewards();
+}
+
+#[test]
 fn test_contract_parameters() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
