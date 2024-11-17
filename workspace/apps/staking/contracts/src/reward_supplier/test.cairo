@@ -2,6 +2,9 @@ use core::option::OptionTrait;
 use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo};
 use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
 use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
+use contracts::reward_supplier::interface::IRewardSupplierSafeDispatcher;
+use contracts::reward_supplier::interface::IRewardSupplierSafeDispatcherTrait;
+use contracts::errors::{Error, ErrorTrait};
 use contracts::staking::Staking::CONTRACT_IDENTITY as staking_identity;
 use contracts::staking::Staking::CONTRACT_VERSION as staking_version;
 use contracts::reward_supplier::RewardSupplier::CONTRACT_IDENTITY as reward_supplier_identity;
@@ -12,10 +15,11 @@ use contracts::pool::Pool::CONTRACT_IDENTITY as pool_identity;
 use contracts::pool::Pool::CONTRACT_VERSION as pool_version;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::test_utils;
-use contracts::test_utils::constants::NOT_STARKGATE_ADDRESS;
+use contracts::test_utils::constants::{NOT_STARKGATE_ADDRESS, NOT_STAKING_CONTRACT_ADDRESS};
 use test_utils::{deploy_mock_erc20_contract, StakingInitConfig, deploy_staking_contract};
 use test_utils::{stake_for_testing_using_dispatcher, initialize_reward_supplier_state_from_cfg};
 use test_utils::{deploy_minting_curve_contract, fund, general_contract_system_deployment};
+use test_utils::assert_panic_with_error;
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use core::num::traits::{Zero, Sqrt};
 use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
@@ -321,4 +325,33 @@ fn test_on_receive_unexpected_token() {
             depositor: cfg.reward_supplier.l1_reward_supplier.try_into().expect('not EthAddress'),
             message: array![].span()
         );
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_claim_rewards_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_safe_dispatcher = IRewardSupplierSafeDispatcher {
+        contract_address: reward_supplier
+    };
+
+    // Catch CALLER_IS_NOT_STAKING_CONTRACT.
+    let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS();
+    let amount = Zero::zero();
+    cheat_caller_address_once(
+        contract_address: reward_supplier, caller_address: not_staking_contract
+    );
+    let result = reward_supplier_safe_dispatcher.claim_rewards(:amount);
+    assert_panic_with_error(
+        :result, expected_error: Error::CALLER_IS_NOT_STAKING_CONTRACT.message()
+    );
+
+    // Catch AMOUNT_TOO_HIGH.
+    let staking_contract = cfg.test_info.staking_contract;
+    let amount = STRK_IN_FRIS + 1;
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
+    let result = reward_supplier_safe_dispatcher.claim_rewards(:amount);
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.message());
 }
