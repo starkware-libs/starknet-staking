@@ -495,6 +495,15 @@ fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
     staking_pool_dispatcher.claim_delegation_pool_rewards(:staker_address);
 }
 
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_claim_delegation_pool_rewards_staker_does_not_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
+    staking_pool_dispatcher.claim_delegation_pool_rewards(staker_address: NON_STAKER_ADDRESS());
+}
 
 #[test]
 #[should_panic(expected: "Caller is not pool contract")]
@@ -1310,6 +1319,32 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     // TODO: Test event emitted.
     let staking_balance_after_action = token_dispatcher.balance_of(staking_contract);
     assert_eq!(staking_balance_after_action, staking_balance_before_action);
+}
+
+#[test]
+#[should_panic(expected: "Intent window is not finished")]
+fn test_remove_from_delegation_pool_action_intent_not_finished() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+
+    // Stake and enter delegation pool.
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    // Intent.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
+    staking_pool_dispatcher
+        .remove_from_delegation_pool_intent(
+            staker_address: cfg.test_info.staker_address,
+            identifier: cfg.test_info.pool_member_address.into(),
+            amount: cfg.pool_member_info.amount
+        );
+    // Try to action before the intent window is finished.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
+    staking_pool_dispatcher
+        .remove_from_delegation_pool_action(identifier: cfg.test_info.pool_member_address.into());
 }
 
 #[test]
@@ -2263,6 +2298,31 @@ fn test_replace_staking_with_eic() {
     assert_eq!(tester.token_address(), init_stakinfo.token_address);
     assert_eq!(tester.pool_class_hash(), class_hash_22.try_into().expect(''));
     assert_eq!(tester.pool_admin(), new_admin_33.try_into().expect(''));
+}
+
+#[test]
+fn test_staker_info() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let mut expected_staker_info = cfg.staker_info;
+    expected_staker_info.pool_info = Option::None;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    assert_eq!(staker_info, expected_staker_info.into());
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_staker_info_staker_doesnt_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher.staker_info(staker_address: NON_STAKER_ADDRESS());
 }
 
 #[test]
