@@ -401,7 +401,7 @@ pub impl SystemImpl of SystemTrait {
 
     /// Advances the block timestamp by the specified amount of time.
     fn advance_time(ref self: SystemState, time: TimeDelta) {
-        start_cheat_block_timestamp_global(block_timestamp: Time::now().add(time).into());
+        start_cheat_block_timestamp_global(block_timestamp: Time::now().add(time).into())
     }
 }
 
@@ -422,7 +422,7 @@ pub impl AccountImpl of AccountTrait {
     }
 
     fn approve(self: Account, spender: ContractAddress, amount: Amount) {
-        self.token.approve(owner: self.address, :spender, :amount);
+        self.token.approve(owner: self.address, :spender, :amount)
     }
 }
 
@@ -456,10 +456,10 @@ pub impl StakerImpl of StakerTrait {
                 :amount,
                 :pool_enabled,
                 :commission
-            );
+            )
     }
 
-    fn increase_stake(self: Staker, amount: Amount) {
+    fn increase_stake(self: Staker, amount: Amount) -> Amount {
         self.staker.approve(spender: self.staker.staking.address, :amount);
         cheat_caller_address_once(
             contract_address: self.staker.staking.address, caller_address: self.staker.address
@@ -468,7 +468,7 @@ pub impl StakerImpl of StakerTrait {
             .staker
             .staking
             .dispatcher()
-            .increase_stake(staker_address: self.staker.address, :amount);
+            .increase_stake(staker_address: self.staker.address, :amount)
     }
 
     fn exit_intent(self: Staker) -> TimeStamp {
@@ -518,7 +518,7 @@ pub impl DelegatorImpl of DelegatorTrait {
         self.delegator.approve(spender: pool, :amount);
         cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.enter_delegation_pool(reward_address: self.reward.address, :amount);
+        pool_dispatcher.enter_delegation_pool(reward_address: self.reward.address, :amount)
     }
 
     fn increase_delegate(self: Delegator, pool: ContractAddress, amount: Amount) -> Amount {
@@ -531,7 +531,7 @@ pub impl DelegatorImpl of DelegatorTrait {
     fn exit_intent(self: Delegator, pool: ContractAddress, amount: Amount) {
         cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.exit_delegation_pool_intent(:amount);
+        pool_dispatcher.exit_delegation_pool_intent(:amount)
     }
 
     fn exit_action(self: Delegator, pool: ContractAddress) -> Amount {
@@ -546,12 +546,12 @@ pub impl DelegatorImpl of DelegatorTrait {
         to_staker: ContractAddress,
         to_pool: ContractAddress,
         amount: Amount
-    ) {
+    ) -> Amount {
         cheat_caller_address_once(
             contract_address: from_pool, caller_address: self.delegator.address
         );
         let pool_dispatcher = IPoolDispatcher { contract_address: from_pool };
-        pool_dispatcher.switch_delegation_pool(:to_staker, :to_pool, :amount);
+        pool_dispatcher.switch_delegation_pool(:to_staker, :to_pool, :amount)
     }
 
     fn claim_rewards(self: Delegator, pool: ContractAddress) -> Amount {
@@ -565,14 +565,14 @@ pub impl DelegatorImpl of DelegatorTrait {
     ) {
         cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.change_reward_address(:reward_address);
+        pool_dispatcher.change_reward_address(:reward_address)
     }
 
-    fn add_to_delegation_pool(self: Delegator, pool: ContractAddress, amount: Amount) {
+    fn add_to_delegation_pool(self: Delegator, pool: ContractAddress, amount: Amount) -> Amount {
         self.delegator.approve(spender: pool, :amount);
         cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.add_to_delegation_pool(pool_member: self.delegator.address, :amount);
+        pool_dispatcher.add_to_delegation_pool(pool_member: self.delegator.address, :amount)
     }
 }
 
