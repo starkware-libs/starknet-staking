@@ -593,12 +593,12 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
     assert!(idx == 1, "Invalid Option loaded from map");
     let mut span = raw_serialized_value.span();
     let mut pool_member_info = InternalPoolMemberInfo {
-        reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed de reward'),
-        amount: Serde::<Amount>::deserialize(ref span).expect('Failed de amount'),
-        index: Serde::<Index>::deserialize(ref span).expect('Failed de index'),
-        unclaimed_rewards: Serde::<Amount>::deserialize(ref span).expect('Failed de unclaimed'),
-        commission: Serde::<Commission>::deserialize(ref span).expect('Failed de commission'),
-        unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed de unpool_amount'),
+        reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
+        amount: Serde::<Amount>::deserialize(ref span).expect('Failed amount'),
+        index: Serde::<Index>::deserialize(ref span).expect('Failed index'),
+        unclaimed_rewards: Serde::<Amount>::deserialize(ref span).expect('Failed unclaimed'),
+        commission: Serde::<Commission>::deserialize(ref span).expect('Failed commission'),
+        unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed unpool_amount'),
         unpool_time: Option::None,
     };
     let idx = *span.pop_front().expect('Failed pop_front');
@@ -607,7 +607,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
         pool_member_info
             .unpool_time =
                 Option::Some(
-                    Serde::<TimeStamp>::deserialize(ref span).expect('Failed de unpool_time')
+                    Serde::<TimeStamp>::deserialize(ref span).expect('Failed unpool_time')
                 );
     }
     return Option::Some(pool_member_info);
@@ -759,6 +759,49 @@ pub fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArra
             expected_error
         ),
     }
+}
+
+pub(crate) fn load_staker_info_from_map(
+    staker_address: ContractAddress, contract: ContractAddress
+) -> Option<InternalStakerInfo> {
+    let map_selector = selector!("staker_info");
+    let mut keys = array![];
+    staker_address.serialize(ref keys);
+    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
+    let mut raw_serialized_value = snforge_std::load(
+        target: contract, :storage_address, size: Store::<Option<InternalStakerInfo>>::size().into()
+    );
+    let idx = raw_serialized_value.pop_front().expect('Failed pop_front');
+    if idx.is_zero() {
+        return Option::None;
+    }
+    assert!(idx == 1, "Invalid Option loaded from map");
+    let mut span = raw_serialized_value.span();
+    let staker_info = InternalStakerInfo {
+        reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
+        operational_address: Serde::<ContractAddress>::deserialize(ref span)
+            .expect('Failed operational'),
+        unstake_time: deserialize_option(ref data: span),
+        amount_own: Serde::<Amount>::deserialize(ref span).expect('Failed amount_own'),
+        index: Serde::<Index>::deserialize(ref span).expect('Failed index'),
+        unclaimed_rewards_own: Serde::<Amount>::deserialize(ref span)
+            .expect('Failed unclaimed_rewards_own'),
+        pool_info: deserialize_option(ref data: span),
+    };
+    return Option::Some(staker_info);
+}
+
+/// Deserialize an Option<T> from the given data.
+fn deserialize_option<T, +Serde<T>, +Drop<T>>(ref data: Span<felt252>) -> Option<T> {
+    let idx = *data.pop_front().expect('Failed pop_front');
+    // Deserialize consumes the data (i.e. the size of T is removed from the front of the data).
+    // It's important to consume it even if the Option is None, as the calling function expects it.
+    let value = Serde::<T>::deserialize(ref serialized: data).expect('Failed deserialization');
+    if idx.is_zero() {
+        return Option::None;
+    }
+    assert!(idx == 1, "Invalid Option loaded from map");
+    Option::Some(value)
 }
 
 #[derive(Drop, Copy)]
