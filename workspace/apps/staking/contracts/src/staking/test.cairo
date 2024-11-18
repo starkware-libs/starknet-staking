@@ -40,6 +40,7 @@ use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::staking::interface::{IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait};
+use contracts::staking::interface::{IStakingSafeDispatcher, IStakingSafeDispatcherTrait};
 use contracts::staking::staking_tester::{IStakingTesterDispatcher, IStakingTesterDispatcherTrait};
 use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::staking::Staking::COMMISSION_DENOMINATOR;
@@ -881,6 +882,35 @@ fn test_unstake_action() {
 }
 
 #[test]
+#[feature("safe_dispatcher")]
+fn test_unstake_action_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+
+    // Catch STAKER_NOT_EXISTS.
+    let result = staking_safe_dispatcher.unstake_action(:staker_address);
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.message());
+
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+
+    // Catch MISSING_UNSTAKE_INTENT.
+    let result = staking_safe_dispatcher.unstake_action(:staker_address);
+    assert_panic_with_error(:result, expected_error: Error::MISSING_UNSTAKE_INTENT.message());
+
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.unstake_intent();
+
+    // Catch INTENT_WINDOW_NOT_FINISHED.
+    let result = staking_safe_dispatcher.unstake_action(:staker_address);
+    assert_panic_with_error(:result, expected_error: Error::INTENT_WINDOW_NOT_FINISHED.message());
+}
+
+#[test]
 fn test_get_total_stake() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -1510,6 +1540,80 @@ fn test_switch_staking_delegation_pool() {
         old_intent_amount: cfg.pool_member_info.amount - switched_amount,
         new_intent_amount: Zero::zero()
     );
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_switch_staking_delegation_pool_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
+        contract_address: staking_contract
+    };
+    let switched_amount = 1;
+
+    // Initialize from_staker.
+    let from_pool = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let from_pool_dispatcher = IPoolDispatcher { contract_address: from_pool };
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: from_pool, :cfg, :token_address
+    );
+
+    // Initialize to_staker.
+    let to_staker = OTHER_STAKER_ADDRESS();
+    cfg.test_info.staker_address = to_staker;
+    cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
+    let to_pool = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+
+    // Initialize SwitchPoolData.
+    let pool_member = cfg.test_info.pool_member_address;
+    let switch_pool_data = SwitchPoolData {
+        pool_member, reward_address: cfg.pool_member_info.reward_address
+    };
+    let mut serialized_data = array![];
+    switch_pool_data.serialize(ref output: serialized_data);
+
+    // Catch MISSING_UNDELEGATE_INTENT.
+    let result = staking_pool_safe_dispatcher
+        .switch_staking_delegation_pool(
+            :to_staker,
+            :to_pool,
+            :switched_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into()
+        );
+    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.message());
+
+    cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
+    from_pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
+
+    // Catch AMOUNT_TOO_HIGH.
+    let switched_amount = cfg.pool_member_info.amount + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: from_pool);
+    let result = staking_pool_safe_dispatcher
+        .switch_staking_delegation_pool(
+            :to_staker,
+            :to_pool,
+            :switched_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into()
+        );
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.message());
+
+    // Catch SELF_SWITCH_NOT_ALLOWED.
+    let switched_amount = 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: from_pool);
+    let result = staking_pool_safe_dispatcher
+        .switch_staking_delegation_pool(
+            :to_staker,
+            to_pool: from_pool,
+            :switched_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into()
+        );
+    assert_panic_with_error(:result, expected_error: Error::SELF_SWITCH_NOT_ALLOWED.message());
 }
 
 
