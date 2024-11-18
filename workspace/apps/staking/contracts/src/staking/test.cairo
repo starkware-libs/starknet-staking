@@ -13,7 +13,7 @@ use test_utils::{enter_delegation_pool_for_testing_using_dispatcher, load_option
 use test_utils::{load_from_simple_map, load_one_felt, stake_for_testing_using_dispatcher};
 use test_utils::{general_contract_system_deployment, cheat_reward_for_reward_supplier};
 use test_utils::{assert_panic_with_error, deploy_reward_supplier_contract, store_to_simple_map};
-use test_utils::{constants, stake_from_zero_address};
+use test_utils::{constants, stake_from_zero_address, load_staker_info_from_map};
 use constants::{DUMMY_ADDRESS, POOL_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, OTHER_REWARD_ADDRESS};
 use constants::{NON_STAKER_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, CALLER_ADDRESS, DUMMY_IDENTIFIER};
 use constants::{OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS};
@@ -982,13 +982,151 @@ fn test_stake_pool_enabled() {
     );
 }
 
-// TODO: Create tests that cover all panic scenarios for add_stake_from_pool.
-// TODO: Implement the following test.
-//       Note: The happy flow is also tested in test_enter_delegation_pool.
-//       in pool/test.cairo.
 #[test]
 fn test_add_stake_from_pool() {
-    assert!(true);
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staker_address = cfg.test_info.staker_address;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
+
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_amount = cfg.test_info.staker_initial_balance;
+    // Fund pool contract.
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: pool_contract,
+        amount: pool_amount,
+        :token_address
+    );
+    // Approve the Staking contract to spend the pool's tokens.
+    approve(owner: pool_contract, spender: staking_contract, amount: pool_amount, :token_address);
+
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let pool_balance_before = token_dispatcher.balance_of(pool_contract);
+    let total_stake_before = staking_dispatcher.get_total_stake();
+    let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    let mut spy = snforge_std::spy_events();
+    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(Time::days(1)).into());
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
+    let returned_index = staking_pool_dispatcher
+        .add_stake_from_pool(:staker_address, amount: pool_amount);
+
+    // Validate returned index.
+    let global_index = staking_dispatcher.contract_parameters().global_index;
+    assert_eq!(returned_index, global_index);
+
+    // Validate total stake.
+    assert_eq!(staking_dispatcher.get_total_stake(), total_stake_before + pool_amount);
+
+    // Validate pool balance.
+    let pool_balance_after = token_dispatcher.balance_of(pool_contract);
+    assert_eq!(pool_balance_after, pool_balance_before - pool_amount.into());
+
+    // Validate staker info.
+    let interest = global_index - cfg.staker_info.index;
+    let staker_rewards = compute_rewards_rounded_down(
+        amount: cfg.staker_info.amount_own, :interest
+    );
+    let pool_rewards_including_commission = compute_rewards_rounded_up(
+        amount: Zero::zero(), :interest
+    );
+    let commission_amount = compute_commission_amount_rounded_down(
+        rewards_including_commission: pool_rewards_including_commission,
+        commission: cfg.staker_info.get_pool_info_unchecked().commission
+    );
+    let mut staker_unclaimed_rewards = staker_rewards + commission_amount;
+    let mut pool_unclaimed_rewards = pool_rewards_including_commission - commission_amount;
+    let expected_staker_info = InternalStakerInfo {
+        reward_address: staker_info_before.reward_address,
+        operational_address: staker_info_before.operational_address,
+        unstake_time: staker_info_before.unstake_time,
+        amount_own: staker_info_before.amount_own,
+        index: staking_dispatcher.contract_parameters().global_index,
+        unclaimed_rewards_own: staker_unclaimed_rewards,
+        pool_info: Option::Some(
+            StakerPoolInfo {
+                pool_contract: pool_contract,
+                amount: pool_amount,
+                unclaimed_rewards: pool_unclaimed_rewards,
+                commission: staker_info_before.get_pool_info_unchecked().commission
+            }
+        )
+    };
+    let loaded_staker_info_after = load_staker_info_from_map(
+        :staker_address, contract: staking_contract
+    );
+    assert_eq!(loaded_staker_info_after, Option::Some(expected_staker_info));
+
+    // Validate `GlobalIndexUpdated` and `StakeBalanceChanged` events.
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 2, message: "add_stake_from_pool");
+    assert_global_index_updated_event(
+        spied_event: events[0],
+        old_index: cfg.staking_contract_info.global_index,
+        new_index: global_index,
+        global_index_last_update_timestamp: Zero::zero(),
+        global_index_current_update_timestamp: Time::now()
+    );
+    assert_stake_balance_changed_event(
+        spied_event: events[1],
+        staker_address: cfg.test_info.staker_address,
+        old_self_stake: cfg.staker_info.amount_own,
+        old_delegated_stake: Zero::zero(),
+        new_self_stake: cfg.staker_info.amount_own,
+        new_delegated_stake: pool_amount
+    );
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_add_stake_from_pool_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
+        contract_address: staking_contract
+    };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let amount = cfg.pool_member_info.amount;
+
+    // Should catch CALLER_IS_ZERO_ADDRESS.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: Zero::zero());
+    let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_ZERO_ADDRESS.message());
+
+    // Should catch STAKER_NOT_EXISTS.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.message());
+
+    // Should catch UNSTAKE_IN_PROGRESS.
+    let token_address = cfg.staking_contract_info.token_address;
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let unstake_time = staking_dispatcher.unstake_intent();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
+    let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.message());
+
+    // Should catch MISSING_POOL_CONTRACT.
+    start_cheat_block_timestamp_global(block_timestamp: unstake_time.add(Time::seconds(1)).into());
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.unstake_action(:staker_address);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
+    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.message());
+
+    // Should catch CALLER_IS_NOT_POOL_CONTRACT.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let commission = cfg.staker_info.get_pool_info_unchecked().commission;
+    staking_dispatcher.set_open_for_delegation(:commission);
+    let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.message());
 }
 
 #[test]
