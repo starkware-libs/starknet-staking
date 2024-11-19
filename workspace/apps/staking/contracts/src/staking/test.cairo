@@ -93,7 +93,6 @@ fn test_constructor() {
 
 #[test]
 fn test_stake() {
-    // TODO(Nir, 01/08/2024): add initial supply and owner address to StakingInitConfig.
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
@@ -515,7 +514,6 @@ fn test_claim_delegation_pool_rewards_unauthorized_address() {
     let staking_contract = cfg.test_info.staking_contract;
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    // TODO: Set the contract address to the actual pool contract address.
     let staker_address = cfg.test_info.staker_address;
     // Update staker info for the test.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -1484,7 +1482,6 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     let staking_balance_before_action = token_dispatcher.balance_of(staking_contract);
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_pool_dispatcher.remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
-    // TODO: Test event emitted.
     let staking_balance_after_action = token_dispatcher.balance_of(staking_contract);
     assert_eq!(staking_balance_after_action, staking_balance_before_action);
 }
