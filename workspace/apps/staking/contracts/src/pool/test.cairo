@@ -145,8 +145,6 @@ fn test_send_rewards_to_member() {
     );
 }
 
-
-// TODO(alon, 24/07/2024): Complete this function.
 #[test]
 fn test_enter_delegation_pool() {
     let cfg: StakingInitConfig = Default::default();
@@ -554,7 +552,6 @@ fn test_claim_rewards() {
         cfg.pool_member_info.into()
     );
     // Update index for testing.
-    // TODO: Wrap in a function.
     let updated_index: Index = cfg.staker_info.index + BASE_VALUE;
     snforge_std::store(
         staking_contract, selector!("global_index"), array![updated_index.into()].span()

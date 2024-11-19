@@ -316,7 +316,4 @@ fn test_claim_delegation_pool_rewards_when_paused() {
     };
     staking_pool_dispatcher.claim_delegation_pool_rewards(staker_address: DUMMY_ADDRESS());
 }
-// TODO: Test that only security admin can unpause
-// TODO: Test that only security agent can pause
-
 
