@@ -396,6 +396,149 @@ fn operations_after_dead_staker_flow_test() {
     );
 }
 
+// Flow:
+// Staker stake with commission 100%
+// Delegator delegate
+// Staker update_commission to 0%
+// Delegator exit_intent
+// Delegator exit_action, should get 0 rewards
+// Staker exit_intent
+// Staker exit_action
+#[test]
+fn delegator_didnt_update_after_staker_update_commission_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let initial_reward_supplier_balance = system
+        .token
+        .balance_of(account: system.reward_supplier.address);
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let delegated_amount = stake_amount;
+    let staker = system.new_staker(amount: stake_amount);
+    let delegator = system.new_delegator(amount: delegated_amount);
+    let commission = 10000;
+    let one_week = Time::weeks(1);
+
+    // Stake with commission 100%
+    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_time(time: one_week);
+
+    let pool = system.staking.get_pool(:staker);
+    delegator.delegate(:pool, amount: delegated_amount);
+
+    // Update commission to 0%
+    staker.update_commission(commission: Zero::zero());
+    system.advance_time(time: one_week);
+
+    delegator.exit_intent(:pool, amount: delegated_amount);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    delegator.exit_action(:pool);
+
+    // Clean up and make all parties exit.
+    staker.exit_intent();
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    staker.exit_action();
+
+    // ------------- Flow complete, now asserts -------------
+
+    // Assert pool balance is high.
+    assert!(system.token.balance_of(account: pool) > 100);
+
+    // Assert all staked amounts were transferred back.
+    assert!(system.token.balance_of(account: system.staking.address).is_zero());
+    assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
+    assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+
+    // Assert staker reward address is not empty.
+    assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+
+    // Assert delegator reward address is empty.
+    assert!(system.token.balance_of(account: delegator.reward.address).is_zero());
+
+    // Assert all funds that moved from rewards supplier, were moved to correct addresses.
+    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert_eq!(
+        initial_reward_supplier_balance,
+        system.token.balance_of(account: system.reward_supplier.address)
+            + system.token.balance_of(account: staker.reward.address)
+            + system.token.balance_of(account: pool)
+    );
+}
+
+// Flow:
+// Staker stake with commission 100%
+// Delegator delegate
+// Staker update_commission to 0%
+// Delegator update commission to 0% by calling claim_rewards
+// Delegator exit_intent
+// Delegator exit_action, should get rewards
+// Staker exit_intent
+// Staker exit_action
+#[test]
+fn delegator_updated_after_staker_update_commission_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let initial_reward_supplier_balance = system
+        .token
+        .balance_of(account: system.reward_supplier.address);
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let delegated_amount = stake_amount;
+    let staker = system.new_staker(amount: stake_amount);
+    let delegator = system.new_delegator(amount: delegated_amount);
+    let commission = 10000;
+    let one_week = Time::weeks(1);
+
+    // Stake with commission 100%
+    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_time(time: one_week);
+
+    let pool = system.staking.get_pool(:staker);
+    delegator.delegate(:pool, amount: delegated_amount);
+
+    // Update commission to 0%
+    staker.update_commission(commission: Zero::zero());
+    system.advance_time(time: one_week);
+
+    // Delegator claim_rewards to update commission to 0%
+    delegator.claim_rewards(:pool);
+    assert_eq!(system.token.balance_of(account: delegator.reward.address), Zero::zero());
+    system.advance_time(time: one_week);
+
+    delegator.exit_intent(:pool, amount: delegated_amount);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    delegator.exit_action(:pool);
+
+    // Clean up and make all parties exit.
+    staker.exit_intent();
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    staker.exit_action();
+
+    // ------------- Flow complete, now asserts -------------
+
+    // Assert pool balance is high.
+    assert!(system.token.balance_of(account: pool) > 100);
+
+    // Assert all staked amounts were transferred back.
+    assert!(system.token.balance_of(account: system.staking.address).is_zero());
+    assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
+    assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+
+    // Asserts reward addresses are not empty.
+    assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+    assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
+
+    // Assert all funds that moved from rewards supplier, were moved to correct addresses.
+    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert_eq!(
+        initial_reward_supplier_balance,
+        system.token.balance_of(account: system.reward_supplier.address)
+            + system.token.balance_of(account: staker.reward.address)
+            + system.token.balance_of(account: delegator.reward.address)
+            + system.token.balance_of(account: pool)
+    );
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

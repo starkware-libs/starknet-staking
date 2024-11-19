@@ -498,6 +498,13 @@ pub impl StakerImpl of StakerTrait {
         );
         self.staker.staking.dispatcher().claim_rewards(staker_address: self.staker.address)
     }
+
+    fn update_commission(self: Staker, commission: Commission) {
+        cheat_caller_address_once(
+            contract_address: self.staker.staking.address, caller_address: self.staker.address
+        );
+        self.staker.staking.dispatcher().update_commission(:commission)
+    }
 }
 
 /// The `Delegator` struct represents a delegator in the staking system.
