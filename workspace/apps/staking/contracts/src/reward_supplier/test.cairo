@@ -265,13 +265,6 @@ fn test_on_receive() {
     );
     for _ in 0
         ..num_msgs {
-            // Transfer base_mint_amount to the reward supplier.
-            fund(
-                sender: cfg.test_info.owner_address,
-                recipient: reward_supplier_contract,
-                amount: base_mint_amount,
-                :token_address
-            );
             cheat_caller_address_once(
                 contract_address: reward_supplier_contract,
                 caller_address: cfg.reward_supplier.starkgate_address
@@ -295,6 +288,28 @@ fn test_on_receive() {
                 expected_l1_pending_requested_amount
             );
         };
+
+    // One more time to cover an amount that's bigger than requested amount.
+    cheat_caller_address_once(
+        contract_address: reward_supplier_contract,
+        caller_address: cfg.reward_supplier.starkgate_address
+    );
+    assert!(
+        reward_supplier_dispatcher
+            .on_receive(
+                l2_token: token_address,
+                amount: 10 * base_mint_amount.into(),
+                depositor: cfg
+                    .reward_supplier
+                    .l1_reward_supplier
+                    .try_into()
+                    .expect('not EthAddress'),
+                message: array![].span()
+            )
+    );
+    assert_eq!(
+        reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount, Zero::zero()
+    );
 }
 
 #[test]
