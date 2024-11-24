@@ -18,13 +18,6 @@ pub trait IRewardSupplier<TContractState> {
     fn contract_parameters(self: @TContractState) -> RewardSupplierInfo;
 }
 
-#[derive(Debug, Copy, Drop, Serde, PartialEq)]
-pub struct RewardSupplierInfo {
-    pub last_timestamp: TimeStamp,
-    pub unclaimed_rewards: Amount,
-    pub l1_pending_requested_amount: Amount,
-}
-
 pub mod Events {
     use contracts::types::Amount;
     use contracts_commons::types::time::TimeStamp;
@@ -41,4 +34,11 @@ pub mod Events {
         pub new_timestamp: TimeStamp,
         pub rewards_calculated: Amount,
     }
+}
+
+#[derive(Debug, Copy, Drop, Serde, PartialEq)]
+pub struct RewardSupplierInfo {
+    pub last_timestamp: TimeStamp,
+    pub unclaimed_rewards: Amount,
+    pub l1_pending_requested_amount: Amount,
 }
