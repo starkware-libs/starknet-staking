@@ -1358,6 +1358,16 @@ fn test_pool_member_info() {
     let expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
     let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     assert_eq!(pool_member_info, expected_pool_member_info);
+
+    // Check after staker exits.
+    let staker_address = cfg.test_info.staker_address;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let unstake_time = staking_dispatcher.unstake_intent();
+    start_cheat_block_timestamp_global(block_timestamp: unstake_time.into());
+    staking_dispatcher.unstake_action(:staker_address);
+    let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
+    assert_eq!(pool_member_info, expected_pool_member_info);
 }
 
 #[test]
