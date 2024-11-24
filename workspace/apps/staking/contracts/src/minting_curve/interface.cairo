@@ -11,12 +11,6 @@ pub trait IMintingCurveConfig<TContractState> {
     fn set_c_num(ref self: TContractState, c_num: Inflation);
 }
 
-#[derive(Copy, Debug, Drop, PartialEq, Serde)]
-pub struct MintingCurveContractInfo {
-    pub c_num: Inflation,
-    pub c_denom: Inflation,
-}
-
 pub mod Events {
     use contracts::types::Amount;
 
@@ -35,4 +29,10 @@ pub mod ConfigEvents {
         pub old_c: Inflation,
         pub new_c: Inflation
     }
+}
+
+#[derive(Copy, Debug, Drop, PartialEq, Serde)]
+pub struct MintingCurveContractInfo {
+    pub c_num: Inflation,
+    pub c_denom: Inflation,
 }
