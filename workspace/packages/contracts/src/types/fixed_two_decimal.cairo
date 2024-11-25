@@ -8,15 +8,27 @@ pub struct FixedTwoDecimal {
     value: u8 // Stores number * 100
 }
 
+const DENOMINATOR: u8 = 100_u8;
+
 #[generate_trait]
 pub impl FixedTwoDecimalImpl of FixedTwoDecimalTrait {
     fn new(value: u8) -> FixedTwoDecimal {
-        assert(value <= 100, 'Value must be <= 100');
+        assert(value <= DENOMINATOR, 'Value must be <= 100');
         FixedTwoDecimal { value }
     }
 
     fn value(self: @FixedTwoDecimal) -> u8 {
         *self.value
+    }
+
+    /// Multiplies the fixed-point value by `other` and divides by DENOMINATOR.
+    /// Integer division truncates toward zero to the nearest integer.
+    ///
+    /// Example: FixedTwoDecimalTrait::new(75).mul(300) == 225
+    /// Example: FixedTwoDecimalTrait::new(75).mul(301) == 225
+    /// Example: FixedTwoDecimalTrait::new(75).mul(-5) == -3
+    fn mul<T, +Mul<T>, +Into<u8, T>, +Div<T>, +Drop<T>>(self: @FixedTwoDecimal, other: T) -> T {
+        (self.value().into() * other) / DENOMINATOR.into()
     }
 }
 
@@ -66,5 +78,13 @@ mod tests {
         let d: FixedTwoDecimal = FixedTwoDecimalTrait::new(1);
         assert!(d.is_non_zero());
         assert!(!d.is_zero());
+    }
+
+    #[test]
+    fn test_mul() {
+        assert_eq!(FixedTwoDecimalTrait::new(75).mul(300_u128), 225);
+        assert_eq!(FixedTwoDecimalTrait::new(75).mul(301_u128), 225);
+        assert_eq!(FixedTwoDecimalTrait::new(75).mul(299_u128), 224);
+        assert_eq!(FixedTwoDecimalTrait::new(75).mul(-5_i128), -3_i128);
     }
 }
