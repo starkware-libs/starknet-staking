@@ -4,8 +4,8 @@ pub mod Pool {
     use core::serde::Serde;
     use core::num::traits::zero::Zero;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
-    use contracts::pool::{interface::PoolContractInfo, IPool, Events};
-    use contracts::pool::{InternalPoolMemberInfo, PoolMemberInfo};
+    use contracts::pool::interface::{PoolContractInfo, IPool, Events};
+    use contracts::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
     use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
     use core::option::OptionTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};

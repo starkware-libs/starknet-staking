@@ -1,18 +1,13 @@
 pub mod interface;
 
 pub mod staking;
-pub mod align_upg_vars_eic;
 pub mod objects;
 
-//convenient reference
-pub use staking::Staking;
-pub use interface::{IStaking, StakerPoolInfo, StakingContractInfo};
-pub use interface::{StakerInfo, StakerInfoTrait};
-pub use interface::{IStakingPool, IStakingPause, IStakingConfig};
-pub use interface::{Events, PauseEvents, ConfigEvents};
+#[cfg(test)]
+mod align_upg_vars_eic;
 
-pub mod staking_tester;
-pub use staking_tester::IStakingTester;
+#[cfg(test)]
+mod staking_tester;
 
 #[cfg(test)]
 mod test;

@@ -9,10 +9,11 @@ use contracts::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo, IPoolSafeDispatcher,
     IPoolSafeDispatcherTrait
 };
-use contracts::pool::{Pool::{SwitchPoolData, InternalPoolFunctionsTrait}};
-use contracts::pool::Pool::CONTRACT_IDENTITY as pool_identity;
-use contracts::pool::Pool::CONTRACT_VERSION as pool_version;
-use contracts::pool::{InternalPoolMemberInfo, PoolMemberInfo};
+use contracts::pool::pool::Pool;
+use Pool::{SwitchPoolData, InternalPoolFunctionsTrait};
+use Pool::CONTRACT_IDENTITY as pool_identity;
+use Pool::CONTRACT_VERSION as pool_version;
+use contracts::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
 use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
 use contracts::test_utils;
 use test_utils::{initialize_pool_state, deploy_mock_erc20_contract, StakingInitConfig};

@@ -14,8 +14,9 @@ pub mod StakingTester {
     use contracts::constants::DEFAULT_EXIT_WAIT_WINDOW;
     use contracts::constants::MIN_TIME_BETWEEN_INDEX_UPDATES;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
-    use contracts::staking::{StakerInfo, StakerPoolInfo, StakingContractInfo};
-    use contracts::staking::{IStakingPool, IStakingPause, IStaking, IStakingConfig, IStakingTester};
+    use contracts::staking::interface::{StakerInfo, StakerPoolInfo, StakingContractInfo};
+    use contracts::staking::interface::{IStakingPool, IStakingPause, IStaking, IStakingConfig};
+    use contracts::staking::staking_tester::IStakingTester;
     use contracts::utils::{deploy_delegation_pool_contract, compute_commission_amount_rounded_down};
     use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
     use contracts::utils::compute_global_index_diff;
@@ -23,7 +24,7 @@ pub mod StakingTester {
     use contracts::staking::objects::UndelegateIntentValueTrait;
     use contracts::staking::objects::UndelegateIntentValueZero;
     use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
-    use contracts::staking::{Events, PauseEvents, ConfigEvents};
+    use contracts::staking::interface::{Events, PauseEvents, ConfigEvents};
     use starknet::{ContractAddress, get_contract_address, get_caller_address};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
