@@ -3,7 +3,7 @@ use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
 use starknet::{ContractAddress, ClassHash, SyscallResultTrait, get_contract_address};
 use starknet::syscalls::deploy_syscall;
 use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-use contracts::staking::Staking::{COMMISSION_DENOMINATOR};
+use contracts::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use core::num::traits::zero::Zero;
 use core::num::traits::WideMul;
 use contracts::types::{Commission, Index, Amount};
