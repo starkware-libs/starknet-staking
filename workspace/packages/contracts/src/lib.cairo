@@ -5,6 +5,7 @@ pub mod interfaces;
 
 pub mod constants;
 pub mod types;
+pub mod math;
 
 pub(crate) mod bit_mask;
 
