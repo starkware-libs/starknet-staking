@@ -10,7 +10,7 @@ use contracts::utils::abs_diff;
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
-/// Staker increase_stake - cover if pool amount=0 in calc_rew
+/// Staker increase_stake - cover if pool amount = 0 in calc_rew
 /// Delegator delegate (and create) to Staker
 /// Staker increase_stake - cover pool amount > 0 in calc_rew
 /// Delegator increase_delegate
