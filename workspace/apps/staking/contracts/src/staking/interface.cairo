@@ -1,7 +1,7 @@
 use starknet::{ContractAddress, ClassHash};
 use contracts::errors::{Error, OptionAuxTrait};
 use contracts::types::{Commission, Index, Amount};
-use contracts_commons::types::time::{TimeStamp, TimeDelta};
+use contracts_commons::types::time::{Timestamp, TimeDelta};
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 
 /// Public interface for the staking contract.
@@ -19,7 +19,7 @@ pub trait IStaking<TContractState> {
         ref self: TContractState, staker_address: ContractAddress, amount: Amount
     ) -> Amount;
     fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> Amount;
-    fn unstake_intent(ref self: TContractState) -> TimeStamp;
+    fn unstake_intent(ref self: TContractState) -> Timestamp;
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn set_open_for_delegation(ref self: TContractState, commission: Commission) -> ContractAddress;
@@ -86,7 +86,7 @@ pub trait IStakingPool<TContractState> {
         staker_address: ContractAddress,
         identifier: felt252,
         amount: Amount,
-    ) -> TimeStamp;
+    ) -> Timestamp;
 
     /// Transfers the removal intent amount back to the pool contract, and clears the intent.
     ///
@@ -148,7 +148,7 @@ pub trait IStakingConfig<TContractState> {
 pub mod Events {
     use starknet::ContractAddress;
     use contracts::types::{Commission, Index, Amount};
-    use contracts_commons::types::time::TimeStamp;
+    use contracts_commons::types::time::Timestamp;
     #[derive(Drop, starknet::Event)]
     pub struct StakeBalanceChanged {
         #[key]
@@ -191,7 +191,7 @@ pub mod Events {
     pub struct StakerExitIntent {
         #[key]
         pub staker_address: ContractAddress,
-        pub exit_timestamp: TimeStamp,
+        pub exit_timestamp: Timestamp,
         pub amount: Amount
     }
 
@@ -231,8 +231,8 @@ pub mod Events {
     pub struct GlobalIndexUpdated {
         pub old_index: Index,
         pub new_index: Index,
-        pub global_index_last_update_timestamp: TimeStamp,
-        pub global_index_current_update_timestamp: TimeStamp
+        pub global_index_last_update_timestamp: Timestamp,
+        pub global_index_current_update_timestamp: Timestamp
     }
 
     #[derive(Drop, starknet::Event)]
@@ -335,7 +335,7 @@ pub struct StakingContractInfo {
 pub struct StakerInfo {
     pub reward_address: ContractAddress,
     pub operational_address: ContractAddress,
-    pub unstake_time: Option<TimeStamp>,
+    pub unstake_time: Option<Timestamp>,
     pub amount_own: Amount,
     pub index: Index,
     pub unclaimed_rewards_own: Amount,

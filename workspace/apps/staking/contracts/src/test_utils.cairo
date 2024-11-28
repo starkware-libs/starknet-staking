@@ -33,7 +33,7 @@ use contracts_commons::constants::{NAME, SYMBOL};
 use snforge_std::byte_array::try_deserialize_bytearray_error;
 use snforge_std::test_address;
 use contracts::types::{Commission, Index, Amount};
-use contracts_commons::types::time::TimeStamp;
+use contracts_commons::types::time::Timestamp;
 
 pub(crate) mod constants {
     use starknet::{ContractAddress, contract_address_const};
@@ -609,7 +609,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
         pool_member_info
             .unpool_time =
                 Option::Some(
-                    Serde::<TimeStamp>::deserialize(ref span).expect('Failed unpool_time')
+                    Serde::<Timestamp>::deserialize(ref span).expect('Failed unpool_time')
                 );
     }
     return Option::Some(pool_member_info);

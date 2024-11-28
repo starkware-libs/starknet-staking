@@ -17,7 +17,7 @@ use contracts::test_utils::StakingInitConfig;
 use contracts_commons::test_utils::{cheat_caller_address_once, TokenState, TokenConfig, TokenTrait};
 use snforge_std::start_cheat_block_timestamp_global;
 use contracts::types::{Commission, Amount};
-use contracts_commons::types::time::{TimeStamp, TimeDelta, Time};
+use contracts_commons::types::time::{Timestamp, TimeDelta, Time};
 
 /// The `StakingRoles` struct represents the various roles involved in the staking contract.
 /// It includes addresses for different administrative and security roles.
@@ -471,7 +471,7 @@ pub impl StakerImpl of StakerTrait {
             .increase_stake(staker_address: self.staker.address, :amount)
     }
 
-    fn exit_intent(self: Staker) -> TimeStamp {
+    fn exit_intent(self: Staker) -> Timestamp {
         cheat_caller_address_once(
             contract_address: self.staker.staking.address, caller_address: self.staker.address
         );
