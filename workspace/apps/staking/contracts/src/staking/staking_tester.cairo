@@ -39,7 +39,7 @@ pub mod StakingTester {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts::types::{Commission, Index, Amount};
-    use contracts_commons::types::time::{TimeDelta, Time, TimeStamp};
+    use contracts_commons::types::time::{TimeDelta, Time, Timestamp};
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
 
@@ -66,7 +66,7 @@ pub mod StakingTester {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         global_index: Index,
-        global_index_last_update_timestamp: TimeStamp,
+        global_index_last_update_timestamp: Timestamp,
         min_stake: Amount,
         staker_info: Map<ContractAddress, Option<InternalStakerInfo>>,
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
@@ -291,7 +291,7 @@ pub mod StakingTester {
             amount
         }
 
-        fn unstake_intent(ref self: ContractState) -> TimeStamp {
+        fn unstake_intent(ref self: ContractState) -> Timestamp {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
@@ -563,7 +563,7 @@ pub mod StakingTester {
             staker_address: ContractAddress,
             identifier: felt252,
             amount: Amount,
-        ) -> TimeStamp {
+        ) -> Timestamp {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             let mut pool_info = staker_info.get_pool_info_unchecked();

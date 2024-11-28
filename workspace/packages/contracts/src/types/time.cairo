@@ -42,32 +42,32 @@ impl TimeDeltaPartialOrd of PartialOrd<TimeDelta> {
 
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-pub struct TimeStamp {
+pub struct Timestamp {
     pub seconds: u64
 }
-impl TimeStampZero of core::num::traits::Zero<TimeStamp> {
-    fn zero() -> TimeStamp {
-        TimeStamp { seconds: 0 }
+impl TimeStampZero of core::num::traits::Zero<Timestamp> {
+    fn zero() -> Timestamp {
+        Timestamp { seconds: 0 }
     }
-    fn is_zero(self: @TimeStamp) -> bool {
+    fn is_zero(self: @Timestamp) -> bool {
         self.seconds.is_zero()
     }
-    fn is_non_zero(self: @TimeStamp) -> bool {
+    fn is_non_zero(self: @Timestamp) -> bool {
         self.seconds.is_non_zero()
     }
 }
-impl TimeAddAssign of core::ops::AddAssign<TimeStamp, TimeDelta> {
-    fn add_assign(ref self: TimeStamp, rhs: TimeDelta) {
+impl TimeAddAssign of core::ops::AddAssign<Timestamp, TimeDelta> {
+    fn add_assign(ref self: Timestamp, rhs: TimeDelta) {
         self.seconds += rhs.seconds;
     }
 }
-impl TimeStampPartialOrd of PartialOrd<TimeStamp> {
-    fn lt(lhs: TimeStamp, rhs: TimeStamp) -> bool {
+impl TimeStampPartialOrd of PartialOrd<Timestamp> {
+    fn lt(lhs: Timestamp, rhs: Timestamp) -> bool {
         lhs.seconds < rhs.seconds
     }
 }
-impl TimeStampInto of Into<TimeStamp, u64> {
-    fn into(self: TimeStamp) -> u64 {
+impl TimeStampInto of Into<Timestamp, u64> {
+    fn into(self: Timestamp) -> u64 {
         self.seconds
     }
 }
@@ -83,15 +83,15 @@ pub impl TimeImpl of Time {
     fn weeks(count: u64) -> TimeDelta {
         Self::seconds(count * WEEK)
     }
-    fn now() -> TimeStamp {
-        TimeStamp { seconds: starknet::get_block_timestamp() }
+    fn now() -> Timestamp {
+        Timestamp { seconds: starknet::get_block_timestamp() }
     }
-    fn add(self: TimeStamp, delta: TimeDelta) -> TimeStamp {
+    fn add(self: Timestamp, delta: TimeDelta) -> Timestamp {
         let mut value = self;
         value += delta;
         value
     }
-    fn sub(self: TimeStamp, other: TimeStamp) -> TimeDelta {
+    fn sub(self: Timestamp, other: Timestamp) -> TimeDelta {
         TimeDelta { seconds: self.seconds - other.seconds }
     }
     fn mul(self: TimeDelta, multiplier: u64) -> TimeDelta {
@@ -108,7 +108,7 @@ mod tests {
     use contracts_commons::constants::DAY;
     use snforge_std::start_cheat_block_timestamp_global;
     use core::num::traits::zero::Zero;
-    use super::{Time, TimeStamp, TimeDelta};
+    use super::{Time, Timestamp, TimeDelta};
 
     #[test]
     fn test_timedelta_add() {
@@ -182,15 +182,15 @@ mod tests {
 
     #[test]
     fn test_timestamp_add_assign() {
-        let mut time: TimeStamp = Zero::zero();
+        let mut time: Timestamp = Zero::zero();
         time += Time::days(1);
         assert_eq!(time.seconds, Zero::zero() + Time::days(1).seconds);
     }
 
     #[test]
     fn test_timestamp_eq() {
-        let time1: TimeStamp = Zero::zero();
-        let time2: TimeStamp = Zero::zero();
+        let time1: Timestamp = Zero::zero();
+        let time2: Timestamp = Zero::zero();
         let time3 = time1.add(Time::days(1));
         assert!(time1 == time2);
         assert!(time1 != time3);
@@ -204,28 +204,28 @@ mod tests {
 
     #[test]
     fn test_timestamp_sub() {
-        let time1 = TimeStamp { seconds: 2 };
-        let time2 = TimeStamp { seconds: 1 };
+        let time1 = Timestamp { seconds: 2 };
+        let time2 = Timestamp { seconds: 1 };
         let delta = time1.sub(time2);
         assert_eq!(delta, Time::seconds(1));
     }
 
     #[test]
     fn test_timestamp_lt() {
-        let time1: TimeStamp = Zero::zero();
+        let time1: Timestamp = Zero::zero();
         let time2 = time1.add(Time::days(1));
         assert!(time1 < time2);
     }
 
     #[test]
     fn test_timestamp_zero() {
-        let time: TimeStamp = TimeStamp { seconds: 0 };
+        let time: Timestamp = Timestamp { seconds: 0 };
         assert_eq!(time, Zero::zero());
     }
 
     #[test]
     fn test_time_add() {
-        let time: TimeStamp = Zero::zero();
+        let time: Timestamp = Zero::zero();
         let new_time = time.add(Time::days(1));
         assert_eq!(new_time.seconds, time.seconds + Time::days(1).seconds);
     }

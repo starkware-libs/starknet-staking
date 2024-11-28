@@ -29,7 +29,7 @@ pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts::types::{Commission, Index, Amount};
-    use contracts_commons::types::time::{TimeDelta, Time, TimeStamp};
+    use contracts_commons::types::time::{TimeDelta, Time, Timestamp};
     use contracts_commons::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -61,7 +61,7 @@ pub mod Staking {
         // The global index of the staking system. This is used to calculate the accrued interest.
         global_index: Index,
         // The timestamp of the last global index update.
-        global_index_last_update_timestamp: TimeStamp,
+        global_index_last_update_timestamp: Timestamp,
         // Minimum amount of initial stake.
         min_stake: Amount,
         // Map staker address to their staker info.
@@ -328,7 +328,7 @@ pub mod Staking {
             amount
         }
 
-        fn unstake_intent(ref self: ContractState) -> TimeStamp {
+        fn unstake_intent(ref self: ContractState) -> Timestamp {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
@@ -642,7 +642,7 @@ pub mod Staking {
             staker_address: ContractAddress,
             identifier: felt252,
             amount: Amount,
-        ) -> TimeStamp {
+        ) -> Timestamp {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);

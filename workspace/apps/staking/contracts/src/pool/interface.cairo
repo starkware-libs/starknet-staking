@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 use contracts::types::{Commission, Index, Amount};
-use contracts_commons::types::time::TimeStamp;
+use contracts_commons::types::time::Timestamp;
 
 #[starknet::interface]
 pub trait IPool<TContractState> {
@@ -37,13 +37,13 @@ pub trait IPool<TContractState> {
 pub mod Events {
     use starknet::ContractAddress;
     use contracts::types::{Index, Amount};
-    use contracts_commons::types::time::TimeStamp;
+    use contracts_commons::types::time::Timestamp;
 
     #[derive(Drop, starknet::Event)]
     pub struct PoolMemberExitIntent {
         #[key]
         pub pool_member: ContractAddress,
-        pub exit_timestamp: TimeStamp,
+        pub exit_timestamp: Timestamp,
         pub amount: Amount
     }
 
@@ -121,7 +121,7 @@ pub struct PoolMemberInfo {
     pub unclaimed_rewards: Amount,
     pub commission: Commission,
     pub unpool_amount: Amount,
-    pub unpool_time: Option<TimeStamp>,
+    pub unpool_time: Option<Timestamp>,
 }
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
@@ -141,7 +141,7 @@ pub struct InternalPoolMemberInfo {
     pub unclaimed_rewards: Amount,
     pub commission: Commission,
     pub unpool_amount: Amount,
-    pub unpool_time: Option<TimeStamp>,
+    pub unpool_time: Option<Timestamp>,
 }
 
 pub(crate) impl InternalPoolMemberInfoInto of Into<InternalPoolMemberInfo, PoolMemberInfo> {

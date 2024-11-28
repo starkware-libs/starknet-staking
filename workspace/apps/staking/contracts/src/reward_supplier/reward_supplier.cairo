@@ -20,7 +20,7 @@ pub mod RewardSupplier {
     use contracts_commons::components::roles::RolesComponent;
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts::types::Amount;
-    use contracts_commons::types::time::{TimeStamp, Time};
+    use contracts_commons::types::time::{Timestamp, Time};
     use contracts_commons::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -50,7 +50,7 @@ pub mod RewardSupplier {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         // The last time rewards were calculated.
-        last_timestamp: TimeStamp,
+        last_timestamp: Timestamp,
         // The amount of unclaimed rewards owed to the staking contract.
         unclaimed_rewards: Amount,
         // The amount of tokens requested from L1.

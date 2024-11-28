@@ -20,7 +20,7 @@ pub mod Pool {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts::utils::CheckedIERC20DispatcherTrait;
     use contracts::types::{Commission, Index, Amount};
-    use contracts_commons::types::time::{TimeStamp, Time};
+    use contracts_commons::types::time::{Timestamp, Time};
     use contracts_commons::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -619,7 +619,7 @@ pub mod Pool {
 
         fn undelegate_from_staking_contract_intent(
             self: @ContractState, pool_member: ContractAddress, amount: Amount
-        ) -> TimeStamp {
+        ) -> Timestamp {
             if !self.is_staker_active() {
                 // Don't allow intent if an intent is already in progress and the staker is erased.
                 assert_with_err(

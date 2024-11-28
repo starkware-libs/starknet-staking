@@ -11,7 +11,7 @@ use contracts::minting_curve::minting_curve::MintingCurve;
 use contracts::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
 use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
 use contracts::types::{Commission, Index, Amount, Inflation};
-use contracts_commons::types::time::{TimeDelta, TimeStamp};
+use contracts_commons::types::time::{TimeDelta, Timestamp};
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(
@@ -27,7 +27,7 @@ pub fn panic_with_event_details(expected_emitted_by: @ContractAddress, details: 
 pub fn assert_staker_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
-    exit_timestamp: TimeStamp,
+    exit_timestamp: Timestamp,
     amount: Amount
 ) {
     let expected_event = @Staking::Event::StakerExitIntent(
@@ -105,7 +105,7 @@ pub fn assert_stake_balance_changed_event(
 pub fn assert_pool_member_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
-    exit_timestamp: TimeStamp,
+    exit_timestamp: Timestamp,
     amount: Amount
 ) {
     let expected_event = @Pool::Event::PoolMemberExitIntent(
@@ -246,8 +246,8 @@ pub fn assert_global_index_updated_event(
     spied_event: @(ContractAddress, Event),
     old_index: Index,
     new_index: Index,
-    global_index_last_update_timestamp: TimeStamp,
-    global_index_current_update_timestamp: TimeStamp,
+    global_index_last_update_timestamp: Timestamp,
+    global_index_current_update_timestamp: Timestamp,
 ) {
     let expected_event = @Staking::Event::GlobalIndexUpdated(
         StakingEvents::GlobalIndexUpdated {
@@ -460,8 +460,8 @@ pub(crate) fn assert_final_index_set_event(
 
 pub(crate) fn assert_calculated_rewards_event(
     spied_event: @(ContractAddress, Event),
-    last_timestamp: TimeStamp,
-    new_timestamp: TimeStamp,
+    last_timestamp: Timestamp,
+    new_timestamp: Timestamp,
     rewards_calculated: Amount
 ) {
     let expected_event = @RewardSupplier::Event::CalculatedRewards(

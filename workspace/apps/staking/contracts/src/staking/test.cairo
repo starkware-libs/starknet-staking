@@ -63,7 +63,7 @@ use contracts_commons::components::replaceability::interface::{
 };
 use contracts_commons::components::replaceability::interface::ImplementationData;
 use contracts::types::{Index, Amount};
-use contracts_commons::types::time::{TimeStamp, Time, TimeDelta};
+use contracts_commons::types::time::{Timestamp, Time, TimeDelta};
 use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
 
 #[test]
@@ -288,7 +288,7 @@ fn test_update_rewards_unstake_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     let staker_info_expected = InternalStakerInfo {
-        unstake_time: Option::Some(TimeStamp { seconds: 1 }), ..cfg.staker_info
+        unstake_time: Option::Some(Timestamp { seconds: 1 }), ..cfg.staker_info
     };
     let mut staker_info = staker_info_expected;
     state.update_rewards(ref :staker_info);
@@ -1376,7 +1376,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
         pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
     let invalid_undelegate_intent_value = UndelegateIntentValue {
-        unpool_time: TimeStamp { seconds: 1 }, amount: 0
+        unpool_time: Timestamp { seconds: 1 }, amount: 0
     };
     store_to_simple_map(
         map_selector: selector!("pool_exit_intents"),

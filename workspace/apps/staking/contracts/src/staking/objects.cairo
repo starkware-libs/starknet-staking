@@ -3,7 +3,7 @@ use contracts::staking::interface::{StakerPoolInfo, StakerInfo};
 use core::num::traits::Zero;
 use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
 use contracts::types::{Amount, Index};
-use contracts_commons::types::time::{TimeStamp, TimeDelta, Time};
+use contracts_commons::types::time::{Timestamp, TimeDelta, Time};
 use core::cmp::max;
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
@@ -16,7 +16,7 @@ pub struct UndelegateIntentKey {
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct UndelegateIntentValue {
-    pub unpool_time: TimeStamp,
+    pub unpool_time: Timestamp,
     pub amount: Amount
 }
 
@@ -38,7 +38,7 @@ pub impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentVa
 pub(crate) struct InternalStakerInfo {
     pub(crate) reward_address: ContractAddress,
     pub(crate) operational_address: ContractAddress,
-    pub(crate) unstake_time: Option<TimeStamp>,
+    pub(crate) unstake_time: Option<Timestamp>,
     pub(crate) amount_own: Amount,
     pub(crate) index: Index,
     pub(crate) unclaimed_rewards_own: Amount,
@@ -47,7 +47,7 @@ pub(crate) struct InternalStakerInfo {
 
 #[generate_trait]
 pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
-    fn compute_unpool_time(self: @InternalStakerInfo, exit_wait_window: TimeDelta) -> TimeStamp {
+    fn compute_unpool_time(self: @InternalStakerInfo, exit_wait_window: TimeDelta) -> Timestamp {
         if let Option::Some(unstake_time) = *self.unstake_time {
             return max(unstake_time, Time::now());
         }
@@ -90,9 +90,9 @@ pub impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
 mod test_undelegate_intent {
     use super::{UndelegateIntentValue, UndelegateIntentValueTrait};
     use core::num::traits::zero::Zero;
-    use contracts_commons::types::time::TimeStamp;
+    use contracts_commons::types::time::Timestamp;
 
-    const UNPOOL_TIME: TimeStamp = TimeStamp { seconds: 1 };
+    const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
 
     #[test]
     fn test_zero() {
@@ -100,7 +100,7 @@ mod test_undelegate_intent {
         assert_eq!(
             d,
             UndelegateIntentValue {
-                unpool_time: TimeStamp { seconds: Zero::zero() }, amount: Zero::zero()
+                unpool_time: Timestamp { seconds: Zero::zero() }, amount: Zero::zero()
             }
         );
     }
