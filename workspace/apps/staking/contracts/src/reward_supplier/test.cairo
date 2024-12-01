@@ -151,7 +151,9 @@ fn test_calculate_staking_rewards() {
         amount: balance,
         :token_address
     );
-    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(Time::days(365)).into());
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 365)).into()
+    );
     cheat_caller_address_once(contract_address: test_address(), caller_address: staking_contract);
     let mut spy = snforge_std::spy_events();
     let mut msgs_to_l1 = spy_messages_to_l1();
@@ -226,7 +228,7 @@ fn test_contract_parameters() {
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
     );
     // Change the block_timestamp so the contract_parameters() won't return zero for all fields.
-    let block_timestamp = Time::now().add(Time::seconds(1));
+    let block_timestamp = Time::now().add(delta: Time::seconds(count: 1));
     start_cheat_block_timestamp_global(block_timestamp: block_timestamp.into());
     let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     let expected_info = RewardSupplierInfo {
@@ -251,7 +253,9 @@ fn test_on_receive() {
     let balance = Zero::zero();
     let credit = balance
         + reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount;
-    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(Time::days(365)).into());
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 365)).into()
+    );
     cheat_caller_address_once(
         contract_address: reward_supplier_contract, caller_address: staking_contract
     );

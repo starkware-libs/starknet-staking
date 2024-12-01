@@ -764,7 +764,8 @@ fn test_unstake_intent() {
     let mut spy = snforge_std::spy_events();
     let unstake_time = staking_dispatcher.unstake_intent();
     let staker_info = staking_dispatcher.staker_info(:staker_address);
-    let expected_time = Time::now().add(staking_dispatcher.contract_parameters().exit_wait_window);
+    let expected_time = Time::now()
+        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
     assert_eq!(staker_info.unstake_time.unwrap(), unstake_time);
     assert_eq!(unstake_time, expected_time);
     assert_eq!(staking_dispatcher.get_total_stake(), Zero::zero());
@@ -839,7 +840,9 @@ fn test_unstake_action() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let unstake_time = staking_dispatcher.unstake_intent();
     // Advance time to enable unstake_action.
-    start_cheat_block_timestamp_global(block_timestamp: unstake_time.add(Time::seconds(1)).into());
+    start_cheat_block_timestamp_global(
+        block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into()
+    );
     let unclaimed_rewards_own = staking_dispatcher
         .staker_info(:staker_address)
         .unclaimed_rewards_own;
@@ -1008,7 +1011,9 @@ fn test_add_stake_from_pool() {
     let total_stake_before = staking_dispatcher.get_total_stake();
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
     let mut spy = snforge_std::spy_events();
-    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(Time::days(1)).into());
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into()
+    );
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     let returned_index = staking_pool_dispatcher
         .add_stake_from_pool(:staker_address, amount: pool_amount);
@@ -1112,7 +1117,9 @@ fn test_add_stake_from_pool_assertions() {
     assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.message());
 
     // Should catch MISSING_POOL_CONTRACT.
-    start_cheat_block_timestamp_global(block_timestamp: unstake_time.add(Time::seconds(1)).into());
+    start_cheat_block_timestamp_global(
+        block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into()
+    );
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_action(:staker_address);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -1210,7 +1217,7 @@ fn test_remove_from_delegation_pool_intent() {
         contract: staking_contract
     );
     let expected_unpool_time = Time::now()
-        .add(staking_dispatcher.contract_parameters().exit_wait_window);
+        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time, amount: intent_amount
     };
@@ -1308,7 +1315,7 @@ fn test_remove_from_delegation_pool_intent() {
         contract: staking_contract
     );
     let expected_unpool_time = Time::now()
-        .add(staking_dispatcher.contract_parameters().exit_wait_window);
+        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time, amount: new_intent_amount
     };
@@ -1429,7 +1436,7 @@ fn test_remove_from_delegation_pool_action() {
     // Remove from delegation pool action, and then check that the intent was removed correctly.
     start_cheat_block_timestamp_global(
         block_timestamp: Time::now()
-            .add(staking_dispatcher.contract_parameters().exit_wait_window)
+            .add(delta: staking_dispatcher.contract_parameters().exit_wait_window)
             .into()
     );
     let pool_balance_before_action = token_dispatcher.balance_of(pool_contract);
@@ -1785,7 +1792,7 @@ fn test_update_global_index_if_needed() {
         .expect('inflation not fit in u64');
     let global_index_last_update_timestamp = Time::now();
     let global_index_current_update_timestamp = global_index_last_update_timestamp
-        .add(Time::days(365));
+        .add(delta: Time::days(count: 365));
     start_cheat_block_timestamp_global(
         block_timestamp: global_index_current_update_timestamp.into()
     );
@@ -2638,7 +2645,7 @@ fn test_get_pool_exit_intent() {
     pool_dispatcher.exit_delegation_pool_intent(amount: 2);
     let undelegate_intent_value = staking_dispatcher.get_pool_exit_intent(:undelegate_intent_key);
     let expected = UndelegateIntentValue {
-        unpool_time: Time::now().add(exit_wait_window), amount: 2
+        unpool_time: Time::now().add(delta: exit_wait_window), amount: 2
     };
     assert_eq!(undelegate_intent_value, expected);
     // Edit intent
@@ -2646,7 +2653,7 @@ fn test_get_pool_exit_intent() {
     pool_dispatcher.exit_delegation_pool_intent(amount: 1);
     let undelegate_intent_value = staking_dispatcher.get_pool_exit_intent(:undelegate_intent_key);
     let expected = UndelegateIntentValue {
-        unpool_time: Time::now().add(exit_wait_window), amount: 1
+        unpool_time: Time::now().add(delta: exit_wait_window), amount: 1
     };
     assert_eq!(undelegate_intent_value, expected);
     // Cancel intent

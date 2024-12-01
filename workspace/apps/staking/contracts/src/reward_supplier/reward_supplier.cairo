@@ -222,7 +222,7 @@ pub mod RewardSupplier {
             self.last_timestamp.write(current_time);
 
             // Return the rewards adjusted by the time passed since the last timestamp.
-            let seconds_diff: u64 = current_time.sub(last_timestamp).into();
+            let seconds_diff: u64 = current_time.sub(other: last_timestamp).into();
             yearly_mint * seconds_diff.into() / SECONDS_IN_YEAR
         }
 

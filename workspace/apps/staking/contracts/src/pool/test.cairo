@@ -610,7 +610,8 @@ fn test_exit_delegation_pool_intent() {
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
     // Validate the expected pool member info and staker info.
-    let expected_time = Time::now().add(staking_dispatcher.contract_parameters().exit_wait_window);
+    let expected_time = Time::now()
+        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
     let expected_pool_member_info = InternalPoolMemberInfo {
         amount: Zero::zero(),
         unpool_amount: cfg.pool_member_info.amount,
@@ -744,7 +745,7 @@ fn test_exit_delegation_pool_action() {
         .balance_of(cfg.pool_member_info.reward_address);
     start_cheat_block_timestamp_global(
         block_timestamp: Time::now()
-            .add(staking_dispatcher.contract_parameters().exit_wait_window)
+            .add(delta: staking_dispatcher.contract_parameters().exit_wait_window)
             .into()
     );
     // Exit delegation pool action and check that:
@@ -1276,7 +1277,8 @@ fn test_partial_undelegate() {
     let actual_pool_member_info: Option<InternalPoolMemberInfo> = load_pool_member_info_from_map(
         key: cfg.test_info.pool_member_address, contract: pool_contract
     );
-    let expected_time = Time::now().add(staking_dispatcher.contract_parameters().exit_wait_window);
+    let expected_time = Time::now()
+        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
     let expected_pool_member_info = InternalPoolMemberInfo {
         unclaimed_rewards: unclaimed_rewards_member,
         unpool_time: Option::Some(expected_time),
