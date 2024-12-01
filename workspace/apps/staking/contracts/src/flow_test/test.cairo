@@ -23,7 +23,7 @@ fn basic_stake_flow_test() {
     let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
     let initial_reward_supplier_balance = system
         .token
         .balance_of(account: system.reward_supplier.address);
@@ -88,7 +88,7 @@ fn set_open_for_delegation_flow_test() {
         .token
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker.stake(amount: initial_stake_amount, pool_enabled: false, :commission);
     system.advance_time(time: one_week);
@@ -152,7 +152,7 @@ fn delegator_intent_after_staker_action_flow_test() {
         .token
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker.stake(amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
@@ -210,7 +210,7 @@ fn delegator_intent_flow_test() {
         .token
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker.stake(amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
@@ -292,7 +292,7 @@ fn operations_after_dead_staker_flow_test() {
     let staker2 = system.new_staker(amount: stake_amount);
     let delegator = system.new_delegator(amount: delegated_amount);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker1.stake(amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
@@ -417,7 +417,7 @@ fn delegator_didnt_update_after_staker_update_commission_flow_test() {
     let staker = system.new_staker(amount: stake_amount);
     let delegator = system.new_delegator(amount: delegated_amount);
     let commission = 10000;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     // Stake with commission 100%
     staker.stake(amount: stake_amount, pool_enabled: true, :commission);
@@ -487,7 +487,7 @@ fn delegator_updated_after_staker_update_commission_flow_test() {
     let staker = system.new_staker(amount: stake_amount);
     let delegator = system.new_delegator(amount: delegated_amount);
     let commission = 10000;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     // Stake with commission 100%
     staker.stake(amount: stake_amount, pool_enabled: true, :commission);
@@ -557,7 +557,7 @@ fn staker_intent_last_action_first_flow_test() {
         .token
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker.stake(amount: initial_stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
@@ -609,7 +609,7 @@ fn switch_to_same_delegation_pool_flow_test() {
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker.stake(amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
@@ -653,7 +653,7 @@ fn delegator_claim_rewards_flow_test() {
         .token
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker.stake(amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
@@ -665,7 +665,7 @@ fn delegator_claim_rewards_flow_test() {
     system.advance_time(time: one_week);
 
     staker.exit_intent();
-    system.advance_time(time: system.staking.get_exit_wait_window().div(2));
+    system.advance_time(time: system.staking.get_exit_wait_window().div(divider: 2));
 
     delegator.claim_rewards(:pool);
     delegator.exit_intent(:pool, amount: delegated_amount);
@@ -711,7 +711,7 @@ fn two_delegators_full_intent_flow_test() {
         .token
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker.stake(amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
@@ -779,7 +779,7 @@ fn partial_switches_flow_test() {
         .balance_of(account: system.reward_supplier.address);
     let stake_amount = system.staking.get_min_stake() * 2;
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     let first_staker = system.new_staker(amount: stake_amount);
     first_staker.stake(amount: stake_amount, pool_enabled: true, :commission);
@@ -894,7 +894,7 @@ fn flow_4_switch_member_back_and_forth_test() {
         .token
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     let staker_A = system.new_staker(amount: stake_amount);
     staker_A.stake(amount: stake_amount, pool_enabled: true, :commission);
@@ -1007,7 +1007,7 @@ fn delegators_add_to_delegation_pool_flow_test() {
         .token
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker.stake(amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
@@ -1101,7 +1101,7 @@ fn same_staker_different_pool_flow_test() {
     let staker = system.new_staker(amount: stake_amount);
     let delegator = system.new_delegator(amount: delegated_amount);
     let commission = 200;
-    let one_week = Time::weeks(1);
+    let one_week = Time::weeks(count: 1);
 
     staker.stake(amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);

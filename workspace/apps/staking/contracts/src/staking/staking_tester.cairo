@@ -297,7 +297,7 @@ pub mod StakingTester {
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             self.update_rewards(ref :staker_info);
-            let unstake_time = Time::now().add(self.exit_wait_window.read());
+            let unstake_time = Time::now().add(delta: self.exit_wait_window.read());
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, Option::Some(staker_info));
             let mut amount_pool = Zero::zero();
@@ -981,7 +981,7 @@ pub mod StakingTester {
         }
 
         fn is_index_update_needed(self: @ContractState) -> bool {
-            let time_diff = Time::now().sub(self.global_index_last_update_timestamp.read());
+            let time_diff = Time::now().sub(other: self.global_index_last_update_timestamp.read());
             time_diff >= MIN_TIME_BETWEEN_INDEX_UPDATES
         }
 

@@ -51,7 +51,7 @@ pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
         if let Option::Some(unstake_time) = *self.unstake_time {
             return max(unstake_time, Time::now());
         }
-        Time::now().add(exit_wait_window)
+        Time::now().add(delta: exit_wait_window)
     }
 
     fn get_pool_info_unchecked(self: @InternalStakerInfo) -> StakerPoolInfo {
@@ -195,11 +195,11 @@ mod test_internal_staker_info {
         };
         assert_eq!(
             internal_staker_info.compute_unpool_time(:exit_wait_window),
-            Time::now().add(exit_wait_window)
+            Time::now().add(delta: exit_wait_window)
         );
 
         // Unstake_time is set.
-        let unstake_time = Time::now().add(Time::weeks(1));
+        let unstake_time = Time::now().add(delta: Time::weeks(count: 1));
         let internal_staker_info = InternalStakerInfo {
             reward_address: Zero::zero(),
             operational_address: Zero::zero(),
@@ -216,7 +216,7 @@ mod test_internal_staker_info {
 
         // Unstake time < current time.
         start_cheat_block_timestamp_global(
-            block_timestamp: Time::now().add(exit_wait_window).into()
+            block_timestamp: Time::now().add(delta: exit_wait_window).into()
         );
         assert_eq!(internal_staker_info.compute_unpool_time(:exit_wait_window), Time::now());
     }

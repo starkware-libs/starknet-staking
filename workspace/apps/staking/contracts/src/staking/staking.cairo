@@ -339,7 +339,7 @@ pub mod Staking {
             self.update_rewards(ref :staker_info);
 
             // Set the unstake time.
-            let unstake_time = Time::now().add(self.exit_wait_window.read());
+            let unstake_time = Time::now().add(delta: self.exit_wait_window.read());
             staker_info.unstake_time = Option::Some(unstake_time);
             self.staker_info.write(staker_address, Option::Some(staker_info));
 
@@ -1113,7 +1113,7 @@ pub mod Staking {
         }
 
         fn is_index_update_needed(self: @ContractState) -> bool {
-            let time_diff = Time::now().sub(self.global_index_last_update_timestamp.read());
+            let time_diff = Time::now().sub(other: self.global_index_last_update_timestamp.read());
             time_diff >= MIN_TIME_BETWEEN_INDEX_UPDATES
         }
 

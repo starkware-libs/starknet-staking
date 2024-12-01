@@ -401,7 +401,7 @@ pub impl SystemImpl of SystemTrait {
 
     /// Advances the block timestamp by the specified amount of time.
     fn advance_time(ref self: SystemState, time: TimeDelta) {
-        start_cheat_block_timestamp_global(block_timestamp: Time::now().add(time).into())
+        start_cheat_block_timestamp_global(block_timestamp: Time::now().add(delta: time).into())
     }
 }
 
