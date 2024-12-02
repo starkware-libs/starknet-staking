@@ -1,10 +1,10 @@
-use starknet::ContractAddress;
-use contracts::staking::interface::{StakerPoolInfo, StakerInfo};
-use core::num::traits::Zero;
 use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
+use contracts::staking::interface::{StakerPoolInfo, StakerInfo};
 use contracts::types::{Amount, Index};
 use contracts_commons::types::time::{Timestamp, TimeDelta, Time};
 use core::cmp::max;
+use core::num::traits::Zero;
+use starknet::ContractAddress;
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub struct UndelegateIntentKey {
@@ -88,9 +88,9 @@ pub impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
 
 #[cfg(test)]
 mod test_undelegate_intent {
-    use super::{UndelegateIntentValue, UndelegateIntentValueTrait};
-    use core::num::traits::zero::Zero;
     use contracts_commons::types::time::Timestamp;
+    use core::num::traits::zero::Zero;
+    use super::{UndelegateIntentValue, UndelegateIntentValueTrait};
 
     const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
 
@@ -149,12 +149,12 @@ mod test_undelegate_intent {
 
 #[cfg(test)]
 mod test_internal_staker_info {
-    use core::num::traits::zero::Zero;
-    use contracts_commons::types::time::Time;
-    use super::{InternalStakerInfo, InternalStakerInfoTrait};
-    use contracts::staking::interface::{StakerInfo, StakerPoolInfo};
-    use snforge_std::start_cheat_block_timestamp_global;
     use contracts::constants::DEFAULT_EXIT_WAIT_WINDOW;
+    use contracts::staking::interface::{StakerInfo, StakerPoolInfo};
+    use contracts_commons::types::time::Time;
+    use core::num::traits::zero::Zero;
+    use snforge_std::start_cheat_block_timestamp_global;
+    use super::{InternalStakerInfo, InternalStakerInfoTrait};
 
     #[test]
     fn test_into() {

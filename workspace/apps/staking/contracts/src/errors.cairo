@@ -1,5 +1,5 @@
-use contracts::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use contracts::constants::MAX_C_NUM;
+use contracts::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use core::panics::panic_with_byte_array;
 
 #[derive(Drop)]

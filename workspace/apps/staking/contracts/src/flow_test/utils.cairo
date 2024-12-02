@@ -1,23 +1,23 @@
-use core::traits::Into;
-use contracts::staking::interface::IStakingDispatcher;
-use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::minting_curve::interface::IMintingCurveDispatcher;
+use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use contracts::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait
 };
+use contracts::staking::interface::IStakingDispatcher;
+use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
-use core::num::traits::zero::Zero;
-use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
-use starknet::{ContractAddress, ClassHash};
-use snforge_std::{ContractClassTrait, DeclareResultTrait};
-use contracts_commons::test_utils::{set_account_as_upgrade_governor, set_account_as_security_admin};
-use contracts_commons::test_utils::{set_account_as_security_agent, set_account_as_app_role_admin};
-use contracts_commons::test_utils::set_account_as_token_admin;
 use contracts::test_utils::StakingInitConfig;
-use contracts_commons::test_utils::{cheat_caller_address_once, TokenState, TokenConfig, TokenTrait};
-use snforge_std::start_cheat_block_timestamp_global;
 use contracts::types::{Commission, Amount};
+use contracts_commons::test_utils::set_account_as_token_admin;
+use contracts_commons::test_utils::{cheat_caller_address_once, TokenState, TokenConfig, TokenTrait};
+use contracts_commons::test_utils::{set_account_as_security_agent, set_account_as_app_role_admin};
+use contracts_commons::test_utils::{set_account_as_upgrade_governor, set_account_as_security_admin};
 use contracts_commons::types::time::{Timestamp, TimeDelta, Time};
+use core::num::traits::zero::Zero;
+use core::traits::Into;
+use snforge_std::start_cheat_block_timestamp_global;
+use snforge_std::{ContractClassTrait, DeclareResultTrait};
+use starknet::{ContractAddress, ClassHash};
 
 /// The `StakingRoles` struct represents the various roles involved in the staking contract.
 /// It includes addresses for different administrative and security roles.

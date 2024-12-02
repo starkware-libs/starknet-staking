@@ -1,12 +1,12 @@
 use contracts::constants::{BASE_VALUE, STRK_IN_FRIS};
 use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
-use starknet::{ContractAddress, ClassHash, SyscallResultTrait, get_contract_address};
-use starknet::syscalls::deploy_syscall;
-use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
 use contracts::staking::staking::Staking::COMMISSION_DENOMINATOR;
-use core::num::traits::zero::Zero;
-use core::num::traits::WideMul;
 use contracts::types::{Commission, Index, Amount};
+use core::num::traits::WideMul;
+use core::num::traits::zero::Zero;
+use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
+use starknet::syscalls::deploy_syscall;
+use starknet::{ContractAddress, ClassHash, SyscallResultTrait, get_contract_address};
 pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
@@ -166,9 +166,9 @@ pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
 mod tests {
     use core::num::traits::zero::Zero;
     use super::{Error, MAX_U64, MAX_U128};
-    use super::{u64_mul_wide_and_div_unsafe, u64_mul_wide_and_ceil_div_unsafe};
-    use super::{u128_mul_wide_and_div_unsafe, u128_mul_wide_and_ceil_div_unsafe};
     use super::{compute_global_index_diff, STRK_IN_FRIS, BASE_VALUE};
+    use super::{u128_mul_wide_and_div_unsafe, u128_mul_wide_and_ceil_div_unsafe};
+    use super::{u64_mul_wide_and_div_unsafe, u64_mul_wide_and_ceil_div_unsafe};
     const TEST_NUM: u64 = 100000000000;
 
     #[test]

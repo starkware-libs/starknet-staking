@@ -1,27 +1,27 @@
 #[starknet::contract]
 pub mod Pool {
-    use starknet::event::EventEmitter;
-    use core::serde::Serde;
-    use core::num::traits::zero::Zero;
+    use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
-    use contracts::pool::interface::{PoolContractInfo, IPool, Events};
     use contracts::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
+    use contracts::pool::interface::{PoolContractInfo, IPool, Events};
+    use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait, StakerInfo};
+    use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
+    use contracts::types::{Commission, Index, Amount};
+    use contracts::utils::CheckedIERC20DispatcherTrait;
     use contracts::utils::{compute_rewards_rounded_down, compute_commission_amount_rounded_up};
+    use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::roles::RolesComponent;
+    use contracts_commons::interfaces::identity::Identity;
+    use contracts_commons::types::time::{Timestamp, Time};
+    use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use core::serde::Serde;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
-    use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
-    use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait, StakerInfo};
+    use starknet::event::EventEmitter;
     use starknet::storage::Map;
-    use contracts_commons::components::roles::RolesComponent;
-    use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts::utils::CheckedIERC20DispatcherTrait;
-    use contracts::types::{Commission, Index, Amount};
-    use contracts_commons::types::time::{Timestamp, Time};
-    use contracts_commons::interfaces::identity::Identity;
+    use starknet::{ContractAddress, get_caller_address, get_contract_address};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 

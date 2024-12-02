@@ -1,27 +1,27 @@
 #[starknet::contract]
 pub mod RewardSupplier {
-    use core::traits::TryInto;
-    use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo, Events};
-    use starknet::{ContractAddress, EthAddress};
-    use openzeppelin::access::accesscontrol::AccessControlComponent;
-    use openzeppelin::introspection::src5::SRC5Component;
-    use starknet::syscalls::{send_message_to_l1_syscall};
-    use starknet::{get_caller_address, get_contract_address};
-    use starknet::SyscallResultTrait;
+    use RolesComponent::InternalTrait as RolesInternalTrait;
+    use contracts::constants::STRK_IN_FRIS;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
-    use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
     use contracts::minting_curve::interface::IMintingCurveDispatcher;
     use contracts::minting_curve::interface::IMintingCurveDispatcherTrait;
-    use core::num::traits::Zero;
-    use contracts::utils::{ceil_of_division, compute_threshold};
-    use contracts::constants::STRK_IN_FRIS;
+    use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo, Events};
+    use contracts::types::Amount;
     use contracts::utils::CheckedIERC20DispatcherTrait;
+    use contracts::utils::{ceil_of_division, compute_threshold};
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts::types::Amount;
-    use contracts_commons::types::time::{Timestamp, Time};
     use contracts_commons::interfaces::identity::Identity;
+    use contracts_commons::types::time::{Timestamp, Time};
+    use core::num::traits::Zero;
+    use core::traits::TryInto;
+    use openzeppelin::access::accesscontrol::AccessControlComponent;
+    use openzeppelin::introspection::src5::SRC5Component;
+    use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
+    use starknet::SyscallResultTrait;
+    use starknet::syscalls::{send_message_to_l1_syscall};
+    use starknet::{ContractAddress, EthAddress};
+    use starknet::{get_caller_address, get_contract_address};
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
