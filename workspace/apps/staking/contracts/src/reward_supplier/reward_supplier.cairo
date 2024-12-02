@@ -139,7 +139,7 @@ pub mod RewardSupplier {
             let unclaimed_rewards = self.update_unclaimed_rewards(:rewards);
 
             // Request funds from L1 if needed.
-            self.request_funds_if_needed(:unclaimed_rewards);
+            self.request_funds(:unclaimed_rewards);
 
             // Emit event.
             self
@@ -234,7 +234,7 @@ pub mod RewardSupplier {
         }
 
         // Requests funds from L1 to account for new rewards, if the contract's balance is too low.
-        fn request_funds_if_needed(ref self: ContractState, unclaimed_rewards: Amount) {
+        fn request_funds(ref self: ContractState, unclaimed_rewards: Amount) {
             // Read current balance.
             let token_dispatcher = self.token_dispatcher.read();
             let balance: Amount = token_dispatcher
