@@ -9,37 +9,37 @@ pub trait IStakingTester<TContractState> {
 
 #[starknet::contract]
 pub mod StakingTester {
-    use core::option::OptionTrait;
-    use core::num::traits::zero::Zero;
+    use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts::constants::DEFAULT_EXIT_WAIT_WINDOW;
     use contracts::constants::MIN_TIME_BETWEEN_INDEX_UPDATES;
     use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
-    use contracts::staking::interface::{StakerInfo, StakerPoolInfo, StakingContractInfo};
+    use contracts::pool::interface::{IPoolDispatcherTrait, IPoolDispatcher};
+    use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
+    use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
+    use contracts::staking::interface::{Events, PauseEvents, ConfigEvents};
     use contracts::staking::interface::{IStakingPool, IStakingPause, IStaking, IStakingConfig};
-    use contracts::staking::staking_tester::IStakingTester;
-    use contracts::utils::{deploy_delegation_pool_contract, compute_commission_amount_rounded_down};
-    use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
-    use contracts::utils::compute_global_index_diff;
-    use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+    use contracts::staking::interface::{StakerInfo, StakerPoolInfo, StakingContractInfo};
     use contracts::staking::objects::UndelegateIntentValueTrait;
     use contracts::staking::objects::UndelegateIntentValueZero;
     use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
-    use contracts::staking::interface::{Events, PauseEvents, ConfigEvents};
-    use starknet::{ContractAddress, get_contract_address, get_caller_address};
+    use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+    use contracts::staking::staking_tester::IStakingTester;
+    use contracts::types::{Commission, Index, Amount};
+    use contracts::utils::CheckedIERC20DispatcherTrait;
+    use contracts::utils::compute_global_index_diff;
+    use contracts::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
+    use contracts::utils::{deploy_delegation_pool_contract, compute_commission_amount_rounded_down};
+    use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::roles::RolesComponent;
+    use contracts_commons::types::time::{TimeDelta, Time, Timestamp};
+    use core::num::traits::zero::Zero;
+    use core::option::OptionTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use contracts::utils::CheckedIERC20DispatcherTrait;
     use starknet::class_hash::ClassHash;
-    use contracts::pool::interface::{IPoolDispatcherTrait, IPoolDispatcher};
-    use contracts::reward_supplier::interface::IRewardSupplierDispatcherTrait;
-    use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
     use starknet::storage::Map;
-    use contracts_commons::components::roles::RolesComponent;
-    use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts::types::{Commission, Index, Amount};
-    use contracts_commons::types::time::{TimeDelta, Time, Timestamp};
+    use starknet::{ContractAddress, get_contract_address, get_caller_address};
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
 

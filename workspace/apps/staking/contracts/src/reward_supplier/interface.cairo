@@ -1,6 +1,6 @@
-use starknet::{ContractAddress, EthAddress};
 use contracts::types::Amount;
 use contracts_commons::types::time::Timestamp;
+use starknet::{ContractAddress, EthAddress};
 
 #[starknet::interface]
 pub trait IRewardSupplier<TContractState> {

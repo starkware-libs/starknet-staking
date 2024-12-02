@@ -1,17 +1,17 @@
-use starknet::ContractAddress;
-use contracts::staking::staking::Staking;
-use contracts::staking::interface::Events as StakingEvents;
-use contracts::staking::interface::ConfigEvents as StakingConfigEvents;
-use contracts::staking::interface::PauseEvents as StakingPauseEvents;
-use contracts::pool::pool::Pool;
-use contracts::pool::interface::Events as PoolEvents;
-use contracts::reward_supplier::reward_supplier::RewardSupplier;
-use contracts::reward_supplier::interface::Events as RewardSupplierEvents;
-use contracts::minting_curve::minting_curve::MintingCurve;
 use contracts::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
-use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
+use contracts::minting_curve::minting_curve::MintingCurve;
+use contracts::pool::interface::Events as PoolEvents;
+use contracts::pool::pool::Pool;
+use contracts::reward_supplier::interface::Events as RewardSupplierEvents;
+use contracts::reward_supplier::reward_supplier::RewardSupplier;
+use contracts::staking::interface::ConfigEvents as StakingConfigEvents;
+use contracts::staking::interface::Events as StakingEvents;
+use contracts::staking::interface::PauseEvents as StakingPauseEvents;
+use contracts::staking::staking::Staking;
 use contracts::types::{Commission, Index, Amount, Inflation};
 use contracts_commons::types::time::{TimeDelta, Timestamp};
+use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
+use starknet::ContractAddress;
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(

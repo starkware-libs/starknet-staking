@@ -1,19 +1,19 @@
 #[starknet::contract]
 pub mod MintingCurve {
-    use core::num::traits::{WideMul, Sqrt};
+    use RolesComponent::InternalTrait as RolesInternalTrait;
+    use contracts::constants::{DEFAULT_C_NUM, C_DENOM, MAX_C_NUM};
+    use contracts::errors::{Error, assert_with_err};
     use contracts::minting_curve::interface::{IMintingCurve, Events, ConfigEvents};
     use contracts::minting_curve::interface::{IMintingCurveConfig, MintingCurveContractInfo};
     use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
-    use contracts::errors::{Error, assert_with_err};
-    use starknet::{ContractAddress};
+    use contracts::types::{Inflation, Amount};
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use RolesComponent::InternalTrait as RolesInternalTrait;
+    use contracts_commons::interfaces::identity::Identity;
+    use core::num::traits::{WideMul, Sqrt};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use contracts::constants::{DEFAULT_C_NUM, C_DENOM, MAX_C_NUM};
-    use contracts::types::{Inflation, Amount};
-    use contracts_commons::interfaces::identity::Identity;
+    use starknet::{ContractAddress};
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 

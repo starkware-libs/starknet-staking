@@ -3,11 +3,11 @@ use contracts::event_test_utils::{assert_unpaused_event};
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPauseDispatcherTrait};
 use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
-use contracts::test_utils::{StakingInitConfig, general_contract_system_deployment};
-use contracts::test_utils::{load_one_felt, pause_staking_contract};
-use contracts::test_utils::stake_for_testing_using_dispatcher;
 use contracts::test_utils::constants::{DUMMY_IDENTIFIER, DUMMY_ADDRESS};
 use contracts::test_utils::constants::{NON_SECURITY_AGENT, NON_SECURITY_ADMIN};
+use contracts::test_utils::stake_for_testing_using_dispatcher;
+use contracts::test_utils::{StakingInitConfig, general_contract_system_deployment};
+use contracts::test_utils::{load_one_felt, pause_staking_contract};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 
