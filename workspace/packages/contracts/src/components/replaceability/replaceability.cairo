@@ -56,21 +56,21 @@ pub mod ReplaceabilityComponent {
         impl Roles: RolesComponent::HasComponent<TContractState>,
         +AccessControlComponent::HasComponent<TContractState>,
         +SRC5Component::HasComponent<TContractState>,
-        +Drop<TContractState>
+        +Drop<TContractState>,
     > of IReplaceable<ComponentState<TContractState>> {
         fn get_upgrade_delay(self: @ComponentState<TContractState>) -> u64 {
             self.upgrade_delay.read()
         }
 
         fn get_impl_activation_time(
-            self: @ComponentState<TContractState>, implementation_data: ImplementationData
+            self: @ComponentState<TContractState>, implementation_data: ImplementationData,
         ) -> u64 {
             let impl_key = calc_impl_key(:implementation_data);
             self.impl_activation_time.read(impl_key)
         }
 
         fn add_new_implementation(
-            ref self: ComponentState<TContractState>, implementation_data: ImplementationData
+            ref self: ComponentState<TContractState>, implementation_data: ImplementationData,
         ) {
             // The call is restricted to the upgrade governor.
             let roles_comp = get_dep_component!(@self, Roles);
@@ -86,7 +86,7 @@ pub mod ReplaceabilityComponent {
         }
 
         fn remove_implementation(
-            ref self: ComponentState<TContractState>, implementation_data: ImplementationData
+            ref self: ComponentState<TContractState>, implementation_data: ImplementationData,
         ) {
             // The call is restricted to the upgrade governor.
             let roles_comp = get_dep_component!(@self, Roles);
@@ -105,7 +105,7 @@ pub mod ReplaceabilityComponent {
         // Replaces the non-finalized current implementation to one that was previously added and
         // whose activation time had passed.
         fn replace_to(
-            ref self: ComponentState<TContractState>, implementation_data: ImplementationData
+            ref self: ComponentState<TContractState>, implementation_data: ImplementationData,
         ) {
             // The call is restricted to the upgrade governor.
             let roles_comp = get_dep_component!(@self, Roles);
@@ -145,11 +145,11 @@ pub mod ReplaceabilityComponent {
                     let res = library_call_syscall(
                         class_hash: eic_data.eic_hash,
                         function_selector: EIC_INITIALIZE_SELECTOR,
-                        calldata: calldata_wrapper.span()
+                        calldata: calldata_wrapper.span(),
                     );
                     assert(res.is_ok(), ReplaceErrors::EIC_LIB_CALL_FAILED);
                 },
-                Option::None(()) => {}
+                Option::None(()) => {},
             };
 
             // Replace the class hash.
@@ -164,7 +164,7 @@ pub mod ReplaceabilityComponent {
 
     #[generate_trait]
     pub impl InternalReplaceability<
-        TContractState, +HasComponent<TContractState>, +Drop<TContractState>
+        TContractState, +HasComponent<TContractState>, +Drop<TContractState>,
     > of InternalReplaceableTrait<TContractState> {
         fn is_finalized(self: @ComponentState<TContractState>) -> bool {
             self.finalized.read()
@@ -177,14 +177,14 @@ pub mod ReplaceabilityComponent {
         fn set_impl_activation_time(
             ref self: ComponentState<TContractState>,
             implementation_data: ImplementationData,
-            activation_time: u64
+            activation_time: u64,
         ) {
             let impl_key = calc_impl_key(:implementation_data);
             self.impl_activation_time.write(impl_key, activation_time);
         }
 
         fn get_impl_expiration_time(
-            self: @ComponentState<TContractState>, implementation_data: ImplementationData
+            self: @ComponentState<TContractState>, implementation_data: ImplementationData,
         ) -> u64 {
             let impl_key = calc_impl_key(:implementation_data);
             self.impl_expiration_time.read(impl_key)
@@ -193,7 +193,7 @@ pub mod ReplaceabilityComponent {
         fn set_impl_expiration_time(
             ref self: ComponentState<TContractState>,
             implementation_data: ImplementationData,
-            expiration_time: u64
+            expiration_time: u64,
         ) {
             let impl_key = calc_impl_key(:implementation_data);
             self.impl_expiration_time.write(impl_key, expiration_time);

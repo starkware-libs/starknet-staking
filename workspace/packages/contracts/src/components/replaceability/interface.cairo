@@ -6,7 +6,7 @@ use starknet::class_hash::ClassHash;
 #[derive(Copy, Drop, Serde, PartialEq)]
 pub struct EICData {
     pub eic_hash: ClassHash,
-    pub eic_init_data: Span<felt252>
+    pub eic_init_data: Span<felt252>,
 }
 
 /// Holds implementation data.
@@ -17,7 +17,7 @@ pub struct EICData {
 pub struct ImplementationData {
     pub impl_hash: ClassHash,
     pub eic_data: Option<EICData>,
-    pub final: bool
+    pub final: bool,
 }
 
 /// starknet_keccak(eic_initialize).
@@ -36,7 +36,7 @@ pub trait IEICInitializable<TContractState> {
 pub trait IReplaceable<TContractState> {
     fn get_upgrade_delay(self: @TContractState) -> u64;
     fn get_impl_activation_time(
-        self: @TContractState, implementation_data: ImplementationData
+        self: @TContractState, implementation_data: ImplementationData,
     ) -> u64;
     fn add_new_implementation(ref self: TContractState, implementation_data: ImplementationData);
     fn remove_implementation(ref self: TContractState, implementation_data: ImplementationData);

@@ -1,8 +1,8 @@
 use contracts::errors::{Error, OptionAuxTrait};
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
-use contracts::types::{Commission, Index, Amount};
-use contracts_commons::types::time::{Timestamp, TimeDelta};
-use starknet::{ContractAddress, ClassHash};
+use contracts::types::{Amount, Commission, Index};
+use contracts_commons::types::time::{TimeDelta, Timestamp};
+use starknet::{ClassHash, ContractAddress};
 
 /// Public interface for the staking contract.
 #[starknet::interface]
@@ -16,7 +16,7 @@ pub trait IStaking<TContractState> {
         commission: Commission,
     );
     fn increase_stake(
-        ref self: TContractState, staker_address: ContractAddress, amount: Amount
+        ref self: TContractState, staker_address: ContractAddress, amount: Amount,
     ) -> Amount;
     fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn unstake_intent(ref self: TContractState) -> Timestamp;
@@ -25,12 +25,12 @@ pub trait IStaking<TContractState> {
     fn set_open_for_delegation(ref self: TContractState, commission: Commission) -> ContractAddress;
     fn staker_info(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
     fn get_staker_info(
-        self: @TContractState, staker_address: ContractAddress
+        self: @TContractState, staker_address: ContractAddress,
     ) -> Option<StakerInfo>;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn get_pool_exit_intent(
-        self: @TContractState, undelegate_intent_key: UndelegateIntentKey
+        self: @TContractState, undelegate_intent_key: UndelegateIntentKey,
     ) -> UndelegateIntentValue;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
@@ -54,7 +54,7 @@ pub trait IStakingPool<TContractState> {
     /// 3. Increase the staker's pooled amount by `amount`.
     /// 4. Increase the total_stake by `amount`.
     fn add_stake_from_pool(
-        ref self: TContractState, staker_address: ContractAddress, amount: Amount
+        ref self: TContractState, staker_address: ContractAddress, amount: Amount,
     ) -> Index;
 
     /// Registers an intention to remove `amount` FRI of pooled stake from the staking contract.
@@ -118,7 +118,7 @@ pub trait IStakingPool<TContractState> {
         to_pool: ContractAddress,
         switched_amount: Amount,
         data: Span<felt252>,
-        identifier: felt252
+        identifier: felt252,
     );
 
     /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
@@ -128,7 +128,7 @@ pub trait IStakingPool<TContractState> {
     /// 2. Send `pool_info.unclaimed_rewards` FRI to the pool contract.
     /// 3. Set pool_info.unclaimed_rewards to zero.
     fn claim_delegation_pool_rewards(
-        ref self: TContractState, staker_address: ContractAddress
+        ref self: TContractState, staker_address: ContractAddress,
     ) -> Index;
 }
 
@@ -146,7 +146,7 @@ pub trait IStakingConfig<TContractState> {
 }
 
 pub mod Events {
-    use contracts::types::{Commission, Index, Amount};
+    use contracts::types::{Amount, Commission, Index};
     use contracts_commons::types::time::Timestamp;
     use starknet::ContractAddress;
     #[derive(Drop, starknet::Event)]
@@ -156,7 +156,7 @@ pub mod Events {
         pub old_self_stake: Amount,
         pub old_delegated_stake: Amount,
         pub new_self_stake: Amount,
-        pub new_delegated_stake: Amount
+        pub new_delegated_stake: Amount,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -174,7 +174,7 @@ pub mod Events {
         pub staker_address: ContractAddress,
         #[key]
         pub pool_contract: ContractAddress,
-        pub commission: Commission
+        pub commission: Commission,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -184,7 +184,7 @@ pub mod Events {
         #[key]
         pub pool_contract: ContractAddress,
         pub new_commission: Commission,
-        pub old_commission: Commission
+        pub old_commission: Commission,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -192,7 +192,7 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         pub exit_timestamp: Timestamp,
-        pub amount: Amount
+        pub amount: Amount,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -200,7 +200,7 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         pub new_address: ContractAddress,
-        pub old_address: ContractAddress
+        pub old_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -208,7 +208,7 @@ pub mod Events {
         #[key]
         pub operational_address: ContractAddress,
         #[key]
-        pub staker_address: ContractAddress
+        pub staker_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -224,7 +224,7 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         pub reward_address: ContractAddress,
-        pub amount: Amount
+        pub amount: Amount,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -232,7 +232,7 @@ pub mod Events {
         pub old_index: Index,
         pub new_index: Index,
         pub global_index_last_update_timestamp: Timestamp,
-        pub global_index_current_update_timestamp: Timestamp
+        pub global_index_current_update_timestamp: Timestamp,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -250,7 +250,7 @@ pub mod Events {
         pub staker_address: ContractAddress,
         #[key]
         pub pool_address: ContractAddress,
-        pub amount: Amount
+        pub amount: Amount,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -262,7 +262,7 @@ pub mod Events {
         #[key]
         pub identifier: felt252,
         pub old_intent_amount: Amount,
-        pub new_intent_amount: Amount
+        pub new_intent_amount: Amount,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -271,7 +271,7 @@ pub mod Events {
         pub pool_contract: ContractAddress,
         #[key]
         pub identifier: felt252,
-        pub amount: Amount
+        pub amount: Amount,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -281,7 +281,7 @@ pub mod Events {
         #[key]
         pub identifier: felt252,
         pub old_intent_amount: Amount,
-        pub new_intent_amount: Amount
+        pub new_intent_amount: Amount,
     }
 }
 
@@ -305,19 +305,19 @@ pub mod ConfigEvents {
     #[derive(Drop, starknet::Event)]
     pub struct MinimumStakeChanged {
         pub old_min_stake: Amount,
-        pub new_min_stake: Amount
+        pub new_min_stake: Amount,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct ExitWaitWindowChanged {
         pub old_exit_window: TimeDelta,
-        pub new_exit_window: TimeDelta
+        pub new_exit_window: TimeDelta,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct RewardSupplierChanged {
         pub old_reward_supplier: ContractAddress,
-        pub new_reward_supplier: ContractAddress
+        pub new_reward_supplier: ContractAddress,
     }
 }
 
@@ -328,7 +328,7 @@ pub struct StakingContractInfo {
     pub global_index: Index,
     pub pool_contract_class_hash: ClassHash,
     pub reward_supplier: ContractAddress,
-    pub exit_wait_window: TimeDelta
+    pub exit_wait_window: TimeDelta,
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]

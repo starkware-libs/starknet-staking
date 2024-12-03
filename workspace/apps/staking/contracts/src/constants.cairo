@@ -1,4 +1,4 @@
-use contracts::types::{Inflation, Amount, Index};
+use contracts::types::{Amount, Index, Inflation};
 use contracts_commons::constants::{MINUTE, WEEK};
 use contracts_commons::types::time::TimeDelta;
 

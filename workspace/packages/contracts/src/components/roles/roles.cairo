@@ -51,23 +51,23 @@ pub mod RolesComponent {
         +HasComponent<TContractState>,
         +Drop<TContractState>,
         impl Access: AccessControlComponent::HasComponent<TContractState>,
-        +SRC5Component::HasComponent<TContractState>
+        +SRC5Component::HasComponent<TContractState>,
     > of IRoles<ComponentState<TContractState>> {
         fn is_app_governor(
-            self: @ComponentState<TContractState>, account: ContractAddress
+            self: @ComponentState<TContractState>, account: ContractAddress,
         ) -> bool {
             get_dep_component!(self, Access).has_role(role: APP_GOVERNOR, :account)
         }
 
         fn is_app_role_admin(
-            self: @ComponentState<TContractState>, account: ContractAddress
+            self: @ComponentState<TContractState>, account: ContractAddress,
         ) -> bool {
             let access_comp = get_dep_component!(self, Access);
             access_comp.has_role(role: APP_ROLE_ADMIN, :account)
         }
 
         fn is_governance_admin(
-            self: @ComponentState<TContractState>, account: ContractAddress
+            self: @ComponentState<TContractState>, account: ContractAddress,
         ) -> bool {
             let access_comp = get_dep_component!(self, Access);
             access_comp.has_role(role: GOVERNANCE_ADMIN, :account)
@@ -79,14 +79,14 @@ pub mod RolesComponent {
         }
 
         fn is_security_admin(
-            self: @ComponentState<TContractState>, account: ContractAddress
+            self: @ComponentState<TContractState>, account: ContractAddress,
         ) -> bool {
             let access_comp = get_dep_component!(self, Access);
             access_comp.has_role(role: SECURITY_ADMIN, :account)
         }
 
         fn is_security_agent(
-            self: @ComponentState<TContractState>, account: ContractAddress
+            self: @ComponentState<TContractState>, account: ContractAddress,
         ) -> bool {
             let access_comp = get_dep_component!(self, Access);
             access_comp.has_role(role: SECURITY_AGENT, :account)
@@ -98,151 +98,151 @@ pub mod RolesComponent {
         }
 
         fn is_upgrade_governor(
-            self: @ComponentState<TContractState>, account: ContractAddress
+            self: @ComponentState<TContractState>, account: ContractAddress,
         ) -> bool {
             let access_comp = get_dep_component!(self, Access);
             access_comp.has_role(role: UPGRADE_GOVERNOR, :account)
         }
 
         fn register_app_governor(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::AppGovernorAdded(
-                AppGovernorAdded { added_account: account, added_by: get_caller_address() }
+                AppGovernorAdded { added_account: account, added_by: get_caller_address() },
             );
             self._grant_role_and_emit(role: APP_GOVERNOR, :account, :event);
         }
 
         fn remove_app_governor(ref self: ComponentState<TContractState>, account: ContractAddress) {
             let event = Event::AppGovernorRemoved(
-                AppGovernorRemoved { removed_account: account, removed_by: get_caller_address() }
+                AppGovernorRemoved { removed_account: account, removed_by: get_caller_address() },
             );
             self._revoke_role_and_emit(role: APP_GOVERNOR, :account, :event);
         }
 
         fn register_app_role_admin(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::AppRoleAdminAdded(
-                AppRoleAdminAdded { added_account: account, added_by: get_caller_address() }
+                AppRoleAdminAdded { added_account: account, added_by: get_caller_address() },
             );
             self._grant_role_and_emit(role: APP_ROLE_ADMIN, :account, :event);
         }
 
         fn remove_app_role_admin(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::AppRoleAdminRemoved(
-                AppRoleAdminRemoved { removed_account: account, removed_by: get_caller_address() }
+                AppRoleAdminRemoved { removed_account: account, removed_by: get_caller_address() },
             );
             self._revoke_role_and_emit(role: APP_ROLE_ADMIN, :account, :event);
         }
 
         fn register_security_admin(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::SecurityAdminAdded(
-                SecurityAdminAdded { added_account: account, added_by: get_caller_address() }
+                SecurityAdminAdded { added_account: account, added_by: get_caller_address() },
             );
             self._grant_role_and_emit(role: SECURITY_ADMIN, :account, :event);
         }
 
         fn remove_security_admin(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::SecurityAdminRemoved(
-                SecurityAdminRemoved { removed_account: account, removed_by: get_caller_address() }
+                SecurityAdminRemoved { removed_account: account, removed_by: get_caller_address() },
             );
             self._revoke_role_and_emit(role: SECURITY_ADMIN, :account, :event);
         }
 
         fn register_security_agent(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::SecurityAgentAdded(
-                SecurityAgentAdded { added_account: account, added_by: get_caller_address() }
+                SecurityAgentAdded { added_account: account, added_by: get_caller_address() },
             );
             self._grant_role_and_emit(role: SECURITY_AGENT, :account, :event);
         }
 
         fn remove_security_agent(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::SecurityAgentRemoved(
-                SecurityAgentRemoved { removed_account: account, removed_by: get_caller_address() }
+                SecurityAgentRemoved { removed_account: account, removed_by: get_caller_address() },
             );
             self._revoke_role_and_emit(role: SECURITY_AGENT, :account, :event);
         }
 
 
         fn register_governance_admin(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::GovernanceAdminAdded(
-                GovernanceAdminAdded { added_account: account, added_by: get_caller_address() }
+                GovernanceAdminAdded { added_account: account, added_by: get_caller_address() },
             );
             self._grant_role_and_emit(role: GOVERNANCE_ADMIN, :account, :event);
         }
 
         fn remove_governance_admin(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let caller_address = get_caller_address();
 
             // Governance admin musn't remove itself, to avoid losing governance.
             assert(account != caller_address, GOV_ADMIN_CANNOT_RENOUNCE);
             let event = Event::GovernanceAdminRemoved(
-                GovernanceAdminRemoved { removed_account: account, removed_by: caller_address }
+                GovernanceAdminRemoved { removed_account: account, removed_by: caller_address },
             );
             self._revoke_role_and_emit(role: GOVERNANCE_ADMIN, :account, :event);
         }
 
         fn register_operator(ref self: ComponentState<TContractState>, account: ContractAddress) {
             let event = Event::OperatorAdded(
-                OperatorAdded { added_account: account, added_by: get_caller_address() }
+                OperatorAdded { added_account: account, added_by: get_caller_address() },
             );
             self._grant_role_and_emit(role: OPERATOR, :account, :event);
         }
 
         fn remove_operator(ref self: ComponentState<TContractState>, account: ContractAddress) {
             let event = Event::OperatorRemoved(
-                OperatorRemoved { removed_account: account, removed_by: get_caller_address() }
+                OperatorRemoved { removed_account: account, removed_by: get_caller_address() },
             );
             self._revoke_role_and_emit(role: OPERATOR, :account, :event);
         }
 
         fn register_token_admin(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::TokenAdminAdded(
-                TokenAdminAdded { added_account: account, added_by: get_caller_address() }
+                TokenAdminAdded { added_account: account, added_by: get_caller_address() },
             );
             self._grant_role_and_emit(role: TOKEN_ADMIN, :account, :event);
         }
 
         fn remove_token_admin(ref self: ComponentState<TContractState>, account: ContractAddress) {
             let event = Event::TokenAdminRemoved(
-                TokenAdminRemoved { removed_account: account, removed_by: get_caller_address() }
+                TokenAdminRemoved { removed_account: account, removed_by: get_caller_address() },
             );
             self._revoke_role_and_emit(role: TOKEN_ADMIN, :account, :event);
         }
 
         fn register_upgrade_governor(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::UpgradeGovernorAdded(
-                UpgradeGovernorAdded { added_account: account, added_by: get_caller_address() }
+                UpgradeGovernorAdded { added_account: account, added_by: get_caller_address() },
             );
             self._grant_role_and_emit(role: UPGRADE_GOVERNOR, :account, :event);
         }
 
         fn remove_upgrade_governor(
-            ref self: ComponentState<TContractState>, account: ContractAddress
+            ref self: ComponentState<TContractState>, account: ContractAddress,
         ) {
             let event = Event::UpgradeGovernorRemoved(
                 UpgradeGovernorRemoved {
-                    removed_account: account, removed_by: get_caller_address()
-                }
+                    removed_account: account, removed_by: get_caller_address(),
+                },
             );
             self._revoke_role_and_emit(role: UPGRADE_GOVERNOR, :account, :event);
         }
@@ -266,14 +266,14 @@ pub mod RolesComponent {
         +HasComponent<TContractState>,
         +Drop<TContractState>,
         impl Access: AccessControlComponent::HasComponent<TContractState>,
-        +SRC5Component::HasComponent<TContractState>
+        +SRC5Component::HasComponent<TContractState>,
     > of InternalTrait<TContractState> {
         // TODO -  change the fn name to _grant_role when we can have modularity.
         fn _grant_role_and_emit(
             ref self: ComponentState<TContractState>,
             role: RoleId,
             account: ContractAddress,
-            event: Event
+            event: Event,
         ) {
             let mut access_comp = get_dep_component_mut!(ref self, Access);
             if !access_comp.has_role(:role, :account) {
@@ -288,7 +288,7 @@ pub mod RolesComponent {
             ref self: ComponentState<TContractState>,
             role: RoleId,
             account: ContractAddress,
-            event: Event
+            event: Event,
         ) {
             let mut access_comp = get_dep_component_mut!(ref self, Access);
             if access_comp.has_role(:role, :account) {

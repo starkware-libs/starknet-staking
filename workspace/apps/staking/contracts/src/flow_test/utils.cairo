@@ -1,23 +1,23 @@
 use contracts::minting_curve::interface::IMintingCurveDispatcher;
 use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use contracts::reward_supplier::interface::{
-    IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait
+    IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
 use contracts::staking::interface::IStakingDispatcher;
 use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
 use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
 use contracts::test_utils::StakingInitConfig;
-use contracts::types::{Commission, Amount};
+use contracts::types::{Amount, Commission};
 use contracts_commons::test_utils::set_account_as_token_admin;
-use contracts_commons::test_utils::{cheat_caller_address_once, TokenState, TokenConfig, TokenTrait};
-use contracts_commons::test_utils::{set_account_as_security_agent, set_account_as_app_role_admin};
-use contracts_commons::test_utils::{set_account_as_upgrade_governor, set_account_as_security_admin};
-use contracts_commons::types::time::{Timestamp, TimeDelta, Time};
+use contracts_commons::test_utils::{TokenConfig, TokenState, TokenTrait, cheat_caller_address_once};
+use contracts_commons::test_utils::{set_account_as_app_role_admin, set_account_as_security_agent};
+use contracts_commons::test_utils::{set_account_as_security_admin, set_account_as_upgrade_governor};
+use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use snforge_std::start_cheat_block_timestamp_global;
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
-use starknet::{ContractAddress, ClassHash};
+use starknet::{ClassHash, ContractAddress};
 
 /// The `StakingRoles` struct represents the various roles involved in the staking contract.
 /// It includes addresses for different administrative and security roles.
@@ -27,7 +27,7 @@ pub struct StakingRoles {
     pub security_admin: ContractAddress,
     pub security_agent: ContractAddress,
     pub app_role_admin: ContractAddress,
-    pub token_admin: ContractAddress
+    pub token_admin: ContractAddress,
 }
 
 /// The `StakingConfig` struct represents the configuration settings for the staking contract.
@@ -46,7 +46,7 @@ pub struct StakingConfig {
     pub reward_supplier: ContractAddress,
     pub pool_contract_admin: ContractAddress,
     pub governance_admin: ContractAddress,
-    pub roles: StakingRoles
+    pub roles: StakingRoles,
 }
 
 /// The `StakingState` struct represents the state of the staking contract.
@@ -55,7 +55,7 @@ pub struct StakingConfig {
 pub struct StakingState {
     pub address: ContractAddress,
     pub governance_admin: ContractAddress,
-    pub roles: StakingRoles
+    pub roles: StakingRoles,
 }
 
 #[generate_trait]
@@ -73,7 +73,7 @@ pub impl StakingImpl of StakingTrait {
         let staking = StakingState {
             address: staking_contract_address,
             governance_admin: self.governance_admin,
-            roles: self.roles
+            roles: self.roles,
         };
         staking.set_roles();
         staking
@@ -87,27 +87,27 @@ pub impl StakingImpl of StakingTrait {
         set_account_as_upgrade_governor(
             contract: self.address,
             account: self.roles.upgrade_governor,
-            governance_admin: self.governance_admin
+            governance_admin: self.governance_admin,
         );
         set_account_as_security_admin(
             contract: self.address,
             account: self.roles.security_admin,
-            governance_admin: self.governance_admin
+            governance_admin: self.governance_admin,
         );
         set_account_as_security_agent(
             contract: self.address,
             account: self.roles.security_agent,
-            security_admin: self.roles.security_admin
+            security_admin: self.roles.security_admin,
         );
         set_account_as_app_role_admin(
             contract: self.address,
             account: self.roles.app_role_admin,
-            governance_admin: self.governance_admin
+            governance_admin: self.governance_admin,
         );
         set_account_as_token_admin(
             contract: self.address,
             account: self.roles.token_admin,
-            app_role_admin: self.roles.app_role_admin
+            app_role_admin: self.roles.app_role_admin,
         );
     }
 
@@ -136,7 +136,7 @@ pub impl StakingImpl of StakingTrait {
 pub struct MintingCurveRoles {
     pub upgrade_governor: ContractAddress,
     pub app_role_admin: ContractAddress,
-    pub token_admin: ContractAddress
+    pub token_admin: ContractAddress,
 }
 
 /// The `MintingCurveConfig` struct represents the configuration settings for the minting curve
@@ -178,7 +178,7 @@ impl MintingCurveImpl of MintingCurveTrait {
         let minting_curve = MintingCurveState {
             address: minting_curve_contract_address,
             governance_admin: self.governance_admin,
-            roles: self.roles
+            roles: self.roles,
         };
         minting_curve.set_roles();
         minting_curve
@@ -192,17 +192,17 @@ impl MintingCurveImpl of MintingCurveTrait {
         set_account_as_upgrade_governor(
             contract: self.address,
             account: self.roles.upgrade_governor,
-            governance_admin: self.governance_admin
+            governance_admin: self.governance_admin,
         );
         set_account_as_app_role_admin(
             contract: self.address,
             account: self.roles.app_role_admin,
-            governance_admin: self.governance_admin
+            governance_admin: self.governance_admin,
         );
         set_account_as_token_admin(
             contract: self.address,
             account: self.roles.token_admin,
-            app_role_admin: self.roles.app_role_admin
+            app_role_admin: self.roles.app_role_admin,
         );
     }
 }
@@ -212,7 +212,7 @@ impl MintingCurveImpl of MintingCurveTrait {
 /// It includes the address for the upgrade governor role.
 #[derive(Drop, Copy)]
 pub struct RewardSupplierRoles {
-    pub upgrade_governor: ContractAddress
+    pub upgrade_governor: ContractAddress,
 }
 
 /// The `RewardSupplierConfig` struct represents the configuration settings for the reward supplier
@@ -231,7 +231,7 @@ pub struct RewardSupplierConfig {
     pub l1_reward_supplier: felt252,
     pub starkgate_address: ContractAddress,
     pub governance_admin: ContractAddress,
-    pub roles: RewardSupplierRoles
+    pub roles: RewardSupplierRoles,
 }
 
 /// The `RewardSupplierState` struct represents the state of the reward supplier contract.
@@ -240,7 +240,7 @@ pub struct RewardSupplierConfig {
 pub struct RewardSupplierState {
     pub address: ContractAddress,
     pub governance_admin: ContractAddress,
-    pub roles: RewardSupplierRoles
+    pub roles: RewardSupplierRoles,
 }
 
 #[generate_trait]
@@ -249,7 +249,7 @@ pub impl RewardSupplierImpl of RewardSupplierTrait {
         self: RewardSupplierConfig,
         minting_curve: MintingCurveState,
         staking: StakingState,
-        token: TokenState
+        token: TokenState,
     ) -> RewardSupplierState {
         let mut calldata = ArrayTrait::new();
         self.base_mint_amount.serialize(ref calldata);
@@ -268,7 +268,7 @@ pub impl RewardSupplierImpl of RewardSupplierTrait {
         let reward_supplier = RewardSupplierState {
             address: reward_supplier_contract_address,
             governance_admin: self.governance_admin,
-            roles: self.roles
+            roles: self.roles,
         };
         reward_supplier.set_roles();
         reward_supplier
@@ -282,7 +282,7 @@ pub impl RewardSupplierImpl of RewardSupplierTrait {
         set_account_as_upgrade_governor(
             contract: self.address,
             account: self.roles.upgrade_governor,
-            governance_admin: self.governance_admin
+            governance_admin: self.governance_admin,
         );
     }
 
@@ -319,7 +319,7 @@ pub impl SystemImpl of SystemTrait {
     /// provided staking initialization configuration.
     fn basic_stake_flow_cfg(cfg: StakingInitConfig) -> SystemConfig {
         let token = TokenConfig {
-            initial_supply: cfg.test_info.initial_supply, owner: cfg.test_info.owner_address
+            initial_supply: cfg.test_info.initial_supply, owner: cfg.test_info.owner_address,
         };
         let staking = StakingConfig {
             min_stake: cfg.staking_contract_info.min_stake,
@@ -332,8 +332,8 @@ pub impl SystemImpl of SystemTrait {
                 security_admin: cfg.test_info.security_admin,
                 security_agent: cfg.test_info.security_agent,
                 app_role_admin: cfg.test_info.app_role_admin,
-                token_admin: cfg.test_info.token_admin
-            }
+                token_admin: cfg.test_info.token_admin,
+            },
         };
         let minting_curve = MintingCurveConfig {
             initial_supply: cfg.test_info.initial_supply.try_into().unwrap(),
@@ -342,15 +342,15 @@ pub impl SystemImpl of SystemTrait {
             roles: MintingCurveRoles {
                 upgrade_governor: cfg.test_info.upgrade_governor,
                 app_role_admin: cfg.test_info.app_role_admin,
-                token_admin: cfg.test_info.token_admin
-            }
+                token_admin: cfg.test_info.token_admin,
+            },
         };
         let reward_supplier = RewardSupplierConfig {
             base_mint_amount: cfg.reward_supplier.base_mint_amount,
             l1_reward_supplier: cfg.reward_supplier.l1_reward_supplier,
             starkgate_address: cfg.reward_supplier.starkgate_address,
             governance_admin: cfg.test_info.governance_admin,
-            roles: RewardSupplierRoles { upgrade_governor: cfg.test_info.upgrade_governor }
+            roles: RewardSupplierRoles { upgrade_governor: cfg.test_info.upgrade_governor },
         };
         SystemConfig { token, staking, minting_curve, reward_supplier }
     }
@@ -364,14 +364,14 @@ pub impl SystemImpl of SystemTrait {
         // Fund reward supplier
         token
             .fund(
-                recipient: reward_supplier.address, amount: self.minting_curve.initial_supply / 10
+                recipient: reward_supplier.address, amount: self.minting_curve.initial_supply / 10,
             );
         // Set reward_supplier in staking
         let contract_address = staking.address;
         let staking_config_dispatcher = IStakingConfigDispatcher { contract_address };
         cheat_caller_address_once(:contract_address, caller_address: staking.roles.token_admin);
         staking_config_dispatcher.set_reward_supplier(reward_supplier: reward_supplier.address);
-        SystemState { token, staking, minting_curve, reward_supplier, base_account: 0x100000, }
+        SystemState { token, staking, minting_curve, reward_supplier, base_account: 0x100000 }
     }
 
     /// Creates a new account with the specified amount.
@@ -412,7 +412,7 @@ pub struct Account {
     pub address: ContractAddress,
     pub amount: Amount,
     pub token: TokenState,
-    pub staking: StakingState
+    pub staking: StakingState,
 }
 
 #[generate_trait]
@@ -432,7 +432,7 @@ pub impl AccountImpl of AccountTrait {
 pub struct Staker {
     pub staker: Account,
     pub reward: Account,
-    pub operational: Account
+    pub operational: Account,
 }
 
 #[generate_trait]
@@ -444,7 +444,7 @@ pub impl StakerImpl of StakerTrait {
     fn stake(self: Staker, amount: Amount, pool_enabled: bool, commission: Commission) {
         self.staker.approve(spender: self.staker.staking.address, :amount);
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address
+            contract_address: self.staker.staking.address, caller_address: self.staker.address,
         );
         self
             .staker
@@ -455,14 +455,14 @@ pub impl StakerImpl of StakerTrait {
                 operational_address: self.operational.address,
                 :amount,
                 :pool_enabled,
-                :commission
+                :commission,
             )
     }
 
     fn increase_stake(self: Staker, amount: Amount) -> Amount {
         self.staker.approve(spender: self.staker.staking.address, :amount);
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address
+            contract_address: self.staker.staking.address, caller_address: self.staker.address,
         );
         self
             .staker
@@ -473,35 +473,35 @@ pub impl StakerImpl of StakerTrait {
 
     fn exit_intent(self: Staker) -> Timestamp {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address
+            contract_address: self.staker.staking.address, caller_address: self.staker.address,
         );
         self.staker.staking.dispatcher().unstake_intent()
     }
 
     fn exit_action(self: Staker) -> Amount {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address
+            contract_address: self.staker.staking.address, caller_address: self.staker.address,
         );
         self.staker.staking.dispatcher().unstake_action(staker_address: self.staker.address)
     }
 
     fn set_open_for_delegation(self: Staker, commission: Commission) -> ContractAddress {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address
+            contract_address: self.staker.staking.address, caller_address: self.staker.address,
         );
         self.staker.staking.dispatcher().set_open_for_delegation(:commission)
     }
 
     fn claim_rewards(self: Staker) -> Amount {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address
+            contract_address: self.staker.staking.address, caller_address: self.staker.address,
         );
         self.staker.staking.dispatcher().claim_rewards(staker_address: self.staker.address)
     }
 
     fn update_commission(self: Staker, commission: Commission) {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address
+            contract_address: self.staker.staking.address, caller_address: self.staker.address,
         );
         self.staker.staking.dispatcher().update_commission(:commission)
     }
@@ -512,7 +512,7 @@ pub impl StakerImpl of StakerTrait {
 #[derive(Drop, Copy)]
 pub struct Delegator {
     pub delegator: Account,
-    pub reward: Account
+    pub reward: Account,
 }
 
 #[generate_trait]
@@ -552,10 +552,10 @@ pub impl DelegatorImpl of DelegatorTrait {
         from_pool: ContractAddress,
         to_staker: ContractAddress,
         to_pool: ContractAddress,
-        amount: Amount
+        amount: Amount,
     ) -> Amount {
         cheat_caller_address_once(
-            contract_address: from_pool, caller_address: self.delegator.address
+            contract_address: from_pool, caller_address: self.delegator.address,
         );
         let pool_dispatcher = IPoolDispatcher { contract_address: from_pool };
         pool_dispatcher.switch_delegation_pool(:to_staker, :to_pool, :amount)
@@ -568,7 +568,7 @@ pub impl DelegatorImpl of DelegatorTrait {
     }
 
     fn change_reward_address(
-        self: Delegator, pool: ContractAddress, reward_address: ContractAddress
+        self: Delegator, pool: ContractAddress, reward_address: ContractAddress,
     ) {
         cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };

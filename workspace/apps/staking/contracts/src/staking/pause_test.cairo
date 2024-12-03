@@ -3,8 +3,8 @@ use contracts::event_test_utils::{assert_unpaused_event};
 use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPauseDispatcherTrait};
 use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
-use contracts::test_utils::constants::{DUMMY_IDENTIFIER, DUMMY_ADDRESS};
-use contracts::test_utils::constants::{NON_SECURITY_AGENT, NON_SECURITY_ADMIN};
+use contracts::test_utils::constants::{DUMMY_ADDRESS, DUMMY_IDENTIFIER};
+use contracts::test_utils::constants::{NON_SECURITY_ADMIN, NON_SECURITY_AGENT};
 use contracts::test_utils::stake_for_testing_using_dispatcher;
 use contracts::test_utils::{StakingInitConfig, general_contract_system_deployment};
 use contracts::test_utils::{load_one_felt, pause_staking_contract};
@@ -19,24 +19,24 @@ fn test_pause() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
     let is_paused = load_one_felt(
-        target: staking_contract, storage_address: selector!("is_paused")
+        target: staking_contract, storage_address: selector!("is_paused"),
     );
     assert_eq!(is_paused, 0);
     assert!(!staking_dispatcher.is_paused());
     let mut spy = snforge_std::spy_events();
     // Pause with security agent.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
     staking_pause_dispatcher.pause();
     let is_paused = load_one_felt(
-        target: staking_contract, storage_address: selector!("is_paused")
+        target: staking_contract, storage_address: selector!("is_paused"),
     );
     assert_ne!(is_paused, 0);
     assert!(staking_dispatcher.is_paused());
     // Unpause with security admin.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
     );
     staking_pause_dispatcher.unpause();
     assert!(!staking_dispatcher.is_paused());
@@ -55,30 +55,30 @@ fn test_already_paused_and_unpaused() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
     let is_paused = load_one_felt(
-        target: staking_contract, storage_address: selector!("is_paused")
+        target: staking_contract, storage_address: selector!("is_paused"),
     );
     assert_eq!(is_paused, 0);
     assert!(!staking_dispatcher.is_paused());
     let mut spy = snforge_std::spy_events();
     // Unpause with security admin when already unpaused should change nothing and emit nothing.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
     );
     staking_pause_dispatcher.unpause();
     let is_paused = load_one_felt(
-        target: staking_contract, storage_address: selector!("is_paused")
+        target: staking_contract, storage_address: selector!("is_paused"),
     );
     assert_eq!(is_paused, 0);
     assert!(!staking_dispatcher.is_paused());
     // Pause with security agent.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
     staking_pause_dispatcher.pause();
     assert!(staking_dispatcher.is_paused());
     // Pause with security agent when already paused should change nothing and emit nothing.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_agent
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
     staking_pause_dispatcher.pause();
     assert!(staking_dispatcher.is_paused());
@@ -97,7 +97,7 @@ fn test_pause_not_security_agent() {
     let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
     let non_security_agent = NON_SECURITY_AGENT();
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: non_security_agent
+        contract_address: staking_contract, caller_address: non_security_agent,
     );
     staking_pause_dispatcher.pause();
 }
@@ -111,7 +111,7 @@ fn test_unpause_not_security_admin() {
     let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
     let non_security_admin = NON_SECURITY_ADMIN();
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: non_security_admin
+        contract_address: staking_contract, caller_address: non_security_admin,
     );
     staking_pause_dispatcher.unpause();
 }
@@ -134,7 +134,7 @@ fn test_increase_stake_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.increase_stake(staker_address: DUMMY_ADDRESS(), amount: 0);
 }
@@ -146,7 +146,7 @@ fn test_claim_rewards_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_disaptcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_disaptcher.claim_rewards(staker_address: DUMMY_ADDRESS());
 }
@@ -158,7 +158,7 @@ fn test_unstake_intent_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.unstake_intent();
 }
@@ -170,7 +170,7 @@ fn test_unstake_action_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.unstake_action(staker_address: DUMMY_ADDRESS());
 }
@@ -182,7 +182,7 @@ fn test_change_reward_address_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.change_reward_address(reward_address: DUMMY_ADDRESS());
 }
@@ -194,7 +194,7 @@ fn test_set_open_for_delegation_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.set_open_for_delegation(commission: 0);
 }
@@ -206,7 +206,7 @@ fn test_update_global_index_if_needed_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.update_global_index_if_needed();
 }
@@ -218,7 +218,7 @@ fn test_change_operational_address_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.change_operational_address(operational_address: DUMMY_ADDRESS());
 }
@@ -230,7 +230,7 @@ fn test_declare_operational_address_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.declare_operational_address(staker_address: DUMMY_ADDRESS());
 }
@@ -242,7 +242,7 @@ fn test_update_commission_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.update_commission(commission: 0);
 }
@@ -254,7 +254,7 @@ fn test_add_stake_from_pool_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_pool_dispatcher = IStakingPoolDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_pool_dispatcher.add_stake_from_pool(staker_address: DUMMY_ADDRESS(), amount: 0);
 }
@@ -266,11 +266,11 @@ fn test_remove_from_delegation_pool_intent_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_pool_dispatcher = IStakingPoolDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_pool_dispatcher
         .remove_from_delegation_pool_intent(
-            staker_address: DUMMY_ADDRESS(), identifier: DUMMY_IDENTIFIER, amount: 0
+            staker_address: DUMMY_ADDRESS(), identifier: DUMMY_IDENTIFIER, amount: 0,
         );
 }
 
@@ -281,7 +281,7 @@ fn test_remove_from_delegation_pool_action_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_pool_dispatcher = IStakingPoolDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_pool_dispatcher.remove_from_delegation_pool_action(identifier: DUMMY_IDENTIFIER);
 }
@@ -293,7 +293,7 @@ fn test_switch_staking_delegation_pool_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_pool_dispatcher = IStakingPoolDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_pool_dispatcher
         .switch_staking_delegation_pool(
@@ -301,7 +301,7 @@ fn test_switch_staking_delegation_pool_when_paused() {
             to_pool: DUMMY_ADDRESS(),
             switched_amount: 0,
             data: [].span(),
-            identifier: DUMMY_IDENTIFIER
+            identifier: DUMMY_IDENTIFIER,
         );
 }
 
@@ -312,7 +312,7 @@ fn test_claim_delegation_pool_rewards_when_paused() {
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_pool_dispatcher = IStakingPoolDispatcher {
-        contract_address: cfg.test_info.staking_contract
+        contract_address: cfg.test_info.staking_contract,
     };
     staking_pool_dispatcher.claim_delegation_pool_rewards(staker_address: DUMMY_ADDRESS());
 }

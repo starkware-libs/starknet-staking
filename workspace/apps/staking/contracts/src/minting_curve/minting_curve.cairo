@@ -1,16 +1,16 @@
 #[starknet::contract]
 pub mod MintingCurve {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts::constants::{DEFAULT_C_NUM, C_DENOM, MAX_C_NUM};
+    use contracts::constants::{C_DENOM, DEFAULT_C_NUM, MAX_C_NUM};
     use contracts::errors::{Error, assert_with_err};
-    use contracts::minting_curve::interface::{IMintingCurve, Events, ConfigEvents};
+    use contracts::minting_curve::interface::{ConfigEvents, Events, IMintingCurve};
     use contracts::minting_curve::interface::{IMintingCurveConfig, MintingCurveContractInfo};
-    use contracts::staking::interface::{IStakingDispatcherTrait, IStakingDispatcher};
-    use contracts::types::{Inflation, Amount};
+    use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+    use contracts::types::{Amount, Inflation};
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::interfaces::identity::Identity;
-    use core::num::traits::{WideMul, Sqrt};
+    use core::num::traits::{Sqrt, WideMul};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::{ContractAddress};
@@ -47,7 +47,7 @@ pub mod MintingCurve {
         l1_reward_supplier: felt252,
         // The numerator of the inflation rate. The denominator is C_DENOM. C_NUM / C_DENOM is the
         // fraction of the total supply that can be minted in a year.
-        c_num: Inflation
+        c_num: Inflation,
     }
 
     #[event]
@@ -62,7 +62,7 @@ pub mod MintingCurve {
         #[flat]
         SRC5Event: SRC5Component::Event,
         TotalSupplyChanged: Events::TotalSupplyChanged,
-        MintingCapChanged: ConfigEvents::MintingCapChanged
+        MintingCapChanged: ConfigEvents::MintingCapChanged,
     }
 
 
@@ -72,7 +72,7 @@ pub mod MintingCurve {
         staking_contract: ContractAddress,
         total_supply: Amount,
         l1_reward_supplier: felt252,
-        governance_admin: ContractAddress
+        governance_admin: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
         self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
@@ -96,7 +96,7 @@ pub mod MintingCurve {
     #[l1_handler]
     fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: Amount) {
         assert_with_err(
-            from_address == self.l1_reward_supplier.read(), Error::UNAUTHORIZED_MESSAGE_SENDER
+            from_address == self.l1_reward_supplier.read(), Error::UNAUTHORIZED_MESSAGE_SENDER,
         );
         let old_total_supply = self.total_supply.read();
         // Note that the total supply may only increase.
@@ -105,7 +105,7 @@ pub mod MintingCurve {
             self.total_supply.write(total_supply);
             self
                 .emit(
-                    Events::TotalSupplyChanged { old_total_supply, new_total_supply: total_supply }
+                    Events::TotalSupplyChanged { old_total_supply, new_total_supply: total_supply },
                 );
         }
     }
@@ -158,7 +158,7 @@ pub mod MintingCurve {
         /// where M and C are given as fractions.
         /// Note: Differences are negligible at this scale.
         fn compute_yearly_mint(
-            self: @ContractState, total_stake: Amount, total_supply: Amount
+            self: @ContractState, total_stake: Amount, total_supply: Amount,
         ) -> Amount {
             let stake_times_supply: u256 = total_stake.wide_mul(total_supply);
             self.c_num.read().into() * stake_times_supply.sqrt() / C_DENOM.into()

@@ -48,7 +48,7 @@ mod ReplaceabilityTests {
         replaceable_dispatcher.add_new_implementation(:implementation_data);
         assert!(
             replaceable_dispatcher
-                .get_impl_activation_time(:implementation_data) == DEFAULT_UPGRADE_DELAY
+                .get_impl_activation_time(:implementation_data) == DEFAULT_UPGRADE_DELAY,
         );
 
         // Validate event emission.
@@ -59,11 +59,11 @@ mod ReplaceabilityTests {
                         contract_address,
                         ReplaceabilityMock::Event::ReplaceabilityEvent(
                             ReplaceabilityComponent::Event::ImplementationAdded(
-                                ImplementationAdded { implementation_data: implementation_data }
-                            )
-                        )
-                    )
-                ]
+                                ImplementationAdded { implementation_data: implementation_data },
+                            ),
+                        ),
+                    ),
+                ],
             );
     }
 
@@ -76,7 +76,7 @@ mod ReplaceabilityTests {
 
         // Invoke not as an Upgrade Governor.
         cheat_caller_address_once(
-            :contract_address, caller_address: NOT_UPGRADE_GOVERNOR_ACCOUNT()
+            :contract_address, caller_address: NOT_UPGRADE_GOVERNOR_ACCOUNT(),
         );
         replaceable_dispatcher.add_new_implementation(:implementation_data);
     }
@@ -90,7 +90,7 @@ mod ReplaceabilityTests {
         cheat_caller_address(
             :contract_address,
             caller_address: get_upgrade_governor_account(:contract_address),
-            span: CheatSpan::TargetCalls(4)
+            span: CheatSpan::TargetCalls(4),
         );
         let mut spy = spy_events();
 
@@ -113,11 +113,11 @@ mod ReplaceabilityTests {
                         contract_address,
                         ReplaceabilityMock::Event::ReplaceabilityEvent(
                             ReplaceabilityComponent::Event::ImplementationRemoved(
-                                ImplementationRemoved { implementation_data: implementation_data }
-                            )
-                        )
-                    )
-                ]
+                                ImplementationRemoved { implementation_data: implementation_data },
+                            ),
+                        ),
+                    ),
+                ],
             );
     }
 
@@ -130,7 +130,7 @@ mod ReplaceabilityTests {
 
         // Invoke not as an Upgrade Governor.
         cheat_caller_address_once(
-            :contract_address, caller_address: NOT_UPGRADE_GOVERNOR_ACCOUNT()
+            :contract_address, caller_address: NOT_UPGRADE_GOVERNOR_ACCOUNT(),
         );
         replaceable_dispatcher.remove_implementation(:implementation_data);
     }
@@ -144,20 +144,20 @@ mod ReplaceabilityTests {
 
         // Prepare implementation data with the same class hash (repalce to self).
         let implementation_data = dummy_nonfinal_implementation_data_with_class_hash(
-            class_hash: get_class_hash(contract_address)
+            class_hash: get_class_hash(contract_address),
         );
 
         // Invoke as an Upgrade Governor.
         cheat_caller_address(
             :contract_address,
             caller_address: get_upgrade_governor_account(:contract_address),
-            span: CheatSpan::TargetCalls(6)
+            span: CheatSpan::TargetCalls(6),
         );
 
         // Add implementation.
         replaceable_dispatcher.add_new_implementation(:implementation_data);
         assert!(
-            replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_non_zero()
+            replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_non_zero(),
         );
 
         // Advance time to enable implementation.
@@ -173,7 +173,7 @@ mod ReplaceabilityTests {
         cheat_block_timestamp(
             contract_address,
             DEFAULT_UPGRADE_DELAY + 1 + DEFAULT_UPGRADE_DELAY + 14 * 3600 * 24 + 2,
-            CheatSpan::Indefinite
+            CheatSpan::Indefinite,
         );
 
         // Should revert on expired_impl.
@@ -192,14 +192,14 @@ mod ReplaceabilityTests {
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;
         let implementation_data = dummy_nonfinal_implementation_data_with_class_hash(
-            class_hash: get_class_hash(contract_address)
+            class_hash: get_class_hash(contract_address),
         );
 
         // Invoke as an Upgrade Governor.
         cheat_caller_address(
             :contract_address,
             caller_address: get_upgrade_governor_account(:contract_address),
-            span: CheatSpan::TargetCalls(2)
+            span: CheatSpan::TargetCalls(2),
         );
         let mut spy = spy_events();
 
@@ -217,11 +217,11 @@ mod ReplaceabilityTests {
                         contract_address,
                         ReplaceabilityMock::Event::ReplaceabilityEvent(
                             ReplaceabilityComponent::Event::ImplementationReplaced(
-                                ImplementationReplaced { implementation_data: implementation_data }
-                            )
-                        )
-                    )
-                ]
+                                ImplementationReplaced { implementation_data: implementation_data },
+                            ),
+                        ),
+                    ),
+                ],
             );
         // TODO: Check the new impl hash.
     // TODO: Check the new impl is not final.
@@ -240,14 +240,14 @@ mod ReplaceabilityTests {
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;
         let implementation_data = dummy_nonfinal_eic_implementation_data_with_class_hash(
-            get_class_hash(contract_address)
+            get_class_hash(contract_address),
         );
 
         // Invoke as an Upgrade Governor.
         cheat_caller_address(
             :contract_address,
             caller_address: get_upgrade_governor_account(:contract_address),
-            span: CheatSpan::TargetCalls(2)
+            span: CheatSpan::TargetCalls(2),
         );
 
         // Add implementation and advance time to enable it.
@@ -257,7 +257,7 @@ mod ReplaceabilityTests {
         replaceable_dispatcher.replace_to(:implementation_data);
         assert!(
             replaceable_dispatcher.get_upgrade_delay() == DEFAULT_UPGRADE_DELAY
-                + EIC_UPGRADE_DELAY_ADDITION
+                + EIC_UPGRADE_DELAY_ADDITION,
         );
     }
 
@@ -270,7 +270,7 @@ mod ReplaceabilityTests {
 
         // Invoke not as an Upgrade Governor.
         cheat_caller_address_once(
-            :contract_address, caller_address: NOT_UPGRADE_GOVERNOR_ACCOUNT()
+            :contract_address, caller_address: NOT_UPGRADE_GOVERNOR_ACCOUNT(),
         );
         replaceable_dispatcher.replace_to(:implementation_data);
     }
@@ -283,7 +283,7 @@ mod ReplaceabilityTests {
 
         // Invoke as an Upgrade Governor.
         cheat_caller_address_once(
-            :contract_address, caller_address: get_upgrade_governor_account(:contract_address)
+            :contract_address, caller_address: get_upgrade_governor_account(:contract_address),
         );
         let implementation_data = DUMMY_NONFINAL_IMPLEMENTATION_DATA();
 
@@ -307,7 +307,7 @@ mod ReplaceabilityTests {
 
         // Prepare implementation data with the same class hash (repalce to self).
         let implementation_data = dummy_nonfinal_implementation_data_with_class_hash(
-            class_hash: get_class_hash(contract_address)
+            class_hash: get_class_hash(contract_address),
         );
         let other_implementation_data = DUMMY_FINAL_IMPLEMENTATION_DATA();
 
@@ -315,7 +315,7 @@ mod ReplaceabilityTests {
         cheat_caller_address(
             :contract_address,
             caller_address: get_upgrade_governor_account(:contract_address),
-            span: CheatSpan::TargetCalls(8)
+            span: CheatSpan::TargetCalls(8),
         );
 
         // Add implementations.
@@ -323,12 +323,12 @@ mod ReplaceabilityTests {
         replaceable_dispatcher
             .add_new_implementation(implementation_data: other_implementation_data);
         assert!(
-            replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_non_zero()
+            replaceable_dispatcher.get_impl_activation_time(:implementation_data).is_non_zero(),
         );
         assert!(
             replaceable_dispatcher
                 .get_impl_activation_time(implementation_data: other_implementation_data)
-                .is_non_zero()
+                .is_non_zero(),
         );
 
         // Advance time to enable implementation.
@@ -341,7 +341,7 @@ mod ReplaceabilityTests {
         assert!(
             replaceable_dispatcher
                 .get_impl_activation_time(implementation_data: other_implementation_data)
-                .is_non_zero()
+                .is_non_zero(),
         );
 
         // Should revert with UNKNOWN_IMPLEMENTATION as replace_to removes the implementation.
@@ -360,14 +360,14 @@ mod ReplaceabilityTests {
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;
         let implementation_data = dummy_final_implementation_data_with_class_hash(
-            get_class_hash(contract_address)
+            get_class_hash(contract_address),
         );
 
         // Invoke as an Upgrade Governor.
         cheat_caller_address(
             :contract_address,
             caller_address: get_upgrade_governor_account(:contract_address),
-            span: CheatSpan::TargetCalls(2)
+            span: CheatSpan::TargetCalls(2),
         );
         let mut spy = spy_events();
         replaceable_dispatcher.add_new_implementation(:implementation_data);
@@ -397,14 +397,14 @@ mod ReplaceabilityTests {
         let contract_address = replaceable_dispatcher.contract_address;
         let replaceable_safe_dispatcher = IReplaceableSafeDispatcher { contract_address };
         let implementation_data = dummy_final_implementation_data_with_class_hash(
-            get_class_hash(contract_address)
+            get_class_hash(contract_address),
         );
 
         // Invoke as an Upgrade Governor.
         cheat_caller_address(
             :contract_address,
             caller_address: get_upgrade_governor_account(:contract_address),
-            span: CheatSpan::TargetCalls(3)
+            span: CheatSpan::TargetCalls(3),
         );
         replaceable_dispatcher.add_new_implementation(:implementation_data);
 

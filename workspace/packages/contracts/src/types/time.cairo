@@ -3,7 +3,7 @@ use core::traits::Into;
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct TimeDelta {
-    pub seconds: u64
+    pub seconds: u64,
 }
 impl TimeDeltaZero of core::num::traits::Zero<TimeDelta> {
     fn zero() -> TimeDelta {
@@ -43,7 +43,7 @@ impl TimeDeltaPartialOrd of PartialOrd<TimeDelta> {
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct Timestamp {
-    pub seconds: u64
+    pub seconds: u64,
 }
 impl TimeStampZero of core::num::traits::Zero<Timestamp> {
     fn zero() -> Timestamp nopanic {

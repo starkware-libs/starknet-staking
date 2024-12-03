@@ -1,7 +1,7 @@
-use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
-use contracts::staking::interface::{StakerPoolInfo, StakerInfo};
+use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
+use contracts::staking::interface::{StakerInfo, StakerPoolInfo};
 use contracts::types::{Amount, Index};
-use contracts_commons::types::time::{Timestamp, TimeDelta, Time};
+use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;
 use starknet::ContractAddress;
@@ -11,13 +11,13 @@ pub struct UndelegateIntentKey {
     pub pool_contract: ContractAddress,
     // The identifier is generally the pool member address, but it can be any unique identifier,
     // depending on the logic of the pool contract.
-    pub identifier: felt252
+    pub identifier: felt252,
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct UndelegateIntentValue {
     pub unpool_time: Timestamp,
-    pub amount: Amount
+    pub amount: Amount,
 }
 
 pub impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentValue> {
@@ -100,8 +100,8 @@ mod test_undelegate_intent {
         assert_eq!(
             d,
             UndelegateIntentValue {
-                unpool_time: Timestamp { seconds: Zero::zero() }, amount: Zero::zero()
-            }
+                unpool_time: Timestamp { seconds: Zero::zero() }, amount: Zero::zero(),
+            },
         );
     }
 
@@ -195,7 +195,7 @@ mod test_internal_staker_info {
         };
         assert_eq!(
             internal_staker_info.compute_unpool_time(:exit_wait_window),
-            Time::now().add(delta: exit_wait_window)
+            Time::now().add(delta: exit_wait_window),
         );
 
         // Unstake_time is set.
@@ -216,7 +216,7 @@ mod test_internal_staker_info {
 
         // Unstake time < current time.
         start_cheat_block_timestamp_global(
-            block_timestamp: Time::now().add(delta: exit_wait_window).into()
+            block_timestamp: Time::now().add(delta: exit_wait_window).into(),
         );
         assert_eq!(internal_staker_info.compute_unpool_time(:exit_wait_window), Time::now());
     }

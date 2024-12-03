@@ -7,16 +7,18 @@ use snforge_std::{CheatSpan, cheat_caller_address, cheat_account_contract_addres
 use starknet::ContractAddress;
 
 pub fn cheat_only_caller_address_once(
-    contract_address: ContractAddress, caller_address: ContractAddress
+    contract_address: ContractAddress, caller_address: ContractAddress,
 ) {
     cheat_caller_address(:contract_address, :caller_address, span: CheatSpan::TargetCalls(1));
 }
 
 pub fn cheat_account_contract_address_once(
-    contract_address: ContractAddress, caller_address: ContractAddress
+    contract_address: ContractAddress, caller_address: ContractAddress,
 ) {
     cheat_account_contract_address(
-        :contract_address, account_contract_address: caller_address, span: CheatSpan::TargetCalls(1)
+        :contract_address,
+        account_contract_address: caller_address,
+        span: CheatSpan::TargetCalls(1),
     );
 }
 
@@ -28,7 +30,7 @@ pub fn set_caller_as_upgrade_governor(contract: ContractAddress, caller: Contrac
 }
 
 pub fn set_account_as_security_admin(
-    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress,
 ) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
     cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
@@ -36,7 +38,7 @@ pub fn set_account_as_security_admin(
 }
 
 pub fn set_account_as_security_agent(
-    contract: ContractAddress, account: ContractAddress, security_admin: ContractAddress
+    contract: ContractAddress, account: ContractAddress, security_admin: ContractAddress,
 ) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
     cheat_caller_address_once(contract_address: contract, caller_address: security_admin);
@@ -44,7 +46,7 @@ pub fn set_account_as_security_agent(
 }
 
 pub fn set_account_as_app_role_admin(
-    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress,
 ) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
     cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
@@ -52,7 +54,7 @@ pub fn set_account_as_app_role_admin(
 }
 
 pub fn set_account_as_upgrade_governor(
-    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress
+    contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress,
 ) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
     cheat_caller_address_once(contract_address: contract, caller_address: governance_admin);
@@ -60,7 +62,7 @@ pub fn set_account_as_upgrade_governor(
 }
 
 pub fn set_account_as_token_admin(
-    contract: ContractAddress, account: ContractAddress, app_role_admin: ContractAddress
+    contract: ContractAddress, account: ContractAddress, app_role_admin: ContractAddress,
 ) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
     cheat_caller_address_once(contract_address: contract, caller_address: app_role_admin);
@@ -68,16 +70,18 @@ pub fn set_account_as_token_admin(
 }
 
 pub fn cheat_caller_address_once(
-    contract_address: ContractAddress, caller_address: ContractAddress
+    contract_address: ContractAddress, caller_address: ContractAddress,
 ) {
     cheat_caller_address(:contract_address, :caller_address, span: CheatSpan::TargetCalls(1));
     cheat_account_contract_address(
-        :contract_address, account_contract_address: caller_address, span: CheatSpan::TargetCalls(1)
+        :contract_address,
+        account_contract_address: caller_address,
+        span: CheatSpan::TargetCalls(1),
     );
 }
 
 pub fn check_identity(
-    target: ContractAddress, expected_identity: felt252, expected_version: felt252
+    target: ContractAddress, expected_identity: felt252, expected_version: felt252,
 ) {
     let identitier = IdentityDispatcher { contract_address: target };
     let identity = identitier.identify();
@@ -91,7 +95,7 @@ pub fn check_identity(
 #[derive(Drop, Copy)]
 pub struct TokenConfig {
     pub initial_supply: u256,
-    pub owner: ContractAddress
+    pub owner: ContractAddress,
 }
 
 /// The `TokenState` struct represents the state of a token contract.
@@ -99,7 +103,7 @@ pub struct TokenConfig {
 #[derive(Drop, Copy)]
 pub struct TokenState {
     pub address: ContractAddress,
-    pub owner: ContractAddress
+    pub owner: ContractAddress,
 }
 
 #[generate_trait]

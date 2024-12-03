@@ -21,7 +21,7 @@ pub(crate) mod ReplaceabilityMock {
         #[substorage(v0)]
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
-        src5: SRC5Component::Storage
+        src5: SRC5Component::Storage,
     }
 
     #[event]
@@ -30,7 +30,7 @@ pub(crate) mod ReplaceabilityMock {
         ReplaceabilityEvent: ReplaceabilityComponent::Event,
         RolesEvent: RolesComponent::Event,
         AccessControlEvent: AccessControlComponent::Event,
-        SRC5Event: SRC5Component::Event
+        SRC5Event: SRC5Component::Event,
     }
 
     #[constructor]

@@ -13,7 +13,7 @@ pub trait IRewardSupplier<TContractState> {
         l2_token: ContractAddress,
         amount: u256,
         depositor: EthAddress,
-        message: Span<felt252>
+        message: Span<felt252>,
     ) -> bool;
     fn contract_parameters(self: @TContractState) -> RewardSupplierInfo;
 }

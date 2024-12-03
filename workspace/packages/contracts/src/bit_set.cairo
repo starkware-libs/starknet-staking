@@ -91,7 +91,7 @@ impl BitSetImpl<
     +Copy<T>,
     +Drop<T>,
     +PartialEq<T>,
-    +Zero<T>
+    +Zero<T>,
 > of BitSetTrait<T> {
     fn get(self: @BitSet<T>, index: usize) -> Result<bool, BitSetError> {
         self._check_in_bounds(index)?;
@@ -196,12 +196,12 @@ impl BitSetImpl<
 
 impl TIntoBitSet<T, +BitSize<T>, +Drop<T>> of Into<T, BitSet<T>> {
     fn into(self: T) -> BitSet<T> {
-        BitSet { bit_array: self, lower_bound: Zero::zero(), upper_bound: BitSize::<T>::bits(), }
+        BitSet { bit_array: self, lower_bound: Zero::zero(), upper_bound: BitSize::<T>::bits() }
     }
 }
 
 impl SpanTryIntoBitSet<
-    T, +BitOr<T>, +BitSize<T>, +Copy<T>, +Drop<T>, +Zero<T>, impl TPowOfTwo: PowOfTwo<T>
+    T, +BitOr<T>, +BitSize<T>, +Copy<T>, +Drop<T>, +Zero<T>, impl TPowOfTwo: PowOfTwo<T>,
 > of TryInto<Span<usize>, BitSet<T>> {
     fn try_into(self: Span<usize>) -> Option<BitSet<T>> {
         let mut bit_array = Zero::<T>::zero();
@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn test_t_into_bit_set() {
         let bit_set = TESTED_BIT_ARRAY.into();
-        let expected = BitSet { bit_array: TESTED_BIT_ARRAY, lower_bound: 0, upper_bound: 8, };
+        let expected = BitSet { bit_array: TESTED_BIT_ARRAY, lower_bound: 0, upper_bound: 8 };
         assert_eq!(bit_set, expected);
     }
 
@@ -243,7 +243,7 @@ mod tests {
     fn test_span_try_into_bit_set() {
         let valid_span = TESTED_TRUE_INDICES.span();
         let bit_set = valid_span.try_into().unwrap();
-        let expected = BitSet { bit_array: TESTED_BIT_ARRAY, lower_bound: 0, upper_bound: 8, };
+        let expected = BitSet { bit_array: TESTED_BIT_ARRAY, lower_bound: 0, upper_bound: 8 };
         assert_eq!(bit_set, expected);
 
         let invalid_span = array![INVALID_INDEX].span();

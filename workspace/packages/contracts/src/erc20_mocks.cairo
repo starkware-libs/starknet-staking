@@ -16,14 +16,14 @@ pub(crate) mod DualCaseERC20Mock {
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        erc20: ERC20Component::Storage
+        erc20: ERC20Component::Storage,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         #[flat]
-        ERC20Event: ERC20Component::Event
+        ERC20Event: ERC20Component::Event,
     }
 
     #[constructor]
@@ -32,7 +32,7 @@ pub(crate) mod DualCaseERC20Mock {
         name: ByteArray,
         symbol: ByteArray,
         initial_supply: u256,
-        recipient: ContractAddress
+        recipient: ContractAddress,
     ) {
         self.erc20.initializer(name, symbol);
         self.erc20.mint(recipient, initial_supply);
@@ -55,14 +55,14 @@ pub(crate) mod SnakeERC20Mock {
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        erc20: ERC20Component::Storage
+        erc20: ERC20Component::Storage,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         #[flat]
-        ERC20Event: ERC20Component::Event
+        ERC20Event: ERC20Component::Event,
     }
 
     #[constructor]
@@ -71,7 +71,7 @@ pub(crate) mod SnakeERC20Mock {
         name: ByteArray,
         symbol: ByteArray,
         initial_supply: u256,
-        recipient: ContractAddress
+        recipient: ContractAddress,
     ) {
         self.erc20.initializer(name, symbol);
         self.erc20.mint(recipient, initial_supply);
@@ -98,14 +98,14 @@ pub(crate) mod CamelERC20Mock {
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        erc20: ERC20Component::Storage
+        erc20: ERC20Component::Storage,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         #[flat]
-        ERC20Event: ERC20Component::Event
+        ERC20Event: ERC20Component::Event,
     }
 
     #[constructor]
@@ -114,7 +114,7 @@ pub(crate) mod CamelERC20Mock {
         name: ByteArray,
         symbol: ByteArray,
         initial_supply: u256,
-        recipient: ContractAddress
+        recipient: ContractAddress,
     ) {
         self.erc20.initializer(name, symbol);
         self.erc20.mint(recipient, initial_supply);
@@ -125,7 +125,7 @@ pub(crate) mod CamelERC20Mock {
     impl ExternalImpl of ExternalTrait {
         #[external(v0)]
         fn allowance(
-            self: @ContractState, owner: ContractAddress, spender: ContractAddress
+            self: @ContractState, owner: ContractAddress, spender: ContractAddress,
         ) -> u256 {
             self.erc20.allowance(owner, spender)
         }
@@ -178,7 +178,7 @@ pub(crate) mod SnakeERC20Panic {
 
         #[external(v0)]
         fn allowance(
-            self: @ContractState, owner: ContractAddress, spender: ContractAddress
+            self: @ContractState, owner: ContractAddress, spender: ContractAddress,
         ) -> u256 {
             panic!("Some error");
             3
@@ -210,7 +210,7 @@ pub(crate) mod SnakeERC20Panic {
 
         #[external(v0)]
         fn transfer_from(
-            ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256
+            ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) -> bool {
             panic!("Some error");
             false
@@ -245,7 +245,7 @@ pub(crate) mod CamelERC20Panic {
             ref self: ContractState,
             sender: ContractAddress,
             recipient: ContractAddress,
-            amount: u256
+            amount: u256,
         ) {
             panic!("Some error");
         }

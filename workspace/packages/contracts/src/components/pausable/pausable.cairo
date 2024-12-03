@@ -12,7 +12,7 @@ pub mod PausableComponent {
 
     #[storage]
     pub struct Storage {
-        pub paused: bool
+        pub paused: bool,
     }
 
     #[event]
@@ -25,13 +25,13 @@ pub mod PausableComponent {
     /// Emitted when paused, where `account` triggered the action.
     #[derive(Drop, PartialEq, starknet::Event)]
     pub struct Paused {
-        pub account: ContractAddress
+        pub account: ContractAddress,
     }
 
     /// Emitted when un-paused, where `account` triggered the action.
     #[derive(Drop, PartialEq, starknet::Event)]
     pub struct Unpaused {
-        pub account: ContractAddress
+        pub account: ContractAddress,
     }
 
     pub mod Errors {
@@ -46,7 +46,7 @@ pub mod PausableComponent {
         +Drop<TContractState>,
         impl Roles: RolesComponent::HasComponent<TContractState>,
         +AccessControlComponent::HasComponent<TContractState>,
-        +SRC5Component::HasComponent<TContractState>
+        +SRC5Component::HasComponent<TContractState>,
     > of IPausable<ComponentState<TContractState>> {
         /// Returns true if the contract is paused, and false otherwise.
         fn is_paused(self: @ComponentState<TContractState>) -> bool {
