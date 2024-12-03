@@ -1,5 +1,5 @@
 use contracts::constants::MAX_C_NUM;
-use contracts::event_test_utils::{assert_number_of_events, assert_minting_cap_changed_event};
+use contracts::event_test_utils::{assert_minting_cap_changed_event, assert_number_of_events};
 use contracts::minting_curve::interface::IMintingCurveConfigDispatcher;
 use contracts::minting_curve::interface::IMintingCurveConfigDispatcherTrait;
 use contracts::minting_curve::interface::MintingCurveContractInfo;
@@ -9,7 +9,7 @@ use contracts::test_utils::constants::NON_TOKEN_ADMIN;
 use contracts::test_utils::{general_contract_system_deployment, stake_for_testing_using_dispatcher};
 use contracts::types::Amount;
 use contracts_commons::test_utils::cheat_caller_address_once;
-use core::num::traits::{WideMul, Sqrt};
+use core::num::traits::{Sqrt, WideMul};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 
 #[test]
@@ -20,7 +20,7 @@ fn test_yearly_mint() {
     let staking_contract = cfg.test_info.staking_contract;
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_dispatcher = IMintingCurveDispatcher {
-        contract_address: minting_curve_contract
+        contract_address: minting_curve_contract,
     };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let total_stake = cfg.staker_info.amount_own;
@@ -44,17 +44,17 @@ fn test_set_c_num() {
     general_contract_system_deployment(ref :cfg);
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_dispatcher = IMintingCurveDispatcher {
-        contract_address: minting_curve_contract
+        contract_address: minting_curve_contract,
     };
     let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
-        contract_address: minting_curve_contract
+        contract_address: minting_curve_contract,
     };
     let old_c = cfg.minting_curve_contract_info.c_num;
     assert_eq!(old_c, minting_curve_dispatcher.contract_parameters().c_num);
     let new_c = old_c * 2;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
-        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin
+        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin,
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c);
     assert_eq!(new_c, minting_curve_dispatcher.contract_parameters().c_num);
@@ -71,11 +71,11 @@ fn test_set_c_num_unauthorized() {
     general_contract_system_deployment(ref :cfg);
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
-        contract_address: minting_curve_contract
+        contract_address: minting_curve_contract,
     };
     let new_c_num = cfg.minting_curve_contract_info.c_num * 2;
     cheat_caller_address_once(
-        contract_address: minting_curve_contract, caller_address: NON_TOKEN_ADMIN()
+        contract_address: minting_curve_contract, caller_address: NON_TOKEN_ADMIN(),
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }
@@ -87,11 +87,11 @@ fn test_set_invalid_c_num() {
     general_contract_system_deployment(ref :cfg);
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
-        contract_address: minting_curve_contract
+        contract_address: minting_curve_contract,
     };
     let new_c_num = cfg.minting_curve_contract_info.c_denom + 1;
     cheat_caller_address_once(
-        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin
+        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin,
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }
@@ -103,11 +103,11 @@ fn test_set_c_num_over_limit() {
     general_contract_system_deployment(ref :cfg);
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
-        contract_address: minting_curve_contract
+        contract_address: minting_curve_contract,
     };
     let new_c_num = MAX_C_NUM + 1;
     cheat_caller_address_once(
-        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin
+        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin,
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }
@@ -118,11 +118,11 @@ fn test_set_max_c_num() {
     general_contract_system_deployment(ref :cfg);
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
-        contract_address: minting_curve_contract
+        contract_address: minting_curve_contract,
     };
     let new_c_num = MAX_C_NUM;
     cheat_caller_address_once(
-        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin
+        contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin,
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }
@@ -133,11 +133,11 @@ fn test_contract_parameters() {
     general_contract_system_deployment(ref :cfg);
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_dispatcher = IMintingCurveDispatcher {
-        contract_address: minting_curve_contract
+        contract_address: minting_curve_contract,
     };
     let expected_contract_parameters = MintingCurveContractInfo {
         c_num: cfg.minting_curve_contract_info.c_num,
-        c_denom: cfg.minting_curve_contract_info.c_denom
+        c_denom: cfg.minting_curve_contract_info.c_denom,
     };
     assert_eq!(expected_contract_parameters, minting_curve_dispatcher.contract_parameters());
 }

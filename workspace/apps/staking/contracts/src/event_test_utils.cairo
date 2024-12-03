@@ -8,14 +8,14 @@ use contracts::staking::interface::ConfigEvents as StakingConfigEvents;
 use contracts::staking::interface::Events as StakingEvents;
 use contracts::staking::interface::PauseEvents as StakingPauseEvents;
 use contracts::staking::staking::Staking;
-use contracts::types::{Commission, Index, Amount, Inflation};
+use contracts::types::{Amount, Commission, Index, Inflation};
 use contracts_commons::types::time::{TimeDelta, Timestamp};
-use snforge_std::cheatcodes::events::{Event, Events, EventSpy, EventSpyTrait, is_emitted};
+use snforge_std::cheatcodes::events::{Event, EventSpy, EventSpyTrait, Events, is_emitted};
 use starknet::ContractAddress;
 
 pub fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(
-        actual, expected, "{actual} events were emitted instead of {expected}. Context: {message}"
+        actual, expected, "{actual} events were emitted instead of {expected}. Context: {message}",
     );
 }
 
@@ -28,10 +28,10 @@ pub fn assert_staker_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     exit_timestamp: Timestamp,
-    amount: Amount
+    amount: Amount,
 ) {
     let expected_event = @Staking::Event::StakerExitIntent(
-        StakingEvents::StakerExitIntent { staker_address, exit_timestamp, amount }
+        StakingEvents::StakerExitIntent { staker_address, exit_timestamp, amount },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -41,7 +41,7 @@ pub fn assert_staker_exit_intent_event(
             "StakerExitIntent{{staker_address: {:?}, exit_timestamp: {}, amount: {}}}",
             staker_address,
             exit_timestamp.seconds,
-            amount
+            amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -52,10 +52,12 @@ pub fn assert_new_staker_event(
     staker_address: ContractAddress,
     reward_address: ContractAddress,
     operational_address: ContractAddress,
-    self_stake: Amount
+    self_stake: Amount,
 ) {
     let expected_event = @Staking::Event::NewStaker(
-        StakingEvents::NewStaker { staker_address, reward_address, operational_address, self_stake }
+        StakingEvents::NewStaker {
+            staker_address, reward_address, operational_address, self_stake,
+        },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -66,7 +68,7 @@ pub fn assert_new_staker_event(
             staker_address,
             reward_address,
             operational_address,
-            self_stake
+            self_stake,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -78,12 +80,16 @@ pub fn assert_stake_balance_changed_event(
     old_self_stake: Amount,
     old_delegated_stake: Amount,
     new_self_stake: Amount,
-    new_delegated_stake: Amount
+    new_delegated_stake: Amount,
 ) {
     let expected_event = @Staking::Event::StakeBalanceChanged(
         StakingEvents::StakeBalanceChanged {
-            staker_address, old_self_stake, old_delegated_stake, new_self_stake, new_delegated_stake
-        }
+            staker_address,
+            old_self_stake,
+            old_delegated_stake,
+            new_self_stake,
+            new_delegated_stake,
+        },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -96,7 +102,7 @@ pub fn assert_stake_balance_changed_event(
             old_self_stake,
             old_delegated_stake,
             new_self_stake,
-            new_delegated_stake
+            new_delegated_stake,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -106,10 +112,10 @@ pub fn assert_pool_member_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
     exit_timestamp: Timestamp,
-    amount: Amount
+    amount: Amount,
 ) {
     let expected_event = @Pool::Event::PoolMemberExitIntent(
-        PoolEvents::PoolMemberExitIntent { pool_member, exit_timestamp, amount }
+        PoolEvents::PoolMemberExitIntent { pool_member, exit_timestamp, amount },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -119,17 +125,17 @@ pub fn assert_pool_member_exit_intent_event(
             "PoolMemberExitIntent{{pool_member: {:?}, exit_timestamp: {}, amount: {}}}",
             pool_member,
             exit_timestamp.seconds,
-            amount
+            amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
 }
 
 pub fn assert_pool_member_exit_action_event(
-    spied_event: @(ContractAddress, Event), pool_member: ContractAddress, unpool_amount: Amount
+    spied_event: @(ContractAddress, Event), pool_member: ContractAddress, unpool_amount: Amount,
 ) {
     let expected_event = @Pool::Event::PoolMemberExitAction(
-        PoolEvents::PoolMemberExitAction { pool_member, unpool_amount }
+        PoolEvents::PoolMemberExitAction { pool_member, unpool_amount },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -138,7 +144,7 @@ pub fn assert_pool_member_exit_action_event(
         let details = format!(
             "PoolMemberExitAction{{pool_member: {:?}, unpool_amount: {}}}",
             pool_member,
-            unpool_amount
+            unpool_amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -148,10 +154,10 @@ pub fn assert_pool_member_reward_claimed_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
     reward_address: ContractAddress,
-    amount: Amount
+    amount: Amount,
 ) {
     let expected_event = @Pool::Event::PoolMemberRewardClaimed(
-        PoolEvents::PoolMemberRewardClaimed { pool_member, reward_address, amount }
+        PoolEvents::PoolMemberRewardClaimed { pool_member, reward_address, amount },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -161,7 +167,7 @@ pub fn assert_pool_member_reward_claimed_event(
             "PoolMemberRewardClaimed{{pool_member: {:?}, reward_address: {:?}, amount: {}}}",
             pool_member,
             reward_address,
-            amount
+            amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -171,12 +177,12 @@ pub fn assert_delegation_pool_member_balance_changed_event(
     mut spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
     old_delegated_stake: Amount,
-    new_delegated_stake: Amount
+    new_delegated_stake: Amount,
 ) {
     let expected_event = @Pool::Event::PoolMemberBalanceChanged(
         PoolEvents::PoolMemberBalanceChanged {
-            pool_member, old_delegated_stake, new_delegated_stake
-        }
+            pool_member, old_delegated_stake, new_delegated_stake,
+        },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -186,7 +192,7 @@ pub fn assert_delegation_pool_member_balance_changed_event(
             "PoolEvents::PoolMemberBalanceChanged{{pool_member: {:?}, old_delegated_stake: {}, new_delegated_stake: {}}}",
             pool_member,
             old_delegated_stake,
-            new_delegated_stake
+            new_delegated_stake,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -199,7 +205,7 @@ pub fn assert_staker_reward_address_change_event(
     old_address: ContractAddress,
 ) {
     let expected_event = @Staking::Event::StakerRewardAddressChanged(
-        StakingEvents::StakerRewardAddressChanged { staker_address, new_address, old_address }
+        StakingEvents::StakerRewardAddressChanged { staker_address, new_address, old_address },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -209,7 +215,7 @@ pub fn assert_staker_reward_address_change_event(
             "StakerRewardAddressChanged{{staker_address: {:?}, new_address: {:?}, old_address: {:?}}}",
             staker_address,
             new_address,
-            old_address
+            old_address,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -224,8 +230,8 @@ pub fn assert_commission_changed_event(
 ) {
     let expected_event = @Staking::Event::CommissionChanged(
         StakingEvents::CommissionChanged {
-            staker_address, pool_contract, new_commission, old_commission
-        }
+            staker_address, pool_contract, new_commission, old_commission,
+        },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -236,7 +242,7 @@ pub fn assert_commission_changed_event(
             staker_address,
             pool_contract,
             new_commission,
-            old_commission
+            old_commission,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -254,8 +260,8 @@ pub fn assert_global_index_updated_event(
             old_index,
             new_index,
             global_index_last_update_timestamp,
-            global_index_current_update_timestamp
-        }
+            global_index_current_update_timestamp,
+        },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -266,7 +272,7 @@ pub fn assert_global_index_updated_event(
             old_index,
             new_index,
             global_index_last_update_timestamp.seconds,
-            global_index_current_update_timestamp.seconds
+            global_index_current_update_timestamp.seconds,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -276,10 +282,10 @@ pub fn assert_new_delegation_pool_event(
     mut spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     pool_contract: ContractAddress,
-    commission: Commission
+    commission: Commission,
 ) {
     let expected_event = @Staking::Event::NewDelegationPool(
-        StakingEvents::NewDelegationPool { staker_address, pool_contract, commission }
+        StakingEvents::NewDelegationPool { staker_address, pool_contract, commission },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -289,7 +295,7 @@ pub fn assert_new_delegation_pool_event(
             "StakingEvents::NewDelegationPool{{staker_address: {:?}, pool_contract: {:?}, commission: {}}}",
             staker_address,
             pool_contract,
-            commission
+            commission,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -301,12 +307,12 @@ pub fn assert_remove_from_delegation_pool_intent_event(
     pool_contract: ContractAddress,
     identifier: felt252,
     old_intent_amount: Amount,
-    new_intent_amount: Amount
+    new_intent_amount: Amount,
 ) {
     let expected_event = @Staking::Event::RemoveFromDelegationPoolIntent(
         StakingEvents::RemoveFromDelegationPoolIntent {
-            staker_address, pool_contract, identifier, old_intent_amount, new_intent_amount
-        }
+            staker_address, pool_contract, identifier, old_intent_amount, new_intent_amount,
+        },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -318,7 +324,7 @@ pub fn assert_remove_from_delegation_pool_intent_event(
             pool_contract,
             identifier,
             old_intent_amount,
-            new_intent_amount
+            new_intent_amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -328,10 +334,10 @@ pub fn assert_remove_from_delegation_pool_action_event(
     spied_event: @(ContractAddress, Event),
     pool_contract: ContractAddress,
     identifier: felt252,
-    amount: Amount
+    amount: Amount,
 ) {
     let expected_event = @Staking::Event::RemoveFromDelegationPoolAction(
-        StakingEvents::RemoveFromDelegationPoolAction { pool_contract, identifier, amount }
+        StakingEvents::RemoveFromDelegationPoolAction { pool_contract, identifier, amount },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -341,7 +347,7 @@ pub fn assert_remove_from_delegation_pool_action_event(
             "RemoveFromDelegationPoolAction{{pool_contract: {:?}, identifier: {}, amount: {}}}",
             pool_contract,
             identifier,
-            amount
+            amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -354,7 +360,7 @@ pub fn assert_pool_member_reward_address_change_event(
     old_address: ContractAddress,
 ) {
     let expected_event = @Pool::Event::PoolMemberRewardAddressChanged(
-        PoolEvents::PoolMemberRewardAddressChanged { pool_member, new_address, old_address }
+        PoolEvents::PoolMemberRewardAddressChanged { pool_member, new_address, old_address },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -364,7 +370,7 @@ pub fn assert_pool_member_reward_address_change_event(
             "PoolMemberRewardAddressChanged{{pool_member: {:?}, new_address: {:?}, old_address: {:?}}}",
             pool_member,
             new_address,
-            old_address
+            old_address,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -374,10 +380,10 @@ pub fn assert_staker_reward_claimed_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     reward_address: ContractAddress,
-    amount: Amount
+    amount: Amount,
 ) {
     let expected_event = @Staking::Event::StakerRewardClaimed(
-        StakingEvents::StakerRewardClaimed { staker_address, reward_address, amount }
+        StakingEvents::StakerRewardClaimed { staker_address, reward_address, amount },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -387,7 +393,7 @@ pub fn assert_staker_reward_claimed_event(
             "StakerRewardClaimed{{staker_address: {:?}, reward_address: {:?}, amount: {}}}",
             staker_address,
             reward_address,
-            amount
+            amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -396,10 +402,10 @@ pub fn assert_staker_reward_claimed_event(
 pub fn assert_declare_operational_address_event(
     spied_event: @(ContractAddress, Event),
     operational_address: ContractAddress,
-    staker_address: ContractAddress
+    staker_address: ContractAddress,
 ) {
     let expected_event = @Staking::Event::OperationalAddressDeclared(
-        StakingEvents::OperationalAddressDeclared { operational_address, staker_address }
+        StakingEvents::OperationalAddressDeclared { operational_address, staker_address },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -408,7 +414,7 @@ pub fn assert_declare_operational_address_event(
         let details = format!(
             "OperationalAddressDeclared{{operational_address: {:?}, staker_address: {:?}}}",
             operational_address,
-            staker_address
+            staker_address,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -421,7 +427,7 @@ pub fn assert_change_operational_address_event(
     old_address: ContractAddress,
 ) {
     let expected_event = @Staking::Event::OperationalAddressChanged(
-        StakingEvents::OperationalAddressChanged { staker_address, new_address, old_address }
+        StakingEvents::OperationalAddressChanged { staker_address, new_address, old_address },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -431,7 +437,7 @@ pub fn assert_change_operational_address_event(
             "OperationalAddressChanged{{staker_address: {:?}, new_address: {:?}, old_address: {:?}}}",
             staker_address,
             new_address,
-            old_address
+            old_address,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -440,10 +446,10 @@ pub fn assert_change_operational_address_event(
 pub(crate) fn assert_final_index_set_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
-    final_staker_index: Index
+    final_staker_index: Index,
 ) {
     let expected_event = @Pool::Event::FinalIndexSet(
-        PoolEvents::FinalIndexSet { staker_address, final_staker_index }
+        PoolEvents::FinalIndexSet { staker_address, final_staker_index },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -452,7 +458,7 @@ pub(crate) fn assert_final_index_set_event(
         let details = format!(
             "FinalIndexSet{{staker_address: {:?}, final_staker_index: {}}}",
             staker_address,
-            final_staker_index
+            final_staker_index,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -462,12 +468,12 @@ pub(crate) fn assert_calculated_rewards_event(
     spied_event: @(ContractAddress, Event),
     last_timestamp: Timestamp,
     new_timestamp: Timestamp,
-    rewards_calculated: Amount
+    rewards_calculated: Amount,
 ) {
     let expected_event = @RewardSupplier::Event::CalculatedRewards(
         RewardSupplierEvents::CalculatedRewards {
-            last_timestamp, new_timestamp, rewards_calculated
-        }
+            last_timestamp, new_timestamp, rewards_calculated,
+        },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -477,24 +483,24 @@ pub(crate) fn assert_calculated_rewards_event(
             "CalculatedRewards{{last_timestamp: {}, new_timestamp: {}, rewards_calculated: {}}}",
             last_timestamp.seconds,
             new_timestamp.seconds,
-            rewards_calculated
+            rewards_calculated,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
 }
 
 pub(crate) fn assert_mint_request_event(
-    spied_event: @(ContractAddress, Event), total_amount: Amount, num_msgs: u128
+    spied_event: @(ContractAddress, Event), total_amount: Amount, num_msgs: u128,
 ) {
     let expected_event = @RewardSupplier::Event::mintRequest(
-        RewardSupplierEvents::MintRequest { total_amount, num_msgs }
+        RewardSupplierEvents::MintRequest { total_amount, num_msgs },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
     let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
     if !emitted {
         let details = format!(
-            "MintRequest{{total_amount: {:?}, num_msgs: {}}}", total_amount, num_msgs
+            "MintRequest{{total_amount: {:?}, num_msgs: {}}}", total_amount, num_msgs,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -505,12 +511,12 @@ pub(crate) fn assert_delete_staker_event(
     staker_address: ContractAddress,
     reward_address: ContractAddress,
     operational_address: ContractAddress,
-    pool_contract: Option<ContractAddress>
+    pool_contract: Option<ContractAddress>,
 ) {
     let expected_event = @Staking::Event::DeleteStaker(
         StakingEvents::DeleteStaker {
-            staker_address, reward_address, operational_address, pool_contract
-        }
+            staker_address, reward_address, operational_address, pool_contract,
+        },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -521,7 +527,7 @@ pub(crate) fn assert_delete_staker_event(
             staker_address,
             reward_address,
             operational_address,
-            pool_contract
+            pool_contract,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -530,10 +536,10 @@ pub(crate) fn assert_delete_staker_event(
 pub(crate) fn assert_delete_pool_member_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
-    reward_address: ContractAddress
+    reward_address: ContractAddress,
 ) {
     let expected_event = @Pool::Event::DeletePoolMember(
-        PoolEvents::DeletePoolMember { pool_member, reward_address }
+        PoolEvents::DeletePoolMember { pool_member, reward_address },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -542,7 +548,7 @@ pub(crate) fn assert_delete_pool_member_event(
         let details = format!(
             "DeletePoolMember{{pool_member: {:?}, reward_address: {:?}}}",
             pool_member,
-            reward_address
+            reward_address,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -552,10 +558,10 @@ pub(crate) fn assert_switch_delegation_pool_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,
     new_delegation_pool: ContractAddress,
-    amount: Amount
+    amount: Amount,
 ) {
     let expected_event = @Pool::Event::SwitchDelegationPool(
-        PoolEvents::SwitchDelegationPool { pool_member, new_delegation_pool, amount }
+        PoolEvents::SwitchDelegationPool { pool_member, new_delegation_pool, amount },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -565,7 +571,7 @@ pub(crate) fn assert_switch_delegation_pool_event(
             "SwitchDelegationPool{{pool_member: {:?}, new_delegation_pool: {:?}, amount: {}}}",
             pool_member,
             new_delegation_pool,
-            amount
+            amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -576,12 +582,12 @@ pub(crate) fn assert_change_delegation_pool_intent_event(
     pool_contract: ContractAddress,
     identifier: felt252,
     old_intent_amount: Amount,
-    new_intent_amount: Amount
+    new_intent_amount: Amount,
 ) {
     let expected_event = @Staking::Event::ChangeDelegationPoolIntent(
         StakingEvents::ChangeDelegationPoolIntent {
-            pool_contract, identifier, old_intent_amount, new_intent_amount
-        }
+            pool_contract, identifier, old_intent_amount, new_intent_amount,
+        },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -592,7 +598,7 @@ pub(crate) fn assert_change_delegation_pool_intent_event(
             pool_contract,
             identifier,
             old_intent_amount,
-            new_intent_amount
+            new_intent_amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -603,10 +609,10 @@ pub(crate) fn assert_new_pool_member_event(
     pool_member: ContractAddress,
     staker_address: ContractAddress,
     reward_address: ContractAddress,
-    amount: Amount
+    amount: Amount,
 ) {
     let expected_event = @Pool::Event::NewPoolMember(
-        PoolEvents::NewPoolMember { pool_member, staker_address, reward_address, amount }
+        PoolEvents::NewPoolMember { pool_member, staker_address, reward_address, amount },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -617,7 +623,7 @@ pub(crate) fn assert_new_pool_member_event(
             pool_member,
             staker_address,
             reward_address,
-            amount
+            amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -627,10 +633,10 @@ pub fn assert_rewards_supplied_to_delegation_pool_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     pool_address: ContractAddress,
-    amount: Amount
+    amount: Amount,
 ) {
     let expected_event = @Staking::Event::RewardsSuppliedToDelegationPool(
-        StakingEvents::RewardsSuppliedToDelegationPool { staker_address, pool_address, amount }
+        StakingEvents::RewardsSuppliedToDelegationPool { staker_address, pool_address, amount },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -640,7 +646,7 @@ pub fn assert_rewards_supplied_to_delegation_pool_event(
             "RewardsSuppliedToDelegationPool{{staker_address: {:?}, pool_address: {:?}, amount: {}}}",
             staker_address,
             pool_address,
-            amount
+            amount,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -671,17 +677,17 @@ pub fn assert_unpaused_event(spied_event: @(ContractAddress, Event), account: Co
 pub fn debug_dump_spied_events(ref spy: EventSpy) {
     let mut serialized = array![];
     Serde::<
-        Array<(starknet::ContractAddress, snforge_std::Event)>
+        Array<(starknet::ContractAddress, snforge_std::Event)>,
     >::serialize(@(spy.get_events().events), ref serialized);
     println!("{:?}", serialized);
     println!("[#events, (emitterAddress, #keys, keys..., #values, values...)...]");
 }
 
 pub fn assert_minting_cap_changed_event(
-    spied_event: @(ContractAddress, Event), old_c: Inflation, new_c: Inflation
+    spied_event: @(ContractAddress, Event), old_c: Inflation, new_c: Inflation,
 ) {
     let expected_event = @MintingCurve::Event::MintingCapChanged(
-        MintingCurveConfigEvents::MintingCapChanged { old_c, new_c }
+        MintingCurveConfigEvents::MintingCapChanged { old_c, new_c },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -693,10 +699,10 @@ pub fn assert_minting_cap_changed_event(
 }
 
 pub fn assert_minimum_stake_changed_event(
-    spied_event: @(ContractAddress, Event), old_min_stake: Amount, new_min_stake: Amount
+    spied_event: @(ContractAddress, Event), old_min_stake: Amount, new_min_stake: Amount,
 ) {
     let expected_event = @Staking::Event::MinimumStakeChanged(
-        StakingConfigEvents::MinimumStakeChanged { old_min_stake, new_min_stake }
+        StakingConfigEvents::MinimumStakeChanged { old_min_stake, new_min_stake },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -705,17 +711,17 @@ pub fn assert_minimum_stake_changed_event(
         let details = format!(
             "MinimumStakeChanged{{old_min_stake: {:?}, new_min_stake: {:?}}}",
             old_min_stake,
-            new_min_stake
+            new_min_stake,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
 }
 
 pub fn assert_exit_wait_window_changed_event(
-    spied_event: @(ContractAddress, Event), old_exit_window: TimeDelta, new_exit_window: TimeDelta
+    spied_event: @(ContractAddress, Event), old_exit_window: TimeDelta, new_exit_window: TimeDelta,
 ) {
     let expected_event = @Staking::Event::ExitWaitWindowChanged(
-        StakingConfigEvents::ExitWaitWindowChanged { old_exit_window, new_exit_window }
+        StakingConfigEvents::ExitWaitWindowChanged { old_exit_window, new_exit_window },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -724,7 +730,7 @@ pub fn assert_exit_wait_window_changed_event(
         let details = format!(
             "ExitWaitWindowChanged{{old_exit_window: {:?}, new_exit_window: {:?}}}",
             old_exit_window,
-            new_exit_window
+            new_exit_window,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }
@@ -733,10 +739,10 @@ pub fn assert_exit_wait_window_changed_event(
 pub fn assert_reward_supplier_changed_event(
     spied_event: @(ContractAddress, Event),
     old_reward_supplier: ContractAddress,
-    new_reward_supplier: ContractAddress
+    new_reward_supplier: ContractAddress,
 ) {
     let expected_event = @Staking::Event::RewardSupplierChanged(
-        StakingConfigEvents::RewardSupplierChanged { old_reward_supplier, new_reward_supplier }
+        StakingConfigEvents::RewardSupplierChanged { old_reward_supplier, new_reward_supplier },
     );
     let (expected_emitted_by, raw_event) = spied_event;
     let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
@@ -745,7 +751,7 @@ pub fn assert_reward_supplier_changed_event(
         let details = format!(
             "RewardSupplierChanged{{old_reward_supplier: {:?}, new_reward_supplier: {:?}}}",
             old_reward_supplier,
-            new_reward_supplier
+            new_reward_supplier,
         );
         panic_with_event_details(:expected_emitted_by, :details);
     }

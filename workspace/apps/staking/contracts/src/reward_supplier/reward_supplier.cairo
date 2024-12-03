@@ -2,22 +2,22 @@
 pub mod RewardSupplier {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts::constants::STRK_IN_FRIS;
-    use contracts::errors::{Error, assert_with_err, OptionAuxTrait};
+    use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
     use contracts::minting_curve::interface::IMintingCurveDispatcher;
     use contracts::minting_curve::interface::IMintingCurveDispatcherTrait;
-    use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo, Events};
+    use contracts::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfo};
     use contracts::types::Amount;
     use contracts::utils::CheckedIERC20DispatcherTrait;
     use contracts::utils::{ceil_of_division, compute_threshold};
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::interfaces::identity::Identity;
-    use contracts_commons::types::time::{Timestamp, Time};
+    use contracts_commons::types::time::{Time, Timestamp};
     use core::num::traits::Zero;
     use core::traits::TryInto;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
+    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::SyscallResultTrait;
     use starknet::syscalls::{send_message_to_l1_syscall};
     use starknet::{ContractAddress, EthAddress};
@@ -90,7 +90,7 @@ pub mod RewardSupplier {
         token_address: ContractAddress,
         l1_reward_supplier: felt252,
         starkgate_address: ContractAddress,
-        governance_admin: ContractAddress
+        governance_admin: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
         self.staking_contract.write(staking_contract);
@@ -127,7 +127,7 @@ pub mod RewardSupplier {
             // Asserts.
             let staking_contract = self.staking_contract.read();
             assert_with_err(
-                get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT
+                get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT,
             );
 
             // Read the last timestamp before it's updated in update_rewards.
@@ -146,7 +146,7 @@ pub mod RewardSupplier {
                 .emit(
                     Events::CalculatedRewards {
                         last_timestamp, new_timestamp, rewards_calculated: rewards,
-                    }
+                    },
                 );
 
             rewards
@@ -157,7 +157,7 @@ pub mod RewardSupplier {
             // Asserts.
             let staking_contract = self.staking_contract.read();
             assert_with_err(
-                get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT
+                get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT,
             );
             let unclaimed_rewards = self.unclaimed_rewards.read();
             assert_with_err(amount <= unclaimed_rewards, Error::AMOUNT_TOO_HIGH);
@@ -174,7 +174,7 @@ pub mod RewardSupplier {
             l2_token: ContractAddress,
             amount: u256,
             depositor: EthAddress,
-            message: Span<felt252>
+            message: Span<felt252>,
         ) -> bool {
             // Note that the deposit can be done by anyone (not just the L1 reward supplier), so
             // depositor is not checked.
@@ -182,11 +182,11 @@ pub mod RewardSupplier {
             // These messages accepted only from the token bridge.
             assert_with_err(
                 get_caller_address() == self.starkgate_address.read(),
-                Error::ON_RECEIVE_NOT_FROM_STARKGATE
+                Error::ON_RECEIVE_NOT_FROM_STARKGATE,
             );
             // The bridge may serve multiple tokens, only the correct token may be received.
             assert_with_err(
-                l2_token == self.token_dispatcher.read().contract_address, Error::UNEXPECTED_TOKEN
+                l2_token == self.token_dispatcher.read().contract_address, Error::UNEXPECTED_TOKEN,
             );
             let amount_u128: Amount = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();

@@ -6,7 +6,7 @@ use contracts_commons::test_utils::{TokenTrait};
 use contracts_commons::types::time::Time;
 use core::num::traits::Zero;
 use flow_test_utils::{DelegatorTrait};
-use flow_test_utils::{SystemTrait, StakerTrait, StakingTrait, RewardSupplierTrait};
+use flow_test_utils::{RewardSupplierTrait, StakerTrait, StakingTrait, SystemTrait};
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
@@ -66,7 +66,7 @@ fn basic_stake_flow_test() {
         system.token.balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -128,7 +128,7 @@ fn set_open_for_delegation_flow_test() {
         system.token.balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -187,7 +187,7 @@ fn delegator_intent_after_staker_action_flow_test() {
         system.token.balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -253,7 +253,7 @@ fn delegator_intent_flow_test() {
         system.token.balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -327,7 +327,7 @@ fn operations_after_dead_staker_flow_test() {
             from_pool: staker1_pool,
             to_staker: staker2.staker.address,
             to_pool: staker2_pool,
-            amount: delegated_amount / 4
+            amount: delegated_amount / 4,
         );
     system.advance_time(time: one_week);
 
@@ -392,7 +392,7 @@ fn operations_after_dead_staker_flow_test() {
             + system.token.balance_of(account: delegator.reward.address)
             + system.token.balance_of(account: staker1_pool)
             + system.token.balance_of(account: staker1_second_pool)
-            + system.token.balance_of(account: staker2_pool)
+            + system.token.balance_of(account: staker2_pool),
     );
 }
 
@@ -461,7 +461,7 @@ fn delegator_didnt_update_after_staker_update_commission_flow_test() {
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -535,7 +535,7 @@ fn delegator_updated_after_staker_update_commission_flow_test() {
         system.token.balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -591,7 +591,7 @@ fn staker_intent_last_action_first_flow_test() {
         system.token.balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -628,7 +628,7 @@ fn switch_to_same_delegation_pool_flow_test() {
             from_pool: pool,
             to_staker: staker.staker.address,
             to_pool: pool,
-            amount: delegated_amount
+            amount: delegated_amount,
         );
 }
 
@@ -686,7 +686,7 @@ fn delegator_claim_rewards_flow_test() {
         system.token.balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -755,7 +755,7 @@ fn two_delegators_full_intent_flow_test() {
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator_x.reward.address)
             + system.token.balance_of(account: delegator_y.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -802,7 +802,7 @@ fn partial_switches_flow_test() {
             from_pool: first_pool,
             to_staker: second_staker.staker.address,
             to_pool: second_pool,
-            amount: delegated_amount / 4
+            amount: delegated_amount / 4,
         );
     system.advance_time(time: system.staking.get_exit_wait_window());
 
@@ -815,7 +815,7 @@ fn partial_switches_flow_test() {
             from_pool: second_pool,
             to_staker: first_staker.staker.address,
             to_pool: first_pool,
-            amount: delegated_amount / 8
+            amount: delegated_amount / 8,
         );
     system.advance_time(time: one_week);
 
@@ -862,7 +862,7 @@ fn partial_switches_flow_test() {
             + system.token.balance_of(account: delegator.reward.address)
             + system.token.balance_of(account: new_reward_address)
             + system.token.balance_of(account: first_pool)
-            + system.token.balance_of(account: second_pool)
+            + system.token.balance_of(account: second_pool),
     );
 }
 
@@ -916,7 +916,7 @@ fn flow_4_switch_member_back_and_forth_test() {
     assert_eq!(system.staking.get_total_stake(), 2 * stake_amount + delegated_amount);
     assert_eq!(
         system.token.balance_of(account: system.staking.address),
-        2 * stake_amount + delegated_amount
+        2 * stake_amount + delegated_amount,
     );
 
     // DY intend to exit PB & switch to PA.
@@ -927,7 +927,7 @@ fn flow_4_switch_member_back_and_forth_test() {
             from_pool: pool_B,
             to_staker: staker_A.staker.address,
             to_pool: pool_A,
-            amount: delegated_amount
+            amount: delegated_amount,
         );
 
     // DY intend to exit PA & switch to PB.
@@ -938,7 +938,7 @@ fn flow_4_switch_member_back_and_forth_test() {
             from_pool: pool_A,
             to_staker: staker_B.staker.address,
             to_pool: pool_B,
-            amount: delegated_amount
+            amount: delegated_amount,
         );
 
     // Perform test end clearance - All stakers and delegators exit staking.
@@ -980,7 +980,7 @@ fn flow_4_switch_member_back_and_forth_test() {
             + system.token.balance_of(account: staker_B.reward.address)
             + system.token.balance_of(account: delegator_Y.reward.address)
             + system.token.balance_of(account: pool_A)
-            + system.token.balance_of(account: pool_B)
+            + system.token.balance_of(account: pool_B),
     );
 }
 
@@ -1050,10 +1050,10 @@ fn delegators_add_to_delegation_pool_flow_test() {
     // 2. Stakers and delegator balances are the staked amounts.
     assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
     assert_eq!(
-        system.token.balance_of(account: first_delegator.delegator.address), delegator_amount
+        system.token.balance_of(account: first_delegator.delegator.address), delegator_amount,
     );
     assert_eq!(
-        system.token.balance_of(account: second_delegator.delegator.address), delegator_amount
+        system.token.balance_of(account: second_delegator.delegator.address), delegator_amount,
     );
 
     // 3. Reward addresses have some balance for all stakers & delegators.
@@ -1071,7 +1071,7 @@ fn delegators_add_to_delegation_pool_flow_test() {
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: first_delegator.reward.address)
             + system.token.balance_of(account: second_delegator.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }
 
@@ -1131,7 +1131,7 @@ fn same_staker_different_pool_flow_test() {
             from_pool: pool,
             to_staker: staker.staker.address,
             to_pool: second_pool,
-            amount: delegated_amount
+            amount: delegated_amount,
         );
     system.advance_time(time: one_week);
 
@@ -1157,14 +1157,14 @@ fn same_staker_different_pool_flow_test() {
             from_pool: second_pool,
             to_staker: staker.staker.address,
             to_pool: third_pool,
-            amount: partial_amount / 2
+            amount: partial_amount / 2,
         );
     delegator
         .switch_delegation_pool(
             from_pool: second_pool,
             to_staker: staker.staker.address,
             to_pool: third_pool,
-            amount: partial_amount / 2
+            amount: partial_amount / 2,
         );
     system.advance_time(time: one_week);
 
@@ -1204,6 +1204,6 @@ fn same_staker_different_pool_flow_test() {
             + system.token.balance_of(account: delegator.reward.address)
             + system.token.balance_of(account: pool)
             + system.token.balance_of(account: second_pool)
-            + system.token.balance_of(account: third_pool)
+            + system.token.balance_of(account: third_pool),
     );
 }

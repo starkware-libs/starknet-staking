@@ -9,7 +9,7 @@ use Staking::CONTRACT_VERSION as staking_version;
 use contracts::constants::STRK_IN_FRIS;
 use contracts::errors::{Error, ErrorTrait};
 use contracts::event_test_utils::assert_calculated_rewards_event;
-use contracts::event_test_utils::{assert_number_of_events, assert_mint_request_event};
+use contracts::event_test_utils::{assert_mint_request_event, assert_number_of_events};
 use contracts::minting_curve::minting_curve::MintingCurve;
 use contracts::pool::pool::Pool;
 use contracts::reward_supplier::interface::IRewardSupplierDispatcher;
@@ -19,23 +19,23 @@ use contracts::reward_supplier::interface::IRewardSupplierSafeDispatcherTrait;
 use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo};
 use contracts::reward_supplier::reward_supplier::RewardSupplier;
 use contracts::staking::staking::Staking;
-use contracts::test_utils::constants::{NOT_STARKGATE_ADDRESS, NOT_STAKING_CONTRACT_ADDRESS};
+use contracts::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use contracts::test_utils;
 use contracts::types::Amount;
 use contracts::utils::{ceil_of_division, compute_threshold};
 use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
 use contracts_commons::types::time::Time;
-use core::num::traits::{Zero, Sqrt};
+use core::num::traits::{Sqrt, Zero};
 use core::option::OptionTrait;
-use openzeppelin::token::erc20::interface::{IERC20DispatcherTrait, IERC20Dispatcher};
+use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::cheatcodes::message_to_l1::MessageToL1SpyAssertionsTrait;
-use snforge_std::cheatcodes::message_to_l1::{spy_messages_to_l1, MessageToL1};
+use snforge_std::cheatcodes::message_to_l1::{MessageToL1, spy_messages_to_l1};
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use test_utils::assert_panic_with_error;
+use test_utils::{StakingInitConfig, deploy_mock_erc20_contract, deploy_staking_contract};
 use test_utils::{deploy_minting_curve_contract, fund, general_contract_system_deployment};
-use test_utils::{deploy_mock_erc20_contract, StakingInitConfig, deploy_staking_contract};
-use test_utils::{stake_for_testing_using_dispatcher, initialize_reward_supplier_state_from_cfg};
+use test_utils::{initialize_reward_supplier_state_from_cfg, stake_for_testing_using_dispatcher};
 
 
 #[test]
@@ -69,7 +69,7 @@ fn test_reward_supplier_constructor() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
     );
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -81,7 +81,7 @@ fn test_reward_supplier_constructor() {
     assert_eq!(state.base_mint_amount.read(), cfg.reward_supplier.base_mint_amount);
     assert_eq!(
         state.minting_curve_dispatcher.read().contract_address,
-        cfg.reward_supplier.minting_curve_contract
+        cfg.reward_supplier.minting_curve_contract,
     );
     assert_eq!(state.l1_reward_supplier.read(), cfg.reward_supplier.l1_reward_supplier);
     assert_eq!(state.last_timestamp.read(), Time::now());
@@ -93,7 +93,7 @@ fn test_claim_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
     );
     // Deploy the staking contract and stake.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -128,7 +128,7 @@ fn test_calculate_staking_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
     );
     // Deploy the staking contract and stake.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -149,10 +149,10 @@ fn test_calculate_staking_rewards() {
         sender: cfg.test_info.owner_address,
         recipient: test_address(),
         amount: balance,
-        :token_address
+        :token_address,
     );
     start_cheat_block_timestamp_global(
-        block_timestamp: Time::now().add(delta: Time::days(count: 365)).into()
+        block_timestamp: Time::now().add(delta: Time::days(count: 365)).into(),
     );
     cheat_caller_address_once(contract_address: test_address(), caller_address: staking_contract);
     let mut spy = snforge_std::spy_events();
@@ -175,10 +175,10 @@ fn test_calculate_staking_rewards() {
     // Validate MintRequest and CalculatedRewards events.
     let events = spy.get_events().emitted_by(contract_address: test_address()).events;
     assert_number_of_events(
-        actual: events.len(), expected: 2, message: "calculate_staking_rewards"
+        actual: events.len(), expected: 2, message: "calculate_staking_rewards",
     );
     assert_mint_request_event(
-        spied_event: events[0], total_amount: expected_l1_pending_requested_amount, :num_msgs
+        spied_event: events[0], total_amount: expected_l1_pending_requested_amount, :num_msgs,
     );
     assert_calculated_rewards_event(
         spied_event: events[1],
@@ -197,10 +197,10 @@ fn test_calculate_staking_rewards() {
                             .l1_reward_supplier
                             .try_into()
                             .expect('not EthAddress'),
-                        payload: array![base_mint_amount.into()]
-                    }
-                )
-            ]
+                        payload: array![base_mint_amount.into()],
+                    },
+                ),
+            ],
         );
 }
 
@@ -211,11 +211,11 @@ fn test_calculate_staking_rewards_caller_not_staking() {
     general_contract_system_deployment(ref :cfg);
     let reward_supplier_contract = cfg.staking_contract_info.reward_supplier;
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
-        contract_address: reward_supplier_contract
+        contract_address: reward_supplier_contract,
     };
     let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS();
     cheat_caller_address_once(
-        contract_address: reward_supplier_contract, caller_address: not_staking_contract
+        contract_address: reward_supplier_contract, caller_address: not_staking_contract,
     );
     reward_supplier_dispatcher.calculate_staking_rewards();
 }
@@ -225,7 +225,7 @@ fn test_contract_parameters() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
     );
     // Change the block_timestamp so the contract_parameters() won't return zero for all fields.
     let block_timestamp = Time::now().add(delta: Time::seconds(count: 1));
@@ -247,17 +247,17 @@ fn test_on_receive() {
     let staking_contract = cfg.test_info.staking_contract;
     let reward_supplier_contract = cfg.staking_contract_info.reward_supplier;
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
-        contract_address: reward_supplier_contract
+        contract_address: reward_supplier_contract,
     };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let balance = Zero::zero();
     let credit = balance
         + reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount;
     start_cheat_block_timestamp_global(
-        block_timestamp: Time::now().add(delta: Time::days(count: 365)).into()
+        block_timestamp: Time::now().add(delta: Time::days(count: 365)).into(),
     );
     cheat_caller_address_once(
-        contract_address: reward_supplier_contract, caller_address: staking_contract
+        contract_address: reward_supplier_contract, caller_address: staking_contract,
     );
     let rewards = reward_supplier_dispatcher.calculate_staking_rewards();
     let unclaimed_rewards = rewards + STRK_IN_FRIS;
@@ -269,13 +269,13 @@ fn test_on_receive() {
     let mut expected_l1_pending_requested_amount = num_msgs * base_mint_amount;
     assert_eq!(
         reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
-        expected_l1_pending_requested_amount
+        expected_l1_pending_requested_amount,
     );
     for _ in 0
         ..num_msgs {
             cheat_caller_address_once(
                 contract_address: reward_supplier_contract,
-                caller_address: cfg.reward_supplier.starkgate_address
+                caller_address: cfg.reward_supplier.starkgate_address,
             );
             assert!(
                 reward_supplier_dispatcher
@@ -287,20 +287,20 @@ fn test_on_receive() {
                             .l1_reward_supplier
                             .try_into()
                             .expect('not EthAddress'),
-                        message: array![].span()
-                    )
+                        message: array![].span(),
+                    ),
             );
             expected_l1_pending_requested_amount -= base_mint_amount;
             assert_eq!(
                 reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
-                expected_l1_pending_requested_amount
+                expected_l1_pending_requested_amount,
             );
         };
 
     // One more time to cover an amount that's bigger than requested amount.
     cheat_caller_address_once(
         contract_address: reward_supplier_contract,
-        caller_address: cfg.reward_supplier.starkgate_address
+        caller_address: cfg.reward_supplier.starkgate_address,
     );
     assert!(
         reward_supplier_dispatcher
@@ -312,11 +312,11 @@ fn test_on_receive() {
                     .l1_reward_supplier
                     .try_into()
                     .expect('not EthAddress'),
-                message: array![].span()
-            )
+                message: array![].span(),
+            ),
     );
     assert_eq!(
-        reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount, Zero::zero()
+        reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount, Zero::zero(),
     );
 }
 
@@ -327,17 +327,17 @@ fn test_on_receive_caller_not_starkgate() {
     general_contract_system_deployment(ref :cfg);
     let reward_supplier_contract = cfg.staking_contract_info.reward_supplier;
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
-        contract_address: reward_supplier_contract
+        contract_address: reward_supplier_contract,
     };
     cheat_caller_address_once(
-        contract_address: reward_supplier_contract, caller_address: NOT_STARKGATE_ADDRESS()
+        contract_address: reward_supplier_contract, caller_address: NOT_STARKGATE_ADDRESS(),
     );
     reward_supplier_dispatcher
         .on_receive(
             l2_token: cfg.staking_contract_info.token_address,
             amount: cfg.reward_supplier.base_mint_amount.into(),
             depositor: cfg.reward_supplier.l1_reward_supplier.try_into().expect('not EthAddress'),
-            message: array![].span()
+            message: array![].span(),
         );
 }
 
@@ -348,11 +348,11 @@ fn test_on_receive_unexpected_token() {
     general_contract_system_deployment(ref :cfg);
     let reward_supplier_contract = cfg.staking_contract_info.reward_supplier;
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
-        contract_address: reward_supplier_contract
+        contract_address: reward_supplier_contract,
     };
     cheat_caller_address_once(
         contract_address: reward_supplier_contract,
-        caller_address: cfg.reward_supplier.starkgate_address
+        caller_address: cfg.reward_supplier.starkgate_address,
     );
 
     // We assign a different address to the l2_token field.
@@ -362,7 +362,7 @@ fn test_on_receive_unexpected_token() {
             l2_token: not_l2_token,
             amount: cfg.reward_supplier.base_mint_amount.into(),
             depositor: cfg.reward_supplier.l1_reward_supplier.try_into().expect('not EthAddress'),
-            message: array![].span()
+            message: array![].span(),
         );
 }
 
@@ -373,18 +373,18 @@ fn test_claim_rewards_assertions() {
     general_contract_system_deployment(ref :cfg);
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
     let reward_supplier_safe_dispatcher = IRewardSupplierSafeDispatcher {
-        contract_address: reward_supplier
+        contract_address: reward_supplier,
     };
 
     // Catch CALLER_IS_NOT_STAKING_CONTRACT.
     let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS();
     let amount = Zero::zero();
     cheat_caller_address_once(
-        contract_address: reward_supplier, caller_address: not_staking_contract
+        contract_address: reward_supplier, caller_address: not_staking_contract,
     );
     let result = reward_supplier_safe_dispatcher.claim_rewards(:amount);
     assert_panic_with_error(
-        :result, expected_error: Error::CALLER_IS_NOT_STAKING_CONTRACT.message()
+        :result, expected_error: Error::CALLER_IS_NOT_STAKING_CONTRACT.message(),
     );
 
     // Catch AMOUNT_TOO_HIGH.

@@ -92,7 +92,7 @@ pub impl ErrorImpl of ErrorTrait {
             Error::OPERATIONAL_NOT_ELIGIBLE => "Operational address had not been declared by staker",
             Error::AMOUNT_LESS_THAN_MIN_STAKE => "Amount is less than min stake - try again with enough funds",
             Error::COMMISSION_OUT_OF_RANGE => format!(
-                "Commission is out of range, expected to be 0-{}", COMMISSION_DENOMINATOR
+                "Commission is out of range, expected to be 0-{}", COMMISSION_DENOMINATOR,
             ),
             Error::POOL_ADDRESS_DOES_NOT_EXIST => "Pool address does not exist",
             Error::MISSING_UNSTAKE_INTENT => "Unstake intent is missing",
