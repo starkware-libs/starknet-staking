@@ -79,7 +79,7 @@ pub impl StakingImpl of StakingTrait {
         staking
     }
 
-    fn dispatcher(self: StakingState) -> IStakingDispatcher {
+    fn dispatcher(self: StakingState) -> IStakingDispatcher nopanic {
         IStakingDispatcher { contract_address: self.address }
     }
 
@@ -184,7 +184,7 @@ impl MintingCurveImpl of MintingCurveTrait {
         minting_curve
     }
 
-    fn dispatcher(self: MintingCurveState) -> IMintingCurveDispatcher {
+    fn dispatcher(self: MintingCurveState) -> IMintingCurveDispatcher nopanic {
         IMintingCurveDispatcher { contract_address: self.address }
     }
 
@@ -274,7 +274,7 @@ pub impl RewardSupplierImpl of RewardSupplierTrait {
         reward_supplier
     }
 
-    fn dispatcher(self: RewardSupplierState) -> IRewardSupplierDispatcher {
+    fn dispatcher(self: RewardSupplierState) -> IRewardSupplierDispatcher nopanic {
         IRewardSupplierDispatcher { contract_address: self.address }
     }
 
@@ -437,7 +437,7 @@ pub struct Staker {
 
 #[generate_trait]
 pub impl StakerImpl of StakerTrait {
-    fn new(staker: Account, reward: Account, operational: Account) -> Staker {
+    fn new(staker: Account, reward: Account, operational: Account) -> Staker nopanic {
         Staker { staker, reward, operational }
     }
 
@@ -517,7 +517,7 @@ pub struct Delegator {
 
 #[generate_trait]
 pub impl DelegatorImpl of DelegatorTrait {
-    fn new(delegator: Account, reward: Account) -> Delegator {
+    fn new(delegator: Account, reward: Account) -> Delegator nopanic {
         Delegator { delegator, reward }
     }
 

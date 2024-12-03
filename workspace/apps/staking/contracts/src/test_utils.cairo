@@ -56,123 +56,123 @@ pub(crate) mod constants {
     pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
     pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
 
-    pub fn CALLER_ADDRESS() -> ContractAddress {
+    pub fn CALLER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'CALLER_ADDRESS'>()
     }
-    pub fn DUMMY_ADDRESS() -> ContractAddress {
+    pub fn DUMMY_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'DUMMY_ADDRESS'>()
     }
-    pub fn STAKER_ADDRESS() -> ContractAddress {
+    pub fn STAKER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'STAKER_ADDRESS'>()
     }
-    pub fn NON_STAKER_ADDRESS() -> ContractAddress {
+    pub fn NON_STAKER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'NON_STAKER_ADDRESS'>()
     }
-    pub fn POOL_MEMBER_ADDRESS() -> ContractAddress {
+    pub fn POOL_MEMBER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'POOL_MEMBER_ADDRESS'>()
     }
-    pub fn OTHER_POOL_MEMBER_ADDRESS() -> ContractAddress {
+    pub fn OTHER_POOL_MEMBER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'OTHER_POOL_MEMBER_ADDRESS'>()
     }
-    pub fn NON_POOL_MEMBER_ADDRESS() -> ContractAddress {
+    pub fn NON_POOL_MEMBER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'NON_POOL_MEMBER_ADDRESS'>()
     }
-    pub fn OTHER_STAKER_ADDRESS() -> ContractAddress {
+    pub fn OTHER_STAKER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'OTHER_STAKER_ADDRESS'>()
     }
-    pub fn OPERATIONAL_ADDRESS() -> ContractAddress {
+    pub fn OPERATIONAL_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'OPERATIONAL_ADDRESS'>()
     }
-    pub fn OTHER_OPERATIONAL_ADDRESS() -> ContractAddress {
+    pub fn OTHER_OPERATIONAL_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'OTHER_OPERATIONAL_ADDRESS'>()
     }
-    pub fn OWNER_ADDRESS() -> ContractAddress {
+    pub fn OWNER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'OWNER_ADDRESS'>()
     }
-    pub fn GOVERNANCE_ADMIN() -> ContractAddress {
+    pub fn GOVERNANCE_ADMIN() -> ContractAddress nopanic {
         contract_address_const::<'GOVERNANCE_ADMIN'>()
     }
-    pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress {
+    pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'STAKING_CONTRACT_ADDRESS'>()
     }
-    pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress {
+    pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'NOT_STAKING_CONTRACT_ADDRESS'>()
     }
-    pub fn POOL_CONTRACT_ADDRESS() -> ContractAddress {
+    pub fn POOL_CONTRACT_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'POOL_CONTRACT_ADDRESS'>()
     }
-    pub fn OTHER_POOL_CONTRACT_ADDRESS() -> ContractAddress {
+    pub fn OTHER_POOL_CONTRACT_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'OTHER_POOL_CONTRACT_ADDRESS'>()
     }
-    pub fn MINTING_CONTRACT_ADDRESS() -> ContractAddress {
+    pub fn MINTING_CONTRACT_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'MINTING_CONTRACT_ADDRESS'>()
     }
-    pub fn REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress {
+    pub fn REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'REWARD_SUPPLIER_ADDRESS'>()
     }
-    pub fn OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress {
+    pub fn OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'OTHER_REWARD_SUPPLIER_ADDRESS'>()
     }
-    pub fn RECIPIENT_ADDRESS() -> ContractAddress {
+    pub fn RECIPIENT_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'RECIPIENT_ADDRESS'>()
     }
-    pub fn STAKER_REWARD_ADDRESS() -> ContractAddress {
+    pub fn STAKER_REWARD_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'STAKER_REWARD_ADDRESS'>()
     }
-    pub fn POOL_MEMBER_REWARD_ADDRESS() -> ContractAddress {
+    pub fn POOL_MEMBER_REWARD_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'POOL_MEMBER_REWARD_ADDRESS'>()
     }
-    pub fn POOL_REWARD_ADDRESS() -> ContractAddress {
+    pub fn POOL_REWARD_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'POOL_REWARD_ADDRESS'>()
     }
-    pub fn OTHER_REWARD_ADDRESS() -> ContractAddress {
+    pub fn OTHER_REWARD_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'OTHER_REWARD_ADDRESS'>()
     }
-    pub fn SPENDER_ADDRESS() -> ContractAddress {
+    pub fn SPENDER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'SPENDER_ADDRESS'>()
     }
-    pub fn NON_TOKEN_ADMIN() -> ContractAddress {
+    pub fn NON_TOKEN_ADMIN() -> ContractAddress nopanic {
         contract_address_const::<'NON_TOKEN_ADMIN'>()
     }
-    pub fn NON_SECURITY_ADMIN() -> ContractAddress {
+    pub fn NON_SECURITY_ADMIN() -> ContractAddress nopanic {
         contract_address_const::<'NON_SECURITY_ADMIN'>()
     }
-    pub fn NON_SECURITY_AGENT() -> ContractAddress {
+    pub fn NON_SECURITY_AGENT() -> ContractAddress nopanic {
         contract_address_const::<'NON_SECURITY_AGENT'>()
     }
-    pub fn STRK_TOKEN_ADDRESS() -> ContractAddress {
+    pub fn STRK_TOKEN_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<
             0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
         >()
     }
-    pub fn TOKEN_ADDRESS() -> ContractAddress {
+    pub fn TOKEN_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'TOKEN_ADDRESS'>()
     }
-    pub fn DUMMY_CLASS_HASH() -> ClassHash {
+    pub fn DUMMY_CLASS_HASH() -> ClassHash nopanic {
         class_hash_const::<'DUMMY'>()
     }
-    pub fn POOL_CONTRACT_ADMIN() -> ContractAddress {
+    pub fn POOL_CONTRACT_ADMIN() -> ContractAddress nopanic {
         contract_address_const::<'POOL_CONTRACT_ADMIN'>()
     }
-    pub fn SECURITY_ADMIN() -> ContractAddress {
+    pub fn SECURITY_ADMIN() -> ContractAddress nopanic {
         contract_address_const::<'SECURITY_ADMIN'>()
     }
-    pub fn SECURITY_AGENT() -> ContractAddress {
+    pub fn SECURITY_AGENT() -> ContractAddress nopanic {
         contract_address_const::<'SECURITY_AGENT'>()
     }
-    pub fn TOKEN_ADMIN() -> ContractAddress {
+    pub fn TOKEN_ADMIN() -> ContractAddress nopanic {
         contract_address_const::<'TOKEN_ADMIN'>()
     }
-    pub fn APP_ROLE_ADMIN() -> ContractAddress {
+    pub fn APP_ROLE_ADMIN() -> ContractAddress nopanic {
         contract_address_const::<'APP_ROLE_ADMIN'>()
     }
-    pub fn UPGRADE_GOVERNOR() -> ContractAddress {
+    pub fn UPGRADE_GOVERNOR() -> ContractAddress nopanic {
         contract_address_const::<'UPGRADE_GOVERNOR'>()
     }
-    pub fn STARKGATE_ADDRESS() -> ContractAddress {
+    pub fn STARKGATE_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'STARKGATE_ADDRESS'>()
     }
-    pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress {
+    pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'NOT_STARKGATE_ADDRESS'>()
     }
 }

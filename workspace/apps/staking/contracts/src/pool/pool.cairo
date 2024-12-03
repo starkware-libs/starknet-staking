@@ -110,11 +110,11 @@ pub mod Pool {
 
     #[abi(embed_v0)]
     impl _Identity of Identity<ContractState> {
-        fn identify(self: @ContractState) -> felt252 {
+        fn identify(self: @ContractState) -> felt252 nopanic {
             CONTRACT_IDENTITY
         }
 
-        fn version(self: @ContractState) -> felt252 {
+        fn version(self: @ContractState) -> felt252 nopanic {
             CONTRACT_VERSION
         }
     }

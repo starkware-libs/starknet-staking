@@ -46,7 +46,7 @@ pub struct Timestamp {
     pub seconds: u64
 }
 impl TimeStampZero of core::num::traits::Zero<Timestamp> {
-    fn zero() -> Timestamp {
+    fn zero() -> Timestamp nopanic {
         Timestamp { seconds: 0 }
     }
     fn is_zero(self: @Timestamp) -> bool {
@@ -67,14 +67,14 @@ impl TimeStampPartialOrd of PartialOrd<Timestamp> {
     }
 }
 impl TimeStampInto of Into<Timestamp, u64> {
-    fn into(self: Timestamp) -> u64 {
+    fn into(self: Timestamp) -> u64 nopanic {
         self.seconds
     }
 }
 
 #[generate_trait]
 pub impl TimeImpl of Time {
-    fn seconds(count: u64) -> TimeDelta {
+    fn seconds(count: u64) -> TimeDelta nopanic {
         TimeDelta { seconds: count }
     }
     fn days(count: u64) -> TimeDelta {

@@ -61,7 +61,7 @@ pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
 
 pub(crate) impl InternalStakerInfoInto of Into<InternalStakerInfo, StakerInfo> {
     #[inline(always)]
-    fn into(self: InternalStakerInfo) -> StakerInfo {
+    fn into(self: InternalStakerInfo) -> StakerInfo nopanic {
         StakerInfo {
             reward_address: self.reward_address,
             operational_address: self.operational_address,
