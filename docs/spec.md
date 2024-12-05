@@ -133,6 +133,7 @@
     - [ONLY\_TOKEN\_ADMIN](#only_token_admin)
     - [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
     - [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
+    - [OPERATIONAL\_IN\_USE](#operational_in_use)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -891,8 +892,10 @@ Allows `staker_address` to use the caller's address in the future, in `change_op
 1. [Operational Address Declared](#operational-address-declared)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [OPERATIONAL\_IN\_USE](#operational_in_use)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
+2. Caller address is not `operational_address` of some staker.
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 1. Set the caller as an eligible operational address, associated with `staker_address`.
@@ -1759,6 +1762,9 @@ Only token admin.
 
 ### OPERATIONAL_NOT_ELIGIBLE
 "Operational address had not been declared by staker"
+
+### OPERATIONAL_IN_USE
+"Operational address already exists"
 
 # Structs
 ### StakerPoolInfo
