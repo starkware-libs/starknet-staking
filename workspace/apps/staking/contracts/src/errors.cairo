@@ -40,6 +40,7 @@ pub enum Error {
     CONTRACT_IS_PAUSED,
     INVALID_UNDELEGATE_INTENT_VALUE,
     OPERATIONAL_NOT_ELIGIBLE,
+    OPERATIONAL_IN_USE,
     CALLER_IS_ZERO_ADDRESS,
     SELF_SWITCH_NOT_ALLOWED,
     ILLEGAL_EXIT_DURATION,
@@ -90,6 +91,7 @@ pub impl ErrorImpl of ErrorTrait {
             Error::INTENT_WINDOW_NOT_FINISHED => "Intent window is not finished",
             Error::OPERATIONAL_EXISTS => "Operational address already exists",
             Error::OPERATIONAL_NOT_ELIGIBLE => "Operational address had not been declared by staker",
+            Error::OPERATIONAL_IN_USE => "Operational address is in use",
             Error::AMOUNT_LESS_THAN_MIN_STAKE => "Amount is less than min stake - try again with enough funds",
             Error::COMMISSION_OUT_OF_RANGE => format!(
                 "Commission is out of range, expected to be 0-{}", COMMISSION_DENOMINATOR,

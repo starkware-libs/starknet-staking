@@ -542,6 +542,10 @@ pub mod Staking {
         fn declare_operational_address(ref self: ContractState, staker_address: ContractAddress) {
             self.general_prerequisites();
             let operational_address = get_caller_address();
+            assert_with_err(
+                self.operational_address_to_staker_address.read(operational_address).is_zero(),
+                Error::OPERATIONAL_IN_USE
+            );
             if self.eligible_operational_addresses.read(operational_address) == staker_address {
                 return;
             }
