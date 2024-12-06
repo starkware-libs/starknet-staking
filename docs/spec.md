@@ -1179,7 +1179,7 @@ Add a new pool member to the delegation pool.
 Only a non-listed pool member address.
 #### logic <!-- omit from toc -->
 1. Transfer funds from pool member to pool contract.
-2. Approve transferal from pool contract to staking contract.
+2. Approve transfer from pool contract to staking contract.
 3. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
 4. Get current index from staking contract.
 5. Create entry for pool member.
