@@ -19,8 +19,8 @@ use contracts::staking::interface::{StakerInfo, StakerInfoTrait, StakerPoolInfo}
 use contracts::staking::objects::InternalStakerInfoTrait;
 use contracts::staking::objects::UndelegateIntentValueZero;
 use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
-use contracts::test_utils::constants;
 use contracts::test_utils;
+use contracts::test_utils::constants;
 use contracts::types::Index;
 use contracts::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
 use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
