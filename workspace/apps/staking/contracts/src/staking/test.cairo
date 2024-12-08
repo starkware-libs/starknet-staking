@@ -1858,7 +1858,7 @@ fn test_declare_operational_address() {
     let bound_staker: ContractAddress = load_from_simple_map(
         map_selector: selector!("eligible_operational_addresses"),
         key: operational_address,
-        contract: staking_contract
+        contract: staking_contract,
     );
     assert_eq!(bound_staker, Zero::zero());
     // First declare
@@ -1871,7 +1871,7 @@ fn test_declare_operational_address() {
     let bound_staker: ContractAddress = load_from_simple_map(
         map_selector: selector!("eligible_operational_addresses"),
         key: operational_address,
-        contract: staking_contract
+        contract: staking_contract,
     );
     assert_eq!(bound_staker, staker_address);
     // Second declare
@@ -1884,7 +1884,7 @@ fn test_declare_operational_address() {
     let bound_staker: ContractAddress = load_from_simple_map(
         map_selector: selector!("eligible_operational_addresses"),
         key: operational_address,
-        contract: staking_contract
+        contract: staking_contract,
     );
     assert_eq!(bound_staker, other_staker_address);
     // Third declare with same operational and staker address - should not emit event or change map
@@ -1896,7 +1896,7 @@ fn test_declare_operational_address() {
     let bound_staker: ContractAddress = load_from_simple_map(
         map_selector: selector!("eligible_operational_addresses"),
         key: operational_address,
-        contract: staking_contract
+        contract: staking_contract,
     );
     assert_eq!(bound_staker, other_staker_address);
     // Fourth declare - set to zero
@@ -1908,7 +1908,7 @@ fn test_declare_operational_address() {
     let bound_staker: ContractAddress = load_from_simple_map(
         map_selector: selector!("eligible_operational_addresses"),
         key: operational_address,
-        contract: staking_contract
+        contract: staking_contract,
     );
     assert_eq!(bound_staker, Zero::zero());
     // Validate the OperationalAddressDeclared events.
@@ -1938,7 +1938,7 @@ fn test_declare_operational_address_operational_address_exists() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let operational_address = cfg.staker_info.operational_address;
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: operational_address
+        contract_address: staking_contract, caller_address: operational_address,
     );
     staking_dispatcher.declare_operational_address(staker_address: DUMMY_ADDRESS());
 }

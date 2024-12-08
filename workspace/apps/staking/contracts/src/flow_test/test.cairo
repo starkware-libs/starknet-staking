@@ -1287,6 +1287,6 @@ fn add_to_delegation_after_intent_flow_test() {
         system.token.balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
-            + system.token.balance_of(account: pool)
+            + system.token.balance_of(account: pool),
     );
 }

@@ -19,8 +19,8 @@ use contracts::reward_supplier::interface::IRewardSupplierSafeDispatcherTrait;
 use contracts::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo};
 use contracts::reward_supplier::reward_supplier::RewardSupplier;
 use contracts::staking::staking::Staking;
-use contracts::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use contracts::test_utils;
+use contracts::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use contracts::types::Amount;
 use contracts::utils::{ceil_of_division, compute_threshold};
 use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
@@ -271,31 +271,30 @@ fn test_on_receive() {
         reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
         expected_l1_pending_requested_amount,
     );
-    for _ in 0
-        ..num_msgs {
-            cheat_caller_address_once(
-                contract_address: reward_supplier_contract,
-                caller_address: cfg.reward_supplier.starkgate_address,
-            );
-            assert!(
-                reward_supplier_dispatcher
-                    .on_receive(
-                        l2_token: token_address,
-                        amount: base_mint_amount.into(),
-                        depositor: cfg
-                            .reward_supplier
-                            .l1_reward_supplier
-                            .try_into()
-                            .expect('not EthAddress'),
-                        message: array![].span(),
-                    ),
-            );
-            expected_l1_pending_requested_amount -= base_mint_amount;
-            assert_eq!(
-                reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
-                expected_l1_pending_requested_amount,
-            );
-        };
+    for _ in 0..num_msgs {
+        cheat_caller_address_once(
+            contract_address: reward_supplier_contract,
+            caller_address: cfg.reward_supplier.starkgate_address,
+        );
+        assert!(
+            reward_supplier_dispatcher
+                .on_receive(
+                    l2_token: token_address,
+                    amount: base_mint_amount.into(),
+                    depositor: cfg
+                        .reward_supplier
+                        .l1_reward_supplier
+                        .try_into()
+                        .expect('not EthAddress'),
+                    message: array![].span(),
+                ),
+        );
+        expected_l1_pending_requested_amount -= base_mint_amount;
+        assert_eq!(
+            reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
+            expected_l1_pending_requested_amount,
+        );
+    };
 
     // One more time to cover an amount that's bigger than requested amount.
     cheat_caller_address_once(
