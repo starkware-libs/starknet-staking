@@ -15,6 +15,7 @@ name = "contracts_commons"
 version = "0.1.0"
 dependencies = [
  "openzeppelin",
+ "openzeppelin_testing",
  "snforge_std",
 ]
 
@@ -111,6 +112,15 @@ name = "openzeppelin_security"
 version = "0.20.0"
 source = "registry+https://scarbs.xyz/"
 checksum = "sha256:27155597019ecf971c48d7bfb07fa58cdc146d5297745570071732abca17f19f"
+
+[[package]]
+name = "openzeppelin_testing"
+version = "0.20.0"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:2fa9aaadacffd6a95754781ed18f6ee660f52a30d27b024efcde2b4b5648e0b3"
+dependencies = [
+ "snforge_std",
+]
 
 [[package]]
 name = "openzeppelin_token"
