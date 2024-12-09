@@ -6,6 +6,7 @@ pub mod interfaces;
 pub mod constants;
 pub mod types;
 pub mod math;
+pub mod message_hash;
 
 pub(crate) mod bit_mask;
 
@@ -21,3 +22,6 @@ pub mod errors;
 // in the same crate with the actual tests using it.
 #[cfg(target: 'test')]
 pub mod test_utils;
+
+#[cfg(test)]
+mod tests;

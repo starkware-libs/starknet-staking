@@ -41,7 +41,7 @@ impl TimeDeltaPartialOrd of PartialOrd<TimeDelta> {
 }
 
 
-#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+#[derive(Debug, PartialEq, Drop, Hash, Serde, Copy, starknet::Store)]
 pub struct Timestamp {
     pub seconds: u64,
 }

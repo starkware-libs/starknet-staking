@@ -6,6 +6,7 @@ members = ["workspace/apps/staking/contracts", "workspace/packages/contracts"]
 starknet = "2.9.1"
 assert_macros = "2.9.1"
 openzeppelin = "0.20.0"
+openzeppelin_testing = "0.20.0"
 snforge_std = "0.34.0"
 
 [scripts]

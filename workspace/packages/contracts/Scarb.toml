@@ -10,6 +10,7 @@ openzeppelin.workspace = true
 [dev-dependencies]
 assert_macros.workspace = true
 snforge_std.workspace = true
+openzeppelin_testing.workspace = true
 
 [scripts]
 test = "snforge test"
