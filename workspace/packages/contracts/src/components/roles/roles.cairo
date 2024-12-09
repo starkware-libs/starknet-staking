@@ -1,19 +1,19 @@
 #[starknet::component]
 pub mod RolesComponent {
-    use core::num::traits::Zero;
-    use contracts_commons::components::roles::interface as RolesInterface;
-    use RolesInterface::{RoleId, IRoles, APP_GOVERNOR, APP_ROLE_ADMIN, GOVERNANCE_ADMIN, OPERATOR};
-    use RolesInterface::{SECURITY_ADMIN, SECURITY_AGENT, TOKEN_ADMIN, UPGRADE_GOVERNOR};
+    use AccessErrors::{ALREADY_INITIALIZED, GOV_ADMIN_CANNOT_RENOUNCE, ZERO_ADDRESS};
+    use AccessErrors::{ONLY_APP_GOVERNOR, ONLY_OPERATOR, ONLY_TOKEN_ADMIN};
+    use AccessErrors::{ONLY_SECURITY_ADMIN, ONLY_SECURITY_AGENT, ONLY_UPGRADE_GOVERNOR};
+    use RolesInterface::{APP_GOVERNOR, APP_ROLE_ADMIN, GOVERNANCE_ADMIN, IRoles, OPERATOR, RoleId};
     use RolesInterface::{AppGovernorAdded, AppGovernorRemoved, AppRoleAdminAdded};
     use RolesInterface::{AppRoleAdminRemoved, GovernanceAdminAdded, GovernanceAdminRemoved};
     use RolesInterface::{OperatorAdded, OperatorRemoved, SecurityAdminAdded, SecurityAdminRemoved};
+    use RolesInterface::{SECURITY_ADMIN, SECURITY_AGENT, TOKEN_ADMIN, UPGRADE_GOVERNOR};
     use RolesInterface::{SecurityAgentAdded, SecurityAgentRemoved, TokenAdminAdded};
     use RolesInterface::{TokenAdminRemoved, UpgradeGovernorAdded, UpgradeGovernorRemoved};
-    use starknet::{ContractAddress, get_caller_address};
+    use contracts_commons::components::roles::interface as RolesInterface;
     use contracts_commons::errors::AccessErrors;
-    use AccessErrors::{GOV_ADMIN_CANNOT_RENOUNCE, ZERO_ADDRESS, ALREADY_INITIALIZED};
-    use AccessErrors::{ONLY_APP_GOVERNOR, ONLY_OPERATOR, ONLY_TOKEN_ADMIN};
-    use AccessErrors::{ONLY_UPGRADE_GOVERNOR, ONLY_SECURITY_ADMIN, ONLY_SECURITY_AGENT};
+    use core::num::traits::Zero;
+    use starknet::{ContractAddress, get_caller_address};
 
     #[storage]
     struct Storage {}
@@ -38,11 +38,11 @@ pub mod RolesComponent {
         UpgradeGovernorAdded: UpgradeGovernorAdded,
         UpgradeGovernorRemoved: UpgradeGovernorRemoved,
     }
-
-    use openzeppelin::access::accesscontrol::interface::IAccessControl;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::access::accesscontrol::AccessControlComponent::AccessControlImpl;
     use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessInternalTrait;
+
+    use openzeppelin::access::accesscontrol::interface::IAccessControl;
     use openzeppelin::introspection::src5::SRC5Component;
 
     #[embeddable_as(RolesImpl)]

@@ -1,10 +1,9 @@
-use core::iter::Iterator;
-use core::iter::IntoIterator;
-use core::num::traits::{BitSize, Bounded};
-use core::num::traits::zero::Zero;
-use core::starknet::storage_access::StorePacking;
-
 use contracts_commons::bit_mask::{BitMask, PowOfTwo};
+use core::iter::IntoIterator;
+use core::iter::Iterator;
+use core::num::traits::zero::Zero;
+use core::num::traits::{BitSize, Bounded};
+use core::starknet::storage_access::StorePacking;
 
 pub type BitSetU8 = BitSet<u8>;
 pub type BitSetU16 = BitSet<u16>;
@@ -224,9 +223,9 @@ impl SpanTryIntoBitSet<
 
 #[cfg(test)]
 mod tests {
-    use core::starknet::storage_access::StorePacking;
     use core::num::traits::Bounded;
-    use super::{BitSet, BitSetTrait, BitSetError};
+    use core::starknet::storage_access::StorePacking;
+    use super::{BitSet, BitSetError, BitSetTrait};
 
     const TESTED_BIT_ARRAY: u8 = 0b01100001;
     const TESTED_TRUE_INDICES: [usize; 3] = [0, 5, 6];

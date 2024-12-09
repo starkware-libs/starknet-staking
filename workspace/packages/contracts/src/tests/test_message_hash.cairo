@@ -1,10 +1,10 @@
+use contracts_commons::message_hash::OffchainMessageHash;
 use core::hash::{HashStateExTrait, HashStateTrait};
 use core::poseidon::{PoseidonTrait, poseidon_hash_span};
 use openzeppelin::utils::cryptography::snip12::{
     SNIP12Metadata, STARKNET_DOMAIN_TYPE_HASH, StarknetDomain, StructHash,
 };
-use contracts_commons::message_hash::OffchainMessageHash;
-use openzeppelin_testing::constants::{OWNER, RECIPIENT, PUBKEY};
+use openzeppelin_testing::constants::{OWNER, PUBKEY, RECIPIENT};
 use snforge_std::{start_cheat_chain_id, test_address};
 use starknet::ContractAddress;
 

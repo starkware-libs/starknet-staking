@@ -49,7 +49,7 @@ pub impl AbsImplI128 of Abs<i128, u128> {
 
 #[cfg(test)]
 mod tests {
-    use super::{AbsImplI8, AbsImplI16, AbsImplI32, AbsImplI64, AbsImplI128};
+    use super::{AbsImplI128, AbsImplI16, AbsImplI32, AbsImplI64, AbsImplI8};
 
     #[test]
     fn test_abs_i8() {

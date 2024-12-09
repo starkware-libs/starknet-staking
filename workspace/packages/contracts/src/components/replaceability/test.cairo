@@ -1,13 +1,20 @@
 mod ReplaceabilityTests {
     use contracts_commons::components::replaceability;
+    use contracts_commons::test_utils::cheat_caller_address_once;
+    use core::num::traits::zero::Zero;
     use replaceability::ReplaceabilityComponent;
-    use replaceability::interface::ImplementationAdded;
-    use replaceability::interface::ImplementationRemoved;
-    use replaceability::interface::ImplementationReplaced;
     use replaceability::interface::IReplaceableDispatcherTrait;
     use replaceability::interface::IReplaceableSafeDispatcher;
     use replaceability::interface::IReplaceableSafeDispatcherTrait;
+    use replaceability::interface::ImplementationAdded;
+    use replaceability::interface::ImplementationRemoved;
+    use replaceability::interface::ImplementationReplaced;
     use replaceability::mock::ReplaceabilityMock;
+    use replaceability::test_utils::Constants::DEFAULT_UPGRADE_DELAY;
+    use replaceability::test_utils::Constants::DUMMY_FINAL_IMPLEMENTATION_DATA;
+    use replaceability::test_utils::Constants::DUMMY_NONFINAL_IMPLEMENTATION_DATA;
+    use replaceability::test_utils::Constants::EIC_UPGRADE_DELAY_ADDITION;
+    use replaceability::test_utils::Constants::NOT_UPGRADE_GOVERNOR_ACCOUNT;
     use replaceability::test_utils::assert_finalized_status;
     use replaceability::test_utils::assert_implementation_finalized_event_emitted;
     use replaceability::test_utils::assert_implementation_replaced_event_emitted;
@@ -16,15 +23,8 @@ mod ReplaceabilityTests {
     use replaceability::test_utils::dummy_nonfinal_eic_implementation_data_with_class_hash;
     use replaceability::test_utils::dummy_nonfinal_implementation_data_with_class_hash;
     use replaceability::test_utils::get_upgrade_governor_account;
-    use replaceability::test_utils::Constants::DEFAULT_UPGRADE_DELAY;
-    use replaceability::test_utils::Constants::DUMMY_FINAL_IMPLEMENTATION_DATA;
-    use replaceability::test_utils::Constants::DUMMY_NONFINAL_IMPLEMENTATION_DATA;
-    use replaceability::test_utils::Constants::EIC_UPGRADE_DELAY_ADDITION;
-    use replaceability::test_utils::Constants::NOT_UPGRADE_GOVERNOR_ACCOUNT;
-    use snforge_std::{EventSpyAssertionsTrait, EventsFilterTrait, EventSpyTrait, CheatSpan};
+    use snforge_std::{CheatSpan, EventSpyAssertionsTrait, EventSpyTrait, EventsFilterTrait};
     use snforge_std::{cheat_block_timestamp, cheat_caller_address, get_class_hash, spy_events};
-    use contracts_commons::test_utils::cheat_caller_address_once;
-    use core::num::traits::zero::Zero;
 
     #[test]
     fn test_get_upgrade_delay() {

@@ -1,14 +1,14 @@
 #[starknet::component]
 pub mod PausableComponent {
+    use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::pausable::interface::IPausable;
+    use contracts_commons::components::roles::RolesComponent;
+    use openzeppelin::access::accesscontrol::AccessControlComponent;
+    use openzeppelin::introspection::src5::SRC5Component;
 
     use starknet::ContractAddress;
     use starknet::get_caller_address;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
-    use contracts_commons::components::roles::RolesComponent;
-    use RolesComponent::InternalTrait as RolesInternalTrait;
-    use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::access::accesscontrol::AccessControlComponent;
 
     #[storage]
     pub struct Storage {

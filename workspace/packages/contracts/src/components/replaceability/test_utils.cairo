@@ -7,15 +7,15 @@ use contracts_commons::components::replaceability::interface::ImplementationRepl
 use contracts_commons::components::replaceability::mock::ReplaceabilityMock;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::test_utils::cheat_caller_address_once;
-use snforge_std::{ContractClassTrait, declare, load, DeclareResultTrait};
 use snforge_std::cheatcodes::events::{Event, Events, is_emitted};
+use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load};
 use starknet::ContractAddress;
 use starknet::class_hash::ClassHash;
 
 pub(crate) mod Constants {
-    use super::{ContractAddress, ImplementationData};
-    use starknet::contract_address_const;
     use starknet::class_hash::class_hash_const;
+    use starknet::contract_address_const;
+    use super::{ContractAddress, ImplementationData};
 
     pub(crate) const DEFAULT_UPGRADE_DELAY: u64 = 12345;
     pub(crate) const EIC_UPGRADE_DELAY_ADDITION: u64 = 5;

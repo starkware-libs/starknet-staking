@@ -103,9 +103,9 @@ pub impl TimeImpl of Time {
 #[cfg(test)]
 mod tests {
     use contracts_commons::constants::DAY;
-    use snforge_std::start_cheat_block_timestamp_global;
     use core::num::traits::zero::Zero;
-    use super::{Time, Timestamp, TimeDelta};
+    use snforge_std::start_cheat_block_timestamp_global;
+    use super::{Time, TimeDelta, Timestamp};
 
     #[test]
     fn test_timedelta_add() {

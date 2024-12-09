@@ -21,3 +21,6 @@ test = "snforge test"
 
 [[test]]
 name = "contracts_commons_unittest"
+
+[tool.fmt]
+sort-module-level-items = true

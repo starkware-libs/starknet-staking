@@ -2,12 +2,12 @@
 pub mod ReplaceabilityComponent {
     use contracts_commons::components::replaceability::interface::EIC_INITIALIZE_SELECTOR;
     use contracts_commons::components::replaceability::interface::IMPLEMENTATION_EXPIRATION;
+    use contracts_commons::components::replaceability::interface::IReplaceable;
     use contracts_commons::components::replaceability::interface::ImplementationAdded;
     use contracts_commons::components::replaceability::interface::ImplementationData;
     use contracts_commons::components::replaceability::interface::ImplementationFinalized;
     use contracts_commons::components::replaceability::interface::ImplementationRemoved;
     use contracts_commons::components::replaceability::interface::ImplementationReplaced;
-    use contracts_commons::components::replaceability::interface::IReplaceable;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::components::roles::RolesComponent::InternalTrait;
     use contracts_commons::errors::ReplaceErrors;
@@ -16,8 +16,8 @@ pub mod ReplaceabilityComponent {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::get_block_timestamp;
-    use starknet::syscalls::{library_call_syscall, replace_class_syscall};
     use starknet::storage::Map;
+    use starknet::syscalls::{library_call_syscall, replace_class_syscall};
 
 
     #[storage]
