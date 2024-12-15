@@ -53,6 +53,14 @@ pub fn set_account_as_app_role_admin(
     roles_dispatcher.register_app_role_admin(:account);
 }
 
+pub fn set_account_as_operator(
+    contract: ContractAddress, account: ContractAddress, app_role_admin: ContractAddress,
+) {
+    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
+    cheat_caller_address_once(contract_address: contract, caller_address: app_role_admin);
+    roles_dispatcher.register_operator(:account);
+}
+
 pub fn set_account_as_upgrade_governor(
     contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress,
 ) {
