@@ -113,7 +113,7 @@ pub impl StakingImpl of StakingTrait {
 
     fn get_pool(self: StakingState, staker: Staker) -> ContractAddress {
         let staker_info = self.dispatcher().staker_info(staker_address: staker.staker.address);
-        staker_info.get_pool_info_unchecked().pool_contract
+        staker_info.get_pool_info().pool_contract
     }
 
     fn get_min_stake(self: StakingState) -> Amount {

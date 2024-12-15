@@ -561,7 +561,7 @@ pub mod Staking {
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
 
             let (pool_contract, old_commission) = {
-                let pool_info = staker_info.get_pool_info_unchecked();
+                let pool_info = staker_info.get_pool_info();
                 (pool_info.pool_contract, pool_info.commission)
             };
 
@@ -572,7 +572,7 @@ pub mod Staking {
 
             // Update commission in this contract, and in the associated pool contract.
             {
-                let mut pool_info = staker_info.get_pool_info_unchecked();
+                let mut pool_info = staker_info.get_pool_info();
                 pool_info.commission = commission;
                 staker_info.pool_info = Option::Some(pool_info);
             }
@@ -605,7 +605,7 @@ pub mod Staking {
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             self.update_rewards(ref :staker_info);
-            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let mut pool_info = staker_info.get_pool_info();
             let pool_contract = pool_info.pool_contract;
             assert_with_err(
                 get_caller_address() == pool_contract, Error::CALLER_IS_NOT_POOL_CONTRACT,
@@ -654,7 +654,7 @@ pub mod Staking {
             self.assert_caller_is_pool_contract(staker_info: @staker_info);
 
             let (old_delegated_stake, pool_contract) = {
-                let pool_info = staker_info.get_pool_info_unchecked();
+                let pool_info = staker_info.get_pool_info();
                 (pool_info.amount, pool_info.pool_contract)
             };
 
@@ -689,7 +689,7 @@ pub mod Staking {
                             old_self_stake: staker_info.amount_own,
                             old_delegated_stake,
                             new_self_stake: staker_info.amount_own,
-                            new_delegated_stake: staker_info.get_pool_info_unchecked().amount,
+                            new_delegated_stake: staker_info.get_pool_info().amount,
                         },
                     );
             }
@@ -768,7 +768,7 @@ pub mod Staking {
 
             // More asserts.
             assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            let mut to_staker_pool_info = to_staker_info.get_pool_info_unchecked();
+            let mut to_staker_pool_info = to_staker_info.get_pool_info();
             let to_staker_pool_contract = to_staker_pool_info.pool_contract;
             assert_with_err(to_pool == to_staker_pool_contract, Error::DELEGATION_POOL_MISMATCH);
             let old_delegated_stake = to_staker_pool_info.amount;
@@ -822,7 +822,7 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            let pool_address = staker_info.get_pool_info_unchecked().pool_contract;
+            let pool_address = staker_info.get_pool_info().pool_contract;
             assert_with_err(
                 get_caller_address() == pool_address, Error::CALLER_IS_NOT_POOL_CONTRACT,
             );
@@ -950,7 +950,7 @@ pub mod Staking {
             ref staker_info: InternalStakerInfo,
             token_dispatcher: IERC20Dispatcher,
         ) {
-            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let mut pool_info = staker_info.get_pool_info();
             let pool_address = pool_info.pool_contract;
             let amount = pool_info.unclaimed_rewards;
 
@@ -1162,7 +1162,7 @@ pub mod Staking {
         }
 
         fn assert_caller_is_pool_contract(self: @ContractState, staker_info: @InternalStakerInfo) {
-            let pool_info = staker_info.get_pool_info_unchecked();
+            let pool_info = staker_info.get_pool_info();
             assert_with_err(
                 get_caller_address() == pool_info.pool_contract, Error::CALLER_IS_NOT_POOL_CONTRACT,
             );
@@ -1180,7 +1180,7 @@ pub mod Staking {
             old_intent_amount: Amount,
             new_intent_amount: Amount,
         ) {
-            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let mut pool_info = staker_info.get_pool_info();
             let old_delegated_stake = pool_info.amount;
             let new_delegated_stake = compute_new_delegated_stake(
                 :old_delegated_stake, :old_intent_amount, :new_intent_amount,
