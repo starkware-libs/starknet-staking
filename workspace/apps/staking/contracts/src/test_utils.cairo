@@ -433,7 +433,7 @@ pub(crate) fn stake_for_testing(
             cfg.staker_info.operational_address,
             cfg.staker_info.amount_own,
             cfg.test_info.pool_enabled,
-            cfg.staker_info.get_pool_info_unchecked().commission,
+            cfg.staker_info.get_pool_info().commission,
         );
 }
 
@@ -451,7 +451,7 @@ pub(crate) fn stake_for_testing_using_dispatcher(
             cfg.staker_info.operational_address,
             cfg.staker_info.amount_own,
             cfg.test_info.pool_enabled,
-            cfg.staker_info.get_pool_info_unchecked().commission,
+            cfg.staker_info.get_pool_info().commission,
         );
 }
 
@@ -468,7 +468,7 @@ pub(crate) fn stake_from_zero_address(
             cfg.staker_info.operational_address,
             cfg.staker_info.amount_own,
             cfg.test_info.pool_enabled,
-            cfg.staker_info.get_pool_info_unchecked().commission,
+            cfg.staker_info.get_pool_info().commission,
         );
 }
 
@@ -480,7 +480,7 @@ pub(crate) fn stake_with_pool_enabled(
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = staking_dispatcher
         .staker_info(cfg.test_info.staker_address)
-        .get_pool_info_unchecked()
+        .get_pool_info()
         .pool_contract;
     pool_contract
 }
@@ -680,7 +680,7 @@ pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> Amount {
     let unclaimed_rewards_member = compute_unclaimed_rewards_member(
         amount: cfg.pool_member_info.amount,
         interest: updated_index - index_before,
-        commission: cfg.staker_info.get_pool_info_unchecked().commission,
+        commission: cfg.staker_info.get_pool_info().commission,
     );
     add_reward_for_reward_supplier(
         :cfg,

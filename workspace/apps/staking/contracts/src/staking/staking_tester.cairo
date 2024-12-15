@@ -480,7 +480,7 @@ pub mod StakingTester {
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            let pool_info = staker_info.get_pool_info_unchecked();
+            let pool_info = staker_info.get_pool_info();
             let pool_contract = pool_info.pool_contract;
             let old_commission = pool_info.commission;
             if commission == old_commission {
@@ -488,7 +488,7 @@ pub mod StakingTester {
             }
             assert_with_err(commission < old_commission, Error::INVALID_COMMISSION);
             self.update_rewards(ref :staker_info);
-            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let mut pool_info = staker_info.get_pool_info();
             pool_info.commission = commission;
             staker_info.pool_info = Option::Some(pool_info);
             self.staker_info.write(staker_address, Option::Some(staker_info));
@@ -529,7 +529,7 @@ pub mod StakingTester {
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
             self.update_rewards(ref :staker_info);
-            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let mut pool_info = staker_info.get_pool_info();
             let pool_contract = pool_info.pool_contract;
             assert_with_err(
                 pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT,
@@ -566,7 +566,7 @@ pub mod StakingTester {
         ) -> Timestamp {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let mut pool_info = staker_info.get_pool_info();
             assert_with_err(
                 pool_info.pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT,
             );
@@ -662,7 +662,7 @@ pub mod StakingTester {
             let mut to_staker_info = self.internal_staker_info(staker_address: to_staker);
             self.update_rewards(ref staker_info: to_staker_info);
             assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            let mut to_staker_pool_info = to_staker_info.get_pool_info_unchecked();
+            let mut to_staker_pool_info = to_staker_info.get_pool_info();
             let to_staker_pool_contract = to_staker_pool_info.pool_contract;
             assert_with_err(to_pool == to_staker_pool_contract, Error::DELEGATION_POOL_MISMATCH);
 
@@ -700,7 +700,7 @@ pub mod StakingTester {
         ) -> Index {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            let pool_address = staker_info.get_pool_info_unchecked().pool_contract;
+            let pool_address = staker_info.get_pool_info().pool_contract;
             assert_with_err(
                 pool_address == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT,
             );
@@ -821,7 +821,7 @@ pub mod StakingTester {
             ref staker_info: InternalStakerInfo,
             token_dispatcher: IERC20Dispatcher,
         ) {
-            let mut pool_info = staker_info.get_pool_info_unchecked();
+            let mut pool_info = staker_info.get_pool_info();
             let pool_address = pool_info.pool_contract;
             let amount = pool_info.unclaimed_rewards;
 

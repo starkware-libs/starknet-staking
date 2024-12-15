@@ -54,7 +54,7 @@ pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
         Time::now().add(delta: exit_wait_window)
     }
 
-    fn get_pool_info_unchecked(self: @InternalStakerInfo) -> StakerPoolInfo {
+    fn get_pool_info(self: @InternalStakerInfo) -> StakerPoolInfo {
         (*self.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 }
@@ -222,7 +222,7 @@ mod test_internal_staker_info {
     }
 
     #[test]
-    fn test_get_pool_info_unchecked() {
+    fn test_get_pool_info() {
         let staker_pool_info = StakerPoolInfo {
             pool_contract: Zero::zero(),
             amount: Zero::zero(),
@@ -238,12 +238,12 @@ mod test_internal_staker_info {
             unclaimed_rewards_own: Zero::zero(),
             pool_info: Option::Some(staker_pool_info),
         };
-        assert_eq!(internal_staker_info.get_pool_info_unchecked(), staker_pool_info);
+        assert_eq!(internal_staker_info.get_pool_info(), staker_pool_info);
     }
 
     #[test]
     #[should_panic(expected: "Staker does not have a pool contract")]
-    fn test_get_pool_info_unchecked_panic() {
+    fn test_get_pool_info_panic() {
         let internal_staker_info = InternalStakerInfo {
             reward_address: Zero::zero(),
             operational_address: Zero::zero(),
@@ -253,6 +253,6 @@ mod test_internal_staker_info {
             unclaimed_rewards_own: Zero::zero(),
             pool_info: Option::None,
         };
-        internal_staker_info.get_pool_info_unchecked();
+        internal_staker_info.get_pool_info();
     }
 }

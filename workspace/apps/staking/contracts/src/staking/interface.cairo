@@ -352,7 +352,7 @@ pub struct StakerPoolInfo {
 
 #[generate_trait]
 pub impl StakerInfoImpl of StakerInfoTrait {
-    fn get_pool_info_unchecked(self: StakerInfo) -> StakerPoolInfo {
+    fn get_pool_info(self: StakerInfo) -> StakerPoolInfo {
         self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 }
