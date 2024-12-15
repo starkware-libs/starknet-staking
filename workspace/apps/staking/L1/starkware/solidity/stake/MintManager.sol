@@ -109,7 +109,7 @@ contract MintManager is IMintManager, Identity, ProxySupportImpl, PeriodMintLimi
     }
 
     /**
-      Unegister an eligible token minter.
+      Unregister an eligible token minter.
       Callable only by the app governor or a security agent/admin.
     */
     function revokeTokenMinter(address token, address minter) external onlySecurityRole {
