@@ -107,7 +107,7 @@ fn test_claim_rewards() {
     cfg.reward_supplier.minting_curve_contract = minting_curve_contract;
     // Use the reward supplier contract state to claim rewards.
     let mut state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
-    // Fund the the reward supplier contract.
+    // Fund the reward supplier contract.
     fund(sender: cfg.test_info.owner_address, recipient: test_address(), :amount, :token_address);
     // Update the unclaimed rewards for testing purposes.
     state.unclaimed_rewards.write(amount);
