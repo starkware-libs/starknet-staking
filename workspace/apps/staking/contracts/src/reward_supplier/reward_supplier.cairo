@@ -55,7 +55,7 @@ pub mod RewardSupplier {
         unclaimed_rewards: Amount,
         // The amount of tokens requested from L1.
         l1_pending_requested_amount: Amount,
-        // The amount of tokens that is requested from L1 in a single message.
+        // The amount of tokens that are requested from L1 in a single message.
         base_mint_amount: Amount,
         minting_curve_dispatcher: IMintingCurveDispatcher,
         staking_contract: ContractAddress,
