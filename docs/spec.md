@@ -517,7 +517,7 @@ fn unstake_action(
 ) -> u128
 ```
 #### description <!-- omit from toc -->
-Executes the intent to exit the stake if enough time have passed.
+Executes the intent to exit the stake if enough time has passed.
 Transfers the funds back to the staker.
 Return the amount of tokens transferred back to the staker.
 #### emits <!-- omit from toc -->
@@ -534,8 +534,8 @@ Return the amount of tokens transferred back to the staker.
 6. [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
-2. Staker exist and requested to unstake.
-3. Enough time have passed from the unstake intent call.
+2. Staker exists and requested to unstake.
+3. Enough time has passed from the unstake intent call.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
@@ -645,7 +645,7 @@ fn remove_from_delegation_pool_action(
 )
 ```
 #### description <!-- omit from toc -->
-Execute the intent to remove funds from pool if enough time have passed.
+Execute the intent to remove funds from pool if enough time has passed.
 Transfers the funds to the pool contract.
 #### emits <!-- omit from toc -->
 1. [Remove From Delegation Pool Action](#remove-from-delegation-pool-action)
@@ -656,7 +656,7 @@ Transfers the funds to the pool contract.
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Removal intent request with the given `identifier` have been sent before.
-3. Enough time have passed since the intent request.
+3. Enough time has passed since the intent request.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
@@ -1258,7 +1258,7 @@ fn exit_delegation_pool_action(
 ) -> u128
 ```
 #### description <!-- omit from toc -->
-Executes the intent to exit the stake if enough time have passed. Transfers the funds back to the pool member.
+Executes the intent to exit the stake if enough time has passed. Transfers the funds back to the pool member.
 Return the amount of tokens transferred back to the pool member.
 #### emits <!-- omit from toc -->
 1. [Pool Member Reward Claimed](#pool-member-reward-claimed)
@@ -1269,8 +1269,8 @@ Return the amount of tokens transferred back to the pool member.
 3. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
 4. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 #### pre-condition <!-- omit from toc -->
-1. Pool member exist and requested to unstake.
-2. Enough time have passed from the delegation pool exit intent call.
+1. Pool member exists and requested to unstake.
+2. Enough time has passed from the delegation pool exit intent call.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
