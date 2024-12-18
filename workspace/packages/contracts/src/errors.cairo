@@ -1,3 +1,5 @@
+use core::panics::panic_with_byte_array;
+
 pub mod ERC20Errors {
     pub const APPROVE_FROM_ZERO: felt252 = 'ERC20: approve from 0';
     pub const APPROVE_TO_ZERO: felt252 = 'ERC20: approve to 0';
@@ -35,4 +37,10 @@ pub mod ReplaceErrors {
     pub const IMPLEMENTATION_EXPIRED: felt252 = 'IMPLEMENTATION_EXPIRED';
     pub const EIC_LIB_CALL_FAILED: felt252 = 'EIC_LIB_CALL_FAILED';
     pub const REPLACE_CLASS_HASH_FAILED: felt252 = 'REPLACE_CLASS_HASH_FAILED';
+}
+
+pub fn assert_with_byte_array(condition: bool, err: ByteArray) {
+    if !condition {
+        panic_with_byte_array(err: @err)
+    }
 }
