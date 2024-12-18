@@ -8,6 +8,7 @@ use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDisp
 use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
 use contracts::test_utils::StakingInitConfig;
 use contracts::types::{Amount, Commission};
+use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::set_account_as_token_admin;
 use contracts_commons::test_utils::{TokenConfig, TokenState, TokenTrait, cheat_caller_address_once};
 use contracts_commons::test_utils::{set_account_as_app_role_admin, set_account_as_security_agent};
@@ -319,7 +320,10 @@ pub impl SystemImpl of SystemTrait {
     /// provided staking initialization configuration.
     fn basic_stake_flow_cfg(cfg: StakingInitConfig) -> SystemConfig {
         let token = TokenConfig {
-            initial_supply: cfg.test_info.initial_supply, owner: cfg.test_info.owner_address,
+            name: NAME,
+            symbol: SYMBOL,
+            initial_supply: cfg.test_info.initial_supply,
+            owner: cfg.test_info.owner_address,
         };
         let staking = StakingConfig {
             min_stake: cfg.staking_contract_info.min_stake,

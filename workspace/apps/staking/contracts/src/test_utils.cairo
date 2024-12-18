@@ -287,8 +287,8 @@ pub(crate) fn deploy_mock_erc20_contract(
     initial_supply: u256, owner_address: ContractAddress,
 ) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
-    NAME().serialize(ref calldata);
-    SYMBOL().serialize(ref calldata);
+    format!("{}", NAME).serialize(ref calldata);
+    format!("{}", SYMBOL).serialize(ref calldata);
     initial_supply.serialize(ref calldata);
     owner_address.serialize(ref calldata);
     let erc20_contract = snforge_std::declare("DualCaseERC20Mock").unwrap().contract_class();
