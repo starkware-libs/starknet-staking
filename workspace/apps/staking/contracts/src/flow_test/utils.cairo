@@ -294,7 +294,7 @@ pub impl RewardSupplierImpl of RewardSupplierTrait {
 
 /// The `SystemConfig` struct represents the configuration settings for the entire system.
 /// It includes configurations for the token, staking, minting curve, and reward supplier contracts.
-#[derive(Drop, Copy)]
+#[derive(Drop)]
 struct SystemConfig {
     token: TokenConfig,
     staking: StakingConfig,
@@ -320,8 +320,8 @@ pub impl SystemImpl of SystemTrait {
     /// provided staking initialization configuration.
     fn basic_stake_flow_cfg(cfg: StakingInitConfig) -> SystemConfig {
         let token = TokenConfig {
-            name: NAME,
-            symbol: SYMBOL,
+            name: NAME(),
+            symbol: SYMBOL(),
             initial_supply: cfg.test_info.initial_supply,
             owner: cfg.test_info.owner_address,
         };
