@@ -1,5 +1,5 @@
 #[starknet::component]
-pub mod RolesComponent {
+pub(crate) mod RolesComponent {
     use AccessErrors::{ALREADY_INITIALIZED, GOV_ADMIN_CANNOT_RENOUNCE, ZERO_ADDRESS};
     use AccessErrors::{ONLY_APP_GOVERNOR, ONLY_OPERATOR, ONLY_TOKEN_ADMIN};
     use AccessErrors::{ONLY_SECURITY_ADMIN, ONLY_SECURITY_AGENT, ONLY_UPGRADE_GOVERNOR};

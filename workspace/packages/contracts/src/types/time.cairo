@@ -102,7 +102,7 @@ pub impl TimeImpl of Time {
 
 #[cfg(test)]
 mod tests {
-    use contracts_commons::constants::DAY;
+    use contracts_commons::constants::{DAY, WEEK};
     use core::num::traits::zero::Zero;
     use snforge_std::start_cheat_block_timestamp_global;
     use super::{Time, TimeDelta, Timestamp};
@@ -127,8 +127,20 @@ mod tests {
 
     #[test]
     fn test_timedelta_zero() {
-        let delta = Time::days(count: 0);
+        let delta = TimeDelta { seconds: 0 };
         assert_eq!(delta, Zero::zero());
+    }
+
+    #[test]
+    fn test_timedelta_is_zero() {
+        let delta = TimeDelta { seconds: 0 };
+        assert!(delta.is_zero());
+    }
+
+    #[test]
+    fn test_timedelta_is_non_zero() {
+        let delta = TimeDelta { seconds: 1 };
+        assert!(delta.is_non_zero());
     }
 
     #[test]
@@ -214,6 +226,18 @@ mod tests {
     }
 
     #[test]
+    fn test_timestamp_is_zero() {
+        let time: Timestamp = Timestamp { seconds: 0 };
+        assert!(time.is_zero());
+    }
+
+    #[test]
+    fn test_timestamp_is_non_zero() {
+        let time: Timestamp = Timestamp { seconds: 1 };
+        assert!(time.is_non_zero());
+    }
+
+    #[test]
     fn test_time_add() {
         let time: Timestamp = Zero::zero();
         let new_time = time.add(delta: Time::days(count: 1));
@@ -238,5 +262,29 @@ mod tests {
     fn test_time_days() {
         let time = Time::days(count: 1);
         assert_eq!(time.seconds, DAY);
+    }
+
+    #[test]
+    fn test_time_weeks() {
+        let time = Time::weeks(count: 1);
+        assert_eq!(time.seconds, WEEK);
+    }
+
+    #[test]
+    fn test_timedelta_div() {
+        let delta1 = TimeDelta { seconds: 10 };
+        let divider = 2;
+        let delta2 = delta1.div(:divider);
+        assert_eq!(delta2.seconds, delta1.seconds / divider);
+        assert_eq!(delta2.seconds, 5);
+    }
+
+    #[test]
+    fn test_timedelta_div_by_bigger() {
+        let delta1 = TimeDelta { seconds: 1 };
+        let divider = 2;
+        let delta2 = delta1.div(:divider);
+        assert_eq!(delta2.seconds, delta1.seconds / divider);
+        assert_eq!(delta2.seconds, 0);
     }
 }

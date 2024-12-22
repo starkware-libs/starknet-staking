@@ -21,11 +21,11 @@ pub struct ImplementationData {
 }
 
 /// starknet_keccak(eic_initialize).
-pub const EIC_INITIALIZE_SELECTOR: felt252 =
+pub(crate) const EIC_INITIALIZE_SELECTOR: felt252 =
     1770792127795049777084697565458798191120226931451376769053057094489776256516;
 
 /// Duration from implementation is eligible until it expires. (1209600 = 2 weeks).
-pub const IMPLEMENTATION_EXPIRATION: u64 = 1209600;
+pub(crate) const IMPLEMENTATION_EXPIRATION: u64 = 1209600;
 
 #[starknet::interface]
 pub trait IEICInitializable<TContractState> {
@@ -44,21 +44,21 @@ pub trait IReplaceable<TContractState> {
 }
 
 #[derive(Copy, Drop, PartialEq, starknet::Event)]
-pub struct ImplementationAdded {
+pub(crate) struct ImplementationAdded {
     pub implementation_data: ImplementationData,
 }
 
 #[derive(Copy, Drop, PartialEq, starknet::Event)]
-pub struct ImplementationRemoved {
+pub(crate) struct ImplementationRemoved {
     pub implementation_data: ImplementationData,
 }
 
 #[derive(Copy, Drop, PartialEq, starknet::Event)]
-pub struct ImplementationReplaced {
+pub(crate) struct ImplementationReplaced {
     pub implementation_data: ImplementationData,
 }
 
 #[derive(Copy, Drop, PartialEq, starknet::Event)]
-pub struct ImplementationFinalized {
+pub(crate) struct ImplementationFinalized {
     pub impl_hash: ClassHash,
 }

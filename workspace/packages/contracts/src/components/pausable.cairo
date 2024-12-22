@@ -1,4 +1,4 @@
 pub mod interface;
-pub mod pausable;
+pub(crate) mod pausable;
 
 pub use pausable::PausableComponent;

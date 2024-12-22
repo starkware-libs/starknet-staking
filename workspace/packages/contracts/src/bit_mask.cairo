@@ -1,15 +1,15 @@
-pub trait BitMask<T> {
+pub(crate) trait BitMask<T> {
     // A default bit_mask implementation could reduce duplication, but Cairo has limited support for
     // default implementations in generic traits.
     fn bit_mask(index: usize) -> Result<T, felt252>;
     fn inverse_bit_mask(index: usize) -> Result<T, felt252>;
 }
 
-pub trait PowOfTwo<T> {
+pub(crate) trait PowOfTwo<T> {
     fn two_to_the(power: usize) -> Result<T, felt252>;
 }
 
-pub impl U8PowOfTwo of PowOfTwo<u8> {
+pub(crate) impl U8PowOfTwo of PowOfTwo<u8> {
     fn two_to_the(power: usize) -> Result<u8, felt252> {
         let val = match power {
             0 => TwoToThe::_0,
@@ -26,7 +26,7 @@ pub impl U8PowOfTwo of PowOfTwo<u8> {
     }
 }
 
-pub impl U8BitMask of BitMask<u8> {
+pub(crate) impl U8BitMask of BitMask<u8> {
     fn bit_mask(index: usize) -> Result<u8, felt252> {
         PowOfTwo::two_to_the(index)
     }
@@ -47,7 +47,7 @@ pub impl U8BitMask of BitMask<u8> {
     }
 }
 
-pub impl U16PowOfTwo of PowOfTwo<u16> {
+pub(crate) impl U16PowOfTwo of PowOfTwo<u16> {
     fn two_to_the(power: usize) -> Result<u16, felt252> {
         let val = match power {
             0 => TwoToThe::_0.into(),
@@ -72,7 +72,7 @@ pub impl U16PowOfTwo of PowOfTwo<u16> {
     }
 }
 
-pub impl U16BitMask of BitMask<u16> {
+pub(crate) impl U16BitMask of BitMask<u16> {
     fn bit_mask(index: usize) -> Result<u16, felt252> {
         PowOfTwo::two_to_the(index)
     }
@@ -101,7 +101,7 @@ pub impl U16BitMask of BitMask<u16> {
     }
 }
 
-pub impl U32PowOfTwo of PowOfTwo<u32> {
+pub(crate) impl U32PowOfTwo of PowOfTwo<u32> {
     fn two_to_the(power: usize) -> Result<u32, felt252> {
         let val = match power {
             0 => TwoToThe::_0.into(),
@@ -142,7 +142,7 @@ pub impl U32PowOfTwo of PowOfTwo<u32> {
     }
 }
 
-pub impl U32BitMask of BitMask<u32> {
+pub(crate) impl U32BitMask of BitMask<u32> {
     fn bit_mask(index: usize) -> Result<u32, felt252> {
         PowOfTwo::two_to_the(index)
     }
@@ -187,7 +187,7 @@ pub impl U32BitMask of BitMask<u32> {
     }
 }
 
-pub impl U64PowOfTwo of PowOfTwo<u64> {
+pub(crate) impl U64PowOfTwo of PowOfTwo<u64> {
     fn two_to_the(power: usize) -> Result<u64, felt252> {
         let val = match power {
             0 => TwoToThe::_0.into(),
@@ -260,7 +260,7 @@ pub impl U64PowOfTwo of PowOfTwo<u64> {
     }
 }
 
-pub impl U64BitMask of BitMask<u64> {
+pub(crate) impl U64BitMask of BitMask<u64> {
     fn bit_mask(index: usize) -> Result<u64, felt252> {
         PowOfTwo::two_to_the(index)
     }
@@ -337,7 +337,7 @@ pub impl U64BitMask of BitMask<u64> {
     }
 }
 
-pub impl U128PowOfTwo of PowOfTwo<u128> {
+pub(crate) impl U128PowOfTwo of PowOfTwo<u128> {
     fn two_to_the(power: usize) -> Result<u128, felt252> {
         let val = match power {
             0 => TwoToThe::_0.into(),
@@ -474,7 +474,7 @@ pub impl U128PowOfTwo of PowOfTwo<u128> {
     }
 }
 
-pub impl U128BitMask of BitMask<u128> {
+pub(crate) impl U128BitMask of BitMask<u128> {
     fn bit_mask(index: usize) -> Result<u128, felt252> {
         PowOfTwo::two_to_the(index)
     }

@@ -67,7 +67,7 @@ fn set_caller_as_upgrade_governor(contract_address: ContractAddress, caller: Con
     roles_dispatcher.register_upgrade_governor(account: caller);
 }
 
-pub fn dummy_final_implementation_data_with_class_hash(
+pub(crate) fn dummy_final_implementation_data_with_class_hash(
     class_hash: ClassHash,
 ) -> ImplementationData {
     ImplementationData { impl_hash: class_hash, eic_data: Option::None(()), final: true }

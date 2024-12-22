@@ -1,18 +1,17 @@
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::interfaces::identity::{IdentityDispatcher, IdentityDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{CheatSpan, cheat_account_contract_address, cheat_caller_address};
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use starknet::ContractAddress;
 
-pub fn cheat_only_caller_address_once(
+pub(crate) fn cheat_only_caller_address_once(
     contract_address: ContractAddress, caller_address: ContractAddress,
 ) {
     cheat_caller_address(:contract_address, :caller_address, span: CheatSpan::TargetCalls(1));
 }
 
-pub fn cheat_account_contract_address_once(
+pub(crate) fn cheat_account_contract_address_once(
     contract_address: ContractAddress, caller_address: ContractAddress,
 ) {
     cheat_account_contract_address(
@@ -23,7 +22,7 @@ pub fn cheat_account_contract_address_once(
 }
 
 
-pub fn set_caller_as_upgrade_governor(contract: ContractAddress, caller: ContractAddress) {
+pub(crate) fn set_caller_as_upgrade_governor(contract: ContractAddress, caller: ContractAddress) {
     let roles_dispatcher = IRolesDispatcher { contract_address: contract };
     cheat_caller_address_once(contract_address: contract, caller_address: caller);
     roles_dispatcher.register_upgrade_governor(account: caller);
@@ -100,8 +99,10 @@ pub fn check_identity(
 
 /// The `TokenConfig` struct is used to configure the initial settings for a token contract.
 /// It includes the initial supply of tokens and the owner's address.
-#[derive(Drop, Copy)]
+#[derive(Drop)]
 pub struct TokenConfig {
+    pub name: ByteArray,
+    pub symbol: ByteArray,
     pub initial_supply: u256,
     pub owner: ContractAddress,
 }
@@ -118,8 +119,8 @@ pub struct TokenState {
 pub impl TokenImpl of TokenTrait {
     fn deploy(self: TokenConfig) -> TokenState {
         let mut calldata = ArrayTrait::new();
-        NAME().serialize(ref calldata);
-        SYMBOL().serialize(ref calldata);
+        self.name.serialize(ref calldata);
+        self.symbol.serialize(ref calldata);
         self.initial_supply.serialize(ref calldata);
         self.owner.serialize(ref calldata);
         let token_contract = snforge_std::declare("DualCaseERC20Mock").unwrap().contract_class();

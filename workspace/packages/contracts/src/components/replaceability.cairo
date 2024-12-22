@@ -2,7 +2,7 @@ pub(crate) mod errors;
 
 pub mod interface;
 
-pub mod replaceability;
+pub(crate) mod replaceability;
 
 // shorthand for the use of ReplaceabilityComponent
 pub use replaceability::ReplaceabilityComponent;

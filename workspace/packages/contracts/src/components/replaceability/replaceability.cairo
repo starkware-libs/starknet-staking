@@ -1,5 +1,5 @@
 #[starknet::component]
-pub mod ReplaceabilityComponent {
+pub(crate) mod ReplaceabilityComponent {
     use contracts_commons::components::replaceability::errors::ReplaceErrors;
     use contracts_commons::components::replaceability::interface::EIC_INITIALIZE_SELECTOR;
     use contracts_commons::components::replaceability::interface::IMPLEMENTATION_EXPIRATION;
