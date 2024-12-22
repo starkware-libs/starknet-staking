@@ -1,5 +1,6 @@
 #[starknet::component]
 pub mod ReplaceabilityComponent {
+    use contracts_commons::components::replaceability::errors::ReplaceErrors;
     use contracts_commons::components::replaceability::interface::EIC_INITIALIZE_SELECTOR;
     use contracts_commons::components::replaceability::interface::IMPLEMENTATION_EXPIRATION;
     use contracts_commons::components::replaceability::interface::IReplaceable;
@@ -10,7 +11,6 @@ pub mod ReplaceabilityComponent {
     use contracts_commons::components::replaceability::interface::ImplementationReplaced;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::components::roles::RolesComponent::InternalTrait;
-    use contracts_commons::errors::ReplaceErrors;
     use core::num::traits::Zero;
     use core::poseidon;
     use openzeppelin::access::accesscontrol::AccessControlComponent;

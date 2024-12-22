@@ -10,8 +10,8 @@ pub mod RolesComponent {
     use RolesInterface::{SECURITY_ADMIN, SECURITY_AGENT, TOKEN_ADMIN, UPGRADE_GOVERNOR};
     use RolesInterface::{SecurityAgentAdded, SecurityAgentRemoved, TokenAdminAdded};
     use RolesInterface::{TokenAdminRemoved, UpgradeGovernorAdded, UpgradeGovernorRemoved};
+    use contracts_commons::components::roles::errors::AccessErrors;
     use contracts_commons::components::roles::interface as RolesInterface;
-    use contracts_commons::errors::AccessErrors;
     use core::num::traits::Zero;
     use starknet::{ContractAddress, get_caller_address};
 
