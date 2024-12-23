@@ -8,10 +8,11 @@ pub mod RewardSupplier {
     use contracts::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfo};
     use contracts::types::Amount;
     use contracts::utils::CheckedIERC20DispatcherTrait;
-    use contracts::utils::{ceil_of_division, compute_threshold};
+    use contracts::utils::compute_threshold;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::interfaces::identity::Identity;
+    use contracts_commons::math::ceil_of_division;
     use contracts_commons::types::time::{Time, Timestamp};
     use core::num::traits::Zero;
     use core::traits::TryInto;
