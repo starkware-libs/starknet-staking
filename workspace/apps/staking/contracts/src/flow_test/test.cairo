@@ -1,7 +1,7 @@
 use contracts::constants::STRK_IN_FRIS;
 use contracts::flow_test::utils as flow_test_utils;
 use contracts::test_utils::StakingInitConfig;
-use contracts::utils::abs_diff;
+use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::{TokenTrait};
 use contracts_commons::types::time::Time;
 use core::num::traits::Zero;
@@ -60,7 +60,7 @@ fn basic_stake_flow_test() {
     assert_eq!(system.token.balance_of(account: delegator.delegator.address), stake_amount);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -122,7 +122,7 @@ fn set_open_for_delegation_flow_test() {
     assert_eq!(system.token.balance_of(account: delegator.delegator.address), initial_stake_amount);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -181,7 +181,7 @@ fn delegator_intent_after_staker_action_flow_test() {
     assert_eq!(system.token.balance_of(account: delegator.delegator.address), stake_amount);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -247,7 +247,7 @@ fn delegator_intent_flow_test() {
     assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -383,7 +383,7 @@ fn operations_after_dead_staker_flow_test() {
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
 
     // Assert all funds that moved from rewards supplier, were moved to correct addresses.
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -456,7 +456,7 @@ fn delegator_didnt_update_after_staker_update_commission_flow_test() {
     assert!(system.token.balance_of(account: delegator.reward.address).is_zero());
 
     // Assert all funds that moved from rewards supplier, were moved to correct addresses.
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -529,7 +529,7 @@ fn delegator_updated_after_staker_update_commission_flow_test() {
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
 
     // Assert all funds that moved from rewards supplier, were moved to correct addresses.
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -585,7 +585,7 @@ fn staker_intent_last_action_first_flow_test() {
     assert_eq!(system.token.balance_of(account: delegator.delegator.address), initial_stake_amount);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -680,7 +680,7 @@ fn delegator_claim_rewards_flow_test() {
     assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount * 2);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -748,7 +748,7 @@ fn two_delegators_full_intent_flow_test() {
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator_x.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator_y.reward.address).is_non_zero());
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -853,7 +853,7 @@ fn partial_switches_flow_test() {
     assert!(system.token.balance_of(account: second_staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: new_reward_address).is_non_zero());
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -970,7 +970,7 @@ fn flow_4_switch_member_back_and_forth_test() {
     assert!(system.token.balance_of(account: delegator_Y.reward.address).is_non_zero());
 
     // 4. Virtually all rewards awarded were claimed.
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 
     // 5. Rewards funds are well accounted for.
     assert_eq!(
@@ -1062,7 +1062,7 @@ fn delegators_add_to_delegation_pool_flow_test() {
     assert!(system.token.balance_of(account: first_delegator.reward.address).is_non_zero());
 
     // 4. Virtually all rewards awarded were claimed.
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 
     // 5. Rewards funds are well accounted for.
     assert_eq!(
@@ -1196,7 +1196,7 @@ fn same_staker_different_pool_flow_test() {
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
 
     // Assert all funds that moved from rewards supplier, were moved to correct addresses.
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
     assert_eq!(
         initial_reward_supplier_balance,
         system.token.balance_of(account: system.reward_supplier.address)
@@ -1279,7 +1279,7 @@ fn add_to_delegation_after_intent_flow_test() {
     assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
 
     // 4. Virtually all rewards awarded were claimed.
-    assert!(abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 
     // 5. Rewards funds are well accounted for.
     assert_eq!(
