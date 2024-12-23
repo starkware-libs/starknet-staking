@@ -48,9 +48,9 @@ pub fn ceil_of_division<T, +Sub<T>, +Add<T>, +One<T>, +Div<T>, +Copy<T>, +Drop<T
 }
 
 /// Returns `|a - b|`.
-pub fn abs_diff<
+pub fn wide_abs_diff<
     T,
-    impl TAbs: AbsDiff<T, T>,
+    impl TAbs: AbsDiff<T>,
     +PartialOrd<T>,
     +Drop<T>,
     +Drop<TAbs::Mid>,
@@ -70,53 +70,53 @@ pub fn abs_diff<
     }
 }
 
-pub trait AbsDiff<Lhs, Rhs> {
+pub trait AbsDiff<T> {
     /// The type of the result of subtraction.
     type Mid;
     type Target;
 }
 
-impl AbsDiffI8 of AbsDiff<i8, i8> {
+impl AbsDiffI8 of AbsDiff<i8> {
     type Mid = i16;
     type Target = u16;
 }
 
-impl AbsDiffI16 of AbsDiff<i16, i16> {
+impl AbsDiffI16 of AbsDiff<i16> {
     type Mid = i32;
     type Target = u32;
 }
 
-impl AbsDiffI32 of AbsDiff<i32, i32> {
+impl AbsDiffI32 of AbsDiff<i32> {
     type Mid = i64;
     type Target = u64;
 }
 
-impl AbsDiffI64 of AbsDiff<i64, i64> {
+impl AbsDiffI64 of AbsDiff<i64> {
     type Mid = i128;
     type Target = u128;
 }
 
-impl AbsDiffU8 of AbsDiff<u8, u8> {
+impl AbsDiffU8 of AbsDiff<u8> {
     type Mid = u16;
     type Target = u16;
 }
 
-impl AbsDiffU16 of AbsDiff<u16, u16> {
+impl AbsDiffU16 of AbsDiff<u16> {
     type Mid = u32;
     type Target = u32;
 }
 
-impl AbsDiffU32 of AbsDiff<u32, u32> {
+impl AbsDiffU32 of AbsDiff<u32> {
     type Mid = u64;
     type Target = u64;
 }
 
-impl AbsDiffU64 of AbsDiff<u64, u64> {
+impl AbsDiffU64 of AbsDiff<u64> {
     type Mid = u128;
     type Target = u128;
 }
 
-impl AbsDiffU128 of AbsDiff<u128, u128> {
+impl AbsDiffU128 of AbsDiff<u128> {
     type Mid = u256;
     type Target = u256;
 }
@@ -267,43 +267,102 @@ impl FractionPartialOrd of PartialOrd<Fraction> {
 mod tests {
     use core::num::traits::one::One;
     use core::num::traits::zero::Zero;
-    use super::{AbsImplI128, AbsImplI16, AbsImplI32, AbsImplI64, AbsImplI8};
+    use super::Abs;
     use super::{Fraction, FractionTrait};
 
 
     use super::{MAX_U128, MAX_U64};
-    use super::{mul_wide_and_ceil_div, mul_wide_and_div};
+    use super::{mul_wide_and_ceil_div, mul_wide_and_div, wide_abs_diff};
     const TEST_NUM: u64 = 100000000000;
 
     #[test]
     fn test_abs_i8() {
-        assert_eq!(AbsImplI8::abs(1_i8), 1_u8);
-        assert_eq!(AbsImplI8::abs(-1_i8), 1_u8);
+        assert_eq!(1_i8.abs(), 1_u8);
+        assert_eq!((-1_i8).abs(), 1_u8);
     }
 
     #[test]
     fn test_abs_i16() {
-        assert_eq!(AbsImplI16::abs(1_i16), 1_u16);
-        assert_eq!(AbsImplI16::abs(-1_i16), 1_u16);
+        assert_eq!(1_i16.abs(), 1_u16);
+        assert_eq!((-1_i16).abs(), 1_u16);
     }
 
     #[test]
     fn test_abs_i32() {
-        assert_eq!(AbsImplI32::abs(1_i32), 1_u32);
-        assert_eq!(AbsImplI32::abs(-1_i32), 1_u32);
+        assert_eq!((1_i32).abs(), 1_u32);
+        assert_eq!((-1_i32).abs(), 1_u32);
     }
 
     #[test]
     fn test_abs_i64() {
-        assert_eq!(AbsImplI64::abs(1_i64), 1_u64);
-        assert_eq!(AbsImplI64::abs(-1_i64), 1_u64);
+        assert_eq!((1_i64).abs(), 1_u64);
+        assert_eq!((-1_i64).abs(), 1_u64);
     }
 
     #[test]
     fn test_abs_i128() {
-        assert_eq!(AbsImplI128::abs(1_i128), 1_u128);
-        assert_eq!(AbsImplI128::abs(-1_i128), 1_u128);
+        assert_eq!(1_i128.abs(), 1_u128);
+        assert_eq!((-1_i128).abs(), 1_u128);
     }
+
+    #[test]
+    fn test_wide_abs_diff_i8() {
+        assert_eq!(wide_abs_diff(-1_i8, 1_i8), 2_u16);
+        assert_eq!(wide_abs_diff(-1_i8, -1_i8), 0_u16);
+        assert_eq!(wide_abs_diff(1_i8, 1_i8), 0_u16);
+    }
+
+    #[test]
+    fn test_wide_abs_diff_i16() {
+        assert_eq!(wide_abs_diff(-1_i16, 1_i16), 2_u32);
+        assert_eq!(wide_abs_diff(-1_i16, -1_i16), 0_u32);
+        assert_eq!(wide_abs_diff(1_i16, 1_i16), 0_u32);
+    }
+
+    #[test]
+    fn test_wide_abs_diff_i32() {
+        assert_eq!(wide_abs_diff(-1_i32, 1_i32), 2_u64);
+        assert_eq!(wide_abs_diff(-1_i32, -1_i32), 0_u64);
+        assert_eq!(wide_abs_diff(1_i32, 1_i32), 0_u64);
+    }
+
+    #[test]
+    fn test_wide_abs_diff_i64() {
+        assert_eq!(wide_abs_diff(-1_i64, 1_i64), 2_u128);
+        assert_eq!(wide_abs_diff(-1_i64, -1_i64), 0_u128);
+        assert_eq!(wide_abs_diff(1_i64, 1_i64), 0_u128);
+    }
+
+    #[test]
+    fn test_wide_abs_diff_u8() {
+        assert_eq!(wide_abs_diff(1_u8, 1_u8), 0_u16);
+        assert_eq!(wide_abs_diff(2_u8, 1_u8), 1_u16);
+    }
+
+    #[test]
+    fn test_wide_abs_diff_u16() {
+        assert_eq!(wide_abs_diff(1_u16, 1_u16), 0_u32);
+        assert_eq!(wide_abs_diff(2_u16, 1_u16), 1_u32);
+    }
+
+    #[test]
+    fn test_wide_abs_diff_u32() {
+        assert_eq!(wide_abs_diff(1_u32, 1_u32), 0_u64);
+        assert_eq!(wide_abs_diff(2_u32, 1_u32), 1_u64);
+    }
+
+    #[test]
+    fn test_wide_abs_diff_u64() {
+        assert_eq!(wide_abs_diff(1_u64, 1_u64), 0_u128);
+        assert_eq!(wide_abs_diff(2_u64, 1_u64), 1_u128);
+    }
+
+    #[test]
+    fn test_wide_abs_diff_u128() {
+        assert_eq!(wide_abs_diff(1_u128, 1_u128), 0_u256);
+        assert_eq!(wide_abs_diff(2_u128, 1_u128), 1_u256);
+    }
+
 
     #[test]
     fn u64_mul_wide_and_div_test() {
