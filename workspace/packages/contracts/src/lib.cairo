@@ -11,6 +11,9 @@ pub(crate) mod erc20_mocks;
 
 // Consts and other non-component utilities
 pub mod errors;
+
+#[cfg(test)]
+pub mod event_test_utils;
 pub mod interfaces;
 pub mod math;
 pub mod message_hash;
