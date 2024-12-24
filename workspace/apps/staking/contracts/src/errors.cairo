@@ -1,6 +1,6 @@
-use contracts::constants::MAX_C_NUM;
-use contracts::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use core::panics::panic_with_byte_array;
+use staking::constants::MAX_C_NUM;
+use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 
 #[derive(Drop)]
 pub(crate) enum Error {

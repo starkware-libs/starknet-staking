@@ -1,13 +1,3 @@
-use contracts::minting_curve::interface::IMintingCurveDispatcher;
-use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
-use contracts::reward_supplier::interface::{
-    IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
-};
-use contracts::staking::interface::IStakingDispatcher;
-use contracts::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
-use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
-use contracts::test_utils::StakingInitConfig;
-use contracts::types::{Amount, Commission};
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::set_account_as_token_admin;
 use contracts_commons::test_utils::{TokenConfig, TokenState, TokenTrait, cheat_caller_address_once};
@@ -18,6 +8,16 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use snforge_std::start_cheat_block_timestamp_global;
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
+use staking::minting_curve::interface::IMintingCurveDispatcher;
+use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
+use staking::reward_supplier::interface::{
+    IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
+};
+use staking::staking::interface::IStakingDispatcher;
+use staking::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
+use staking::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
+use staking::test_utils::StakingInitConfig;
+use staking::types::{Amount, Commission};
 use starknet::{ClassHash, ContractAddress};
 
 /// The `StakingRoles` struct represents the various roles involved in the staking contract.

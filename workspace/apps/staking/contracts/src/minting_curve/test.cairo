@@ -1,16 +1,16 @@
-use contracts::constants::MAX_C_NUM;
-use contracts::event_test_utils::{assert_minting_cap_changed_event, assert_number_of_events};
-use contracts::minting_curve::interface::IMintingCurveConfigDispatcher;
-use contracts::minting_curve::interface::IMintingCurveConfigDispatcherTrait;
-use contracts::minting_curve::interface::MintingCurveContractInfo;
-use contracts::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
-use contracts::test_utils::StakingInitConfig;
-use contracts::test_utils::constants::NON_TOKEN_ADMIN;
-use contracts::test_utils::{general_contract_system_deployment, stake_for_testing_using_dispatcher};
-use contracts::types::Amount;
 use contracts_commons::test_utils::cheat_caller_address_once;
 use core::num::traits::{Sqrt, WideMul};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
+use staking::constants::MAX_C_NUM;
+use staking::event_test_utils::{assert_minting_cap_changed_event, assert_number_of_events};
+use staking::minting_curve::interface::IMintingCurveConfigDispatcher;
+use staking::minting_curve::interface::IMintingCurveConfigDispatcherTrait;
+use staking::minting_curve::interface::MintingCurveContractInfo;
+use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
+use staking::test_utils::StakingInitConfig;
+use staking::test_utils::constants::NON_TOKEN_ADMIN;
+use staking::test_utils::{general_contract_system_deployment, stake_for_testing_using_dispatcher};
+use staking::types::Amount;
 
 #[test]
 fn test_yearly_mint() {

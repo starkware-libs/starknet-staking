@@ -5,24 +5,6 @@ use constants::{COMMISSION, NON_POOL_MEMBER_ADDRESS, OTHER_REWARD_ADDRESS, STAKE
 use constants::{DUMMY_ADDRESS, STAKER_ADDRESS, STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS};
 use constants::{NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS};
 use constants::{OTHER_OPERATIONAL_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_UNCLAIMED_REWARDS};
-use contracts::constants::{BASE_VALUE};
-use contracts::errors::{Error, ErrorTrait};
-use contracts::event_test_utils;
-use contracts::pool::interface::{
-    IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
-    PoolContractInfo,
-};
-use contracts::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
-use contracts::pool::pool::Pool;
-use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
-use contracts::staking::interface::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
-use contracts::staking::objects::InternalStakerInfoTrait;
-use contracts::staking::objects::UndelegateIntentValueZero;
-use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
-use contracts::test_utils;
-use contracts::test_utils::constants;
-use contracts::types::Index;
-use contracts::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
 use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
 use contracts_commons::types::time::Time;
 use core::num::traits::zero::Zero;
@@ -39,6 +21,24 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{CheatSpan, cheat_caller_address};
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
+use staking::constants::{BASE_VALUE};
+use staking::errors::{Error, ErrorTrait};
+use staking::event_test_utils;
+use staking::pool::interface::{
+    IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
+    PoolContractInfo,
+};
+use staking::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
+use staking::pool::pool::Pool;
+use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
+use staking::staking::objects::InternalStakerInfoTrait;
+use staking::staking::objects::UndelegateIntentValueZero;
+use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+use staking::test_utils;
+use staking::test_utils::constants;
+use staking::types::Index;
+use staking::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
 use test_utils::{StakingInitConfig, deploy_mock_erc20_contract, initialize_pool_state};
 use test_utils::{approve, assert_panic_with_error, deploy_staking_contract, fund};
 use test_utils::{cheat_reward_for_reward_supplier, general_contract_system_deployment};
