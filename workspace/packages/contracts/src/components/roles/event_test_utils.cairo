@@ -50,3 +50,186 @@ pub fn assert_app_role_admin_removed_event(
         panic_with_event_details(:expected_emitted_by, :details);
     }
 }
+
+pub fn assert_upgrade_governor_added_event(
+    spied_event: @(ContractAddress, Event),
+    added_account: ContractAddress,
+    added_by: ContractAddress,
+) {
+    let expected_event = @MockContract::Event::RolesEvent(
+        RolesEvent::UpgradeGovernorAdded(
+            RolesInterface::UpgradeGovernorAdded { added_account, added_by },
+        ),
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "UpgradeGovernorAdded{{added_account: {:?}, added_by: {:?}}}", added_account, added_by,
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+
+pub fn assert_upgrade_governor_removed_event(
+    spied_event: @(ContractAddress, Event),
+    removed_account: ContractAddress,
+    removed_by: ContractAddress,
+) {
+    let expected_event = @MockContract::Event::RolesEvent(
+        RolesEvent::UpgradeGovernorRemoved(
+            RolesInterface::UpgradeGovernorRemoved { removed_account, removed_by },
+        ),
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "UpgradeGovernorRemoved{{removed_account: {:?}, removed_by: {:?}}}",
+            removed_account,
+            removed_by,
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+
+pub fn assert_governance_admin_added_event(
+    spied_event: @(ContractAddress, Event),
+    added_account: ContractAddress,
+    added_by: ContractAddress,
+) {
+    let expected_event = @MockContract::Event::RolesEvent(
+        RolesEvent::GovernanceAdminAdded(
+            RolesInterface::GovernanceAdminAdded { added_account, added_by },
+        ),
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "GovernanceAdminAdded{{added_account: {:?}, added_by: {:?}}}", added_account, added_by,
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+
+pub fn assert_governance_admin_removed_event(
+    spied_event: @(ContractAddress, Event),
+    removed_account: ContractAddress,
+    removed_by: ContractAddress,
+) {
+    let expected_event = @MockContract::Event::RolesEvent(
+        RolesEvent::GovernanceAdminRemoved(
+            RolesInterface::GovernanceAdminRemoved { removed_account, removed_by },
+        ),
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "GovernanceAdminRemoved{{removed_account: {:?}, removed_by: {:?}}}",
+            removed_account,
+            removed_by,
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+
+pub fn assert_security_agent_added_event(
+    spied_event: @(ContractAddress, Event),
+    added_account: ContractAddress,
+    added_by: ContractAddress,
+) {
+    let expected_event = @MockContract::Event::RolesEvent(
+        RolesEvent::SecurityAgentAdded(
+            RolesInterface::SecurityAgentAdded { added_account, added_by },
+        ),
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "SecurityAgentAdded{{added_account: {:?}, added_by: {:?}}}", added_account, added_by,
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+
+pub fn assert_security_agent_removed_event(
+    spied_event: @(ContractAddress, Event),
+    removed_account: ContractAddress,
+    removed_by: ContractAddress,
+) {
+    let expected_event = @MockContract::Event::RolesEvent(
+        RolesEvent::SecurityAgentRemoved(
+            RolesInterface::SecurityAgentRemoved { removed_account, removed_by },
+        ),
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "SecurityAgentRemoved{{removed_account: {:?}, removed_by: {:?}}}",
+            removed_account,
+            removed_by,
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+
+pub fn assert_security_admin_added_event(
+    spied_event: @(ContractAddress, Event),
+    added_account: ContractAddress,
+    added_by: ContractAddress,
+) {
+    let expected_event = @MockContract::Event::RolesEvent(
+        RolesEvent::SecurityAdminAdded(
+            RolesInterface::SecurityAdminAdded { added_account, added_by },
+        ),
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "SecurityAdminAdded{{added_account: {:?}, added_by: {:?}}}", added_account, added_by,
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
+
+
+pub fn assert_security_admin_removed_event(
+    spied_event: @(ContractAddress, Event),
+    removed_account: ContractAddress,
+    removed_by: ContractAddress,
+) {
+    let expected_event = @MockContract::Event::RolesEvent(
+        RolesEvent::SecurityAdminRemoved(
+            RolesInterface::SecurityAdminRemoved { removed_account, removed_by },
+        ),
+    );
+    let (expected_emitted_by, raw_event) = spied_event;
+    let wrapped_spied_event = Events { events: array![(*expected_emitted_by, raw_event.clone())] };
+    let emitted = is_emitted(self: @wrapped_spied_event, :expected_emitted_by, :expected_event);
+    if !emitted {
+        let details = format!(
+            "SecurityAdminRemoved{{removed_account: {:?}, removed_by: {:?}}}",
+            removed_account,
+            removed_by,
+        );
+        panic_with_event_details(:expected_emitted_by, :details);
+    }
+}
