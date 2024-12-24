@@ -1,14 +1,6 @@
 #[starknet::contract]
 pub mod RewardSupplier {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts::constants::STRK_IN_FRIS;
-    use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
-    use contracts::minting_curve::interface::IMintingCurveDispatcher;
-    use contracts::minting_curve::interface::IMintingCurveDispatcherTrait;
-    use contracts::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfo};
-    use contracts::types::Amount;
-    use contracts::utils::CheckedIERC20DispatcherTrait;
-    use contracts::utils::compute_threshold;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::interfaces::identity::Identity;
@@ -19,6 +11,14 @@ pub mod RewardSupplier {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use staking::constants::STRK_IN_FRIS;
+    use staking::errors::{Error, OptionAuxTrait, assert_with_err};
+    use staking::minting_curve::interface::IMintingCurveDispatcher;
+    use staking::minting_curve::interface::IMintingCurveDispatcherTrait;
+    use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfo};
+    use staking::types::Amount;
+    use staking::utils::CheckedIERC20DispatcherTrait;
+    use staking::utils::compute_threshold;
     use starknet::SyscallResultTrait;
     use starknet::syscalls::{send_message_to_l1_syscall};
     use starknet::{ContractAddress, EthAddress};

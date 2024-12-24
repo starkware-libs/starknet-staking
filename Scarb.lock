@@ -2,15 +2,6 @@
 version = 1
 
 [[package]]
-name = "contracts"
-version = "0.1.0"
-dependencies = [
- "contracts_commons",
- "openzeppelin",
- "snforge_std",
-]
-
-[[package]]
 name = "contracts_commons"
 version = "0.1.0"
 dependencies = [
@@ -168,4 +159,13 @@ source = "registry+https://scarbs.xyz/"
 checksum = "sha256:bd20964bde07e6fd0f7adb50d41216f05d66abd422ed82241030369333385876"
 dependencies = [
  "snforge_scarb_plugin",
+]
+
+[[package]]
+name = "staking"
+version = "0.1.0"
+dependencies = [
+ "contracts_commons",
+ "openzeppelin",
+ "snforge_std",
 ]

@@ -1,4 +1,4 @@
-use contracts::types::{Amount, Inflation};
+use staking::types::{Amount, Inflation};
 
 #[starknet::interface]
 pub trait IMintingCurve<TContractState> {
@@ -12,7 +12,7 @@ pub trait IMintingCurveConfig<TContractState> {
 }
 
 pub mod Events {
-    use contracts::types::Amount;
+    use staking::types::Amount;
 
     #[derive(Drop, starknet::Event)]
     pub struct TotalSupplyChanged {
@@ -22,7 +22,7 @@ pub mod Events {
 }
 
 pub mod ConfigEvents {
-    use contracts::types::Inflation;
+    use staking::types::Inflation;
 
     #[derive(Drop, starknet::Event)]
     pub struct MintingCapChanged {

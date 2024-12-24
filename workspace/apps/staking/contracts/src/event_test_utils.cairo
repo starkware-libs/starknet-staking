@@ -1,16 +1,16 @@
-use contracts::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
-use contracts::minting_curve::minting_curve::MintingCurve;
-use contracts::pool::interface::Events as PoolEvents;
-use contracts::pool::pool::Pool;
-use contracts::reward_supplier::interface::Events as RewardSupplierEvents;
-use contracts::reward_supplier::reward_supplier::RewardSupplier;
-use contracts::staking::interface::ConfigEvents as StakingConfigEvents;
-use contracts::staking::interface::Events as StakingEvents;
-use contracts::staking::interface::PauseEvents as StakingPauseEvents;
-use contracts::staking::staking::Staking;
-use contracts::types::{Amount, Commission, Index, Inflation};
 use contracts_commons::types::time::{TimeDelta, Timestamp};
 use snforge_std::cheatcodes::events::{Event, EventSpy, EventSpyTrait, Events, is_emitted};
+use staking::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
+use staking::minting_curve::minting_curve::MintingCurve;
+use staking::pool::interface::Events as PoolEvents;
+use staking::pool::pool::Pool;
+use staking::reward_supplier::interface::Events as RewardSupplierEvents;
+use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::staking::interface::ConfigEvents as StakingConfigEvents;
+use staking::staking::interface::Events as StakingEvents;
+use staking::staking::interface::PauseEvents as StakingPauseEvents;
+use staking::staking::staking::Staking;
+use staking::types::{Amount, Commission, Index, Inflation};
 use starknet::ContractAddress;
 
 pub(crate) fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {

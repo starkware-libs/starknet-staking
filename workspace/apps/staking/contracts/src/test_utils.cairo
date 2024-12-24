@@ -8,20 +8,6 @@ use constants::{MINTING_CONTRACT_ADDRESS, STAKING_CONTRACT_ADDRESS, STARKGATE_AD
 use constants::{OPERATIONAL_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT};
 use constants::{POOL_CONTRACT_ADMIN, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN};
 use constants::{POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS};
-use contracts::constants::{BASE_VALUE, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
-use contracts::minting_curve::interface::MintingCurveContractInfo;
-use contracts::minting_curve::minting_curve::MintingCurve;
-use contracts::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, InternalPoolMemberInfo};
-use contracts::pool::pool::Pool;
-use contracts::reward_supplier::reward_supplier::RewardSupplier;
-use contracts::staking::interface::{IStaking, StakerPoolInfo};
-use contracts::staking::interface::{IStakingDispatcher, StakingContractInfo};
-use contracts::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
-use contracts::staking::interface::{IStakingPauseDispatcher, IStakingPauseDispatcherTrait};
-use contracts::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
-use contracts::staking::staking::Staking;
-use contracts::types::{Amount, Commission, Index};
-use contracts::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts_commons::test_utils::{set_account_as_app_role_admin, set_account_as_security_agent};
@@ -33,11 +19,25 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::byte_array::try_deserialize_bytearray_error;
 use snforge_std::test_address;
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
+use staking::constants::{BASE_VALUE, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
+use staking::minting_curve::interface::MintingCurveContractInfo;
+use staking::minting_curve::minting_curve::MintingCurve;
+use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, InternalPoolMemberInfo};
+use staking::pool::pool::Pool;
+use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::staking::interface::{IStaking, StakerPoolInfo};
+use staking::staking::interface::{IStakingDispatcher, StakingContractInfo};
+use staking::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
+use staking::staking::interface::{IStakingPauseDispatcher, IStakingPauseDispatcherTrait};
+use staking::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
+use staking::staking::staking::Staking;
+use staking::types::{Amount, Commission, Index};
+use staking::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
 use starknet::{ClassHash, ContractAddress, Store};
 
 pub(crate) mod constants {
-    use contracts::constants::STRK_IN_FRIS;
-    use contracts::types::{Amount, Commission, Index};
+    use staking::constants::STRK_IN_FRIS;
+    use staking::types::{Amount, Commission, Index};
     use starknet::class_hash::{ClassHash, class_hash_const};
     use starknet::{ContractAddress, contract_address_const};
 

@@ -1,6 +1,6 @@
-use contracts::types::{Amount, Index, Inflation};
 use contracts_commons::constants::{MINUTE, WEEK};
 use contracts_commons::types::time::TimeDelta;
+use staking::types::{Amount, Index, Inflation};
 
 pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 3 * WEEK };
 pub(crate) const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };

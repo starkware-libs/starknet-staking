@@ -1,14 +1,6 @@
 #[starknet::contract]
 pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
-    use contracts::pool::interface::{Events, IPool, PoolContractInfo};
-    use contracts::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
-    use contracts::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait, StakerInfo};
-    use contracts::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
-    use contracts::types::{Amount, Commission, Index};
-    use contracts::utils::CheckedIERC20DispatcherTrait;
-    use contracts::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::interfaces::identity::Identity;
@@ -19,6 +11,14 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use staking::errors::{Error, OptionAuxTrait, assert_with_err};
+    use staking::pool::interface::{Events, IPool, PoolContractInfo};
+    use staking::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
+    use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait, StakerInfo};
+    use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
+    use staking::types::{Amount, Commission, Index};
+    use staking::utils::CheckedIERC20DispatcherTrait;
+    use staking::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
     use starknet::event::EventEmitter;
     use starknet::storage::Map;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};

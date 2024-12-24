@@ -1,9 +1,9 @@
-use contracts::errors::{Error, OptionAuxTrait, assert_with_err};
-use contracts::staking::interface::{StakerInfo, StakerPoolInfo};
-use contracts::types::{Amount, Index};
 use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;
+use staking::errors::{Error, OptionAuxTrait, assert_with_err};
+use staking::staking::interface::{StakerInfo, StakerPoolInfo};
+use staking::types::{Amount, Index};
 use starknet::ContractAddress;
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
@@ -149,11 +149,11 @@ mod test_undelegate_intent {
 
 #[cfg(test)]
 mod test_internal_staker_info {
-    use contracts::constants::DEFAULT_EXIT_WAIT_WINDOW;
-    use contracts::staking::interface::{StakerInfo, StakerPoolInfo};
     use contracts_commons::types::time::Time;
     use core::num::traits::zero::Zero;
     use snforge_std::start_cheat_block_timestamp_global;
+    use staking::constants::DEFAULT_EXIT_WAIT_WINDOW;
+    use staking::staking::interface::{StakerInfo, StakerPoolInfo};
     use super::{InternalStakerInfo, InternalStakerInfoTrait};
 
     #[test]

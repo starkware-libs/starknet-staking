@@ -1,7 +1,7 @@
-use contracts::errors::{Error, OptionAuxTrait};
-use contracts::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
-use contracts::types::{Amount, Commission, Index};
 use contracts_commons::types::time::{TimeDelta, Timestamp};
+use staking::errors::{Error, OptionAuxTrait};
+use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+use staking::types::{Amount, Commission, Index};
 use starknet::{ClassHash, ContractAddress};
 
 /// Public interface for the staking contract.
@@ -146,8 +146,8 @@ pub trait IStakingConfig<TContractState> {
 }
 
 pub mod Events {
-    use contracts::types::{Amount, Commission, Index};
     use contracts_commons::types::time::Timestamp;
+    use staking::types::{Amount, Commission, Index};
     use starknet::ContractAddress;
     #[derive(Drop, starknet::Event)]
     pub struct StakeBalanceChanged {
@@ -299,8 +299,8 @@ pub mod PauseEvents {
 }
 
 pub mod ConfigEvents {
-    use contracts::types::Amount;
     use contracts_commons::types::time::TimeDelta;
+    use staking::types::Amount;
     use starknet::ContractAddress;
     #[derive(Drop, starknet::Event)]
     pub struct MinimumStakeChanged {

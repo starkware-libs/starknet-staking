@@ -1,12 +1,12 @@
-use contracts::constants::STRK_IN_FRIS;
-use contracts::flow_test::utils as flow_test_utils;
-use contracts::test_utils::StakingInitConfig;
 use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::{TokenTrait};
 use contracts_commons::types::time::Time;
 use core::num::traits::Zero;
 use flow_test_utils::{DelegatorTrait};
 use flow_test_utils::{RewardSupplierTrait, StakerTrait, StakingTrait, SystemTrait};
+use staking::constants::STRK_IN_FRIS;
+use staking::flow_test::utils as flow_test_utils;
+use staking::test_utils::StakingInitConfig;
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true

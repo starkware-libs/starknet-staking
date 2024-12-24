@@ -1,5 +1,5 @@
 [package]
-name = "contracts"
+name = "staking"
 version = "0.1.0"
 edition = "2023_11"
 
