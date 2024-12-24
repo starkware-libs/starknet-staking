@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod align_upg_vars_eic;
 pub mod interface;
-pub mod objects;
+pub(crate) mod objects;
 #[cfg(test)]
 mod pause_test;
 pub mod staking;

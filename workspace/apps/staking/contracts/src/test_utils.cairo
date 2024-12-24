@@ -624,7 +624,7 @@ pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -
     *value[0]
 }
 
-pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
+pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     // Deploy contracts: ERC20, MintingCurve, RewardSupplier, Staking.
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -652,7 +652,7 @@ pub fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     );
 }
 
-pub fn cheat_reward_for_reward_supplier(
+pub(crate) fn cheat_reward_for_reward_supplier(
     cfg: StakingInitConfig,
     reward_supplier: ContractAddress,
     expected_reward: Amount,
@@ -671,7 +671,7 @@ pub fn cheat_reward_for_reward_supplier(
     );
 }
 
-pub fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> Amount {
+pub(crate) fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> Amount {
     let index_before = cfg.pool_member_info.index;
     cfg.pool_member_info.index += BASE_VALUE;
     let updated_index = cfg.pool_member_info.index;
@@ -720,7 +720,7 @@ pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
     staking_pause_dispatcher.pause();
 }
 
-pub fn add_reward_for_reward_supplier(
+pub(crate) fn add_reward_for_reward_supplier(
     cfg: StakingInitConfig,
     reward_supplier: ContractAddress,
     reward: Amount,
@@ -745,7 +745,7 @@ pub fn add_reward_for_reward_supplier(
     );
 }
 
-pub fn assert_panic_with_error<T, +Drop<T>>(
+pub(crate) fn assert_panic_with_error<T, +Drop<T>>(
     result: Result<T, Array<felt252>>, expected_error: ByteArray,
 ) {
     match result {
@@ -756,7 +756,7 @@ pub fn assert_panic_with_error<T, +Drop<T>>(
     };
 }
 
-pub fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArray) {
+pub(crate) fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArray) {
     match try_deserialize_bytearray_error(error_data) {
         Result::Ok(error) => assert_eq!(error, expected_error),
         Result::Err(_) => panic!(

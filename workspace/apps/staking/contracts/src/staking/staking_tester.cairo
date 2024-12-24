@@ -1,14 +1,14 @@
 use starknet::{ClassHash, ContractAddress};
 
 #[starknet::interface]
-pub trait IStakingTester<TContractState> {
+pub(crate) trait IStakingTester<TContractState> {
     fn token_address(self: @TContractState) -> ContractAddress;
     fn pool_admin(self: @TContractState) -> ContractAddress;
     fn pool_class_hash(self: @TContractState) -> ClassHash;
 }
 
 #[starknet::contract]
-pub mod StakingTester {
+pub(crate) mod StakingTester {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts::constants::DEFAULT_EXIT_WAIT_WINDOW;
     use contracts::constants::MIN_TIME_BETWEEN_INDEX_UPDATES;

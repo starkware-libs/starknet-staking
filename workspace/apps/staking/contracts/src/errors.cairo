@@ -3,7 +3,7 @@ use contracts::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use core::panics::panic_with_byte_array;
 
 #[derive(Drop)]
-pub enum Error {
+pub(crate) enum Error {
     // Generic errors
     MESSAGES_COUNT_ISNT_U32,
     INTEREST_ISNT_INDEX_TYPE,
@@ -67,7 +67,7 @@ pub enum Error {
 }
 
 #[generate_trait]
-pub impl ErrorImpl of ErrorTrait {
+pub(crate) impl ErrorImpl of ErrorTrait {
     #[inline(always)]
     fn panic(self: Error) -> core::never {
         panic_with_byte_array(@self.message())
@@ -136,14 +136,14 @@ pub impl ErrorImpl of ErrorTrait {
 }
 
 #[inline(always)]
-pub fn assert_with_err(condition: bool, error: Error) {
+pub(crate) fn assert_with_err(condition: bool, error: Error) {
     if !condition {
         error.panic();
     }
 }
 
 #[generate_trait]
-pub impl OptionAuxImpl<T> of OptionAuxTrait<T> {
+pub(crate) impl OptionAuxImpl<T> of OptionAuxTrait<T> {
     #[inline(always)]
     fn expect_with_err(self: Option<T>, err: Error) -> T {
         match self {

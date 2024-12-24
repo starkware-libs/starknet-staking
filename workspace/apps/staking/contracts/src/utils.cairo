@@ -9,7 +9,7 @@ use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_contract_address};
 
 /// Computes the new delegated stake based on changing in the intent amount.
-pub fn compute_new_delegated_stake(
+pub(crate) fn compute_new_delegated_stake(
     old_delegated_stake: Amount, old_intent_amount: Amount, new_intent_amount: Amount,
 ) -> Amount {
     let total_amount = old_intent_amount + old_delegated_stake;
@@ -17,7 +17,7 @@ pub fn compute_new_delegated_stake(
     total_amount - new_intent_amount
 }
 
-pub fn deploy_delegation_pool_contract(
+pub(crate) fn deploy_delegation_pool_contract(
     class_hash: ClassHash,
     contract_address_salt: felt252,
     staker_address: ContractAddress,
@@ -42,7 +42,7 @@ pub fn deploy_delegation_pool_contract(
 // Compute the commission amount of the staker from the pool rewards.
 //
 // $$ commission_amount = rewards_including_commission * commission / COMMISSION_DENOMINATOR $$
-pub fn compute_commission_amount_rounded_down(
+pub(crate) fn compute_commission_amount_rounded_down(
     rewards_including_commission: Amount, commission: Commission,
 ) -> Amount {
     mul_wide_and_div(
@@ -57,7 +57,7 @@ pub fn compute_commission_amount_rounded_down(
 //
 // $$ commission_amount = ceil_of_division(rewards_including_commission * commission,
 // COMMISSION_DENOMINATOR) $$
-pub fn compute_commission_amount_rounded_up(
+pub(crate) fn compute_commission_amount_rounded_up(
     rewards_including_commission: Amount, commission: Commission,
 ) -> Amount {
     mul_wide_and_ceil_div(
@@ -68,7 +68,7 @@ pub fn compute_commission_amount_rounded_up(
         .expect_with_err(err: Error::COMMISSION_ISNT_AMOUNT_TYPE)
 }
 
-pub fn compute_global_index_diff(staking_rewards: Amount, total_stake: Amount) -> Index {
+pub(crate) fn compute_global_index_diff(staking_rewards: Amount, total_stake: Amount) -> Index {
     // Return zero if the total stake is too small, to avoid overflow below.
     if total_stake < STRK_IN_FRIS {
         return Zero::zero();
@@ -80,7 +80,7 @@ pub fn compute_global_index_diff(staking_rewards: Amount, total_stake: Amount) -
 // Compute the rewards from the amount and interest.
 //
 // $$ rewards = amount * interest / BASE_VALUE $$
-pub fn compute_rewards_rounded_down(amount: Amount, interest: Index) -> Amount {
+pub(crate) fn compute_rewards_rounded_down(amount: Amount, interest: Index) -> Amount {
     mul_wide_and_div(lhs: amount, rhs: interest, div: BASE_VALUE)
         .expect_with_err(err: Error::REWARDS_ISNT_AMOUNT_TYPE)
 }
@@ -88,13 +88,13 @@ pub fn compute_rewards_rounded_down(amount: Amount, interest: Index) -> Amount {
 // Compute the rewards from the amount and interest.
 //
 // $$ rewards = ceil_of_division(amount * interest, BASE_VALUE) $$
-pub fn compute_rewards_rounded_up(amount: Amount, interest: Index) -> Amount {
+pub(crate) fn compute_rewards_rounded_up(amount: Amount, interest: Index) -> Amount {
     mul_wide_and_ceil_div(lhs: amount, rhs: interest, div: BASE_VALUE)
         .expect_with_err(err: Error::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
 // Compute the threshold for requesting funds from L1 Reward Supplier.
-pub fn compute_threshold(base_mint_amount: Amount) -> Amount {
+pub(crate) fn compute_threshold(base_mint_amount: Amount) -> Amount {
     base_mint_amount / 2
 }
 
