@@ -13,7 +13,7 @@ snforge_std.workspace = true
 openzeppelin_testing.workspace = true
 
 [scripts]
-test = "snforge test"
+test = "SNFORGE_BACKTRACE=1 snforge test"
 
 [lib]
 
