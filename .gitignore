@@ -62,3 +62,6 @@ target
 
 #foundry
 .snfoundry_cache
+.snfoundry_versioned_programs
+snfoundry_trace
+coverage_report

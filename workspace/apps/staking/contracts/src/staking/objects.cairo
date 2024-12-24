@@ -7,7 +7,7 @@ use core::num::traits::Zero;
 use starknet::ContractAddress;
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
-pub struct UndelegateIntentKey {
+pub(crate) struct UndelegateIntentKey {
     pub pool_contract: ContractAddress,
     // The identifier is generally the pool member address, but it can be any unique identifier,
     // depending on the logic of the pool contract.
@@ -15,12 +15,12 @@ pub struct UndelegateIntentKey {
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-pub struct UndelegateIntentValue {
+pub(crate) struct UndelegateIntentValue {
     pub unpool_time: Timestamp,
     pub amount: Amount,
 }
 
-pub impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentValue> {
+pub(crate) impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentValue> {
     fn zero() -> UndelegateIntentValue {
         UndelegateIntentValue { unpool_time: Zero::zero(), amount: Zero::zero() }
     }
@@ -75,7 +75,7 @@ pub(crate) impl InternalStakerInfoInto of Into<InternalStakerInfo, StakerInfo> {
 }
 
 #[generate_trait]
-pub impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
+pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
     fn is_valid(self: @UndelegateIntentValue) -> bool {
         // The value is valid if and only if unpool_time and amount are both zero or both non-zero.
         self.unpool_time.is_zero() == self.amount.is_zero()
