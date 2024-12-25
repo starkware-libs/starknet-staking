@@ -133,24 +133,12 @@ pub mod Pool {
             );
             assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
 
-            // Transfer funds from delegator. Sufficient approvals is a pre-condition.
+            // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
-            let self_contract = get_contract_address();
-            token_dispatcher
-                .checked_transfer_from(
-                    sender: pool_member, recipient: self_contract, amount: amount.into(),
-                );
-
-            // Approve staking contract to transfer funds from the pool.
-            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
-            token_dispatcher
-                .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
-
-            // Notify the staking contract of the new delegated stake.
-            // This will complete the fund transfer to the staking contract.
             let staker_address = self.staker_address.read();
-            let updated_index = staking_pool_dispatcher
-                .add_stake_from_pool(:staker_address, :amount);
+            self.transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
+            let updated_index = self
+                .transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
             // Create the pool member record.
             self
@@ -195,23 +183,11 @@ pub mod Pool {
                 Error::CALLER_CANNOT_ADD_TO_POOL,
             );
 
-            // Transfer funds from delegator. Sufficient approvals is a pre-condition.
+            // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
-            let self_contract = get_contract_address();
-            token_dispatcher
-                .checked_transfer_from(
-                    sender: caller_address, recipient: self_contract, amount: amount.into(),
-                );
-
-            // Approve staking contract to transfer funds from the pool.
-            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
-            token_dispatcher
-                .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
-
-            // Notify the staking contract of the new delegated stake, and receive updated index.
-            // This will complete the fund transfer to the staking contract.
-            staking_pool_dispatcher
-                .add_stake_from_pool(staker_address: self.staker_address.read(), :amount);
+            let staker_address = self.staker_address.read();
+            self.transfer_from_delegator(pool_member: caller_address, :amount, :token_dispatcher);
+            self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
             // Update the pool member's record to account for accrued rewards and increased stake,
             // and commit record to storage.
@@ -661,6 +637,43 @@ pub mod Pool {
             let contract_address = self.staking_pool_dispatcher.read().contract_address;
             let staking_dispatcher = IStakingDispatcher { contract_address };
             staking_dispatcher.staker_info(staker_address: self.staker_address.read())
+        }
+
+        /// Transfer funds of the specified amount from the given delegator to the pool.
+        ///
+        /// Sufficient approvals of transfer is a pre-condition.
+        fn transfer_from_delegator(
+            self: @ContractState,
+            pool_member: ContractAddress,
+            amount: Amount,
+            token_dispatcher: IERC20Dispatcher,
+        ) {
+            let self_contract = get_contract_address();
+            token_dispatcher
+                .checked_transfer_from(
+                    sender: pool_member, recipient: self_contract, amount: amount.into(),
+                );
+        }
+
+        /// Transfer funds of the specified amount from the pool to the staking contract.
+        ///
+        /// Approve the transfer and notify staking contract of the new delegated stake.
+        fn transfer_to_staking_contract(
+            self: @ContractState,
+            amount: Amount,
+            token_dispatcher: IERC20Dispatcher,
+            staker_address: ContractAddress,
+        ) -> Index {
+            // Approve staking contract to transfer funds from the pool.
+            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
+            token_dispatcher
+                .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
+
+            // Notify the staking contract of the new delegated stake, and receive updated index.
+            // This will complete the fund transfer to the staking contract.
+            let updated_index = staking_pool_dispatcher
+                .add_stake_from_pool(:staker_address, :amount);
+            updated_index
         }
     }
 }
