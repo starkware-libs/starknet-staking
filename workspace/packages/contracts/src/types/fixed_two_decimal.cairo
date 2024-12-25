@@ -17,10 +17,6 @@ pub impl FixedTwoDecimalImpl of FixedTwoDecimalTrait {
         FixedTwoDecimal { value }
     }
 
-    fn value(self: @FixedTwoDecimal) -> u8 {
-        *self.value
-    }
-
     /// Multiplies the fixed-point value by `other` and divides by DENOMINATOR.
     /// Integer division truncates toward zero to the nearest integer.
     ///
@@ -28,7 +24,7 @@ pub impl FixedTwoDecimalImpl of FixedTwoDecimalTrait {
     /// Example: FixedTwoDecimalTrait::new(75).mul(301) == 225
     /// Example: FixedTwoDecimalTrait::new(75).mul(-5) == -3
     fn mul<T, +Mul<T>, +Into<u8, T>, +Div<T>, +Drop<T>>(self: @FixedTwoDecimal, other: T) -> T {
-        (self.value().into() * other) / DENOMINATOR.into()
+        ((*self.value).into() * other) / DENOMINATOR.into()
     }
 }
 
