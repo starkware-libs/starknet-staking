@@ -3,12 +3,13 @@ pub mod MintingCurve {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
+    use contracts_commons::errors::assert_with_err;
     use contracts_commons::interfaces::identity::Identity;
     use core::num::traits::{Sqrt, WideMul};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::constants::{C_DENOM, DEFAULT_C_NUM, MAX_C_NUM};
-    use staking::errors::{Error, assert_with_err};
+    use staking::errors::Error;
     use staking::minting_curve::interface::{ConfigEvents, Events, IMintingCurve};
     use staking::minting_curve::interface::{IMintingCurveConfig, MintingCurveContractInfo};
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};

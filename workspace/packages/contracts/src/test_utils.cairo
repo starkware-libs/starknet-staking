@@ -1,9 +1,11 @@
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::interfaces::identity::{IdentityDispatcher, IdentityDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use snforge_std::byte_array::try_deserialize_bytearray_error;
 use snforge_std::{CheatSpan, cheat_account_contract_address, cheat_caller_address};
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use starknet::ContractAddress;
+
 
 pub(crate) fn cheat_only_caller_address_once(
     contract_address: ContractAddress, caller_address: ContractAddress,
@@ -95,6 +97,28 @@ pub fn check_identity(
     let version = identitier.version();
     assert_eq!(expected_identity, identity);
     assert_eq!(expected_version, version);
+}
+
+pub fn assert_panic_with_error<T, +Drop<T>>(
+    result: Result<T, Array<felt252>>, expected_error: ByteArray,
+) {
+    match result {
+        Result::Ok(_) => panic!("Expected to fail with: {}", expected_error),
+        Result::Err(error_data) => assert_expected_error(
+            error_data: error_data.span(), :expected_error,
+        ),
+    };
+}
+
+pub fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArray) {
+    match try_deserialize_bytearray_error(error_data) {
+        Result::Ok(error) => assert_eq!(error, expected_error),
+        Result::Err(_) => panic!(
+            "Failed to deserialize error data: {:?}.\nExpect to panic with {}.",
+            error_data,
+            expected_error,
+        ),
+    }
 }
 
 /// The `TokenConfig` struct is used to configure the initial settings for a token contract.

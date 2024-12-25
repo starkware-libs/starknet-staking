@@ -3,6 +3,7 @@ pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
+    use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;
@@ -12,7 +13,7 @@ pub mod Staking {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::constants::MIN_TIME_BETWEEN_INDEX_UPDATES;
     use staking::constants::{DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
-    use staking::errors::{Error, OptionAuxTrait, assert_with_err};
+    use staking::errors::Error;
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
     use staking::reward_supplier::interface::IRewardSupplierDispatcher;
     use staking::reward_supplier::interface::IRewardSupplierDispatcherTrait;

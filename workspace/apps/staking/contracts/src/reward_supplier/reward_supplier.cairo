@@ -3,6 +3,7 @@ pub mod RewardSupplier {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
+    use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::math::ceil_of_division;
     use contracts_commons::types::time::{Time, Timestamp};
@@ -12,7 +13,7 @@ pub mod RewardSupplier {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::constants::STRK_IN_FRIS;
-    use staking::errors::{Error, OptionAuxTrait, assert_with_err};
+    use staking::errors::Error;
     use staking::minting_curve::interface::IMintingCurveDispatcher;
     use staking::minting_curve::interface::IMintingCurveDispatcherTrait;
     use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfo};

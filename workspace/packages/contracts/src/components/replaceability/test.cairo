@@ -68,7 +68,7 @@ mod ReplaceabilityTests {
     }
 
     #[test]
-    #[should_panic(expected: ('ONLY_UPGRADE_GOVERNOR',))]
+    #[should_panic(expected: "ONLY_UPGRADE_GOVERNOR")]
     fn test_add_new_implementation_not_upgrade_governor() {
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;
@@ -122,7 +122,7 @@ mod ReplaceabilityTests {
     }
 
     #[test]
-    #[should_panic(expected: ('ONLY_UPGRADE_GOVERNOR',))]
+    #[should_panic(expected: "ONLY_UPGRADE_GOVERNOR")]
     fn test_remove_implementation_not_upgrade_governor() {
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;
@@ -136,7 +136,7 @@ mod ReplaceabilityTests {
     }
 
     #[test]
-    #[should_panic(expected: ('IMPLEMENTATION_EXPIRED',))]
+    #[should_panic(expected: "IMPLEMENTATION_EXPIRED")]
     fn test_replace_to_expire_impl() {
         // Tests that impl class-hash cannot be replaced to after expiration.
         let replaceable_dispatcher = deploy_replaceability_mock();
@@ -262,7 +262,7 @@ mod ReplaceabilityTests {
     }
 
     #[test]
-    #[should_panic(expected: ('ONLY_UPGRADE_GOVERNOR',))]
+    #[should_panic(expected: "ONLY_UPGRADE_GOVERNOR")]
     fn test_replace_to_not_upgrade_governor() {
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;
@@ -276,7 +276,7 @@ mod ReplaceabilityTests {
     }
 
     #[test]
-    #[should_panic(expected: ('UNKNOWN_IMPLEMENTATION',))]
+    #[should_panic(expected: "UNKNOWN_IMPLEMENTATION")]
     fn test_replace_to_unknown_implementation() {
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;
@@ -292,7 +292,7 @@ mod ReplaceabilityTests {
     }
 
     #[test]
-    #[should_panic(expected: ('UNKNOWN_IMPLEMENTATION',))]
+    #[should_panic(expected: "UNKNOWN_IMPLEMENTATION")]
     fn test_replace_to_remove_impl_on_replace() {
         // Tests that when replacing class-hash, the impl time is reset to zero.
         // 1. deploys a replaceable contract
@@ -391,7 +391,7 @@ mod ReplaceabilityTests {
 
     #[test]
     #[feature("safe_dispatcher")]
-    #[should_panic(expected: ('FINALIZED',))]
+    #[should_panic(expected: "FINALIZED")]
     fn test_replace_to_already_final() {
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;

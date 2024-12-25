@@ -11,7 +11,8 @@ use contracts_commons::components::replaceability::interface::{
 };
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::constants::{DAY};
-use contracts_commons::test_utils::cheat_caller_address_once;
+use contracts_commons::errors::Describable;
+use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -36,7 +37,7 @@ use snforge_std::{
 };
 use snforge_std::{DeclareResultTrait, declare};
 use staking::constants::{BASE_VALUE, MAX_EXIT_WAIT_WINDOW};
-use staking::errors::{Error, ErrorTrait};
+use staking::errors::Error;
 use staking::event_test_utils;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
 use staking::pool::pool::Pool::SwitchPoolData;
@@ -60,9 +61,9 @@ use staking::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
 use starknet::ContractAddress;
 use test_utils::{StakingInitConfig, deploy_mock_erc20_contract, initialize_staking_state_from_cfg};
 use test_utils::{approve, deploy_staking_contract, fund, stake_with_pool_enabled};
-use test_utils::{assert_panic_with_error, deploy_reward_supplier_contract, store_to_simple_map};
 use test_utils::{cheat_reward_for_reward_supplier, general_contract_system_deployment};
 use test_utils::{constants, load_staker_info_from_map, stake_from_zero_address};
+use test_utils::{deploy_reward_supplier_contract, store_to_simple_map};
 use test_utils::{enter_delegation_pool_for_testing_using_dispatcher, load_option_from_simple_map};
 use test_utils::{load_from_simple_map, load_one_felt, stake_for_testing_using_dispatcher};
 
@@ -894,20 +895,20 @@ fn test_unstake_action_assertions() {
 
     // Catch STAKER_NOT_EXISTS.
     let result = staking_safe_dispatcher.unstake_action(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.message());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 
     // Catch MISSING_UNSTAKE_INTENT.
     let result = staking_safe_dispatcher.unstake_action(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_UNSTAKE_INTENT.message());
+    assert_panic_with_error(:result, expected_error: Error::MISSING_UNSTAKE_INTENT.describe());
 
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
 
     // Catch INTENT_WINDOW_NOT_FINISHED.
     let result = staking_safe_dispatcher.unstake_action(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::INTENT_WINDOW_NOT_FINISHED.message());
+    assert_panic_with_error(:result, expected_error: Error::INTENT_WINDOW_NOT_FINISHED.describe());
 }
 
 #[test]
@@ -1098,12 +1099,12 @@ fn test_add_stake_from_pool_assertions() {
     // Should catch CALLER_IS_ZERO_ADDRESS.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: Zero::zero());
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
-    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_ZERO_ADDRESS.message());
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_ZERO_ADDRESS.describe());
 
     // Should catch STAKER_NOT_EXISTS.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
-    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.message());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 
     // Should catch UNSTAKE_IN_PROGRESS.
     let token_address = cfg.staking_contract_info.token_address;
@@ -1112,7 +1113,7 @@ fn test_add_stake_from_pool_assertions() {
     let unstake_time = staking_dispatcher.unstake_intent();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
-    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.message());
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
 
     // Should catch MISSING_POOL_CONTRACT.
     start_cheat_block_timestamp_global(
@@ -1123,14 +1124,14 @@ fn test_add_stake_from_pool_assertions() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.message());
+    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.describe());
 
     // Should catch CALLER_IS_NOT_POOL_CONTRACT.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let commission = cfg.staker_info.get_pool_info().commission;
     staking_dispatcher.set_open_for_delegation(:commission);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
-    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.message());
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
 }
 
 #[test]
@@ -1358,14 +1359,14 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     // Should catch STAKER_NOT_EXISTS.
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
-    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.message());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 
     // Should catch MISSING_POOL_CONTRACT.
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.message());
+    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.describe());
 
     // Should catch CALLER_IS_NOT_POOL_CONTRACT.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -1374,7 +1375,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     let pool_contract = staking_dispatcher.set_open_for_delegation(:commission);
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
-    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.message());
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
 
     // Should catch INVALID_UNDELEGATE_INTENT_VALUE.
     let undelegate_intent_key = UndelegateIntentKey {
@@ -1393,7 +1394,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
     assert_panic_with_error(
-        :result, expected_error: Error::INVALID_UNDELEGATE_INTENT_VALUE.message(),
+        :result, expected_error: Error::INVALID_UNDELEGATE_INTENT_VALUE.describe(),
     );
 
     // Should catch AMOUNT_TOO_HIGH.
@@ -1407,7 +1408,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.message());
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
 }
 
 #[test]
@@ -1725,7 +1726,7 @@ fn test_switch_staking_delegation_pool_assertions() {
             data: serialized_data.span(),
             identifier: pool_member.into(),
         );
-    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.message());
+    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.describe());
 
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
     from_pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
@@ -1741,7 +1742,7 @@ fn test_switch_staking_delegation_pool_assertions() {
             data: serialized_data.span(),
             identifier: pool_member.into(),
         );
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.message());
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
 
     // Catch SELF_SWITCH_NOT_ALLOWED.
     let switched_amount = 1;
@@ -1754,7 +1755,7 @@ fn test_switch_staking_delegation_pool_assertions() {
             data: serialized_data.span(),
             identifier: pool_member.into(),
         );
-    assert_panic_with_error(:result, expected_error: Error::SELF_SWITCH_NOT_ALLOWED.message());
+    assert_panic_with_error(:result, expected_error: Error::SELF_SWITCH_NOT_ALLOWED.describe());
 }
 
 
@@ -2348,7 +2349,7 @@ fn test_set_min_stake() {
 }
 
 #[test]
-#[should_panic(expected: 'ONLY_TOKEN_ADMIN')]
+#[should_panic(expected: "ONLY_TOKEN_ADMIN")]
 fn test_set_min_stake_not_token_admin() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -2385,7 +2386,7 @@ fn test_set_exit_waiting_window() {
 }
 
 #[test]
-#[should_panic(expected: 'ONLY_TOKEN_ADMIN')]
+#[should_panic(expected: "ONLY_TOKEN_ADMIN")]
 fn test_set_exit_waiting_window_not_token_admin() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -2450,7 +2451,7 @@ fn test_set_reward_supplier() {
 }
 
 #[test]
-#[should_panic(expected: 'ONLY_TOKEN_ADMIN')]
+#[should_panic(expected: "ONLY_TOKEN_ADMIN")]
 fn test_set_reward_supplier_not_token_admin() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

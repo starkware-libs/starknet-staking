@@ -1,8 +1,28 @@
-pub mod ReplaceErrors {
-    pub const FINALIZED: felt252 = 'FINALIZED';
-    pub const UNKNOWN_IMPLEMENTATION: felt252 = 'UNKNOWN_IMPLEMENTATION';
-    pub const NOT_ENABLED_YET: felt252 = 'NOT_ENABLED_YET';
-    pub const IMPLEMENTATION_EXPIRED: felt252 = 'IMPLEMENTATION_EXPIRED';
-    pub const EIC_LIB_CALL_FAILED: felt252 = 'EIC_LIB_CALL_FAILED';
-    pub const REPLACE_CLASS_HASH_FAILED: felt252 = 'REPLACE_CLASS_HASH_FAILED';
+use contracts_commons::errors::Describable;
+use contracts_commons::errors::Panicable;
+
+#[derive(Drop)]
+pub(crate) enum ReplaceErrors {
+    FINALIZED,
+    UNKNOWN_IMPLEMENTATION,
+    NOT_ENABLED_YET,
+    IMPLEMENTATION_EXPIRED,
+    EIC_LIB_CALL_FAILED,
+    REPLACE_CLASS_HASH_FAILED,
 }
+
+impl DescribableError of Describable<ReplaceErrors> {
+    #[inline(always)]
+    fn describe(self: ReplaceErrors) -> ByteArray {
+        match self {
+            ReplaceErrors::FINALIZED => "FINALIZED",
+            ReplaceErrors::UNKNOWN_IMPLEMENTATION => "UNKNOWN_IMPLEMENTATION",
+            ReplaceErrors::NOT_ENABLED_YET => "NOT_ENABLED_YET",
+            ReplaceErrors::IMPLEMENTATION_EXPIRED => "IMPLEMENTATION_EXPIRED",
+            ReplaceErrors::EIC_LIB_CALL_FAILED => "EIC_LIB_CALL_FAILED",
+            ReplaceErrors::REPLACE_CLASS_HASH_FAILED => "REPLACE_CLASS_HASH_FAILED",
+        }
+    }
+}
+
+impl PanicableError of Panicable<ReplaceErrors>;

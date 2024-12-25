@@ -3,6 +3,7 @@ pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
+    use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::types::time::{Time, Timestamp};
     use core::num::traits::zero::Zero;
@@ -11,7 +12,7 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::errors::{Error, OptionAuxTrait, assert_with_err};
+    use staking::errors::Error;
     use staking::pool::interface::{Events, IPool, PoolContractInfo};
     use staking::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait, StakerInfo};

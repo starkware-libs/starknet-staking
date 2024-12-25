@@ -89,7 +89,7 @@ fn test_already_paused_and_unpaused() {
 }
 
 #[test]
-#[should_panic(expected: 'ONLY_SECURITY_AGENT')]
+#[should_panic(expected: "ONLY_SECURITY_AGENT")]
 fn test_pause_not_security_agent() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -103,7 +103,7 @@ fn test_pause_not_security_agent() {
 }
 
 #[test]
-#[should_panic(expected: 'ONLY_SECURITY_ADMIN')]
+#[should_panic(expected: "ONLY_SECURITY_ADMIN")]
 fn test_unpause_not_security_admin() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

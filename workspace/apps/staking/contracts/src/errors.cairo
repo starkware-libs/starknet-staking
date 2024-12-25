@@ -1,4 +1,5 @@
-use core::panics::panic_with_byte_array;
+use contracts_commons::errors::Describable;
+use contracts_commons::errors::Panicable;
 use staking::constants::MAX_C_NUM;
 use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 
@@ -66,15 +67,9 @@ pub(crate) enum Error {
     UNEXPECTED_TOKEN,
 }
 
-#[generate_trait]
-pub(crate) impl ErrorImpl of ErrorTrait {
+impl DescribableError of Describable<Error> {
     #[inline(always)]
-    fn panic(self: Error) -> core::never {
-        panic_with_byte_array(@self.message())
-    }
-
-    #[inline(always)]
-    fn message(self: Error) -> ByteArray {
+    fn describe(self: Error) -> ByteArray {
         match self {
             Error::ON_RECEIVE_NOT_FROM_STARKGATE => "Only StarkGate can call on_receive",
             Error::MESSAGES_COUNT_ISNT_U32 => "Number of messages is too large, expected to fit in u32",
@@ -135,20 +130,4 @@ pub(crate) impl ErrorImpl of ErrorTrait {
     }
 }
 
-#[inline(always)]
-pub(crate) fn assert_with_err(condition: bool, error: Error) {
-    if !condition {
-        error.panic();
-    }
-}
-
-#[generate_trait]
-pub(crate) impl OptionAuxImpl<T> of OptionAuxTrait<T> {
-    #[inline(always)]
-    fn expect_with_err(self: Option<T>, err: Error) -> T {
-        match self {
-            Option::Some(x) => x,
-            Option::None => err.panic(),
-        }
-    }
-}
+impl PanicableError of Panicable<Error>;

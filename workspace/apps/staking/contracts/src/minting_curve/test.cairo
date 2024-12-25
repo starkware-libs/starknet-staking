@@ -65,7 +65,7 @@ fn test_set_c_num() {
 }
 
 #[test]
-#[should_panic(expected: 'ONLY_TOKEN_ADMIN')]
+#[should_panic(expected: "ONLY_TOKEN_ADMIN")]
 fn test_set_c_num_unauthorized() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

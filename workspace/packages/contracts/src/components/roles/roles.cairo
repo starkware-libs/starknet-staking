@@ -1,8 +1,5 @@
 #[starknet::component]
 pub(crate) mod RolesComponent {
-    use AccessErrors::{ALREADY_INITIALIZED, GOV_ADMIN_CANNOT_RENOUNCE, ZERO_ADDRESS};
-    use AccessErrors::{ONLY_APP_GOVERNOR, ONLY_OPERATOR, ONLY_TOKEN_ADMIN};
-    use AccessErrors::{ONLY_SECURITY_ADMIN, ONLY_SECURITY_AGENT, ONLY_UPGRADE_GOVERNOR};
     use RolesInterface::{APP_GOVERNOR, APP_ROLE_ADMIN, GOVERNANCE_ADMIN, IRoles, OPERATOR, RoleId};
     use RolesInterface::{AppGovernorAdded, AppGovernorRemoved, AppRoleAdminAdded};
     use RolesInterface::{AppRoleAdminRemoved, GovernanceAdminAdded, GovernanceAdminRemoved};
@@ -12,6 +9,7 @@ pub(crate) mod RolesComponent {
     use RolesInterface::{TokenAdminRemoved, UpgradeGovernorAdded, UpgradeGovernorRemoved};
     use contracts_commons::components::roles::errors::AccessErrors;
     use contracts_commons::components::roles::interface as RolesInterface;
+    use contracts_commons::errors::{assert_with_err};
     use core::num::traits::Zero;
     use starknet::{ContractAddress, get_caller_address};
 
@@ -190,7 +188,7 @@ pub(crate) mod RolesComponent {
             let caller_address = get_caller_address();
 
             // Governance admin musn't remove itself, to avoid losing governance.
-            assert(account != caller_address, GOV_ADMIN_CANNOT_RENOUNCE);
+            assert_with_err(account != caller_address, AccessErrors::GOV_ADMIN_CANNOT_RENOUNCE);
             let event = Event::GovernanceAdminRemoved(
                 GovernanceAdminRemoved { removed_account: account, removed_by: caller_address },
             );
@@ -251,7 +249,7 @@ pub(crate) mod RolesComponent {
         // TODO -  change to GOVERNANCE_ADMIN_CANNOT_SELF_REMOVE when the 32 characters limitations
         // is off.
         fn renounce(ref self: ComponentState<TContractState>, role: RoleId) {
-            assert(role != GOVERNANCE_ADMIN, GOV_ADMIN_CANNOT_RENOUNCE);
+            assert_with_err(role != GOVERNANCE_ADMIN, AccessErrors::GOV_ADMIN_CANNOT_RENOUNCE);
             let mut access_comp = get_dep_component_mut!(ref self, Access);
             access_comp.renounce_role(:role, account: get_caller_address())
             // TODO add another event? Currently there are two events when a role is removed but
@@ -277,7 +275,7 @@ pub(crate) mod RolesComponent {
         ) {
             let mut access_comp = get_dep_component_mut!(ref self, Access);
             if !access_comp.has_role(:role, :account) {
-                assert(account.is_non_zero(), ZERO_ADDRESS);
+                assert_with_err(account.is_non_zero(), AccessErrors::ZERO_ADDRESS);
                 access_comp.grant_role(:role, :account);
                 self.emit(event);
             }
@@ -304,7 +302,7 @@ pub(crate) mod RolesComponent {
         fn initialize(ref self: ComponentState<TContractState>, governance_admin: ContractAddress) {
             let mut access_comp = get_dep_component_mut!(ref self, Access);
             let un_initialized = access_comp.get_role_admin(role: GOVERNANCE_ADMIN).is_zero();
-            assert(un_initialized, ALREADY_INITIALIZED);
+            assert_with_err(un_initialized, AccessErrors::ALREADY_INITIALIZED);
             access_comp.initializer();
             access_comp._grant_role(role: GOVERNANCE_ADMIN, account: governance_admin);
             access_comp.set_role_admin(role: APP_GOVERNOR, admin_role: APP_ROLE_ADMIN);
@@ -320,24 +318,34 @@ pub(crate) mod RolesComponent {
         }
 
         fn only_app_governor(self: @ComponentState<TContractState>) {
-            assert(self.is_app_governor(get_caller_address()), ONLY_APP_GOVERNOR);
+            assert_with_err(
+                self.is_app_governor(get_caller_address()), AccessErrors::ONLY_APP_GOVERNOR,
+            );
         }
         fn only_operator(self: @ComponentState<TContractState>) {
-            assert(self.is_operator(get_caller_address()), ONLY_OPERATOR);
+            assert_with_err(self.is_operator(get_caller_address()), AccessErrors::ONLY_OPERATOR);
         }
         fn only_token_admin(self: @ComponentState<TContractState>) {
-            assert(self.is_token_admin(get_caller_address()), ONLY_TOKEN_ADMIN);
+            assert_with_err(
+                self.is_token_admin(get_caller_address()), AccessErrors::ONLY_TOKEN_ADMIN,
+            );
         }
         fn only_upgrade_governor(self: @ComponentState<TContractState>) {
-            assert(self.is_upgrade_governor(get_caller_address()), ONLY_UPGRADE_GOVERNOR);
+            assert_with_err(
+                self.is_upgrade_governor(get_caller_address()), AccessErrors::ONLY_UPGRADE_GOVERNOR,
+            );
         }
 
         fn only_security_admin(self: @ComponentState<TContractState>) {
-            assert(self.is_security_admin(get_caller_address()), ONLY_SECURITY_ADMIN);
+            assert_with_err(
+                self.is_security_admin(get_caller_address()), AccessErrors::ONLY_SECURITY_ADMIN,
+            );
         }
 
         fn only_security_agent(self: @ComponentState<TContractState>) {
-            assert(self.is_security_agent(get_caller_address()), ONLY_SECURITY_AGENT);
+            assert_with_err(
+                self.is_security_agent(get_caller_address()), AccessErrors::ONLY_SECURITY_AGENT,
+            );
         }
     }
 }

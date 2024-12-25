@@ -1,7 +1,8 @@
+use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
 use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;
-use staking::errors::{Error, OptionAuxTrait, assert_with_err};
+use staking::errors::Error;
 use staking::staking::interface::{StakerInfo, StakerPoolInfo};
 use staking::types::{Amount, Index};
 use starknet::ContractAddress;

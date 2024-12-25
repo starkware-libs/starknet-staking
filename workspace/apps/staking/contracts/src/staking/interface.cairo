@@ -1,5 +1,6 @@
+use contracts_commons::errors::OptionAuxTrait;
 use contracts_commons::types::time::{TimeDelta, Timestamp};
-use staking::errors::{Error, OptionAuxTrait};
+use staking::errors::Error;
 use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use staking::types::{Amount, Commission, Index};
 use starknet::{ClassHash, ContractAddress};

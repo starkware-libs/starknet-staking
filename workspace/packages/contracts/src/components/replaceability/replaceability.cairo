@@ -11,6 +11,7 @@ pub(crate) mod ReplaceabilityComponent {
     use contracts_commons::components::replaceability::interface::ImplementationReplaced;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::components::roles::RolesComponent::InternalTrait;
+    use contracts_commons::errors::assert_with_err;
     use core::num::traits::Zero;
     use core::poseidon;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -112,7 +113,7 @@ pub(crate) mod ReplaceabilityComponent {
             roles_comp.only_upgrade_governor();
 
             // Validate implementation is not finalized.
-            assert(!self.is_finalized(), ReplaceErrors::FINALIZED);
+            assert_with_err(!self.is_finalized(), ReplaceErrors::FINALIZED);
 
             let now = get_block_timestamp();
             let impl_activation_time = self.get_impl_activation_time(:implementation_data);
@@ -120,10 +121,12 @@ pub(crate) mod ReplaceabilityComponent {
 
             // Zero activation time means that this implementation & init vector combination
             // was not previously added.
-            assert(impl_activation_time.is_non_zero(), ReplaceErrors::UNKNOWN_IMPLEMENTATION);
+            assert_with_err(
+                impl_activation_time.is_non_zero(), ReplaceErrors::UNKNOWN_IMPLEMENTATION,
+            );
 
-            assert(impl_activation_time <= now, ReplaceErrors::NOT_ENABLED_YET);
-            assert(now <= impl_expiration_time, ReplaceErrors::IMPLEMENTATION_EXPIRED);
+            assert_with_err(impl_activation_time <= now, ReplaceErrors::NOT_ENABLED_YET);
+            assert_with_err(now <= impl_expiration_time, ReplaceErrors::IMPLEMENTATION_EXPIRED);
             // We emit now so that finalize emits last (if it does).
             self.emit(ImplementationReplaced { implementation_data });
 
@@ -147,14 +150,14 @@ pub(crate) mod ReplaceabilityComponent {
                         function_selector: EIC_INITIALIZE_SELECTOR,
                         calldata: calldata_wrapper.span(),
                     );
-                    assert(res.is_ok(), ReplaceErrors::EIC_LIB_CALL_FAILED);
+                    assert_with_err(res.is_ok(), ReplaceErrors::EIC_LIB_CALL_FAILED);
                 },
                 Option::None(()) => {},
             };
 
             // Replace the class hash.
             let result = replace_class_syscall(implementation_data.impl_hash);
-            assert(result.is_ok(), ReplaceErrors::REPLACE_CLASS_HASH_FAILED);
+            assert_with_err(result.is_ok(), ReplaceErrors::REPLACE_CLASS_HASH_FAILED);
 
             // Remove implementation data, as it was comsumed.
             self.set_impl_activation_time(:implementation_data, activation_time: 0);
