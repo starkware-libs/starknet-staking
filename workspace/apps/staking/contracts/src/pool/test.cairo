@@ -5,6 +5,8 @@ use constants::{COMMISSION, NON_POOL_MEMBER_ADDRESS, OTHER_REWARD_ADDRESS, STAKE
 use constants::{DUMMY_ADDRESS, STAKER_ADDRESS, STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS};
 use constants::{NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS};
 use constants::{OTHER_OPERATIONAL_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_UNCLAIMED_REWARDS};
+use contracts_commons::errors::Describable;
+use contracts_commons::test_utils::assert_panic_with_error;
 use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
 use contracts_commons::types::time::Time;
 use core::num::traits::zero::Zero;
@@ -22,7 +24,7 @@ use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{CheatSpan, cheat_caller_address};
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use staking::constants::{BASE_VALUE};
-use staking::errors::{Error, ErrorTrait};
+use staking::errors::Error;
 use staking::event_test_utils;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
@@ -40,7 +42,7 @@ use staking::test_utils::constants;
 use staking::types::Index;
 use staking::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
 use test_utils::{StakingInitConfig, deploy_mock_erc20_contract, initialize_pool_state};
-use test_utils::{approve, assert_panic_with_error, deploy_staking_contract, fund};
+use test_utils::{approve, deploy_staking_contract, fund};
 use test_utils::{cheat_reward_for_reward_supplier, general_contract_system_deployment};
 use test_utils::{create_rewards_for_pool_member, load_pool_member_info_from_map};
 use test_utils::{enter_delegation_pool_for_testing_using_dispatcher};
@@ -233,19 +235,19 @@ fn test_enter_delegation_pool_assertions() {
     // Catch STAKER_INACTIVE.
     snforge_std::store(pool_contract, selector!("final_staker_index"), array![true.into()].span());
     let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, :amount);
-    assert_panic_with_error(:result, expected_error: Error::STAKER_INACTIVE.message());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_INACTIVE.describe());
     snforge_std::store(pool_contract, selector!("final_staker_index"), array![false.into()].span());
 
     // Catch AMOUNT_IS_ZERO.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, amount: Zero::zero());
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.message());
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.describe());
 
     // Catch POOL_MEMBER_EXISTS.
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, :amount);
-    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_EXISTS.message());
+    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_EXISTS.describe());
 }
 
 #[test]
@@ -321,21 +323,21 @@ fn test_add_to_delegation_pool_assertions() {
     // Catch STAKER_INACTIVE.
     snforge_std::store(pool_contract, selector!("final_staker_index"), array![true.into()].span());
     let result = pool_safe_dispatcher.add_to_delegation_pool(:pool_member, :amount);
-    assert_panic_with_error(:result, expected_error: Error::STAKER_INACTIVE.message());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_INACTIVE.describe());
     snforge_std::store(pool_contract, selector!("final_staker_index"), array![false.into()].span());
 
     // Catch POOL_MEMBER_DOES_NOT_EXIST.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher
         .add_to_delegation_pool(pool_member: NON_POOL_MEMBER_ADDRESS(), :amount);
-    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.message());
+    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.describe());
 
     // Catch CALLER_CANNOT_ADD_TO_POOL.
     cheat_caller_address_once(
         contract_address: pool_contract, caller_address: NON_POOL_MEMBER_ADDRESS(),
     );
     let result = pool_safe_dispatcher.add_to_delegation_pool(:pool_member, :amount);
-    assert_panic_with_error(:result, expected_error: Error::CALLER_CANNOT_ADD_TO_POOL.message());
+    assert_panic_with_error(:result, expected_error: Error::CALLER_CANNOT_ADD_TO_POOL.describe());
 }
 
 #[test]
@@ -681,13 +683,13 @@ fn test_exit_delegation_pool_intent_assertions() {
         contract_address: pool_contract, caller_address: NON_POOL_MEMBER_ADDRESS(),
     );
     let result = pool_safe_dispatcher.exit_delegation_pool_intent(:amount);
-    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.message());
+    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.describe());
 
     // Catch AMOUNT_TOO_HIGH.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher
         .exit_delegation_pool_intent(amount: cfg.pool_member_info.amount + 1);
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.message());
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
 
     // Catch UNDELEGATE_IN_PROGRESS.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
@@ -695,7 +697,7 @@ fn test_exit_delegation_pool_intent_assertions() {
     snforge_std::store(pool_contract, selector!("final_staker_index"), array![true.into()].span());
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher.exit_delegation_pool_intent(:amount);
-    assert_panic_with_error(:result, expected_error: Error::UNDELEGATE_IN_PROGRESS.message());
+    assert_panic_with_error(:result, expected_error: Error::UNDELEGATE_IN_PROGRESS.describe());
 }
 
 #[test]
@@ -809,17 +811,17 @@ fn test_exit_delegation_pool_action_assertions() {
     // Catch POOL_MEMBER_DOES_NOT_EXIST.
     let result = pool_safe_dispatcher
         .exit_delegation_pool_action(pool_member: NON_POOL_MEMBER_ADDRESS());
-    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.message());
+    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.describe());
 
     // Catch MISSING_UNDELEGATE_INTENT.
     let result = pool_safe_dispatcher.exit_delegation_pool_action(:pool_member);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.message());
+    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.describe());
 
     // Catch INTENT_WINDOW_NOT_FINISHED.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     pool_dispatcher.exit_delegation_pool_intent(:amount);
     let result = pool_safe_dispatcher.exit_delegation_pool_action(:pool_member);
-    assert_panic_with_error(:result, expected_error: Error::INTENT_WINDOW_NOT_FINISHED.message());
+    assert_panic_with_error(:result, expected_error: Error::INTENT_WINDOW_NOT_FINISHED.describe());
 }
 
 #[test]
@@ -936,7 +938,7 @@ fn test_switch_delegation_pool_assertions() {
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
     let result = pool_safe_dispatcher
         .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: Zero::zero());
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.message());
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.describe());
 
     // Catch POOL_MEMBER_DOES_NOT_EXIST.
     cheat_caller_address_once(
@@ -944,13 +946,13 @@ fn test_switch_delegation_pool_assertions() {
     );
     let result = pool_safe_dispatcher
         .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: switch_amount);
-    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.message());
+    assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.describe());
 
     // Catch MISSING_UNDELEGATE_INTENT.
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
     let result = pool_safe_dispatcher
         .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: switch_amount);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.message());
+    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.describe());
 
     // Catch AMOUNT_TOO_HIGH.
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
@@ -960,7 +962,7 @@ fn test_switch_delegation_pool_assertions() {
         .switch_delegation_pool(
             to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: switch_amount + 1,
         );
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.message());
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
 }
 
 #[test]
@@ -1107,7 +1109,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     let result = pool_safe_dispatcher
         .enter_delegation_pool_from_staking_contract(amount: Zero::zero(), :index, :data);
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.message());
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.describe());
 
     // Catch CALLER_IS_NOT_STAKING_CONTRACT.
     cheat_caller_address_once(
@@ -1116,7 +1118,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     let result = pool_safe_dispatcher
         .enter_delegation_pool_from_staking_contract(amount: switch_amount, :index, :data);
     assert_panic_with_error(
-        :result, expected_error: Error::CALLER_IS_NOT_STAKING_CONTRACT.message(),
+        :result, expected_error: Error::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
     );
 
     // Catch SWITCH_POOL_DATA_DESERIALIZATION_FAILED.
@@ -1125,7 +1127,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     let result = pool_safe_dispatcher
         .enter_delegation_pool_from_staking_contract(amount: switch_amount, :index, :data);
     assert_panic_with_error(
-        :result, expected_error: Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED.message(),
+        :result, expected_error: Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED.describe(),
     );
 
     // Catch REWARD_ADDRESS_MISMATCH.
@@ -1137,7 +1139,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     let result = pool_safe_dispatcher
         .enter_delegation_pool_from_staking_contract(amount: switch_amount, :index, :data);
-    assert_panic_with_error(:result, expected_error: Error::REWARD_ADDRESS_MISMATCH.message());
+    assert_panic_with_error(:result, expected_error: Error::REWARD_ADDRESS_MISMATCH.describe());
 }
 
 #[test]

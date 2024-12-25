@@ -16,7 +16,6 @@ use contracts_commons::types::time::Timestamp;
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::byte_array::try_deserialize_bytearray_error;
 use snforge_std::test_address;
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use staking::constants::{BASE_VALUE, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
@@ -743,28 +742,6 @@ pub(crate) fn add_reward_for_reward_supplier(
         storage_address: selector!("unclaimed_rewards"),
         serialized_value: array![current_unclaimed_rewards + reward.into()].span(),
     );
-}
-
-pub(crate) fn assert_panic_with_error<T, +Drop<T>>(
-    result: Result<T, Array<felt252>>, expected_error: ByteArray,
-) {
-    match result {
-        Result::Ok(_) => panic!("Expected to fail with: {}", expected_error),
-        Result::Err(error_data) => assert_expected_error(
-            error_data: error_data.span(), expected_error: expected_error,
-        ),
-    };
-}
-
-pub(crate) fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArray) {
-    match try_deserialize_bytearray_error(error_data) {
-        Result::Ok(error) => assert_eq!(error, expected_error),
-        Result::Err(_) => panic!(
-            "Failed to deserialize error data: {:?}.\nExpect to panic with {}.",
-            error_data,
-            expected_error,
-        ),
-    }
 }
 
 pub(crate) fn load_staker_info_from_map(

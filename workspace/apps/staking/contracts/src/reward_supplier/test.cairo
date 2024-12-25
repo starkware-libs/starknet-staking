@@ -6,7 +6,9 @@ use RewardSupplier::CONTRACT_IDENTITY as reward_supplier_identity;
 use RewardSupplier::CONTRACT_VERSION as reward_supplier_version;
 use Staking::CONTRACT_IDENTITY as staking_identity;
 use Staking::CONTRACT_VERSION as staking_version;
+use contracts_commons::errors::Describable;
 use contracts_commons::math::ceil_of_division;
+use contracts_commons::test_utils::assert_panic_with_error;
 use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
 use contracts_commons::types::time::Time;
 use core::num::traits::{Sqrt, Zero};
@@ -17,7 +19,7 @@ use snforge_std::cheatcodes::message_to_l1::MessageToL1SpyAssertionsTrait;
 use snforge_std::cheatcodes::message_to_l1::{MessageToL1, spy_messages_to_l1};
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use staking::constants::STRK_IN_FRIS;
-use staking::errors::{Error, ErrorTrait};
+use staking::errors::Error;
 use staking::event_test_utils::assert_calculated_rewards_event;
 use staking::event_test_utils::{assert_mint_request_event, assert_number_of_events};
 use staking::minting_curve::minting_curve::MintingCurve;
@@ -33,7 +35,6 @@ use staking::test_utils;
 use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use staking::types::Amount;
 use staking::utils::compute_threshold;
-use test_utils::assert_panic_with_error;
 use test_utils::{StakingInitConfig, deploy_mock_erc20_contract, deploy_staking_contract};
 use test_utils::{deploy_minting_curve_contract, fund, general_contract_system_deployment};
 use test_utils::{initialize_reward_supplier_state_from_cfg, stake_for_testing_using_dispatcher};
@@ -384,7 +385,7 @@ fn test_claim_rewards_assertions() {
     );
     let result = reward_supplier_safe_dispatcher.claim_rewards(:amount);
     assert_panic_with_error(
-        :result, expected_error: Error::CALLER_IS_NOT_STAKING_CONTRACT.message(),
+        :result, expected_error: Error::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
     );
 
     // Catch AMOUNT_TOO_HIGH.
@@ -392,5 +393,5 @@ fn test_claim_rewards_assertions() {
     let amount = STRK_IN_FRIS + 1;
     cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
     let result = reward_supplier_safe_dispatcher.claim_rewards(:amount);
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.message());
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
 }
