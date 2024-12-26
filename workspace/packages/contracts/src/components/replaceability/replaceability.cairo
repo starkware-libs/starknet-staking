@@ -166,7 +166,7 @@ pub(crate) mod ReplaceabilityComponent {
     }
 
     #[generate_trait]
-    pub impl InternalReplaceability<
+    impl InternalReplaceability<
         TContractState, +HasComponent<TContractState>, +Drop<TContractState>,
     > of InternalReplaceableTrait<TContractState> {
         fn is_finalized(self: @ComponentState<TContractState>) -> bool {

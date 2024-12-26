@@ -211,7 +211,7 @@ pub mod RewardSupplier {
     }
 
     #[generate_trait]
-    pub impl InternalRewardSupplierFunctions of InternalRewardSupplierFunctionsTrait {
+    impl InternalRewardSupplierFunctions of InternalRewardSupplierFunctionsTrait {
         // Returns the reward since the last timestamp, and updates the last timestamp.
         fn update_timestamp_and_calculate_rewards(ref self: ContractState) -> Amount {
             // Receive yearly rewards from the minting curve contract.

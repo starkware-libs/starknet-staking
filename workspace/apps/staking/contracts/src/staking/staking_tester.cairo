@@ -779,7 +779,7 @@ pub(crate) mod StakingTester {
     }
 
     #[generate_trait]
-    pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+    pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         fn send_rewards(
             self: @ContractState,
             reward_address: ContractAddress,
