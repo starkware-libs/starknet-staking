@@ -76,14 +76,15 @@
     - [contract\_parameters](#contract_parameters-1)
     - [update\_rewards](#update_rewards-1)
   - [Events](#events-1)
-    - [New Staking Delegation Pool Member](#new-staking-delegation-pool-member)
-    - [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
+    - [Pool Member Balance Changed](#pool-member-balance-changed)
     - [Pool Member Exit Intent](#pool-member-exit-intent)
+    - [Pool Member Exit Action](#pool-member-exit-action)
     - [Final Index Set](#final-index-set)
     - [New Pool Member](#new-pool-member)
     - [Delete Pool Member](#delete-pool-member)
     - [Pool Member Reward Claimed](#pool-member-reward-claimed)
     - [Pool Member Reward Address Changed](#pool-member-reward-address-changed)
+    - [Switch Delegation Pool](#switch-delegation-pool)
 - [L2 Reward supplier contract](#l2-reward-supplier-contract)
   - [Functions](#functions-2)
     - [calculate\_staking\_rewards](#calculate_staking_rewards)
@@ -143,6 +144,13 @@
     - [RewardSupplierInfo](#rewardsupplierinfo)
     - [UndelegateIntentKey](#undelegateintentkey)
     - [UndelegateIntentValue](#undelegateintentvalue)
+    - [TimeStamp](#timestamp)
+    - [TimeDelta](#timedelta)
+- [Type aliases](#type-aliases)
+    - [Amount](#amount)
+    - [Commission](#commission)
+    - [Index](#index)
+    - [Inflation](#inflation)
 
 </details>
 
@@ -421,9 +429,9 @@ fn stake(
   ref self: TContractState,
   reward_address: ContractAddress,
   operational_address: ContractAddress,
-  amount: u128,
+  amount: Amount,
   pool_enabled: bool,
-  commission: u16
+  commission: Commission
 )
 ```
 #### description <!-- omit from toc -->
@@ -460,8 +468,8 @@ Only staker address.
 fn increase_stake(
     ref self: ContractState, 
     staker_address: ContractAddress, 
-    amount: u128
-) -> u128
+    amount: Amount
+) -> Amount
 ``` 
 #### description <!-- omit from toc -->
 Increase the amount staked for an existing staker.
@@ -485,7 +493,7 @@ Only the staker address or rewards address for which the change is requested for
 
 ### unstake_intent
 ```rust
-fn unstake_intent(ref self: ContractState) -> u64
+fn unstake_intent(ref self: ContractState) -> TimeStamp
 ```
 #### description <!-- omit from toc -->
 Inform of the intent to exit the stake. 
@@ -514,7 +522,7 @@ Only the staker address for which the operation is requested for.
 fn unstake_action(
   ref self: ContractState, 
   staker_address: ContractAddress
-) -> u128
+) -> Amount
 ```
 #### description <!-- omit from toc -->
 Executes the intent to exit the stake if enough time have passed.
@@ -550,7 +558,7 @@ Any address can execute.
 fn claim_rewards(
   ref self: ContractState, 
   staker_address: ContractAddress
-) -> u128
+) -> Amount
 ```
 #### description <!-- omit from toc -->
 Update rewards and transfer them to the reward address.
@@ -576,13 +584,13 @@ Only staker address or reward address can execute.
 fn add_stake_from_pool(
     ref self: ContractState, 
     staker_address: ContractAddress, 
-    amount: u128
-) -> u128
+    amount: Amount
+) -> Index
 ```
 #### description <!-- omit from toc -->
 Delegation pool contract's way to add funds to the staking pool.
 #### return <!-- omit from toc -->
-index: u128 - updated index
+[Index](#index) - updated index
 #### emits <!-- omit from toc -->
 1. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
@@ -609,8 +617,8 @@ fn remove_from_delegation_pool_intent(
     ref self: ContractState,
     staker_address: ContractAddress,
     identifier: felt252,
-    amount: u128,
-) -> u64
+    amount: Amount,
+) -> TimeStamp
 ```
 #### description <!-- omit from toc -->
 Inform the staker that an amount will be reduced from the delegation pool.
@@ -669,7 +677,7 @@ fn switch_staking_delegation_pool(
     ref self: ContractState,
     to_staker: ContractAddress,
     to_pool: ContractAddress,
-    switched_amount: u128,
+    switched_amount: Amount,
     data: Span<felt252>,
     identifier: felt252
 )
@@ -728,7 +736,7 @@ Only staker address.
 ```rust
 fn set_open_for_delegation(
   ref self: ContractState, 
-  commission: u16
+  commission: Commission
 ) -> ContractAddress
 ```
 #### description <!-- omit from toc -->
@@ -757,7 +765,7 @@ Only staker address.
 fn claim_delegation_pool_rewards(
     ref self: ContractState, 
     staker_address: ContractAddress
-) -> u64
+) -> Index
 ```
 #### description <!-- omit from toc -->
 Update rewards and transfer the delegation pool rewards to the delegation pool contract.
@@ -831,7 +839,7 @@ Return general parameters of the contract.
 
 ### get_total_stake
 ```rust
-get_total_stake(self: @ContractState) -> u128
+get_total_stake(self: @ContractState) -> Amount
 ```
 #### description <!-- omit from toc -->
 Return the total stake amount.
@@ -1034,49 +1042,50 @@ Only token admin.
 
 ## Events
 ### Stake Balance Changed
-| data                | type    | keyed |
-| ------------------- | ------- | ----- |
-| staker_address      | address | ✅     |
-| old_self_stake      | u128    | ❌     |
-| old_delegated_stake | u128    | ❌     |
-| new_self_stake      | u128    | ❌     |
-| new_delegated_stake | u128    | ❌     |
+| data                | type              | keyed |
+| ------------------- | ----------------- | ----- |
+| staker_address      | address           | ✅    |
+| old_self_stake      | [Amount](#amount) | ❌    |
+| old_delegated_stake | [Amount](#amount) | ❌    |
+| new_self_stake      | [Amount](#amount) | ❌    |
+| new_delegated_stake | [Amount](#amount) | ❌    |
 
 ### New Delegation Pool
-| data           | type    | keyed |
-| -------------- | ------- | ----- |
-| staker_address | address | ✅     |
-| pool_contract  | address | ✅     |
-| commission     | u16     | ❌     |
+| data           | type                      | keyed |
+| -------------- | ------------------------- | ----- |
+| staker_address | address                   | ✅    |
+| pool_contract  | address                   | ✅    |
+| commission     | [Commission](#commission) | ❌    |
 
 ### New Staker
-| data                | type    | keyed |
-| ------------------- | ------- | ----- |
-| staker_address      | address | ✅     |
-| reward_address      | address | ❌     |
-| operational_address | address | ❌     |
-| self_stake          | u128    | ❌     |
+| data                | type              | keyed |
+| ------------------- | ----------------- | ----- |
+| staker_address      | address           | ✅    |
+| reward_address      | address           | ❌    |
+| operational_address | address           | ❌    |
+| self_stake          | [Amount](#amount) | ❌    |
 
 ### Staker Exit intent
-| data    | type    | keyed |
-| ------- | ------- | ----- |
-| staker  | address | ✅     |
-| exit_at | time    | ❌     |
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| staker_address | address           | ✅    |
+| exit_timestamp | time              | ❌    |
+| amount         | [Amount](#amount) | ❌    |
 
 ### Rewards Supplied To Delegation Pool
-| data           | type    | keyed |
-| -------------- | ------- | ----- |
-| staker_address | address | ✅     |
-| pool_address   | address | ✅     |
-| amount         | u128    | ❌     |
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| staker_address | address           | ✅    |
+| pool_address   | address           | ✅    |
+| amount         | [Amount](#amount) | ❌    |
 
 ### Change Delegation Pool Intent
-| data              | type    | keyed |
-| ----------------- | ------- | ----- |
-| pool_contract     | address | ✅     |
-| identifier        | felt252 | ✅     |
-| old_intent_amount | address | ❌     |
-| new_intent_amount | u128    | ❌     |
+| data              | type              | keyed |
+| ----------------- | ----------------- | ----- |
+| pool_contract     | address           | ✅    |
+| identifier        | felt252           | ✅    |
+| old_intent_amount | [Amount](#amount) | ❌    |
+| new_intent_amount | [Amount](#amount) | ❌    |
 
 ### Delete Staker
 | data                | type            | keyed |
@@ -1087,11 +1096,11 @@ Only token admin.
 | pool_contract       | Option<address> | ❌     |
 
 ### Staker Reward Claimed
-| data           | type    | keyed |
-| -------------- | ------- | ----- |
-| staker_address | address | ✅     |
-| reward_address | address | ❌     |
-| amount         | u128    | ❌     |
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| staker_address | address           | ✅    |
+| reward_address | address           | ❌    |
+| amount         | [Amount](#amount) | ❌    |
 
 ### Staker Reward Address Changed
 | data           | type    | keyed |
@@ -1114,28 +1123,28 @@ Only token admin.
 | old_address    | address | ❌     |
 
 ### Remove From Delegation Pool Intent
-| data              | type    | keyed  |
-| ----------------- | ------- | ------ |
-| staker_address    | address | ✅     |
-| pool_contract     | address | ✅     |
-| identifier        | felt252 | ✅     |
-| old_intent_amount | u128    | ❌     |
-| new_intent_amount | u128    | ❌     |
+| data              | type              | keyed  |
+| ----------------- | ----------------- | ------ |
+| staker_address    | address           | ✅     |
+| pool_contract     | address           | ✅     |
+| identifier        | felt252           | ✅     |
+| old_intent_amount | [Amount](#amount) | ❌     |
+| new_intent_amount | [Amount](#amount) | ❌     |
 
 ### Remove From Delegation Pool Action
-| data              | type    | keyed  |
-| ----------------- | ------- | ------ |
-| pool_contract     | address | ✅     |
-| identifier        | felt252 | ✅     |
-| amount            | u128    | ❌     |
+| data              | type              | keyed  |
+| ----------------- | ----------------- | ------ |
+| pool_contract     | address           | ✅     |
+| identifier        | felt252           | ✅     |
+| amount            | [Amount](#amount) | ❌     |
 
 ### Global Index Updated
-| data                                  | type | keyed |
-| ------------------------------------- | ---- | ----- |
-| old_index                             | u64  | ❌     |
-| new_index                             | u64  | ❌     |
-| global_index_last_update_timestamp    | u64  | ❌     |
-| global_index_current_update_timestamp | u64  | ❌     |
+| data                                  | type                    | keyed |
+| ------------------------------------- | ----------------------- | ----- |
+| old_index                             | [Index](#index)         | ❌    |
+| new_index                             | [Index](#index)         | ❌    |
+| global_index_last_update_timestamp    | [TimeStamp](#timestamp) | ❌    |
+| global_index_current_update_timestamp | [TimeStamp](#timestamp) | ❌    |
 
 ### Paused
 | data    | type    | keyed |
@@ -1147,6 +1156,24 @@ Only token admin.
 | ------- | ------- | ----- |
 | account | address | ❌    |
 
+### Minimum Stake Changed
+| data          | type              | keyed |
+| ------------- | ----------------- | ----- |
+| old_min_stake | [Amount](#amount) | ❌    |
+| new_min_stake | [Amount](#amount) | ❌    |
+
+### Exit Wait Window Changed
+| data            | type                    | keyed |
+| --------------- | ----------------------- | ----- |
+| old_exit_window | [TimeDelta](#timedelta) | ❌    |
+| new_exit_window | [TimeDelta](#timedelta) | ❌    |
+
+### Reward Supplier Changed
+| data                | type            | keyed |
+| ------------------- | --------------- | ----- |
+| old_reward_supplier | ContractAddress | ❌    |
+| new_reward_supplier | ContractAddress | ❌    |
+
 # Delegation pool contract
 
 ## Functions
@@ -1155,7 +1182,7 @@ Only token admin.
 fn enter_delegation_pool(
     ref self: ContractState, 
     reward_address: ContractAddress, 
-    amount: u128
+    amount: Amount
 )
 ```
 #### description <!-- omit from toc -->
@@ -1189,8 +1216,8 @@ Only a non-listed pool member address.
 fn add_to_delegation_pool(
     ref self: ContractState, 
     pool_member: ContractAddress, 
-    amount: u128
-) -> u128
+    amount: Amount
+) -> Amount
 ```
 #### description <!-- omit from toc -->
 Increase the funds for an existing pool member.
@@ -1223,7 +1250,7 @@ Only the pool member address or rewards address for which the change is requeste
 ```rust
 fn exit_delegation_pool_intent(
   ref self: ContractState, 
-  amount: u128
+  amount: Amount
 )
 ```
 #### description <!-- omit from toc -->
@@ -1255,7 +1282,7 @@ Only the pool member address for which the operation is requested for.
 fn exit_delegation_pool_action(
     ref self: ContractState, 
     pool_member: ContractAddress
-) -> u128
+) -> Amount
 ```
 #### description <!-- omit from toc -->
 Executes the intent to exit the stake if enough time have passed. Transfers the funds back to the pool member.
@@ -1284,7 +1311,7 @@ Any address can execute.
 fn claim_rewards(
   ref self: ContractState, 
   pool_member: ContractAddress
-) -> u128
+) -> Amount
 ```
 #### description <!-- omit from toc -->
 Update rewards and transfer them to the reward address.
@@ -1311,8 +1338,8 @@ fn switch_delegation_pool(
     ref self: ContractState,
     to_staker: ContractAddress,
     to_pool: ContractAddress,
-    amount: u128
-) -> u128
+    amount: Amount
+) -> Amount
 ```
 #### description <!-- omit from toc -->
 Request the staking contract to move a pool member to another pool contract.
@@ -1345,8 +1372,8 @@ Only pool member can execute.
 ```rust
 fn enter_delegation_pool_from_staking_contract(
     ref self: ContractState, 
-    amount: u128, 
-    index: u64, 
+    amount: Amount, 
+    index: Index, 
     data: Span<felt252>
 )
 ```
@@ -1376,7 +1403,7 @@ Only staking contract can execute.
 ```rust
 fn set_final_staker_index(
   ref self: ContractState, 
-  final_staker_index: u64
+  final_staker_index: Index
 )
 ```
 #### description <!-- omit from toc -->
@@ -1466,7 +1493,7 @@ Return [PoolContractInfo](#poolcontractinfo) of the contract.
 fn update_rewards(
     ref self: ContractState, 
     ref pool_member_info: PoolMemberInfo, 
-    updated_index: u64
+    updated_index: Index
 )
 ```
 >**note:** internal logic
@@ -1483,39 +1510,39 @@ internal function.
 3. Update `unclaimed_rewards`.
 
 ## Events
-### New Staking Delegation Pool Member
-| data        | type    | keyed |
-| ----------- | ------- | ----- |
-| staker      | address | ✅     |
-| pool_member | address | ✅     |
-| amount      | u128    | ❌     |
-
-### Delegation Pool Member Balance Changed
-| data                | type    | keyed |
-| ------------------- | ------- | ----- |
-| pool_member         | address | ✅     |
-| old_delegated_stake | u128    | ❌     |
-| new_delegated_stake | u128    | ❌     |
+### Pool Member Balance Changed
+| data                | type              | keyed |
+| ------------------- | ----------------- | ----- |
+| pool_member         | address           | ✅    |
+| old_delegated_stake | [Amount](#amount) | ❌    |
+| new_delegated_stake | [Amount](#amount) | ❌    |
 
 ### Pool Member Exit Intent
-| data        | type    | keyed |
-| ----------- | ------- | ----- |
-| pool_member | address | ✅     |
-| exit_at     | time    | ❌     |
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| pool_member    | address           | ✅    |
+| exit_timestamp | time              | ❌    |
+| amount         | [Amount](#amount) | ❌    |
+
+### Pool Member Exit Action
+| data          | type              | keyed |
+| ------------- | ----------------- | ----- |
+| pool_member   | address           | ✅    |
+| unpool_amount | [Amount](#amount) | ❌    |
 
 ### Final Index Set
 | data               | type    | keyed |
 | ------------------ | ------- | ----- |
-| staker_address     | address | ✅     |
-| final_staker_index | u64     | ❌     |
+| staker_address     | address | ✅    |
+| final_staker_index | Index   | ❌    |
 
 ### New Pool Member
-| data           | type    | keyed |
-| -------------- | ------- | ----- |
-| pool_member    | address | ✅     |
-| staker_address | address | ✅     |
-| reward_address | address | ❌     |
-| amount         | u128    | ❌     |
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| pool_member    | address           | ✅    |
+| staker_address | address           | ✅    |
+| reward_address | address           | ❌    |
+| amount         | [Amount](#amount) | ❌    |
 
 ### Delete Pool Member
 | data           | type    | keyed |
@@ -1524,11 +1551,11 @@ internal function.
 | reward_address | address | ❌     |
 
 ### Pool Member Reward Claimed
-| data           | type    | keyed |
-| -------------- | ------- | ----- |
-| pool_member    | address | ✅     |
-| reward_address | address | ✅     |
-| amount         | u128    | ❌     |
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| pool_member    | address           | ✅    |
+| reward_address | address           | ✅    |
+| amount         | [Amount](#amount) | ❌    |
 
 ### Pool Member Reward Address Changed
 | data           | type    | keyed |
@@ -1537,18 +1564,25 @@ internal function.
 | new_address    | address | ❌    |
 | old_address    | address | ❌    |
 
+### Switch Delegation Pool
+| data                | type              | keyed |
+| ------------------- | ----------------- | ----- |
+| pool_member         | address           | ✅    |
+| new_delegation_pool | address           | ✅    |
+| amount              | [Amount](#amount) | ❌    |
+
 # L2 Reward supplier contract
 
 ## Functions
 ### calculate_staking_rewards
 ```rust
-fn calculate_staking_rewards(ref self: TContractState) -> u128
+fn calculate_staking_rewards(ref self: TContractState) -> Amount
 ```
 #### description <!-- omit from toc -->
 Calculate the total amount of rewards owed to the stakers (based on total stake), since the previous
 time it was calculated.
 #### return <!-- omit from toc -->
-rewards: u128 - the rewards owed to stakers, in FRI.
+rewards: [Amount](#amount) - the rewards owed to stakers, in FRI.
 #### emits <!-- omit from toc -->
 [Mint Request](#mint-request)
 #### errors <!-- omit from toc -->
@@ -1562,7 +1596,7 @@ Only staking contract.
 
 ### claim_rewards
 ```rust
-fn claim_rewards(ref self: TContractState, amount: u128)
+fn claim_rewards(ref self: TContractState, amount: Amount)
 ```
 #### description <!-- omit from toc -->
 Transfers `amount` FRI to staking contract
@@ -1618,17 +1652,17 @@ variable is set to 0.
 
 ## Events
 ### Mint Request
-| data         | type | keyed |
-| ------------ | ---- | ----- |
-| total_amount | u128 | ❌    |
-| num_msgs     | u128 | ❌    |
+| data         | type              | keyed |
+| ------------ | ----------------- | ----- |
+| total_amount | [Amount](#amount) | ❌    |
+| num_msgs     | u128              | ❌    |
 
 # Minting Curve Contract
 
 ## Functions
 ### yearly_mint
 ```rust
-fn yearly_mint(self: @TContractState) -> u128
+fn yearly_mint(self: @TContractState) -> Amount
 ```
 #### description <!-- omit from toc -->
 Return the amount to be minted in a year given the current total stake in the staking contract.
@@ -1658,10 +1692,16 @@ Only token admin.
 
 ## Events
 ### Total Supply Changed
-| data                 | type | keyed |
-| -------------------- | ---- | ----- |
-| old_total_supply     | u128 | ❌    |
-| new_total_supply     | u128 | ❌    |
+| data             | type              | keyed |
+| ---------------- | ----------------- | ----- |
+| old_total_supply | [Amount](#amount) | ❌    |
+| new_total_supply | [Amount](#amount) | ❌    |
+
+### Minting Cap Changed
+| data  | type                    | keyed |
+| ----- | ----------------------- | ----- |
+| old_c | [Inflation](#inflation) | ❌    |
+| new_c | [Inflation](#inflation) | ❌    |
 
 # Errors
 ### STAKER_EXISTS
@@ -1768,67 +1808,91 @@ Only token admin.
 
 # Structs
 ### StakerPoolInfo
-| name              | type    |
-| ----------------- | ------- |
-| pool_contract  | address |
-| amount            | u128    |
-| unclaimed_rewards | u128    |
-| commission        | u16     |
+| name              | type                      |
+| ----------------- | ------------------------- |
+| pool_contract     | address                   |
+| amount            | [Amount](#amount)         |
+| unclaimed_rewards | [Amount](#amount)         |
+| commission        | [Commission](#commission) |
 
 ### StakerInfo
-| name                  | type                   |
-| --------------------- | ---------------------- |
-| reward_address        | address                |
-| operational_address   | address                |
-| unstake_time          | Option<u64>            |
-| amount_own            | u128                   |
-| index                 | u64                    |
-| unclaimed_rewards_own | u128                   |
-| pool_info             | Option<StakerPoolInfo> |
+| name                  | type                                      |
+| --------------------- | ----------------------------------------- |
+| reward_address        | address                                   |
+| operational_address   | address                                   |
+| unstake_time          | Option<[TimeStamp](#timestamp)>           |
+| amount_own            | [Amount](#amount)                         |
+| index                 | [Index](#index)                           |
+| unclaimed_rewards_own | [Amount](#amount)                         |
+| pool_info             | Option<[StakerPoolInfo](#stakerpoolinfo)> |
 
 ### StakingContractInfo
-| name                     | type      |
-| ------------------------ | --------- |
-| min_stake                | u128      |
-| token_address            | address   |
-| global_index             | u64       |
-| pool_contract_class_hash | ClassHash |
-| reward_supplier          | address   |
+| name                     | type              |
+| ------------------------ | ----------------- |
+| min_stake                | [Amount](#amount) |
+| token_address            | address           |
+| global_index             | [Index](#index)   |
+| pool_contract_class_hash | ClassHash         |
+| reward_supplier          | address           |
 
 ### PoolMemberInfo
-| name              | type        |
-| ----------------- | ----------- |
-| reward_address    | address     |
-| amount            | u128        |
-| index             | u64         |
-| unclaimed_rewards | u128        |
-| unpool_amount     | u128        |
-| unpool_time       | Option<u64> |
+| name              | type                            |
+| ----------------- | ------------------------------- |
+| reward_address    | address                         |
+| amount            | [Amount](#amount)               |
+| index             | [Index](#index)                 |
+| unclaimed_rewards | [Amount](#amount)               |
+| commission        | [Commission](#commission)       |
+| unpool_amount     | [Amount](#amount)               |
+| unpool_time       | Option<[TimeStamp](#timestamp)> |
 
 ### PoolContractInfo
-| name               | type        |
-| ------------------ | ----------- |
-| staker_address     | address     |
-| final_staker_index | Option<u64> |
-| staking_contract   | address     |
-| token_address      | address     |
-| commission         | u16         |
+| name               | type                      |
+| ------------------ | ------------------------- |
+| staker_address     | address                   |
+| final_staker_index | Option<[Index](#index)>   |
+| staking_contract   | address                   |
+| token_address      | address                   |
+| commission         | [Commission](#commission) |
 
 ### RewardSupplierInfo
-| name                          | type      |
-| ----------------------------- | --------- |
-| last_timestamp                | u64       |
-| unclaimed_rewards             | u128      |
-| l1_pending_requested_amount   | u128      |
+| name                        | type                    |
+| --------------------------- | ----------------------- |
+| last_timestamp              | [TimeStamp](#timestamp) |
+| unclaimed_rewards           | [Amount](#amount)       |
+| l1_pending_requested_amount | [Amount](#amount)       |
 
 ### UndelegateIntentKey
-| name                          | type      |
-| ----------------------------- | --------- |
-| pool_contract                 | address       |
-| identifier                    | felt252      |
+| name          | type      |
+| ------------- | --------- |
+| pool_contract | address   |
+| identifier    | felt252   |
 
 ### UndelegateIntentValue
-| name                          | type      |
-| ----------------------------- | --------- |
-| unpool_time                   | u64       |
-| amount                        | u128      |
+| name        | type                    |
+| ----------- | ----------------------- |
+| unpool_time | [TimeStamp](#timestamp) |
+| amount      | [Amount](#amount)       |
+
+### TimeStamp
+| name    | type  |
+| ------- | ----- |
+| seconds | u64   |
+
+### TimeDelta
+| name    | type  |
+| ------- | ----- |
+| seconds | u64   |
+
+# Type aliases
+### Amount
+Amount: u128
+
+### Commission
+Commission: u16
+
+### Index
+Index: u128
+
+### Inflation
+Inflation: u16
