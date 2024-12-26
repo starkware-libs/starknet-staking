@@ -182,6 +182,7 @@ pub mod Pool {
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
                 Error::CALLER_CANNOT_ADD_TO_POOL,
             );
+            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
 
             // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
