@@ -20,6 +20,15 @@ pub(crate) mod Constants {
     pub(crate) fn APP_ROLE_ADMIN() -> ContractAddress {
         contract_address_const::<'APP_ROLE_ADMIN'>()
     }
+    pub(crate) fn APP_GOVERNOR() -> ContractAddress {
+        contract_address_const::<'APP_GOVERNOR'>()
+    }
+    pub(crate) fn OPERATOR() -> ContractAddress {
+        contract_address_const::<'OPERATOR'>()
+    }
+    pub(crate) fn TOKEN_ADMIN() -> ContractAddress {
+        contract_address_const::<'TOKEN_ADMIN'>()
+    }
     pub(crate) fn UPGRADE_GOVERNOR() -> ContractAddress {
         contract_address_const::<'UPGRADE_GOVERNOR'>()
     }
