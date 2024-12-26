@@ -5,6 +5,10 @@ pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
 
+pub fn have_same_sign(a: i128, b: i128) -> bool {
+    (a < 0) == (b < 0)
+}
+
 pub fn mul_wide_and_div<
     T,
     impl TWide: WideMul<T, T>,
@@ -167,16 +171,23 @@ pub(crate) impl AbsImplI128 of Abs<i128, u128> {
     }
 }
 
-#[derive(Copy, Drop, Hash, Serde)]
+#[derive(Copy, Debug, Drop, Hash, Serde)]
 pub struct Fraction {
     numerator: i128,
     denominator: u128,
 }
 
-#[generate_trait]
-pub impl FractionlImpl of FractionTrait {
-    fn new(numerator: i128, denominator: u128) -> Fraction {
+pub trait FractionTrait<N, D> {
+    fn new(numerator: N, denominator: D) -> Fraction;
+}
+
+pub impl FractionlImpl<
+    N, +Into<N, i128>, +Drop<N>, D, +Into<D, u128>, +Drop<D>,
+> of FractionTrait<N, D> {
+    fn new(numerator: N, denominator: D) -> Fraction {
         /// TODO : consider  reducing a fraction to its simplest form.
+        let numerator: i128 = numerator.into();
+        let denominator: u128 = denominator.into();
         assert(denominator != 0, 'Denominator must be non-zero');
         Fraction { numerator, denominator }
     }
@@ -434,8 +445,32 @@ mod tests {
 
 
     #[test]
+    // This test verifies that the constructor functions correctly with various types of numerators
+    // and denominators.
+    // It ensures that the constructor does not panic when provided with valid arguments.
+    fn fraction_constructor_test() {
+        // Signed numerator and unsigned denominator.
+        assert_eq!(
+            FractionTrait::new(numerator: (-317_i32), denominator: 54_u128),
+            FractionTrait::new(numerator: (-634_i32), denominator: 108_u128),
+            "Fraction equality failed",
+        );
+        // Both are unsigned, from different types.
+        assert_eq!(
+            FractionTrait::new(numerator: 1_i8, denominator: 32_u64),
+            FractionTrait::new(numerator: 4_i16, denominator: 128_u128),
+            "Fraction equality failed",
+        );
+        assert_eq!(
+            FractionTrait::new(numerator: 5_u8, denominator: 2_u8),
+            FractionTrait::new(numerator: 10_u64, denominator: 4_u8),
+            "Fraction equality failed",
+        );
+    }
+
+    #[test]
     fn fraction_neg_test() {
-        let f1 = FractionTrait::new(numerator: 1, denominator: 2);
+        let f1 = FractionTrait::new(numerator: 1_u8, denominator: 2_u8);
         let f2 = -f1;
         assert!(f2.numerator == -1 && f2.denominator == 2, "Fraction negation failed");
     }
@@ -443,8 +478,8 @@ mod tests {
 
     #[test]
     fn fraction_eq_test() {
-        let f1 = FractionTrait::new(numerator: 1, denominator: 2);
-        let f2 = FractionTrait::new(numerator: 6, denominator: 12);
+        let f1 = FractionTrait::new(numerator: 1_u8, denominator: 2_u8);
+        let f2 = FractionTrait::new(numerator: 6_u8, denominator: 12_u8);
         assert!(f1 == f2, "Fraction equality failed");
     }
 
@@ -453,7 +488,7 @@ mod tests {
         let f1 = Zero::<Fraction>::zero();
         assert!(f1.numerator == 0 && f1.denominator == 1, "Fraction zero failed");
         assert!(f1.is_zero(), "Fraction is_zero failed");
-        let f2 = FractionTrait::new(numerator: 1, denominator: 2);
+        let f2 = FractionTrait::new(numerator: 1_u8, denominator: 2_u8);
         assert!(f2.is_non_zero(), "Fraction is_non_zero failed");
     }
 
@@ -462,22 +497,22 @@ mod tests {
         let f1 = One::<Fraction>::one();
         assert!(f1.numerator == 1 && f1.denominator == 1, "Fraction one failed");
         assert!(f1.is_one(), "Fraction is_one failed");
-        let f2 = FractionTrait::new(numerator: 1, denominator: 2);
+        let f2 = FractionTrait::new(numerator: 1_u8, denominator: 2_u8);
         assert!(f2.is_non_one(), "Fraction is_non_one failed");
-        let f3 = FractionTrait::new(numerator: 30, denominator: 30);
+        let f3 = FractionTrait::new(numerator: 30_u8, denominator: 30_u8);
         assert!(f3.is_one(), "Fraction is_one failed");
     }
 
     #[test]
     #[should_panic(expected: 'Denominator must be non-zero')]
     fn fraction_new_test_panic() {
-        FractionTrait::new(numerator: 1, denominator: 0);
+        FractionTrait::new(numerator: 1_u8, denominator: 0_u8);
     }
 
     #[test]
     fn fraction_parial_ord_test() {
-        let f1 = FractionTrait::new(numerator: 1, denominator: 2);
-        let f2 = FractionTrait::new(numerator: 1, denominator: 3);
+        let f1 = FractionTrait::new(numerator: 1_u8, denominator: 2_u8);
+        let f2 = FractionTrait::new(numerator: 1_u8, denominator: 3_u8);
         assert!(f1 > f2, "Fraction partial ord failed");
         assert!(-f2 > -f1, "Fraction partial ord failed");
         assert!(f1 >= f2, "Fraction partial ord failed");
