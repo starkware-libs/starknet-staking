@@ -13,8 +13,9 @@ pub mod Pool {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::errors::Error;
+    use staking::pool::interface::PoolMemberInfo;
     use staking::pool::interface::{Events, IPool, PoolContractInfo};
-    use staking::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
+    use staking::pool::objects::{InternalPoolMemberInfo, SwitchPoolData};
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait, StakerInfo};
     use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
     use staking::types::{Amount, Commission, Index};
@@ -37,12 +38,6 @@ pub mod Pool {
 
     #[abi(embed_v0)]
     impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
-
-    #[derive(Debug, Drop, Serde, Copy)]
-    pub struct SwitchPoolData {
-        pub pool_member: ContractAddress,
-        pub reward_address: ContractAddress,
-    }
 
     #[storage]
     struct Storage {

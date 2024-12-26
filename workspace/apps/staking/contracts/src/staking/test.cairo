@@ -40,7 +40,7 @@ use staking::constants::{BASE_VALUE, MAX_EXIT_WAIT_WINDOW};
 use staking::errors::Error;
 use staking::event_test_utils;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
-use staking::pool::pool::Pool::SwitchPoolData;
+use staking::pool::objects::SwitchPoolData;
 use staking::reward_supplier::interface::IRewardSupplierDispatcher;
 use staking::staking::interface::StakingContractInfo;
 use staking::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
