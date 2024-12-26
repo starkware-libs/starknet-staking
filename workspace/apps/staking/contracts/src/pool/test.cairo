@@ -1,6 +1,6 @@
 use Pool::CONTRACT_IDENTITY as pool_identity;
 use Pool::CONTRACT_VERSION as pool_version;
-use Pool::{InternalPoolFunctionsTrait, SwitchPoolData};
+use Pool::InternalPoolFunctionsTrait;
 use constants::{COMMISSION, NON_POOL_MEMBER_ADDRESS, OTHER_REWARD_ADDRESS, STAKER_FINAL_INDEX};
 use constants::{DUMMY_ADDRESS, STAKER_ADDRESS, STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS};
 use constants::{NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS};
@@ -26,11 +26,12 @@ use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use staking::constants::{BASE_VALUE};
 use staking::errors::Error;
 use staking::event_test_utils;
+use staking::pool::interface::PoolMemberInfo;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
     PoolContractInfo,
 };
-use staking::pool::interface::{InternalPoolMemberInfo, PoolMemberInfo};
+use staking::pool::objects::{InternalPoolMemberInfo, SwitchPoolData};
 use staking::pool::pool::Pool;
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
