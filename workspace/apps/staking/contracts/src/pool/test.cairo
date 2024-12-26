@@ -338,6 +338,11 @@ fn test_add_to_delegation_pool_assertions() {
     );
     let result = pool_safe_dispatcher.add_to_delegation_pool(:pool_member, :amount);
     assert_panic_with_error(:result, expected_error: Error::CALLER_CANNOT_ADD_TO_POOL.describe());
+
+    // Catch AMOUNT_IS_ZERO.
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
+    let result = pool_safe_dispatcher.add_to_delegation_pool(:pool_member, amount: Zero::zero());
+    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.describe());
 }
 
 #[test]
