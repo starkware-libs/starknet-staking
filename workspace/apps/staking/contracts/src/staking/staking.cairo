@@ -5,7 +5,7 @@ pub mod Staking {
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
     use contracts_commons::interfaces::identity::Identity;
-    use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
+    use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;

@@ -8,7 +8,7 @@ use constants::{OTHER_OPERATIONAL_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_UNCL
 use contracts_commons::errors::Describable;
 use contracts_commons::test_utils::assert_panic_with_error;
 use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
-use contracts_commons::types::time::Time;
+use contracts_commons::types::time::time::Time;
 use core::num::traits::zero::Zero;
 use core::option::OptionTrait;
 use core::serde::Serde;

@@ -13,7 +13,7 @@ use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDi
 use contracts_commons::constants::{DAY};
 use contracts_commons::errors::Describable;
 use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
-use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
+use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::Zero;
 use core::option::OptionTrait;
 use event_test_utils::assert_change_delegation_pool_intent_event;

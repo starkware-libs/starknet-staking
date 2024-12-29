@@ -3,7 +3,7 @@ use contracts_commons::test_utils::set_account_as_token_admin;
 use contracts_commons::test_utils::{TokenConfig, TokenState, TokenTrait, cheat_caller_address_once};
 use contracts_commons::test_utils::{set_account_as_app_role_admin, set_account_as_security_agent};
 use contracts_commons::test_utils::{set_account_as_security_admin, set_account_as_upgrade_governor};
-use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
+use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use snforge_std::start_cheat_block_timestamp_global;

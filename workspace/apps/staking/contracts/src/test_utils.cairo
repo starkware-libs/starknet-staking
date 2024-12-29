@@ -12,7 +12,7 @@ use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::cheat_caller_address_once;
 use contracts_commons::test_utils::{set_account_as_app_role_admin, set_account_as_security_agent};
 use contracts_commons::test_utils::{set_account_as_security_admin, set_account_as_token_admin};
-use contracts_commons::types::time::Timestamp;
+use contracts_commons::types::time::time::Timestamp;
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};

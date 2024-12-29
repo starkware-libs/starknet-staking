@@ -1,4 +1,4 @@
-use contracts_commons::types::time::Timestamp;
+use contracts_commons::types::time::time::Timestamp;
 use staking::types::{Amount, Commission, Index};
 use starknet::ContractAddress;
 
@@ -35,7 +35,7 @@ pub trait IPool<TContractState> {
 }
 
 pub mod Events {
-    use contracts_commons::types::time::Timestamp;
+    use contracts_commons::types::time::time::Timestamp;
     use staking::types::{Amount, Index};
     use starknet::ContractAddress;
 
