@@ -1,4 +1,4 @@
-use contracts_commons::types::time::Timestamp;
+use contracts_commons::types::time::time::Timestamp;
 use staking::pool::interface::PoolMemberInfo;
 use staking::types::{Amount, Commission, Index};
 use starknet::ContractAddress;

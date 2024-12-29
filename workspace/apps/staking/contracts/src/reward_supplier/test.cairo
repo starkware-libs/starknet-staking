@@ -10,7 +10,7 @@ use contracts_commons::errors::Describable;
 use contracts_commons::math::ceil_of_division;
 use contracts_commons::test_utils::assert_panic_with_error;
 use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
-use contracts_commons::types::time::Time;
+use contracts_commons::types::time::time::Time;
 use core::num::traits::{Sqrt, Zero};
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};

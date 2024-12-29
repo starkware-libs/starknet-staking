@@ -6,7 +6,7 @@ pub mod RewardSupplier {
     use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::math::ceil_of_division;
-    use contracts_commons::types::time::{Time, Timestamp};
+    use contracts_commons::types::time::time::{Time, Timestamp};
     use core::num::traits::Zero;
     use core::traits::TryInto;
     use openzeppelin::access::accesscontrol::AccessControlComponent;

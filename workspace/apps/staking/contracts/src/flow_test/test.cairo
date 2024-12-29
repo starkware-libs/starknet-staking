@@ -1,6 +1,6 @@
 use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::{TokenTrait};
-use contracts_commons::types::time::Time;
+use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use flow_test_utils::{DelegatorTrait};
 use flow_test_utils::{RewardSupplierTrait, StakerTrait, StakingTrait, SystemTrait};

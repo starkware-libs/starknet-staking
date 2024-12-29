@@ -1,5 +1,5 @@
 use contracts_commons::errors::OptionAuxTrait;
-use contracts_commons::types::time::{TimeDelta, Timestamp};
+use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use staking::errors::Error;
 use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use staking::types::{Amount, Commission, Index};
@@ -147,7 +147,7 @@ pub trait IStakingConfig<TContractState> {
 }
 
 pub mod Events {
-    use contracts_commons::types::time::Timestamp;
+    use contracts_commons::types::time::time::Timestamp;
     use staking::types::{Amount, Commission, Index};
     use starknet::ContractAddress;
     #[derive(Drop, starknet::Event)]
@@ -300,7 +300,7 @@ pub mod PauseEvents {
 }
 
 pub mod ConfigEvents {
-    use contracts_commons::types::time::TimeDelta;
+    use contracts_commons::types::time::time::TimeDelta;
     use staking::types::Amount;
     use starknet::ContractAddress;
     #[derive(Drop, starknet::Event)]

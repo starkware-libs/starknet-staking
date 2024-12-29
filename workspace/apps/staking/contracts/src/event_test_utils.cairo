@@ -1,4 +1,4 @@
-use contracts_commons::types::time::{TimeDelta, Timestamp};
+use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use snforge_std::cheatcodes::events::{Event, EventSpy, EventSpyTrait, Events, is_emitted};
 use staking::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
 use staking::minting_curve::minting_curve::MintingCurve;

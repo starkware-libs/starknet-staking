@@ -1,5 +1,5 @@
 use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
-use contracts_commons::types::time::{Time, TimeDelta, Timestamp};
+use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;
 use staking::errors::Error;
@@ -89,7 +89,7 @@ pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
 
 #[cfg(test)]
 mod test_undelegate_intent {
-    use contracts_commons::types::time::Timestamp;
+    use contracts_commons::types::time::time::Timestamp;
     use core::num::traits::zero::Zero;
     use super::{UndelegateIntentValue, UndelegateIntentValueTrait};
 
@@ -150,7 +150,7 @@ mod test_undelegate_intent {
 
 #[cfg(test)]
 mod test_internal_staker_info {
-    use contracts_commons::types::time::Time;
+    use contracts_commons::types::time::time::Time;
     use core::num::traits::zero::Zero;
     use snforge_std::start_cheat_block_timestamp_global;
     use staking::constants::DEFAULT_EXIT_WAIT_WINDOW;
