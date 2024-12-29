@@ -141,7 +141,7 @@ pub struct TokenState {
 
 #[generate_trait]
 pub impl TokenImpl of TokenTrait {
-    fn deploy(self: TokenConfig) -> TokenState {
+    fn deploy(self: @TokenConfig) -> TokenState {
         let mut calldata = ArrayTrait::new();
         self.name.serialize(ref calldata);
         self.symbol.serialize(ref calldata);
@@ -149,7 +149,7 @@ pub impl TokenImpl of TokenTrait {
         self.owner.serialize(ref calldata);
         let token_contract = snforge_std::declare("DualCaseERC20Mock").unwrap().contract_class();
         let (address, _) = token_contract.deploy(@calldata).unwrap();
-        TokenState { address, owner: self.owner }
+        TokenState { address, owner: *self.owner }
     }
 
     fn fund(self: TokenState, recipient: ContractAddress, amount: u128) {
