@@ -5,7 +5,7 @@ pub const MAX_U64: u64 = 18446744073709551615;
 pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
 
-pub fn have_same_sign(a: i128, b: i128) -> bool {
+pub fn have_same_sign(a: i64, b: i64) -> bool {
     (a < 0) == (b < 0)
 }
 
