@@ -177,12 +177,9 @@ pub struct Fraction {
     denominator: u128,
 }
 
-pub trait FractionTrait<N, D> {
-    fn new(numerator: N, denominator: D) -> Fraction;
-}
-
+#[generate_trait]
 pub impl FractionlImpl<
-    N, +Into<N, i128>, +Drop<N>, D, +Into<D, u128>, +Drop<D>,
+    N, D, +Into<N, i128>, +Drop<N>, +Into<D, u128>, +Drop<D>,
 > of FractionTrait<N, D> {
     fn new(numerator: N, denominator: D) -> Fraction {
         /// TODO : consider  reducing a fraction to its simplest form.
