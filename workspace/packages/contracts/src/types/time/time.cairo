@@ -1,9 +1,14 @@
 use contracts_commons::constants::{DAY, WEEK};
+use contracts_commons::errors::{assert_with_err};
+use contracts_commons::types::time::errors::TimeErrors;
+use core::num::traits::Bounded;
 use core::traits::Into;
+
+pub type Seconds = u64;
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct TimeDelta {
-    pub seconds: u64,
+    pub seconds: Seconds,
 }
 impl TimeDeltaZero of core::num::traits::Zero<TimeDelta> {
     fn zero() -> TimeDelta {
@@ -18,16 +23,21 @@ impl TimeDeltaZero of core::num::traits::Zero<TimeDelta> {
 }
 impl TimeDeltaAdd of Add<TimeDelta> {
     fn add(lhs: TimeDelta, rhs: TimeDelta) -> TimeDelta {
+        assert_with_err(
+            (Bounded::<Seconds>::MAX - lhs.seconds) >= rhs.seconds,
+            TimeErrors::TIMEDELTA_ADD_OVERFLOW,
+        );
         TimeDelta { seconds: lhs.seconds + rhs.seconds }
     }
 }
 impl TimeDeltaSub of Sub<TimeDelta> {
     fn sub(lhs: TimeDelta, rhs: TimeDelta) -> TimeDelta {
+        assert_with_err(lhs.seconds >= rhs.seconds, TimeErrors::TIMEDELTA_SUB_UNDERFLOW);
         TimeDelta { seconds: lhs.seconds - rhs.seconds }
     }
 }
-impl TimeDeltaIntoU64 of Into<TimeDelta, u64> {
-    fn into(self: TimeDelta) -> u64 {
+impl TimeDeltaIntoSeconds of Into<TimeDelta, Seconds> {
+    fn into(self: TimeDelta) -> Seconds {
         self.seconds
     }
 }
@@ -43,7 +53,7 @@ impl TimeDeltaPartialOrd of PartialOrd<TimeDelta> {
 
 #[derive(Debug, PartialEq, Drop, Hash, Serde, Copy, starknet::Store)]
 pub struct Timestamp {
-    pub seconds: u64,
+    pub seconds: Seconds,
 }
 impl TimeStampZero of core::num::traits::Zero<Timestamp> {
     fn zero() -> Timestamp nopanic {
@@ -58,6 +68,10 @@ impl TimeStampZero of core::num::traits::Zero<Timestamp> {
 }
 impl TimeAddAssign of core::ops::AddAssign<Timestamp, TimeDelta> {
     fn add_assign(ref self: Timestamp, rhs: TimeDelta) {
+        assert_with_err(
+            (Bounded::<Seconds>::MAX - self.seconds) >= rhs.seconds,
+            TimeErrors::TIMESTAMP_ADD_OVERFLOW,
+        );
         self.seconds += rhs.seconds;
     }
 }
@@ -66,8 +80,8 @@ impl TimeStampPartialOrd of PartialOrd<Timestamp> {
         lhs.seconds < rhs.seconds
     }
 }
-impl TimeStampInto of Into<Timestamp, u64> {
-    fn into(self: Timestamp) -> u64 nopanic {
+impl TimeStampIntoSeconds of Into<Timestamp, Seconds> {
+    fn into(self: Timestamp) -> Seconds nopanic {
         self.seconds
     }
 }
@@ -78,9 +92,19 @@ pub impl TimeImpl of Time {
         TimeDelta { seconds: count }
     }
     fn days(count: u64) -> TimeDelta {
+        let count_u128: u128 = count.into();
+        assert_with_err(
+            (count_u128 * DAY.into()) <= Bounded::<Seconds>::MAX.into(),
+            TimeErrors::TIMEDELTA_DAYS_OVERFLOW,
+        );
         Self::seconds(count: count * DAY)
     }
     fn weeks(count: u64) -> TimeDelta {
+        let count_u128: u128 = count.into();
+        assert_with_err(
+            (count_u128 * WEEK.into()) <= Bounded::<Seconds>::MAX.into(),
+            TimeErrors::TIMEDELTA_WEEKS_OVERFLOW,
+        );
         Self::seconds(count: count * WEEK)
     }
     fn now() -> Timestamp {
@@ -92,9 +116,11 @@ pub impl TimeImpl of Time {
         value
     }
     fn sub(self: Timestamp, other: Timestamp) -> TimeDelta {
+        assert_with_err(self.seconds >= other.seconds, TimeErrors::TIMESTAMP_SUB_UNDERFLOW);
         TimeDelta { seconds: self.seconds - other.seconds }
     }
     fn div(self: TimeDelta, divider: u64) -> TimeDelta {
+        assert_with_err(divider != 0, TimeErrors::TIMEDELTA_DIV_BY_ZERO);
         TimeDelta { seconds: self.seconds / divider }
     }
 }
@@ -105,7 +131,7 @@ mod tests {
     use contracts_commons::constants::{DAY, WEEK};
     use core::num::traits::zero::Zero;
     use snforge_std::start_cheat_block_timestamp_global;
-    use super::{Time, TimeDelta, Timestamp};
+    use super::{Bounded, Seconds, Time, TimeDelta, Timestamp};
 
     #[test]
     fn test_timedelta_add() {
@@ -262,6 +288,63 @@ mod tests {
     fn test_time_days() {
         let time = Time::days(count: 1);
         assert_eq!(time.seconds, DAY);
+    }
+
+    #[test]
+    #[should_panic(expected: "TimeDelta_add Overflow")]
+    fn test_timedelta_add_overflow() {
+        let delta1 = TimeDelta { seconds: 1 };
+        let delta2 = TimeDelta { seconds: Bounded::<Seconds>::MAX };
+        delta1 + delta2;
+    }
+
+    #[test]
+    #[should_panic(expected: "TimeDelta_sub Underflow")]
+    fn test_timedelta_sub_underflow() {
+        let delta1 = TimeDelta { seconds: 1 };
+        let delta2 = TimeDelta { seconds: 2 };
+        delta1 - delta2;
+    }
+
+    #[test]
+    #[should_panic(expected: "Timestamp_add Overflow")]
+    fn test_timestamp_add_assign_overflow() {
+        let mut time = Timestamp { seconds: Bounded::<Seconds>::MAX };
+        time += Time::seconds(count: 1);
+    }
+
+    #[test]
+    #[should_panic(expected: "Timestamp_add Overflow")]
+    fn test_timestamp_add_overflow() {
+        let mut time = Timestamp { seconds: Bounded::<Seconds>::MAX };
+        time.add(Time::seconds(count: 1));
+    }
+
+    #[test]
+    #[should_panic(expected: "Timestamp_sub Underflow")]
+    fn test_timestamp_sub_underflow() {
+        let time1 = Timestamp { seconds: 1 };
+        let time2 = Timestamp { seconds: 2 };
+        time1.sub(other: time2);
+    }
+
+    #[test]
+    #[should_panic(expected: "Timedelta overflow: too many days")]
+    fn test_days_overflow() {
+        Time::days(count: Bounded::<Seconds>::MAX);
+    }
+
+    #[test]
+    #[should_panic(expected: "Timedelta overflow: too many weeks")]
+    fn test_weeks_overflow() {
+        Time::weeks(count: Bounded::<Seconds>::MAX);
+    }
+
+    #[test]
+    #[should_panic(expected: "TimeDelta division by 0")]
+    fn test_timedelta_div_by_zero() {
+        let delta = TimeDelta { seconds: 1 };
+        delta.div(divider: 0);
     }
 
     #[test]
