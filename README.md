@@ -41,7 +41,7 @@ The project is built with [Turbo repo](https://turbo.build/) and [pnpm](https://
 Turbo's installation process will also install the cairo dependencies such as [Scarb](https://docs.swmansion.com/scarb/) and [Starknet foundry](https://foundry-rs.github.io/starknet-foundry/index.html).
 
 ## Installation
-Clone the repo and from within the projects root folder run:
+Clone the repo and from within the project's root folder run:
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 nvm install 20
