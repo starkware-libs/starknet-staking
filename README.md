@@ -30,14 +30,14 @@
 
 
 ## About
-This repo holds the implementation of Staknet's staking mechanism.  
+This repo holds the implementation of Starknet's staking mechanism.  
 Following [Starknet SNIP 18](https://community.starknet.io/t/snip-18-staking-s-first-stage-on-starknet/114334).
 
 ## Disclaimer
 Staking is a work in progress.
 
 ## Dependencies
-The project is build with [Turbo repo](https://turbo.build/) and [pnpm](https://pnpm.io/).  
+The project is built with [Turbo repo](https://turbo.build/) and [pnpm](https://pnpm.io/).  
 Turbo's installation process will also install the cairo dependencies such as [Scarb](https://docs.swmansion.com/scarb/) and [Starknet foundry](https://foundry-rs.github.io/starknet-foundry/index.html).
 
 ## Installation
