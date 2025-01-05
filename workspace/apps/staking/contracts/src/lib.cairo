@@ -12,3 +12,4 @@ pub mod staking;
 pub(crate) mod test_utils;
 pub(crate) mod types;
 pub(crate) mod utils;
+pub mod work;
