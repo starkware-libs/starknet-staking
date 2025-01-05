@@ -598,6 +598,7 @@ fn test_increase_stake_unstake_in_progress() {
 }
 
 #[test]
+#[should_panic(expected: "Amount is zero")]
 fn test_increase_stake_amount_is_zero() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -606,11 +607,8 @@ fn test_increase_stake_amount_is_zero() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-    let staker_info_before = staking_dispatcher.staker_info(:staker_address);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.increase_stake(:staker_address, amount: Zero::zero());
-    let staker_info_after = staking_dispatcher.staker_info(:staker_address);
-    assert_eq!(staker_info_before, staker_info_after);
 }
 
 #[test]

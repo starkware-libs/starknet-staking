@@ -263,6 +263,7 @@ pub mod Staking {
                 caller_address == staker_address || caller_address == staker_info.reward_address,
                 Error::CALLER_CANNOT_INCREASE_STAKE,
             );
+            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
 
             // Update the staker info to account for accumulated rewards, before updating their
             // staked amount.

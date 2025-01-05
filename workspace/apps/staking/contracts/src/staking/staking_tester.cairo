@@ -237,6 +237,7 @@ pub(crate) mod StakingTester {
                 caller_address == staker_address || caller_address == staker_info.reward_address,
                 Error::CALLER_CANNOT_INCREASE_STAKE,
             );
+            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
             let old_self_stake = staker_info.amount_own;
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
