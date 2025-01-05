@@ -306,8 +306,8 @@ struct SystemConfig {
 /// It includes the state for the token, staking, minting curve, and reward supplier contracts,
 /// as well as a base account identifier.
 #[derive(Drop, Copy)]
-pub(crate) struct SystemState {
-    pub token: TokenState,
+pub(crate) struct SystemState<TTokenState> {
+    pub token: TTokenState,
     pub staking: StakingState,
     pub minting_curve: MintingCurveState,
     pub reward_supplier: RewardSupplierState,
@@ -360,7 +360,7 @@ pub(crate) impl SystemImpl of SystemTrait {
     }
 
     /// Deploys the system configuration and returns the system state.
-    fn deploy(self: SystemConfig) -> SystemState {
+    fn deploy(self: SystemConfig) -> SystemState<TokenState> {
         let token = self.token.deploy();
         let staking = self.staking.deploy(:token);
         let minting_curve = self.minting_curve.deploy(:staking);
@@ -379,7 +379,7 @@ pub(crate) impl SystemImpl of SystemTrait {
     }
 
     /// Creates a new account with the specified amount.
-    fn new_account(ref self: SystemState, amount: Amount) -> Account {
+    fn new_account(ref self: SystemState<TokenState>, amount: Amount) -> Account {
         self.base_account += 1;
         let account = AccountTrait::new(
             address: self.base_account, amount: amount, token: self.token, staking: self.staking,
@@ -389,7 +389,7 @@ pub(crate) impl SystemImpl of SystemTrait {
     }
 
     /// Creates a new staker with the specified amount.
-    fn new_staker(ref self: SystemState, amount: Amount) -> Staker {
+    fn new_staker(ref self: SystemState<TokenState>, amount: Amount) -> Staker {
         let staker = self.new_account(:amount);
         let reward = self.new_account(amount: Zero::zero());
         let operational = self.new_account(amount: Zero::zero());
@@ -397,14 +397,14 @@ pub(crate) impl SystemImpl of SystemTrait {
     }
 
     /// Creates a new delegator with the specified amount.
-    fn new_delegator(ref self: SystemState, amount: Amount) -> Delegator {
+    fn new_delegator(ref self: SystemState<TokenState>, amount: Amount) -> Delegator {
         let delegator = self.new_account(:amount);
         let reward = self.new_account(amount: Zero::zero());
         DelegatorTrait::new(:delegator, :reward)
     }
 
     /// Advances the block timestamp by the specified amount of time.
-    fn advance_time(ref self: SystemState, time: TimeDelta) {
+    fn advance_time(ref self: SystemState<TokenState>, time: TimeDelta) {
         start_cheat_block_timestamp_global(block_timestamp: Time::now().add(delta: time).into())
     }
 }
