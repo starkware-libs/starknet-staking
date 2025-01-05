@@ -46,6 +46,17 @@ pub(crate) struct InternalStakerInfo {
     pub(crate) pool_info: Option<StakerPoolInfo>,
 }
 
+#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+pub(crate) struct InternalStakerInfoV1 {
+    pub(crate) reward_address: ContractAddress,
+    pub(crate) operational_address: ContractAddress,
+    pub(crate) unstake_time: Option<Timestamp>,
+    pub(crate) amount_own: Amount,
+    pub(crate) index: Index,
+    pub(crate) unclaimed_rewards_own: Amount,
+    pub(crate) pool_info: Option<StakerPoolInfo>,
+}
+
 #[generate_trait]
 pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
     fn compute_unpool_time(self: @InternalStakerInfo, exit_wait_window: TimeDelta) -> Timestamp {
