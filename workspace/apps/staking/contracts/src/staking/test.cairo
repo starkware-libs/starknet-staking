@@ -36,6 +36,7 @@ use snforge_std::{
     CheatSpan, cheat_account_contract_address, cheat_block_timestamp, cheat_caller_address,
 };
 use snforge_std::{DeclareResultTrait, declare};
+use staking::constants::DEFAULT_EXIT_WAIT_WINDOW;
 use staking::constants::{BASE_VALUE, MAX_EXIT_WAIT_WINDOW};
 use staking::errors::Error;
 use staking::event_test_utils;
@@ -49,9 +50,9 @@ use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcher
 use staking::staking::interface::{IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait};
 use staking::staking::interface::{IStakingSafeDispatcher, IStakingSafeDispatcherTrait};
 use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
-use staking::staking::objects::UndelegateIntentValueZero;
 use staking::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+use staking::staking::objects::{UndelegateIntentValueTrait, UndelegateIntentValueZero};
 use staking::staking::staking::Staking;
 use staking::staking::staking_tester::{IStakingTesterDispatcher, IStakingTesterDispatcherTrait};
 use staking::test_utils;
@@ -2672,4 +2673,158 @@ fn test_get_pool_exit_intent() {
     pool_dispatcher.exit_delegation_pool_intent(amount: 0);
     let undelegate_intent_value = staking_dispatcher.get_pool_exit_intent(:undelegate_intent_key);
     assert_eq!(undelegate_intent_value, Zero::zero());
+}
+
+const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
+
+#[test]
+fn test_undelegate_intent_zero() {
+    let d: UndelegateIntentValue = Zero::zero();
+    assert_eq!(
+        d,
+        UndelegateIntentValue {
+            unpool_time: Timestamp { seconds: Zero::zero() }, amount: Zero::zero(),
+        },
+    );
+}
+
+#[test]
+fn test_undelegate_intent_is_zero() {
+    let d: UndelegateIntentValue = Zero::zero();
+    assert!(d.is_zero());
+    assert!(!d.is_non_zero());
+}
+
+#[test]
+fn test_undelegate_intent_is_non_zero() {
+    let d = UndelegateIntentValue { unpool_time: UNPOOL_TIME, amount: 1 };
+    assert!(!d.is_zero());
+    assert!(d.is_non_zero());
+}
+
+#[test]
+fn test_undelegate_intent_is_valid() {
+    let d = UndelegateIntentValue { unpool_time: Zero::zero(), amount: Zero::zero() };
+    assert!(d.is_valid());
+    let d = UndelegateIntentValue { unpool_time: UNPOOL_TIME, amount: 1 };
+    assert!(d.is_valid());
+    let d = UndelegateIntentValue { unpool_time: Zero::zero(), amount: 1 };
+    assert!(!d.is_valid());
+    let d = UndelegateIntentValue { unpool_time: UNPOOL_TIME, amount: Zero::zero() };
+    assert!(!d.is_valid());
+}
+
+#[test]
+fn test_undelegate_intent_assert_valid() {
+    let d = UndelegateIntentValue { unpool_time: Zero::zero(), amount: Zero::zero() };
+    d.assert_valid();
+    let d = UndelegateIntentValue { unpool_time: UNPOOL_TIME, amount: 1 };
+    d.assert_valid();
+}
+
+#[test]
+#[should_panic(expected: "Invalid undelegate intent value")]
+fn test_undelegate_intent_assert_valid_panic() {
+    let d = UndelegateIntentValue { unpool_time: Zero::zero(), amount: 1 };
+    d.assert_valid();
+}
+
+#[test]
+fn test_internal_staker_info_into_staker_info() {
+    let internal_staker_info = InternalStakerInfo {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    let staker_info: StakerInfo = internal_staker_info.into();
+    let expected_staker_info = StakerInfo {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    assert_eq!(staker_info, expected_staker_info);
+}
+
+#[test]
+fn test_compute_unpool_time() {
+    let exit_wait_window = DEFAULT_EXIT_WAIT_WINDOW;
+    // Unstake_time is not set.
+    let internal_staker_info = InternalStakerInfo {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    assert_eq!(
+        internal_staker_info.compute_unpool_time(:exit_wait_window),
+        Time::now().add(delta: exit_wait_window),
+    );
+
+    // Unstake_time is set.
+    let unstake_time = Time::now().add(delta: Time::weeks(count: 1));
+    let internal_staker_info = InternalStakerInfo {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::Some(unstake_time),
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+
+    // Unstake time > current time.
+    assert_eq!(Time::now(), Zero::zero());
+    assert_eq!(internal_staker_info.compute_unpool_time(:exit_wait_window), unstake_time);
+
+    // Unstake time < current time.
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: exit_wait_window).into(),
+    );
+    assert_eq!(internal_staker_info.compute_unpool_time(:exit_wait_window), Time::now());
+}
+
+#[test]
+fn test_get_pool_info() {
+    let staker_pool_info = StakerPoolInfo {
+        pool_contract: Zero::zero(),
+        amount: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+    };
+    let internal_staker_info = InternalStakerInfo {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::Some(staker_pool_info),
+    };
+    assert_eq!(internal_staker_info.get_pool_info(), staker_pool_info);
+}
+
+#[test]
+#[should_panic(expected: "Staker does not have a pool contract")]
+fn test_get_pool_info_panic() {
+    let internal_staker_info = InternalStakerInfo {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    internal_staker_info.get_pool_info();
 }
