@@ -1,5 +1,4 @@
-use contracts_commons::errors::Describable;
-use contracts_commons::errors::Panicable;
+use contracts_commons::errors::{Describable, ErrorDisplay};
 use staking::constants::MAX_C_NUM;
 use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 
@@ -69,7 +68,7 @@ pub(crate) enum Error {
 
 impl DescribableError of Describable<Error> {
     #[inline(always)]
-    fn describe(self: Error) -> ByteArray {
+    fn describe(self: @Error) -> ByteArray {
         match self {
             Error::ON_RECEIVE_NOT_FROM_STARKGATE => "Only StarkGate can call on_receive",
             Error::MESSAGES_COUNT_ISNT_U32 => "Number of messages is too large, expected to fit in u32",
@@ -130,4 +129,3 @@ impl DescribableError of Describable<Error> {
     }
 }
 
-impl PanicableError of Panicable<Error>;

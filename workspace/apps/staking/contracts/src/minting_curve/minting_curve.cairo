@@ -3,7 +3,6 @@ pub mod MintingCurve {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::assert_with_err;
     use contracts_commons::interfaces::identity::Identity;
     use core::num::traits::{Sqrt, WideMul};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -96,8 +95,10 @@ pub mod MintingCurve {
     // Message updating the total supply, sent by the L1 reward supplier.
     #[l1_handler]
     fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: Amount) {
-        assert_with_err(
-            from_address == self.l1_reward_supplier.read(), Error::UNAUTHORIZED_MESSAGE_SENDER,
+        assert!(
+            from_address == self.l1_reward_supplier.read(),
+            "{}",
+            Error::UNAUTHORIZED_MESSAGE_SENDER,
         );
         let old_total_supply = self.total_supply.read();
         // Note that the total supply may only increase.
@@ -143,7 +144,7 @@ pub mod MintingCurve {
         // If you wish to set the inflation rate to 1.7%, you should set c_num to 170.
         fn set_c_num(ref self: ContractState, c_num: Inflation) {
             self.roles.only_token_admin();
-            assert_with_err(c_num <= MAX_C_NUM, Error::C_NUM_OUT_OF_RANGE);
+            assert!(c_num <= MAX_C_NUM, "{}", Error::C_NUM_OUT_OF_RANGE);
 
             let old_c = self.c_num.read();
             self.c_num.write(c_num);

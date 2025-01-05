@@ -3,7 +3,7 @@ pub mod RewardSupplier {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
+    use contracts_commons::errors::{OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::math::ceil_of_division;
     use contracts_commons::types::time::time::{Time, Timestamp};
@@ -128,8 +128,10 @@ pub mod RewardSupplier {
         fn calculate_staking_rewards(ref self: ContractState) -> Amount {
             // Asserts.
             let staking_contract = self.staking_contract.read();
-            assert_with_err(
-                get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT,
+            assert!(
+                get_caller_address() == staking_contract,
+                "{}",
+                Error::CALLER_IS_NOT_STAKING_CONTRACT,
             );
 
             // Read the last timestamp before it's updated in update_rewards.
@@ -158,11 +160,13 @@ pub mod RewardSupplier {
         fn claim_rewards(ref self: ContractState, amount: Amount) {
             // Asserts.
             let staking_contract = self.staking_contract.read();
-            assert_with_err(
-                get_caller_address() == staking_contract, Error::CALLER_IS_NOT_STAKING_CONTRACT,
+            assert!(
+                get_caller_address() == staking_contract,
+                "{}",
+                Error::CALLER_IS_NOT_STAKING_CONTRACT,
             );
             let unclaimed_rewards = self.unclaimed_rewards.read();
-            assert_with_err(amount <= unclaimed_rewards, Error::AMOUNT_TOO_HIGH);
+            assert!(amount <= unclaimed_rewards, "{}", Error::AMOUNT_TOO_HIGH);
 
             // Update unclaimed_rewards and transfer the requested rewards to the staking contract.
             self.unclaimed_rewards.write(unclaimed_rewards - amount);
@@ -182,13 +186,16 @@ pub mod RewardSupplier {
             // depositor is not checked.
 
             // These messages accepted only from the token bridge.
-            assert_with_err(
+            assert!(
                 get_caller_address() == self.starkgate_address.read(),
+                "{}",
                 Error::ON_RECEIVE_NOT_FROM_STARKGATE,
             );
             // The bridge may serve multiple tokens, only the correct token may be received.
-            assert_with_err(
-                l2_token == self.token_dispatcher.read().contract_address, Error::UNEXPECTED_TOKEN,
+            assert!(
+                l2_token == self.token_dispatcher.read().contract_address,
+                "{}",
+                Error::UNEXPECTED_TOKEN,
             );
             let amount_u128: Amount = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();

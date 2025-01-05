@@ -1,4 +1,4 @@
-use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
+use contracts_commons::errors::{OptionAuxTrait};
 use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;
@@ -83,7 +83,7 @@ pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
     }
 
     fn assert_valid(self: @UndelegateIntentValue) {
-        assert_with_err(self.is_valid(), Error::INVALID_UNDELEGATE_INTENT_VALUE);
+        assert!(self.is_valid(), "{}", Error::INVALID_UNDELEGATE_INTENT_VALUE);
     }
 }
 

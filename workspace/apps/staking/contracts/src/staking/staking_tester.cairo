@@ -12,7 +12,7 @@ pub(crate) mod StakingTester {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
+    use contracts_commons::errors::{OptionAuxTrait};
     use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
@@ -151,13 +151,14 @@ pub(crate) mod StakingTester {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
-            assert_with_err(self.staker_info.read(staker_address).is_none(), Error::STAKER_EXISTS);
-            assert_with_err(
+            assert!(self.staker_info.read(staker_address).is_none(), "{}", Error::STAKER_EXISTS);
+            assert!(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
+                "{}",
                 Error::OPERATIONAL_EXISTS,
             );
-            assert_with_err(amount >= self.min_stake.read(), Error::AMOUNT_LESS_THAN_MIN_STAKE);
-            assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
+            assert!(amount >= self.min_stake.read(), "{}", Error::AMOUNT_LESS_THAN_MIN_STAKE);
+            assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
             // Transfer funds from staker.
             let staking_contract = get_contract_address();
             let token_dispatcher = self.token_dispatcher.read();
@@ -232,12 +233,13 @@ pub(crate) mod StakingTester {
             self.general_prerequisites();
             let caller_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
-            assert_with_err(
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            assert!(
                 caller_address == staker_address || caller_address == staker_info.reward_address,
+                "{}",
                 Error::CALLER_CANNOT_INCREASE_STAKE,
             );
-            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
+            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
             let old_self_stake = staker_info.amount_own;
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
@@ -281,8 +283,9 @@ pub(crate) mod StakingTester {
             let mut staker_info = self.internal_staker_info(:staker_address);
             let caller_address = get_caller_address();
             let reward_address = staker_info.reward_address;
-            assert_with_err(
+            assert!(
                 caller_address == staker_address || caller_address == reward_address,
+                "{}",
                 Error::CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
             );
             self.update_rewards(ref :staker_info);
@@ -297,7 +300,7 @@ pub(crate) mod StakingTester {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             self.update_rewards(ref :staker_info);
             let unstake_time = Time::now().add(delta: self.exit_wait_window.read());
             staker_info.unstake_time = Option::Some(unstake_time);
@@ -333,7 +336,7 @@ pub(crate) mod StakingTester {
             let unstake_time = staker_info
                 .unstake_time
                 .expect_with_err(Error::MISSING_UNSTAKE_INTENT);
-            assert_with_err(Time::now() >= unstake_time, Error::INTENT_WINDOW_NOT_FINISHED);
+            assert!(Time::now() >= unstake_time, "{}", Error::INTENT_WINDOW_NOT_FINISHED);
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
             // Transfer stake to staker.
@@ -367,8 +370,8 @@ pub(crate) mod StakingTester {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert_with_err(commission <= COMMISSION_DENOMINATOR, Error::COMMISSION_OUT_OF_RANGE);
-            assert_with_err(staker_info.pool_info.is_none(), Error::STAKER_ALREADY_HAS_POOL);
+            assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
+            assert!(staker_info.pool_info.is_none(), "{}", Error::STAKER_ALREADY_HAS_POOL);
             let pool_contract = self
                 .deploy_delegation_pool_from_staking_contract(
                     :staker_address,
@@ -442,14 +445,16 @@ pub(crate) mod StakingTester {
             ref self: ContractState, operational_address: ContractAddress,
         ) {
             self.general_prerequisites();
-            assert_with_err(
+            assert!(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
+                "{}",
                 Error::OPERATIONAL_EXISTS,
             );
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert_with_err(
+            assert!(
                 self.eligible_operational_addresses.read(operational_address) == staker_address,
+                "{}",
                 Error::OPERATIONAL_NOT_ELIGIBLE,
             );
             self
@@ -481,14 +486,14 @@ pub(crate) mod StakingTester {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             let pool_info = staker_info.get_pool_info();
             let pool_contract = pool_info.pool_contract;
             let old_commission = pool_info.commission;
             if commission == old_commission {
                 return;
             }
-            assert_with_err(commission < old_commission, Error::INVALID_COMMISSION);
+            assert!(commission < old_commission, "{}", Error::INVALID_COMMISSION);
             self.update_rewards(ref :staker_info);
             let mut pool_info = staker_info.get_pool_info();
             pool_info.commission = commission;
@@ -529,12 +534,12 @@ pub(crate) mod StakingTester {
         ) -> Index {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert_with_err(staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             self.update_rewards(ref :staker_info);
             let mut pool_info = staker_info.get_pool_info();
             let pool_contract = pool_info.pool_contract;
-            assert_with_err(
-                pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT,
+            assert!(
+                pool_contract == get_caller_address(), "{}", Error::CALLER_IS_NOT_POOL_CONTRACT,
             );
 
             let token_dispatcher = self.token_dispatcher.read();
@@ -569,8 +574,10 @@ pub(crate) mod StakingTester {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             let mut pool_info = staker_info.get_pool_info();
-            assert_with_err(
-                pool_info.pool_contract == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT,
+            assert!(
+                pool_info.pool_contract == get_caller_address(),
+                "{}",
+                Error::CALLER_IS_NOT_POOL_CONTRACT,
             );
             let undelegate_intent_key = UndelegateIntentKey {
                 pool_contract: pool_info.pool_contract, identifier,
@@ -579,7 +586,7 @@ pub(crate) mod StakingTester {
             let old_intent_amount = undelegate_intent_value.amount;
             let old_delegated_stake = pool_info.amount;
             let total_amount = old_intent_amount + old_delegated_stake;
-            assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
+            assert!(amount <= total_amount, "{}", Error::AMOUNT_TOO_HIGH);
             let new_delegated_stake = total_amount - amount;
             pool_info.amount = new_delegated_stake;
             self.update_rewards(ref :staker_info);
@@ -623,8 +630,10 @@ pub(crate) mod StakingTester {
             if undelegate_intent.amount.is_zero() {
                 return;
             }
-            assert_with_err(
-                Time::now() >= undelegate_intent.unpool_time, Error::INTENT_WINDOW_NOT_FINISHED,
+            assert!(
+                Time::now() >= undelegate_intent.unpool_time,
+                "{}",
+                Error::INTENT_WINDOW_NOT_FINISHED,
             );
             self.clear_undelegate_intent(:undelegate_intent_key);
             let token_dispatcher = self.token_dispatcher.read();
@@ -655,18 +664,16 @@ pub(crate) mod StakingTester {
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let mut undelegate_intent_value = self.get_pool_exit_intent(:undelegate_intent_key);
-            assert_with_err(
-                undelegate_intent_value.is_non_zero(), Error::MISSING_UNDELEGATE_INTENT,
-            );
-            assert_with_err(
-                undelegate_intent_value.amount >= switched_amount, Error::AMOUNT_TOO_HIGH,
+            assert!(undelegate_intent_value.is_non_zero(), "{}", Error::MISSING_UNDELEGATE_INTENT);
+            assert!(
+                undelegate_intent_value.amount >= switched_amount, "{}", Error::AMOUNT_TOO_HIGH,
             );
             let mut to_staker_info = self.internal_staker_info(staker_address: to_staker);
             self.update_rewards(ref staker_info: to_staker_info);
-            assert_with_err(to_staker_info.unstake_time.is_none(), Error::UNSTAKE_IN_PROGRESS);
+            assert!(to_staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             let mut to_staker_pool_info = to_staker_info.get_pool_info();
             let to_staker_pool_contract = to_staker_pool_info.pool_contract;
-            assert_with_err(to_pool == to_staker_pool_contract, Error::DELEGATION_POOL_MISMATCH);
+            assert!(to_pool == to_staker_pool_contract, "{}", Error::DELEGATION_POOL_MISMATCH);
 
             let old_delegated_stake = to_staker_pool_info.amount;
             to_staker_pool_info.amount += switched_amount;
@@ -703,9 +710,7 @@ pub(crate) mod StakingTester {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info().pool_contract;
-            assert_with_err(
-                pool_address == get_caller_address(), Error::CALLER_IS_NOT_POOL_CONTRACT,
-            );
+            assert!(pool_address == get_caller_address(), "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
             self.update_rewards(ref :staker_info);
             // The function update_rewards updated the index in staker_info.
             let updated_index = staker_info.index;
@@ -791,8 +796,8 @@ pub(crate) mod StakingTester {
             let balance_before = token_dispatcher.balance_of(account: get_contract_address());
             reward_supplier_dispatcher.claim_rewards(:amount);
             let balance_after = token_dispatcher.balance_of(account: get_contract_address());
-            assert_with_err(
-                balance_after - balance_before == amount.into(), Error::UNEXPECTED_BALANCE,
+            assert!(
+                balance_after - balance_before == amount.into(), "{}", Error::UNEXPECTED_BALANCE,
             );
             token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
         }
@@ -846,11 +851,11 @@ pub(crate) mod StakingTester {
         }
 
         fn assert_is_unpaused(self: @ContractState) {
-            assert_with_err(!self.is_paused(), Error::CONTRACT_IS_PAUSED);
+            assert!(!self.is_paused(), "{}", Error::CONTRACT_IS_PAUSED);
         }
 
         fn assert_caller_is_not_zero(self: @ContractState) {
-            assert_with_err(get_caller_address().is_non_zero(), Error::CALLER_IS_ZERO_ADDRESS);
+            assert!(get_caller_address().is_non_zero(), "{}", Error::CALLER_IS_ZERO_ADDRESS);
         }
 
         fn internal_staker_info(
