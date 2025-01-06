@@ -50,6 +50,7 @@ use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcher
 use staking::staking::interface::{IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait};
 use staking::staking::interface::{IStakingSafeDispatcher, IStakingSafeDispatcherTrait};
 use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
+use staking::staking::objects::VersionedInternalStakerInfo;
 use staking::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
 use staking::staking::objects::{UndelegateIntentValueTrait, UndelegateIntentValueZero};
@@ -2827,4 +2828,26 @@ fn test_get_pool_info_panic() {
         pool_info: Option::None,
     };
     internal_staker_info.get_pool_info();
+}
+
+#[test]
+fn test_sanity_versioned_staker_info() {
+    let internal_staker_info = InternalStakerInfo {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    let option_internal_staker_info = Option::Some(internal_staker_info);
+    let mut arr = array![];
+    option_internal_staker_info.serialize(ref arr);
+    let mut span = arr.span();
+    let versioned_staker_info: VersionedInternalStakerInfo = Serde::<
+        VersionedInternalStakerInfo,
+    >::deserialize(ref span)
+        .unwrap();
+    assert_eq!(versioned_staker_info, VersionedInternalStakerInfo::V0(internal_staker_info));
 }
