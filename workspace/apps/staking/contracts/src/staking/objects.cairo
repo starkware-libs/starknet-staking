@@ -57,6 +57,14 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) pool_info: Option<StakerPoolInfo>,
 }
 
+#[derive(Debug, PartialEq, Serde, Drop, Copy, starknet::Store)]
+pub(crate) enum VersionedInternalStakerInfo {
+    V0: InternalStakerInfo,
+    #[default]
+    None,
+    V1: InternalStakerInfoV1,
+}
+
 #[generate_trait]
 pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
     fn compute_unpool_time(self: @InternalStakerInfo, exit_wait_window: TimeDelta) -> Timestamp {
