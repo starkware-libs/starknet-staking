@@ -1,5 +1,4 @@
-use contracts_commons::errors::Describable;
-use contracts_commons::errors::Panicable;
+use contracts_commons::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]
 pub(crate) enum TimeErrors {
@@ -14,7 +13,7 @@ pub(crate) enum TimeErrors {
 
 impl DescribableError of Describable<TimeErrors> {
     #[inline(always)]
-    fn describe(self: TimeErrors) -> ByteArray {
+    fn describe(self: @TimeErrors) -> ByteArray {
         match self {
             TimeErrors::TIMEDELTA_ADD_OVERFLOW => "TimeDelta_add Overflow",
             TimeErrors::TIMEDELTA_SUB_UNDERFLOW => "TimeDelta_sub Underflow",
@@ -26,5 +25,3 @@ impl DescribableError of Describable<TimeErrors> {
         }
     }
 }
-
-impl PanicableError of Panicable<TimeErrors>;

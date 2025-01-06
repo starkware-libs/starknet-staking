@@ -1,4 +1,4 @@
-use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
+use contracts_commons::errors::{OptionAuxTrait};
 use contracts_commons::math::{mul_wide_and_ceil_div, mul_wide_and_div};
 use core::num::traits::zero::Zero;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -14,7 +14,7 @@ pub(crate) fn compute_new_delegated_stake(
     old_delegated_stake: Amount, old_intent_amount: Amount, new_intent_amount: Amount,
 ) -> Amount {
     let total_amount = old_intent_amount + old_delegated_stake;
-    assert_with_err(new_intent_amount <= total_amount, Error::AMOUNT_TOO_HIGH);
+    assert!(new_intent_amount <= total_amount, "{}", Error::AMOUNT_TOO_HIGH);
     total_amount - new_intent_amount
 }
 
@@ -104,17 +104,20 @@ pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
     fn checked_transfer_from(
         self: IERC20Dispatcher, sender: ContractAddress, recipient: ContractAddress, amount: u256,
     ) -> bool {
-        assert_with_err(amount <= self.balance_of(account: sender), Error::INSUFFICIENT_BALANCE);
-        assert_with_err(
+        assert!(amount <= self.balance_of(account: sender), "{}", Error::INSUFFICIENT_BALANCE);
+        assert!(
             amount <= self.allowance(owner: sender, spender: get_contract_address()),
+            "{}",
             Error::INSUFFICIENT_ALLOWANCE,
         );
         self.transfer_from(:sender, :recipient, :amount)
     }
 
     fn checked_transfer(self: IERC20Dispatcher, recipient: ContractAddress, amount: u256) -> bool {
-        assert_with_err(
-            amount <= self.balance_of(account: get_contract_address()), Error::INSUFFICIENT_BALANCE,
+        assert!(
+            amount <= self.balance_of(account: get_contract_address()),
+            "{}",
+            Error::INSUFFICIENT_BALANCE,
         );
         self.transfer(:recipient, :amount)
     }

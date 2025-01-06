@@ -1,12 +1,12 @@
 use core::num::traits::WideMul;
 use core::num::traits::one::One;
 use core::num::traits::zero::Zero;
-pub const MAX_U64: u64 = 18446744073709551615;
-pub const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
 
-pub fn have_same_sign(a: i64, b: i64) -> bool {
-    (a < 0) == (b < 0)
+pub fn have_same_sign<T, +Zero<T>, +PartialOrd<T>, S, +Zero<S>, +PartialOrd<S>, +Drop<T>, +Drop<S>>(
+    a: T, b: S,
+) -> bool {
+    (a < Zero::<T>::zero()) == (b < Zero::<S>::zero())
 }
 
 pub fn mul_wide_and_div<
@@ -273,13 +273,12 @@ impl FractionPartialOrd of PartialOrd<Fraction> {
 
 #[cfg(test)]
 mod tests {
+    use contracts_commons::constants::{MAX_U128, MAX_U64};
     use core::num::traits::one::One;
     use core::num::traits::zero::Zero;
     use super::Abs;
     use super::{Fraction, FractionTrait};
-
-
-    use super::{MAX_U128, MAX_U64};
+    use super::{have_same_sign};
     use super::{mul_wide_and_ceil_div, mul_wide_and_div, wide_abs_diff};
     const TEST_NUM: u64 = 100000000000;
 
@@ -518,5 +517,43 @@ mod tests {
         assert!(-f1 < -f2, "Fraction partial ord failed");
         assert!(f2 <= f1, "Fraction partial ord failed");
         assert!(-f1 <= -f2, "Fraction partial ord failed");
+    }
+
+    #[test]
+    fn have_same_sign_test() {
+        /// Case 1: Both are positive.
+        assert!(have_same_sign(1_i64, 2_i64), "both are positive failed");
+
+        /// Case 2: Both are negative.
+        assert!(have_same_sign(-1_i64, -2_i64), "both are negative failed");
+
+        /// Case 3: Both are zero.
+        assert!(have_same_sign(0_i64, 0_i64), "both are zero failed");
+
+        /// Case 4: One is positive and the other is negative.
+        assert!(
+            have_same_sign(1_i64, -2_i64) == false,
+            "One is positive and the other is negative failed",
+        );
+        assert!(
+            have_same_sign(-2_i64, 1_i64) == false,
+            "One is positive and the other is negative failed",
+        );
+
+        /// Case 5: One is positive and the other is zero.
+        assert!(have_same_sign(1_i64, 0_i64), "One is positive and the other is zero failed");
+        assert!(have_same_sign(0_i64, 1_i64), "One is positive and the other is zero failed");
+
+        /// Case 6: One is negative and the other is zero.
+        assert!(
+            have_same_sign(-1_i64, 0_i64) == false, "One is negative and the other is zero failed",
+        );
+        assert!(
+            have_same_sign(0_i64, -1_i64) == false, "One is negative and the other is zero failed",
+        );
+
+        /// Case 7: different types
+        assert!(have_same_sign(1_i64, 2_u64), "Different types failed");
+        assert!(have_same_sign(1_u64, 2_i64), "Different types failed");
     }
 }

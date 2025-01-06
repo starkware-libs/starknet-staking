@@ -1,5 +1,4 @@
-use contracts_commons::errors::Describable;
-use contracts_commons::errors::Panicable;
+use contracts_commons::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]
 pub(crate) enum ReplaceErrors {
@@ -13,7 +12,7 @@ pub(crate) enum ReplaceErrors {
 
 impl DescribableError of Describable<ReplaceErrors> {
     #[inline(always)]
-    fn describe(self: ReplaceErrors) -> ByteArray {
+    fn describe(self: @ReplaceErrors) -> ByteArray {
         match self {
             ReplaceErrors::FINALIZED => "FINALIZED",
             ReplaceErrors::UNKNOWN_IMPLEMENTATION => "UNKNOWN_IMPLEMENTATION",
@@ -24,5 +23,3 @@ impl DescribableError of Describable<ReplaceErrors> {
         }
     }
 }
-
-impl PanicableError of Panicable<ReplaceErrors>;

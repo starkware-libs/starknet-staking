@@ -3,7 +3,7 @@ pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::{OptionAuxTrait, assert_with_err};
+    use contracts_commons::errors::{OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::types::time::time::{Time, Timestamp};
     use core::num::traits::zero::Zero;
@@ -123,10 +123,10 @@ pub mod Pool {
             // Asserts.
             self.assert_staker_is_active();
             let pool_member = get_caller_address();
-            assert_with_err(
-                self.pool_member_info.read(pool_member).is_none(), Error::POOL_MEMBER_EXISTS,
+            assert!(
+                self.pool_member_info.read(pool_member).is_none(), "{}", Error::POOL_MEMBER_EXISTS,
             );
-            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
+            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
 
             // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
@@ -173,11 +173,12 @@ pub mod Pool {
             self.assert_staker_is_active();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
-            assert_with_err(
+            assert!(
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
+                "{}",
                 Error::CALLER_CANNOT_ADD_TO_POOL,
             );
-            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
+            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
 
             // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
@@ -210,7 +211,7 @@ pub mod Pool {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
-            assert_with_err(amount <= total_amount, Error::AMOUNT_TOO_HIGH);
+            assert!(amount <= total_amount, "{}", Error::AMOUNT_TOO_HIGH);
             let old_delegated_stake = pool_member_info.amount;
 
             // Update rewards and notify the staking contract of the removal intent.
@@ -252,7 +253,7 @@ pub mod Pool {
             let unpool_time = pool_member_info
                 .unpool_time
                 .expect_with_err(Error::MISSING_UNDELEGATE_INTENT);
-            assert_with_err(Time::now() >= unpool_time, Error::INTENT_WINDOW_NOT_FINISHED);
+            assert!(Time::now() >= unpool_time, "{}", Error::INTENT_WINDOW_NOT_FINISHED);
 
             // Emit event.
             self
@@ -294,8 +295,9 @@ pub mod Pool {
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
             let reward_address = pool_member_info.reward_address;
-            assert_with_err(
+            assert!(
                 caller_address == pool_member || caller_address == reward_address,
+                "{}",
                 Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
             );
 
@@ -316,13 +318,11 @@ pub mod Pool {
             amount: Amount,
         ) -> Amount {
             // Asserts.
-            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
+            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
-            assert_with_err(
-                pool_member_info.unpool_time.is_some(), Error::MISSING_UNDELEGATE_INTENT,
-            );
-            assert_with_err(amount <= pool_member_info.unpool_amount, Error::AMOUNT_TOO_HIGH);
+            assert!(pool_member_info.unpool_time.is_some(), "{}", Error::MISSING_UNDELEGATE_INTENT);
+            assert!(amount <= pool_member_info.unpool_amount, "{}", Error::AMOUNT_TOO_HIGH);
             let reward_address = pool_member_info.reward_address;
 
             // Update pool_member_info and write to storage.
@@ -372,9 +372,10 @@ pub mod Pool {
             ref self: ContractState, amount: Amount, index: Index, data: Span<felt252>,
         ) {
             // Asserts.
-            assert_with_err(amount.is_non_zero(), Error::AMOUNT_IS_ZERO);
-            assert_with_err(
+            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
+            assert!(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
+                "{}",
                 Error::CALLER_IS_NOT_STAKING_CONTRACT,
             );
 
@@ -390,8 +391,9 @@ pub mod Pool {
                 Option::Some(mut pool_member_info) => {
                     // Pool member already exists. Need to update pool_member_info to account for
                     // the accrued rewards and then update the delegated amount.
-                    assert_with_err(
+                    assert!(
                         pool_member_info.reward_address == switch_pool_data.reward_address,
+                        "{}",
                         Error::REWARD_ADDRESS_MISMATCH,
                     );
                     self.update_rewards(ref :pool_member_info, updated_index: index);
@@ -428,12 +430,15 @@ pub mod Pool {
         /// been erased from the staking contract.
         fn set_final_staker_index(ref self: ContractState, final_staker_index: Index) {
             // Asserts.
-            assert_with_err(
+            assert!(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
+                "{}",
                 Error::CALLER_IS_NOT_STAKING_CONTRACT,
             );
-            assert_with_err(
-                self.final_staker_index.read().is_none(), Error::FINAL_STAKER_INDEX_ALREADY_SET,
+            assert!(
+                self.final_staker_index.read().is_none(),
+                "{}",
+                Error::FINAL_STAKER_INDEX_ALREADY_SET,
             );
 
             // All future functionality that requires the staker index, will use this final index.
@@ -512,9 +517,10 @@ pub mod Pool {
         ) {
             // Asserts.
             let old_commission = self.commission.read();
-            assert_with_err(commission < old_commission, Error::INVALID_COMMISSION);
-            assert_with_err(
+            assert!(commission < old_commission, "{}", Error::INVALID_COMMISSION);
+            assert!(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
+                "{}",
                 Error::CALLER_IS_NOT_STAKING_CONTRACT,
             );
 
@@ -585,7 +591,7 @@ pub mod Pool {
         }
 
         fn assert_staker_is_active(self: @ContractState) {
-            assert_with_err(self.is_staker_active(), Error::STAKER_INACTIVE);
+            assert!(self.is_staker_active(), "{}", Error::STAKER_INACTIVE);
         }
 
         fn is_staker_active(self: @ContractState) -> bool {
@@ -597,8 +603,9 @@ pub mod Pool {
         ) -> Timestamp {
             if !self.is_staker_active() {
                 // Don't allow intent if an intent is already in progress and the staker is erased.
-                assert_with_err(
+                assert!(
                     self.internal_pool_member_info(:pool_member).unpool_time.is_none(),
+                    "{}",
                     Error::UNDELEGATE_IN_PROGRESS,
                 );
                 return Time::now();

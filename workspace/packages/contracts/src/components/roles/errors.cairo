@@ -1,5 +1,4 @@
-use contracts_commons::errors::Describable;
-use contracts_commons::errors::Panicable;
+use contracts_commons::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]
 pub(crate) enum AccessErrors {
@@ -23,7 +22,7 @@ pub(crate) enum AccessErrors {
 
 impl DescribableError of Describable<AccessErrors> {
     #[inline(always)]
-    fn describe(self: AccessErrors) -> ByteArray {
+    fn describe(self: @AccessErrors) -> ByteArray {
         match self {
             AccessErrors::INVALID_MINTER => "INVALID_MINTER_ADDRESS",
             AccessErrors::INVALID_TOKEN => "INVALID_TOKEN_ADDRESS",
@@ -44,5 +43,3 @@ impl DescribableError of Describable<AccessErrors> {
         }
     }
 }
-
-impl PanicableError of Panicable<AccessErrors>;

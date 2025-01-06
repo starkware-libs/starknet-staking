@@ -1,3 +1,4 @@
+use core::fmt::{Display, Error as fmtError, Formatter};
 use core::panics::panic_with_byte_array;
 
 pub fn assert_with_byte_array(condition: bool, err: ByteArray) {
@@ -7,31 +8,25 @@ pub fn assert_with_byte_array(condition: bool, err: ByteArray) {
 }
 
 pub trait Describable<T> {
-    fn describe(self: T) -> ByteArray;
-}
-
-pub trait Panicable<TError, +Describable<TError>> {
-    fn panic(self: TError) -> core::never {
-        panic_with_byte_array(@self.describe())
-    }
-}
-
-pub fn assert_with_err<TError, +Describable<TError>, +Panicable<TError>, +Drop<TError>>(
-    condition: bool, error: TError,
-) {
-    if !condition {
-        error.panic();
-    }
+    fn describe(self: @T) -> ByteArray;
 }
 
 #[generate_trait]
 pub impl OptionAuxImpl<T> of OptionAuxTrait<T> {
-    fn expect_with_err<TError, +Describable<TError>, +Panicable<TError>, +Drop<TError>>(
+    fn expect_with_err<TError, +Describable<TError>, +Drop<TError>>(
         self: Option<T>, err: TError,
     ) -> T {
         match self {
             Option::Some(x) => x,
-            Option::None => err.panic(),
+            Option::None => panic_with_byte_array(err: @err.describe()),
         }
+    }
+}
+
+pub impl ErrorDisplay<T, +Describable<T>> of Display<T> {
+    fn fmt(self: @T, ref f: Formatter) -> Result<(), fmtError> {
+        let description = self.describe();
+        f.buffer.append(@description);
+        Result::Ok(())
     }
 }
