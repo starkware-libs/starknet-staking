@@ -150,7 +150,7 @@ pub mod Events {
     use contracts_commons::types::time::time::Timestamp;
     use staking::types::{Amount, Commission, Index};
     use starknet::ContractAddress;
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakeBalanceChanged {
         #[key]
         pub staker_address: ContractAddress,
@@ -160,7 +160,7 @@ pub mod Events {
         pub new_delegated_stake: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct NewStaker {
         #[key]
         pub staker_address: ContractAddress,
@@ -169,7 +169,7 @@ pub mod Events {
         pub self_stake: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct NewDelegationPool {
         #[key]
         pub staker_address: ContractAddress,
@@ -178,7 +178,7 @@ pub mod Events {
         pub commission: Commission,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct CommissionChanged {
         #[key]
         pub staker_address: ContractAddress,
@@ -188,7 +188,7 @@ pub mod Events {
         pub old_commission: Commission,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakerExitIntent {
         #[key]
         pub staker_address: ContractAddress,
@@ -196,7 +196,7 @@ pub mod Events {
         pub amount: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakerRewardAddressChanged {
         #[key]
         pub staker_address: ContractAddress,
@@ -204,7 +204,7 @@ pub mod Events {
         pub old_address: ContractAddress,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct OperationalAddressDeclared {
         #[key]
         pub operational_address: ContractAddress,
@@ -212,7 +212,7 @@ pub mod Events {
         pub staker_address: ContractAddress,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct OperationalAddressChanged {
         #[key]
         pub staker_address: ContractAddress,
@@ -220,7 +220,7 @@ pub mod Events {
         pub old_address: ContractAddress,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakerRewardClaimed {
         #[key]
         pub staker_address: ContractAddress,
@@ -228,7 +228,7 @@ pub mod Events {
         pub amount: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct GlobalIndexUpdated {
         pub old_index: Index,
         pub new_index: Index,
@@ -236,7 +236,7 @@ pub mod Events {
         pub global_index_current_update_timestamp: Timestamp,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct DeleteStaker {
         #[key]
         pub staker_address: ContractAddress,
@@ -245,7 +245,7 @@ pub mod Events {
         pub pool_contract: Option<ContractAddress>,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct RewardsSuppliedToDelegationPool {
         #[key]
         pub staker_address: ContractAddress,
@@ -254,7 +254,7 @@ pub mod Events {
         pub amount: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct RemoveFromDelegationPoolIntent {
         #[key]
         pub staker_address: ContractAddress,
@@ -266,7 +266,7 @@ pub mod Events {
         pub new_intent_amount: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct RemoveFromDelegationPoolAction {
         #[key]
         pub pool_contract: ContractAddress,
@@ -275,7 +275,7 @@ pub mod Events {
         pub amount: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct ChangeDelegationPoolIntent {
         #[key]
         pub pool_contract: ContractAddress,
@@ -288,12 +288,12 @@ pub mod Events {
 
 pub mod PauseEvents {
     use starknet::ContractAddress;
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct Paused {
         pub account: ContractAddress,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct Unpaused {
         pub account: ContractAddress,
     }
@@ -303,19 +303,19 @@ pub mod ConfigEvents {
     use contracts_commons::types::time::time::TimeDelta;
     use staking::types::Amount;
     use starknet::ContractAddress;
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct MinimumStakeChanged {
         pub old_min_stake: Amount,
         pub new_min_stake: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct ExitWaitWindowChanged {
         pub old_exit_window: TimeDelta,
         pub new_exit_window: TimeDelta,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct RewardSupplierChanged {
         pub old_reward_supplier: ContractAddress,
         pub new_reward_supplier: ContractAddress,

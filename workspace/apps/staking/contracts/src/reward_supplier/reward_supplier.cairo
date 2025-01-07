@@ -80,7 +80,7 @@ pub mod RewardSupplier {
         #[flat]
         src5Event: SRC5Component::Event,
         CalculatedRewards: Events::CalculatedRewards,
-        mintRequest: Events::MintRequest,
+        MintRequest: Events::MintRequest,
     }
 
     #[constructor]

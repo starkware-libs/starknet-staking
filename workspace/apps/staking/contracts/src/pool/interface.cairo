@@ -39,7 +39,7 @@ pub mod Events {
     use staking::types::{Amount, Index};
     use starknet::ContractAddress;
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct PoolMemberExitIntent {
         #[key]
         pub pool_member: ContractAddress,
@@ -47,14 +47,14 @@ pub mod Events {
         pub amount: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct PoolMemberExitAction {
         #[key]
         pub pool_member: ContractAddress,
         pub unpool_amount: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct PoolMemberBalanceChanged {
         #[key]
         pub pool_member: ContractAddress,
@@ -62,7 +62,7 @@ pub mod Events {
         pub new_delegated_stake: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct PoolMemberRewardAddressChanged {
         #[key]
         pub pool_member: ContractAddress,
@@ -70,7 +70,7 @@ pub mod Events {
         pub old_address: ContractAddress,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct PoolMemberRewardClaimed {
         #[key]
         pub pool_member: ContractAddress,
@@ -79,21 +79,21 @@ pub mod Events {
         pub amount: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct FinalIndexSet {
         #[key]
         pub staker_address: ContractAddress,
         pub final_staker_index: Index,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct DeletePoolMember {
         #[key]
         pub pool_member: ContractAddress,
         pub reward_address: ContractAddress,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct NewPoolMember {
         #[key]
         pub pool_member: ContractAddress,
@@ -103,7 +103,7 @@ pub mod Events {
         pub amount: Amount,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct SwitchDelegationPool {
         #[key]
         pub pool_member: ContractAddress,

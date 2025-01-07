@@ -24,7 +24,7 @@ pub mod Events {
 pub mod ConfigEvents {
     use staking::types::Inflation;
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct MintingCapChanged {
         pub old_c: Inflation,
         pub new_c: Inflation,

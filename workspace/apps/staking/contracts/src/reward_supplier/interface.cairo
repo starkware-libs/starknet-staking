@@ -22,13 +22,13 @@ pub mod Events {
     use contracts_commons::types::time::time::Timestamp;
     use staking::types::Amount;
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct MintRequest {
         pub total_amount: Amount,
         pub num_msgs: u128,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct CalculatedRewards {
         pub last_timestamp: Timestamp,
         pub new_timestamp: Timestamp,
