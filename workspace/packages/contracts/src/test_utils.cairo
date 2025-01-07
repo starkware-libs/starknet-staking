@@ -7,29 +7,6 @@ use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use starknet::ContractAddress;
 
 
-pub(crate) fn cheat_only_caller_address_once(
-    contract_address: ContractAddress, caller_address: ContractAddress,
-) {
-    cheat_caller_address(:contract_address, :caller_address, span: CheatSpan::TargetCalls(1));
-}
-
-pub(crate) fn cheat_account_contract_address_once(
-    contract_address: ContractAddress, caller_address: ContractAddress,
-) {
-    cheat_account_contract_address(
-        :contract_address,
-        account_contract_address: caller_address,
-        span: CheatSpan::TargetCalls(1),
-    );
-}
-
-
-pub(crate) fn set_caller_as_upgrade_governor(contract: ContractAddress, caller: ContractAddress) {
-    let roles_dispatcher = IRolesDispatcher { contract_address: contract };
-    cheat_caller_address_once(contract_address: contract, caller_address: caller);
-    roles_dispatcher.register_upgrade_governor(account: caller);
-}
-
 pub fn set_account_as_security_admin(
     contract: ContractAddress, account: ContractAddress, governance_admin: ContractAddress,
 ) {
