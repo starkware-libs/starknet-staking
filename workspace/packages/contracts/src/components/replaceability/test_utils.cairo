@@ -55,6 +55,18 @@ pub(crate) fn deploy_replaceability_mock() -> IReplaceableDispatcher {
     return IReplaceableDispatcher { contract_address: contract_address };
 }
 
+#[starknet::contract]
+mod DummyContract {
+    #[storage]
+    struct Storage {}
+}
+
+pub(crate) fn deploy_dummy_contract() -> ContractAddress {
+    let dummy_contract = declare("DummyContract").unwrap().contract_class();
+    let (contract_address, _) = dummy_contract.deploy(@array![]).unwrap();
+    contract_address
+}
+
 pub(crate) fn get_upgrade_governor_account(contract_address: ContractAddress) -> ContractAddress {
     let caller_address: ContractAddress = Constants::CALLER_ADDRESS();
     set_caller_as_upgrade_governor(contract_address, caller_address);

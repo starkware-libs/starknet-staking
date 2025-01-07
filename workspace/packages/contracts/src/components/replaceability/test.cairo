@@ -7,6 +7,7 @@ mod ReplaceabilityTests {
     use replaceability::interface::IReplaceableSafeDispatcher;
     use replaceability::interface::IReplaceableSafeDispatcherTrait;
     use replaceability::interface::ImplementationAdded;
+    use replaceability::interface::ImplementationFinalized;
     use replaceability::interface::ImplementationRemoved;
     use replaceability::interface::ImplementationReplaced;
     use replaceability::mock::ReplaceabilityMock;
@@ -18,6 +19,7 @@ mod ReplaceabilityTests {
     use replaceability::test_utils::assert_finalized_status;
     use replaceability::test_utils::assert_implementation_finalized_event_emitted;
     use replaceability::test_utils::assert_implementation_replaced_event_emitted;
+    use replaceability::test_utils::deploy_dummy_contract;
     use replaceability::test_utils::deploy_replaceability_mock;
     use replaceability::test_utils::dummy_final_implementation_data_with_class_hash;
     use replaceability::test_utils::dummy_nonfinal_eic_implementation_data_with_class_hash;
@@ -183,7 +185,7 @@ mod ReplaceabilityTests {
     #[test]
     fn test_replace_to_nonfinal_impl() {
         // Tests replacing an implementation to a non-final implementation, as follows:
-        // 1. deploys a replaceable contract
+        // 1. deploys a replaceable contract and another contract with different class hash
         // 2. generates a non-final dummy implementation replacement
         // 3. adds it to the replaceable contract
         // 4. advances time until the new implementation is ready
@@ -191,8 +193,12 @@ mod ReplaceabilityTests {
         // 6. checks the implemenation is not final
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;
+
+        let new_class_hash = get_class_hash(contract_address: deploy_dummy_contract());
+        assert_ne!(get_class_hash(:contract_address), new_class_hash);
+
         let implementation_data = dummy_nonfinal_implementation_data_with_class_hash(
-            class_hash: get_class_hash(contract_address),
+            class_hash: new_class_hash,
         );
 
         // Invoke as an Upgrade Governor.
@@ -205,11 +211,21 @@ mod ReplaceabilityTests {
 
         // Add implementation and advance time to enable it.
         replaceable_dispatcher.add_new_implementation(:implementation_data);
-        cheat_block_timestamp(contract_address, DEFAULT_UPGRADE_DELAY + 1, CheatSpan::Indefinite);
+        cheat_block_timestamp(
+            :contract_address,
+            block_timestamp: DEFAULT_UPGRADE_DELAY + 1,
+            span: CheatSpan::Indefinite,
+        );
 
         replaceable_dispatcher.replace_to(:implementation_data);
 
-        // Validate event emission.
+        // Validate new class hash.
+        assert_eq!(get_class_hash(:contract_address), new_class_hash);
+
+        // Validate that the new implementation is not final.
+        assert_finalized_status(expected: false, :contract_address);
+
+        // Validate `ImplementationReplaced` event emission.
         spy
             .assert_emitted(
                 @array![
@@ -223,9 +239,23 @@ mod ReplaceabilityTests {
                     ),
                 ],
             );
-        // TODO: Check the new impl hash.
-    // TODO: Check the new impl is not final.
-    // TODO: Check that ImplementationFinalized is NOT emitted.
+
+        // Validate `ImplementationFinalized` event is NOT emitted.
+        spy
+            .assert_not_emitted(
+                @array![
+                    (
+                        contract_address,
+                        ReplaceabilityMock::Event::ReplaceabilityEvent(
+                            ReplaceabilityComponent::Event::ImplementationFinalized(
+                                ImplementationFinalized {
+                                    impl_hash: get_class_hash(:contract_address),
+                                },
+                            ),
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
@@ -351,7 +381,7 @@ mod ReplaceabilityTests {
     #[test]
     fn test_replace_to_final() {
         // Tests replacing an implementation to a final implementation, as follows:
-        // 1. deploys a replaceable contract
+        // 1. deploys a replaceable contract and another contract with different class hash
         // 2. generates a final dummy implementation replacement
         // 3. adds it to the replaceable contract
         // 4. advances time until the new implementation is ready
@@ -359,8 +389,12 @@ mod ReplaceabilityTests {
         // 6. checks the implementation is final
         let replaceable_dispatcher = deploy_replaceability_mock();
         let contract_address = replaceable_dispatcher.contract_address;
+
+        let new_class_hash = get_class_hash(contract_address: deploy_dummy_contract());
+        assert_ne!(get_class_hash(:contract_address), new_class_hash);
+
         let implementation_data = dummy_final_implementation_data_with_class_hash(
-            get_class_hash(contract_address),
+            class_hash: new_class_hash,
         );
 
         // Invoke as an Upgrade Governor.
@@ -373,20 +407,30 @@ mod ReplaceabilityTests {
         replaceable_dispatcher.add_new_implementation(:implementation_data);
 
         // Advance time to enable implementation.
-        cheat_block_timestamp(contract_address, DEFAULT_UPGRADE_DELAY + 1, CheatSpan::Indefinite);
+        cheat_block_timestamp(
+            :contract_address,
+            block_timestamp: DEFAULT_UPGRADE_DELAY + 1,
+            span: CheatSpan::Indefinite,
+        );
         replaceable_dispatcher.replace_to(:implementation_data);
 
+        // Validate new class hash.
+        assert_eq!(get_class_hash(:contract_address), new_class_hash);
+
         // Validate event emissions -- replacement and finalization of the implementation.
-        let events = spy.get_events().emitted_by(contract_address).events;
+        let events = spy.get_events().emitted_by(:contract_address).events;
         // Should emit 3 events: ImplementationAdded, ImplementationReplaced,
         // ImplementationFinalized.
         assert!(events.len() == 3);
-        assert_implementation_replaced_event_emitted(events.at(1), implementation_data);
-        assert_implementation_finalized_event_emitted(events.at(2), implementation_data);
+        assert_implementation_replaced_event_emitted(
+            spied_event: events.at(1), :implementation_data,
+        );
+        assert_implementation_finalized_event_emitted(
+            spied_event: events.at(2), :implementation_data,
+        );
 
         // Validate finalized status.
         assert_finalized_status(expected: true, :contract_address);
-        // TODO: Check the new impl hash.
     }
 
     #[test]
