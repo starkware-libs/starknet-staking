@@ -139,8 +139,11 @@ pub struct TokenState {
     pub owner: ContractAddress,
 }
 
-#[generate_trait]
-pub impl TokenImpl of TokenTrait {
+pub trait Deployable<T, V> {
+    fn deploy(self: @T) -> V;
+}
+
+pub impl TokenDeployImpl of Deployable<TokenConfig, TokenState> {
     fn deploy(self: @TokenConfig) -> TokenState {
         let mut calldata = ArrayTrait::new();
         self.name.serialize(ref calldata);
@@ -151,7 +154,15 @@ pub impl TokenImpl of TokenTrait {
         let (address, _) = token_contract.deploy(@calldata).unwrap();
         TokenState { address, owner: *self.owner }
     }
+}
 
+pub trait TokenTrait<TTokenState> {
+    fn fund(self: TTokenState, recipient: ContractAddress, amount: u128);
+    fn approve(self: TTokenState, owner: ContractAddress, spender: ContractAddress, amount: u128);
+    fn balance_of(self: TTokenState, account: ContractAddress) -> u128;
+}
+
+pub impl TokenImpl of TokenTrait<TokenState> {
     fn fund(self: TokenState, recipient: ContractAddress, amount: u128) {
         let erc20_dispatcher = IERC20Dispatcher { contract_address: self.address };
         cheat_caller_address_once(contract_address: self.address, caller_address: self.owner);

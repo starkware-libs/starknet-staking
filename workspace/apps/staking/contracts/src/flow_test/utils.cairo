@@ -1,5 +1,5 @@
 use contracts_commons::constants::{NAME, SYMBOL};
-use contracts_commons::test_utils::set_account_as_token_admin;
+use contracts_commons::test_utils::{Deployable, set_account_as_token_admin};
 use contracts_commons::test_utils::{TokenConfig, TokenState, TokenTrait, cheat_caller_address_once};
 use contracts_commons::test_utils::{set_account_as_app_role_admin, set_account_as_security_agent};
 use contracts_commons::test_utils::{set_account_as_security_admin, set_account_as_upgrade_governor};
