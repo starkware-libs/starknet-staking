@@ -6,7 +6,7 @@ use roles::roles::RolesComponent::Event as RolesEvent;
 use snforge_std::cheatcodes::events::{Event, Events, is_emitted};
 use starknet::ContractAddress;
 
-pub fn assert_app_role_admin_added_event(
+pub(crate) fn assert_app_role_admin_added_event(
     spied_event: @(ContractAddress, Event),
     added_account: ContractAddress,
     added_by: ContractAddress,
@@ -28,7 +28,7 @@ pub fn assert_app_role_admin_added_event(
 }
 
 
-pub fn assert_app_role_admin_removed_event(
+pub(crate) fn assert_app_role_admin_removed_event(
     spied_event: @(ContractAddress, Event),
     removed_account: ContractAddress,
     removed_by: ContractAddress,
@@ -51,7 +51,7 @@ pub fn assert_app_role_admin_removed_event(
     }
 }
 
-pub fn assert_app_governor_added_event(
+pub(crate) fn assert_app_governor_added_event(
     spied_event: @(ContractAddress, Event),
     added_account: ContractAddress,
     added_by: ContractAddress,
@@ -71,7 +71,7 @@ pub fn assert_app_governor_added_event(
 }
 
 
-pub fn assert_app_governor_removed_event(
+pub(crate) fn assert_app_governor_removed_event(
     spied_event: @(ContractAddress, Event),
     removed_account: ContractAddress,
     removed_by: ContractAddress,
@@ -94,7 +94,7 @@ pub fn assert_app_governor_removed_event(
     }
 }
 
-pub fn assert_token_admin_added_event(
+pub(crate) fn assert_token_admin_added_event(
     spied_event: @(ContractAddress, Event),
     added_account: ContractAddress,
     added_by: ContractAddress,
@@ -114,7 +114,7 @@ pub fn assert_token_admin_added_event(
 }
 
 
-pub fn assert_token_admin_removed_event(
+pub(crate) fn assert_token_admin_removed_event(
     spied_event: @(ContractAddress, Event),
     removed_account: ContractAddress,
     removed_by: ContractAddress,
@@ -137,7 +137,7 @@ pub fn assert_token_admin_removed_event(
     }
 }
 
-pub fn assert_operator_added_event(
+pub(crate) fn assert_operator_added_event(
     spied_event: @(ContractAddress, Event),
     added_account: ContractAddress,
     added_by: ContractAddress,
@@ -157,7 +157,7 @@ pub fn assert_operator_added_event(
 }
 
 
-pub fn assert_operator_removed_event(
+pub(crate) fn assert_operator_removed_event(
     spied_event: @(ContractAddress, Event),
     removed_account: ContractAddress,
     removed_by: ContractAddress,
@@ -181,7 +181,7 @@ pub fn assert_operator_removed_event(
 }
 
 
-pub fn assert_upgrade_governor_added_event(
+pub(crate) fn assert_upgrade_governor_added_event(
     spied_event: @(ContractAddress, Event),
     added_account: ContractAddress,
     added_by: ContractAddress,
@@ -203,7 +203,7 @@ pub fn assert_upgrade_governor_added_event(
 }
 
 
-pub fn assert_upgrade_governor_removed_event(
+pub(crate) fn assert_upgrade_governor_removed_event(
     spied_event: @(ContractAddress, Event),
     removed_account: ContractAddress,
     removed_by: ContractAddress,
@@ -227,7 +227,7 @@ pub fn assert_upgrade_governor_removed_event(
 }
 
 
-pub fn assert_governance_admin_added_event(
+pub(crate) fn assert_governance_admin_added_event(
     spied_event: @(ContractAddress, Event),
     added_account: ContractAddress,
     added_by: ContractAddress,
@@ -249,7 +249,7 @@ pub fn assert_governance_admin_added_event(
 }
 
 
-pub fn assert_governance_admin_removed_event(
+pub(crate) fn assert_governance_admin_removed_event(
     spied_event: @(ContractAddress, Event),
     removed_account: ContractAddress,
     removed_by: ContractAddress,
@@ -273,7 +273,7 @@ pub fn assert_governance_admin_removed_event(
 }
 
 
-pub fn assert_security_agent_added_event(
+pub(crate) fn assert_security_agent_added_event(
     spied_event: @(ContractAddress, Event),
     added_account: ContractAddress,
     added_by: ContractAddress,
@@ -295,7 +295,7 @@ pub fn assert_security_agent_added_event(
 }
 
 
-pub fn assert_security_agent_removed_event(
+pub(crate) fn assert_security_agent_removed_event(
     spied_event: @(ContractAddress, Event),
     removed_account: ContractAddress,
     removed_by: ContractAddress,
@@ -319,7 +319,7 @@ pub fn assert_security_agent_removed_event(
 }
 
 
-pub fn assert_security_admin_added_event(
+pub(crate) fn assert_security_admin_added_event(
     spied_event: @(ContractAddress, Event),
     added_account: ContractAddress,
     added_by: ContractAddress,
@@ -341,7 +341,7 @@ pub fn assert_security_admin_added_event(
 }
 
 
-pub fn assert_security_admin_removed_event(
+pub(crate) fn assert_security_admin_removed_event(
     spied_event: @(ContractAddress, Event),
     removed_account: ContractAddress,
     removed_by: ContractAddress,

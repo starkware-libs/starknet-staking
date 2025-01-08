@@ -8,7 +8,7 @@ pub(crate) mod replaceability;
 pub use replaceability::ReplaceabilityComponent;
 
 // Due to an issue in snforge, it won't recognize the eic testing contract under #[cfg(test)].
-pub(crate) mod eic_test_contract;
+mod eic_test_contract;
 
 // Due to an issue in snforge, it won't recognize the mock under #[cfg(test)].
 pub(crate) mod mock;

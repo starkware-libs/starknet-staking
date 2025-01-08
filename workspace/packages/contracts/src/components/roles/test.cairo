@@ -14,7 +14,7 @@ use roles::interface;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 
 
-pub fn assert_panic_with_felt_error<T, +Drop<T>>(
+fn assert_panic_with_felt_error<T, +Drop<T>>(
     result: Result<T, Array<felt252>>, expected_error: felt252,
 ) {
     match result {

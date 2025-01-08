@@ -7,11 +7,10 @@ pub(crate) mod roles;
 pub use roles::RolesComponent;
 
 #[cfg(test)]
-pub mod event_test_utils;
-
+pub(crate) mod event_test_utils;
 
 #[cfg(test)]
-pub mod mock_contract;
+pub(crate) mod mock_contract;
 
 #[cfg(test)]
 mod test;
