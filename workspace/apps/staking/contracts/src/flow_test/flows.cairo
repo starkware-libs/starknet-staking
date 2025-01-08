@@ -2,7 +2,7 @@ use contracts_commons::test_utils::{TokenState, TokenTrait};
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use staking::flow_test::utils::SystemTrait;
-use staking::flow_test::utils::{DelegatorTrait, StakingTrait, SystemStakerTrait, SystemState};
+use staking::flow_test::utils::{StakingTrait, SystemDelegatorTrait, SystemStakerTrait, SystemState};
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
@@ -27,22 +27,22 @@ pub(crate) fn basic_stake_flow(ref system: SystemState<TokenState>) {
 
     let pool = system.staking.get_pool(:staker);
     let delegator = system.new_delegator(amount: stake_amount);
-    delegator.delegate(:pool, amount: stake_amount / 2);
+    system.delegate(:delegator, :pool, amount: stake_amount / 2);
     system.advance_time(time: one_week);
 
     system.increase_stake(:staker, amount: stake_amount / 4);
     system.advance_time(time: one_week);
 
-    delegator.increase_delegate(:pool, amount: stake_amount / 4);
+    system.increase_delegate(:delegator, :pool, amount: stake_amount / 4);
     system.advance_time(time: one_week);
 
-    delegator.exit_intent(:pool, amount: stake_amount * 3 / 4);
+    system.delegator_exit_intent(:delegator, :pool, amount: stake_amount * 3 / 4);
     system.advance_time(time: one_week);
 
     system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
-    delegator.exit_action(:pool);
+    system.delegator_exit_action(:delegator, :pool);
     system.staker_exit_action(:staker);
 
     assert!(system.token.balance_of(account: pool) < 100);

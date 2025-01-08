@@ -10,6 +10,7 @@ use snforge_std::start_cheat_block_timestamp_global;
 use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
+use staking::pool::interface::{IPoolSafeDispatcher, IPoolSafeDispatcherTrait};
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
@@ -528,70 +529,105 @@ pub(crate) struct Delegator {
 }
 
 #[generate_trait]
-pub(crate) impl DelegatorImpl of DelegatorTrait {
+impl DelegatorImpl of DelegatorTrait {
     fn new(delegator: Account, reward: Account) -> Delegator nopanic {
         Delegator { delegator, reward }
     }
+}
 
-    fn delegate(self: Delegator, pool: ContractAddress, amount: Amount) {
-        self.delegator.approve(spender: pool, :amount);
-        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+#[generate_trait]
+pub(crate) impl SystemDelegatorImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of SystemDelegatorTrait<TTokenState> {
+    fn delegate(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
+    ) {
+        self.token.approve(owner: delegator.delegator.address, spender: pool, :amount);
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.enter_delegation_pool(reward_address: self.reward.address, :amount)
+        pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
     }
 
-    fn increase_delegate(self: Delegator, pool: ContractAddress, amount: Amount) -> Amount {
-        self.delegator.approve(spender: pool, :amount);
-        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+    fn increase_delegate(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
+    ) -> Amount {
+        self.token.approve(owner: delegator.delegator.address, spender: pool, :amount);
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.add_to_delegation_pool(pool_member: self.delegator.address, :amount)
+        pool_dispatcher.add_to_delegation_pool(pool_member: delegator.delegator.address, :amount)
     }
 
-    fn exit_intent(self: Delegator, pool: ContractAddress, amount: Amount) {
-        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+    fn delegator_exit_intent(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
+    ) {
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.exit_delegation_pool_intent(:amount)
     }
 
-    fn exit_action(self: Delegator, pool: ContractAddress) -> Amount {
-        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+    fn delegator_exit_action(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+    ) -> Amount {
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.exit_delegation_pool_action(pool_member: self.delegator.address)
+        pool_dispatcher.exit_delegation_pool_action(pool_member: delegator.delegator.address)
     }
 
     fn switch_delegation_pool(
-        self: Delegator,
+        self: SystemState<TTokenState>,
+        delegator: Delegator,
         from_pool: ContractAddress,
         to_staker: ContractAddress,
         to_pool: ContractAddress,
         amount: Amount,
     ) -> Amount {
         cheat_caller_address_once(
-            contract_address: from_pool, caller_address: self.delegator.address,
+            contract_address: from_pool, caller_address: delegator.delegator.address,
         );
         let pool_dispatcher = IPoolDispatcher { contract_address: from_pool };
         pool_dispatcher.switch_delegation_pool(:to_staker, :to_pool, :amount)
     }
 
-    fn claim_rewards(self: Delegator, pool: ContractAddress) -> Amount {
-        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+    fn delegator_claim_rewards(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+    ) -> Amount {
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.claim_rewards(pool_member: self.delegator.address)
+        pool_dispatcher.claim_rewards(pool_member: delegator.delegator.address)
     }
 
-    fn change_reward_address(
-        self: Delegator, pool: ContractAddress, reward_address: ContractAddress,
+    fn delegator_change_reward_address(
+        self: SystemState<TTokenState>,
+        delegator: Delegator,
+        pool: ContractAddress,
+        reward_address: ContractAddress,
     ) {
-        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.change_reward_address(:reward_address)
     }
 
-    fn add_to_delegation_pool(self: Delegator, pool: ContractAddress, amount: Amount) -> Amount {
-        self.delegator.approve(spender: pool, :amount);
-        cheat_caller_address_once(contract_address: pool, caller_address: self.delegator.address);
+    fn add_to_delegation_pool(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
+    ) -> Amount {
+        self.token.approve(owner: delegator.delegator.address, spender: pool, :amount);
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.add_to_delegation_pool(pool_member: self.delegator.address, :amount)
+        pool_dispatcher.add_to_delegation_pool(pool_member: delegator.delegator.address, :amount)
     }
 }
 
