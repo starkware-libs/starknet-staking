@@ -2,7 +2,7 @@ use contracts_commons::test_utils::{TokenState, TokenTrait};
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use staking::flow_test::utils::SystemTrait;
-use staking::flow_test::utils::{DelegatorTrait, StakerTrait, StakingTrait, SystemState};
+use staking::flow_test::utils::{DelegatorTrait, StakingTrait, SystemStakerTrait, SystemState};
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
@@ -19,10 +19,10 @@ pub(crate) fn basic_stake_flow(ref system: SystemState<TokenState>) {
         .token
         .balance_of(account: system.reward_supplier.address);
     let staker = system.new_staker(amount: stake_amount * 2);
-    staker.stake(amount: stake_amount, pool_enabled: true, commission: 200);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
     system.advance_time(time: one_week);
 
-    staker.increase_stake(amount: stake_amount / 2);
+    system.increase_stake(:staker, amount: stake_amount / 2);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -30,7 +30,7 @@ pub(crate) fn basic_stake_flow(ref system: SystemState<TokenState>) {
     delegator.delegate(:pool, amount: stake_amount / 2);
     system.advance_time(time: one_week);
 
-    staker.increase_stake(amount: stake_amount / 4);
+    system.increase_stake(:staker, amount: stake_amount / 4);
     system.advance_time(time: one_week);
 
     delegator.increase_delegate(:pool, amount: stake_amount / 4);
@@ -39,11 +39,11 @@ pub(crate) fn basic_stake_flow(ref system: SystemState<TokenState>) {
     delegator.exit_intent(:pool, amount: stake_amount * 3 / 4);
     system.advance_time(time: one_week);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
     delegator.exit_action(:pool);
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     assert!(system.token.balance_of(account: pool) < 100);
     assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount * 2);

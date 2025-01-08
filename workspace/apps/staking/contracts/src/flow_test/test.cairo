@@ -3,7 +3,7 @@ use contracts_commons::test_utils::{TokenTrait};
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use flow_test_utils::{DelegatorTrait};
-use flow_test_utils::{RewardSupplierTrait, StakerTrait, StakingTrait, SystemTrait};
+use flow_test_utils::{RewardSupplierTrait, StakingTrait, SystemStakerTrait, SystemTrait};
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows::basic_stake_flow;
 use staking::flow_test::utils as flow_test_utils;
@@ -48,31 +48,31 @@ fn set_open_for_delegation_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker.stake(amount: initial_stake_amount, pool_enabled: false, :commission);
+    system.stake(:staker, amount: initial_stake_amount, pool_enabled: false, :commission);
     system.advance_time(time: one_week);
 
-    staker.increase_stake(amount: initial_stake_amount / 2);
+    system.increase_stake(:staker, amount: initial_stake_amount / 2);
     system.advance_time(time: one_week);
 
     assert!(system.token.balance_of(account: staker.reward.address).is_zero());
-    staker.claim_rewards();
+    system.staker_claim_rewards(:staker);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
 
-    let pool = staker.set_open_for_delegation(:commission);
+    let pool = system.set_open_for_delegation(:staker, :commission);
     system.advance_time(time: one_week);
 
     let delegator = system.new_delegator(amount: initial_stake_amount);
     delegator.delegate(:pool, amount: initial_stake_amount / 2);
     system.advance_time(time: one_week);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
     delegator.exit_intent(:pool, amount: initial_stake_amount / 2);
     system.advance_time(time: one_week);
 
     delegator.exit_action(:pool);
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     assert!(system.token.balance_of(account: system.staking.address).is_zero());
     assert!(system.token.balance_of(account: pool) < 100);
@@ -112,7 +112,7 @@ fn delegator_intent_after_staker_action_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -120,10 +120,10 @@ fn delegator_intent_after_staker_action_flow_test() {
     delegator.delegate(:pool, amount: stake_amount);
     system.advance_time(time: one_week);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
-    staker.exit_action();
+    system.staker_exit_action(:staker);
     system.advance_time(time: one_week);
 
     delegator.exit_intent(:pool, amount: stake_amount / 2);
@@ -170,7 +170,7 @@ fn delegator_intent_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -195,9 +195,9 @@ fn delegator_intent_flow_test() {
     system.advance_time(time: system.staking.get_exit_wait_window());
     delegator.exit_action(:pool);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     assert!(system.token.balance_of(account: system.staking.address).is_zero());
     assert!(system.token.balance_of(account: pool) < 100);
@@ -252,27 +252,27 @@ fn operations_after_dead_staker_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker1.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
-    staker2.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(staker: staker2, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let staker1_pool = system.staking.get_pool(staker: staker1);
     delegator.delegate(pool: staker1_pool, amount: delegated_amount);
     system.advance_time(time: one_week);
 
-    staker1.exit_intent();
+    system.staker_exit_intent(staker: staker1);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
     // After the following, delegator has 1/2 in staker1, and 1/2 in intent.
     delegator.exit_intent(pool: staker1_pool, amount: delegated_amount / 2);
     system.advance_time(time: one_week);
 
-    staker1.exit_action();
+    system.staker_exit_action(staker: staker1);
 
     // Re-stake after exiting. Pool should be different.
-    staker1.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
     let staker1_second_pool = system.staking.get_pool(staker: staker1);
     system.advance_time(time: one_week);
     assert_ne!(staker1_pool, staker1_second_pool);
@@ -311,14 +311,14 @@ fn operations_after_dead_staker_flow_test() {
     delegator.exit_action(pool: staker1_pool);
 
     // Clean up and make all parties exit.
-    staker1.exit_intent();
+    system.staker_exit_intent(staker: staker1);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
-    staker2.exit_intent();
+    system.staker_exit_intent(staker: staker2);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
-    staker1.exit_action();
-    staker2.exit_action();
+    system.staker_exit_action(staker: staker1);
+    system.staker_exit_action(staker: staker2);
     delegator.exit_intent(pool: staker2_pool, amount: delegated_amount / 4);
     delegator.exit_action(pool: staker2_pool);
 
@@ -378,14 +378,14 @@ fn delegator_didnt_update_after_staker_update_commission_flow_test() {
     let one_week = Time::weeks(count: 1);
 
     // Stake with commission 100%
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
     delegator.delegate(:pool, amount: delegated_amount);
 
     // Update commission to 0%
-    staker.update_commission(commission: Zero::zero());
+    system.update_commission(:staker, commission: Zero::zero());
     system.advance_time(time: one_week);
 
     delegator.exit_intent(:pool, amount: delegated_amount);
@@ -393,9 +393,9 @@ fn delegator_didnt_update_after_staker_update_commission_flow_test() {
     delegator.exit_action(:pool);
 
     // Clean up and make all parties exit.
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     // ------------- Flow complete, now asserts -------------
 
@@ -448,14 +448,14 @@ fn delegator_updated_after_staker_update_commission_flow_test() {
     let one_week = Time::weeks(count: 1);
 
     // Stake with commission 100%
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
     delegator.delegate(:pool, amount: delegated_amount);
 
     // Update commission to 0%
-    staker.update_commission(commission: Zero::zero());
+    system.update_commission(:staker, commission: Zero::zero());
     system.advance_time(time: one_week);
 
     // Delegator claim_rewards to update commission to 0%
@@ -468,9 +468,9 @@ fn delegator_updated_after_staker_update_commission_flow_test() {
     delegator.exit_action(:pool);
 
     // Clean up and make all parties exit.
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     // ------------- Flow complete, now asserts -------------
 
@@ -517,7 +517,7 @@ fn staker_intent_last_action_first_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker.stake(amount: initial_stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: initial_stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -528,10 +528,10 @@ fn staker_intent_last_action_first_flow_test() {
     delegator.exit_intent(:pool, amount: initial_stake_amount / 2);
     system.advance_time(time: one_week);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
-    staker.exit_action();
+    system.staker_exit_action(:staker);
     system.advance_time(time: one_week);
 
     delegator.exit_action(:pool);
@@ -569,7 +569,7 @@ fn switch_to_same_delegation_pool_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -613,7 +613,7 @@ fn delegator_claim_rewards_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -622,7 +622,7 @@ fn delegator_claim_rewards_flow_test() {
     delegator.delegate(:pool, amount: delegated_amount);
     system.advance_time(time: one_week);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window().div(divider: 2));
 
     delegator.claim_rewards(:pool);
@@ -630,7 +630,7 @@ fn delegator_claim_rewards_flow_test() {
     system.advance_time(time: system.staking.get_exit_wait_window());
 
     delegator.exit_action(:pool);
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     assert!(system.token.balance_of(account: system.staking.address).is_zero());
     assert!(system.token.balance_of(account: pool) < 100);
@@ -671,7 +671,7 @@ fn two_delegators_full_intent_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -693,10 +693,10 @@ fn two_delegators_full_intent_flow_test() {
     system.advance_time(time: system.staking.get_exit_wait_window());
 
     delegator_y.exit_action(:pool);
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     assert!(system.token.balance_of(account: system.staking.address).is_zero());
     assert!(system.token.balance_of(account: pool) < 100);
@@ -740,7 +740,7 @@ fn partial_switches_flow_test() {
     let one_week = Time::weeks(count: 1);
 
     let first_staker = system.new_staker(amount: stake_amount);
-    first_staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(staker: first_staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let delegated_amount = stake_amount;
@@ -750,7 +750,7 @@ fn partial_switches_flow_test() {
     system.advance_time(time: one_week);
 
     let second_staker = system.new_staker(amount: stake_amount);
-    second_staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(staker: second_staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     delegator.exit_intent(pool: first_pool, amount: delegated_amount / 2);
@@ -792,13 +792,13 @@ fn partial_switches_flow_test() {
     system.advance_time(time: system.staking.get_exit_wait_window());
     delegator.exit_action(pool: second_pool);
 
-    first_staker.exit_intent();
+    system.staker_exit_intent(staker: first_staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    first_staker.exit_action();
+    system.staker_exit_action(staker: first_staker);
 
-    second_staker.exit_intent();
+    system.staker_exit_intent(staker: second_staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    second_staker.exit_action();
+    system.staker_exit_action(staker: second_staker);
 
     assert!(system.token.balance_of(account: system.staking.address).is_zero());
     assert!(system.token.balance_of(account: first_pool) < 100);
@@ -855,13 +855,13 @@ fn flow_4_switch_member_back_and_forth_test() {
     let one_week = Time::weeks(count: 1);
 
     let staker_A = system.new_staker(amount: stake_amount);
-    staker_A.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(staker: staker_A, amount: stake_amount, pool_enabled: true, :commission);
     assert_eq!(system.staking.get_total_stake(), stake_amount);
     let pool_A = system.staking.get_pool(staker: staker_A);
     system.advance_time(time: one_week);
 
     let staker_B = system.new_staker(amount: stake_amount);
-    staker_B.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(staker: staker_B, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
     let pool_B = system.staking.get_pool(staker: staker_B);
 
@@ -904,11 +904,11 @@ fn flow_4_switch_member_back_and_forth_test() {
     system.advance_time(time: system.staking.get_exit_wait_window());
     delegator_Y.exit_action(pool: pool_B);
 
-    staker_B.exit_intent();
-    staker_A.exit_intent();
+    system.staker_exit_intent(staker: staker_B);
+    system.staker_exit_intent(staker: staker_A);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    staker_A.exit_action();
-    staker_B.exit_action();
+    system.staker_exit_action(staker: staker_A);
+    system.staker_exit_action(staker: staker_B);
 
     /// Post clearance checks: ///
 
@@ -967,7 +967,7 @@ fn delegators_add_to_delegation_pool_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -995,9 +995,9 @@ fn delegators_add_to_delegation_pool_flow_test() {
     system.advance_time(time: system.staking.get_exit_wait_window());
     second_delegator.exit_action(:pool);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     // Post clearance checks:
 
@@ -1061,7 +1061,7 @@ fn same_staker_different_pool_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -1072,13 +1072,13 @@ fn same_staker_different_pool_flow_test() {
     delegator.exit_intent(:pool, amount: delegated_amount);
     system.advance_time(time: one_week);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     // Re-stake after exiting. Pool should be different.
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
     let second_pool = system.staking.get_pool(:staker);
     assert!(pool != second_pool);
@@ -1098,13 +1098,13 @@ fn same_staker_different_pool_flow_test() {
     delegator.exit_intent(pool: second_pool, amount: partial_amount);
     system.advance_time(time: one_week);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
 
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     // Second re-stake after exiting. Pool should be different.
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
     let third_pool = system.staking.get_pool(:staker);
     assert!(second_pool != third_pool);
@@ -1133,9 +1133,9 @@ fn same_staker_different_pool_flow_test() {
     delegator.exit_action(pool: second_pool);
     delegator.exit_action(pool: third_pool);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     // ------------- Flow complete, now asserts -------------
 
@@ -1190,7 +1190,7 @@ fn add_to_delegation_after_intent_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(1);
 
-    staker.stake(amount: stake_amount, pool_enabled: true, :commission);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -1218,9 +1218,9 @@ fn add_to_delegation_after_intent_flow_test() {
     system.advance_time(time: system.staking.get_exit_wait_window());
     delegator.exit_action(:pool);
 
-    staker.exit_intent();
+    system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    staker.exit_action();
+    system.staker_exit_action(:staker);
 
     // Post clearance checks:
 
