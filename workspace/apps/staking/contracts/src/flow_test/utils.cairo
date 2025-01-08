@@ -440,74 +440,82 @@ pub(crate) struct Staker {
 }
 
 #[generate_trait]
-pub(crate) impl StakerImpl of StakerTrait {
+impl StakerImpl of StakerTrait {
     fn new(staker: Account, reward: Account, operational: Account) -> Staker nopanic {
         Staker { staker, reward, operational }
     }
+}
 
-    fn stake(self: Staker, amount: Amount, pool_enabled: bool, commission: Commission) {
-        self.staker.approve(spender: self.staker.staking.address, :amount);
+#[generate_trait]
+pub(crate) impl SystemStakerImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of SystemStakerTrait<TTokenState> {
+    fn stake(
+        self: SystemState<TTokenState>,
+        staker: Staker,
+        amount: Amount,
+        pool_enabled: bool,
+        commission: Commission,
+    ) {
+        self.token.approve(owner: staker.staker.address, spender: self.staking.address, :amount);
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address,
+            contract_address: self.staking.address, caller_address: staker.staker.address,
         );
         self
-            .staker
             .staking
             .dispatcher()
             .stake(
-                reward_address: self.reward.address,
-                operational_address: self.operational.address,
+                reward_address: staker.reward.address,
+                operational_address: staker.operational.address,
                 :amount,
                 :pool_enabled,
                 :commission,
             )
     }
 
-    fn increase_stake(self: Staker, amount: Amount) -> Amount {
-        self.staker.approve(spender: self.staker.staking.address, :amount);
+    fn increase_stake(self: SystemState<TTokenState>, staker: Staker, amount: Amount) -> Amount {
+        self.token.approve(owner: staker.staker.address, spender: self.staking.address, :amount);
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address,
+            contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self
-            .staker
-            .staking
-            .dispatcher()
-            .increase_stake(staker_address: self.staker.address, :amount)
+        self.staking.dispatcher().increase_stake(staker_address: staker.staker.address, :amount)
     }
 
-    fn exit_intent(self: Staker) -> Timestamp {
+    fn staker_exit_intent(self: SystemState<TTokenState>, staker: Staker) -> Timestamp {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address,
+            contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self.staker.staking.dispatcher().unstake_intent()
+        self.staking.dispatcher().unstake_intent()
     }
 
-    fn exit_action(self: Staker) -> Amount {
+    fn staker_exit_action(self: SystemState<TTokenState>, staker: Staker) -> Amount {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address,
+            contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self.staker.staking.dispatcher().unstake_action(staker_address: self.staker.address)
+        self.staking.dispatcher().unstake_action(staker_address: staker.staker.address)
     }
 
-    fn set_open_for_delegation(self: Staker, commission: Commission) -> ContractAddress {
+    fn set_open_for_delegation(
+        self: SystemState<TTokenState>, staker: Staker, commission: Commission,
+    ) -> ContractAddress {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address,
+            contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self.staker.staking.dispatcher().set_open_for_delegation(:commission)
+        self.staking.dispatcher().set_open_for_delegation(:commission)
     }
 
-    fn claim_rewards(self: Staker) -> Amount {
+    fn staker_claim_rewards(self: SystemState<TTokenState>, staker: Staker) -> Amount {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address,
+            contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self.staker.staking.dispatcher().claim_rewards(staker_address: self.staker.address)
+        self.staking.dispatcher().claim_rewards(staker_address: staker.staker.address)
     }
 
-    fn update_commission(self: Staker, commission: Commission) {
+    fn update_commission(self: SystemState<TTokenState>, staker: Staker, commission: Commission) {
         cheat_caller_address_once(
-            contract_address: self.staker.staking.address, caller_address: self.staker.address,
+            contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self.staker.staking.dispatcher().update_commission(:commission)
+        self.staking.dispatcher().update_commission(:commission)
     }
 }
 
