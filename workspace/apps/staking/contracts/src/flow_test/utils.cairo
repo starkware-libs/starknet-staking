@@ -1,22 +1,24 @@
 use contracts_commons::constants::{NAME, SYMBOL};
-use contracts_commons::test_utils::{Deployable, set_account_as_token_admin};
-use contracts_commons::test_utils::{TokenConfig, TokenState, TokenTrait, cheat_caller_address_once};
-use contracts_commons::test_utils::{set_account_as_app_role_admin, set_account_as_security_agent};
-use contracts_commons::test_utils::{set_account_as_security_admin, set_account_as_upgrade_governor};
+use contracts_commons::test_utils::{
+    Deployable, TokenConfig, TokenState, TokenTrait, cheat_caller_address_once,
+    set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
+    set_account_as_token_admin, set_account_as_upgrade_governor,
+};
 use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
 use core::traits::Into;
-use snforge_std::start_cheat_block_timestamp_global;
-use snforge_std::{ContractClassTrait, DeclareResultTrait};
+use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
 use staking::minting_curve::interface::IMintingCurveDispatcher;
-use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
-use staking::pool::interface::{IPoolSafeDispatcher, IPoolSafeDispatcherTrait};
+use staking::pool::interface::{
+    IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
+};
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
-use staking::staking::interface::IStakingDispatcher;
-use staking::staking::interface::{IStakingConfigDispatcher, IStakingConfigDispatcherTrait};
-use staking::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
+use staking::staking::interface::{
+    IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
+    IStakingDispatcherTrait, StakerInfoTrait,
+};
 use staking::test_utils::StakingInitConfig;
 use staking::types::{Amount, Commission};
 use starknet::{ClassHash, ContractAddress};

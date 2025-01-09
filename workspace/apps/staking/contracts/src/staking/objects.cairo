@@ -1,4 +1,4 @@
-use contracts_commons::errors::{OptionAuxTrait};
+use contracts_commons::errors::OptionAuxTrait;
 use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;

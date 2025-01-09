@@ -1,43 +1,47 @@
-use MintingCurve::CONTRACT_IDENTITY as mint_curve_identity;
-use MintingCurve::CONTRACT_VERSION as mint_curve_version;
-use Pool::CONTRACT_IDENTITY as pool_identity;
-use Pool::CONTRACT_VERSION as pool_version;
-use RewardSupplier::CONTRACT_IDENTITY as reward_supplier_identity;
-use RewardSupplier::CONTRACT_VERSION as reward_supplier_version;
-use Staking::CONTRACT_IDENTITY as staking_identity;
-use Staking::CONTRACT_VERSION as staking_version;
+use MintingCurve::{
+    CONTRACT_IDENTITY as mint_curve_identity, CONTRACT_VERSION as mint_curve_version,
+};
+use Pool::{CONTRACT_IDENTITY as pool_identity, CONTRACT_VERSION as pool_version};
+use RewardSupplier::{
+    CONTRACT_IDENTITY as reward_supplier_identity, CONTRACT_VERSION as reward_supplier_version,
+};
+use Staking::{CONTRACT_IDENTITY as staking_identity, CONTRACT_VERSION as staking_version};
 use contracts_commons::errors::Describable;
 use contracts_commons::math::ceil_of_division;
-use contracts_commons::test_utils::assert_panic_with_error;
-use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
+use contracts_commons::test_utils::{
+    assert_panic_with_error, cheat_caller_address_once, check_identity,
+};
 use contracts_commons::types::time::time::Time;
 use core::num::traits::{Sqrt, Zero};
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use snforge_std::cheatcodes::message_to_l1::MessageToL1SpyAssertionsTrait;
-use snforge_std::cheatcodes::message_to_l1::{MessageToL1, spy_messages_to_l1};
+use snforge_std::cheatcodes::message_to_l1::{
+    MessageToL1, MessageToL1SpyAssertionsTrait, spy_messages_to_l1,
+};
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use staking::constants::STRK_IN_FRIS;
 use staking::errors::Error;
-use staking::event_test_utils::assert_calculated_rewards_event;
-use staking::event_test_utils::{assert_mint_request_event, assert_number_of_events};
+use staking::event_test_utils::{
+    assert_calculated_rewards_event, assert_mint_request_event, assert_number_of_events,
+};
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::pool::Pool;
-use staking::reward_supplier::interface::IRewardSupplierDispatcher;
-use staking::reward_supplier::interface::IRewardSupplierDispatcherTrait;
-use staking::reward_supplier::interface::IRewardSupplierSafeDispatcher;
-use staking::reward_supplier::interface::IRewardSupplierSafeDispatcherTrait;
-use staking::reward_supplier::interface::{IRewardSupplier, RewardSupplierInfo};
+use staking::reward_supplier::interface::{
+    IRewardSupplier, IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
+    IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfo,
+};
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::staking::Staking;
 use staking::test_utils;
 use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use staking::types::Amount;
 use staking::utils::compute_threshold;
-use test_utils::{StakingInitConfig, deploy_mock_erc20_contract, deploy_staking_contract};
-use test_utils::{deploy_minting_curve_contract, fund, general_contract_system_deployment};
-use test_utils::{initialize_reward_supplier_state_from_cfg, stake_for_testing_using_dispatcher};
+use test_utils::{
+    StakingInitConfig, deploy_minting_curve_contract, deploy_mock_erc20_contract,
+    deploy_staking_contract, fund, general_contract_system_deployment,
+    initialize_reward_supplier_state_from_cfg, stake_for_testing_using_dispatcher,
+};
 
 
 #[test]

@@ -3,7 +3,7 @@ pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::{OptionAuxTrait};
+    use contracts_commons::errors::OptionAuxTrait;
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;
@@ -11,24 +11,28 @@ pub mod Staking {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::MIN_TIME_BETWEEN_INDEX_UPDATES;
-    use staking::constants::{DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
+    use staking::constants::{
+        DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, MIN_TIME_BETWEEN_INDEX_UPDATES,
+    };
     use staking::errors::Error;
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
-    use staking::reward_supplier::interface::IRewardSupplierDispatcher;
-    use staking::reward_supplier::interface::IRewardSupplierDispatcherTrait;
-    use staking::staking::interface::{ConfigEvents, Events, PauseEvents};
-    use staking::staking::interface::{IStaking, IStakingConfig, IStakingPause, IStakingPool};
-    use staking::staking::interface::{StakerInfo, StakerPoolInfo, StakingContractInfo};
-    use staking::staking::objects::UndelegateIntentValueTrait;
-    use staking::staking::objects::UndelegateIntentValueZero;
-    use staking::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
-    use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+    use staking::reward_supplier::interface::{
+        IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
+    };
+    use staking::staking::interface::{
+        ConfigEvents, Events, IStaking, IStakingConfig, IStakingPause, IStakingPool, PauseEvents,
+        StakerInfo, StakerPoolInfo, StakingContractInfo,
+    };
+    use staking::staking::objects::{
+        InternalStakerInfo, InternalStakerInfoTrait, UndelegateIntentKey, UndelegateIntentValue,
+        UndelegateIntentValueTrait, UndelegateIntentValueZero,
+    };
     use staking::types::{Amount, Commission, Index};
-    use staking::utils::CheckedIERC20DispatcherTrait;
-    use staking::utils::{compute_commission_amount_rounded_down, deploy_delegation_pool_contract};
-    use staking::utils::{compute_global_index_diff, compute_new_delegated_stake};
-    use staking::utils::{compute_rewards_rounded_down, compute_rewards_rounded_up};
+    use staking::utils::{
+        CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
+        compute_global_index_diff, compute_new_delegated_stake, compute_rewards_rounded_down,
+        compute_rewards_rounded_up, deploy_delegation_pool_contract,
+    };
     use starknet::class_hash::ClassHash;
     use starknet::storage::Map;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};

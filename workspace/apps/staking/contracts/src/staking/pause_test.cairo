@@ -1,15 +1,19 @@
 use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use staking::event_test_utils::{assert_number_of_events, assert_paused_event};
-use staking::event_test_utils::{assert_unpaused_event};
-use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
-use staking::staking::interface::{IStakingPauseDispatcher, IStakingPauseDispatcherTrait};
-use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
-use staking::test_utils::constants::{DUMMY_ADDRESS, DUMMY_IDENTIFIER};
-use staking::test_utils::constants::{NON_SECURITY_ADMIN, NON_SECURITY_AGENT};
-use staking::test_utils::stake_for_testing_using_dispatcher;
-use staking::test_utils::{StakingInitConfig, general_contract_system_deployment};
-use staking::test_utils::{load_one_felt, pause_staking_contract};
+use staking::event_test_utils::{
+    assert_number_of_events, assert_paused_event, assert_unpaused_event,
+};
+use staking::staking::interface::{
+    IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
+    IStakingPauseDispatcherTrait, IStakingPoolDispatcher, IStakingPoolDispatcherTrait,
+};
+use staking::test_utils::constants::{
+    DUMMY_ADDRESS, DUMMY_IDENTIFIER, NON_SECURITY_ADMIN, NON_SECURITY_AGENT,
+};
+use staking::test_utils::{
+    StakingInitConfig, general_contract_system_deployment, load_one_felt, pause_staking_contract,
+    stake_for_testing_using_dispatcher,
+};
 
 #[test]
 fn test_pause() {
