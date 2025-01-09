@@ -1,7 +1,9 @@
+use contracts_commons::errors::Describable;
 use contracts_commons::errors::OptionAuxTrait;
 use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;
+use core::panics::panic_with_byte_array;
 use staking::errors::Error;
 use staking::staking::interface::{StakerInfo, StakerPoolInfo};
 use staking::types::{Amount, Index};
@@ -103,6 +105,43 @@ pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
 
     fn assert_valid(self: @UndelegateIntentValue) {
         assert!(self.is_valid(), "{}", Error::INVALID_UNDELEGATE_INTENT_VALUE);
+    }
+}
+
+#[generate_trait]
+pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTrait {
+    fn is_none(self: @VersionedInternalStakerInfo) -> bool nopanic {
+        match *self {
+            VersionedInternalStakerInfo::None => true,
+            _ => false,
+        }
+    }
+
+    fn get_internal_staker_info_v1(self: VersionedInternalStakerInfo) -> InternalStakerInfoV1 {
+        match self {
+            VersionedInternalStakerInfo::V0(internal_staker_info) => internal_staker_info.into(),
+            VersionedInternalStakerInfo::V1(internal_staker_info_v1) => internal_staker_info_v1,
+            VersionedInternalStakerInfo::None => panic_with_byte_array(
+                err: @Error::STAKER_NOT_EXISTS.describe(),
+            ),
+        }
+    }
+}
+
+pub(crate) impl InternalStakerInfoIntoInternalStakerInfoV1 of Into<
+    InternalStakerInfo, InternalStakerInfoV1,
+> {
+    #[inline(always)]
+    fn into(self: InternalStakerInfo) -> InternalStakerInfoV1 nopanic {
+        InternalStakerInfoV1 {
+            reward_address: self.reward_address,
+            operational_address: self.operational_address,
+            unstake_time: self.unstake_time,
+            amount_own: self.amount_own,
+            index: self.index,
+            unclaimed_rewards_own: self.unclaimed_rewards_own,
+            pool_info: self.pool_info,
+        }
     }
 }
 

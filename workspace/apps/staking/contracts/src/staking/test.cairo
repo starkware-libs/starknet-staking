@@ -45,8 +45,9 @@ use staking::staking::interface::{
     IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
-    InternalStakerInfo, InternalStakerInfoTrait, UndelegateIntentKey, UndelegateIntentValue,
-    UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
+    InternalStakerInfo, InternalStakerInfoTrait, InternalStakerInfoV1, UndelegateIntentKey,
+    UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
+    VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
 use staking::staking::staking_tester::{IStakingTesterDispatcher, IStakingTesterDispatcherTrait};
@@ -2847,4 +2848,92 @@ fn test_sanity_versioned_staker_info() {
     >::deserialize(ref span)
         .unwrap();
     assert_eq!(versioned_staker_info, VersionedInternalStakerInfo::V0(internal_staker_info));
+}
+
+#[test]
+fn test_versioned_internal_staker_info_is_none() {
+    let versioned_none = VersionedInternalStakerInfo::None;
+    let versioned_v0 = VersionedInternalStakerInfo::V0(
+        InternalStakerInfo {
+            reward_address: Zero::zero(),
+            operational_address: Zero::zero(),
+            unstake_time: Option::None,
+            amount_own: Zero::zero(),
+            index: Zero::zero(),
+            unclaimed_rewards_own: Zero::zero(),
+            pool_info: Option::None,
+        },
+    );
+    let versioned_v1 = VersionedInternalStakerInfo::V1(
+        InternalStakerInfoV1 {
+            reward_address: Zero::zero(),
+            operational_address: Zero::zero(),
+            unstake_time: Option::None,
+            amount_own: Zero::zero(),
+            index: Zero::zero(),
+            unclaimed_rewards_own: Zero::zero(),
+            pool_info: Option::None,
+        },
+    );
+    assert!(versioned_none.is_none());
+    assert!(!versioned_v0.is_none());
+    assert!(!versioned_v1.is_none());
+}
+
+#[test]
+fn test_internal_staker_info_into_internal_staker_info_v1() {
+    let internal_staker_info = InternalStakerInfo {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    let internal_staker_info_v1: InternalStakerInfoV1 = internal_staker_info.into();
+    let expected_internal_staker_info_v1 = InternalStakerInfoV1 {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    assert_eq!(internal_staker_info_v1, expected_internal_staker_info_v1);
+}
+
+#[test]
+fn test_versioned_internal_staker_info_get_internal_staker_info_v1() {
+    let internal_staker_info_v1 = InternalStakerInfoV1 {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    let versioned_v0 = VersionedInternalStakerInfo::V0(
+        InternalStakerInfo {
+            reward_address: Zero::zero(),
+            operational_address: Zero::zero(),
+            unstake_time: Option::None,
+            amount_own: Zero::zero(),
+            index: Zero::zero(),
+            unclaimed_rewards_own: Zero::zero(),
+            pool_info: Option::None,
+        },
+    );
+    let versioned_v1 = VersionedInternalStakerInfo::V1(internal_staker_info_v1);
+    assert_eq!(versioned_v0.get_internal_staker_info_v1(), internal_staker_info_v1);
+    assert_eq!(versioned_v1.get_internal_staker_info_v1(), internal_staker_info_v1);
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_versioned_internal_staker_info_get_internal_staker_info_v1_panic() {
+    let versioned_none = VersionedInternalStakerInfo::None;
+    versioned_none.get_internal_staker_info_v1();
 }
