@@ -1,9 +1,8 @@
 use contracts_commons::components::replaceability::ReplaceabilityComponent;
-use contracts_commons::components::replaceability::interface::EICData;
-use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
-use contracts_commons::components::replaceability::interface::ImplementationData;
-use contracts_commons::components::replaceability::interface::ImplementationFinalized;
-use contracts_commons::components::replaceability::interface::ImplementationReplaced;
+use contracts_commons::components::replaceability::interface::{
+    EICData, IReplaceableDispatcher, ImplementationData, ImplementationFinalized,
+    ImplementationReplaced,
+};
 use contracts_commons::components::replaceability::mock::ReplaceabilityMock;
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::test_utils::cheat_caller_address_once;

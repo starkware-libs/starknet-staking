@@ -1,23 +1,23 @@
 use Staking::ContractState;
-use constants::{APP_ROLE_ADMIN, UPGRADE_GOVERNOR};
-use constants::{BASE_MINT_AMOUNT, BUFFER, L1_REWARD_SUPPLIER};
-use constants::{COMMISSION, POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, TOKEN_ADDRESS};
-use constants::{GOVERNANCE_ADMIN, SECURITY_AGENT, TOKEN_ADMIN};
-use constants::{INITIAL_SUPPLY, MIN_STAKE, OWNER_ADDRESS, STAKER_INITIAL_BALANCE};
-use constants::{MINTING_CONTRACT_ADDRESS, STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS};
-use constants::{OPERATIONAL_ADDRESS, STAKER_ADDRESS, STAKER_REWARD_ADDRESS, STAKE_AMOUNT};
-use constants::{POOL_CONTRACT_ADMIN, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN};
-use constants::{POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS};
+use constants::{
+    APP_ROLE_ADMIN, BASE_MINT_AMOUNT, BUFFER, COMMISSION, GOVERNANCE_ADMIN, INITIAL_SUPPLY,
+    L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS, OWNER_ADDRESS,
+    POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
+    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS,
+    SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS,
+    STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN,
+    UPGRADE_GOVERNOR,
+};
 use contracts_commons::constants::{NAME, SYMBOL};
-use contracts_commons::test_utils::cheat_caller_address_once;
-use contracts_commons::test_utils::{set_account_as_app_role_admin, set_account_as_security_agent};
-use contracts_commons::test_utils::{set_account_as_security_admin, set_account_as_token_admin};
+use contracts_commons::test_utils::{
+    cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
+    set_account_as_security_agent, set_account_as_token_admin,
+};
 use contracts_commons::types::time::time::Timestamp;
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::test_address;
-use snforge_std::{ContractClassTrait, DeclareResultTrait};
+use snforge_std::{ContractClassTrait, DeclareResultTrait, test_address};
 use staking::constants::{BASE_VALUE, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
 use staking::minting_curve::interface::MintingCurveContractInfo;
 use staking::minting_curve::minting_curve::MintingCurve;
@@ -25,10 +25,10 @@ use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::pool::objects::InternalPoolMemberInfo;
 use staking::pool::pool::Pool;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
-use staking::staking::interface::{IStaking, StakerPoolInfo};
-use staking::staking::interface::{IStakingDispatcher, StakingContractInfo};
-use staking::staking::interface::{IStakingDispatcherTrait, StakerInfoTrait};
-use staking::staking::interface::{IStakingPauseDispatcher, IStakingPauseDispatcherTrait};
+use staking::staking::interface::{
+    IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
+    IStakingPauseDispatcherTrait, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
+};
 use staking::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
 use staking::staking::staking::Staking;
 use staking::types::{Amount, Commission, Index};

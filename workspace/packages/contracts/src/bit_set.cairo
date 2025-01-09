@@ -1,6 +1,5 @@
 use contracts_commons::bit_mask::{BitMask, PowOfTwo};
-use core::iter::IntoIterator;
-use core::iter::Iterator;
+use core::iter::{IntoIterator, Iterator};
 use core::num::traits::zero::Zero;
 use core::num::traits::{BitSize, Bounded};
 use core::starknet::storage_access::StorePacking;

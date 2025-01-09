@@ -3,14 +3,14 @@ use contracts_commons::components::roles::errors::AccessErrors;
 use contracts_commons::components::roles::test_utils;
 use contracts_commons::components::roles::test_utils::Constants;
 use contracts_commons::errors::Describable;
-use contracts_commons::event_test_utils::{assert_number_of_events};
+use contracts_commons::event_test_utils::assert_number_of_events;
 use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 use core::num::traits::zero::Zero;
-use interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use interface::{IRolesSafeDispatcher, IRolesSafeDispatcherTrait};
+use interface::{
+    IRolesDispatcher, IRolesDispatcherTrait, IRolesSafeDispatcher, IRolesSafeDispatcherTrait,
+};
 use openzeppelin::access::accesscontrol::AccessControlComponent::Errors as OZAccessErrors;
-use roles::event_test_utils;
-use roles::interface;
+use roles::{event_test_utils, interface};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 
 

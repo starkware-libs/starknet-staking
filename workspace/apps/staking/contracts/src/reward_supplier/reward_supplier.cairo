@@ -3,7 +3,7 @@ pub mod RewardSupplier {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::{OptionAuxTrait};
+    use contracts_commons::errors::OptionAuxTrait;
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::math::ceil_of_division;
     use contracts_commons::types::time::time::{Time, Timestamp};
@@ -14,16 +14,14 @@ pub mod RewardSupplier {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::constants::STRK_IN_FRIS;
     use staking::errors::Error;
-    use staking::minting_curve::interface::IMintingCurveDispatcher;
-    use staking::minting_curve::interface::IMintingCurveDispatcherTrait;
+    use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfo};
     use staking::types::Amount;
-    use staking::utils::CheckedIERC20DispatcherTrait;
-    use staking::utils::compute_threshold;
-    use starknet::SyscallResultTrait;
-    use starknet::syscalls::{send_message_to_l1_syscall};
-    use starknet::{ContractAddress, EthAddress};
-    use starknet::{get_caller_address, get_contract_address};
+    use staking::utils::{CheckedIERC20DispatcherTrait, compute_threshold};
+    use starknet::syscalls::send_message_to_l1_syscall;
+    use starknet::{
+        ContractAddress, EthAddress, SyscallResultTrait, get_caller_address, get_contract_address,
+    };
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 

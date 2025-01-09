@@ -1,53 +1,58 @@
-use Pool::CONTRACT_IDENTITY as pool_identity;
-use Pool::CONTRACT_VERSION as pool_version;
-use Pool::InternalPoolFunctionsTrait;
-use constants::{COMMISSION, NON_POOL_MEMBER_ADDRESS, OTHER_REWARD_ADDRESS, STAKER_FINAL_INDEX};
-use constants::{DUMMY_ADDRESS, STAKER_ADDRESS, STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS};
-use constants::{NOT_STAKING_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS};
-use constants::{OTHER_OPERATIONAL_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_UNCLAIMED_REWARDS};
+use Pool::{
+    CONTRACT_IDENTITY as pool_identity, CONTRACT_VERSION as pool_version,
+    InternalPoolFunctionsTrait,
+};
+use constants::{
+    COMMISSION, DUMMY_ADDRESS, NON_POOL_MEMBER_ADDRESS, NOT_STAKING_CONTRACT_ADDRESS,
+    OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS, OTHER_STAKER_ADDRESS, POOL_CONTRACT_ADMIN,
+    POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_FINAL_INDEX, STAKING_CONTRACT_ADDRESS,
+    TOKEN_ADDRESS,
+};
 use contracts_commons::errors::Describable;
-use contracts_commons::test_utils::assert_panic_with_error;
-use contracts_commons::test_utils::{cheat_caller_address_once, check_identity};
+use contracts_commons::test_utils::{
+    assert_panic_with_error, cheat_caller_address_once, check_identity,
+};
 use contracts_commons::types::time::time::Time;
 use core::num::traits::zero::Zero;
 use core::option::OptionTrait;
 use core::serde::Serde;
-use event_test_utils::assert_delegation_pool_member_balance_changed_event;
-use event_test_utils::assert_number_of_events;
-use event_test_utils::assert_pool_member_reward_address_change_event;
-use event_test_utils::assert_pool_member_reward_claimed_event;
-use event_test_utils::{assert_delete_pool_member_event, assert_switch_delegation_pool_event};
-use event_test_utils::{assert_final_index_set_event, assert_new_pool_member_event};
-use event_test_utils::{assert_pool_member_exit_action_event, assert_pool_member_exit_intent_event};
+use event_test_utils::{
+    assert_delegation_pool_member_balance_changed_event, assert_delete_pool_member_event,
+    assert_final_index_set_event, assert_new_pool_member_event, assert_number_of_events,
+    assert_pool_member_exit_action_event, assert_pool_member_exit_intent_event,
+    assert_pool_member_reward_address_change_event, assert_pool_member_reward_claimed_event,
+    assert_switch_delegation_pool_event,
+};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use snforge_std::{CheatSpan, cheat_caller_address};
-use snforge_std::{start_cheat_block_timestamp_global, test_address};
-use staking::constants::{BASE_VALUE};
+use snforge_std::{
+    CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, test_address,
+};
+use staking::constants::BASE_VALUE;
 use staking::errors::Error;
-use staking::event_test_utils;
-use staking::pool::interface::PoolMemberInfo;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
-    PoolContractInfo,
+    PoolContractInfo, PoolMemberInfo,
 };
 use staking::pool::objects::{InternalPoolMemberInfo, SwitchPoolData};
 use staking::pool::pool::Pool;
-use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
-use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerPoolInfo};
-use staking::staking::objects::InternalStakerInfoTrait;
-use staking::staking::objects::UndelegateIntentValueZero;
-use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
-use staking::test_utils;
+use staking::staking::interface::{
+    IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
+};
+use staking::staking::objects::{
+    InternalStakerInfoTrait, UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueZero,
+};
 use staking::test_utils::constants;
 use staking::types::Index;
 use staking::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
-use test_utils::{StakingInitConfig, deploy_mock_erc20_contract, initialize_pool_state};
-use test_utils::{approve, deploy_staking_contract, fund};
-use test_utils::{cheat_reward_for_reward_supplier, general_contract_system_deployment};
-use test_utils::{create_rewards_for_pool_member, load_pool_member_info_from_map};
-use test_utils::{enter_delegation_pool_for_testing_using_dispatcher};
-use test_utils::{load_from_simple_map, load_option_from_simple_map, stake_with_pool_enabled};
+use staking::{event_test_utils, test_utils};
+use test_utils::{
+    StakingInitConfig, approve, cheat_reward_for_reward_supplier, create_rewards_for_pool_member,
+    deploy_mock_erc20_contract, deploy_staking_contract,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    initialize_pool_state, load_from_simple_map, load_option_from_simple_map,
+    load_pool_member_info_from_map, stake_with_pool_enabled,
+};
 
 #[test]
 fn test_identity() {

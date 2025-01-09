@@ -1,5 +1,5 @@
 use contracts_commons::components::roles;
-use contracts_commons::event_test_utils::{panic_with_event_details};
+use contracts_commons::event_test_utils::panic_with_event_details;
 use roles::interface as RolesInterface;
 use roles::mock_contract::MockContract;
 use roles::roles::RolesComponent::Event as RolesEvent;

@@ -1,12 +1,13 @@
 #[starknet::component]
 pub(crate) mod RolesComponent {
-    use RolesInterface::{APP_GOVERNOR, APP_ROLE_ADMIN, GOVERNANCE_ADMIN, IRoles, OPERATOR, RoleId};
-    use RolesInterface::{AppGovernorAdded, AppGovernorRemoved, AppRoleAdminAdded};
-    use RolesInterface::{AppRoleAdminRemoved, GovernanceAdminAdded, GovernanceAdminRemoved};
-    use RolesInterface::{OperatorAdded, OperatorRemoved, SecurityAdminAdded, SecurityAdminRemoved};
-    use RolesInterface::{SECURITY_ADMIN, SECURITY_AGENT, TOKEN_ADMIN, UPGRADE_GOVERNOR};
-    use RolesInterface::{SecurityAgentAdded, SecurityAgentRemoved, TokenAdminAdded};
-    use RolesInterface::{TokenAdminRemoved, UpgradeGovernorAdded, UpgradeGovernorRemoved};
+    use RolesInterface::{
+        APP_GOVERNOR, APP_ROLE_ADMIN, AppGovernorAdded, AppGovernorRemoved, AppRoleAdminAdded,
+        AppRoleAdminRemoved, GOVERNANCE_ADMIN, GovernanceAdminAdded, GovernanceAdminRemoved, IRoles,
+        OPERATOR, OperatorAdded, OperatorRemoved, RoleId, SECURITY_ADMIN, SECURITY_AGENT,
+        SecurityAdminAdded, SecurityAdminRemoved, SecurityAgentAdded, SecurityAgentRemoved,
+        TOKEN_ADMIN, TokenAdminAdded, TokenAdminRemoved, UPGRADE_GOVERNOR, UpgradeGovernorAdded,
+        UpgradeGovernorRemoved,
+    };
     use contracts_commons::components::roles::errors::AccessErrors;
     use contracts_commons::components::roles::interface as RolesInterface;
     use core::num::traits::Zero;
@@ -36,9 +37,9 @@ pub(crate) mod RolesComponent {
         UpgradeGovernorRemoved: UpgradeGovernorRemoved,
     }
     use openzeppelin::access::accesscontrol::AccessControlComponent;
-    use openzeppelin::access::accesscontrol::AccessControlComponent::AccessControlImpl;
-    use openzeppelin::access::accesscontrol::AccessControlComponent::InternalTrait as AccessInternalTrait;
-
+    use openzeppelin::access::accesscontrol::AccessControlComponent::{
+        AccessControlImpl, InternalTrait as AccessInternalTrait,
+    };
     use openzeppelin::access::accesscontrol::interface::IAccessControl;
     use openzeppelin::introspection::src5::SRC5Component;
 

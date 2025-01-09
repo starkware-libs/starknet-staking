@@ -4,9 +4,9 @@ use snforge_std::cheatcodes::events::{Event, EventSpy, EventSpyTrait};
 use staking::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
 use staking::pool::interface::Events as PoolEvents;
 use staking::reward_supplier::interface::Events as RewardSupplierEvents;
-use staking::staking::interface::ConfigEvents as StakingConfigEvents;
-use staking::staking::interface::Events as StakingEvents;
-use staking::staking::interface::PauseEvents as StakingPauseEvents;
+use staking::staking::interface::{
+    ConfigEvents as StakingConfigEvents, Events as StakingEvents, PauseEvents as StakingPauseEvents,
+};
 use staking::types::{Amount, Commission, Index, Inflation};
 use starknet::ContractAddress;
 

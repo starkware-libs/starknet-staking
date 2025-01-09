@@ -1,4 +1,4 @@
-use contracts_commons::errors::{OptionAuxTrait};
+use contracts_commons::errors::OptionAuxTrait;
 use contracts_commons::math::{mul_wide_and_ceil_div, mul_wide_and_div};
 use core::num::traits::zero::Zero;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};

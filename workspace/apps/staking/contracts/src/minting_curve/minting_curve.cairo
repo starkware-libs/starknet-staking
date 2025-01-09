@@ -9,11 +9,12 @@ pub mod MintingCurve {
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::constants::{C_DENOM, DEFAULT_C_NUM, MAX_C_NUM};
     use staking::errors::Error;
-    use staking::minting_curve::interface::{ConfigEvents, Events, IMintingCurve};
-    use staking::minting_curve::interface::{IMintingCurveConfig, MintingCurveContractInfo};
+    use staking::minting_curve::interface::{
+        ConfigEvents, Events, IMintingCurve, IMintingCurveConfig, MintingCurveContractInfo,
+    };
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use staking::types::{Amount, Inflation};
-    use starknet::{ContractAddress};
+    use starknet::ContractAddress;
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 

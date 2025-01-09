@@ -276,10 +276,10 @@ mod tests {
     use contracts_commons::constants::{MAX_U128, MAX_U64};
     use core::num::traits::one::One;
     use core::num::traits::zero::Zero;
-    use super::Abs;
-    use super::{Fraction, FractionTrait};
-    use super::{have_same_sign};
-    use super::{mul_wide_and_ceil_div, mul_wide_and_div, wide_abs_diff};
+    use super::{
+        Abs, Fraction, FractionTrait, have_same_sign, mul_wide_and_ceil_div, mul_wide_and_div,
+        wide_abs_diff,
+    };
     const TEST_NUM: u64 = 100000000000;
 
     #[test]

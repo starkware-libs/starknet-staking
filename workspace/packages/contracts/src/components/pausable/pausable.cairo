@@ -5,10 +5,8 @@ pub(crate) mod PausableComponent {
     use contracts_commons::components::roles::RolesComponent;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-
-    use starknet::ContractAddress;
-    use starknet::get_caller_address;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use starknet::{ContractAddress, get_caller_address};
 
     #[storage]
     pub struct Storage {

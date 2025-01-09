@@ -1,14 +1,10 @@
 #[starknet::component]
 pub(crate) mod ReplaceabilityComponent {
     use contracts_commons::components::replaceability::errors::ReplaceErrors;
-    use contracts_commons::components::replaceability::interface::EIC_INITIALIZE_SELECTOR;
-    use contracts_commons::components::replaceability::interface::IMPLEMENTATION_EXPIRATION;
-    use contracts_commons::components::replaceability::interface::IReplaceable;
-    use contracts_commons::components::replaceability::interface::ImplementationAdded;
-    use contracts_commons::components::replaceability::interface::ImplementationData;
-    use contracts_commons::components::replaceability::interface::ImplementationFinalized;
-    use contracts_commons::components::replaceability::interface::ImplementationRemoved;
-    use contracts_commons::components::replaceability::interface::ImplementationReplaced;
+    use contracts_commons::components::replaceability::interface::{
+        EIC_INITIALIZE_SELECTOR, IMPLEMENTATION_EXPIRATION, IReplaceable, ImplementationAdded,
+        ImplementationData, ImplementationFinalized, ImplementationRemoved, ImplementationReplaced,
+    };
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::components::roles::RolesComponent::InternalTrait;
     use core::num::traits::Zero;
