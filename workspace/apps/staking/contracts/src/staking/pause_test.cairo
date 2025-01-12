@@ -149,10 +149,10 @@ fn test_claim_rewards_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
-    let staking_disaptcher = IStakingDispatcher {
+    let staking_dispatcher = IStakingDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_disaptcher.claim_rewards(staker_address: DUMMY_ADDRESS());
+    staking_dispatcher.claim_rewards(staker_address: DUMMY_ADDRESS());
 }
 
 #[test]
