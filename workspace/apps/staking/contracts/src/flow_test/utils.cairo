@@ -9,9 +9,7 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
 use staking::minting_curve::interface::IMintingCurveDispatcher;
-use staking::pool::interface::{
-    IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
-};
+use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
@@ -384,9 +382,7 @@ pub(crate) impl SystemImpl of SystemTrait {
     /// Creates a new account with the specified amount.
     fn new_account(ref self: SystemState<TokenState>, amount: Amount) -> Account {
         self.base_account += 1;
-        let account = AccountTrait::new(
-            address: self.base_account, amount: amount, token: self.token, staking: self.staking,
-        );
+        let account = AccountTrait::new(address: self.base_account, amount: amount);
         self.token.fund(recipient: account.address, :amount);
         account
     }
@@ -418,18 +414,12 @@ pub(crate) impl SystemImpl of SystemTrait {
 pub(crate) struct Account {
     pub address: ContractAddress,
     pub amount: Amount,
-    pub token: TokenState,
-    pub staking: StakingState,
 }
 
 #[generate_trait]
 pub(crate) impl AccountImpl of AccountTrait {
-    fn new(address: felt252, amount: Amount, token: TokenState, staking: StakingState) -> Account {
-        Account { address: address.try_into().unwrap(), amount, token, staking }
-    }
-
-    fn approve(self: Account, spender: ContractAddress, amount: Amount) {
-        self.token.approve(owner: self.address, :spender, :amount)
+    fn new(address: felt252, amount: Amount) -> Account {
+        Account { address: address.try_into().unwrap(), amount }
     }
 }
 
