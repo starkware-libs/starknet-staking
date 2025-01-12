@@ -28,7 +28,7 @@ pub mod Staking {
         UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
         VersionedInternalStakerInfoTrait,
     };
-    use staking::types::{Amount, Commission, Index};
+    use staking::types::{Amount, Commission, Epoch, Index};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
         compute_global_index_diff, compute_new_delegated_stake, compute_rewards_rounded_down,
@@ -486,6 +486,27 @@ pub mod Staking {
             }
             Option::Some(self.staker_info(:staker_address))
         }
+
+        fn get_staker_address_by_operational(
+            self: @ContractState, operational_address: ContractAddress,
+        ) -> ContractAddress {
+            let staker_address = self
+                .operational_address_to_staker_address
+                .read(operational_address);
+            assert!(staker_address.is_non_zero(), "{}", Error::STAKER_NOT_EXISTS);
+            staker_address
+        }
+
+        // TODO: implement
+        fn get_current_epoch(self: @ContractState) -> Epoch {
+            1
+        }
+
+        // TODO: implement
+        fn update_rewards_from_work_contract(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) {}
+
 
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
             StakingContractInfo {

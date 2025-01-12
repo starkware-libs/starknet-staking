@@ -2,7 +2,7 @@ use contracts_commons::errors::OptionAuxTrait;
 use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use staking::errors::Error;
 use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
-use staking::types::{Amount, Commission, Index};
+use staking::types::{Amount, Commission, Epoch, Index};
 use starknet::{ClassHash, ContractAddress};
 
 /// Public interface for the staking contract.
@@ -28,6 +28,12 @@ pub trait IStaking<TContractState> {
     fn get_staker_info(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Option<StakerInfo>;
+    fn get_staker_address_by_operational(
+        self: @TContractState, operational_address: ContractAddress,
+    ) -> ContractAddress;
+    fn get_current_epoch(self: @TContractState) -> Epoch;
+    // TODO: Rename once internal update_rewards is deleted.
+    fn update_rewards_from_work_contract(ref self: TContractState, staker_address: ContractAddress);
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn get_pool_exit_intent(

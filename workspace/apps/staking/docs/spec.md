@@ -27,6 +27,9 @@
     - [claim\_delegation\_pool\_rewards](#claim_delegation_pool_rewards)
     - [staker\_info](#staker_info)
     - [get\_staker\_info](#get_staker_info)
+    - [get\_staker\_address\_by\_operational](#get_staker_address_by_operational)
+    - [get\_current\_epoch](#get_current_epoch)
+    - [update_rewards_from_work_contract](#update_rewards_from_work_contract)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
     - [get\_pool\_exit\_intent](#get_pool_exit_intent)
@@ -100,6 +103,10 @@
   - [Events](#events-3)
     - [Total Supply Changed](#total-supply-changed)
     - [Minting Cap Changed](#minting-cap-changed)
+- [Work Contract](#work-contract)
+  - [Functions](#functions-4)
+    - [work](#work)
+  - [Events](#events-4)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -135,6 +142,7 @@
     - [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
     - [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
     - [OPERATIONAL\_IN\_USE](#operational_in_use)
+    - [WORK\_IS\_DONE](#work_is_done)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -151,6 +159,7 @@
     - [Commission](#commission)
     - [Index](#index)
     - [Inflation](#inflation)
+    - [Epoch](#epoch)
 
 </details>
 
@@ -271,11 +280,20 @@ classDiagram
     yearly_mint()
     set_c_num()
   }
+  class Work {
+    staking_dispatcher,
+    Map< staker_address, Epoch >,
+    work()
+    is_work_done_in_curr_epoch()
+  }
+  class WorkInfo{
+  }
   StakingContract o-- StakerInfo
   StakerInfo o-- StakerPoolInfo
   DelegationPoolContract o-- PoolMemberInfo
   StakingContract o-- RewardSupplier
   RewardSupplier o-- MintingCurve
+  Work o-- WorkInfo
 ```
 
 ## L1 Contracts block diagram
@@ -824,6 +842,59 @@ Returns Option<[StakerInfo](#stakerinfo)> of the given staker without throwing a
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. Returns `Option::Some` with [StakerInfo](#stakerinfo) if exists, otherwise `Option::None`.
+
+### get_staker_address_by_operational
+```rust
+fn get_staker_address_by_operational(
+  self: @ContractState, 
+  operational_address: ContractAddress
+) -> ContractAddress
+```
+#### description <!-- omit from toc -->
+Returns `staker_address` of the given `operational_address`.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+#### pre-condition <!-- omit from toc -->
+1. Staker exist in the contract.
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Returns `staker_address`.
+
+### get_current_epoch
+```rust
+fn get_current_epoch(self: @ContractState) -> Epoch
+```
+#### description <!-- omit from toc -->
+Returns the current epoch.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Calculate the current epoch
+2. Returns the current epoch.
+
+### update_rewards_from_work_contract
+```rust
+fn update_rewards_from_work_contract(ref self: ContractState,
+ staker_address: ContractAddress) 
+```
+#### description <!-- omit from toc -->
+Returns the current epoch.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only work contract.
+#### logic <!-- omit from toc -->
+1. Calculate total rewards for `staker_address` in this epoch.
+2. Calculate staker rewards (include commission)
+3. Update `unclaimed_rewards_own` of the staker
+4. Update and transfer to the pool, if exist.
+5. Update `RewardSupplier Contract unclaimed_rewards`
 
 ### contract_parameters
 ```rust
@@ -1703,6 +1774,39 @@ Only token admin.
 | old_c | [Inflation](#inflation) | ❌    |
 | new_c | [Inflation](#inflation) | ❌    |
 
+# Work Contract
+
+## Functions
+### work
+```rust
+fn work(ref self: ContractState, work_info: WorkInfo) 
+```
+#### description <!-- omit from toc -->
+Validates the work of a staker and call staking [update_rewards_from_work_contract](#update_rewards_from_work_contract).
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. Validate the work.
+2. [update_rewards_from_work_contract](#update_rewards_from_work_contract).
+
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### is_work_done_in_curr_epoch
+```rust
+fn is_work_done_in_curr_epoch(self: @TContractState, address: ContractAddress) -> bool;
+```
+
+#### description <!-- omit from toc -->
+Returns true if work is done for this `staker_address` in current epoch, else returns false.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+## Events
+
 # Errors
 ### STAKER_EXISTS
 "Staker already exists, use increase_stake instead."
@@ -1896,3 +2000,6 @@ Index: u128
 
 ### Inflation
 Inflation: u16
+
+### Epoch
+Epoch: u64
