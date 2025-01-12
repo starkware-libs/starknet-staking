@@ -6,7 +6,7 @@ use constants::{
     POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS,
     SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS,
     STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN,
-    UPGRADE_GOVERNOR,
+    UPGRADE_GOVERNOR, WORK_CONTRACT_ADDRESS,
 };
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::{
@@ -177,6 +177,9 @@ pub(crate) mod constants {
     }
     pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'NOT_STARKGATE_ADDRESS'>()
+    }
+    pub fn WORK_CONTRACT_ADDRESS() -> ContractAddress nopanic {
+        contract_address_const::<'WORK_CONTRACT_ADDRESS'>()
     }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
@@ -376,6 +379,14 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap().contract_class();
     let (reward_supplier_contract_address, _) = reward_supplier_contract.deploy(@calldata).unwrap();
     reward_supplier_contract_address
+}
+
+pub(crate) fn deploy_work_contract(cfg: StakingInitConfig) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    cfg.test_info.staking_contract.serialize(ref calldata);
+    let work_contract = snforge_std::declare("Work").unwrap().contract_class();
+    let (work_contract_address, _) = work_contract.deploy(@calldata).unwrap();
+    work_contract_address
 }
 
 pub(crate) fn declare_pool_contract() -> ClassHash {
@@ -653,6 +664,9 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         storage_address: selector!("staking_dispatcher"),
         serialized_value: array![staking_contract.into()].span(),
     );
+    // Deploy the work contract.
+    let work_contract = deploy_work_contract(:cfg);
+    cfg.test_info.work_contract = work_contract;
 }
 
 pub(crate) fn cheat_reward_for_reward_supplier(
@@ -810,6 +824,7 @@ pub(crate) struct TestInfo {
     pub token_admin: ContractAddress,
     pub app_role_admin: ContractAddress,
     pub upgrade_governor: ContractAddress,
+    pub work_contract: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -885,6 +900,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             token_admin: TOKEN_ADMIN(),
             app_role_admin: APP_ROLE_ADMIN(),
             upgrade_governor: UPGRADE_GOVERNOR(),
+            work_contract: WORK_CONTRACT_ADDRESS(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,

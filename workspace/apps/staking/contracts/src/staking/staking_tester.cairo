@@ -417,6 +417,23 @@ pub(crate) mod StakingTester {
             Option::Some(self.staker_info(:staker_address))
         }
 
+        fn get_staker_address_by_operational(
+            self: @ContractState, operational_address: ContractAddress,
+        ) -> ContractAddress {
+            // TODO: assert zero address here or in the caller?
+            self.operational_address_to_staker_address.read(operational_address)
+        }
+
+        // TODO: implement
+        fn get_current_epoch(self: @ContractState) -> u64 {
+            0
+        }
+
+        // TODO: implement
+        fn update_rewards_from_work_contract(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) {}
+
         fn contract_parameters(self: @ContractState) -> StakingContractInfo {
             StakingContractInfo {
                 min_stake: self.min_stake.read(),

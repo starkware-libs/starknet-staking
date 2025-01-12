@@ -2674,6 +2674,61 @@ fn test_get_pool_exit_intent() {
     assert_eq!(undelegate_intent_value, Zero::zero());
 }
 
+#[test]
+fn test_get_staker_address_by_operational() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let operational_address = cfg.staker_info.operational_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: DUMMY_ADDRESS());
+    staking_dispatcher.get_staker_address_by_operational(:operational_address);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_get_staker_address_by_operational_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+    let operational_address = cfg.staker_info.operational_address;
+
+    // Catch STAKER_NOT_EXISTS.
+    let result = staking_safe_dispatcher.get_staker_address_by_operational(:operational_address);
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
+}
+
+#[test]
+fn test_get_current_epoch() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let delta = Time::weeks(count: 100);
+    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(:delta).into());
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    assert_eq!(current_epoch, 1);
+}
+
+#[test]
+fn test_update_rewards_from_work_contract() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: DUMMY_ADDRESS());
+    staking_dispatcher.update_rewards_from_work_contract(:staker_address);
+    let staker_info_after = staking_dispatcher.staker_info(:staker_address);
+    assert_eq!(staker_info_after, staker_info_before);
+}
+
 const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
 
 #[test]
