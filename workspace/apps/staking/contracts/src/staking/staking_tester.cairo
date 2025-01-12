@@ -30,8 +30,9 @@ pub(crate) mod StakingTester {
         StakerInfo, StakerPoolInfo, StakingContractInfo,
     };
     use staking::staking::objects::{
-        InternalStakerInfo, InternalStakerInfoTrait, UndelegateIntentKey, UndelegateIntentValue,
-        UndelegateIntentValueTrait, UndelegateIntentValueZero,
+        InternalStakerInfoV1, InternalStakerInfoV1Trait, UndelegateIntentKey, UndelegateIntentValue,
+        UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
+        VersionedInternalStakerInfoTrait,
     };
     use staking::staking::staking_tester::IStakingTester;
     use staking::types::{Amount, Commission, Index};
@@ -71,7 +72,7 @@ pub(crate) mod StakingTester {
         global_index: Index,
         global_index_last_update_timestamp: Timestamp,
         min_stake: Amount,
-        staker_info: Map<ContractAddress, Option<InternalStakerInfo>>,
+        staker_info: Map<ContractAddress, VersionedInternalStakerInfo>,
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
         eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
         token_dispatcher: IERC20Dispatcher,
@@ -193,16 +194,12 @@ pub(crate) mod StakingTester {
                 .staker_info
                 .write(
                     staker_address,
-                    Option::Some(
-                        InternalStakerInfo {
-                            reward_address,
-                            operational_address,
-                            unstake_time: Option::None,
-                            amount_own: amount,
-                            index: self.global_index.read(),
-                            unclaimed_rewards_own: Zero::zero(),
-                            pool_info,
-                        },
+                    VersionedInternalStakerInfoTrait::new_latest(
+                        reward_address,
+                        operational_address,
+                        amount,
+                        index: self.global_index.read(),
+                        pool_info: pool_info,
                     ),
                 );
             // Update the operational address mapping, which is a 1 to 1 mapping.
@@ -257,7 +254,9 @@ pub(crate) mod StakingTester {
             // Update the staker's staked amount, and add to total_stake.
             staker_info.amount_own += amount;
             let mut staker_total_stake = staker_info.amount_own;
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             self.add_to_total_stake(:amount);
             // Emit events.
             let mut old_delegated_stake = Zero::zero();
@@ -294,7 +293,9 @@ pub(crate) mod StakingTester {
             let amount = staker_info.unclaimed_rewards_own;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             amount
         }
 
@@ -306,7 +307,9 @@ pub(crate) mod StakingTester {
             self.update_rewards(ref :staker_info);
             let unstake_time = Time::now().add(delta: self.exit_wait_window.read());
             staker_info.unstake_time = Option::Some(unstake_time);
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             let mut amount_pool = Zero::zero();
             if let Option::Some(pool_info) = staker_info.pool_info {
                 amount_pool = pool_info.amount;
@@ -357,7 +360,9 @@ pub(crate) mod StakingTester {
             let mut staker_info = self.internal_staker_info(:staker_address);
             let old_address = staker_info.reward_address;
             staker_info.reward_address = reward_address;
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             self
                 .emit(
                     Events::StakerRewardAddressChanged {
@@ -391,7 +396,9 @@ pub(crate) mod StakingTester {
                             commission,
                         },
                     );
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             pool_contract
         }
 
@@ -464,7 +471,9 @@ pub(crate) mod StakingTester {
                 .write(staker_info.operational_address, Zero::zero());
             let old_address = staker_info.operational_address;
             staker_info.operational_address = operational_address;
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             self.operational_address_to_staker_address.write(operational_address, staker_address);
             self
                 .emit(
@@ -500,7 +509,9 @@ pub(crate) mod StakingTester {
             let mut pool_info = staker_info.get_pool_info();
             pool_info.commission = commission;
             staker_info.pool_info = Option::Some(pool_info);
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
             pool_dispatcher.update_commission_from_staking_contract(:commission);
             self
@@ -552,7 +563,9 @@ pub(crate) mod StakingTester {
             let old_delegated_stake = pool_info.amount;
             pool_info.amount += amount;
             staker_info.pool_info = Option::Some(pool_info);
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             self.add_to_total_stake(:amount);
             self
                 .emit(
@@ -603,7 +616,9 @@ pub(crate) mod StakingTester {
                 }
             }
             staker_info.pool_info = Option::Some(pool_info);
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             if amount.is_zero() {
                 self.clear_undelegate_intent(:undelegate_intent_key);
             } else {
@@ -680,7 +695,9 @@ pub(crate) mod StakingTester {
             let old_delegated_stake = to_staker_pool_info.amount;
             to_staker_pool_info.amount += switched_amount;
             to_staker_info.pool_info = Option::Some(to_staker_pool_info);
-            self.staker_info.write(to_staker, Option::Some(to_staker_info));
+            self
+                .staker_info
+                .write(to_staker, VersionedInternalStakerInfoTrait::new(to_staker_info));
             self.add_to_total_stake(amount: switched_amount);
 
             undelegate_intent_value.amount -= switched_amount;
@@ -721,7 +738,9 @@ pub(crate) mod StakingTester {
                 .send_rewards_to_delegation_pool(
                     :staker_address, ref :staker_info, :token_dispatcher,
                 );
-            self.staker_info.write(staker_address, Option::Some(staker_info));
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::new(staker_info));
             updated_index
         }
     }
@@ -810,7 +829,7 @@ pub(crate) mod StakingTester {
         fn send_rewards_to_staker(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: InternalStakerInfo,
+            ref staker_info: InternalStakerInfoV1,
             token_dispatcher: IERC20Dispatcher,
         ) {
             let reward_address = staker_info.reward_address;
@@ -827,7 +846,7 @@ pub(crate) mod StakingTester {
         fn send_rewards_to_delegation_pool(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: InternalStakerInfo,
+            ref staker_info: InternalStakerInfoV1,
             token_dispatcher: IERC20Dispatcher,
         ) {
             let mut pool_info = staker_info.get_pool_info();
@@ -862,12 +881,12 @@ pub(crate) mod StakingTester {
 
         fn internal_staker_info(
             self: @ContractState, staker_address: ContractAddress,
-        ) -> InternalStakerInfo {
-            self.staker_info.read(staker_address).expect_with_err(Error::STAKER_NOT_EXISTS)
+        ) -> InternalStakerInfoV1 {
+            self.staker_info.read(staker_address).get_internal_staker_info_v1()
         }
 
         fn calculate_and_update_pool_rewards(
-            self: @ContractState, interest: Index, ref staker_info: InternalStakerInfo,
+            self: @ContractState, interest: Index, ref staker_info: InternalStakerInfoV1,
         ) {
             if let Option::Some(mut pool_info) = staker_info.pool_info {
                 if (pool_info.amount.is_non_zero()) {
@@ -888,7 +907,7 @@ pub(crate) mod StakingTester {
         fn transfer_to_pool_when_unstake(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: InternalStakerInfo,
+            ref staker_info: InternalStakerInfoV1,
         ) {
             if let Option::Some(pool_info) = staker_info.pool_info {
                 let token_dispatcher = self.token_dispatcher.read();
@@ -908,9 +927,9 @@ pub(crate) mod StakingTester {
         fn remove_staker(
             ref self: ContractState,
             staker_address: ContractAddress,
-            staker_info: InternalStakerInfo,
+            staker_info: InternalStakerInfoV1,
         ) {
-            self.staker_info.write(staker_address, Option::None);
+            self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
             self
                 .operational_address_to_staker_address
                 .write(staker_info.operational_address, Zero::zero());
@@ -945,7 +964,7 @@ pub(crate) mod StakingTester {
         /// - unclaimed_rewards_own
         /// - unclaimed_rewards
         /// - index
-        fn update_rewards(self: @ContractState, ref staker_info: InternalStakerInfo) {
+        fn update_rewards(self: @ContractState, ref staker_info: InternalStakerInfoV1) {
             if (staker_info.unstake_time.is_some()) {
                 return;
             }

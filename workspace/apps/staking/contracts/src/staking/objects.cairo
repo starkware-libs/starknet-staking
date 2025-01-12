@@ -68,22 +68,22 @@ pub(crate) enum VersionedInternalStakerInfo {
 }
 
 #[generate_trait]
-pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
-    fn compute_unpool_time(self: @InternalStakerInfo, exit_wait_window: TimeDelta) -> Timestamp {
+pub(crate) impl InternalStakerInfoV1Impl of InternalStakerInfoV1Trait {
+    fn compute_unpool_time(self: @InternalStakerInfoV1, exit_wait_window: TimeDelta) -> Timestamp {
         if let Option::Some(unstake_time) = *self.unstake_time {
             return max(unstake_time, Time::now());
         }
         Time::now().add(delta: exit_wait_window)
     }
 
-    fn get_pool_info(self: @InternalStakerInfo) -> StakerPoolInfo {
+    fn get_pool_info(self: @InternalStakerInfoV1) -> StakerPoolInfo {
         (*self.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 }
 
-pub(crate) impl InternalStakerInfoInto of Into<InternalStakerInfo, StakerInfo> {
+pub(crate) impl InternalStakerInfoV1IntoStakerInfo of Into<InternalStakerInfoV1, StakerInfo> {
     #[inline(always)]
-    fn into(self: InternalStakerInfo) -> StakerInfo nopanic {
+    fn into(self: InternalStakerInfoV1) -> StakerInfo nopanic {
         StakerInfo {
             reward_address: self.reward_address,
             operational_address: self.operational_address,
@@ -125,6 +125,30 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 err: @Error::STAKER_NOT_EXISTS.describe(),
             ),
         }
+    }
+
+    fn new(value: InternalStakerInfoV1) -> VersionedInternalStakerInfo {
+        VersionedInternalStakerInfo::V1(value)
+    }
+
+    fn new_latest(
+        reward_address: ContractAddress,
+        operational_address: ContractAddress,
+        amount: Amount,
+        index: Index,
+        pool_info: Option<StakerPoolInfo>,
+    ) -> VersionedInternalStakerInfo {
+        VersionedInternalStakerInfo::V1(
+            InternalStakerInfoV1 {
+                reward_address,
+                operational_address,
+                unstake_time: Option::None,
+                amount_own: amount,
+                index: index,
+                unclaimed_rewards_own: Zero::zero(),
+                pool_info,
+            },
+        )
     }
 }
 

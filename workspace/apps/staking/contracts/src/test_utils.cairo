@@ -29,7 +29,10 @@ use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
 };
-use staking::staking::objects::{InternalStakerInfo, InternalStakerInfoTrait};
+use staking::staking::objects::{
+    InternalStakerInfoV1, InternalStakerInfoV1Trait, VersionedInternalStakerInfo,
+    VersionedInternalStakerInfoTrait,
+};
 use staking::staking::staking::Staking;
 use staking::types::{Amount, Commission, Index};
 use staking::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
@@ -747,7 +750,7 @@ pub(crate) fn add_reward_for_reward_supplier(
 
 pub(crate) fn load_staker_info_from_map(
     staker_address: ContractAddress, contract: ContractAddress,
-) -> Option<InternalStakerInfo> {
+) -> VersionedInternalStakerInfo {
     let map_selector = selector!("staker_info");
     let mut keys = array![];
     staker_address.serialize(ref keys);
@@ -755,15 +758,15 @@ pub(crate) fn load_staker_info_from_map(
     let mut raw_serialized_value = snforge_std::load(
         target: contract,
         :storage_address,
-        size: Store::<Option<InternalStakerInfo>>::size().into(),
+        size: Store::<VersionedInternalStakerInfo>::size().into(),
     );
     let idx = raw_serialized_value.pop_front().expect('Failed pop_front');
     if idx.is_zero() {
-        return Option::None;
+        return VersionedInternalStakerInfo::None;
     }
-    assert!(idx == 1, "Invalid Option loaded from map");
+    assert!(idx == 2, "Invalid Version loaded from map");
     let mut span = raw_serialized_value.span();
-    let staker_info = InternalStakerInfo {
+    let staker_info = InternalStakerInfoV1 {
         reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
         operational_address: Serde::<ContractAddress>::deserialize(ref span)
             .expect('Failed operational'),
@@ -774,7 +777,7 @@ pub(crate) fn load_staker_info_from_map(
             .expect('Failed unclaimed_rewards_own'),
         pool_info: deserialize_option(ref data: span),
     };
-    return Option::Some(staker_info);
+    return VersionedInternalStakerInfoTrait::new(staker_info);
 }
 
 /// Deserialize an Option<T> from the given data.
@@ -820,7 +823,7 @@ struct RewardSupplierInfo {
 
 #[derive(Drop, Copy)]
 pub(crate) struct StakingInitConfig {
-    pub staker_info: InternalStakerInfo,
+    pub staker_info: InternalStakerInfoV1,
     pub pool_member_info: InternalPoolMemberInfo,
     pub staking_contract_info: StakingContractInfo,
     pub minting_curve_contract_info: MintingCurveContractInfo,
@@ -830,7 +833,7 @@ pub(crate) struct StakingInitConfig {
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
     fn default() -> StakingInitConfig {
-        let staker_info = InternalStakerInfo {
+        let staker_info = InternalStakerInfoV1 {
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,

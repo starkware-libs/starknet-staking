@@ -45,7 +45,7 @@ use staking::staking::interface::{
     IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
-    InternalStakerInfo, InternalStakerInfoTrait, InternalStakerInfoV1, UndelegateIntentKey,
+    InternalStakerInfo, InternalStakerInfoV1, InternalStakerInfoV1Trait, UndelegateIntentKey,
     UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
     VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
 };
@@ -150,7 +150,7 @@ fn test_update_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg
         .staker_info =
-            InternalStakerInfo {
+            InternalStakerInfoV1 {
                 pool_info: Option::Some(
                     StakerPoolInfo {
                         pool_contract: POOL_CONTRACT_ADDRESS(),
@@ -176,7 +176,7 @@ fn test_update_rewards() {
     );
     let unclaimed_rewards_own: Amount = staker_rewards + commission_amount;
     let unclaimed_rewards: Amount = pool_rewards_including_commission - commission_amount;
-    let expected_staker_info = InternalStakerInfo {
+    let expected_staker_info = InternalStakerInfoV1 {
         unclaimed_rewards_own,
         pool_info: Option::Some(
             StakerPoolInfo { unclaimed_rewards, ..staker_info.get_pool_info() },
@@ -218,7 +218,7 @@ fn test_send_rewards_to_delegation_pool() {
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards, :token_address,
     );
     let pool_balance_before_rewards = token_dispatcher.balance_of(account: pool_contract);
-    let expected_staker_info = InternalStakerInfo {
+    let expected_staker_info = InternalStakerInfoV1 {
         pool_info: Option::Some(
             StakerPoolInfo { unclaimed_rewards: Zero::zero(), ..cfg.staker_info.get_pool_info() },
         ),
@@ -257,7 +257,7 @@ fn test_send_rewards_to_staker() {
     // Setup staker_info and expected results before sending rewards.
     let unclaimed_rewards_own = STAKER_UNCLAIMED_REWARDS;
     cfg.staker_info.unclaimed_rewards_own = unclaimed_rewards_own;
-    let expected_staker_info = InternalStakerInfo {
+    let expected_staker_info = InternalStakerInfoV1 {
         unclaimed_rewards_own: Zero::zero(), ..cfg.staker_info,
     };
     cheat_reward_for_reward_supplier(
@@ -286,7 +286,7 @@ fn test_send_rewards_to_staker() {
 fn test_update_rewards_unstake_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
-    let staker_info_expected = InternalStakerInfo {
+    let staker_info_expected = InternalStakerInfoV1 {
         unstake_time: Option::Some(Timestamp { seconds: 1 }), ..cfg.staker_info,
     };
     let mut staker_info = staker_info_expected;
@@ -1040,7 +1040,7 @@ fn test_add_stake_from_pool() {
     );
     let mut staker_unclaimed_rewards = staker_rewards + commission_amount;
     let mut pool_unclaimed_rewards = pool_rewards_including_commission - commission_amount;
-    let expected_staker_info = InternalStakerInfo {
+    let expected_staker_info = InternalStakerInfoV1 {
         reward_address: staker_info_before.reward_address,
         operational_address: staker_info_before.operational_address,
         unstake_time: staker_info_before.unstake_time,
@@ -1059,7 +1059,7 @@ fn test_add_stake_from_pool() {
     let loaded_staker_info_after = load_staker_info_from_map(
         :staker_address, contract: staking_contract,
     );
-    assert_eq!(loaded_staker_info_after, Option::Some(expected_staker_info));
+    assert_eq!(loaded_staker_info_after, VersionedInternalStakerInfo::V1(expected_staker_info));
 
     // Validate `GlobalIndexUpdated` and `StakeBalanceChanged` events.
     let events = spy.get_events().emitted_by(staking_contract).events;
@@ -1184,7 +1184,7 @@ fn test_remove_from_delegation_pool_intent() {
     let mut staker_unclaimed_rewards = staker_rewards + commission_amount;
     let mut pool_unclaimed_rewards = pool_rewards_including_commission - commission_amount;
     let mut cur_delegated_stake = initial_delegated_stake - intent_amount;
-    let mut expected_staker_info = InternalStakerInfo {
+    let mut expected_staker_info = InternalStakerInfoV1 {
         unclaimed_rewards_own: staker_unclaimed_rewards,
         index: global_index,
         pool_info: Option::Some(
@@ -1281,7 +1281,7 @@ fn test_remove_from_delegation_pool_intent() {
     let prev_delegated_stake = cur_delegated_stake;
     cur_delegated_stake = initial_delegated_stake - new_intent_amount;
     expected_staker_info =
-        InternalStakerInfo {
+        InternalStakerInfoV1 {
             unclaimed_rewards_own: staker_unclaimed_rewards,
             index: global_index,
             pool_info: Option::Some(
@@ -2729,8 +2729,8 @@ fn test_undelegate_intent_assert_valid_panic() {
 }
 
 #[test]
-fn test_internal_staker_info_into_staker_info() {
-    let internal_staker_info = InternalStakerInfo {
+fn test_internal_staker_info_v1_into_staker_info() {
+    let internal_staker_info = InternalStakerInfoV1 {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
@@ -2756,7 +2756,7 @@ fn test_internal_staker_info_into_staker_info() {
 fn test_compute_unpool_time() {
     let exit_wait_window = DEFAULT_EXIT_WAIT_WINDOW;
     // Unstake_time is not set.
-    let internal_staker_info = InternalStakerInfo {
+    let internal_staker_info = InternalStakerInfoV1 {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
@@ -2772,7 +2772,7 @@ fn test_compute_unpool_time() {
 
     // Unstake_time is set.
     let unstake_time = Time::now().add(delta: Time::weeks(count: 1));
-    let internal_staker_info = InternalStakerInfo {
+    let internal_staker_info = InternalStakerInfoV1 {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::Some(unstake_time),
@@ -2801,7 +2801,7 @@ fn test_get_pool_info() {
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
     };
-    let internal_staker_info = InternalStakerInfo {
+    let internal_staker_info = InternalStakerInfoV1 {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
@@ -2816,7 +2816,7 @@ fn test_get_pool_info() {
 #[test]
 #[should_panic(expected: "Staker does not have a pool contract")]
 fn test_get_pool_info_panic() {
-    let internal_staker_info = InternalStakerInfo {
+    let internal_staker_info = InternalStakerInfoV1 {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
@@ -2936,4 +2936,47 @@ fn test_versioned_internal_staker_info_get_internal_staker_info_v1() {
 fn test_versioned_internal_staker_info_get_internal_staker_info_v1_panic() {
     let versioned_none = VersionedInternalStakerInfo::None;
     versioned_none.get_internal_staker_info_v1();
+}
+
+#[test]
+fn test_versioned_internal_staker_info_new() {
+    let internal_staker_info = InternalStakerInfoV1 {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    let versioned_internal_staker_info = VersionedInternalStakerInfoTrait::new(
+        internal_staker_info,
+    );
+    let expected_versioned_internal_staker_info = VersionedInternalStakerInfo::V1(
+        internal_staker_info,
+    );
+    assert_eq!(versioned_internal_staker_info, expected_versioned_internal_staker_info);
+}
+
+#[test]
+fn test_versioned_internal_staker_info_new_latest() {
+    let versioned_internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        pool_info: Option::None,
+    );
+    let expected_versioned_internal_staker_info = VersionedInternalStakerInfo::V1(
+        InternalStakerInfoV1 {
+            reward_address: Zero::zero(),
+            operational_address: Zero::zero(),
+            unstake_time: Option::None,
+            amount_own: Zero::zero(),
+            index: Zero::zero(),
+            unclaimed_rewards_own: Zero::zero(),
+            pool_info: Option::None,
+        },
+    );
+    assert_eq!(versioned_internal_staker_info, expected_versioned_internal_staker_info);
 }
