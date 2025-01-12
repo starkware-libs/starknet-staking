@@ -40,7 +40,8 @@ use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
 };
 use staking::staking::objects::{
-    InternalStakerInfoTrait, UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueZero,
+    InternalStakerInfoV1Trait, UndelegateIntentKey, UndelegateIntentValue,
+    UndelegateIntentValueZero,
 };
 use staking::test_utils::constants;
 use staking::types::Index;
