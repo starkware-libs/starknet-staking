@@ -698,13 +698,13 @@ fn test_claim_rewards() {
     cheat_reward_for_reward_supplier(:cfg, :reward_supplier, :expected_reward, :token_address);
     // Claim rewards and validate the results.
     let mut spy = snforge_std::spy_events();
-    let staking_disaptcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let reward = staking_disaptcher.claim_rewards(:staker_address);
+    let reward = staking_dispatcher.claim_rewards(:staker_address);
     assert_eq!(reward, expected_reward);
 
-    let new_staker_info = staking_disaptcher.staker_info(:staker_address);
+    let new_staker_info = staking_dispatcher.staker_info(:staker_address);
     assert_eq!(new_staker_info.unclaimed_rewards_own, 0);
 
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
