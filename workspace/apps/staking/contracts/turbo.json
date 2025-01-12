@@ -1,0 +1,11 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "dependsOn": []
+    },
+    "pack": {
+      "dependsOn": ["lint", "test"]
+    }
+  }
+}
