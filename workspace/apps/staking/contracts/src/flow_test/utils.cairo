@@ -21,6 +21,36 @@ use staking::test_utils::StakingInitConfig;
 use staking::types::{Amount, Commission};
 use starknet::{ClassHash, ContractAddress};
 
+pub(crate) mod MainnetAddresses {
+    use starknet::{ContractAddress, contract_address_const};
+
+    pub(crate) fn MAINNET_STAKING_CONTRCT_ADDRESS() -> ContractAddress nopanic {
+        contract_address_const::<
+            0x00ca1702e64c81d9a07b86bd2c540188d92a2c73cf5cc0e508d949015e7e84a7,
+        >()
+    }
+    pub(crate) fn MAINNET_L2_BRIDGE_ADDRESS() -> ContractAddress nopanic {
+        contract_address_const::<
+            0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d,
+        >()
+    }
+    pub(crate) fn MAINNET_REWARD_SUPPLIER_ADDRESS() -> ContractAddress nopanic {
+        contract_address_const::<
+            0x009035556d1ee136e7722ae4e78f92828553a45eed3bc9b2aba90788ec2ca112,
+        >()
+    }
+    pub(crate) fn MAINNET_MINTING_CURVE_ADDRESS() -> ContractAddress nopanic {
+        contract_address_const::<
+            0x00ca1705e74233131dbcdee7f1b8d2926bf262168c7df339004b3f46015b6984,
+        >()
+    }
+    pub(crate) fn MAINNET_UPGRADE_GOVERNOR() -> ContractAddress nopanic {
+        contract_address_const::<
+            0x0663cc699d9c51b7d4d434e06f5982692167546ce525d9155edb476ac9a117d6,
+        >()
+    }
+}
+
 /// The `StakingRoles` struct represents the various roles involved in the staking contract.
 /// It includes addresses for different administrative and security roles.
 #[derive(Drop, Copy)]
