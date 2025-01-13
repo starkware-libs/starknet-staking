@@ -6,6 +6,4 @@ pub(crate) mod objects;
 mod pause_test;
 pub mod staking;
 #[cfg(test)]
-mod staking_tester;
-#[cfg(test)]
 mod test;
