@@ -1,3 +1,4 @@
+use MainnetAddresses::MAINNET_L2_BRIDGE_ADDRESS;
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::{
     Deployable, TokenConfig, TokenState, TokenTrait, cheat_caller_address_once,
@@ -7,6 +8,7 @@ use contracts_commons::test_utils::{
 use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
 use core::traits::Into;
+use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -653,3 +655,39 @@ pub(crate) impl SystemDelegatorImpl<
     }
 }
 
+// This interface is implemented by the `STRK` token contract.
+#[starknet::interface]
+trait IMintableToken<TContractState> {
+    fn permissioned_mint(ref self: TContractState, account: ContractAddress, amount: u256);
+    fn permissioned_burn(ref self: TContractState, account: ContractAddress, amount: u256);
+}
+
+/// The `STRKTokenState` struct represents the state of the `STRK` token contract.
+/// It includes the `STRK` token address.
+#[derive(Drop, Copy)]
+pub(crate) struct STRKTokenState {
+    pub(crate) address: ContractAddress,
+}
+
+impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
+    fn fund(self: STRKTokenState, recipient: ContractAddress, amount: u128) {
+        let mintable_token_dispatcher = IMintableTokenDispatcher { contract_address: self.address };
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: MAINNET_L2_BRIDGE_ADDRESS(),
+        );
+        mintable_token_dispatcher.permissioned_mint(account: recipient, amount: amount.into());
+    }
+
+    fn approve(
+        self: STRKTokenState, owner: ContractAddress, spender: ContractAddress, amount: u128,
+    ) {
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: self.address };
+        cheat_caller_address_once(contract_address: self.address, caller_address: owner);
+        erc20_dispatcher.approve(spender: spender, amount: amount.into());
+    }
+
+    fn balance_of(self: STRKTokenState, account: ContractAddress) -> u128 {
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: self.address };
+        erc20_dispatcher.balance_of(account: account).try_into().unwrap()
+    }
+}
