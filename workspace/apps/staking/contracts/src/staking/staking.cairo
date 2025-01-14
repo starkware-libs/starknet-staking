@@ -14,11 +14,13 @@ pub mod Staking {
     use staking::constants::{
         DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, MIN_TIME_BETWEEN_INDEX_UPDATES,
     };
-    use staking::errors::Error;
+    use staking::errors::GenericError;
+    use staking::pool::errors::Error as PoolError;
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
     use staking::reward_supplier::interface::{
         IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     };
+    use staking::staking::errors::Error;
     use staking::staking::interface::{
         ConfigEvents, Events, IStaking, IStakingConfig, IStakingPause, IStakingPool, PauseEvents,
         StakerInfo, StakerPoolInfo, StakingContractInfo,
@@ -176,11 +178,13 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
-            assert!(self.staker_info.read(staker_address).is_none(), "{}", Error::STAKER_EXISTS);
+            assert!(
+                self.staker_info.read(staker_address).is_none(), "{}", GenericError::STAKER_EXISTS,
+            );
             assert!(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
                 "{}",
-                Error::OPERATIONAL_EXISTS,
+                GenericError::OPERATIONAL_EXISTS,
             );
             assert!(amount >= self.min_stake.read(), "{}", Error::AMOUNT_LESS_THAN_MIN_STAKE);
             assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
@@ -264,9 +268,9 @@ pub mod Staking {
             assert!(
                 caller_address == staker_address || caller_address == staker_info.reward_address,
                 "{}",
-                Error::CALLER_CANNOT_INCREASE_STAKE,
+                GenericError::CALLER_CANNOT_INCREASE_STAKE,
             );
-            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
+            assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
 
             // Update the staker info to account for accumulated rewards, before updating their
             // staked amount.
@@ -391,7 +395,7 @@ pub mod Staking {
             let unstake_time = staker_info
                 .unstake_time
                 .expect_with_err(Error::MISSING_UNSTAKE_INTENT);
-            assert!(Time::now() >= unstake_time, "{}", Error::INTENT_WINDOW_NOT_FINISHED);
+            assert!(Time::now() >= unstake_time, "{}", GenericError::INTENT_WINDOW_NOT_FINISHED);
 
             // Send rewards to staker's reward address.
             // It must be part of this function's flow because staker_info is about to be erased.
@@ -493,7 +497,7 @@ pub mod Staking {
             let staker_address = self
                 .operational_address_to_staker_address
                 .read(operational_address);
-            assert!(staker_address.is_non_zero(), "{}", Error::STAKER_NOT_EXISTS);
+            assert!(staker_address.is_non_zero(), "{}", GenericError::STAKER_NOT_EXISTS);
             staker_address
         }
 
@@ -549,7 +553,7 @@ pub mod Staking {
             assert!(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
                 "{}",
-                Error::OPERATIONAL_EXISTS,
+                GenericError::OPERATIONAL_EXISTS,
             );
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
@@ -607,7 +611,7 @@ pub mod Staking {
                 (pool_info.pool_contract, pool_info.commission)
             };
 
-            assert!(commission < old_commission, "{}", Error::INVALID_COMMISSION);
+            assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
 
             // Update rewards using the existing commission before changing the commission.
             self.update_rewards(ref :staker_info);
@@ -759,7 +763,7 @@ pub mod Staking {
             assert!(
                 Time::now() >= undelegate_intent.unpool_time,
                 "{}",
-                Error::INTENT_WINDOW_NOT_FINISHED,
+                GenericError::INTENT_WINDOW_NOT_FINISHED,
             );
 
             // Clear the intent, and transfer the intent amount to the pool contract.
@@ -797,9 +801,13 @@ pub mod Staking {
                 pool_contract: from_pool, identifier,
             };
             let mut undelegate_intent_value = self.get_pool_exit_intent(:undelegate_intent_key);
-            assert!(undelegate_intent_value.is_non_zero(), "{}", Error::MISSING_UNDELEGATE_INTENT);
             assert!(
-                switched_amount <= undelegate_intent_value.amount, "{}", Error::AMOUNT_TOO_HIGH,
+                undelegate_intent_value.is_non_zero(), "{}", PoolError::MISSING_UNDELEGATE_INTENT,
+            );
+            assert!(
+                switched_amount <= undelegate_intent_value.amount,
+                "{}",
+                GenericError::AMOUNT_TOO_HIGH,
             );
             let old_intent_amount = undelegate_intent_value.amount;
             assert!(to_pool != from_pool, "{}", Error::SELF_SWITCH_NOT_ALLOWED);

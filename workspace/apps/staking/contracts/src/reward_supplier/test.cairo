@@ -21,7 +21,7 @@ use snforge_std::cheatcodes::message_to_l1::{
 };
 use snforge_std::{start_cheat_block_timestamp_global, test_address};
 use staking::constants::STRK_IN_FRIS;
-use staking::errors::Error;
+use staking::errors::GenericError;
 use staking::event_test_utils::{
     assert_calculated_rewards_event, assert_mint_request_event, assert_number_of_events,
 };
@@ -389,7 +389,7 @@ fn test_claim_rewards_assertions() {
     );
     let result = reward_supplier_safe_dispatcher.claim_rewards(:amount);
     assert_panic_with_error(
-        :result, expected_error: Error::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
+        :result, expected_error: GenericError::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
     );
 
     // Catch AMOUNT_TOO_HIGH.
@@ -397,5 +397,5 @@ fn test_claim_rewards_assertions() {
     let amount = STRK_IN_FRIS + 1;
     cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
     let result = reward_supplier_safe_dispatcher.claim_rewards(:amount);
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_TOO_HIGH.describe());
 }

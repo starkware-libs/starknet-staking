@@ -31,10 +31,12 @@ use snforge_std::{
     start_cheat_block_timestamp_global,
 };
 use staking::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
-use staking::errors::Error;
+use staking::errors::GenericError;
+use staking::pool::errors::Error as PoolError;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
 use staking::pool::objects::SwitchPoolData;
 use staking::reward_supplier::interface::IRewardSupplierDispatcher;
+use staking::staking::errors::Error;
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingPoolDispatcher, IStakingPoolDispatcherTrait,
@@ -889,8 +891,7 @@ fn test_unstake_action_assertions() {
 
     // Catch STAKER_NOT_EXISTS.
     let result = staking_safe_dispatcher.unstake_action(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
-
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 
     // Catch MISSING_UNSTAKE_INTENT.
@@ -902,7 +903,9 @@ fn test_unstake_action_assertions() {
 
     // Catch INTENT_WINDOW_NOT_FINISHED.
     let result = staking_safe_dispatcher.unstake_action(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::INTENT_WINDOW_NOT_FINISHED.describe());
+    assert_panic_with_error(
+        :result, expected_error: GenericError::INTENT_WINDOW_NOT_FINISHED.describe(),
+    );
 }
 
 #[test]
@@ -1098,7 +1101,7 @@ fn test_add_stake_from_pool_assertions() {
     // Should catch STAKER_NOT_EXISTS.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
-    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 
     // Should catch UNSTAKE_IN_PROGRESS.
     let token_address = cfg.staking_contract_info.token_address;
@@ -1353,7 +1356,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     // Should catch STAKER_NOT_EXISTS.
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
-    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 
     // Should catch MISSING_POOL_CONTRACT.
     let token_address = cfg.staking_contract_info.token_address;
@@ -1402,7 +1405,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_TOO_HIGH.describe());
 }
 
 #[test]
@@ -1720,7 +1723,9 @@ fn test_switch_staking_delegation_pool_assertions() {
             data: serialized_data.span(),
             identifier: pool_member.into(),
         );
-    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.describe());
+    assert_panic_with_error(
+        :result, expected_error: PoolError::MISSING_UNDELEGATE_INTENT.describe(),
+    );
 
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
     from_pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
@@ -1736,7 +1741,7 @@ fn test_switch_staking_delegation_pool_assertions() {
             data: serialized_data.span(),
             identifier: pool_member.into(),
         );
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_TOO_HIGH.describe());
 
     // Catch SELF_SWITCH_NOT_ALLOWED.
     let switched_amount = 1;
@@ -2578,7 +2583,7 @@ fn test_get_staker_address_by_operational_assertions() {
 
     // Catch STAKER_NOT_EXISTS.
     let result = staking_safe_dispatcher.get_staker_address_by_operational(:operational_address);
-    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 }
 
 #[test]
