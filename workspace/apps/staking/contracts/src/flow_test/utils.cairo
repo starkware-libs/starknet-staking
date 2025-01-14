@@ -1,4 +1,7 @@
 use MainnetAddresses::MAINNET_L2_BRIDGE_ADDRESS;
+use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
+use contracts_commons::components::replaceability::interface::IReplaceableDispatcherTrait;
+use contracts_commons::components::replaceability::interface::ImplementationData;
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::{
     Deployable, TokenConfig, TokenState, TokenTrait, cheat_caller_address_once,
@@ -690,4 +693,77 @@ impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
         let erc20_dispatcher = IERC20Dispatcher { contract_address: self.address };
         erc20_dispatcher.balance_of(account: account).try_into().unwrap()
     }
+}
+
+#[generate_trait]
+/// Replaceability utils for internal use of the system. Meant to be used before running a
+/// regression test.
+impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
+    /// Upgrades the contracts in the system state with local implementations.
+    fn upgrade_contracts_implementation(self: SystemState<STRKTokenState>) {
+        self.upgrade_staking_implementation();
+        self.upgrade_reward_supplier_implementation();
+        self.upgrade_minting_curve_implementation();
+    }
+
+    /// Upgrades the staking contract in the system state with a local implementation.
+    fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
+        let implementation_data = ImplementationData {
+            impl_hash: declare_staking_contract(), eic_data: Option::None, final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.staking.address,
+            :implementation_data,
+            upgrade_governor: self.staking.roles.upgrade_governor,
+        );
+    }
+
+    /// Upgrades the reward supplier contract in the system state with a local implementation.
+    fn upgrade_reward_supplier_implementation(self: SystemState<STRKTokenState>) {
+        let implementation_data = ImplementationData {
+            impl_hash: declare_reward_supplier_contract(), eic_data: Option::None, final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.reward_supplier.address,
+            :implementation_data,
+            upgrade_governor: self.reward_supplier.roles.upgrade_governor,
+        );
+    }
+
+    /// Upgrades the minting curve contract in the system state with a local implementation.
+    fn upgrade_minting_curve_implementation(self: SystemState<STRKTokenState>) {
+        let implementation_data = ImplementationData {
+            impl_hash: declare_minting_curve_contract(), eic_data: Option::None, final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.minting_curve.address,
+            :implementation_data,
+            upgrade_governor: self.minting_curve.roles.upgrade_governor,
+        );
+    }
+}
+
+fn declare_staking_contract() -> ClassHash {
+    *snforge_std::declare("Staking").unwrap().contract_class().class_hash
+}
+
+fn declare_reward_supplier_contract() -> ClassHash {
+    *snforge_std::declare("RewardSupplier").unwrap().contract_class().class_hash
+}
+
+fn declare_minting_curve_contract() -> ClassHash {
+    *snforge_std::declare("MintingCurve").unwrap().contract_class().class_hash
+}
+
+/// Upgrades implementation of the given contract.
+fn upgrade_implementation(
+    contract_address: ContractAddress,
+    implementation_data: ImplementationData,
+    upgrade_governor: ContractAddress,
+) {
+    let replaceability_dispatcher = IReplaceableDispatcher { contract_address };
+    cheat_caller_address_once(:contract_address, caller_address: upgrade_governor);
+    replaceability_dispatcher.add_new_implementation(:implementation_data);
+    cheat_caller_address_once(:contract_address, caller_address: upgrade_governor);
+    replaceability_dispatcher.replace_to(:implementation_data);
 }
