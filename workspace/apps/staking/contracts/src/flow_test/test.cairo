@@ -2,9 +2,8 @@ use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::TokenTrait;
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
-use flow_test_utils::{
-    RewardSupplierTrait, StakingTrait, SystemDelegatorTrait, SystemStakerTrait, SystemTrait,
-};
+use flow_test_utils::{RewardSupplierTrait, StakingTrait, SystemStakerTrait, SystemTrait};
+use flow_test_utils::{SystemConfigTrait, SystemDelegatorTrait};
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows::basic_stake_flow;
 use staking::flow_test::utils as flow_test_utils;
@@ -22,7 +21,7 @@ use staking::test_utils::StakingInitConfig;
 fn basic_stake_flow_test() {
     // TODO: new cfg - split to basic cfg and specific flow cfg.
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     basic_stake_flow(ref :system);
 
     assert!(system.token.balance_of(account: system.staking.address).is_zero());
@@ -39,7 +38,7 @@ fn basic_stake_flow_test() {
 #[test]
 fn set_open_for_delegation_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let initial_stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: initial_stake_amount * 2);
@@ -103,7 +102,7 @@ fn set_open_for_delegation_flow_test() {
 #[test]
 fn delegator_intent_after_staker_action_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount * 2);
@@ -161,7 +160,7 @@ fn delegator_intent_after_staker_action_flow_test() {
 #[test]
 fn delegator_intent_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount);
@@ -240,7 +239,7 @@ fn delegator_intent_flow_test() {
 #[test]
 fn operations_after_dead_staker_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let initial_reward_supplier_balance = system
         .token
         .balance_of(account: system.reward_supplier.address);
@@ -367,7 +366,7 @@ fn operations_after_dead_staker_flow_test() {
 #[test]
 fn delegator_didnt_update_after_staker_update_commission_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let initial_reward_supplier_balance = system
         .token
         .balance_of(account: system.reward_supplier.address);
@@ -437,7 +436,7 @@ fn delegator_didnt_update_after_staker_update_commission_flow_test() {
 #[test]
 fn delegator_updated_after_staker_update_commission_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let initial_reward_supplier_balance = system
         .token
         .balance_of(account: system.reward_supplier.address);
@@ -509,7 +508,7 @@ fn delegator_updated_after_staker_update_commission_flow_test() {
 #[test]
 fn staker_intent_last_action_first_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let initial_stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: initial_stake_amount * 2);
@@ -564,7 +563,7 @@ fn staker_intent_last_action_first_flow_test() {
 #[should_panic(expected: "SELF_SWITCH_NOT_ALLOWED")]
 fn switch_to_same_delegation_pool_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount);
@@ -606,7 +605,7 @@ fn switch_to_same_delegation_pool_flow_test() {
 #[test]
 fn delegator_claim_rewards_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount * 2);
@@ -664,7 +663,7 @@ fn delegator_claim_rewards_flow_test() {
 #[test]
 fn two_delegators_full_intent_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount);
@@ -734,7 +733,7 @@ fn two_delegators_full_intent_flow_test() {
 #[test]
 fn partial_switches_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let initial_reward_supplier_balance = system
         .token
         .balance_of(account: system.reward_supplier.address);
@@ -851,7 +850,7 @@ fn partial_switches_flow_test() {
 #[test]
 fn flow_4_switch_member_back_and_forth_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let delegated_amount = stake_amount;
@@ -967,7 +966,7 @@ fn flow_4_switch_member_back_and_forth_test() {
 #[test]
 fn delegators_add_to_delegation_pool_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount);
@@ -1065,7 +1064,7 @@ fn delegators_add_to_delegation_pool_flow_test() {
 #[test]
 fn same_staker_different_pool_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let initial_reward_supplier_balance = system
         .token
         .balance_of(account: system.reward_supplier.address);
@@ -1199,7 +1198,7 @@ fn same_staker_different_pool_flow_test() {
 #[test]
 fn add_to_delegation_after_intent_flow_test() {
     let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount);
