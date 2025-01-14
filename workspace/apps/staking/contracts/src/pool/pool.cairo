@@ -12,7 +12,8 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::errors::Error;
+    use staking::errors::GenericError;
+    use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, PoolContractInfo, PoolMemberInfo};
     use staking::pool::objects::{InternalPoolMemberInfo, SwitchPoolData};
     use staking::staking::interface::{
@@ -129,7 +130,7 @@ pub mod Pool {
             assert!(
                 self.pool_member_info.read(pool_member).is_none(), "{}", Error::POOL_MEMBER_EXISTS,
             );
-            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
+            assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
 
             // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
@@ -181,7 +182,7 @@ pub mod Pool {
                 "{}",
                 Error::CALLER_CANNOT_ADD_TO_POOL,
             );
-            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
+            assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
 
             // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
@@ -214,7 +215,7 @@ pub mod Pool {
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
-            assert!(amount <= total_amount, "{}", Error::AMOUNT_TOO_HIGH);
+            assert!(amount <= total_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
             let old_delegated_stake = pool_member_info.amount;
 
             // Update rewards and notify the staking contract of the removal intent.
@@ -256,7 +257,7 @@ pub mod Pool {
             let unpool_time = pool_member_info
                 .unpool_time
                 .expect_with_err(Error::MISSING_UNDELEGATE_INTENT);
-            assert!(Time::now() >= unpool_time, "{}", Error::INTENT_WINDOW_NOT_FINISHED);
+            assert!(Time::now() >= unpool_time, "{}", GenericError::INTENT_WINDOW_NOT_FINISHED);
 
             // Emit event.
             self
@@ -321,11 +322,11 @@ pub mod Pool {
             amount: Amount,
         ) -> Amount {
             // Asserts.
-            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
+            assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             assert!(pool_member_info.unpool_time.is_some(), "{}", Error::MISSING_UNDELEGATE_INTENT);
-            assert!(amount <= pool_member_info.unpool_amount, "{}", Error::AMOUNT_TOO_HIGH);
+            assert!(amount <= pool_member_info.unpool_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
             let reward_address = pool_member_info.reward_address;
 
             // Update pool_member_info and write to storage.
@@ -375,11 +376,11 @@ pub mod Pool {
             ref self: ContractState, amount: Amount, index: Index, data: Span<felt252>,
         ) {
             // Asserts.
-            assert!(amount.is_non_zero(), "{}", Error::AMOUNT_IS_ZERO);
+            assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
             assert!(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 "{}",
-                Error::CALLER_IS_NOT_STAKING_CONTRACT,
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
 
             // Deserialize the switch pool data.
@@ -436,7 +437,7 @@ pub mod Pool {
             assert!(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 "{}",
-                Error::CALLER_IS_NOT_STAKING_CONTRACT,
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
             assert!(
                 self.final_staker_index.read().is_none(),
@@ -520,11 +521,11 @@ pub mod Pool {
         ) {
             // Asserts.
             let old_commission = self.commission.read();
-            assert!(commission < old_commission, "{}", Error::INVALID_COMMISSION);
+            assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
             assert!(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
                 "{}",
-                Error::CALLER_IS_NOT_STAKING_CONTRACT,
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
 
             self.commission.write(commission);

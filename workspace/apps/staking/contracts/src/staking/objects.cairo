@@ -4,7 +4,8 @@ use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;
 use core::panics::panic_with_byte_array;
-use staking::errors::Error;
+use staking::errors::GenericError;
+use staking::staking::errors::Error;
 use staking::staking::interface::{StakerInfo, StakerPoolInfo};
 use staking::types::{Amount, Index};
 use starknet::ContractAddress;
@@ -122,7 +123,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
             VersionedInternalStakerInfo::V0(internal_staker_info) => internal_staker_info.into(),
             VersionedInternalStakerInfo::V1(internal_staker_info_v1) => internal_staker_info_v1,
             VersionedInternalStakerInfo::None => panic_with_byte_array(
-                err: @Error::STAKER_NOT_EXISTS.describe(),
+                err: @GenericError::STAKER_NOT_EXISTS.describe(),
             ),
         }
     }

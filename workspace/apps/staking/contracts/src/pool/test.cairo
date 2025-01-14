@@ -28,8 +28,9 @@ use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{
     CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, test_address,
 };
-use staking::constants::BASE_VALUE;
-use staking::errors::Error;
+use staking::constants::{BASE_VALUE};
+use staking::errors::GenericError;
+use staking::pool::errors::Error;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
     PoolContractInfo, PoolMemberInfo,
@@ -248,7 +249,7 @@ fn test_enter_delegation_pool_assertions() {
     // Catch AMOUNT_IS_ZERO.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, amount: Zero::zero());
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_IS_ZERO.describe());
 
     // Catch POOL_MEMBER_EXISTS.
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
@@ -349,7 +350,7 @@ fn test_add_to_delegation_pool_assertions() {
     // Catch AMOUNT_IS_ZERO.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher.add_to_delegation_pool(:pool_member, amount: Zero::zero());
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_IS_ZERO.describe());
 }
 
 #[test]
@@ -701,7 +702,7 @@ fn test_exit_delegation_pool_intent_assertions() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher
         .exit_delegation_pool_intent(amount: cfg.pool_member_info.amount + 1);
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_TOO_HIGH.describe());
 
     // Catch UNDELEGATE_IN_PROGRESS.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
@@ -833,7 +834,9 @@ fn test_exit_delegation_pool_action_assertions() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     pool_dispatcher.exit_delegation_pool_intent(:amount);
     let result = pool_safe_dispatcher.exit_delegation_pool_action(:pool_member);
-    assert_panic_with_error(:result, expected_error: Error::INTENT_WINDOW_NOT_FINISHED.describe());
+    assert_panic_with_error(
+        :result, expected_error: GenericError::INTENT_WINDOW_NOT_FINISHED.describe(),
+    );
 }
 
 #[test]
@@ -950,7 +953,7 @@ fn test_switch_delegation_pool_assertions() {
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
     let result = pool_safe_dispatcher
         .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: Zero::zero());
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_IS_ZERO.describe());
 
     // Catch POOL_MEMBER_DOES_NOT_EXIST.
     cheat_caller_address_once(
@@ -974,7 +977,7 @@ fn test_switch_delegation_pool_assertions() {
         .switch_delegation_pool(
             to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: switch_amount + 1,
         );
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_TOO_HIGH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_TOO_HIGH.describe());
 }
 
 #[test]
@@ -1121,7 +1124,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     let result = pool_safe_dispatcher
         .enter_delegation_pool_from_staking_contract(amount: Zero::zero(), :index, :data);
-    assert_panic_with_error(:result, expected_error: Error::AMOUNT_IS_ZERO.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_IS_ZERO.describe());
 
     // Catch CALLER_IS_NOT_STAKING_CONTRACT.
     cheat_caller_address_once(
@@ -1130,7 +1133,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     let result = pool_safe_dispatcher
         .enter_delegation_pool_from_staking_contract(amount: switch_amount, :index, :data);
     assert_panic_with_error(
-        :result, expected_error: Error::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
+        :result, expected_error: GenericError::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
     );
 
     // Catch SWITCH_POOL_DATA_DESERIALIZATION_FAILED.

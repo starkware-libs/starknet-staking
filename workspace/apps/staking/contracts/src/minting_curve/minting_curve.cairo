@@ -8,7 +8,7 @@ pub mod MintingCurve {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::constants::{C_DENOM, DEFAULT_C_NUM, MAX_C_NUM};
-    use staking::errors::Error;
+    use staking::minting_curve::errors::Error;
     use staking::minting_curve::interface::{
         ConfigEvents, Events, IMintingCurve, IMintingCurveConfig, MintingCurveContractInfo,
     };

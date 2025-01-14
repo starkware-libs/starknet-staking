@@ -13,8 +13,9 @@ pub mod RewardSupplier {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::constants::STRK_IN_FRIS;
-    use staking::errors::Error;
+    use staking::errors::GenericError;
     use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
+    use staking::reward_supplier::errors::Error;
     use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfo};
     use staking::types::Amount;
     use staking::utils::{CheckedIERC20DispatcherTrait, compute_threshold};
@@ -129,7 +130,7 @@ pub mod RewardSupplier {
             assert!(
                 get_caller_address() == staking_contract,
                 "{}",
-                Error::CALLER_IS_NOT_STAKING_CONTRACT,
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
 
             // Read the last timestamp before it's updated in update_rewards.
@@ -161,10 +162,10 @@ pub mod RewardSupplier {
             assert!(
                 get_caller_address() == staking_contract,
                 "{}",
-                Error::CALLER_IS_NOT_STAKING_CONTRACT,
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
             let unclaimed_rewards = self.unclaimed_rewards.read();
-            assert!(amount <= unclaimed_rewards, "{}", Error::AMOUNT_TOO_HIGH);
+            assert!(amount <= unclaimed_rewards, "{}", GenericError::AMOUNT_TOO_HIGH);
 
             // Update unclaimed_rewards and transfer the requested rewards to the staking contract.
             self.unclaimed_rewards.write(unclaimed_rewards - amount);
@@ -195,7 +196,9 @@ pub mod RewardSupplier {
                 "{}",
                 Error::UNEXPECTED_TOKEN,
             );
-            let amount_u128: Amount = amount.try_into().expect_with_err(Error::AMOUNT_TOO_HIGH);
+            let amount_u128: Amount = amount
+                .try_into()
+                .expect_with_err(GenericError::AMOUNT_TOO_HIGH);
             let mut l1_pending_requested_amount = self.l1_pending_requested_amount.read();
             if amount_u128 > l1_pending_requested_amount {
                 self.l1_pending_requested_amount.write(Zero::zero());
@@ -247,7 +250,7 @@ pub mod RewardSupplier {
             let balance: Amount = token_dispatcher
                 .balance_of(account: get_contract_address())
                 .try_into()
-                .expect_with_err(Error::BALANCE_ISNT_AMOUNT_TYPE);
+                .expect_with_err(GenericError::BALANCE_ISNT_AMOUNT_TYPE);
 
             // Calculate credit, which is the contract's balance plus the amount already requested
             // from L1, and the debit, which is the unclaimed rewards.

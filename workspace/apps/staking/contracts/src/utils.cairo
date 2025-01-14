@@ -3,7 +3,8 @@ use contracts_commons::math::{mul_wide_and_ceil_div, mul_wide_and_div};
 use core::num::traits::zero::Zero;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use staking::constants::{BASE_VALUE, STRK_IN_FRIS};
-use staking::errors::Error;
+use staking::errors::{Erc20Error, GenericError};
+use staking::staking::errors::Error as StakingError;
 use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use staking::types::{Amount, Commission, Index};
 use starknet::syscalls::deploy_syscall;
@@ -14,7 +15,7 @@ pub(crate) fn compute_new_delegated_stake(
     old_delegated_stake: Amount, old_intent_amount: Amount, new_intent_amount: Amount,
 ) -> Amount {
     let total_amount = old_intent_amount + old_delegated_stake;
-    assert!(new_intent_amount <= total_amount, "{}", Error::AMOUNT_TOO_HIGH);
+    assert!(new_intent_amount <= total_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
     total_amount - new_intent_amount
 }
 
@@ -51,7 +52,7 @@ pub(crate) fn compute_commission_amount_rounded_down(
         rhs: commission.into(),
         div: COMMISSION_DENOMINATOR.into(),
     )
-        .expect_with_err(err: Error::COMMISSION_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: GenericError::COMMISSION_ISNT_AMOUNT_TYPE)
 }
 
 // Compute the commission amount of the staker from the pool rewards.
@@ -66,7 +67,7 @@ pub(crate) fn compute_commission_amount_rounded_up(
         rhs: commission.into(),
         div: COMMISSION_DENOMINATOR.into(),
     )
-        .expect_with_err(err: Error::COMMISSION_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: GenericError::COMMISSION_ISNT_AMOUNT_TYPE)
 }
 
 pub(crate) fn compute_global_index_diff(staking_rewards: Amount, total_stake: Amount) -> Index {
@@ -75,7 +76,7 @@ pub(crate) fn compute_global_index_diff(staking_rewards: Amount, total_stake: Am
         return Zero::zero();
     }
     mul_wide_and_div(lhs: staking_rewards, rhs: BASE_VALUE, div: total_stake)
-        .expect_with_err(err: Error::GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW)
+        .expect_with_err(err: StakingError::GLOBAL_INDEX_DIFF_COMPUTATION_OVERFLOW)
 }
 
 // Compute the rewards from the amount and interest.
@@ -83,7 +84,7 @@ pub(crate) fn compute_global_index_diff(staking_rewards: Amount, total_stake: Am
 // $$ rewards = amount * interest / BASE_VALUE $$
 pub(crate) fn compute_rewards_rounded_down(amount: Amount, interest: Index) -> Amount {
     mul_wide_and_div(lhs: amount, rhs: interest, div: BASE_VALUE)
-        .expect_with_err(err: Error::REWARDS_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
 // Compute the rewards from the amount and interest.
@@ -91,7 +92,7 @@ pub(crate) fn compute_rewards_rounded_down(amount: Amount, interest: Index) -> A
 // $$ rewards = ceil_of_division(amount * interest, BASE_VALUE) $$
 pub(crate) fn compute_rewards_rounded_up(amount: Amount, interest: Index) -> Amount {
     mul_wide_and_ceil_div(lhs: amount, rhs: interest, div: BASE_VALUE)
-        .expect_with_err(err: Error::REWARDS_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
 // Compute the threshold for requesting funds from L1 Reward Supplier.
@@ -104,11 +105,11 @@ pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
     fn checked_transfer_from(
         self: IERC20Dispatcher, sender: ContractAddress, recipient: ContractAddress, amount: u256,
     ) -> bool {
-        assert!(amount <= self.balance_of(account: sender), "{}", Error::INSUFFICIENT_BALANCE);
+        assert!(amount <= self.balance_of(account: sender), "{}", Erc20Error::INSUFFICIENT_BALANCE);
         assert!(
             amount <= self.allowance(owner: sender, spender: get_contract_address()),
             "{}",
-            Error::INSUFFICIENT_ALLOWANCE,
+            Erc20Error::INSUFFICIENT_ALLOWANCE,
         );
         self.transfer_from(:sender, :recipient, :amount)
     }
@@ -117,7 +118,7 @@ pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
         assert!(
             amount <= self.balance_of(account: get_contract_address()),
             "{}",
-            Error::INSUFFICIENT_BALANCE,
+            Erc20Error::INSUFFICIENT_BALANCE,
         );
         self.transfer(:recipient, :amount)
     }
