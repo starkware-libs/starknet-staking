@@ -1,4 +1,6 @@
 use MainnetAddresses::MAINNET_L2_BRIDGE_ADDRESS;
+use MainnetAddresses::{MAINNET_MINTING_CURVE_ADDRESS, MAINNET_UPGRADE_GOVERNOR};
+use MainnetAddresses::{MAINNET_REWARD_SUPPLIER_ADDRESS, MAINNET_STAKING_CONTRCT_ADDRESS};
 use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
 use contracts_commons::components::replaceability::interface::IReplaceableDispatcherTrait;
 use contracts_commons::components::replaceability::interface::ImplementationData;
@@ -23,6 +25,7 @@ use staking::staking::interface::{
     IStakingDispatcherTrait, StakerInfoTrait,
 };
 use staking::test_utils::StakingInitConfig;
+use staking::test_utils::constants::STRK_TOKEN_ADDRESS;
 use staking::types::{Amount, Commission};
 use starknet::{ClassHash, ContractAddress};
 
@@ -771,4 +774,60 @@ fn upgrade_implementation(
     replaceability_dispatcher.add_new_implementation(:implementation_data);
     cheat_caller_address_once(:contract_address, caller_address: upgrade_governor);
     replaceability_dispatcher.replace_to(:implementation_data);
+}
+
+#[generate_trait]
+/// System factory for creating system states used in flow and regression tests.
+impl SystemFactoryImpl of SystemFactoryTrait {
+    // System state used for flow tests.
+    fn local_system() -> SystemState<TokenState> {
+        let cfg: StakingInitConfig = Default::default();
+        SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy()
+    }
+
+    // System state used for regression tests.
+    fn mainnet_system() -> SystemState<STRKTokenState> {
+        let system_state = SystemState {
+            token: STRKTokenState { address: STRK_TOKEN_ADDRESS() },
+            staking: mainnet_staking_state(),
+            minting_curve: mainnet_minting_curve_state(),
+            reward_supplier: mainnet_reward_supplier_state(),
+            base_account: 0x100000,
+        };
+        system_state
+    }
+}
+
+fn mainnet_staking_state() -> StakingState {
+    StakingState {
+        address: MAINNET_STAKING_CONTRCT_ADDRESS(),
+        governance_admin: Zero::zero(),
+        roles: StakingRoles {
+            upgrade_governor: MAINNET_UPGRADE_GOVERNOR(),
+            security_admin: Zero::zero(),
+            security_agent: Zero::zero(),
+            app_role_admin: Zero::zero(),
+            token_admin: Zero::zero(),
+        },
+    }
+}
+
+fn mainnet_minting_curve_state() -> MintingCurveState {
+    MintingCurveState {
+        address: MAINNET_MINTING_CURVE_ADDRESS(),
+        governance_admin: Zero::zero(),
+        roles: MintingCurveRoles {
+            upgrade_governor: MAINNET_UPGRADE_GOVERNOR(),
+            app_role_admin: Zero::zero(),
+            token_admin: Zero::zero(),
+        },
+    }
+}
+
+fn mainnet_reward_supplier_state() -> RewardSupplierState {
+    RewardSupplierState {
+        address: MAINNET_REWARD_SUPPLIER_ADDRESS(),
+        governance_admin: Zero::zero(),
+        roles: RewardSupplierRoles { upgrade_governor: MAINNET_UPGRADE_GOVERNOR() },
+    }
 }
