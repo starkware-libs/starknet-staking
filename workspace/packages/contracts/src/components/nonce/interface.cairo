@@ -1,4 +1,4 @@
 #[starknet::interface]
-pub trait INonce<TState> {
-    fn nonce(self: @TState) -> u64;
+pub trait INonce<TContractState> {
+    fn nonce(self: @TContractState) -> u64;
 }

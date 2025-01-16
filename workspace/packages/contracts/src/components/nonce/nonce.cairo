@@ -8,14 +8,14 @@ pub mod NonceComponent {
 
     #[storage]
     pub struct Storage {
-        pub nonce: u64,
+        nonce: u64,
     }
 
     #[embeddable_as(NonceImpl)]
     impl Nonce<
         TContractState, +HasComponent<TContractState>,
     > of INonce<ComponentState<TContractState>> {
-        /// Returns the next unused nonce for an address.
+        /// Returns the next unused nonce.
         fn nonce(self: @ComponentState<TContractState>) -> u64 {
             self.nonce.read()
         }
@@ -32,7 +32,8 @@ pub mod NonceComponent {
             nonce
         }
 
-        /// Same as `use_next_nonce` but checking that `nonce` is the next valid one.
+        /// Consumes a nonce, returns the current value, and increments nonce.
+        /// Panics if the nonce is not the expected value.
         fn use_checked_nonce(ref self: ComponentState<TContractState>, nonce: u64) -> u64 {
             let current = self.use_next_nonce();
             assert!(
