@@ -3,29 +3,23 @@ use contracts_commons::test_utils::TokenTrait;
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use flow_test_utils::{RewardSupplierTrait, StakingTrait, SystemStakerTrait, SystemTrait};
-use flow_test_utils::{SystemConfigTrait, SystemDelegatorTrait};
+use flow_test_utils::{SystemConfigTrait, SystemDelegatorTrait, test_flow_local, test_flow_mainnet};
 use staking::constants::STRK_IN_FRIS;
-use staking::flow_test::flows::basic_stake_flow;
+use staking::flow_test::flows::BasicStakeFlow;
 use staking::flow_test::utils as flow_test_utils;
 use staking::test_utils::StakingInitConfig;
 
-/// Flow - Basic Stake:
-/// Staker - Stake with pool - cover if pool_enabled=true
-/// Staker increase_stake - cover if pool amount = 0 in calc_rew
-/// Delegator delegate (and create) to Staker
-/// Staker increase_stake - cover pool amount > 0 in calc_rew
-/// Delegator increase_delegate
-/// Exit and check
-
 #[test]
 fn basic_stake_flow_test() {
-    // TODO: new cfg - split to basic cfg and specific flow cfg.
-    let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
-    basic_stake_flow(ref :system);
+    let flow = BasicStakeFlow {};
+    test_flow_local(:flow);
+}
 
-    assert!(system.token.balance_of(account: system.staking.address).is_zero());
-    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+#[test]
+#[fork("MAINNET_LATEST")]
+fn basic_stake_flow_regression_test() {
+    let flow = BasicStakeFlow {};
+    test_flow_mainnet(:flow);
 }
 
 /// Flow:

@@ -25,3 +25,6 @@ build-external-contracts = ["contracts_commons::erc20_mocks::DualCaseERC20Mock"]
 
 [tool.fmt]
 sort-module-level-items = true
+
+[tool]
+snforge.workspace = true
