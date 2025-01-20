@@ -653,6 +653,9 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     // Deploy the staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
+    // Deploy the work contract.
+    let work_contract = deploy_work_contract(:cfg);
+    cfg.test_info.work_contract = work_contract;
     // There are circular dependecies between the contracts, so we override the fake addresses.
     snforge_std::store(
         target: reward_supplier,
@@ -664,9 +667,11 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         storage_address: selector!("staking_dispatcher"),
         serialized_value: array![staking_contract.into()].span(),
     );
-    // Deploy the work contract.
-    let work_contract = deploy_work_contract(:cfg);
-    cfg.test_info.work_contract = work_contract;
+    snforge_std::store(
+        target: staking_contract,
+        storage_address: selector!("work_contract"),
+        serialized_value: array![work_contract.into()].span(),
+    );
 }
 
 pub(crate) fn cheat_reward_for_reward_supplier(
