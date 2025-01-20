@@ -1,7 +1,9 @@
 use contracts_commons::errors::OptionAuxTrait;
 use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use staking::staking::errors::Error;
-use staking::staking::objects::{UndelegateIntentKey, UndelegateIntentValue};
+use staking::staking::objects::{
+    UndelegateIntentKey, UndelegateIntentValue, VersionedInternalStakerInfo,
+};
 use staking::types::{Amount, Commission, Epoch, Index};
 use starknet::{ClassHash, ContractAddress};
 
@@ -44,6 +46,13 @@ pub trait IStaking<TContractState> {
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
     fn update_commission(ref self: TContractState, commission: Commission);
     fn is_paused(self: @TContractState) -> bool;
+}
+
+#[starknet::interface]
+pub trait IStakingMigration<TContractState> {
+    fn convert(
+        self: @TContractState, versioned_internal_staker_info: VersionedInternalStakerInfo,
+    ) -> VersionedInternalStakerInfo;
 }
 
 /// Interface for the staking pool contract.

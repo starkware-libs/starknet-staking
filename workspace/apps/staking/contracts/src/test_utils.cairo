@@ -30,7 +30,7 @@ use staking::staking::interface::{
     IStakingPauseDispatcherTrait, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
-    InternalStakerInfoV1, InternalStakerInfoV1Trait, VersionedInternalStakerInfo,
+    VersionedInternalStakerInfo, VersionedInternalStakerInfoGetters,
     VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
@@ -443,9 +443,9 @@ pub(crate) fn stake_for_testing(
     );
     state
         .stake(
-            cfg.staker_info.reward_address,
-            cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info.reward_address(),
+            cfg.staker_info.operational_address(),
+            cfg.staker_info.amount_own(),
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -461,9 +461,9 @@ pub(crate) fn stake_for_testing_using_dispatcher(
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
         .stake(
-            cfg.staker_info.reward_address,
-            cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info.reward_address(),
+            cfg.staker_info.operational_address(),
+            cfg.staker_info.amount_own(),
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -478,9 +478,9 @@ pub(crate) fn stake_from_zero_address(
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
         .stake(
-            cfg.staker_info.reward_address,
-            cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info.reward_address(),
+            cfg.staker_info.operational_address(),
+            cfg.staker_info.amount_own(),
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -780,7 +780,7 @@ pub(crate) fn load_staker_info_from_map(
     }
     assert!(idx == 2, "Invalid Version loaded from map");
     let mut span = raw_serialized_value.span();
-    let staker_info = InternalStakerInfoV1 {
+    let staker_info = VersionedInternalStakerInfoTrait::new_latest(
         reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
         operational_address: Serde::<ContractAddress>::deserialize(ref span)
             .expect('Failed operational'),
@@ -790,8 +790,8 @@ pub(crate) fn load_staker_info_from_map(
         unclaimed_rewards_own: Serde::<Amount>::deserialize(ref span)
             .expect('Failed unclaimed_rewards_own'),
         pool_info: deserialize_option(ref data: span),
-    };
-    return VersionedInternalStakerInfoTrait::new(staker_info);
+    );
+    return staker_info;
 }
 
 /// Deserialize an Option<T> from the given data.
@@ -838,7 +838,7 @@ struct RewardSupplierInfo {
 
 #[derive(Drop, Copy)]
 pub(crate) struct StakingInitConfig {
-    pub staker_info: InternalStakerInfoV1,
+    pub staker_info: VersionedInternalStakerInfo,
     pub pool_member_info: InternalPoolMemberInfo,
     pub staking_contract_info: StakingContractInfo,
     pub minting_curve_contract_info: MintingCurveContractInfo,
@@ -848,7 +848,7 @@ pub(crate) struct StakingInitConfig {
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
     fn default() -> StakingInitConfig {
-        let staker_info = InternalStakerInfoV1 {
+        let staker_info = VersionedInternalStakerInfoTrait::new_latest(
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
@@ -863,7 +863,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
                     commission: COMMISSION,
                 },
             ),
-        };
+        );
         let pool_member_info = InternalPoolMemberInfo {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             amount: POOL_MEMBER_STAKE_AMOUNT,

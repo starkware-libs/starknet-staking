@@ -2,6 +2,7 @@ use contracts_commons::errors::Describable;
 use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::event_test_utils::assert_number_of_events;
+use staking::staking::objects::VersionedInternalStakerInfoGetters;
 use staking::test_utils;
 use staking::work::errors::Error;
 use staking::work::interface::{
@@ -20,7 +21,7 @@ fn test_work() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let work_contract = cfg.test_info.work_contract;
     let work_dispatcher = IWorkDispatcher { contract_address: work_contract };
-    let operational_address = cfg.staker_info.operational_address;
+    let operational_address = cfg.staker_info.operational_address();
     let staker_address = cfg.test_info.staker_address;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: work_contract, caller_address: operational_address);
@@ -43,7 +44,7 @@ fn test_work_assertions() {
     let work_contract = cfg.test_info.work_contract;
     let work_dispatcher = IWorkDispatcher { contract_address: work_contract };
     let work_safe_dispatcher = IWorkSafeDispatcher { contract_address: work_contract };
-    let operational_address = cfg.staker_info.operational_address;
+    let operational_address = cfg.staker_info.operational_address();
     // Catch WORK_IS_DONE.
     let work_info = WorkInfo {};
     cheat_caller_address_once(contract_address: work_contract, caller_address: operational_address);
@@ -65,7 +66,7 @@ fn test_is_work_done_in_curr_epoch() {
     let staker_address = cfg.test_info.staker_address;
     let is_work_done = work_dispatcher.is_work_done_in_curr_epoch(address: staker_address);
     assert_eq!(is_work_done, false);
-    let operational_address = cfg.staker_info.operational_address;
+    let operational_address = cfg.staker_info.operational_address();
     cheat_caller_address_once(contract_address: work_contract, caller_address: operational_address);
     let work_info = WorkInfo {};
     work_dispatcher.work(:work_info);
