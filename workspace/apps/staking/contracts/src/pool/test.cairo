@@ -28,7 +28,7 @@ use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{
     CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, test_address,
 };
-use staking::constants::{BASE_VALUE};
+use staking::constants::BASE_VALUE;
 use staking::errors::GenericError;
 use staking::pool::errors::Error;
 use staking::pool::interface::{

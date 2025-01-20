@@ -1,9 +1,10 @@
 use contracts_commons::test_utils::TokenTrait;
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
-use staking::flow_test::utils::SystemState;
-use staking::flow_test::utils::{FlowTrait, SystemStakerTrait, SystemType};
-use staking::flow_test::utils::{StakingTrait, SystemDelegatorTrait, SystemTrait};
+use staking::flow_test::utils::{
+    FlowTrait, StakingTrait, SystemDelegatorTrait, SystemStakerTrait, SystemState, SystemTrait,
+    SystemType,
+};
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true

@@ -10,7 +10,6 @@ pub mod Work {
     use staking::work::errors::Error;
     use staking::work::interface::{IWork, WorkInfo};
     use starknet::storage::Map;
-
     use starknet::{ContractAddress, get_caller_address};
     pub const CONTRACT_IDENTITY: felt252 = 'Work';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';

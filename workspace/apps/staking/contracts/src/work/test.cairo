@@ -1,15 +1,15 @@
 use contracts_commons::errors::Describable;
-use contracts_commons::test_utils::assert_panic_with_error;
-use contracts_commons::test_utils::cheat_caller_address_once;
+use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::event_test_utils::assert_number_of_events;
 use staking::test_utils;
 use staking::work::errors::Error;
-use staking::work::interface::{IWorkDispatcher, IWorkDispatcherTrait, WorkInfo};
-use staking::work::interface::{IWorkSafeDispatcher, IWorkSafeDispatcherTrait};
-use test_utils::StakingInitConfig;
-use test_utils::general_contract_system_deployment;
-use test_utils::stake_for_testing_using_dispatcher;
+use staking::work::interface::{
+    IWorkDispatcher, IWorkDispatcherTrait, IWorkSafeDispatcher, IWorkSafeDispatcherTrait, WorkInfo,
+};
+use test_utils::{
+    StakingInitConfig, general_contract_system_deployment, stake_for_testing_using_dispatcher,
+};
 
 #[test]
 fn test_work() {

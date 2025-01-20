@@ -1,9 +1,10 @@
-use MainnetAddresses::MAINNET_L2_BRIDGE_ADDRESS;
-use MainnetAddresses::{MAINNET_MINTING_CURVE_ADDRESS, MAINNET_UPGRADE_GOVERNOR};
-use MainnetAddresses::{MAINNET_REWARD_SUPPLIER_ADDRESS, MAINNET_STAKING_CONTRCT_ADDRESS};
-use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
-use contracts_commons::components::replaceability::interface::IReplaceableDispatcherTrait;
-use contracts_commons::components::replaceability::interface::ImplementationData;
+use MainnetAddresses::{
+    MAINNET_L2_BRIDGE_ADDRESS, MAINNET_MINTING_CURVE_ADDRESS, MAINNET_REWARD_SUPPLIER_ADDRESS,
+    MAINNET_STAKING_CONTRCT_ADDRESS, MAINNET_UPGRADE_GOVERNOR,
+};
+use contracts_commons::components::replaceability::interface::{
+    IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
+};
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::{

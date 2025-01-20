@@ -2,8 +2,10 @@ use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::TokenTrait;
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
-use flow_test_utils::{RewardSupplierTrait, StakingTrait, SystemStakerTrait, SystemTrait};
-use flow_test_utils::{SystemConfigTrait, SystemDelegatorTrait, test_flow_local, test_flow_mainnet};
+use flow_test_utils::{
+    RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemStakerTrait,
+    SystemTrait, test_flow_local, test_flow_mainnet,
+};
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows::BasicStakeFlow;
 use staking::flow_test::utils as flow_test_utils;
