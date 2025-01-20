@@ -845,6 +845,7 @@ pub(crate) enum SystemType {
 pub(crate) trait FlowTrait<
     TFlow, TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > {
+    fn setup(ref self: TFlow, ref system: SystemState<TTokenState>);
     fn test(self: TFlow, ref system: SystemState<TTokenState>, system_type: SystemType);
 }
 
@@ -857,13 +858,13 @@ pub(crate) fn test_flow_local<TFlow, +FlowTrait<TFlow, TokenState>, +Drop<TFlow>
     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 }
 
-
 pub(crate) fn test_flow_mainnet<
     TFlow, +FlowTrait<TFlow, STRKTokenState>, +Drop<TFlow>, +Copy<TFlow>,
 >(
-    flow: TFlow,
+    ref flow: TFlow,
 ) {
     let mut system = SystemFactoryTrait::mainnet_system();
+    flow.setup(ref :system);
     system.upgrade_contracts_implementation();
     flow.test(ref :system, system_type: SystemType::Mainnet);
 }

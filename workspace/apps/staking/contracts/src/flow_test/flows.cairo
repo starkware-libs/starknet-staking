@@ -18,6 +18,8 @@ pub(crate) struct BasicStakeFlow {}
 pub(crate) impl BasicStakeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<BasicStakeFlow, TTokenState> {
+    fn setup(ref self: BasicStakeFlow, ref system: SystemState<TTokenState>) {}
+
     fn test(self: BasicStakeFlow, ref system: SystemState<TTokenState>, system_type: SystemType) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;

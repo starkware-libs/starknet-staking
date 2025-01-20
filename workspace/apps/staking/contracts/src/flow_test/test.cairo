@@ -20,8 +20,8 @@ fn basic_stake_flow_test() {
 #[test]
 #[fork("MAINNET_LATEST")]
 fn basic_stake_flow_regression_test() {
-    let flow = BasicStakeFlow {};
-    test_flow_mainnet(:flow);
+    let mut flow = BasicStakeFlow {};
+    test_flow_mainnet(ref :flow);
 }
 
 /// Flow:
