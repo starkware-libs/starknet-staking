@@ -37,6 +37,18 @@ pub(crate) impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateI
     }
 }
 
+#[generate_trait]
+pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
+    fn is_valid(self: @UndelegateIntentValue) -> bool {
+        // The value is valid if and only if unpool_time and amount are both zero or both non-zero.
+        self.unpool_time.is_zero() == self.amount.is_zero()
+    }
+
+    fn assert_valid(self: @UndelegateIntentValue) {
+        assert!(self.is_valid(), "{}", Error::INVALID_UNDELEGATE_INTENT_VALUE);
+    }
+}
+
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 struct InternalStakerInfo {
     reward_address: ContractAddress,
@@ -207,18 +219,6 @@ pub(crate) impl VersionedInternalStakerInfoImplSetters of VersionedInternalStake
         let mut internal_staker_info = self.unwrap_latest_version();
         internal_staker_info.pool_info = pool_info;
         self = VersionedInternalStakerInfoInternalTrait::new(internal_staker_info);
-    }
-}
-
-#[generate_trait]
-pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
-    fn is_valid(self: @UndelegateIntentValue) -> bool {
-        // The value is valid if and only if unpool_time and amount are both zero or both non-zero.
-        self.unpool_time.is_zero() == self.amount.is_zero()
-    }
-
-    fn assert_valid(self: @UndelegateIntentValue) {
-        assert!(self.is_valid(), "{}", Error::INVALID_UNDELEGATE_INTENT_VALUE);
     }
 }
 
