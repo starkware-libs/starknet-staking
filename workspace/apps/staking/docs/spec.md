@@ -43,6 +43,7 @@
     - [set\_min\_stake](#set_min_stake)
     - [set\_exit\_wait\_window](#set_exit_wait_window)
     - [set\_reward\_supplier](#set_reward_supplier)
+    - [convert\_from\_upgraded\_contract](#convert_from_upgraded_contract)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
@@ -215,6 +216,7 @@ classDiagram
     set_min_stake()
     set_exit_wait_window()
     set_reward_supplier()
+    convert_from_upgraded_contract()
   }
   class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
@@ -1113,6 +1115,25 @@ Set the reward supplier.
 #### access control <!-- omit from toc -->
 Only token admin.
 #### logic <!-- omit from toc -->
+
+### convert_from_upgraded_contract
+```rust
+fn convert_from_upgraded_contract(
+        self: @TContractState,
+        versioned_internal_staker_info: VersionedInternalStakerInfo,
+        staker_address: ContractAddress,
+    ) -> VersionedInternalStakerInfo
+```
+#### description <!-- omit from toc -->
+Convert InternalStakerInfo from outdated version.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Staking contract of latest version.
+#### logic <!-- omit from toc -->
+1. Convert versioned_internal_staker_info to newer version.
 
 ## Events
 ### Stake Balance Changed
