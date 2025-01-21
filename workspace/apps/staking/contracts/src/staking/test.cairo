@@ -1,7 +1,7 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
     CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_CLASS_HASH, DUMMY_IDENTIFIER, NON_STAKER_ADDRESS,
-    NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
+    NON_TOKEN_ADMIN, NOT_STAKING_CONTRACT_ADDRESS, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
     OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, POOL_CONTRACT_ADDRESS,
     POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_UNCLAIMED_REWARDS,
 };
@@ -39,9 +39,10 @@ use staking::reward_supplier::interface::IRewardSupplierDispatcher;
 use staking::staking::errors::Error;
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
-    IStakingDispatcherTrait, IStakingPoolDispatcher, IStakingPoolDispatcherTrait,
-    IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
+    IStakingDispatcherTrait, IStakingMigrationSafeDispatcher, IStakingMigrationSafeDispatcherTrait,
+    IStakingPoolDispatcher, IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher,
+    IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
+    StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
     InternalStakerInfoTestTrait, UndelegateIntentKey, UndelegateIntentValue,
@@ -2636,6 +2637,29 @@ fn test_update_rewards_from_work_contract_assertions() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: work_contract);
     let result = staking_safe_dispatcher.update_rewards_from_work_contract(:staker_address);
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+}
+
+fn test_convert_from_upgraded_contract_caller_is_not_staking_contract() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_safe_dispatcher = IStakingMigrationSafeDispatcher {
+        contract_address: staking_contract,
+    };
+
+    // Catch CALLER_IS_NOT_STAKING_CONTRACT.
+    let staker_address = cfg.test_info.staker_address;
+    let internal_staker_info = cfg.staker_info;
+    let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: not_staking_contract,
+    );
+    let result = staking_safe_dispatcher
+        .convert_from_upgraded_contract(internal_staker_info, staker_address);
+    assert_panic_with_error(
+        :result, expected_error: GenericError::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
+    );
 }
 
 const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };

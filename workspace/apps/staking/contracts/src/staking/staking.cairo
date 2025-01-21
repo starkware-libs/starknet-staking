@@ -658,13 +658,16 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingMigrationImpl of IStakingMigration<ContractState> {
-        fn convert(
+        /// pre-condition: `versioned_internal_staker_info` must match the `staker_address` key in
+        /// the `self.staker_info` storage map.
+        fn convert_from_upgraded_contract(
             self: @ContractState,
             versioned_internal_staker_info: VersionedInternalStakerInfo,
             staker_address: ContractAddress,
         ) -> VersionedInternalStakerInfo {
             // TODO emit event
-            versioned_internal_staker_info.convert(staker_address, self.prev_class_hash.read())
+            self.assert_caller_is_staking_contract();
+            self.convert(versioned_internal_staker_info, staker_address)
         }
     }
 
@@ -983,6 +986,14 @@ pub mod Staking {
 
     #[generate_trait]
     pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+        fn convert(
+            self: @ContractState,
+            versioned_internal_staker_info: VersionedInternalStakerInfo,
+            staker_address: ContractAddress,
+        ) -> VersionedInternalStakerInfo {
+            versioned_internal_staker_info.convert(staker_address, self.prev_class_hash.read())
+        }
+
         fn send_rewards(
             self: @ContractState,
             reward_address: ContractAddress,
@@ -1254,6 +1265,14 @@ pub mod Staking {
                 get_caller_address() == pool_info.pool_contract,
                 "{}",
                 Error::CALLER_IS_NOT_POOL_CONTRACT,
+            );
+        }
+
+        fn assert_caller_is_staking_contract(self: @ContractState) {
+            assert!(
+                get_caller_address() == get_contract_address(),
+                "{}",
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
         }
 

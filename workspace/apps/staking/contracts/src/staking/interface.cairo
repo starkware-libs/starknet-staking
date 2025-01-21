@@ -51,7 +51,7 @@ pub trait IStaking<TContractState> {
 
 #[starknet::interface]
 pub trait IStakingMigration<TContractState> {
-    fn convert(
+    fn convert_from_upgraded_contract(
         self: @TContractState,
         versioned_internal_staker_info: VersionedInternalStakerInfo,
         staker_address: ContractAddress,
