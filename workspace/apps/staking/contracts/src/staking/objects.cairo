@@ -142,7 +142,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
     fn compute_unpool_time(
         self: @VersionedInternalStakerInfo, exit_wait_window: TimeDelta,
     ) -> Timestamp {
-        let internal_staker_info = self.unwrap_latest_version();
+        let internal_staker_info = self.unwrap_latest();
         if let Option::Some(unstake_time) = internal_staker_info.unstake_time {
             return max(unstake_time, Time::now());
         }
@@ -150,7 +150,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
     }
 
     fn get_pool_info(self: @VersionedInternalStakerInfo) -> StakerPoolInfo {
-        let internal_staker_info = self.unwrap_latest_version();
+        let internal_staker_info = self.unwrap_latest();
         (internal_staker_info.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 }
@@ -158,66 +158,66 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
 #[generate_trait]
 pub(crate) impl VersionedInternalStakerInfoImplGetters of VersionedInternalStakerInfoGetters {
     fn reward_address(self: @VersionedInternalStakerInfo) -> ContractAddress {
-        self.unwrap_latest_version().reward_address
+        self.unwrap_latest().reward_address
     }
     fn operational_address(self: @VersionedInternalStakerInfo) -> ContractAddress {
-        self.unwrap_latest_version().operational_address
+        self.unwrap_latest().operational_address
     }
     fn unstake_time(self: @VersionedInternalStakerInfo) -> Option<Timestamp> {
-        self.unwrap_latest_version().unstake_time
+        self.unwrap_latest().unstake_time
     }
     fn amount_own(self: @VersionedInternalStakerInfo) -> Amount {
-        self.unwrap_latest_version().amount_own
+        self.unwrap_latest().amount_own
     }
     fn index(self: @VersionedInternalStakerInfo) -> Index {
-        self.unwrap_latest_version().index
+        self.unwrap_latest().index
     }
     fn unclaimed_rewards_own(self: @VersionedInternalStakerInfo) -> Amount {
-        self.unwrap_latest_version().unclaimed_rewards_own
+        self.unwrap_latest().unclaimed_rewards_own
     }
     fn pool_info(self: @VersionedInternalStakerInfo) -> Option<StakerPoolInfo> {
-        self.unwrap_latest_version().pool_info
+        self.unwrap_latest().pool_info
     }
 }
 
 #[generate_trait]
 pub(crate) impl VersionedInternalStakerInfoImplSetters of VersionedInternalStakerInfoSetters {
     fn set_reward_address(ref self: VersionedInternalStakerInfo, reward_address: ContractAddress) {
-        let mut internal_staker_info = self.unwrap_latest_version();
+        let mut internal_staker_info = self.unwrap_latest();
         internal_staker_info.reward_address = reward_address;
         self = VersionedInternalStakerInfoInternalTrait::new(internal_staker_info);
     }
     fn set_operational_address(
         ref self: VersionedInternalStakerInfo, operational_address: ContractAddress,
     ) {
-        let mut internal_staker_info = self.unwrap_latest_version();
+        let mut internal_staker_info = self.unwrap_latest();
         internal_staker_info.operational_address = operational_address;
         self = VersionedInternalStakerInfoInternalTrait::new(internal_staker_info);
     }
     fn set_unstake_time(ref self: VersionedInternalStakerInfo, unstake_time: Option<Timestamp>) {
-        let mut internal_staker_info = self.unwrap_latest_version();
+        let mut internal_staker_info = self.unwrap_latest();
         internal_staker_info.unstake_time = unstake_time;
         self = VersionedInternalStakerInfoInternalTrait::new(internal_staker_info);
     }
     fn set_amount_own(ref self: VersionedInternalStakerInfo, amount_own: Amount) {
-        let mut internal_staker_info = self.unwrap_latest_version();
+        let mut internal_staker_info = self.unwrap_latest();
         internal_staker_info.amount_own = amount_own;
         self = VersionedInternalStakerInfoInternalTrait::new(internal_staker_info);
     }
     fn set_index(ref self: VersionedInternalStakerInfo, index: Index) {
-        let mut internal_staker_info = self.unwrap_latest_version();
+        let mut internal_staker_info = self.unwrap_latest();
         internal_staker_info.index = index;
         self = VersionedInternalStakerInfoInternalTrait::new(internal_staker_info);
     }
     fn set_unclaimed_rewards_own(
         ref self: VersionedInternalStakerInfo, unclaimed_rewards_own: Amount,
     ) {
-        let mut internal_staker_info = self.unwrap_latest_version();
+        let mut internal_staker_info = self.unwrap_latest();
         internal_staker_info.unclaimed_rewards_own = unclaimed_rewards_own;
         self = VersionedInternalStakerInfoInternalTrait::new(internal_staker_info);
     }
     fn set_pool_info(ref self: VersionedInternalStakerInfo, pool_info: Option<StakerPoolInfo>) {
-        let mut internal_staker_info = self.unwrap_latest_version();
+        let mut internal_staker_info = self.unwrap_latest();
         internal_staker_info.pool_info = pool_info;
         self = VersionedInternalStakerInfoInternalTrait::new(internal_staker_info);
     }
@@ -229,7 +229,7 @@ impl VersionedInternalStakerInfoInternalImpl of VersionedInternalStakerInfoInter
         VersionedInternalStakerInfo::V1(value)
     }
 
-    fn unwrap_latest_version(self: @VersionedInternalStakerInfo) -> InternalStakerInfoV1 {
+    fn unwrap_latest(self: @VersionedInternalStakerInfo) -> InternalStakerInfoV1 {
         match *self {
             VersionedInternalStakerInfo::V0(_) => panic_with_byte_array(
                 err: @Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION.describe(),
@@ -245,7 +245,7 @@ impl VersionedInternalStakerInfoInternalImpl of VersionedInternalStakerInfoInter
 impl VersionedInternalStakerInfoIntoStakerInfo of Into<VersionedInternalStakerInfo, StakerInfo> {
     #[inline(always)]
     fn into(self: VersionedInternalStakerInfo) -> StakerInfo {
-        let internal_staker_info = self.unwrap_latest_version();
+        let internal_staker_info = self.unwrap_latest();
         StakerInfo {
             reward_address: internal_staker_info.reward_address,
             operational_address: internal_staker_info.operational_address,
