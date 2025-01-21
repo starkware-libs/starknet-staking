@@ -95,6 +95,8 @@ pub mod Staking {
         // Required delay (in seconds) between unstake intent and unstake action.
         exit_wait_window: TimeDelta,
         work_contract: ContractAddress,
+        // Class hash of the previous version of the contract
+        prev_class_hash: ClassHash,
     }
 
     #[event]
@@ -139,6 +141,7 @@ pub mod Staking {
         reward_supplier: ContractAddress,
         pool_contract_admin: ContractAddress,
         governance_admin: ContractAddress,
+        prev_class_hash: ClassHash,
     ) {
         self.roles.initialize(:governance_admin);
         self.replaceability.upgrade_delay.write(Zero::zero());
@@ -153,6 +156,7 @@ pub mod Staking {
         self.global_index_last_update_timestamp.write(Time::now());
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
+        self.prev_class_hash.write(prev_class_hash);
     }
 
     #[abi(embed_v0)]
@@ -655,9 +659,12 @@ pub mod Staking {
     #[abi(embed_v0)]
     impl StakingMigrationImpl of IStakingMigration<ContractState> {
         fn convert(
-            self: @ContractState, versioned_internal_staker_info: VersionedInternalStakerInfo,
+            self: @ContractState,
+            versioned_internal_staker_info: VersionedInternalStakerInfo,
+            staker_address: ContractAddress,
         ) -> VersionedInternalStakerInfo {
-            versioned_internal_staker_info.convert()
+            // TODO emit event
+            versioned_internal_staker_info.convert(staker_address, self.prev_class_hash.read())
         }
     }
 
@@ -1053,7 +1060,7 @@ pub mod Staking {
         fn internal_staker_info(
             self: @ContractState, staker_address: ContractAddress,
         ) -> VersionedInternalStakerInfo {
-            self.convert(self.staker_info.read(staker_address))
+            self.convert(self.staker_info.read(staker_address), staker_address)
         }
 
         fn calculate_and_update_pool_rewards(

@@ -5,9 +5,11 @@ use core::num::traits::Zero;
 use core::panics::panic_with_byte_array;
 use staking::errors::GenericError;
 use staking::staking::errors::Error;
-use staking::staking::interface::{StakerInfo, StakerPoolInfo};
+use staking::staking::interface::{
+    IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo, StakerPoolInfo,
+};
 use staking::types::{Amount, Index};
-use starknet::ContractAddress;
+use starknet::{ClassHash, ContractAddress};
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct UndelegateIntentKey {
@@ -118,21 +120,20 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
         }
     }
 
-    fn convert(self: VersionedInternalStakerInfo) -> VersionedInternalStakerInfo {
+    fn convert(
+        self: VersionedInternalStakerInfo,
+        staker_address: ContractAddress,
+        staking_prev_class_hash: ClassHash,
+    ) -> VersionedInternalStakerInfo {
         match self {
-            VersionedInternalStakerInfo::None => {
-                panic_with_byte_array(err: @GenericError::STAKER_NOT_EXISTS.describe())
-            },
-            VersionedInternalStakerInfo::V0(internal_staker_info) => {
-                Self::new_latest(
-                    internal_staker_info.reward_address,
-                    internal_staker_info.operational_address,
-                    internal_staker_info.unstake_time,
-                    internal_staker_info.amount_own,
-                    internal_staker_info.index,
-                    internal_staker_info.unclaimed_rewards_own,
-                    internal_staker_info.pool_info,
-                )
+            VersionedInternalStakerInfo::None => panic_with_byte_array(
+                err: @GenericError::STAKER_NOT_EXISTS.describe(),
+            ),
+            VersionedInternalStakerInfo::V0(_) => {
+                let library_dispatcher = IStakingLibraryDispatcher {
+                    class_hash: staking_prev_class_hash,
+                };
+                library_dispatcher.staker_info(staker_address).into()
             },
             VersionedInternalStakerInfo::V1(_) => self,
         }

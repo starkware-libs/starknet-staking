@@ -3,6 +3,7 @@ use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use staking::staking::errors::Error;
 use staking::staking::objects::{
     UndelegateIntentKey, UndelegateIntentValue, VersionedInternalStakerInfo,
+    VersionedInternalStakerInfoTrait,
 };
 use staking::types::{Amount, Commission, Epoch, Index};
 use starknet::{ClassHash, ContractAddress};
@@ -51,7 +52,9 @@ pub trait IStaking<TContractState> {
 #[starknet::interface]
 pub trait IStakingMigration<TContractState> {
     fn convert(
-        self: @TContractState, versioned_internal_staker_info: VersionedInternalStakerInfo,
+        self: @TContractState,
+        versioned_internal_staker_info: VersionedInternalStakerInfo,
+        staker_address: ContractAddress,
     ) -> VersionedInternalStakerInfo;
 }
 
@@ -356,6 +359,23 @@ pub struct StakerInfo {
     pub index: Index,
     pub unclaimed_rewards_own: Amount,
     pub pool_info: Option<StakerPoolInfo>,
+}
+
+pub(crate) impl StakerInfoIntoVersionedInternalStakerInfo of Into<
+    StakerInfo, VersionedInternalStakerInfo,
+> {
+    #[inline(always)]
+    fn into(self: StakerInfo) -> VersionedInternalStakerInfo nopanic {
+        VersionedInternalStakerInfoTrait::new_latest(
+            reward_address: self.reward_address,
+            operational_address: self.operational_address,
+            unstake_time: self.unstake_time,
+            amount_own: self.amount_own,
+            index: self.index,
+            unclaimed_rewards_own: self.unclaimed_rewards_own,
+            pool_info: self.pool_info,
+        )
+    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
