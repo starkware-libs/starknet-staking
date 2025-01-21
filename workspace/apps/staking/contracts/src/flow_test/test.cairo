@@ -4,8 +4,9 @@ use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use flow_test_utils::{RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait};
 use flow_test_utils::{SystemStakerTrait, SystemTrait, test_flow_local, test_flow_mainnet};
+use flows::{BasicStakeFlow, SetOpenForDelegationFlow};
 use staking::constants::STRK_IN_FRIS;
-use staking::flow_test::flows::BasicStakeFlow;
+use staking::flow_test::flows;
 use staking::flow_test::utils as flow_test_utils;
 use staking::test_utils::StakingInitConfig;
 
@@ -22,66 +23,17 @@ fn basic_stake_flow_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-/// Flow:
-/// Staker - Stake without pool - cover if pool_enabled=false
-/// Staker increase_stake - cover if pool amount=none in update_rewards
-/// Staker claim_rewards
-/// Staker set_open_for_delegation
-/// Delegator delegate - cover delegating after opening an initially closed pool
-/// Exit and check
 #[test]
 fn set_open_for_delegation_flow_test() {
-    let cfg: StakingInitConfig = Default::default();
-    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
-    let min_stake = system.staking.get_min_stake();
-    let initial_stake_amount = min_stake * 2;
-    let staker = system.new_staker(amount: initial_stake_amount * 2);
-    let initial_reward_supplier_balance = system
-        .token
-        .balance_of(account: system.reward_supplier.address);
-    let commission = 200;
-    let one_week = Time::weeks(count: 1);
+    let flow = SetOpenForDelegationFlow {};
+    test_flow_local(:flow);
+}
 
-    system.stake(:staker, amount: initial_stake_amount, pool_enabled: false, :commission);
-    system.advance_time(time: one_week);
-
-    system.increase_stake(:staker, amount: initial_stake_amount / 2);
-    system.advance_time(time: one_week);
-
-    assert!(system.token.balance_of(account: staker.reward.address).is_zero());
-    system.staker_claim_rewards(:staker);
-    assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
-
-    let pool = system.set_open_for_delegation(:staker, :commission);
-    system.advance_time(time: one_week);
-
-    let delegator = system.new_delegator(amount: initial_stake_amount);
-    system.delegate(:delegator, :pool, amount: initial_stake_amount / 2);
-    system.advance_time(time: one_week);
-
-    system.staker_exit_intent(:staker);
-    system.advance_time(time: system.staking.get_exit_wait_window());
-
-    system.delegator_exit_intent(:delegator, :pool, amount: initial_stake_amount / 2);
-    system.advance_time(time: one_week);
-
-    system.delegator_exit_action(:delegator, :pool);
-    system.staker_exit_action(:staker);
-
-    assert!(system.token.balance_of(account: system.staking.address).is_zero());
-    assert!(system.token.balance_of(account: pool) < 100);
-    assert_eq!(system.token.balance_of(account: staker.staker.address), initial_stake_amount * 2);
-    assert_eq!(system.token.balance_of(account: delegator.delegator.address), initial_stake_amount);
-    assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
-    assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
-    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-    assert_eq!(
-        initial_reward_supplier_balance,
-        system.token.balance_of(account: system.reward_supplier.address)
-            + system.token.balance_of(account: staker.reward.address)
-            + system.token.balance_of(account: delegator.reward.address)
-            + system.token.balance_of(account: pool),
-    );
+#[test]
+#[fork("MAINNET_LATEST")]
+fn set_open_for_delegation_regression_test() {
+    let mut flow = SetOpenForDelegationFlow {};
+    test_flow_mainnet(ref :flow);
 }
 
 /// Flow:
