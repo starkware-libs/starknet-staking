@@ -85,6 +85,10 @@ pub mod Work {
             // TODO: emit event.
         }
 
+        fn get_last_epoch_work_done(self: @ContractState, address: ContractAddress) -> Epoch {
+            self.work_is_done.read(address)
+        }
+
         fn is_work_done_in_curr_epoch(self: @ContractState, address: ContractAddress) -> bool {
             self.work_is_done.read(address) == self.staking_dispatcher.read().get_current_epoch()
         }

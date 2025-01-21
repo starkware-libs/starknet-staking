@@ -1,5 +1,6 @@
 use contracts_commons::errors::Describable;
 use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
+use core::num::traits::zero::Zero;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::event_test_utils::assert_number_of_events;
 use staking::staking::objects::VersionedInternalStakerInfoGetters;
@@ -74,3 +75,22 @@ fn test_is_work_done_in_curr_epoch() {
     assert_eq!(is_work_done, true);
 }
 
+#[test]
+fn test_get_last_epoch_work_done() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let work_contract = cfg.test_info.work_contract;
+    let work_dispatcher = IWorkDispatcher { contract_address: work_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let last_epoch_work_done = work_dispatcher.get_last_epoch_work_done(address: staker_address);
+    assert_eq!(last_epoch_work_done, Zero::zero());
+    let operational_address = cfg.staker_info.operational_address();
+    cheat_caller_address_once(contract_address: work_contract, caller_address: operational_address);
+    let work_info = WorkInfo {};
+    work_dispatcher.work(:work_info);
+    let last_epoch_work_done = work_dispatcher.get_last_epoch_work_done(address: staker_address);
+    assert_eq!(last_epoch_work_done, 1);
+}

@@ -106,6 +106,8 @@
 - [Work Contract](#work-contract)
   - [Functions](#functions-4)
     - [work](#work)
+    - [is\_work\_done\_in\_curr\_epoch](#is_work_done_in_curr_epoch)
+    - [get\_last\_epoch\_work\_done](#get_last_epoch_work_done)
   - [Events](#events-4)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
@@ -285,6 +287,7 @@ classDiagram
     Map< staker_address, Epoch >,
     work()
     is_work_done_in_curr_epoch()
+    get_last_epoch_work_done()
   }
   class WorkInfo{
   }
@@ -1798,7 +1801,20 @@ fn is_work_done_in_curr_epoch(self: @TContractState, address: ContractAddress) -
 ```
 
 #### description <!-- omit from toc -->
-Returns true if work is done for this `staker_address` in current epoch, else returns false.
+Returns true if work is done for this `address` in current epoch, else returns false.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### get_last_epoch_work_done
+```rust
+fn get_last_epoch_work_done(self: @TContractState, address: ContractAddress) -> Epoch;
+```
+
+#### description <!-- omit from toc -->
+Returns the last epoch that `address` finished his job.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
