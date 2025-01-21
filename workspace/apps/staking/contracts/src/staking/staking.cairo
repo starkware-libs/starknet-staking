@@ -295,8 +295,9 @@ pub mod Staking {
                 );
 
             // Update staker's staked amount, and total stake.
-            staker_info.set_amount_own(staker_info.amount_own() + amount);
-            let mut staker_total_stake = staker_info.amount_own();
+            let new_self_stake = old_self_stake + amount;
+            staker_info.set_amount_own(new_self_stake);
+            let mut staker_total_stake = new_self_stake;
             self.staker_info.write(staker_address, staker_info);
             self.add_to_total_stake(:amount);
 
@@ -314,7 +315,7 @@ pub mod Staking {
                         staker_address,
                         old_self_stake,
                         old_delegated_stake,
-                        new_self_stake: staker_info.amount_own(),
+                        new_self_stake,
                         new_delegated_stake,
                     },
                 );
@@ -366,7 +367,8 @@ pub mod Staking {
             } else {
                 Zero::zero()
             };
-            let amount = staker_info.amount_own() + amount_pool;
+            let old_self_stake = staker_info.amount_own();
+            let amount = old_self_stake + amount_pool;
             self.remove_from_total_stake(:amount);
 
             // Emit events.
@@ -380,7 +382,7 @@ pub mod Staking {
                 .emit(
                     Events::StakeBalanceChanged {
                         staker_address,
-                        old_self_stake: staker_info.amount_own(),
+                        old_self_stake,
                         old_delegated_stake: amount_pool,
                         new_self_stake: Zero::zero(),
                         new_delegated_stake: Zero::zero(),
@@ -582,10 +584,8 @@ pub mod Staking {
             );
 
             // Set operational address and write to storage.
-            self
-                .operational_address_to_staker_address
-                .write(staker_info.operational_address(), Zero::zero());
             let old_address = staker_info.operational_address();
+            self.operational_address_to_staker_address.write(old_address, Zero::zero());
             staker_info.set_operational_address(operational_address);
             self.staker_info.write(staker_address, staker_info);
             self.operational_address_to_staker_address.write(operational_address, staker_address);
@@ -872,13 +872,14 @@ pub mod Staking {
                 );
 
             // Emit event.
+            let to_staker_self_stake = to_staker_info.amount_own();
             self
                 .emit(
                     Events::StakeBalanceChanged {
                         staker_address: to_staker,
-                        old_self_stake: to_staker_info.amount_own(),
+                        old_self_stake: to_staker_self_stake,
                         old_delegated_stake,
-                        new_self_stake: to_staker_info.amount_own(),
+                        new_self_stake: to_staker_self_stake,
                         new_delegated_stake: to_staker_pool_info.amount,
                     },
                 );
@@ -1111,15 +1112,14 @@ pub mod Staking {
             staker_info: VersionedInternalStakerInfo,
         ) {
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
-            self
-                .operational_address_to_staker_address
-                .write(staker_info.operational_address(), Zero::zero());
+            let operational_address = staker_info.operational_address();
+            self.operational_address_to_staker_address.write(operational_address, Zero::zero());
             self
                 .emit(
                     Events::DeleteStaker {
                         staker_address,
                         reward_address: staker_info.reward_address(),
-                        operational_address: staker_info.operational_address(),
+                        operational_address,
                         pool_contract: match staker_info.pool_info() {
                             Option::Some(pool_info) => Option::Some(pool_info.pool_contract),
                             Option::None => Option::None,
