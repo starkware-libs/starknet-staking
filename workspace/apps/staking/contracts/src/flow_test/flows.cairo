@@ -209,3 +209,74 @@ pub(crate) impl SetOpenForDelegationFlowImpl<
         );
     }
 }
+
+/// Flow:
+/// Staker Stake
+/// Delegator delegate
+/// Delegator exit_intent partial amount
+/// Delegator exit_intent with lower amount - cover lowering partial undelegate
+/// Delegator exit_intent with zero amount - cover clearing an intent
+/// Delegator exit_intent all amount
+/// Delegator exit_action
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorIntentFlow {}
+pub(crate) impl DelegatorIntentFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<DelegatorIntentFlow, TTokenState> {
+    fn setup(ref self: DelegatorIntentFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: DelegatorIntentFlow, ref system: SystemState<TTokenState>, system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount);
+        let initial_reward_supplier_balance = system
+            .token
+            .balance_of(account: system.reward_supplier.address);
+        let commission = 200;
+        let one_week = Time::weeks(count: 1);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.advance_time(time: one_week);
+
+        let pool = system.staking.get_pool(:staker);
+        let delegated_amount = stake_amount;
+        let delegator = system.new_delegator(amount: delegated_amount);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.advance_time(time: one_week);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount / 2);
+        system.advance_time(time: one_week);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount / 4);
+        system.advance_time(time: one_week);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount / 2);
+        system.advance_time(time: one_week);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: Zero::zero());
+        system.advance_time(time: one_week);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.delegator_exit_action(:delegator, :pool);
+
+        system.staker_exit_intent(:staker);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.staker_exit_action(:staker);
+
+        assert!(system.token.balance_of(account: pool) < 100);
+        assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
+        assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+        assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+        assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
+        assert_eq!(
+            initial_reward_supplier_balance,
+            system.token.balance_of(account: system.reward_supplier.address)
+                + system.token.balance_of(account: staker.reward.address)
+                + system.token.balance_of(account: delegator.reward.address)
+                + system.token.balance_of(account: pool),
+        );
+    }
+}
