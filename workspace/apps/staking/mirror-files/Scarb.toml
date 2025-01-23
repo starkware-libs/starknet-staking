@@ -17,3 +17,10 @@ test = "snforge test"
 unstable-add-statements-code-locations-debug-info = true
 unstable-add-statements-functions-debug-info = true
 inlining-strategy = "avoid"
+
+[[workspace.tool.snforge.fork]]
+name = "MAINNET_LATEST"
+
+url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
+
+block_id.tag = "latest"
