@@ -307,3 +307,24 @@ pub(crate) impl InternalStakerInfoTestImpl of InternalStakerInfoTestTrait {
         }
     }
 }
+
+/// This module is used in tests to verify that changing the storage type from
+/// `Option<InternalStakerInfo>` to `VersionedInternalStakerInfo` retains the same `StoragePath`
+/// and `StoragePtr`.
+///
+/// The `#[rename("staker_info")]` attribute ensures the variable name remains consistent,
+/// as it is part of the storage path calculation.
+#[cfg(test)]
+#[starknet::contract]
+pub mod VersionedStorageContractTest {
+    use starknet::storage::Map;
+    use super::{ContractAddress, InternalStakerInfo, VersionedInternalStakerInfo};
+
+    #[storage]
+    pub struct Storage {
+        #[allow(starknet::colliding_storage_paths)]
+        pub staker_info: Map<ContractAddress, Option<InternalStakerInfo>>,
+        #[rename("staker_info")]
+        pub new_staker_info: Map<ContractAddress, VersionedInternalStakerInfo>,
+    }
+}

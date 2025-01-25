@@ -3,7 +3,8 @@ use constants::{
     CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_CLASS_HASH, DUMMY_IDENTIFIER, NON_STAKER_ADDRESS,
     NON_TOKEN_ADMIN, NOT_STAKING_CONTRACT_ADDRESS, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
     OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, POOL_CONTRACT_ADDRESS,
-    POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_UNCLAIMED_REWARDS,
+    POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS,
+    STAKER_UNCLAIMED_REWARDS,
 };
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::constants::DAY;
@@ -49,6 +50,7 @@ use staking::staking::objects::{
     UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
     VersionedInternalStakerInfoGetters, VersionedInternalStakerInfoSetters,
     VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
+    VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
 use staking::types::{Amount, Index};
@@ -3015,7 +3017,40 @@ fn test_versioned_internal_staker_info_into_staker_info() {
 }
 
 #[test]
-fn test_sanity_versioned_staker_info() {
+fn test_sanity_storage_versioned_internal_staker_info() {
+    let mut state = VersionedStorageContractTest::contract_state_for_testing();
+    state
+        .staker_info
+        .write(
+            STAKER_ADDRESS(),
+            Option::Some(
+                InternalStakerInfoTestTrait::new(
+                    reward_address: Zero::zero(),
+                    operational_address: Zero::zero(),
+                    unstake_time: Option::None,
+                    amount_own: Zero::zero(),
+                    index: Zero::zero(),
+                    unclaimed_rewards_own: Zero::zero(),
+                    pool_info: Option::None,
+                ),
+            ),
+        );
+    assert_eq!(
+        state.new_staker_info.read(STAKER_ADDRESS()),
+        VersionedInternalStakerInfoTestTrait::new_v0(
+            reward_address: Zero::zero(),
+            operational_address: Zero::zero(),
+            unstake_time: Option::None,
+            amount_own: Zero::zero(),
+            index: Zero::zero(),
+            unclaimed_rewards_own: Zero::zero(),
+            pool_info: Option::None,
+        ),
+    );
+}
+
+#[test]
+fn test_sanity_serde_versioned_internal_staker_info() {
     let option_internal_staker_info = Option::Some(
         InternalStakerInfoTestTrait::new(
             reward_address: Zero::zero(),
