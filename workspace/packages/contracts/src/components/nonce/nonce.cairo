@@ -36,9 +36,7 @@ pub mod NonceComponent {
         /// Panics if the nonce is not the expected value.
         fn use_checked_nonce(ref self: ComponentState<TContractState>, nonce: u64) -> u64 {
             let current = self.use_next_nonce();
-            assert!(
-                nonce == current, "Nonce: invalid nonce: current!=recieved {}!={}", current, nonce,
-            );
+            assert!(nonce == current, "INVALID_NONCE: current!=received {}!={}", current, nonce);
             current
         }
     }

@@ -38,7 +38,7 @@ fn test_use_checked_nonce() {
 }
 
 #[test]
-#[should_panic(expected: "Nonce: invalid nonce: current!=recieved 0!=15")]
+#[should_panic(expected: "INVALID_NONCE: current!=received 0!=15")]
 fn test_use_checked_nonce_invalid_current() {
     let mut state = COMPONENT_STATE();
     state.use_checked_nonce(15);

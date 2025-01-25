@@ -1,6 +1,6 @@
 [package]
 name = "staking"
-version = "1.0.0"
+version = "1.3.2"
 edition = "2023_11"
 
 [dependencies]
@@ -25,3 +25,6 @@ build-external-contracts = ["contracts_commons::erc20_mocks::DualCaseERC20Mock"]
 
 [tool.fmt]
 sort-module-level-items = true
+
+[tool]
+snforge.workspace = true

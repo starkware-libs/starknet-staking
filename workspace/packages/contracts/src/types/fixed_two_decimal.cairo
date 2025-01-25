@@ -3,7 +3,7 @@ use core::num::traits::zero::Zero;
 // Fixed-point decimal with 2 decimal places.
 //
 // Example: 0.75 is represented as 75.
-#[derive(Copy, Debug, Default, Drop, Serde, starknet::Store)]
+#[derive(Copy, Debug, Default, Drop, PartialEq, Serde, starknet::Store)]
 pub struct FixedTwoDecimal {
     value: u8 // Stores number * 100
 }

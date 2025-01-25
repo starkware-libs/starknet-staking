@@ -43,6 +43,7 @@
     - [set\_min\_stake](#set_min_stake)
     - [set\_exit\_wait\_window](#set_exit_wait_window)
     - [set\_reward\_supplier](#set_reward_supplier)
+    - [convert\_from\_upgraded\_contract](#convert_from_upgraded_contract)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
@@ -106,6 +107,8 @@
 - [Work Contract](#work-contract)
   - [Functions](#functions-4)
     - [work](#work)
+    - [is\_work\_done\_in\_curr\_epoch](#is_work_done_in_curr_epoch)
+    - [get\_last\_epoch\_work\_done](#get_last_epoch_work_done)
   - [Events](#events-4)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
@@ -213,6 +216,7 @@ classDiagram
     set_min_stake()
     set_exit_wait_window()
     set_reward_supplier()
+    convert_from_upgraded_contract()
   }
   class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
@@ -285,6 +289,7 @@ classDiagram
     Map< staker_address, Epoch >,
     work()
     is_work_done_in_curr_epoch()
+    get_last_epoch_work_done()
   }
   class WorkInfo{
   }
@@ -1111,6 +1116,25 @@ Set the reward supplier.
 Only token admin.
 #### logic <!-- omit from toc -->
 
+### convert_from_upgraded_contract
+```rust
+fn convert_from_upgraded_contract(
+        self: @TContractState,
+        versioned_internal_staker_info: VersionedInternalStakerInfo,
+        staker_address: ContractAddress,
+    ) -> VersionedInternalStakerInfo
+```
+#### description <!-- omit from toc -->
+Convert InternalStakerInfo from outdated version.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Staking contract of latest version.
+#### logic <!-- omit from toc -->
+1. Convert versioned_internal_staker_info to newer version.
+
 ## Events
 ### Stake Balance Changed
 | data                | type              | keyed |
@@ -1798,7 +1822,20 @@ fn is_work_done_in_curr_epoch(self: @TContractState, address: ContractAddress) -
 ```
 
 #### description <!-- omit from toc -->
-Returns true if work is done for this `staker_address` in current epoch, else returns false.
+Returns true if work is done for this `address` in current epoch, else returns false.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### get_last_epoch_work_done
+```rust
+fn get_last_epoch_work_done(self: @TContractState, address: ContractAddress) -> Epoch;
+```
+
+#### description <!-- omit from toc -->
+Returns the last epoch that `address` finished his job.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->

@@ -1,10 +1,12 @@
-use MainnetAddresses::MAINNET_L2_BRIDGE_ADDRESS;
-use MainnetAddresses::{MAINNET_MINTING_CURVE_ADDRESS, MAINNET_UPGRADE_GOVERNOR};
-use MainnetAddresses::{MAINNET_REWARD_SUPPLIER_ADDRESS, MAINNET_STAKING_CONTRCT_ADDRESS};
-use contracts_commons::components::replaceability::interface::IReplaceableDispatcher;
-use contracts_commons::components::replaceability::interface::IReplaceableDispatcherTrait;
-use contracts_commons::components::replaceability::interface::ImplementationData;
+use MainnetAddresses::{
+    MAINNET_L2_BRIDGE_ADDRESS, MAINNET_MINTING_CURVE_ADDRESS, MAINNET_REWARD_SUPPLIER_ADDRESS,
+    MAINNET_STAKING_CONTRCT_ADDRESS, MAINNET_UPGRADE_GOVERNOR,
+};
+use contracts_commons::components::replaceability::interface::{
+    IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
+};
 use contracts_commons::constants::{NAME, SYMBOL};
+use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::{
     Deployable, TokenConfig, TokenState, TokenTrait, cheat_caller_address_once,
     set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
@@ -15,6 +17,7 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
+use staking::constants::STRK_IN_FRIS;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::reward_supplier::interface::{
@@ -86,6 +89,7 @@ pub(crate) struct StakingConfig {
     pub reward_supplier: ContractAddress,
     pub pool_contract_admin: ContractAddress,
     pub governance_admin: ContractAddress,
+    pub prev_staking_contract_class_hash: ClassHash,
     pub roles: StakingRoles,
 }
 
@@ -108,6 +112,7 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.reward_supplier.serialize(ref calldata);
         self.pool_contract_admin.serialize(ref calldata);
         self.governance_admin.serialize(ref calldata);
+        self.prev_staking_contract_class_hash.serialize(ref calldata);
         let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
         let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
         let staking = StakingState {
@@ -355,6 +360,7 @@ pub(crate) struct SystemState<TTokenState> {
 
 #[generate_trait]
 pub(crate) impl SystemConfigImpl of SystemConfigTrait {
+    // TODO: new cfg - split to basic cfg and specific flow cfg.
     /// Configures the basic staking flow by initializing the system configuration with the
     /// provided staking initialization configuration.
     fn basic_stake_flow_cfg(cfg: StakingInitConfig) -> SystemConfig {
@@ -370,6 +376,9 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             reward_supplier: cfg.staking_contract_info.reward_supplier,
             pool_contract_admin: cfg.test_info.pool_contract_admin,
             governance_admin: cfg.test_info.governance_admin,
+            prev_staking_contract_class_hash: cfg
+                .staking_contract_info
+                .prev_staking_contract_class_hash,
             roles: StakingRoles {
                 upgrade_governor: cfg.test_info.upgrade_governor,
                 security_admin: cfg.test_info.security_admin,
@@ -830,4 +839,37 @@ fn mainnet_reward_supplier_state() -> RewardSupplierState {
         governance_admin: Zero::zero(),
         roles: RewardSupplierRoles { upgrade_governor: MAINNET_UPGRADE_GOVERNOR() },
     }
+}
+
+#[derive(Drop, Copy)]
+pub(crate) enum SystemType {
+    Local,
+    Mainnet,
+}
+
+pub(crate) trait FlowTrait<
+    TFlow, TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> {
+    fn setup(ref self: TFlow, ref system: SystemState<TTokenState>);
+    fn test(self: TFlow, ref system: SystemState<TTokenState>, system_type: SystemType);
+}
+
+pub(crate) fn test_flow_local<TFlow, +FlowTrait<TFlow, TokenState>, +Drop<TFlow>, +Copy<TFlow>>(
+    flow: TFlow,
+) {
+    let mut system = SystemFactoryTrait::local_system();
+    flow.test(ref :system, system_type: SystemType::Local);
+    assert!(system.token.balance_of(account: system.staking.address).is_zero());
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+}
+
+pub(crate) fn test_flow_mainnet<
+    TFlow, +FlowTrait<TFlow, STRKTokenState>, +Drop<TFlow>, +Copy<TFlow>,
+>(
+    ref flow: TFlow,
+) {
+    let mut system = SystemFactoryTrait::mainnet_system();
+    flow.setup(ref :system);
+    system.upgrade_contracts_implementation();
+    flow.test(ref :system, system_type: SystemType::Mainnet);
 }

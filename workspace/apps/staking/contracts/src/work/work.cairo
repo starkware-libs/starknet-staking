@@ -10,7 +10,6 @@ pub mod Work {
     use staking::work::errors::Error;
     use staking::work::interface::{IWork, WorkInfo};
     use starknet::storage::Map;
-
     use starknet::{ContractAddress, get_caller_address};
     pub const CONTRACT_IDENTITY: felt252 = 'Work';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -84,6 +83,10 @@ pub mod Work {
             self._validate_work(:work_info, :staker_address, :current_epoch);
             staking_dispatcher.update_rewards_from_work_contract(:staker_address);
             // TODO: emit event.
+        }
+
+        fn get_last_epoch_work_done(self: @ContractState, address: ContractAddress) -> Epoch {
+            self.work_is_done.read(address)
         }
 
         fn is_work_done_in_curr_epoch(self: @ContractState, address: ContractAddress) -> bool {

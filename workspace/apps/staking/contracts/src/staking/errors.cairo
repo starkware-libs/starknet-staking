@@ -23,6 +23,8 @@ pub(crate) enum Error {
     CALLER_IS_ZERO_ADDRESS,
     SELF_SWITCH_NOT_ALLOWED,
     ILLEGAL_EXIT_DURATION,
+    CALLER_IS_NOT_WORK_CONTRACT,
+    INTERNAL_STAKER_INFO_OUTDATED_VERSION,
 }
 
 impl DescribableError of Describable<Error> {
@@ -51,6 +53,8 @@ impl DescribableError of Describable<Error> {
             Error::CALLER_IS_ZERO_ADDRESS => "Zero address caller is not allowed",
             Error::SELF_SWITCH_NOT_ALLOWED => "SELF_SWITCH_NOT_ALLOWED",
             Error::ILLEGAL_EXIT_DURATION => "ILLEGAL_EXIT_DURATION",
+            Error::CALLER_IS_NOT_WORK_CONTRACT => "Caller is not work contract",
+            Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION => "Outdated version of Internal Staker Info",
         }
     }
 }

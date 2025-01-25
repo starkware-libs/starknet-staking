@@ -1,19 +1,19 @@
 use Staking::ContractState;
 use constants::{
-    APP_ROLE_ADMIN, BASE_MINT_AMOUNT, BUFFER, COMMISSION, GOVERNANCE_ADMIN, INITIAL_SUPPLY,
-    L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS, OWNER_ADDRESS,
-    POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
-    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS,
-    SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS,
-    STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN,
-    UPGRADE_GOVERNOR, WORK_CONTRACT_ADDRESS,
+    APP_ROLE_ADMIN, BASE_MINT_AMOUNT, BUFFER, COMMISSION, DUMMY_CLASS_HASH, GOVERNANCE_ADMIN,
+    INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS,
+    OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS,
+    POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
+    REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
+    STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
+    STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR, WORK_CONTRACT_ADDRESS,
 };
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::{
     cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
     set_account_as_security_agent, set_account_as_token_admin,
 };
-use contracts_commons::types::time::time::Timestamp;
+use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -27,10 +27,10 @@ use staking::pool::pool::Pool;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
-    IStakingPauseDispatcherTrait, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
+    IStakingPauseDispatcherTrait, StakerInfoTrait, StakerPoolInfo,
 };
 use staking::staking::objects::{
-    InternalStakerInfoV1, InternalStakerInfoV1Trait, VersionedInternalStakerInfo,
+    VersionedInternalStakerInfo, VersionedInternalStakerInfoGetters,
     VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
@@ -196,6 +196,7 @@ pub(crate) fn initialize_staking_state_from_cfg(
         reward_supplier: cfg.staking_contract_info.reward_supplier,
         pool_contract_admin: cfg.test_info.pool_contract_admin,
         governance_admin: cfg.test_info.governance_admin,
+        prev_class_hash: cfg.staking_contract_info.prev_staking_contract_class_hash,
     )
 }
 pub(crate) fn initialize_staking_state(
@@ -205,6 +206,7 @@ pub(crate) fn initialize_staking_state(
     reward_supplier: ContractAddress,
     pool_contract_admin: ContractAddress,
     governance_admin: ContractAddress,
+    prev_class_hash: ClassHash,
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
@@ -216,6 +218,7 @@ pub(crate) fn initialize_staking_state(
         :reward_supplier,
         :pool_contract_admin,
         :governance_admin,
+        :prev_class_hash,
     );
     state
 }
@@ -312,6 +315,7 @@ pub(crate) fn deploy_staking_contract(
     cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
     cfg.test_info.pool_contract_admin.serialize(ref calldata);
     cfg.test_info.governance_admin.serialize(ref calldata);
+    cfg.staking_contract_info.prev_staking_contract_class_hash.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     set_default_roles(staking_contract: staking_contract_address, :cfg);
@@ -443,9 +447,9 @@ pub(crate) fn stake_for_testing(
     );
     state
         .stake(
-            cfg.staker_info.reward_address,
-            cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info.reward_address(),
+            cfg.staker_info.operational_address(),
+            cfg.staker_info.amount_own(),
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -461,9 +465,9 @@ pub(crate) fn stake_for_testing_using_dispatcher(
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
         .stake(
-            cfg.staker_info.reward_address,
-            cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info.reward_address(),
+            cfg.staker_info.operational_address(),
+            cfg.staker_info.amount_own(),
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -478,9 +482,9 @@ pub(crate) fn stake_from_zero_address(
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
         .stake(
-            cfg.staker_info.reward_address,
-            cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info.reward_address(),
+            cfg.staker_info.operational_address(),
+            cfg.staker_info.amount_own(),
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -653,6 +657,9 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     // Deploy the staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
+    // Deploy the work contract.
+    let work_contract = deploy_work_contract(:cfg);
+    cfg.test_info.work_contract = work_contract;
     // There are circular dependecies between the contracts, so we override the fake addresses.
     snforge_std::store(
         target: reward_supplier,
@@ -664,9 +671,11 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         storage_address: selector!("staking_dispatcher"),
         serialized_value: array![staking_contract.into()].span(),
     );
-    // Deploy the work contract.
-    let work_contract = deploy_work_contract(:cfg);
-    cfg.test_info.work_contract = work_contract;
+    snforge_std::store(
+        target: staking_contract,
+        storage_address: selector!("work_contract"),
+        serialized_value: array![work_contract.into()].span(),
+    );
 }
 
 pub(crate) fn cheat_reward_for_reward_supplier(
@@ -780,7 +789,7 @@ pub(crate) fn load_staker_info_from_map(
     }
     assert!(idx == 2, "Invalid Version loaded from map");
     let mut span = raw_serialized_value.span();
-    let staker_info = InternalStakerInfoV1 {
+    let staker_info = VersionedInternalStakerInfoTrait::new_latest(
         reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
         operational_address: Serde::<ContractAddress>::deserialize(ref span)
             .expect('Failed operational'),
@@ -790,8 +799,8 @@ pub(crate) fn load_staker_info_from_map(
         unclaimed_rewards_own: Serde::<Amount>::deserialize(ref span)
             .expect('Failed unclaimed_rewards_own'),
         pool_info: deserialize_option(ref data: span),
-    };
-    return VersionedInternalStakerInfoTrait::new(staker_info);
+    );
+    return staker_info;
 }
 
 /// Deserialize an Option<T> from the given data.
@@ -838,9 +847,9 @@ struct RewardSupplierInfo {
 
 #[derive(Drop, Copy)]
 pub(crate) struct StakingInitConfig {
-    pub staker_info: InternalStakerInfoV1,
+    pub staker_info: VersionedInternalStakerInfo,
     pub pool_member_info: InternalPoolMemberInfo,
-    pub staking_contract_info: StakingContractInfo,
+    pub staking_contract_info: StakingContractInfoCfg,
     pub minting_curve_contract_info: MintingCurveContractInfo,
     pub test_info: TestInfo,
     pub reward_supplier: RewardSupplierInfo,
@@ -848,7 +857,7 @@ pub(crate) struct StakingInitConfig {
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
     fn default() -> StakingInitConfig {
-        let staker_info = InternalStakerInfoV1 {
+        let staker_info = VersionedInternalStakerInfoTrait::new_latest(
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
@@ -863,7 +872,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
                     commission: COMMISSION,
                 },
             ),
-        };
+        );
         let pool_member_info = InternalPoolMemberInfo {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             amount: POOL_MEMBER_STAKE_AMOUNT,
@@ -873,13 +882,14 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),
         };
-        let staking_contract_info = StakingContractInfo {
+        let staking_contract_info = StakingContractInfoCfg {
             min_stake: MIN_STAKE,
             token_address: TOKEN_ADDRESS(),
             global_index: Zero::zero(),
             pool_contract_class_hash: declare_pool_contract(),
             reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW,
+            prev_staking_contract_class_hash: DUMMY_CLASS_HASH(),
         };
         let minting_curve_contract_info = MintingCurveContractInfo {
             c_num: DEFAULT_C_NUM, c_denom: C_DENOM,
@@ -918,4 +928,15 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_supplier,
         }
     }
+}
+
+#[derive(Copy, Debug, Drop, PartialEq, Serde)]
+pub struct StakingContractInfoCfg {
+    pub min_stake: Amount,
+    pub token_address: ContractAddress,
+    pub global_index: Index,
+    pub pool_contract_class_hash: ClassHash,
+    pub reward_supplier: ContractAddress,
+    pub exit_wait_window: TimeDelta,
+    pub prev_staking_contract_class_hash: ClassHash,
 }

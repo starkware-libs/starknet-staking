@@ -7,11 +7,11 @@ pub const MAX_U64: u64 = Bounded::<u64>::MAX;
 pub const MAX_U128: u128 = Bounded::<u128>::MAX;
 pub const MAX_U256: u256 = Bounded::<u256>::MAX;
 
-pub const TWO_POW_8: u16 = 256;
-pub const TWO_POW_16: u32 = 65536;
-pub const TWO_POW_32: u64 = 4294967296;
-pub const TWO_POW_64: u128 = 18446744073709551616;
-pub const TWO_POW_128: u256 = 340282366920938463463374607431768211456;
+pub const TWO_POW_8: u16 = 0x100;
+pub const TWO_POW_16: u32 = 0x10000;
+pub const TWO_POW_32: u64 = 0x100000000;
+pub const TWO_POW_64: u128 = 0x10000000000000000;
+pub const TWO_POW_128: u256 = 0x100000000000000000000000000000000;
 
 pub const MINUTE: u64 = 60;
 pub const HOUR: u64 = 60 * MINUTE;
