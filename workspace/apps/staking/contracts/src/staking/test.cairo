@@ -2606,7 +2606,7 @@ fn test_get_current_epoch() {
 }
 
 #[test]
-fn test_update_rewards_from_work_contract() {
+fn test_update_rewards_from_attestation_contract() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
@@ -2614,30 +2614,36 @@ fn test_update_rewards_from_work_contract() {
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
-    let work_contract = cfg.test_info.work_contract;
+    let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: work_contract);
-    staking_dispatcher.update_rewards_from_work_contract(:staker_address);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: attestation_contract,
+    );
+    staking_dispatcher.update_rewards_from_attestation_contract(:staker_address);
     let staker_info_after = staking_dispatcher.staker_info(:staker_address);
     assert_eq!(staker_info_after, staker_info_before);
 }
 
 #[test]
 #[feature("safe_dispatcher")]
-fn test_update_rewards_from_work_contract_assertions() {
+fn test_update_rewards_from_attestation_contract_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-    let work_contract = cfg.test_info.work_contract;
+    let attestation_contract = cfg.test_info.attestation_contract;
 
-    // Catch CALLER_IS_NOT_WORK_CONTRACT.
-    let result = staking_safe_dispatcher.update_rewards_from_work_contract(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_WORK_CONTRACT.describe());
+    // Catch CALLER_IS_NOT_ATTESTATION_CONTRACT.
+    let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
+    assert_panic_with_error(
+        :result, expected_error: Error::CALLER_IS_NOT_ATTESTATION_CONTRACT.describe(),
+    );
     // Catch STAKER_NOT_EXISTS.
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: work_contract);
-    let result = staking_safe_dispatcher.update_rewards_from_work_contract(:staker_address);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: attestation_contract,
+    );
+    let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 }
 

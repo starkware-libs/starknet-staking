@@ -1,3 +1,4 @@
+pub mod attestation;
 pub(crate) mod constants;
 pub(crate) mod errors;
 #[cfg(test)]
@@ -12,4 +13,3 @@ pub mod staking;
 pub(crate) mod test_utils;
 pub(crate) mod types;
 pub(crate) mod utils;
-pub mod work;

@@ -36,7 +36,9 @@ pub trait IStaking<TContractState> {
     ) -> ContractAddress;
     fn get_current_epoch(self: @TContractState) -> Epoch;
     // TODO: Rename once internal update_rewards is deleted.
-    fn update_rewards_from_work_contract(ref self: TContractState, staker_address: ContractAddress);
+    fn update_rewards_from_attestation_contract(
+        ref self: TContractState, staker_address: ContractAddress,
+    );
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn get_pool_exit_intent(

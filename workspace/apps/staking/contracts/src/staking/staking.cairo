@@ -94,7 +94,7 @@ pub mod Staking {
         is_paused: bool,
         // Required delay (in seconds) between unstake intent and unstake action.
         exit_wait_window: TimeDelta,
-        work_contract: ContractAddress,
+        attestation_contract: ContractAddress,
         // Class hash of the previous version of the contract
         prev_class_hash: ClassHash,
     }
@@ -508,15 +508,15 @@ pub mod Staking {
 
         // TODO: implement
         // TODO: rounding issues in the rewards calculation
-        fn update_rewards_from_work_contract(
+        fn update_rewards_from_attestation_contract(
             ref self: ContractState, staker_address: ContractAddress,
         ) {
             self.general_prerequisites();
-            // Assert caller is work contract
+            // Assert caller is attesation contract
             assert!(
-                get_caller_address() == self.work_contract.read(),
+                get_caller_address() == self.attestation_contract.read(),
                 "{}",
-                Error::CALLER_IS_NOT_WORK_CONTRACT,
+                Error::CALLER_IS_NOT_ATTESTATION_CONTRACT,
             );
             let mut staker_info = self.internal_staker_info(:staker_address);
             let total_rewards = self.calculate_total_rewards(:staker_info);
