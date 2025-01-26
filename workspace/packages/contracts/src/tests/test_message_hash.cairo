@@ -61,21 +61,6 @@ fn test_StructHashStarknetDomainImpl() {
 }
 
 #[test]
-fn test_OffchainMessageHashImpl_ContractAddress() {
-    let message = Message { recipient: RECIPIENT(), amount: 100, nonce: 1, expiry: 1000 };
-    let domain = StarknetDomain { name: 'DAPP_NAME', version: 'v1', chain_id: 'TEST', revision: 1 };
-
-    let contract_address = test_address();
-    start_cheat_chain_id(contract_address, 'TEST');
-
-    let expected = poseidon_hash_span(
-        array!['StarkNet Message', domain.hash_struct(), OWNER().into(), message.hash_struct()]
-            .span(),
-    );
-    assert_eq!(message.get_message_hash(OWNER()), expected);
-}
-
-#[test]
 fn test_OffchainMessageHashImpl_Felt() {
     let message = Message { recipient: RECIPIENT(), amount: 100, nonce: 1, expiry: 1000 };
     let domain = StarknetDomain { name: 'DAPP_NAME', version: 'v1', chain_id: 'TEST', revision: 1 };

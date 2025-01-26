@@ -135,9 +135,7 @@ pub(crate) mod Deposit {
         ) {
             assert(quantized_amount > 0, errors::INVALID_NON_POSITIVE_AMOUNT);
             let hash = self
-                .deposit_hash(
-                    signer: get_caller_address(), :asset_id, :quantized_amount, :beneficiary, :salt,
-                );
+                .deposit_hash(signer: depositor, :asset_id, :quantized_amount, :beneficiary, :salt);
             let request_status = self.internal_get_deposit_status(:hash);
             match request_status {
                 DepositStatus::NON_EXIST => { panic_with_felt(errors::DEPOSIT_NOT_REGISTERED) },
@@ -151,7 +149,7 @@ pub(crate) mod Deposit {
                 .emit(
                     events::DepositProcessed {
                         position_id: beneficiary,
-                        depositing_address: get_caller_address(),
+                        depositing_address: depositor,
                         asset_id,
                         amount: quantized_amount,
                         deposit_request_hash: hash,
