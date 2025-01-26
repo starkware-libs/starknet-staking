@@ -1,12 +1,13 @@
 use Staking::ContractState;
 use constants::{
-    APP_ROLE_ADMIN, BASE_MINT_AMOUNT, BUFFER, COMMISSION, DUMMY_CLASS_HASH, GOVERNANCE_ADMIN,
-    INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS,
-    OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS,
-    POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
-    REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
-    STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
-    STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR, WORK_CONTRACT_ADDRESS,
+    APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BUFFER, COMMISSION,
+    DUMMY_CLASS_HASH, GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER,
+    MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS,
+    POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
+    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS,
+    SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS,
+    STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN,
+    UPGRADE_GOVERNOR,
 };
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::{
@@ -178,8 +179,8 @@ pub(crate) mod constants {
     pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'NOT_STARKGATE_ADDRESS'>()
     }
-    pub fn WORK_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'WORK_CONTRACT_ADDRESS'>()
+    pub fn ATTESTATION_CONTRACT_ADDRESS() -> ContractAddress nopanic {
+        contract_address_const::<'ATTESTATION_CONTRACT_ADDRESS'>()
     }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
@@ -385,12 +386,12 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     reward_supplier_contract_address
 }
 
-pub(crate) fn deploy_work_contract(cfg: StakingInitConfig) -> ContractAddress {
+pub(crate) fn deploy_attestation_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     cfg.test_info.staking_contract.serialize(ref calldata);
-    let work_contract = snforge_std::declare("Work").unwrap().contract_class();
-    let (work_contract_address, _) = work_contract.deploy(@calldata).unwrap();
-    work_contract_address
+    let attestation_contract = snforge_std::declare("Attestation").unwrap().contract_class();
+    let (attestation_contract_address, _) = attestation_contract.deploy(@calldata).unwrap();
+    attestation_contract_address
 }
 
 pub(crate) fn declare_pool_contract() -> ClassHash {
@@ -657,9 +658,9 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     // Deploy the staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
-    // Deploy the work contract.
-    let work_contract = deploy_work_contract(:cfg);
-    cfg.test_info.work_contract = work_contract;
+    // Deploy the attestation contract.
+    let attestation_contract = deploy_attestation_contract(:cfg);
+    cfg.test_info.attestation_contract = attestation_contract;
     // There are circular dependecies between the contracts, so we override the fake addresses.
     snforge_std::store(
         target: reward_supplier,
@@ -673,8 +674,8 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     );
     snforge_std::store(
         target: staking_contract,
-        storage_address: selector!("work_contract"),
-        serialized_value: array![work_contract.into()].span(),
+        storage_address: selector!("attestation_contract"),
+        serialized_value: array![attestation_contract.into()].span(),
     );
 }
 
@@ -833,7 +834,7 @@ pub(crate) struct TestInfo {
     pub token_admin: ContractAddress,
     pub app_role_admin: ContractAddress,
     pub upgrade_governor: ContractAddress,
-    pub work_contract: ContractAddress,
+    pub attestation_contract: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -910,7 +911,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             token_admin: TOKEN_ADMIN(),
             app_role_admin: APP_ROLE_ADMIN(),
             upgrade_governor: UPGRADE_GOVERNOR(),
-            work_contract: WORK_CONTRACT_ADDRESS(),
+            attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,
