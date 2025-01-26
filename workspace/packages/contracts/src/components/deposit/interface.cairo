@@ -14,7 +14,7 @@ pub trait IDeposit<TContractState> {
         beneficiary: u32,
         salt: felt252,
     );
-    fn get_deposit_status(self: @TContractState, hash: felt252) -> DepositStatus;
+    fn get_deposit_status(self: @TContractState, deposit_hash: felt252) -> DepositStatus;
     fn get_asset_data(self: @TContractState, asset_id: felt252) -> (ContractAddress, u64);
 }
 

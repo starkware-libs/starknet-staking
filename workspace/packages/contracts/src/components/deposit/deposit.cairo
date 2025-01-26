@@ -43,15 +43,17 @@ pub(crate) mod Deposit {
             salt: felt252,
         ) {
             assert(quantized_amount > 0, errors::INVALID_NON_POSITIVE_AMOUNT);
-            let hash = self
+            let deposit_hash = self
                 .deposit_hash(
                     signer: get_caller_address(), :asset_id, :quantized_amount, :beneficiary, :salt,
                 );
             assert(
-                self.get_deposit_status(:hash) == DepositStatus::NON_EXIST,
+                self.get_deposit_status(:deposit_hash) == DepositStatus::NON_EXIST,
                 errors::DEPOSIT_ALREADY_REGISTERED,
             );
-            self.registered_deposits.write(key: hash, value: DepositStatus::PENDING(Time::now()));
+            self
+                .registered_deposits
+                .write(key: deposit_hash, value: DepositStatus::PENDING(Time::now()));
             self.pending_deposits.entry(asset_id).add_and_write(quantized_amount);
             let (token_address, quantum) = self.get_asset_data(:asset_id);
 
@@ -69,15 +71,15 @@ pub(crate) mod Deposit {
                         depositing_address: get_caller_address(),
                         asset_id,
                         amount: quantized_amount,
-                        deposit_request_hash: hash,
+                        deposit_request_hash: deposit_hash,
                     },
                 );
         }
 
         fn get_deposit_status(
-            self: @ComponentState<TContractState>, hash: felt252,
+            self: @ComponentState<TContractState>, deposit_hash: felt252,
         ) -> DepositStatus {
-            self.internal_get_deposit_status(:hash)
+            self.internal_get_deposit_status(:deposit_hash)
         }
 
         fn get_asset_data(
@@ -134,16 +136,16 @@ pub(crate) mod Deposit {
             salt: felt252,
         ) {
             assert(quantized_amount > 0, errors::INVALID_NON_POSITIVE_AMOUNT);
-            let hash = self
+            let deposit_hash = self
                 .deposit_hash(signer: depositor, :asset_id, :quantized_amount, :beneficiary, :salt);
-            let request_status = self.internal_get_deposit_status(:hash);
-            match request_status {
+            let deposit_status = self.internal_get_deposit_status(:deposit_hash);
+            match deposit_status {
                 DepositStatus::NON_EXIST => { panic_with_felt(errors::DEPOSIT_NOT_REGISTERED) },
                 DepositStatus::PENDING(_) => {},
                 DepositStatus::DONE => { panic_with_felt(errors::DEPOSIT_ALREADY_DONE) },
             };
 
-            self.registered_deposits.write(hash, DepositStatus::DONE);
+            self.registered_deposits.write(deposit_hash, DepositStatus::DONE);
             self.pending_deposits.entry(asset_id).sub_and_write(quantized_amount);
             self
                 .emit(
@@ -152,15 +154,15 @@ pub(crate) mod Deposit {
                         depositing_address: depositor,
                         asset_id,
                         amount: quantized_amount,
-                        deposit_request_hash: hash,
+                        deposit_request_hash: deposit_hash,
                     },
                 );
         }
 
         fn internal_get_deposit_status(
-            self: @ComponentState<TContractState>, hash: felt252,
+            self: @ComponentState<TContractState>, deposit_hash: felt252,
         ) -> DepositStatus {
-            self.registered_deposits.read(hash)
+            self.registered_deposits.read(deposit_hash)
         }
     }
 }
