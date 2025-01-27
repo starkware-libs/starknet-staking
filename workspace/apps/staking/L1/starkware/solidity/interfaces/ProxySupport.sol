@@ -9,10 +9,10 @@ import "starkware/solidity/interfaces/ContractInitializer.sol";
 /**
   This contract contains the code commonly needed for a contract to be deployed behind
   an upgradability proxy.
-  It perform the required semantics of the proxy pattern,
+  It performs the required semantics of the proxy pattern,
   but in a generic manner.
   Instantiation of the Governance and of the ContractInitializer, that are the app specific
-  part of initialization, has to be done by the using contract.
+  part of initialization has to be done by the using contract.
 */
 abstract contract ProxySupport is MGovernance, BlockDirectCall, ContractInitializer {
     using Addresses for address;
