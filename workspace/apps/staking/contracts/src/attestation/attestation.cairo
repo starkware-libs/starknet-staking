@@ -2,6 +2,7 @@
 pub mod Attestation {
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
+    use contracts_commons::errors::OptionAuxTrait;
     use contracts_commons::interfaces::identity::Identity;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -38,7 +39,7 @@ pub mod Attestation {
         src5: SRC5Component::Storage,
         staking_dispatcher: IStakingDispatcher,
         // Maps staker address to the last epoch he attested.
-        staker_last_attested_epoch: Map<ContractAddress, Epoch>,
+        staker_last_attested_epoch: Map<ContractAddress, Option<Epoch>>,
     }
 
     #[event]
@@ -88,18 +89,14 @@ pub mod Attestation {
         fn get_last_epoch_attestation_done(
             self: @ContractState, address: ContractAddress,
         ) -> Epoch {
-            self.staker_last_attested_epoch.read(address)
+            self.staker_last_attested_epoch.read(address).expect_with_err(Error::NO_ATTEST_DONE)
         }
 
         fn is_attestation_done_in_curr_epoch(
             self: @ContractState, address: ContractAddress,
         ) -> bool {
-            self
-                .staker_last_attested_epoch
-                .read(address) == self
-                .staking_dispatcher
-                .read()
-                .get_current_epoch()
+            let current_epoch = self.staking_dispatcher.read().get_current_epoch();
+            self.get_last_epoch_attestation_done(:address) == current_epoch
         }
     }
 
@@ -120,17 +117,18 @@ pub mod Attestation {
         fn _assert_attestation_is_not_done(
             ref self: ContractState, staker_address: ContractAddress, current_epoch: Epoch,
         ) {
-            assert!(
-                self.staker_last_attested_epoch.read(staker_address) < current_epoch,
-                "{}",
-                Error::ATTEST_IS_DONE,
-            );
+            // None means no work done for this staker_address.
+            if let Option::Some(last_epoch_done) = self
+                .staker_last_attested_epoch
+                .read(staker_address) {
+                assert!(last_epoch_done != current_epoch, "{}", Error::ATTEST_IS_DONE);
+            }
         }
 
         fn _mark_attestation_is_done(
             ref self: ContractState, staker_address: ContractAddress, current_epoch: Epoch,
         ) {
-            self.staker_last_attested_epoch.write(staker_address, current_epoch);
+            self.staker_last_attested_epoch.write(staker_address, Option::Some(current_epoch));
         }
     }
 }

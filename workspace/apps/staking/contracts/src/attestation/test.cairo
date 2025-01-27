@@ -75,9 +75,6 @@ fn test_is_attestation_done_in_curr_epoch() {
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
-    let is_attestation_done = attestation_dispatcher
-        .is_attestation_done_in_curr_epoch(address: staker_address);
-    assert_eq!(is_attestation_done, false);
     let operational_address = cfg.staker_info.operational_address();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
@@ -90,6 +87,25 @@ fn test_is_attestation_done_in_curr_epoch() {
 }
 
 #[test]
+#[feature("safe_dispatcher")]
+fn test_is_attestation_done_in_curr_epoch_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_safe_dispatcher = IAttestationSafeDispatcher {
+        contract_address: attestation_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    // Catch NO_ATTEST_DONE.
+    let result = attestation_safe_dispatcher
+        .is_attestation_done_in_curr_epoch(address: staker_address);
+    assert_panic_with_error(:result, expected_error: Error::NO_ATTEST_DONE.describe());
+}
+
+#[test]
 fn test_get_last_epoch_attestation_done() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -99,9 +115,6 @@ fn test_get_last_epoch_attestation_done() {
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
-    let last_epoch_attesation_done = attestation_dispatcher
-        .get_last_epoch_attestation_done(address: staker_address);
-    assert_eq!(last_epoch_attesation_done, Zero::zero());
     let operational_address = cfg.staker_info.operational_address();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
@@ -111,4 +124,23 @@ fn test_get_last_epoch_attestation_done() {
     let last_epoch_attesation_done = attestation_dispatcher
         .get_last_epoch_attestation_done(address: staker_address);
     assert_eq!(last_epoch_attesation_done, 1);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_get_last_epoch_attestation_done_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_safe_dispatcher = IAttestationSafeDispatcher {
+        contract_address: attestation_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    // Catch NO_ATTEST_DONE.
+    let result = attestation_safe_dispatcher
+        .get_last_epoch_attestation_done(address: staker_address);
+    assert_panic_with_error(:result, expected_error: Error::NO_ATTEST_DONE.describe());
 }
