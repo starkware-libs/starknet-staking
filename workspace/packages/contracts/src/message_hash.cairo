@@ -17,7 +17,7 @@ pub(crate) impl OffchainMessageHashImpl<
             name: metadata::name(),
             version: metadata::version(),
             chain_id: get_tx_info().unbox().chain_id,
-            revision: 1,
+            revision: '1',
         };
         let mut state = PoseidonTrait::new();
         state = state.update_with('StarkNet Message');
