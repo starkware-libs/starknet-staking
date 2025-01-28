@@ -172,6 +172,10 @@ pub(crate) impl StakingImpl of StakingTrait {
     fn get_exit_wait_window(self: StakingState) -> TimeDelta {
         self.dispatcher().contract_parameters().exit_wait_window
     }
+
+    fn update_global_index_if_needed(self: StakingState) -> bool {
+        self.dispatcher().update_global_index_if_needed()
+    }
 }
 
 /// The `MintingCurveRoles` struct represents the various roles involved in the minting curve
@@ -725,6 +729,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
 
     /// Upgrades the staking contract in the system state with a local implementation.
     fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
+        self.staking.update_global_index_if_needed();
         let implementation_data = ImplementationData {
             impl_hash: declare_staking_contract(), eic_data: Option::None, final: false,
         };
