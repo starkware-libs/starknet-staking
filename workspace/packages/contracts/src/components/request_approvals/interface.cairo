@@ -29,14 +29,11 @@ impl RequestStatusPacking of StorePacking<RequestStatus, u8> {
 
     fn unpack(value: u8) -> RequestStatus {
         let status = value & STATUS_MASK;
-        if status == 0 {
-            RequestStatus::NON_EXIST
-        } else if status == 1 {
-            RequestStatus::DONE
-        } else if status == 2 {
-            RequestStatus::PENDING
-        } else {
-            panic_with_felt252(errors::INVALID_STATUS)
+        match status {
+            0 => RequestStatus::NON_EXIST,
+            1 => RequestStatus::DONE,
+            2 => RequestStatus::PENDING,
+            _ => panic_with_felt252(errors::INVALID_STATUS),
         }
     }
 }

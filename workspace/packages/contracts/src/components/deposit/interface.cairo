@@ -1,4 +1,5 @@
 use contracts_commons::components::deposit::errors;
+use contracts_commons::types::HashType;
 use contracts_commons::types::time::time::Timestamp;
 use core::panic_with_felt252;
 use core::starknet::storage_access::StorePacking;
@@ -14,7 +15,7 @@ pub trait IDeposit<TContractState> {
         beneficiary: u32,
         salt: felt252,
     );
-    fn get_deposit_status(self: @TContractState, deposit_hash: felt252) -> DepositStatus;
+    fn get_deposit_status(self: @TContractState, deposit_hash: HashType) -> DepositStatus;
     fn get_asset_data(self: @TContractState, asset_id: felt252) -> (ContractAddress, u64);
 }
 

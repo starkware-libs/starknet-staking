@@ -4,6 +4,7 @@ pub(crate) mod Deposit {
     use contracts_commons::components::deposit::{errors, events};
     use contracts_commons::errors::panic_with_felt;
     use contracts_commons::math::Abs;
+    use contracts_commons::types::HashType;
     use contracts_commons::types::time::time::{Time, TimeDelta};
     use contracts_commons::utils::{AddToStorage, SubFromStorage};
     use core::hash::{HashStateExTrait, HashStateTrait};
@@ -16,7 +17,7 @@ pub(crate) mod Deposit {
 
     #[storage]
     pub struct Storage {
-        pub registered_deposits: Map<felt252, DepositStatus>,
+        pub registered_deposits: Map<HashType, DepositStatus>,
         pub pending_deposits: Map<felt252, i64>,
         pub asset_data: Map<felt252, (ContractAddress, u64)>,
         pub cancellation_time: TimeDelta,
@@ -77,7 +78,7 @@ pub(crate) mod Deposit {
         }
 
         fn get_deposit_status(
-            self: @ComponentState<TContractState>, deposit_hash: felt252,
+            self: @ComponentState<TContractState>, deposit_hash: HashType,
         ) -> DepositStatus {
             self.internal_get_deposit_status(:deposit_hash)
         }
@@ -106,7 +107,7 @@ pub(crate) mod Deposit {
             quantized_amount: i64,
             beneficiary: u32,
             salt: felt252,
-        ) -> felt252 {
+        ) -> HashType {
             PoseidonTrait::new()
                 .update_with(value: signer)
                 .update_with(value: asset_id)
@@ -141,8 +142,8 @@ pub(crate) mod Deposit {
             let deposit_status = self.internal_get_deposit_status(:deposit_hash);
             match deposit_status {
                 DepositStatus::NON_EXIST => { panic_with_felt(errors::DEPOSIT_NOT_REGISTERED) },
-                DepositStatus::PENDING(_) => {},
                 DepositStatus::DONE => { panic_with_felt(errors::DEPOSIT_ALREADY_DONE) },
+                DepositStatus::PENDING(_) => {},
             };
 
             self.registered_deposits.write(deposit_hash, DepositStatus::DONE);
@@ -160,7 +161,7 @@ pub(crate) mod Deposit {
         }
 
         fn internal_get_deposit_status(
-            self: @ComponentState<TContractState>, deposit_hash: felt252,
+            self: @ComponentState<TContractState>, deposit_hash: HashType,
         ) -> DepositStatus {
             self.registered_deposits.read(deposit_hash)
         }

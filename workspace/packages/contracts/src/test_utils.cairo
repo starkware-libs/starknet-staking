@@ -2,10 +2,7 @@ use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDi
 use contracts_commons::interfaces::identity::{IdentityDispatcher, IdentityDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::byte_array::try_deserialize_bytearray_error;
-use snforge_std::{
-    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_account_contract_address,
-    cheat_caller_address,
-};
+use snforge_std::{CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address};
 use starknet::ContractAddress;
 
 

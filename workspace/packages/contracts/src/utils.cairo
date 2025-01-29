@@ -1,6 +1,7 @@
 use contracts_commons::errors::assert_with_byte_array;
 use contracts_commons::math::{Abs, FractionTrait};
 use contracts_commons::types::time::time::{Time, Timestamp};
+use contracts_commons::types::{HashType, PublicKey, Signature};
 use openzeppelin::account::utils::is_valid_stark_signature;
 use starknet::storage::{
     Mutable, StorageBase, StoragePath, StoragePointer, StoragePointerReadAccess,
@@ -79,7 +80,7 @@ pub impl StorageBaseSubImpl<
     }
 }
 
-pub fn validate_stark_signature(public_key: felt252, msg_hash: felt252, signature: Span<felt252>) {
+pub fn validate_stark_signature(public_key: PublicKey, msg_hash: HashType, signature: Signature) {
     assert(
         is_valid_stark_signature(:msg_hash, :public_key, :signature), 'INVALID_STARK_KEY_SIGNATURE',
     );

@@ -1,4 +1,5 @@
 use contracts_commons::message_hash::OffchainMessageHash;
+use contracts_commons::types::HashType;
 use core::hash::{HashStateExTrait, HashStateTrait};
 use core::poseidon::{PoseidonTrait, poseidon_hash_span};
 use openzeppelin::utils::cryptography::snip12::{
@@ -8,7 +9,7 @@ use openzeppelin_testing::constants::{PUBKEY, RECIPIENT};
 use snforge_std::{start_cheat_chain_id, test_address};
 use starknet::ContractAddress;
 
-const MESSAGE_TYPE_HASH: felt252 =
+const MESSAGE_TYPE_HASH: HashType =
     0x120ae1bdaf7c1e48349da94bb8dad27351ca115d6605ce345aee02d68d99ec1;
 
 #[derive(Copy, Drop, Hash)]
@@ -20,7 +21,7 @@ struct Message {
 }
 
 impl StructHashImpl of StructHash<Message> {
-    fn hash_struct(self: @Message) -> felt252 {
+    fn hash_struct(self: @Message) -> HashType {
         let hash_state = PoseidonTrait::new();
         hash_state.update_with(MESSAGE_TYPE_HASH).update_with(*self).finalize()
     }

@@ -6,6 +6,7 @@ pub(crate) mod RequestApprovalsComponent {
     };
     use contracts_commons::errors::panic_with_felt;
     use contracts_commons::message_hash::OffchainMessageHash;
+    use contracts_commons::types::{HashType, PublicKey};
     use contracts_commons::utils::validate_stark_signature;
     use core::num::traits::Zero;
     use openzeppelin::utils::snip12::StructHash;
@@ -14,7 +15,7 @@ pub(crate) mod RequestApprovalsComponent {
 
     #[storage]
     pub struct Storage {
-        pub approved_requests: Map<felt252, RequestStatus>,
+        pub approved_requests: Map<HashType, RequestStatus>,
     }
 
     #[event]
@@ -45,10 +46,10 @@ pub(crate) mod RequestApprovalsComponent {
         fn register_approval<T, +StructHash<T>, +OffchainMessageHash<T>, +Drop<T>>(
             ref self: ComponentState<TContractState>,
             owner_account: ContractAddress,
-            public_key: felt252,
+            public_key: PublicKey,
             signature: Span<felt252>,
             args: T,
-        ) -> felt252 {
+        ) -> HashType {
             let request_hash = args.get_message_hash(:public_key);
             assert(
                 self.get_request_status_internal(:request_hash) == RequestStatus::NON_EXIST,
@@ -69,8 +70,8 @@ pub(crate) mod RequestApprovalsComponent {
         /// The request must be registered with PENDING state.
         /// The request must not be in the DONE state.
         fn consume_approved_request<T, +StructHash<T>, +OffchainMessageHash<T>, +Drop<T>>(
-            ref self: ComponentState<TContractState>, args: T, public_key: felt252,
-        ) -> felt252 {
+            ref self: ComponentState<TContractState>, args: T, public_key: PublicKey,
+        ) -> HashType {
             let request_hash = args.get_message_hash(:public_key);
             let request_status = self.get_request_status_internal(:request_hash);
             match request_status {

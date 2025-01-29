@@ -1,4 +1,3 @@
-use contracts_commons::types::time::time::Timestamp;
 use starknet::ContractAddress;
 
 #[derive(Debug, Drop, PartialEq, starknet::Event)]
@@ -33,7 +32,6 @@ pub struct DepositCanceled {
     pub depositing_address: ContractAddress,
     pub asset_id: felt252,
     pub amount: i64,
-    pub expiration: Timestamp,
     #[key]
     pub deposit_request_hash: felt252,
 }
