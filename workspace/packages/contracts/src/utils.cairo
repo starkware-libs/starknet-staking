@@ -3,7 +3,8 @@ use contracts_commons::math::{Abs, FractionTrait};
 use contracts_commons::types::time::time::{Time, Timestamp};
 use openzeppelin::account::utils::is_valid_stark_signature;
 use starknet::storage::{
-    Mutable, StoragePath, StoragePointer, StoragePointerReadAccess, StoragePointerWriteAccess,
+    Mutable, StorageBase, StoragePath, StoragePointer, StoragePointerReadAccess,
+    StoragePointerWriteAccess,
 };
 
 pub trait AddToStorage<T> {
@@ -25,6 +26,17 @@ pub impl StoragePointerAddImpl<
 > of AddToStorage<StoragePointer<Mutable<T>>> {
     type Value = T;
     fn add_and_write(self: StoragePointer<Mutable<T>>, value: Self::Value) -> Self::Value {
+        let new_value = self.read() + value;
+        self.write(new_value);
+        new_value
+    }
+}
+
+pub impl StorageBaseAddImpl<
+    T, +Add<T>, +Copy<T>, +starknet::Store<T>, +Drop<T>,
+> of AddToStorage<StorageBase<Mutable<T>>> {
+    type Value = T;
+    fn add_and_write(self: StorageBase<Mutable<T>>, value: Self::Value) -> Self::Value {
         let new_value = self.read() + value;
         self.write(new_value);
         new_value
@@ -56,6 +68,16 @@ pub impl StoragePointerSubImpl<
     }
 }
 
+pub impl StorageBaseSubImpl<
+    T, +Sub<T>, +Copy<T>, +starknet::Store<T>, +Drop<T>,
+> of SubFromStorage<StorageBase<Mutable<T>>> {
+    type Value = T;
+    fn sub_and_write(self: StorageBase<Mutable<T>>, value: Self::Value) -> Self::Value {
+        let new_value = self.read() - value;
+        self.write(new_value);
+        new_value
+    }
+}
 
 pub fn validate_stark_signature(public_key: felt252, msg_hash: felt252, signature: Span<felt252>) {
     assert(
