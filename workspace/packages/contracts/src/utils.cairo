@@ -3,41 +3,32 @@ use contracts_commons::math::{Abs, FractionTrait};
 use contracts_commons::types::time::time::{Time, Timestamp};
 use contracts_commons::types::{HashType, PublicKey, Signature};
 use openzeppelin::account::utils::is_valid_stark_signature;
-use starknet::storage::{
-    Mutable, StorageBase, StoragePath, StoragePointer, StoragePointerReadAccess,
-    StoragePointerWriteAccess,
-};
+use starknet::Store;
+use starknet::storage::{Mutable, StorageAsPointer, StoragePointer};
 
 pub trait AddToStorage<T> {
     type Value;
     fn add_and_write(self: T, value: Self::Value) -> Self::Value;
 }
-pub impl StoragePathAddImpl<
-    T, +Add<T>, +Copy<T>, +starknet::Store<T>, +Drop<T>,
-> of AddToStorage<StoragePath<Mutable<T>>> {
-    type Value = T;
-    fn add_and_write(self: StoragePath<Mutable<T>>, value: Self::Value) -> Self::Value {
-        let new_value = self.read() + value;
-        self.write(new_value);
-        new_value
-    }
-}
-pub impl StoragePointerAddImpl<
-    T, +Add<T>, +Copy<T>, +starknet::Store<T>, +Drop<T>,
-> of AddToStorage<StoragePointer<Mutable<T>>> {
-    type Value = T;
-    fn add_and_write(self: StoragePointer<Mutable<T>>, value: Self::Value) -> Self::Value {
-        let new_value = self.read() + value;
-        self.write(new_value);
-        new_value
+
+pub impl AddToStorageGeneralImpl<
+    T,
+    +Drop<T>,
+    impl AsPointerImpl: StorageAsPointer<T>,
+    impl PointerImpl: AddToStorage<StoragePointer<AsPointerImpl::Value>>,
+    +Drop<PointerImpl::Value>,
+> of AddToStorage<T> {
+    type Value = PointerImpl::Value;
+    fn add_and_write(self: T, value: Self::Value) -> Self::Value {
+        self.as_ptr().deref().add_and_write(value)
     }
 }
 
-pub impl StorageBaseAddImpl<
-    T, +Add<T>, +Copy<T>, +starknet::Store<T>, +Drop<T>,
-> of AddToStorage<StorageBase<Mutable<T>>> {
-    type Value = T;
-    fn add_and_write(self: StorageBase<Mutable<T>>, value: Self::Value) -> Self::Value {
+pub impl StoragePointerAddToStorageImpl<
+    TValue, +Drop<TValue>, +Add<TValue>, +Copy<TValue>, +Store<TValue>,
+> of AddToStorage<StoragePointer<Mutable<TValue>>> {
+    type Value = TValue;
+    fn add_and_write(self: StoragePointer<Mutable<TValue>>, value: TValue) -> TValue {
         let new_value = self.read() + value;
         self.write(new_value);
         new_value
@@ -48,32 +39,25 @@ pub trait SubFromStorage<T> {
     type Value;
     fn sub_and_write(self: T, value: Self::Value) -> Self::Value;
 }
-pub impl StoragePathSubImpl<
-    T, +Sub<T>, +Copy<T>, +starknet::Store<T>, +Drop<T>,
-> of SubFromStorage<StoragePath<Mutable<T>>> {
-    type Value = T;
-    fn sub_and_write(self: StoragePath<Mutable<T>>, value: Self::Value) -> Self::Value {
-        let new_value = self.read() - value;
-        self.write(new_value);
-        new_value
-    }
-}
-pub impl StoragePointerSubImpl<
-    T, +Sub<T>, +Copy<T>, +starknet::Store<T>, +Drop<T>,
-> of SubFromStorage<StoragePointer<Mutable<T>>> {
-    type Value = T;
-    fn sub_and_write(self: StoragePointer<Mutable<T>>, value: Self::Value) -> Self::Value {
-        let new_value = self.read() - value;
-        self.write(new_value);
-        new_value
+
+pub impl SubFromStorageGeneralImpl<
+    T,
+    +Drop<T>,
+    impl AsPointerImpl: StorageAsPointer<T>,
+    impl PointerImpl: SubFromStorage<StoragePointer<AsPointerImpl::Value>>,
+    +Drop<PointerImpl::Value>,
+> of SubFromStorage<T> {
+    type Value = PointerImpl::Value;
+    fn sub_and_write(self: T, value: Self::Value) -> Self::Value {
+        self.as_ptr().deref().sub_and_write(value)
     }
 }
 
-pub impl StorageBaseSubImpl<
-    T, +Sub<T>, +Copy<T>, +starknet::Store<T>, +Drop<T>,
-> of SubFromStorage<StorageBase<Mutable<T>>> {
-    type Value = T;
-    fn sub_and_write(self: StorageBase<Mutable<T>>, value: Self::Value) -> Self::Value {
+pub impl StoragePathSubFromStorageImpl<
+    TValue, +Drop<TValue>, +Sub<TValue>, +Copy<TValue>, +Store<TValue>,
+> of SubFromStorage<StoragePointer<Mutable<TValue>>> {
+    type Value = TValue;
+    fn sub_and_write(self: StoragePointer<Mutable<TValue>>, value: TValue) -> TValue {
         let new_value = self.read() - value;
         self.write(new_value);
         new_value
