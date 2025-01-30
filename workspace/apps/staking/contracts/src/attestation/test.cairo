@@ -1,6 +1,5 @@
 use contracts_commons::errors::Describable;
 use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
-use core::num::traits::zero::Zero;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{
