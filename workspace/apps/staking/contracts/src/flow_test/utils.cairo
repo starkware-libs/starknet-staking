@@ -32,7 +32,7 @@ use staking::test_utils::constants::STRK_TOKEN_ADDRESS;
 use staking::types::{Amount, Commission};
 use starknet::{ClassHash, ContractAddress};
 
-pub(crate) mod MainnetAddresses {
+mod MainnetAddresses {
     use starknet::{ContractAddress, contract_address_const};
 
     pub(crate) fn MAINNET_STAKING_CONTRCT_ADDRESS() -> ContractAddress nopanic {
@@ -59,6 +59,26 @@ pub(crate) mod MainnetAddresses {
         contract_address_const::<
             0x0663cc699d9c51b7d4d434e06f5982692167546ce525d9155edb476ac9a117d6,
         >()
+    }
+}
+
+/// Contains class hashes of mainnet contracts.
+mod MainnetClassHashes {
+    use starknet::class_hash::{ClassHash, class_hash_const};
+
+    /// Class hash of the first staking contract deployed on mainnet.
+    fn MAINNET_STAKING_CLASS_HASH_V0() -> ClassHash nopanic {
+        class_hash_const::<0x31578ba8535c5be427c03412d596fe17d3cecfc2b4a3040b841c009fe4ac5f5>()
+    }
+
+    /// Class hash of the first reward supplier contract deployed on mainnet.
+    fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash nopanic {
+        class_hash_const::<0x7cbbebcdbbce7bd45611d8b679e524b63586429adee0f858b7f0994d709d648>()
+    }
+
+    /// Class hash of the first minting curve contract deployed on mainnet.
+    fn MAINNET_MINTING_CURVE_CLASS_HASH_V0() -> ClassHash nopanic {
+        class_hash_const::<0xb00a4f0a3ba3f266837da66c0c3053c4676046a2d621e80d1f822fe9c9b5f6>()
     }
 }
 
