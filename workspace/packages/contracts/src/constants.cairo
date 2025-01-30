@@ -13,6 +13,13 @@ pub const TWO_POW_32: u64 = 0x100000000;
 pub const TWO_POW_64: u128 = 0x10000000000000000;
 pub const TWO_POW_128: u256 = 0x100000000000000000000000000000000;
 
+pub const TEN_POW_3: u16 = 1_000;
+pub const TEN_POW_6: u32 = 1_000_000;
+pub const TEN_POW_9: u32 = 1_000_000_000;
+pub const TEN_POW_12: u64 = 1_000_000_000_000;
+pub const TEN_POW_15: u64 = 1_000_000_000_000_000;
+pub const TEN_POW_18: u64 = 1_000_000_000_000_000_000;
+
 pub const MINUTE: u64 = 60;
 pub const HOUR: u64 = 60 * MINUTE;
 pub const DAY: u64 = 24 * HOUR;
