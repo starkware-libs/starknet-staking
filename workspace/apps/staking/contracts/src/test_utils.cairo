@@ -12,7 +12,7 @@ use constants::{
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::{
     cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
-    set_account_as_security_agent, set_account_as_token_admin,
+    set_account_as_security_agent, set_account_as_token_admin, set_account_as_upgrade_governor,
 };
 use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
@@ -344,6 +344,11 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
         account: cfg.test_info.token_admin,
         app_role_admin: cfg.test_info.app_role_admin,
     );
+    set_account_as_upgrade_governor(
+        contract: staking_contract,
+        account: cfg.test_info.upgrade_governor,
+        governance_admin: cfg.test_info.governance_admin,
+    );
 }
 
 pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractAddress {
@@ -396,6 +401,10 @@ pub(crate) fn deploy_attestation_contract(cfg: StakingInitConfig) -> ContractAdd
 
 pub(crate) fn declare_pool_contract() -> ClassHash {
     *snforge_std::declare("Pool").unwrap().contract_class().class_hash
+}
+
+pub(crate) fn declare_staking_eic_contract() -> ClassHash {
+    *snforge_std::declare("StakingEIC").unwrap().contract_class().class_hash
 }
 
 pub(crate) fn fund(

@@ -3,4 +3,4 @@ pub(crate) mod flows;
 #[cfg(test)]
 mod test;
 #[cfg(test)]
-mod utils;
+pub(crate) mod utils;

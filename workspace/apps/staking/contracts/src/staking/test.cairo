@@ -6,6 +6,7 @@ use constants::{
     POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS,
     STAKER_UNCLAIMED_REWARDS,
 };
+use contracts_commons::components::replaceability::interface::{EICData, ImplementationData};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::constants::DAY;
 use contracts_commons::errors::Describable;
@@ -33,6 +34,8 @@ use snforge_std::{
 };
 use staking::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
 use staking::errors::GenericError;
+use staking::flow_test::utils::MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0;
+use staking::flow_test::utils::{declare_staking_contract, upgrade_implementation};
 use staking::pool::errors::Error as PoolError;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
 use staking::pool::objects::SwitchPoolData;
@@ -59,14 +62,15 @@ use staking::utils::{
     compute_rewards_rounded_up,
 };
 use staking::{event_test_utils, test_utils};
-use starknet::{ContractAddress, contract_address_const};
+use starknet::class_hash::ClassHash;
+use starknet::{ContractAddress, Store, contract_address_const};
 use test_utils::{
     StakingInitConfig, approve, cheat_reward_for_reward_supplier, constants,
-    deploy_mock_erc20_contract, deploy_reward_supplier_contract, deploy_staking_contract,
-    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    initialize_staking_state_from_cfg, load_from_simple_map, load_one_felt,
-    load_staker_info_from_map, stake_for_testing_using_dispatcher, stake_from_zero_address,
-    stake_with_pool_enabled, store_to_simple_map,
+    declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
+    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
+    general_contract_system_deployment, initialize_staking_state_from_cfg, load_from_simple_map,
+    load_one_felt, load_staker_info_from_map, stake_for_testing_using_dispatcher,
+    stake_from_zero_address, stake_with_pool_enabled, store_to_simple_map,
 };
 
 #[test]
@@ -3483,4 +3487,34 @@ fn test_versioned_internal_staker_info_into_staker_info_old_version() {
         pool_info: Option::None,
     );
     let _: StakerInfo = internal_staker_info.into();
+}
+
+#[test]
+fn test_staking_eic() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    // Upgrade.
+    let eic_data = EICData {
+        eic_hash: declare_staking_eic_contract(),
+        eic_init_data: array![MAINNET_STAKING_CLASS_HASH_V0().into()].span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
+    };
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: staking_contract, :implementation_data, :upgrade_governor,
+    );
+    // Test.
+    let prev_class_hash = *snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("prev_class_hash"),
+        size: Store::<ClassHash>::size().into(),
+    )
+        .at(0);
+    assert_eq!(prev_class_hash.try_into().unwrap(), MAINNET_STAKING_CLASS_HASH_V0());
 }
