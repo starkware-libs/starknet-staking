@@ -182,7 +182,7 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_min_stake(self: StakingState) -> Amount {
-        self.dispatcher().contract_parameters().try_into().unwrap().min_stake
+        self.dispatcher().contract_parameters().min_stake
     }
 
     fn get_total_stake(self: StakingState) -> Amount {
