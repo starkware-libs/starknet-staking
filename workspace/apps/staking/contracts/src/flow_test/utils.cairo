@@ -25,11 +25,11 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
-    IStakingDispatcherTrait, StakerInfoTrait,
+    IStakingDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
 use staking::test_utils::constants::STRK_TOKEN_ADDRESS;
 use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
-use staking::types::{Amount, Commission};
+use staking::types::{Amount, Commission, Index};
 use starknet::{ClassHash, ContractAddress};
 
 mod MainnetAddresses {
@@ -195,6 +195,10 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn update_global_index_if_needed(self: StakingState) -> bool {
         self.dispatcher().update_global_index_if_needed()
+    }
+
+    fn get_global_index(self: StakingState) -> Index {
+        self.dispatcher().contract_parameters().global_index
     }
 }
 
@@ -585,6 +589,10 @@ pub(crate) impl SystemStakerImpl<
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
         self.staking.dispatcher().update_commission(:commission)
+    }
+
+    fn staker_info(self: SystemState<TTokenState>, staker: Staker) -> StakerInfo {
+        self.staking.dispatcher().staker_info(staker_address: staker.staker.address)
     }
 }
 

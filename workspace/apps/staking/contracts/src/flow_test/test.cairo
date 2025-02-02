@@ -4,7 +4,10 @@ use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use flow_test_utils::{RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait};
 use flow_test_utils::{SystemStakerTrait, SystemTrait, test_flow_local, test_flow_mainnet};
-use flows::{BasicStakeFlow, DelegatorIntentFlow, SetOpenForDelegationFlow};
+use flows::{
+    BasicStakeFlow, DelegatorIntentFlow, SetOpenForDelegationFlow, StakerInfoAfterUpgradeFlow,
+    StakerInfoUnstakeAfterUpgradeFlow, StakerInfoWithPoolAfterUpgradeFlow,
+};
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows;
 use staking::flow_test::flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow;
@@ -116,6 +119,31 @@ fn staker_intent_last_action_first_flow_test() {
 #[fork("MAINNET_LATEST")]
 fn staker_intent_last_action_first_regression_test() {
     let mut flow = StakerIntentLastActionFirstFlow {};
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_info_after_upgrade_regression_test() {
+    let mut flow = StakerInfoAfterUpgradeFlow { staker: Option::None, staker_info: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_info_with_pool_after_upgrade_regression_test() {
+    let mut flow = StakerInfoWithPoolAfterUpgradeFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_info_unstake_after_upgrade_regression_test() {
+    let mut flow = StakerInfoUnstakeAfterUpgradeFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
     test_flow_mainnet(ref :flow);
 }
 
