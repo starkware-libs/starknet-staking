@@ -2582,7 +2582,8 @@ fn test_get_staker_address_by_operational() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let operational_address = cfg.staker_info.operational_address();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: DUMMY_ADDRESS());
-    staking_dispatcher.get_staker_address_by_operational(:operational_address);
+    let staker_address = staking_dispatcher.get_staker_address_by_operational(:operational_address);
+    assert_eq!(staker_address, cfg.test_info.staker_address);
 }
 
 #[test]
