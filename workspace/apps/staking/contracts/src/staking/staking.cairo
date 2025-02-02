@@ -26,9 +26,10 @@ pub mod Staking {
         IStakingPool, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
     };
     use staking::staking::objects::{
-        UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
-        UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoGetters,
-        VersionedInternalStakerInfoSetters, VersionedInternalStakerInfoTrait,
+        EpochInfo, EpochInfoTrait, UndelegateIntentKey, UndelegateIntentValue,
+        UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
+        VersionedInternalStakerInfoGetters, VersionedInternalStakerInfoSetters,
+        VersionedInternalStakerInfoTrait,
     };
     use staking::types::{Amount, Commission, Epoch, Index};
     use staking::utils::{
@@ -94,6 +95,9 @@ pub mod Staking {
         is_paused: bool,
         // Required delay (in seconds) between unstake intent and unstake action.
         exit_wait_window: TimeDelta,
+        // Epoch info.
+        epoch_info: EpochInfo,
+        // The contract staker sends attestation trasaction to.
         attestation_contract: ContractAddress,
         // Class hash of the previous version of the contract
         prev_class_hash: ClassHash,
@@ -142,6 +146,7 @@ pub mod Staking {
         pool_contract_admin: ContractAddress,
         governance_admin: ContractAddress,
         prev_class_hash: ClassHash,
+        epoch_info: EpochInfo,
     ) {
         self.roles.initialize(:governance_admin);
         self.replaceability.upgrade_delay.write(Zero::zero());
@@ -157,6 +162,7 @@ pub mod Staking {
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
         self.prev_class_hash.write(prev_class_hash);
+        self.epoch_info.write(epoch_info);
     }
 
     #[abi(embed_v0)]
@@ -409,7 +415,6 @@ pub mod Staking {
             let staker_amount = staker_info.amount_own();
             token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
-
             self.transfer_to_pool_when_unstake(:staker_address, ref :staker_info);
             self.remove_staker(:staker_address, :staker_info);
             staker_amount
@@ -501,9 +506,12 @@ pub mod Staking {
             staker_address
         }
 
-        // TODO: implement
         fn get_current_epoch(self: @ContractState) -> Epoch {
-            1
+            self.epoch_info.read().current_epoch()
+        }
+
+        fn get_epoch_info(self: @ContractState) -> EpochInfo {
+            self.epoch_info.read()
         }
 
         // TODO: implement
@@ -981,6 +989,16 @@ pub mod Staking {
                         old_reward_supplier, new_reward_supplier: reward_supplier,
                     },
                 );
+        }
+
+        fn set_epoch_length(ref self: ContractState, epoch_length: u16) {
+            // TODO: roles
+            // TODO: assert length
+            self.roles.only_token_admin();
+            let mut epoch_info = self.epoch_info.read();
+            epoch_info.update(:epoch_length);
+            self.epoch_info.write(epoch_info);
+            // TODO: emit event
         }
     }
 

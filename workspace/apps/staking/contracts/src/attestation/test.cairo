@@ -10,7 +10,8 @@ use staking::event_test_utils::assert_number_of_events;
 use staking::staking::objects::VersionedInternalStakerInfoGetters;
 use staking::test_utils;
 use test_utils::{
-    StakingInitConfig, general_contract_system_deployment, stake_for_testing_using_dispatcher,
+    StakingInitConfig, advance_epoch_global, general_contract_system_deployment,
+    stake_for_testing_using_dispatcher,
 };
 
 #[test]
@@ -25,6 +26,7 @@ fn test_attest() {
     let operational_address = cfg.staker_info.operational_address();
     let staker_address = cfg.test_info.staker_address;
     let mut spy = snforge_std::spy_events();
+    advance_epoch_global();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -53,6 +55,7 @@ fn test_attest_assertions() {
     let operational_address = cfg.staker_info.operational_address();
     // Catch ATTEST_IS_DONE.
     let attest_info = AttestInfo {};
+    advance_epoch_global();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -75,6 +78,7 @@ fn test_is_attestation_done_in_curr_epoch() {
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address();
+    advance_epoch_global();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -115,6 +119,7 @@ fn test_get_last_epoch_attestation_done() {
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address();
+    advance_epoch_global();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );

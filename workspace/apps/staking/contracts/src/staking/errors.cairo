@@ -25,6 +25,7 @@ pub(crate) enum Error {
     ILLEGAL_EXIT_DURATION,
     CALLER_IS_NOT_ATTESTATION_CONTRACT,
     INTERNAL_STAKER_INFO_OUTDATED_VERSION,
+    INVALID_EPOCH_LENGTH,
 }
 
 impl DescribableError of Describable<Error> {
@@ -55,6 +56,7 @@ impl DescribableError of Describable<Error> {
             Error::ILLEGAL_EXIT_DURATION => "ILLEGAL_EXIT_DURATION",
             Error::CALLER_IS_NOT_ATTESTATION_CONTRACT => "Caller is not attestation contract",
             Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION => "Outdated version of Internal Staker Info",
+            Error::INVALID_EPOCH_LENGTH => "Invalid epoch length, must be greater than 0",
         }
     }
 }

@@ -2,7 +2,7 @@ use contracts_commons::errors::OptionAuxTrait;
 use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use staking::staking::errors::Error;
 use staking::staking::objects::{
-    UndelegateIntentKey, UndelegateIntentValue, VersionedInternalStakerInfo,
+    EpochInfo, UndelegateIntentKey, UndelegateIntentValue, VersionedInternalStakerInfo,
     VersionedInternalStakerInfoTrait,
 };
 use staking::types::{Amount, Commission, Epoch, Index};
@@ -35,6 +35,7 @@ pub trait IStaking<TContractState> {
         self: @TContractState, operational_address: ContractAddress,
     ) -> ContractAddress;
     fn get_current_epoch(self: @TContractState) -> Epoch;
+    fn get_epoch_info(self: @TContractState) -> EpochInfo;
     // TODO: Rename once internal update_rewards is deleted.
     fn update_rewards_from_attestation_contract(
         ref self: TContractState, staker_address: ContractAddress,
@@ -164,6 +165,7 @@ pub trait IStakingConfig<TContractState> {
     fn set_min_stake(ref self: TContractState, min_stake: Amount);
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
+    fn set_epoch_length(ref self: TContractState, epoch_length: u16);
 }
 
 pub mod Events {

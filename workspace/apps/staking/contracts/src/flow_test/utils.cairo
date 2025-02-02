@@ -27,6 +27,7 @@ use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
+use staking::staking::objects::EpochInfo;
 use staking::test_utils::constants::STRK_TOKEN_ADDRESS;
 use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
 use staking::types::{Amount, Commission, Index};
@@ -110,6 +111,7 @@ pub(crate) struct StakingConfig {
     pub pool_contract_admin: ContractAddress,
     pub governance_admin: ContractAddress,
     pub prev_staking_contract_class_hash: ClassHash,
+    pub epoch_info: EpochInfo,
     pub roles: StakingRoles,
 }
 
@@ -133,6 +135,7 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.pool_contract_admin.serialize(ref calldata);
         self.governance_admin.serialize(ref calldata);
         self.prev_staking_contract_class_hash.serialize(ref calldata);
+        self.epoch_info.serialize(ref calldata);
         let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
         let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
         let staking = StakingState {
@@ -407,6 +410,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             prev_staking_contract_class_hash: cfg
                 .staking_contract_info
                 .prev_staking_contract_class_hash,
+            epoch_info: cfg.staking_contract_info.epoch_info,
             roles: StakingRoles {
                 upgrade_governor: cfg.test_info.upgrade_governor,
                 security_admin: cfg.test_info.security_admin,
