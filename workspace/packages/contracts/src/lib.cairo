@@ -17,6 +17,7 @@ pub mod event_test_utils;
 pub mod interfaces;
 pub mod math;
 pub mod message_hash;
+pub mod span_utils;
 
 // Make the module be available in a test target.
 // Simple #cfg(test) won't work because the module is not

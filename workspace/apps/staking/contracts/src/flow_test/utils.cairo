@@ -3,7 +3,7 @@ use MainnetAddresses::{
     MAINNET_STAKING_CONTRCT_ADDRESS, MAINNET_UPGRADE_GOVERNOR,
 };
 use contracts_commons::components::replaceability::interface::{
-    IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
+    EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
 };
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::math::wide_abs_diff;
@@ -27,8 +27,8 @@ use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, StakerInfoTrait,
 };
-use staking::test_utils::StakingInitConfig;
 use staking::test_utils::constants::STRK_TOKEN_ADDRESS;
+use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
 use staking::types::{Amount, Commission};
 use starknet::{ClassHash, ContractAddress};
 
@@ -63,11 +63,11 @@ mod MainnetAddresses {
 }
 
 /// Contains class hashes of mainnet contracts.
-mod MainnetClassHashes {
+pub(crate) mod MainnetClassHashes {
     use starknet::class_hash::{ClassHash, class_hash_const};
 
     /// Class hash of the first staking contract deployed on mainnet.
-    fn MAINNET_STAKING_CLASS_HASH_V0() -> ClassHash nopanic {
+    pub(crate) fn MAINNET_STAKING_CLASS_HASH_V0() -> ClassHash nopanic {
         class_hash_const::<0x31578ba8535c5be427c03412d596fe17d3cecfc2b4a3040b841c009fe4ac5f5>()
     }
 
@@ -182,7 +182,7 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_min_stake(self: StakingState) -> Amount {
-        self.dispatcher().contract_parameters().try_into().unwrap().min_stake
+        self.dispatcher().contract_parameters().min_stake
     }
 
     fn get_total_stake(self: StakingState) -> Amount {
@@ -750,8 +750,13 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     /// Upgrades the staking contract in the system state with a local implementation.
     fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
         self.staking.update_global_index_if_needed();
+        let eic_data = EICData {
+            eic_hash: declare_staking_eic_contract(),
+            eic_init_data: array![MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0().into()]
+                .span(),
+        };
         let implementation_data = ImplementationData {
-            impl_hash: declare_staking_contract(), eic_data: Option::None, final: false,
+            impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
         };
         upgrade_implementation(
             contract_address: self.staking.address,
@@ -785,7 +790,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     }
 }
 
-fn declare_staking_contract() -> ClassHash {
+pub(crate) fn declare_staking_contract() -> ClassHash {
     *snforge_std::declare("Staking").unwrap().contract_class().class_hash
 }
 
@@ -798,7 +803,7 @@ fn declare_minting_curve_contract() -> ClassHash {
 }
 
 /// Upgrades implementation of the given contract.
-fn upgrade_implementation(
+pub(crate) fn upgrade_implementation(
     contract_address: ContractAddress,
     implementation_data: ImplementationData,
     upgrade_governor: ContractAddress,

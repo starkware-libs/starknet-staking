@@ -7,7 +7,8 @@ pub struct Deposit {
     #[key]
     pub depositing_address: ContractAddress,
     pub asset_id: felt252,
-    pub amount: i64,
+    pub quantized_amount: u128,
+    pub unquantized_amount: u128,
     #[key]
     pub deposit_request_hash: felt252,
 }
@@ -19,7 +20,8 @@ pub struct DepositProcessed {
     #[key]
     pub depositing_address: ContractAddress,
     pub asset_id: felt252,
-    pub amount: i64,
+    pub quantized_amount: u128,
+    pub unquantized_amount: u128,
     #[key]
     pub deposit_request_hash: felt252,
 }
@@ -31,7 +33,8 @@ pub struct DepositCanceled {
     #[key]
     pub depositing_address: ContractAddress,
     pub asset_id: felt252,
-    pub amount: i64,
+    pub quantized_amount: u128,
+    pub unquantized_amount: u128,
     #[key]
     pub deposit_request_hash: felt252,
 }

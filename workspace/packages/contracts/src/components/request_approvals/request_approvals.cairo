@@ -52,7 +52,7 @@ pub(crate) mod RequestApprovalsComponent {
         ) -> HashType {
             let request_hash = args.get_message_hash(:public_key);
             assert(
-                self.get_request_status_internal(:request_hash) == RequestStatus::NON_EXIST,
+                self.get_request_status_internal(:request_hash) == RequestStatus::NOT_EXIST,
                 errors::APPROVAL_ALREADY_REGISTERED,
             );
             if owner_account.is_non_zero() {
@@ -75,8 +75,8 @@ pub(crate) mod RequestApprovalsComponent {
             let request_hash = args.get_message_hash(:public_key);
             let request_status = self.get_request_status_internal(:request_hash);
             match request_status {
-                RequestStatus::NON_EXIST => panic_with_felt(errors::APPROVAL_NOT_REGISTERED),
-                RequestStatus::DONE => panic_with_felt(errors::REQUEST_ALREADY_DONE),
+                RequestStatus::NOT_EXIST => panic_with_felt(errors::APPROVAL_NOT_REGISTERED),
+                RequestStatus::DONE => panic_with_felt(errors::DEPOSIT_ALREADY_PROCESSED),
                 RequestStatus::PENDING => {},
             };
             self.approved_requests.write(request_hash, RequestStatus::DONE);
