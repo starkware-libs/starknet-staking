@@ -25,11 +25,12 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
-    IStakingDispatcherTrait, StakerInfoTrait,
+    IStakingDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
+use staking::staking::objects::EpochInfo;
 use staking::test_utils::constants::STRK_TOKEN_ADDRESS;
 use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
-use staking::types::{Amount, Commission};
+use staking::types::{Amount, Commission, Index};
 use starknet::{ClassHash, ContractAddress};
 
 mod MainnetAddresses {
@@ -110,6 +111,7 @@ pub(crate) struct StakingConfig {
     pub pool_contract_admin: ContractAddress,
     pub governance_admin: ContractAddress,
     pub prev_staking_contract_class_hash: ClassHash,
+    pub epoch_info: EpochInfo,
     pub roles: StakingRoles,
 }
 
@@ -133,6 +135,7 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.pool_contract_admin.serialize(ref calldata);
         self.governance_admin.serialize(ref calldata);
         self.prev_staking_contract_class_hash.serialize(ref calldata);
+        self.epoch_info.serialize(ref calldata);
         let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
         let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
         let staking = StakingState {
@@ -195,6 +198,10 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn update_global_index_if_needed(self: StakingState) -> bool {
         self.dispatcher().update_global_index_if_needed()
+    }
+
+    fn get_global_index(self: StakingState) -> Index {
+        self.dispatcher().contract_parameters().global_index
     }
 }
 
@@ -403,6 +410,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             prev_staking_contract_class_hash: cfg
                 .staking_contract_info
                 .prev_staking_contract_class_hash,
+            epoch_info: cfg.staking_contract_info.epoch_info,
             roles: StakingRoles {
                 upgrade_governor: cfg.test_info.upgrade_governor,
                 security_admin: cfg.test_info.security_admin,
@@ -585,6 +593,10 @@ pub(crate) impl SystemStakerImpl<
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
         self.staking.dispatcher().update_commission(:commission)
+    }
+
+    fn staker_info(self: SystemState<TTokenState>, staker: Staker) -> StakerInfo {
+        self.staking.dispatcher().staker_info(staker_address: staker.staker.address)
     }
 }
 

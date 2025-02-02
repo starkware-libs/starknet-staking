@@ -43,6 +43,7 @@
     - [set\_min\_stake](#set_min_stake)
     - [set\_exit\_wait\_window](#set_exit_wait_window)
     - [set\_reward\_supplier](#set_reward_supplier)
+    - [set\_epoch\_length](#set_epoch_length)
     - [convert\_from\_upgraded\_contract](#convert_from_upgraded_contract)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
@@ -216,6 +217,7 @@ classDiagram
     set_min_stake()
     set_exit_wait_window()
     set_reward_supplier()
+    set_epoch_length()
     convert_from_upgraded_contract()
   }
   class DelegationPoolContract{
@@ -1109,6 +1111,20 @@ fn set_reward_supplier(ref self: ContractState, reward_supplier: ContractAddress
 Set the reward supplier.
 #### emits <!-- omit from toc -->
 1. [Reward Supplier Changed](#reward-supplier-changed)
+#### errors <!-- omit from toc -->
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only token admin.
+#### logic <!-- omit from toc -->
+
+### set_epoch_length
+```rust
+fn set_epoch_length(ref self: ContractState, epoch_length: u16)
+```
+#### description <!-- omit from toc -->
+Set the epoch length.
+#### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 #### pre-condition <!-- omit from toc -->

@@ -1,24 +1,27 @@
 use Staking::ContractState;
 use constants::{
     APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BUFFER, COMMISSION,
-    DUMMY_CLASS_HASH, GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER,
-    MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS,
-    POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
-    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS,
-    SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS,
-    STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN,
-    UPGRADE_GOVERNOR,
+    DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN,
+    INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS,
+    OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS,
+    POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
+    REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
+    STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
+    STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::test_utils::{
-    cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
-    set_account_as_security_agent, set_account_as_token_admin, set_account_as_upgrade_governor,
+    advance_block_number_global, cheat_caller_address_once, set_account_as_app_role_admin,
+    set_account_as_security_admin, set_account_as_security_agent, set_account_as_token_admin,
+    set_account_as_upgrade_governor,
 };
 use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::{ContractClassTrait, DeclareResultTrait, test_address};
+use snforge_std::{
+    ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global, test_address,
+};
 use staking::constants::{BASE_VALUE, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
 use staking::minting_curve::interface::MintingCurveContractInfo;
 use staking::minting_curve::minting_curve::MintingCurve;
@@ -28,19 +31,23 @@ use staking::pool::pool::Pool;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
-    IStakingPauseDispatcherTrait, StakerInfoTrait, StakerPoolInfo,
+    IStakingPauseDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
 };
 use staking::staking::objects::{
-    VersionedInternalStakerInfo, VersionedInternalStakerInfoGetters,
+    EpochInfo, VersionedInternalStakerInfo, VersionedInternalStakerInfoGetters,
     VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
 use staking::types::{Amount, Commission, Index};
-use staking::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
+use staking::utils::{
+    compute_commission_amount_rounded_down, compute_commission_amount_rounded_up,
+    compute_rewards_rounded_down, compute_rewards_rounded_up,
+};
 use starknet::{ClassHash, ContractAddress, Store};
 
 pub(crate) mod constants {
     use staking::constants::STRK_IN_FRIS;
+    use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Commission, Index};
     use starknet::class_hash::{ClassHash, class_hash_const};
     use starknet::{ContractAddress, contract_address_const};
@@ -59,6 +66,8 @@ pub(crate) mod constants {
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
     pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
     pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
+    pub const EPOCH_LENGTH: u16 = 300;
+    pub const EPOCH_STARTING_BLOCK: u64 = 463476;
 
     pub fn CALLER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'CALLER_ADDRESS'>()
@@ -182,6 +191,9 @@ pub(crate) mod constants {
     pub fn ATTESTATION_CONTRACT_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'ATTESTATION_CONTRACT_ADDRESS'>()
     }
+    pub fn DEFAULT_EPOCH_INFO() -> EpochInfo {
+        EpochInfoTrait::new(length: EPOCH_LENGTH, starting_block: EPOCH_STARTING_BLOCK)
+    }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
     ref cfg: StakingInitConfig,
@@ -198,6 +210,7 @@ pub(crate) fn initialize_staking_state_from_cfg(
         pool_contract_admin: cfg.test_info.pool_contract_admin,
         governance_admin: cfg.test_info.governance_admin,
         prev_class_hash: cfg.staking_contract_info.prev_staking_contract_class_hash,
+        epoch_info: cfg.staking_contract_info.epoch_info,
     )
 }
 pub(crate) fn initialize_staking_state(
@@ -208,6 +221,7 @@ pub(crate) fn initialize_staking_state(
     pool_contract_admin: ContractAddress,
     governance_admin: ContractAddress,
     prev_class_hash: ClassHash,
+    epoch_info: EpochInfo,
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
@@ -220,6 +234,7 @@ pub(crate) fn initialize_staking_state(
         :pool_contract_admin,
         :governance_admin,
         :prev_class_hash,
+        :epoch_info,
     );
     state
 }
@@ -317,9 +332,11 @@ pub(crate) fn deploy_staking_contract(
     cfg.test_info.pool_contract_admin.serialize(ref calldata);
     cfg.test_info.governance_admin.serialize(ref calldata);
     cfg.staking_contract_info.prev_staking_contract_class_hash.serialize(ref calldata);
+    cfg.staking_contract_info.epoch_info.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     set_default_roles(staking_contract: staking_contract_address, :cfg);
+    start_cheat_block_number_global(block_number: EPOCH_STARTING_BLOCK);
     staking_contract_address
 }
 
@@ -900,6 +917,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW,
             prev_staking_contract_class_hash: DUMMY_CLASS_HASH(),
+            epoch_info: DEFAULT_EPOCH_INFO(),
         };
         let minting_curve_contract_info = MintingCurveContractInfo {
             c_num: DEFAULT_C_NUM, c_denom: C_DENOM,
@@ -949,4 +967,42 @@ pub struct StakingContractInfoCfg {
     pub reward_supplier: ContractAddress,
     pub exit_wait_window: TimeDelta,
     pub prev_staking_contract_class_hash: ClassHash,
+    pub epoch_info: EpochInfo,
+}
+
+/// Update rewards for staker and pool.
+pub(crate) fn staker_update_rewards(staker_info: StakerInfo, global_index: Index) -> StakerInfo {
+    let interest: Index = global_index - staker_info.index;
+    let mut staker_rewards = compute_rewards_rounded_down(
+        amount: staker_info.amount_own, :interest,
+    );
+    let mut staker_pool_info: Option<StakerPoolInfo> = Option::None;
+    if let Option::Some(pool_info) = staker_info.pool_info {
+        let pool_rewards_including_commission = compute_rewards_rounded_up(
+            amount: pool_info.amount, :interest,
+        );
+        let commission_amount = compute_commission_amount_rounded_down(
+            rewards_including_commission: pool_rewards_including_commission,
+            commission: pool_info.commission,
+        );
+        staker_rewards += commission_amount;
+        let pool_rewards = pool_rewards_including_commission - commission_amount;
+        staker_pool_info =
+            Option::Some(
+                StakerPoolInfo {
+                    unclaimed_rewards: pool_info.unclaimed_rewards + pool_rewards, ..pool_info,
+                },
+            );
+    };
+    StakerInfo {
+        index: global_index,
+        unclaimed_rewards_own: staker_info.unclaimed_rewards_own + staker_rewards,
+        pool_info: staker_pool_info,
+        ..staker_info,
+    }
+}
+
+/// Advance one epoch.
+pub(crate) fn advance_epoch_global() {
+    advance_block_number_global(blocks: EPOCH_LENGTH.into());
 }

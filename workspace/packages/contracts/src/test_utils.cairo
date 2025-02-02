@@ -2,7 +2,10 @@ use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDi
 use contracts_commons::interfaces::identity::{IdentityDispatcher, IdentityDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::byte_array::try_deserialize_bytearray_error;
-use snforge_std::{CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address};
+use snforge_std::{
+    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address,
+    start_cheat_block_number_global,
+};
 use starknet::ContractAddress;
 
 
@@ -58,6 +61,10 @@ pub fn cheat_caller_address_once(
     contract_address: ContractAddress, caller_address: ContractAddress,
 ) {
     cheat_caller_address(:contract_address, :caller_address, span: CheatSpan::TargetCalls(1));
+}
+
+pub fn advance_block_number_global(blocks: u64) {
+    start_cheat_block_number_global(block_number: starknet::get_block_number() + blocks)
 }
 
 pub fn check_identity(

@@ -8,8 +8,9 @@ use staking::staking::errors::Error;
 use staking::staking::interface::{
     IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo, StakerPoolInfo,
 };
-use staking::types::{Amount, Index};
-use starknet::{ClassHash, ContractAddress};
+use staking::types::{Amount, Epoch, Index};
+use starknet::ClassHash;
+use starknet::{ContractAddress, get_block_number};
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct UndelegateIntentKey {
@@ -48,6 +49,56 @@ pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
 
     fn assert_valid(self: @UndelegateIntentValue) {
         assert!(self.is_valid(), "{}", Error::INVALID_UNDELEGATE_INTENT_VALUE);
+    }
+}
+
+// TODO: pack
+#[derive(Debug, Hash, Drop, Serde, Copy, PartialEq, starknet::Store)]
+pub(crate) struct EpochInfo {
+    length: u16,
+    // The first block of the first epoch with this length.
+    starting_block: u64,
+    // The first epoch, can be changed by fn update.
+    starting_epoch: Epoch,
+}
+
+#[generate_trait]
+pub(crate) impl EpochInfoImpl of EpochInfoTrait {
+    fn new(length: u16, starting_block: u64) -> EpochInfo {
+        assert!(length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
+        EpochInfo { length, starting_block, starting_epoch: Zero::zero() }
+    }
+
+    fn current_epoch(self: @EpochInfo) -> Epoch {
+        let current_block = get_block_number();
+        // If the epoch info updated and the current block is before the starting block of the
+        // next epoch with the new length.
+        if current_block < *self.starting_block {
+            return *self.starting_epoch - 1;
+        }
+        ((current_block - *self.starting_block) / (*self.length).into()) + *self.starting_epoch
+    }
+
+    fn update(ref self: EpochInfo, epoch_length: u16) {
+        assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
+        self.starting_epoch = self.next_epoch();
+        self.starting_block = self.calculate_next_epoch_starting_block();
+        self.length = epoch_length;
+    }
+}
+
+#[generate_trait]
+impl PrivateEpochInfoImpl of PrivateEpochInfoTrait {
+    fn calculate_next_epoch_starting_block(self: @EpochInfo) -> u64 {
+        let current_block = get_block_number();
+        let blocks_passed = current_block - *self.starting_block;
+        let length: u64 = (*self.length).into();
+        let blocks_to_next_epoch = length - (blocks_passed % length);
+        current_block + blocks_to_next_epoch
+    }
+
+    fn next_epoch(self: @EpochInfo) -> Epoch {
+        self.current_epoch() + 1
     }
 }
 

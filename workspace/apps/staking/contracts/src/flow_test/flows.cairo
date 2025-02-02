@@ -2,9 +2,11 @@ use contracts_commons::test_utils::TokenTrait;
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use staking::flow_test::utils::{
-    FlowTrait, StakingTrait, SystemDelegatorTrait, SystemStakerTrait, SystemState, SystemTrait,
-    SystemType,
+    FlowTrait, Staker, StakingTrait, SystemDelegatorTrait, SystemStakerTrait, SystemState,
+    SystemTrait, SystemType,
 };
+use staking::staking::interface::StakerInfo;
+use staking::test_utils::staker_update_rewards;
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
@@ -654,5 +656,140 @@ pub(crate) impl StakerIntentLastActionFirstFlowImpl<
                 + system.token.balance_of(account: delegator.reward.address)
                 + system.token.balance_of(account: pool),
         );
+    }
+}
+
+/// Flow:
+/// Staker stake without pool
+/// Upgrade
+/// staker_info
+#[derive(Drop, Copy)]
+pub(crate) struct StakerInfoAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) staker_info: Option<StakerInfo>,
+}
+pub(crate) impl StakerInfoAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<StakerInfoAfterUpgradeFlow, TTokenState> {
+    fn setup(ref self: StakerInfoAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+        let one_week = Time::weeks(count: 1);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+
+        let staker_info = system.staker_info(:staker);
+
+        self.staker = Option::Some(staker);
+        self.staker_info = Option::Some(staker_info);
+
+        system.advance_time(time: one_week);
+    }
+
+    fn test(
+        self: StakerInfoAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker_info_after_upgrade = system.staker_info(staker: self.staker.unwrap());
+        let expected_staker_info = staker_update_rewards(
+            staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
+        );
+        assert_eq!(staker_info_after_upgrade, expected_staker_info);
+    }
+}
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Upgrade
+/// staker_info
+#[derive(Drop, Copy)]
+pub(crate) struct StakerInfoWithPoolAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) staker_info: Option<StakerInfo>,
+}
+pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<StakerInfoWithPoolAfterUpgradeFlow, TTokenState> {
+    fn setup(ref self: StakerInfoWithPoolAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+        let one_week = Time::weeks(count: 1);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let delegated_amount = stake_amount / 2;
+        let delegator = system.new_delegator(amount: delegated_amount);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+
+        let staker_info = system.staker_info(:staker);
+
+        self.staker = Option::Some(staker);
+        self.staker_info = Option::Some(staker_info);
+
+        system.advance_time(time: one_week);
+    }
+
+    fn test(
+        self: StakerInfoWithPoolAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker_info_after_upgrade = system.staker_info(staker: self.staker.unwrap());
+        let expected_staker_info = staker_update_rewards(
+            staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
+        );
+        assert_eq!(staker_info_after_upgrade, expected_staker_info);
+    }
+}
+
+/// Flow:
+/// Staker stake with pool
+/// Staker unstake_intent
+/// Upgrade
+/// staker_info
+#[derive(Drop, Copy)]
+pub(crate) struct StakerInfoUnstakeAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) staker_info: Option<StakerInfo>,
+}
+pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<StakerInfoUnstakeAfterUpgradeFlow, TTokenState> {
+    fn setup(ref self: StakerInfoUnstakeAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+        let one_week = Time::weeks(count: 1);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        system.advance_time(time: one_week);
+
+        system.staker_exit_intent(:staker);
+
+        let staker_info = system.staker_info(:staker);
+
+        self.staker = Option::Some(staker);
+        self.staker_info = Option::Some(staker_info);
+
+        system.advance_time(time: one_week);
+    }
+
+    fn test(
+        self: StakerInfoUnstakeAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker_info_after_upgrade = system.staker_info(staker: self.staker.unwrap());
+        let expected_staker_info = self.staker_info.unwrap();
+        assert_eq!(staker_info_after_upgrade, expected_staker_info);
     }
 }

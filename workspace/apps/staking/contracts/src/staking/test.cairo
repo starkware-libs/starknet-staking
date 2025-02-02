@@ -1,16 +1,18 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
-    CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_CLASS_HASH, DUMMY_IDENTIFIER, NON_STAKER_ADDRESS,
-    NON_TOKEN_ADMIN, NOT_STAKING_CONTRACT_ADDRESS, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
-    OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, POOL_CONTRACT_ADDRESS,
-    POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS,
-    STAKER_UNCLAIMED_REWARDS,
+    CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_CLASS_HASH, DUMMY_IDENTIFIER, EPOCH_LENGTH,
+    EPOCH_STARTING_BLOCK, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, NOT_STAKING_CONTRACT_ADDRESS,
+    OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS,
+    OTHER_STAKER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
+    POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
 };
 use contracts_commons::components::replaceability::interface::{EICData, ImplementationData};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::constants::DAY;
 use contracts_commons::errors::Describable;
-use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
+use contracts_commons::test_utils::{
+    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
+};
 use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -30,7 +32,7 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{
     CheatSpan, cheat_account_contract_address, cheat_caller_address,
-    start_cheat_block_timestamp_global,
+    start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
 use staking::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
 use staking::errors::GenericError;
@@ -49,7 +51,7 @@ use staking::staking::interface::{
     StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
-    InternalStakerInfoTestTrait, UndelegateIntentKey, UndelegateIntentValue,
+    EpochInfoTrait, InternalStakerInfoTestTrait, UndelegateIntentKey, UndelegateIntentValue,
     UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
     VersionedInternalStakerInfoGetters, VersionedInternalStakerInfoSetters,
     VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
@@ -63,7 +65,7 @@ use staking::utils::{
 };
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
-use starknet::{ContractAddress, Store, contract_address_const};
+use starknet::{ContractAddress, Store, contract_address_const, get_block_number};
 use test_utils::{
     StakingInitConfig, approve, cheat_reward_for_reward_supplier, constants,
     declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
@@ -2580,7 +2582,8 @@ fn test_get_staker_address_by_operational() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let operational_address = cfg.staker_info.operational_address();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: DUMMY_ADDRESS());
-    staking_dispatcher.get_staker_address_by_operational(:operational_address);
+    let staker_address = staking_dispatcher.get_staker_address_by_operational(:operational_address);
+    assert_eq!(staker_address, cfg.test_info.staker_address);
 }
 
 #[test]
@@ -2603,8 +2606,12 @@ fn test_get_current_epoch() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let delta = Time::weeks(count: 100);
-    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(:delta).into());
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    assert_eq!(current_epoch, 0);
+    advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    assert_eq!(current_epoch, 0);
+    advance_block_number_global(blocks: 1);
     let current_epoch = staking_dispatcher.get_current_epoch();
     assert_eq!(current_epoch, 1);
 }
@@ -3490,6 +3497,101 @@ fn test_versioned_internal_staker_info_into_staker_info_old_version() {
 }
 
 #[test]
+#[should_panic(expected: "Invalid epoch length, must be greater than 0")]
+fn test_epoch_info_new_invalid_length() {
+    EpochInfoTrait::new(length: Zero::zero(), starting_block: get_block_number());
+}
+
+#[test]
+fn test_epoch_info_current_epoch() {
+    let block_number = EPOCH_STARTING_BLOCK;
+    let length = EPOCH_LENGTH;
+    start_cheat_block_number_global(:block_number);
+    let epoch_info = EpochInfoTrait::new(:length, starting_block: get_block_number());
+    assert_eq!(epoch_info.current_epoch(), Zero::zero());
+    advance_block_number_global(blocks: length.into() - 1);
+    assert_eq!(epoch_info.current_epoch(), Zero::zero());
+    advance_block_number_global(blocks: 1);
+    assert_eq!(epoch_info.current_epoch(), 1);
+}
+
+#[test]
+fn test_epoch_info_update() {
+    let block_number = EPOCH_STARTING_BLOCK;
+    let length = EPOCH_LENGTH;
+    start_cheat_block_number_global(:block_number);
+    let mut epoch_info = EpochInfoTrait::new(:length, starting_block: get_block_number());
+    let first_epoch = 10;
+    advance_block_number_global(blocks: first_epoch * length.into());
+    assert_eq!(epoch_info.current_epoch(), first_epoch);
+
+    // Update in the first block of the epoch.
+    let new_epoch_length = length + 1;
+    epoch_info.update(epoch_length: new_epoch_length);
+    assert_eq!(epoch_info.current_epoch(), first_epoch);
+    // Still the same length.
+    advance_block_number_global(blocks: length.into() - 1);
+    assert_eq!(epoch_info.current_epoch(), first_epoch);
+    advance_block_number_global(blocks: 1);
+    assert_eq!(epoch_info.current_epoch(), first_epoch + 1);
+    // Different length.
+    advance_block_number_global(blocks: length.into());
+    assert_eq!(epoch_info.current_epoch(), first_epoch + 1);
+    advance_block_number_global(blocks: 1);
+    assert_eq!(epoch_info.current_epoch(), first_epoch + 2);
+
+    // Update in the last block of the epoch.
+    advance_block_number_global(blocks: length.into());
+    epoch_info.update(epoch_length: EPOCH_LENGTH - 1);
+    assert_eq!(epoch_info.current_epoch(), first_epoch + 2);
+    advance_block_number_global(blocks: 1);
+    assert_eq!(epoch_info.current_epoch(), first_epoch + 3);
+    advance_block_number_global(blocks: length.into() - 2);
+    assert_eq!(epoch_info.current_epoch(), first_epoch + 3);
+    advance_block_number_global(blocks: 1);
+    assert_eq!(epoch_info.current_epoch(), first_epoch + 4);
+}
+
+#[test]
+fn test_set_epoch_length() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let new_length = 2 * EPOCH_LENGTH;
+    let mut spy = snforge_std::spy_events();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
+    );
+    staking_config_dispatcher.set_epoch_length(epoch_length: new_length);
+    advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
+    assert_eq!(staking_dispatcher.get_current_epoch(), 0);
+    advance_block_number_global(blocks: 1);
+    assert_eq!(staking_dispatcher.get_current_epoch(), 1);
+    advance_block_number_global(blocks: EPOCH_LENGTH.into());
+    assert_eq!(staking_dispatcher.get_current_epoch(), 1);
+    advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
+    assert_eq!(staking_dispatcher.get_current_epoch(), 1);
+    advance_block_number_global(blocks: 1);
+    assert_eq!(staking_dispatcher.get_current_epoch(), 2);
+    // Events.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 0, message: "set_epoch_length");
+}
+
+#[test]
+#[should_panic(expected: "ONLY_TOKEN_ADMIN")]
+fn test_set_epoch_length_not_token_admin() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let non_token_admin = NON_TOKEN_ADMIN();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: non_token_admin);
+    staking_config_dispatcher.set_epoch_length(epoch_length: EPOCH_LENGTH);
+}
+
 fn test_staking_eic() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
