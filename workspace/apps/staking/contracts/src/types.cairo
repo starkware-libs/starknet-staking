@@ -4,3 +4,4 @@ pub(crate) type Amount = u128;
 pub(crate) type Index = u128;
 pub(crate) type Inflation = u16;
 pub(crate) type Epoch = u64;
+pub(crate) type Version = u8;

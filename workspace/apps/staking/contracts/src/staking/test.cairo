@@ -100,7 +100,7 @@ fn test_constructor() {
     );
     assert_eq!(state.pool_contract_admin.read(), cfg.test_info.pool_contract_admin);
     assert_eq!(
-        state.prev_class_hash.read(), cfg.staking_contract_info.prev_staking_contract_class_hash,
+        state.prev_class_hash.read(0), cfg.staking_contract_info.prev_staking_contract_class_hash,
     );
 }
 
@@ -3600,7 +3600,7 @@ fn test_staking_eic() {
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
-        eic_init_data: array![MAINNET_STAKING_CLASS_HASH_V0().into()].span(),
+        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V0().into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -3612,10 +3612,10 @@ fn test_staking_eic() {
         contract_address: staking_contract, :implementation_data, :upgrade_governor,
     );
     // Test.
+    let map_selector = selector!("prev_class_hash");
+    let storage_address = snforge_std::map_entry_address(:map_selector, keys: [0].span());
     let prev_class_hash = *snforge_std::load(
-        target: staking_contract,
-        storage_address: selector!("prev_class_hash"),
-        size: Store::<ClassHash>::size().into(),
+        target: staking_contract, :storage_address, size: Store::<ClassHash>::size().into(),
     )
         .at(0);
     assert_eq!(prev_class_hash.try_into().unwrap(), MAINNET_STAKING_CLASS_HASH_V0());

@@ -31,7 +31,7 @@ pub mod Staking {
         VersionedInternalStakerInfoGetters, VersionedInternalStakerInfoSetters,
         VersionedInternalStakerInfoTrait,
     };
-    use staking::types::{Amount, Commission, Epoch, Index};
+    use staking::types::{Amount, Commission, Epoch, Index, Version};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
         compute_global_index_diff, compute_new_delegated_stake, compute_rewards_rounded_down,
@@ -99,8 +99,8 @@ pub mod Staking {
         epoch_info: EpochInfo,
         // The contract staker sends attestation trasaction to.
         attestation_contract: ContractAddress,
-        // Class hash of the previous version of the contract
-        prev_class_hash: ClassHash,
+        // Map version to class hash of the contract.
+        prev_class_hash: Map<Version, ClassHash>,
     }
 
     #[event]
@@ -161,7 +161,7 @@ pub mod Staking {
         self.global_index_last_update_timestamp.write(Time::now());
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
-        self.prev_class_hash.write(prev_class_hash);
+        self.prev_class_hash.write(0, prev_class_hash);
         self.epoch_info.write(epoch_info);
     }
 
@@ -1009,7 +1009,14 @@ pub mod Staking {
             versioned_internal_staker_info: VersionedInternalStakerInfo,
             staker_address: ContractAddress,
         ) -> VersionedInternalStakerInfo {
-            versioned_internal_staker_info.convert(staker_address, self.prev_class_hash.read())
+            versioned_internal_staker_info.convert(staker_address, self.get_prev_class_hash())
+        }
+
+        /// Returns the class hash of the previous contract version.
+        ///
+        /// **Note**: This function must be reimplemented in the next version of the contract.
+        fn get_prev_class_hash(self: @ContractState) -> ClassHash {
+            self.prev_class_hash.read(0)
         }
 
         fn send_rewards(
