@@ -1,5 +1,5 @@
 use contracts_commons::errors::assert_with_byte_array;
-use contracts_commons::math::{Abs, FractionTrait};
+use contracts_commons::math::FractionTrait;
 use contracts_commons::types::time::time::{Time, Timestamp};
 use contracts_commons::types::{HashType, PublicKey, Signature};
 use openzeppelin::account::utils::is_valid_stark_signature;
@@ -74,9 +74,10 @@ pub fn validate_expiration(expiration: Timestamp, err: felt252) {
     assert(Time::now() < expiration, err);
 }
 
-pub fn validate_ratio(n1: i64, d1: i64, n2: i64, d2: i64, err: ByteArray) {
-    let f1 = FractionTrait::new(numerator: n1, denominator: d1.abs());
-    let f2 = FractionTrait::new(numerator: n2, denominator: d2.abs());
+pub fn validate_ratio<N, D, +Into<N, i128>, +Drop<N>, +Into<D, u128>, +Drop<D>>(
+    n1: N, d1: D, n2: N, d2: D, err: ByteArray,
+) {
+    let f1 = FractionTrait::new(numerator: n1, denominator: d1);
+    let f2 = FractionTrait::new(numerator: n2, denominator: d2);
     assert_with_byte_array(f1 <= f2, err);
 }
-
