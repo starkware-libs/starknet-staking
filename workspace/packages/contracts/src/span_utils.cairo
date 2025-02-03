@@ -1,8 +1,14 @@
-/// Validate that all values in the span are within the range [from, to).
-pub fn validate_range<T, +Drop<T>, +Copy<T>, +PartialOrd<T>>(from: T, to: T, span: Span<T>) {
+/// Check that all values in the span are within the range [from, to).
+/// The Result is true if all values are within the range, false otherwise.
+pub fn check_range<T, +Drop<T>, +Copy<T>, +PartialOrd<T>>(from: T, to: T, span: Span<T>) -> bool {
+    let mut result = true;
     for value in span {
-        assert(from <= *value && *value < to, 'Value is out of range');
-    }
+        if from > *value || *value >= to {
+            result = false;
+            break;
+        }
+    };
+    result
 }
 
 pub fn validate_median<T, +Drop<T>, +Copy<T>, +PartialOrd<T>>(median: T, span: Span<T>) {
@@ -25,48 +31,40 @@ pub fn validate_median<T, +Drop<T>, +Copy<T>, +PartialOrd<T>>(median: T, span: S
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_median, validate_range};
+    use super::{check_range, validate_median};
 
     #[test]
-    fn test_validate_range_happy_flow() {
+    fn test_check_range_in_range() {
         let span: Span<u32> = array![0, 9, 1].span();
-        validate_range(0, 10, span);
+        assert(check_range(0, 10, span), 'Should be in range');
     }
 
     #[test]
-    #[should_panic(expected: 'Value is out of range')]
-    fn test_validate_range_out_of_range() {
+    fn test_check_range_out_of_range() {
         let span: Span<u32> = array![0, 10, 1].span();
-        validate_range(0, 10, span);
+        assert(!check_range(0, 10, span), 'Should be out of range');
     }
 
     #[test]
-    fn test_validate_range_empty_span() {
+    fn test_check_range_empty_span() {
         let span: Span<u32> = array![].span();
-        validate_range(0, 10, span);
-        validate_range(0, 0, span);
-        validate_range(10, 10, span);
+        assert(check_range(0, 10, span), 'Should be in range');
+        assert(check_range(0, 0, span), 'Should be in range');
+        assert(check_range(10, 10, span), 'Should be in range');
     }
 
     #[test]
-    fn test_validate_range_single_value_happy_flow() {
+    fn test_check_range_single_value() {
         let span: Span<u32> = array![5].span();
-        validate_range(0, 10, span);
-        validate_range(5, 6, span);
+        assert(check_range(0, 10, span), 'Should be in range');
+        assert(check_range(5, 6, span), 'Should be in range');
+        assert(!check_range(0, 5, span), 'Should be out of range');
     }
 
     #[test]
-    #[should_panic(expected: 'Value is out of range')]
-    fn test_validate_range_single_value_out_of_range() {
-        let span: Span<u32> = array![10].span();
-        validate_range(0, 10, span);
-    }
-
-    #[test]
-    #[should_panic(expected: 'Value is out of range')]
-    fn test_validate_range_to_lower_than_from() {
+    fn test_check_range_to_lower_than_from() {
         let span: Span<u32> = array![5].span();
-        validate_range(10, 0, span);
+        assert(!check_range(10, 0, span), 'Should be out of range');
     }
 
 
