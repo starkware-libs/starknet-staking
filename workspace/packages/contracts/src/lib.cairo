@@ -27,5 +27,7 @@ pub mod test_utils;
 
 #[cfg(test)]
 mod tests;
+
+pub mod trace;
 pub mod types;
 pub mod utils;
