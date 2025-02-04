@@ -3,11 +3,12 @@ pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::OptionAuxTrait;
+    use contracts_commons::errors::{Describable, OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
+    use core::panics::panic_with_byte_array;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -26,10 +27,10 @@ pub mod Staking {
         IStakingPool, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
     };
     use staking::staking::objects::{
-        EpochInfo, EpochInfoTrait, UndelegateIntentKey, UndelegateIntentValue,
-        UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
-        VersionedInternalStakerInfoGetters, VersionedInternalStakerInfoSetters,
-        VersionedInternalStakerInfoTrait,
+        EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, UndelegateIntentKey,
+        UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
+        VersionedInternalStakerInfo, VersionedInternalStakerInfoGetters,
+        VersionedInternalStakerInfoSetters, VersionedInternalStakerInfoTrait,
     };
     use staking::types::{Amount, Commission, Epoch, Index, Version};
     use staking::utils::{
@@ -666,16 +667,18 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingMigrationImpl of IStakingMigration<ContractState> {
-        /// pre-condition: `versioned_internal_staker_info` must match the `staker_address` key in
-        /// the `self.staker_info` storage map.
-        fn convert_from_upgraded_contract(
-            self: @ContractState,
-            versioned_internal_staker_info: VersionedInternalStakerInfo,
-            staker_address: ContractAddress,
+        fn internal_staker_info(
+            self: @ContractState, staker_address: ContractAddress,
         ) -> VersionedInternalStakerInfo {
-            // TODO emit event
-            self.assert_caller_is_staking_contract();
-            self.convert(versioned_internal_staker_info, staker_address)
+            let versioned_internal_staker_info = self.staker_info.read(staker_address);
+            match versioned_internal_staker_info {
+                VersionedInternalStakerInfo::None => panic_with_byte_array(
+                    err: @GenericError::STAKER_NOT_EXISTS.describe(),
+                ),
+                VersionedInternalStakerInfo::V0(internal_staker_info_v0) => internal_staker_info_v0
+                    .convert(self.get_prev_class_hash(), staker_address),
+                VersionedInternalStakerInfo::V1(_) => versioned_internal_staker_info,
+            }
         }
     }
 
@@ -1003,22 +1006,17 @@ pub mod Staking {
     }
 
     #[generate_trait]
-    pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
-        fn convert(
-            self: @ContractState,
-            versioned_internal_staker_info: VersionedInternalStakerInfo,
-            staker_address: ContractAddress,
-        ) -> VersionedInternalStakerInfo {
-            versioned_internal_staker_info.convert(staker_address, self.get_prev_class_hash())
-        }
-
+    pub(crate) impl InternalStakingMigration of IStakingMigrationInternal {
         /// Returns the class hash of the previous contract version.
         ///
         /// **Note**: This function must be reimplemented in the next version of the contract.
         fn get_prev_class_hash(self: @ContractState) -> ClassHash {
             self.prev_class_hash.read(0)
         }
+    }
 
+    #[generate_trait]
+    pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         fn send_rewards(
             self: @ContractState,
             reward_address: ContractAddress,
@@ -1086,18 +1084,6 @@ pub mod Staking {
 
         fn assert_is_unpaused(self: @ContractState) {
             assert!(!self.is_paused(), "{}", Error::CONTRACT_IS_PAUSED);
-        }
-
-        /// Reads the internal staker information for the given `staker_address` from storage and
-        /// returns the latest version of this struct.
-        ///
-        /// Use this function instead of directly accessing storage to ensure you retrieve the
-        /// latest version of the struct. Direct storage access may return an outdated version,
-        /// which could be misaligned with the code and probably cause panics.
-        fn internal_staker_info(
-            self: @ContractState, staker_address: ContractAddress,
-        ) -> VersionedInternalStakerInfo {
-            self.convert(self.staker_info.read(staker_address), staker_address)
         }
 
         fn calculate_and_update_pool_rewards(
