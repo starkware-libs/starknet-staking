@@ -34,11 +34,11 @@ use staking::staking::interface::{
     IStakingPauseDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
 };
 use staking::staking::objects::{
-    EpochInfo, VersionedInternalStakerInfo, VersionedInternalStakerInfoGetters,
+    EpochInfo, InternalStakerInfoLatestTrait, VersionedInternalStakerInfo,
     VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
-use staking::types::{Amount, Commission, Index};
+use staking::types::{Amount, Commission, Index, InternalStakerInfoLatest};
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_commission_amount_rounded_up,
     compute_rewards_rounded_down, compute_rewards_rounded_up,
@@ -474,9 +474,9 @@ pub(crate) fn stake_for_testing(
     );
     state
         .stake(
-            cfg.staker_info.reward_address(),
-            cfg.staker_info.operational_address(),
-            cfg.staker_info.amount_own(),
+            cfg.staker_info.reward_address,
+            cfg.staker_info.operational_address,
+            cfg.staker_info.amount_own,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -492,9 +492,9 @@ pub(crate) fn stake_for_testing_using_dispatcher(
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
         .stake(
-            cfg.staker_info.reward_address(),
-            cfg.staker_info.operational_address(),
-            cfg.staker_info.amount_own(),
+            cfg.staker_info.reward_address,
+            cfg.staker_info.operational_address,
+            cfg.staker_info.amount_own,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -509,9 +509,9 @@ pub(crate) fn stake_from_zero_address(
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
         .stake(
-            cfg.staker_info.reward_address(),
-            cfg.staker_info.operational_address(),
-            cfg.staker_info.amount_own(),
+            cfg.staker_info.reward_address,
+            cfg.staker_info.operational_address,
+            cfg.staker_info.amount_own,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -874,7 +874,7 @@ struct RewardSupplierInfo {
 
 #[derive(Drop, Copy)]
 pub(crate) struct StakingInitConfig {
-    pub staker_info: VersionedInternalStakerInfo,
+    pub staker_info: InternalStakerInfoLatest,
     pub pool_member_info: InternalPoolMemberInfo,
     pub staking_contract_info: StakingContractInfoCfg,
     pub minting_curve_contract_info: MintingCurveContractInfo,
@@ -884,7 +884,7 @@ pub(crate) struct StakingInitConfig {
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
     fn default() -> StakingInitConfig {
-        let staker_info = VersionedInternalStakerInfoTrait::new_latest(
+        let staker_info = InternalStakerInfoLatest {
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
@@ -899,7 +899,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
                     commission: COMMISSION,
                 },
             ),
-        );
+        };
         let pool_member_info = InternalPoolMemberInfo {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             amount: POOL_MEMBER_STAKE_AMOUNT,

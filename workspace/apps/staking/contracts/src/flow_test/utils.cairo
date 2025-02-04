@@ -29,10 +29,9 @@ use staking::staking::interface::{
     StakerInfo, StakerInfoTrait,
 };
 use staking::staking::objects::EpochInfo;
-use staking::staking::objects::VersionedInternalStakerInfo;
 use staking::test_utils::constants::STRK_TOKEN_ADDRESS;
 use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
-use staking::types::{Amount, Commission, Index};
+use staking::types::{Amount, Commission, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
 
 mod MainnetAddresses {
@@ -607,7 +606,7 @@ pub(crate) impl SystemStakerImpl<
 
     fn internal_staker_info(
         self: SystemState<TTokenState>, staker: Staker,
-    ) -> VersionedInternalStakerInfo {
+    ) -> InternalStakerInfoLatest {
         self
             .staking
             .migration_dispatcher()

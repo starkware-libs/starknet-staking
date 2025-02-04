@@ -7,7 +7,6 @@ use staking::attestation::interface::{
     IAttestationSafeDispatcherTrait,
 };
 use staking::event_test_utils::assert_number_of_events;
-use staking::staking::objects::VersionedInternalStakerInfoGetters;
 use staking::test_utils;
 use test_utils::{
     StakingInitConfig, advance_epoch_global, general_contract_system_deployment,
@@ -23,7 +22,7 @@ fn test_attest() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
-    let operational_address = cfg.staker_info.operational_address();
+    let operational_address = cfg.staker_info.operational_address;
     let staker_address = cfg.test_info.staker_address;
     let mut spy = snforge_std::spy_events();
     advance_epoch_global();
@@ -52,7 +51,7 @@ fn test_attest_assertions() {
     let attestation_safe_dispatcher = IAttestationSafeDispatcher {
         contract_address: attestation_contract,
     };
-    let operational_address = cfg.staker_info.operational_address();
+    let operational_address = cfg.staker_info.operational_address;
     // Catch ATTEST_IS_DONE.
     let attest_info = AttestInfo {};
     advance_epoch_global();
@@ -77,7 +76,7 @@ fn test_is_attestation_done_in_curr_epoch() {
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
-    let operational_address = cfg.staker_info.operational_address();
+    let operational_address = cfg.staker_info.operational_address;
     advance_epoch_global();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
@@ -118,7 +117,7 @@ fn test_get_last_epoch_attestation_done() {
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
-    let operational_address = cfg.staker_info.operational_address();
+    let operational_address = cfg.staker_info.operational_address;
     advance_epoch_global();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,

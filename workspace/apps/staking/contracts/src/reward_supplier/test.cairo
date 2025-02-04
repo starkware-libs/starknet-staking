@@ -32,7 +32,6 @@ use staking::reward_supplier::interface::{
     IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfo,
 };
 use staking::reward_supplier::reward_supplier::RewardSupplier;
-use staking::staking::objects::VersionedInternalStakerInfoSetters;
 use staking::staking::staking::Staking;
 use staking::test_utils;
 use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
@@ -107,7 +106,7 @@ fn test_claim_rewards() {
     cfg.test_info.staking_contract = staking_contract;
     let amount = (cfg.test_info.initial_supply / 2).try_into().expect('amount does not fit in');
     cfg.test_info.staker_initial_balance = amount;
-    cfg.staker_info.set_amount_own(amount);
+    cfg.staker_info.amount_own = amount;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     // Deploy the minting curve contract.
     let minting_curve_contract = deploy_minting_curve_contract(:cfg);
@@ -142,7 +141,7 @@ fn test_calculate_staking_rewards() {
     cfg.test_info.staking_contract = staking_contract;
     let amount = (cfg.test_info.initial_supply / 2).try_into().expect('amount does not fit in');
     cfg.test_info.staker_initial_balance = amount;
-    cfg.staker_info.set_amount_own(amount);
+    cfg.staker_info.amount_own = amount;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     // Deploy the minting curve contract.
     let minting_curve_contract = deploy_minting_curve_contract(:cfg);
