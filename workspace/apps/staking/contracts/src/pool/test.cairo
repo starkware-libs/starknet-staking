@@ -177,12 +177,14 @@ fn test_enter_delegation_pool() {
         commission: cfg.pool_member_info.commission,
         unclaimed_rewards: cfg.pool_member_info.unclaimed_rewards,
         unpool_amount: Zero::zero(),
+        new_amount: cfg.pool_member_info.amount.into(),
     };
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     assert_eq!(
         pool_dispatcher.pool_member_info(cfg.test_info.pool_member_address),
         expected_pool_member_info,
     );
+
     // Check that all the pool amount was transferred to the staking contract.
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = token_dispatcher.balance_of(staking_contract);
@@ -562,9 +564,11 @@ fn test_claim_rewards() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     // Check that the pool member info was updated correctly.
+    let mut expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
+    expected_pool_member_info.new_amount = cfg.pool_member_info.amount.into();
     assert_eq!(
         pool_dispatcher.pool_member_info(cfg.test_info.pool_member_address),
-        cfg.pool_member_info.into(),
+        expected_pool_member_info,
     );
     // Update index for testing.
     let updated_index: Index = cfg.staker_info.index + BASE_VALUE;
@@ -625,15 +629,18 @@ fn test_exit_delegation_pool_intent() {
     // Validate the expected pool member info and staker info.
     let expected_time = Time::now()
         .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
-    let expected_pool_member_info = InternalPoolMemberInfo {
+    let mut expected_pool_member_info = InternalPoolMemberInfo {
         amount: Zero::zero(),
         unpool_amount: cfg.pool_member_info.amount,
         unpool_time: Option::Some(expected_time),
         ..cfg.pool_member_info,
     };
+    // This should break when intent will update new_amount.
+    let mut expected_pool_member_info: PoolMemberInfo = expected_pool_member_info.into();
+    expected_pool_member_info.new_amount = cfg.pool_member_info.amount.into();
     assert_eq!(
         pool_dispatcher.pool_member_info(cfg.test_info.pool_member_address),
-        expected_pool_member_info.into(),
+        expected_pool_member_info,
     );
     let mut expected_staker_info: StakerInfo = cfg.staker_info.into();
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
@@ -1051,6 +1058,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
         commission: cfg.pool_member_info.commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
+        new_amount: Zero::zero(),
     };
     assert_eq!(pool_member_info, expected_pool_member_info);
 
@@ -1356,7 +1364,8 @@ fn test_get_pool_member_info() {
     assert!(option_pool_member_info.is_none());
     // Check after enter the pool.
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
-    let expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
+    let mut expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
+    expected_pool_member_info.new_amount = cfg.pool_member_info.amount.into();
     let option_pool_member_info = pool_dispatcher.get_pool_member_info(:pool_member);
     assert_eq!(option_pool_member_info, Option::Some(expected_pool_member_info));
 }
@@ -1371,7 +1380,8 @@ fn test_pool_member_info() {
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
-    let expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
+    let mut expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
+    expected_pool_member_info.new_amount = cfg.pool_member_info.amount.into();
     let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     assert_eq!(pool_member_info, expected_pool_member_info);
 
