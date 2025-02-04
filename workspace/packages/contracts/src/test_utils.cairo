@@ -119,7 +119,6 @@ pub fn assert_expected_event_emitted<T, +starknet::Event<T>, +Drop<T>, +Debug<T>
     assert_eq!(expected_event, actual_event);
 }
 
-
 /// The `TokenConfig` struct is used to configure the initial settings for a token contract.
 /// It includes the initial supply of tokens and the owner's address.
 #[derive(Drop)]
