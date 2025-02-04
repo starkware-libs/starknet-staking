@@ -5,6 +5,7 @@ pub mod Pool {
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::OptionAuxTrait;
     use contracts_commons::interfaces::identity::Identity;
+    use contracts_commons::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     use contracts_commons::types::time::time::{Time, Timestamp};
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
@@ -12,8 +13,6 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use openzeppelin::utils::structs::Trace;
-    use openzeppelin::utils::structs::checkpoint::TraceTrait;
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, PoolContractInfo, PoolMemberInfo};
@@ -700,7 +699,7 @@ pub mod Pool {
 
         fn set_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
-        ) -> (u256, u256) {
+        ) -> (Amount, Amount) {
             let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
             member_checkpoint.push(key: self.get_next_epoch(), value: amount.into())
             // TODO: Emit event?
