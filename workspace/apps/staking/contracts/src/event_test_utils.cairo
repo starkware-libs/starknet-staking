@@ -1,5 +1,5 @@
+use contracts_commons::test_utils::assert_expected_event_emitted;
 use contracts_commons::types::time::time::{TimeDelta, Timestamp};
-use core::fmt::Debug;
 use snforge_std::cheatcodes::events::{Event, EventSpy, EventSpyTrait};
 use staking::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
 use staking::pool::interface::Events as PoolEvents;
@@ -464,24 +464,4 @@ pub(crate) fn assert_reward_supplier_changed_event(
     assert_expected_event_emitted(
         :spied_event, :expected_event, expected_event_selector: @selector!("RewardSupplierChanged"),
     );
-}
-
-pub(crate) fn assert_expected_event_emitted<
-    T, +starknet::Event<T>, +Drop<T>, +Debug<T>, +PartialEq<T>,
->(
-    spied_event: @(ContractAddress, Event), expected_event: T, expected_event_selector: @felt252,
-) {
-    let (_, raw_event) = spied_event;
-    let mut data = raw_event.data.span();
-    let mut keys = raw_event.keys.span();
-
-    // Remove the first key from the spied event's keys. This key corresponds to the
-    // `sn_keccak` hash of the event name, which is currently not included in the
-    // expected event's keys.
-    if keys.pop_front() != Option::Some(expected_event_selector) {
-        panic!("Expected event type does not match the actual event type");
-    };
-
-    let actual_event = starknet::Event::<T>::deserialize(ref :keys, ref :data).unwrap();
-    assert_eq!(expected_event, actual_event);
 }
