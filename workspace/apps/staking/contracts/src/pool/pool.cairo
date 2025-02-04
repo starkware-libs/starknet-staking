@@ -12,6 +12,8 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use openzeppelin::utils::structs::Trace;
+    use openzeppelin::utils::structs::checkpoint::TraceTrait;
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, PoolContractInfo, PoolMemberInfo};
@@ -20,13 +22,13 @@ pub mod Pool {
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
         IStakingPoolDispatcherTrait, StakerInfo,
     };
-    use staking::types::{Amount, Commission, Index};
+    use staking::types::{Amount, Commission, Epoch, Index};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_up,
         compute_rewards_rounded_down,
     };
     use starknet::event::EventEmitter;
-    use starknet::storage::Map;
+    use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -64,6 +66,8 @@ pub mod Pool {
         token_dispatcher: IERC20Dispatcher,
         // The commission rate for the pool, in BPS.
         commission: Commission,
+        // Map pool member to their epoch-balance info.
+        pool_member_epoch_balance: Map<ContractAddress, Trace>,
     }
 
     #[event]
@@ -156,6 +160,7 @@ pub mod Pool {
                         },
                     ),
                 );
+            self.set_next_epoch_balance(:pool_member, :amount);
 
             // Emit events.
             self
@@ -494,7 +499,10 @@ pub mod Pool {
             self.update_rewards(ref :pool_member_info, :updated_index);
             pool_member_info.commission = commission;
 
-            pool_member_info.into()
+            let new_amount = self.pool_member_epoch_balance.entry(pool_member).latest();
+            let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
+            external_pool_member_info.new_amount = new_amount.into();
+            external_pool_member_info
         }
 
         fn get_pool_member_info(
@@ -681,6 +689,21 @@ pub mod Pool {
             let updated_index = staking_pool_dispatcher
                 .add_stake_from_pool(:staker_address, :amount);
             updated_index
+        }
+
+        fn get_next_epoch(self: @ContractState) -> Epoch {
+            let staking_dispatcher = IStakingDispatcher {
+                contract_address: self.staking_pool_dispatcher.read().contract_address,
+            };
+            staking_dispatcher.get_current_epoch() + 1
+        }
+
+        fn set_next_epoch_balance(
+            ref self: ContractState, pool_member: ContractAddress, amount: Amount,
+        ) -> (u256, u256) {
+            let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
+            member_checkpoint.push(key: self.get_next_epoch(), value: amount.into())
+            // TODO: Emit event?
         }
     }
 }

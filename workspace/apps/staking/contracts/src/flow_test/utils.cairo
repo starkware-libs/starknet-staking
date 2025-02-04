@@ -8,9 +8,9 @@ use contracts_commons::components::replaceability::interface::{
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::{
-    Deployable, TokenConfig, TokenState, TokenTrait, cheat_caller_address_once,
-    set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
-    set_account_as_token_admin, set_account_as_upgrade_governor,
+    Deployable, TokenConfig, TokenState, TokenTrait, advance_block_number_global,
+    cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
+    set_account_as_security_agent, set_account_as_token_admin, set_account_as_upgrade_governor,
 };
 use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
@@ -29,7 +29,7 @@ use staking::staking::interface::{
     StakerInfo, StakerInfoTrait,
 };
 use staking::staking::objects::EpochInfo;
-use staking::test_utils::constants::STRK_TOKEN_ADDRESS;
+use staking::test_utils::constants::{EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS};
 use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
 use staking::types::{Amount, Commission, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
@@ -460,6 +460,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         let staking_config_dispatcher = IStakingConfigDispatcher { contract_address };
         cheat_caller_address_once(:contract_address, caller_address: staking.roles.token_admin);
         staking_config_dispatcher.set_reward_supplier(reward_supplier: reward_supplier.address);
+        advance_block_number_global(blocks: EPOCH_STARTING_BLOCK);
         SystemState { token, staking, minting_curve, reward_supplier, base_account: 0x100000 }
     }
 }
