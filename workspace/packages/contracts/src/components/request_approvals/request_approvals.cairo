@@ -29,7 +29,7 @@ pub(crate) mod RequestApprovalsComponent {
         fn get_request_status(
             self: @ComponentState<TContractState>, request_hash: felt252,
         ) -> RequestStatus {
-            self.get_request_status_internal(:request_hash)
+            self._get_request_status(:request_hash)
         }
     }
 
@@ -52,7 +52,7 @@ pub(crate) mod RequestApprovalsComponent {
         ) -> HashType {
             let request_hash = args.get_message_hash(:public_key);
             assert(
-                self.get_request_status_internal(:request_hash) == RequestStatus::NOT_EXIST,
+                self._get_request_status(:request_hash) == RequestStatus::NOT_EXIST,
                 errors::APPROVAL_ALREADY_REGISTERED,
             );
             if owner_account.is_non_zero() {
@@ -73,7 +73,7 @@ pub(crate) mod RequestApprovalsComponent {
             ref self: ComponentState<TContractState>, args: T, public_key: PublicKey,
         ) -> HashType {
             let request_hash = args.get_message_hash(:public_key);
-            let request_status = self.get_request_status_internal(:request_hash);
+            let request_status = self._get_request_status(:request_hash);
             match request_status {
                 RequestStatus::NOT_EXIST => panic_with_felt(errors::APPROVAL_NOT_REGISTERED),
                 RequestStatus::DONE => panic_with_felt(errors::DEPOSIT_ALREADY_PROCESSED),
@@ -82,9 +82,13 @@ pub(crate) mod RequestApprovalsComponent {
             self.approved_requests.write(request_hash, RequestStatus::DONE);
             request_hash
         }
+    }
 
-
-        fn get_request_status_internal(
+    #[generate_trait]
+    impl PrivateImpl<
+        TContractState, +HasComponent<TContractState>,
+    > of PrivateTrait<TContractState> {
+        fn _get_request_status(
             self: @ComponentState<TContractState>, request_hash: felt252,
         ) -> RequestStatus {
             self.approved_requests.read(request_hash)

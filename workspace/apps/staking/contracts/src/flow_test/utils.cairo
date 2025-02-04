@@ -25,9 +25,11 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
-    IStakingDispatcherTrait, StakerInfo, StakerInfoTrait,
+    IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
+    StakerInfo, StakerInfoTrait,
 };
 use staking::staking::objects::EpochInfo;
+use staking::staking::objects::VersionedInternalStakerInfo;
 use staking::test_utils::constants::STRK_TOKEN_ADDRESS;
 use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
 use staking::types::{Amount, Commission, Index};
@@ -149,6 +151,10 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn dispatcher(self: StakingState) -> IStakingDispatcher nopanic {
         IStakingDispatcher { contract_address: self.address }
+    }
+
+    fn migration_dispatcher(self: StakingState) -> IStakingMigrationDispatcher nopanic {
+        IStakingMigrationDispatcher { contract_address: self.address }
     }
 
     fn set_roles(self: StakingState) {
@@ -597,6 +603,15 @@ pub(crate) impl SystemStakerImpl<
 
     fn staker_info(self: SystemState<TTokenState>, staker: Staker) -> StakerInfo {
         self.staking.dispatcher().staker_info(staker_address: staker.staker.address)
+    }
+
+    fn internal_staker_info(
+        self: SystemState<TTokenState>, staker: Staker,
+    ) -> VersionedInternalStakerInfo {
+        self
+            .staking
+            .migration_dispatcher()
+            .internal_staker_info(staker_address: staker.staker.address)
     }
 }
 

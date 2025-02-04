@@ -1,10 +1,10 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
-    CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_CLASS_HASH, DUMMY_IDENTIFIER, EPOCH_LENGTH,
-    EPOCH_STARTING_BLOCK, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, NOT_STAKING_CONTRACT_ADDRESS,
-    OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS,
-    OTHER_STAKER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
-    POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
+    CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
+    NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
+    OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, POOL_CONTRACT_ADDRESS,
+    POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS,
+    STAKER_UNCLAIMED_REWARDS,
 };
 use contracts_commons::components::replaceability::interface::{EICData, ImplementationData};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
@@ -45,7 +45,7 @@ use staking::reward_supplier::interface::IRewardSupplierDispatcher;
 use staking::staking::errors::Error;
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
-    IStakingDispatcherTrait, IStakingMigrationSafeDispatcher, IStakingMigrationSafeDispatcherTrait,
+    IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher,
     IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
     StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
@@ -2658,29 +2658,6 @@ fn test_update_rewards_from_attestation_contract_assertions() {
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 }
 
-fn test_convert_from_upgraded_contract_caller_is_not_staking_contract() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-
-    let staking_contract = cfg.test_info.staking_contract;
-    let staking_safe_dispatcher = IStakingMigrationSafeDispatcher {
-        contract_address: staking_contract,
-    };
-
-    // Catch CALLER_IS_NOT_STAKING_CONTRACT.
-    let staker_address = cfg.test_info.staker_address;
-    let internal_staker_info = cfg.staker_info;
-    let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS();
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: not_staking_contract,
-    );
-    let result = staking_safe_dispatcher
-        .convert_from_upgraded_contract(internal_staker_info, staker_address);
-    assert_panic_with_error(
-        :result, expected_error: GenericError::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
-    );
-}
-
 const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
 
 #[test]
@@ -2880,57 +2857,29 @@ fn test_versioned_internal_staker_info_is_latest() {
     assert!(versioned_latest.is_latest());
 }
 
-// TODO with yaniv's tests
 #[test]
-#[ignore]
-fn test_versioned_internal_staker_info_convert() {
-    let versioned_v0 = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    let versioned_latest = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    assert_eq!(
-        versioned_v0
-            .convert(staker_address: DUMMY_ADDRESS(), staking_prev_class_hash: DUMMY_CLASS_HASH()),
-        versioned_latest,
-    );
-}
-
-#[test]
-fn test_versioned_internal_staker_info_convert_v1() {
-    let versioned_v1 = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    let converted_versioned = versioned_v1
-        .convert(staker_address: DUMMY_ADDRESS(), staking_prev_class_hash: DUMMY_CLASS_HASH());
-    assert_eq!(converted_versioned, versioned_v1);
+fn test_internal_staker_info() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let mut expected_internal_staker_info = cfg.staker_info;
+    expected_internal_staker_info.set_pool_info(Option::None);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let internal_staker_info = staking_dispatcher.internal_staker_info(:staker_address);
+    assert_eq!(internal_staker_info, expected_internal_staker_info);
 }
 
 #[test]
 #[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_convert_staker_not_exist() {
-    let versioned_none = VersionedInternalStakerInfo::None;
-    versioned_none
-        .convert(staker_address: DUMMY_ADDRESS(), staking_prev_class_hash: DUMMY_CLASS_HASH());
+fn test_internal_staker_info_staker_not_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
+    staking_dispatcher.internal_staker_info(staker_address: DUMMY_ADDRESS());
 }
 
 #[test]

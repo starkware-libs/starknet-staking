@@ -1,7 +1,9 @@
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::interfaces::identity::{IdentityDispatcher, IdentityDispatcherTrait};
+use core::fmt::Debug;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::byte_array::try_deserialize_bytearray_error;
+use snforge_std::cheatcodes::events::Event;
 use snforge_std::{
     CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address,
     start_cheat_block_number_global,
@@ -98,6 +100,25 @@ pub fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArra
         ),
     }
 }
+
+pub fn assert_expected_event_emitted<T, +starknet::Event<T>, +Drop<T>, +Debug<T>, +PartialEq<T>>(
+    spied_event: @(ContractAddress, Event), expected_event: T, expected_event_selector: @felt252,
+) {
+    let (_, raw_event) = spied_event;
+    let mut data = raw_event.data.span();
+    let mut keys = raw_event.keys.span();
+
+    // Remove the first key from the spied event's keys. This key corresponds to the
+    // `sn_keccak` hash of the event name, which is currently not included in the
+    // expected event's keys.
+    if keys.pop_front() != Option::Some(expected_event_selector) {
+        panic!("Expected event type does not match the actual event type");
+    };
+
+    let actual_event = starknet::Event::<T>::deserialize(ref :keys, ref :data).unwrap();
+    assert_eq!(expected_event, actual_event);
+}
+
 
 /// The `TokenConfig` struct is used to configure the initial settings for a token contract.
 /// It includes the initial supply of tokens and the owner's address.

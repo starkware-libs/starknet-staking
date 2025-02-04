@@ -42,7 +42,7 @@ pub(crate) mod Deposit {
             quantized_amount: u128,
             beneficiary: u32,
             salt: felt252,
-        ) {
+        ) -> HashType {
             assert(quantized_amount > 0, errors::ZERO_AMOUNT);
             let deposit_hash = self
                 .deposit_hash(
@@ -77,6 +77,7 @@ pub(crate) mod Deposit {
                         deposit_request_hash: deposit_hash,
                     },
                 );
+            deposit_hash
         }
 
         fn get_deposit_status(
@@ -100,23 +101,6 @@ pub(crate) mod Deposit {
             self.cancellation_time.write(Time::weeks(count: 1));
         }
 
-        fn deposit_hash(
-            ref self: ComponentState<TContractState>,
-            signer: ContractAddress,
-            asset_id: felt252,
-            quantized_amount: u128,
-            beneficiary: u32,
-            salt: felt252,
-        ) -> HashType {
-            PoseidonTrait::new()
-                .update_with(value: signer)
-                .update_with(value: asset_id)
-                .update_with(value: quantized_amount)
-                .update_with(value: beneficiary)
-                .update_with(value: salt)
-                .finalize()
-        }
-
         fn register_token(
             ref self: ComponentState<TContractState>,
             asset_id: felt252,
@@ -135,7 +119,7 @@ pub(crate) mod Deposit {
             quantized_amount: u128,
             beneficiary: u32,
             salt: felt252,
-        ) {
+        ) -> HashType {
             assert(quantized_amount > 0, errors::ZERO_AMOUNT);
             let deposit_hash = self
                 .deposit_hash(signer: depositor, :asset_id, :quantized_amount, :beneficiary, :salt);
@@ -165,8 +149,14 @@ pub(crate) mod Deposit {
                         );
                 },
             };
+            deposit_hash
         }
+    }
 
+    #[generate_trait]
+    impl PrivateImpl<
+        TContractState, +HasComponent<TContractState>,
+    > of PrivateTrait<TContractState> {
         fn _get_deposit_status(
             self: @ComponentState<TContractState>, deposit_hash: HashType,
         ) -> DepositStatus {
@@ -179,6 +169,23 @@ pub(crate) mod Deposit {
             let (token_address, quantum) = self.asset_info.read(asset_id);
             assert(token_address.is_non_zero(), errors::ASSET_NOT_REGISTERED);
             (token_address, quantum)
+        }
+
+        fn deposit_hash(
+            ref self: ComponentState<TContractState>,
+            signer: ContractAddress,
+            asset_id: felt252,
+            quantized_amount: u128,
+            beneficiary: u32,
+            salt: felt252,
+        ) -> HashType {
+            PoseidonTrait::new()
+                .update_with(value: signer)
+                .update_with(value: asset_id)
+                .update_with(value: quantized_amount)
+                .update_with(value: beneficiary)
+                .update_with(value: salt)
+                .finalize()
         }
     }
 }

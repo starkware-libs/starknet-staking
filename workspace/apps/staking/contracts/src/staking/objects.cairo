@@ -133,6 +133,16 @@ pub(crate) enum VersionedInternalStakerInfo {
 }
 
 #[generate_trait]
+pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
+    fn convert(
+        self: InternalStakerInfo, prev_class_hash: ClassHash, staker_address: ContractAddress,
+    ) -> VersionedInternalStakerInfo {
+        let library_dispatcher = IStakingLibraryDispatcher { class_hash: prev_class_hash };
+        library_dispatcher.staker_info(staker_address).into()
+    }
+}
+
+#[generate_trait]
 pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTrait {
     fn new_latest(
         reward_address: ContractAddress,
@@ -168,25 +178,6 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
             VersionedInternalStakerInfo::V1(_) => true,
             VersionedInternalStakerInfo::None(_) => true,
             _ => false,
-        }
-    }
-
-    fn convert(
-        self: VersionedInternalStakerInfo,
-        staker_address: ContractAddress,
-        staking_prev_class_hash: ClassHash,
-    ) -> VersionedInternalStakerInfo {
-        match self {
-            VersionedInternalStakerInfo::None => panic_with_byte_array(
-                err: @GenericError::STAKER_NOT_EXISTS.describe(),
-            ),
-            VersionedInternalStakerInfo::V0(_) => {
-                let library_dispatcher = IStakingLibraryDispatcher {
-                    class_hash: staking_prev_class_hash,
-                };
-                library_dispatcher.staker_info(staker_address).into()
-            },
-            VersionedInternalStakerInfo::V1(_) => self,
         }
     }
 
