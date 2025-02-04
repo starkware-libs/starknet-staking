@@ -71,3 +71,16 @@ fn test_length() {
     mock_trace.push(200, 2000);
     assert_eq!(mock_trace.length(), 2);
 }
+
+#[test]
+fn test_upper_lookup() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    mock_trace.push(100, 1000);
+    mock_trace.push(200, 2000);
+
+    assert_eq!(mock_trace.upper_lookup(100), 1000);
+    assert_eq!(mock_trace.upper_lookup(150), 1000);
+    assert_eq!(mock_trace.upper_lookup(200), 2000);
+    assert_eq!(mock_trace.upper_lookup(250), 2000);
+}

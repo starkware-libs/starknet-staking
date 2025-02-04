@@ -4,6 +4,7 @@ pub trait IMockTrace<TContractState> {
     fn latest(self: @TContractState) -> u128;
     fn latest_checkpoint(self: @TContractState) -> (bool, u64, u128);
     fn length(self: @TContractState) -> u64;
+    fn upper_lookup(self: @TContractState, key: u64) -> u128;
 }
 
 #[starknet::contract]
@@ -31,6 +32,10 @@ pub mod MockTrace {
 
         fn length(self: @ContractState) -> u64 {
             self.trace.deref().length()
+        }
+
+        fn upper_lookup(self: @ContractState, key: u64) -> u128 {
+            self.trace.deref().upper_lookup(:key)
         }
     }
 }
