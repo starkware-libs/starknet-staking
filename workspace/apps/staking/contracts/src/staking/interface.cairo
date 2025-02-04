@@ -2,10 +2,9 @@ use contracts_commons::errors::OptionAuxTrait;
 use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use staking::staking::errors::Error;
 use staking::staking::objects::{
-    EpochInfo, UndelegateIntentKey, UndelegateIntentValue, VersionedInternalStakerInfo,
-    VersionedInternalStakerInfoTrait,
+    EpochInfo, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
 };
-use staking::types::{Amount, Commission, Epoch, Index};
+use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
 
 /// Public interface for the staking contract.
@@ -62,7 +61,7 @@ pub trait IStakingMigration<TContractState> {
     /// which could be misaligned with the code and probably cause panics.
     fn internal_staker_info(
         self: @TContractState, staker_address: ContractAddress,
-    ) -> VersionedInternalStakerInfo;
+    ) -> InternalStakerInfoLatest;
 }
 
 /// Interface for the staking pool contract.
@@ -369,12 +368,11 @@ pub struct StakerInfo {
     pub pool_info: Option<StakerPoolInfo>,
 }
 
-pub(crate) impl StakerInfoIntoVersionedInternalStakerInfo of Into<
-    StakerInfo, VersionedInternalStakerInfo,
-> {
+pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalStakerInfoV1> {
+    /// This function is used during convertion from `InternalStakerInfo` to `InternalStakerInfoV1`.
     #[inline(always)]
-    fn into(self: StakerInfo) -> VersionedInternalStakerInfo nopanic {
-        VersionedInternalStakerInfoTrait::new_latest(
+    fn into(self: StakerInfo) -> InternalStakerInfoV1 nopanic {
+        InternalStakerInfoV1 {
             reward_address: self.reward_address,
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
@@ -382,7 +380,7 @@ pub(crate) impl StakerInfoIntoVersionedInternalStakerInfo of Into<
             index: self.index,
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,
-        )
+        }
     }
 }
 

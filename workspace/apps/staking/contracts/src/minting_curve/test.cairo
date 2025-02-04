@@ -7,7 +7,6 @@ use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
     IMintingCurveDispatcherTrait, MintingCurveContractInfo,
 };
-use staking::staking::objects::VersionedInternalStakerInfoGetters;
 use staking::test_utils::constants::NON_TOKEN_ADMIN;
 use staking::test_utils::{
     StakingInitConfig, general_contract_system_deployment, stake_for_testing_using_dispatcher,
@@ -25,7 +24,7 @@ fn test_yearly_mint() {
         contract_address: minting_curve_contract,
     };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let total_stake = cfg.staker_info.amount_own();
+    let total_stake = cfg.staker_info.amount_own;
     let total_supply: Amount = cfg
         .test_info
         .initial_supply

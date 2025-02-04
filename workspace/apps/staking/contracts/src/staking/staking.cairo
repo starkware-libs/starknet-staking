@@ -27,12 +27,11 @@ pub mod Staking {
         IStakingPool, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
     };
     use staking::staking::objects::{
-        EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, UndelegateIntentKey,
-        UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
-        VersionedInternalStakerInfo, VersionedInternalStakerInfoGetters,
-        VersionedInternalStakerInfoSetters, VersionedInternalStakerInfoTrait,
+        EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait,
+        UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
+        UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
     };
-    use staking::types::{Amount, Commission, Epoch, Index, Version};
+    use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest, Version};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
         compute_global_index_diff, compute_new_delegated_stake, compute_rewards_rounded_down,
@@ -278,9 +277,9 @@ pub mod Staking {
             self.general_prerequisites();
             let caller_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert!(staker_info.unstake_time().is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             assert!(
-                caller_address == staker_address || caller_address == staker_info.reward_address(),
+                caller_address == staker_address || caller_address == staker_info.reward_address,
                 "{}",
                 GenericError::CALLER_CANNOT_INCREASE_STAKE,
             );
@@ -288,7 +287,7 @@ pub mod Staking {
 
             // Update the staker info to account for accumulated rewards, before updating their
             // staked amount.
-            let old_self_stake = staker_info.amount_own();
+            let old_self_stake = staker_info.amount_own;
             self.update_rewards(ref :staker_info);
 
             // Transfer funds from caller (which is either the staker or their reward address).
@@ -303,15 +302,17 @@ pub mod Staking {
 
             // Update staker's staked amount, and total stake.
             let new_self_stake = old_self_stake + amount;
-            staker_info.set_amount_own(new_self_stake);
+            staker_info.amount_own = new_self_stake;
             let mut staker_total_stake = new_self_stake;
-            self.staker_info.write(staker_address, staker_info);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
             self.add_to_total_stake(:amount);
 
             // Emit events.
             let mut old_delegated_stake = Zero::zero();
             let mut new_delegated_stake = Zero::zero();
-            if let Option::Some(pool_info) = staker_info.pool_info() {
+            if let Option::Some(pool_info) = staker_info.pool_info {
                 old_delegated_stake = pool_info.amount;
                 new_delegated_stake = pool_info.amount;
                 staker_total_stake += pool_info.amount;
@@ -334,7 +335,7 @@ pub mod Staking {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             let caller_address = get_caller_address();
-            let reward_address = staker_info.reward_address();
+            let reward_address = staker_info.reward_address;
             assert!(
                 caller_address == staker_address || caller_address == reward_address,
                 "{}",
@@ -346,10 +347,12 @@ pub mod Staking {
             // Transfer rewards to staker's reward address and write updated staker info to storage.
             // Note: `send_rewards_to_staker` alters `staker_info` thus commit to storage is
             // performed only after that.
-            let amount = staker_info.unclaimed_rewards_own();
+            let amount = staker_info.unclaimed_rewards_own;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
-            self.staker_info.write(staker_address, staker_info);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
             amount
         }
 
@@ -358,23 +361,25 @@ pub mod Staking {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert!(staker_info.unstake_time().is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
             // Updating rewards last time for the staker, as they're about to exit.
             self.update_rewards(ref :staker_info);
 
             // Set the unstake time.
             let unstake_time = Time::now().add(delta: self.exit_wait_window.read());
-            staker_info.set_unstake_time(Option::Some(unstake_time));
-            self.staker_info.write(staker_address, staker_info);
+            staker_info.unstake_time = Option::Some(unstake_time);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
 
             // Write off the staker's stake and delegated stake from the total stake.
-            let amount_pool = if let Option::Some(pool_info) = staker_info.pool_info() {
+            let amount_pool = if let Option::Some(pool_info) = staker_info.pool_info {
                 pool_info.amount
             } else {
                 Zero::zero()
             };
-            let old_self_stake = staker_info.amount_own();
+            let old_self_stake = staker_info.amount_own;
             let amount = old_self_stake + amount_pool;
             self.remove_from_total_stake(:amount);
 
@@ -403,7 +408,7 @@ pub mod Staking {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             let unstake_time = staker_info
-                .unstake_time()
+                .unstake_time
                 .expect_with_err(Error::MISSING_UNSTAKE_INTENT);
             assert!(Time::now() >= unstake_time, "{}", GenericError::INTENT_WINDOW_NOT_FINISHED);
 
@@ -413,7 +418,7 @@ pub mod Staking {
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
 
             // Return stake to staker, return delegated stake to pool, and remove staker.
-            let staker_amount = staker_info.amount_own();
+            let staker_amount = staker_info.amount_own;
             token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
             self.transfer_to_pool_when_unstake(:staker_address, ref :staker_info);
@@ -426,11 +431,13 @@ pub mod Staking {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            let old_address = staker_info.reward_address();
+            let old_address = staker_info.reward_address;
 
             // Update reward_address and commit to storage.
-            staker_info.set_reward_address(reward_address);
-            self.staker_info.write(staker_address, staker_info);
+            staker_info.reward_address = reward_address;
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
 
             // Emit event.
             self
@@ -448,9 +455,9 @@ pub mod Staking {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert!(staker_info.unstake_time().is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
-            assert!(staker_info.pool_info().is_none(), "{}", Error::STAKER_ALREADY_HAS_POOL);
+            assert!(staker_info.pool_info.is_none(), "{}", Error::STAKER_ALREADY_HAS_POOL);
 
             // Deploy delegation pool contract.
             let pool_contract = self
@@ -464,7 +471,7 @@ pub mod Staking {
             // Update staker info and commit to storage.
             // No need to update rewards as there is no change in staked amount (own or delegated).
             staker_info
-                .set_pool_info(
+                .pool_info =
                     Option::Some(
                         StakerPoolInfo {
                             pool_contract,
@@ -472,9 +479,10 @@ pub mod Staking {
                             unclaimed_rewards: Zero::zero(),
                             commission,
                         },
-                    ),
-                );
-            self.staker_info.write(staker_address, staker_info);
+                    );
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
             pool_contract
         }
 
@@ -530,12 +538,13 @@ pub mod Staking {
             let mut staker_info = self.internal_staker_info(:staker_address);
             let total_rewards = self.calculate_total_rewards(:staker_info);
             let staker_rewards = self.calculate_staker_rewards(:staker_info, :total_rewards);
-            let unclaimed_rewards_own = staker_info.unclaimed_rewards_own() + staker_rewards;
-            staker_info.set_unclaimed_rewards_own(:unclaimed_rewards_own);
+            staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
             self.update_pool_rewards(:staker_info, :pool_rewards);
             self.update_reward_supplier(:staker_rewards);
-            self.staker_info.write(staker_address, staker_info);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
             // TODO: emit events
         }
 
@@ -585,7 +594,7 @@ pub mod Staking {
             );
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert!(staker_info.unstake_time().is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             assert!(
                 self.eligible_operational_addresses.read(operational_address) == staker_address,
                 "{}",
@@ -593,10 +602,12 @@ pub mod Staking {
             );
 
             // Set operational address and write to storage.
-            let old_address = staker_info.operational_address();
+            let old_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(old_address, Zero::zero());
-            staker_info.set_operational_address(operational_address);
-            self.staker_info.write(staker_address, staker_info);
+            staker_info.operational_address = operational_address;
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
             self.operational_address_to_staker_address.write(operational_address, staker_address);
 
             // Emit event.
@@ -628,7 +639,7 @@ pub mod Staking {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert!(staker_info.unstake_time().is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
             let (pool_contract, old_commission) = {
                 let pool_info = staker_info.get_pool_info();
@@ -644,10 +655,12 @@ pub mod Staking {
             {
                 let mut pool_info = staker_info.get_pool_info();
                 pool_info.commission = commission;
-                staker_info.set_pool_info(Option::Some(pool_info));
+                staker_info.pool_info = Option::Some(pool_info);
             }
 
-            self.staker_info.write(staker_address, staker_info);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
             let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
             pool_dispatcher.update_commission_from_staking_contract(:commission);
 
@@ -669,7 +682,7 @@ pub mod Staking {
     impl StakingMigrationImpl of IStakingMigration<ContractState> {
         fn internal_staker_info(
             self: @ContractState, staker_address: ContractAddress,
-        ) -> VersionedInternalStakerInfo {
+        ) -> InternalStakerInfoLatest {
             let versioned_internal_staker_info = self.staker_info.read(staker_address);
             match versioned_internal_staker_info {
                 VersionedInternalStakerInfo::None => panic_with_byte_array(
@@ -677,7 +690,7 @@ pub mod Staking {
                 ),
                 VersionedInternalStakerInfo::V0(internal_staker_info_v0) => internal_staker_info_v0
                     .convert(self.get_prev_class_hash(), staker_address),
-                VersionedInternalStakerInfo::V1(_) => versioned_internal_staker_info,
+                VersionedInternalStakerInfo::V1(internal_staker_info_v1) => internal_staker_info_v1,
             }
         }
     }
@@ -690,7 +703,7 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            assert!(staker_info.unstake_time().is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             self.update_rewards(ref :staker_info);
             let mut pool_info = staker_info.get_pool_info();
             let pool_contract = pool_info.pool_contract;
@@ -709,8 +722,10 @@ pub mod Staking {
             // Update the staker's staked amount, and add to total_stake.
             let old_delegated_stake = pool_info.amount;
             pool_info.amount += amount;
-            staker_info.set_pool_info(Option::Some(pool_info));
-            self.staker_info.write(staker_address, staker_info);
+            staker_info.pool_info = Option::Some(pool_info);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
             self.add_to_total_stake(:amount);
 
             // Emit event.
@@ -718,14 +733,14 @@ pub mod Staking {
                 .emit(
                     Events::StakeBalanceChanged {
                         staker_address,
-                        old_self_stake: staker_info.amount_own(),
+                        old_self_stake: staker_info.amount_own,
                         old_delegated_stake,
-                        new_self_stake: staker_info.amount_own(),
+                        new_self_stake: staker_info.amount_own,
                         new_delegated_stake: pool_info.amount,
                     },
                 );
 
-            staker_info.index()
+            staker_info.index
         }
 
         fn remove_from_delegation_pool_intent(
@@ -768,20 +783,22 @@ pub mod Staking {
             // If the staker is in the process of unstaking (intent called),
             // an event indicating the staked amount (own and delegated) to be zero
             // had already been emitted, thus unneeded now.
-            if staker_info.unstake_time().is_none() {
+            if staker_info.unstake_time.is_none() {
                 self
                     .emit(
                         Events::StakeBalanceChanged {
                             staker_address,
-                            old_self_stake: staker_info.amount_own(),
+                            old_self_stake: staker_info.amount_own,
                             old_delegated_stake,
-                            new_self_stake: staker_info.amount_own(),
+                            new_self_stake: staker_info.amount_own,
                             new_delegated_stake: staker_info.get_pool_info().amount,
                         },
                     );
             }
 
-            self.staker_info.write(staker_address, staker_info);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
 
             self.get_pool_exit_intent(:undelegate_intent_key).unpool_time
         }
@@ -858,7 +875,7 @@ pub mod Staking {
                 );
 
             // More asserts.
-            assert!(to_staker_info.unstake_time().is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            assert!(to_staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             let mut to_staker_pool_info = to_staker_info.get_pool_info();
             let to_staker_pool_contract = to_staker_pool_info.pool_contract;
             assert!(to_pool == to_staker_pool_contract, "{}", Error::DELEGATION_POOL_MISMATCH);
@@ -866,8 +883,10 @@ pub mod Staking {
 
             // Update `to_staker`'s delegated stake amount, and add to total stake.
             to_staker_pool_info.amount += switched_amount;
-            to_staker_info.set_pool_info(Option::Some(to_staker_pool_info));
-            self.staker_info.write(to_staker, to_staker_info);
+            to_staker_info.pool_info = Option::Some(to_staker_pool_info);
+            self
+                .staker_info
+                .write(to_staker, VersionedInternalStakerInfoTrait::wrap_latest(to_staker_info));
             self.add_to_total_stake(amount: switched_amount);
 
             // Update the undelegate intent. If the amount is zero, clear the intent.
@@ -882,11 +901,11 @@ pub mod Staking {
             let to_pool_dispatcher = IPoolDispatcher { contract_address: to_pool };
             to_pool_dispatcher
                 .enter_delegation_pool_from_staking_contract(
-                    amount: switched_amount, index: to_staker_info.index(), :data,
+                    amount: switched_amount, index: to_staker_info.index, :data,
                 );
 
             // Emit event.
-            let to_staker_self_stake = to_staker_info.amount_own();
+            let to_staker_self_stake = to_staker_info.amount_own;
             self
                 .emit(
                     Events::StakeBalanceChanged {
@@ -922,13 +941,15 @@ pub mod Staking {
             // Send rewards to pool contract, and commit to storage.
             // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
             // is performed only after that.
-            let updated_index = staker_info.index();
+            let updated_index = staker_info.index;
             let token_dispatcher = self.token_dispatcher.read();
             self
                 .send_rewards_to_delegation_pool(
                     :staker_address, ref :staker_info, :token_dispatcher,
                 );
-            self.staker_info.write(staker_address, staker_info);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
 
             updated_index
         }
@@ -1040,14 +1061,14 @@ pub mod Staking {
         fn send_rewards_to_staker(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: VersionedInternalStakerInfo,
+            ref staker_info: InternalStakerInfoLatest,
             token_dispatcher: IERC20Dispatcher,
         ) {
-            let reward_address = staker_info.reward_address();
-            let amount = staker_info.unclaimed_rewards_own();
+            let reward_address = staker_info.reward_address;
+            let amount = staker_info.unclaimed_rewards_own;
 
             self.send_rewards(:reward_address, :amount, :token_dispatcher);
-            staker_info.set_unclaimed_rewards_own(Zero::zero());
+            staker_info.unclaimed_rewards_own = Zero::zero();
 
             self.emit(Events::StakerRewardClaimed { staker_address, reward_address, amount });
         }
@@ -1057,7 +1078,7 @@ pub mod Staking {
         fn send_rewards_to_delegation_pool(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: VersionedInternalStakerInfo,
+            ref staker_info: InternalStakerInfoLatest,
             token_dispatcher: IERC20Dispatcher,
         ) {
             let mut pool_info = staker_info.get_pool_info();
@@ -1066,7 +1087,7 @@ pub mod Staking {
 
             self.send_rewards(reward_address: pool_address, :amount, :token_dispatcher);
             pool_info.unclaimed_rewards = Zero::zero();
-            staker_info.set_pool_info(Option::Some(pool_info));
+            staker_info.pool_info = Option::Some(pool_info);
 
             self
                 .emit(
@@ -1087,9 +1108,9 @@ pub mod Staking {
         }
 
         fn calculate_and_update_pool_rewards(
-            self: @ContractState, interest: Index, ref staker_info: VersionedInternalStakerInfo,
+            self: @ContractState, interest: Index, ref staker_info: InternalStakerInfoLatest,
         ) {
-            if let Option::Some(mut pool_info) = staker_info.pool_info() {
+            if let Option::Some(mut pool_info) = staker_info.pool_info {
                 if (pool_info.amount.is_non_zero()) {
                     let rewards_including_commission = compute_rewards_rounded_up(
                         amount: pool_info.amount, :interest,
@@ -1097,13 +1118,11 @@ pub mod Staking {
                     let commission_amount = compute_commission_amount_rounded_down(
                         :rewards_including_commission, commission: pool_info.commission,
                     );
-                    staker_info
-                        .set_unclaimed_rewards_own(
-                            staker_info.unclaimed_rewards_own() + commission_amount,
-                        );
+                    staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own
+                        + commission_amount;
                     let rewards = rewards_including_commission - commission_amount;
                     pool_info.unclaimed_rewards += rewards;
-                    staker_info.set_pool_info(Option::Some(pool_info));
+                    staker_info.pool_info = Option::Some(pool_info);
                 }
             }
         }
@@ -1111,9 +1130,9 @@ pub mod Staking {
         fn transfer_to_pool_when_unstake(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: VersionedInternalStakerInfo,
+            ref staker_info: InternalStakerInfoLatest,
         ) {
-            if let Option::Some(pool_info) = staker_info.pool_info() {
+            if let Option::Some(pool_info) = staker_info.pool_info {
                 let token_dispatcher = self.token_dispatcher.read();
                 self
                     .send_rewards_to_delegation_pool(
@@ -1124,25 +1143,25 @@ pub mod Staking {
                         recipient: pool_info.pool_contract, amount: pool_info.amount.into(),
                     );
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_info.pool_contract };
-                pool_dispatcher.set_final_staker_index(final_staker_index: staker_info.index());
+                pool_dispatcher.set_final_staker_index(final_staker_index: staker_info.index);
             }
         }
 
         fn remove_staker(
             ref self: ContractState,
             staker_address: ContractAddress,
-            staker_info: VersionedInternalStakerInfo,
+            staker_info: InternalStakerInfoLatest,
         ) {
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
-            let operational_address = staker_info.operational_address();
+            let operational_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(operational_address, Zero::zero());
             self
                 .emit(
                     Events::DeleteStaker {
                         staker_address,
-                        reward_address: staker_info.reward_address(),
+                        reward_address: staker_info.reward_address,
                         operational_address,
-                        pool_contract: match staker_info.pool_info() {
+                        pool_contract: match staker_info.pool_info {
                             Option::Some(pool_info) => Option::Some(pool_info.pool_contract),
                             Option::None => Option::None,
                         },
@@ -1167,19 +1186,18 @@ pub mod Staking {
         /// - unclaimed_rewards_own
         /// - unclaimed_rewards
         /// - index
-        fn update_rewards(self: @ContractState, ref staker_info: VersionedInternalStakerInfo) {
-            if (staker_info.unstake_time().is_some()) {
+        fn update_rewards(self: @ContractState, ref staker_info: InternalStakerInfoLatest) {
+            if (staker_info.unstake_time.is_some()) {
                 return;
             }
             let global_index = self.global_index.read();
-            let interest = global_index - staker_info.index();
-            staker_info.set_index(global_index);
+            let interest = global_index - staker_info.index;
+            staker_info.index = global_index;
 
             let staker_rewards = compute_rewards_rounded_down(
-                amount: staker_info.amount_own(), :interest,
+                amount: staker_info.amount_own, :interest,
             );
-            staker_info
-                .set_unclaimed_rewards_own(staker_info.unclaimed_rewards_own() + staker_rewards);
+            staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
             self.calculate_and_update_pool_rewards(:interest, ref :staker_info);
         }
 
@@ -1269,7 +1287,7 @@ pub mod Staking {
         }
 
         fn assert_caller_is_pool_contract(
-            self: @ContractState, staker_info: @VersionedInternalStakerInfo,
+            self: @ContractState, staker_info: @InternalStakerInfoLatest,
         ) {
             let pool_info = staker_info.get_pool_info();
             assert!(
@@ -1295,7 +1313,7 @@ pub mod Staking {
         /// the intent amount. Also updates the total stake accordingly.
         fn update_delegated_stake(
             ref self: ContractState,
-            ref staker_info: VersionedInternalStakerInfo,
+            ref staker_info: InternalStakerInfoLatest,
             old_intent_amount: Amount,
             new_intent_amount: Amount,
         ) {
@@ -1307,21 +1325,21 @@ pub mod Staking {
 
             // Do not update the total stake when the staker is in the process of unstaking,
             // since its delegated stake is already excluded from the total stake.
-            if staker_info.unstake_time().is_none() {
+            if staker_info.unstake_time.is_none() {
                 self
                     .update_total_stake_according_to_delegated_stake_changes(
                         :old_delegated_stake, :new_delegated_stake,
                     )
             }
             pool_info.amount = new_delegated_stake;
-            staker_info.set_pool_info(Option::Some(pool_info));
+            staker_info.pool_info = Option::Some(pool_info);
         }
 
         /// Updates undelegate intent value with the given `new_intent_amount` and an updated unpool
         /// time.
         fn update_undelegate_intent_value(
             ref self: ContractState,
-            staker_info: VersionedInternalStakerInfo,
+            staker_info: InternalStakerInfoLatest,
             undelegate_intent_key: UndelegateIntentKey,
             new_intent_amount: Amount,
         ) {
@@ -1337,14 +1355,14 @@ pub mod Staking {
 
         // TODO: implement
         fn calculate_total_rewards(
-            self: @ContractState, staker_info: VersionedInternalStakerInfo,
+            self: @ContractState, staker_info: InternalStakerInfoLatest,
         ) -> Amount {
             0
         }
 
         // TODO: implement
         fn calculate_staker_rewards(
-            self: @ContractState, staker_info: VersionedInternalStakerInfo, total_rewards: Amount,
+            self: @ContractState, staker_info: InternalStakerInfoLatest, total_rewards: Amount,
         ) -> Amount {
             0
         }
@@ -1352,7 +1370,7 @@ pub mod Staking {
         // TODO: implement
         // TODO: emit events
         fn update_pool_rewards(
-            self: @ContractState, staker_info: VersionedInternalStakerInfo, pool_rewards: Amount,
+            self: @ContractState, staker_info: InternalStakerInfoLatest, pool_rewards: Amount,
         ) {}
 
         // TODO: implement

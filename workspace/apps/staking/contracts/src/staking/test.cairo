@@ -51,21 +51,20 @@ use staking::staking::interface::{
     StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
-    EpochInfoTrait, InternalStakerInfoTestTrait, UndelegateIntentKey, UndelegateIntentValue,
-    UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
-    VersionedInternalStakerInfoGetters, VersionedInternalStakerInfoSetters,
-    VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
-    VersionedStorageContractTest,
+    EpochInfoTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait,
+    InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
+    UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTestTrait,
+    VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
-use staking::types::{Amount, Index};
+use staking::types::{Amount, Index, InternalStakerInfoLatest};
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_rewards_rounded_down,
     compute_rewards_rounded_up,
 };
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
-use starknet::{ContractAddress, Store, contract_address_const, get_block_number};
+use starknet::{ContractAddress, Store, get_block_number};
 use test_utils::{
     StakingInitConfig, approve, cheat_reward_for_reward_supplier, constants,
     declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
@@ -87,7 +86,7 @@ fn test_constructor() {
     assert_eq!(Zero::zero(), contract_global_index);
     let staker_address = state
         .operational_address_to_staker_address
-        .read(cfg.staker_info.operational_address());
+        .read(cfg.staker_info.operational_address);
     assert_eq!(staker_address, Zero::zero());
     let staker_info = state.staker_info.read(staker_address);
     assert!(staker_info.is_none());
@@ -117,13 +116,13 @@ fn test_stake() {
     let staker_address = cfg.test_info.staker_address;
     // Check that the staker info was updated correctly.
     let mut expected_staker_info = cfg.staker_info;
-    expected_staker_info.set_pool_info(Option::None);
+    expected_staker_info.pool_info = Option::None;
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     assert_eq!(expected_staker_info.into(), staking_dispatcher.staker_info(:staker_address));
 
     let staker_address_from_operational_address = load_from_simple_map(
         map_selector: selector!("operational_address_to_staker_address"),
-        key: cfg.staker_info.operational_address(),
+        key: cfg.staker_info.operational_address,
         contract: staking_contract,
     );
     // Check that the operational address to staker address mapping was updated correctly.
@@ -132,26 +131,26 @@ fn test_stake() {
     // Check that the staker's tokens were transferred to the Staking contract.
     assert_eq!(
         token_dispatcher.balance_of(staker_address),
-        (cfg.test_info.staker_initial_balance - cfg.staker_info.amount_own()).into(),
+        (cfg.test_info.staker_initial_balance - cfg.staker_info.amount_own).into(),
     );
-    assert_eq!(token_dispatcher.balance_of(staking_contract), cfg.staker_info.amount_own().into());
-    assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own());
+    assert_eq!(token_dispatcher.balance_of(staking_contract), cfg.staker_info.amount_own.into());
+    assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own);
     // Validate StakeBalanceChanged and NewStaker event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 2, message: "stake");
     assert_new_staker_event(
         spied_event: events[0],
         :staker_address,
-        reward_address: cfg.staker_info.reward_address(),
-        operational_address: cfg.staker_info.operational_address(),
-        self_stake: cfg.staker_info.amount_own(),
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        self_stake: cfg.staker_info.amount_own,
     );
     assert_stake_balance_changed_event(
         spied_event: events[1],
         :staker_address,
         old_self_stake: Zero::zero(),
         old_delegated_stake: Zero::zero(),
-        new_self_stake: cfg.staker_info.amount_own(),
+        new_self_stake: cfg.staker_info.amount_own,
         new_delegated_stake: Zero::zero(),
     );
 }
@@ -161,22 +160,21 @@ fn test_update_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg
         .staker_info
-        .set_pool_info(
+        .pool_info =
             Option::Some(
                 StakerPoolInfo {
                     pool_contract: POOL_CONTRACT_ADDRESS(),
                     amount: POOL_MEMBER_STAKE_AMOUNT,
                     ..cfg.staker_info.get_pool_info(),
                 },
-            ),
-        );
-    cfg.staker_info.set_index(0);
+            );
+    cfg.staker_info.index = 0;
 
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     let mut staker_info = cfg.staker_info;
-    let interest = state.global_index.read() - staker_info.index();
+    let interest = state.global_index.read() - staker_info.index;
     state.update_rewards(ref :staker_info);
-    let staker_rewards = compute_rewards_rounded_down(amount: staker_info.amount_own(), :interest);
+    let staker_rewards = compute_rewards_rounded_down(amount: staker_info.amount_own, :interest);
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: staker_info.get_pool_info().amount, :interest,
     );
@@ -187,11 +185,10 @@ fn test_update_rewards() {
     let unclaimed_rewards_own: Amount = staker_rewards + commission_amount;
     let unclaimed_rewards: Amount = pool_rewards_including_commission - commission_amount;
     let mut expected_staker_info = staker_info.clone();
-    expected_staker_info.set_unclaimed_rewards_own(unclaimed_rewards_own);
+    expected_staker_info.unclaimed_rewards_own = unclaimed_rewards_own;
     expected_staker_info
-        .set_pool_info(
-            Option::Some(StakerPoolInfo { unclaimed_rewards, ..staker_info.get_pool_info() }),
-        );
+        .pool_info =
+            Option::Some(StakerPoolInfo { unclaimed_rewards, ..staker_info.get_pool_info() });
     assert_eq!(staker_info, expected_staker_info);
 }
 
@@ -217,26 +214,24 @@ fn test_send_rewards_to_delegation_pool() {
     let unclaimed_rewards = POOL_MEMBER_UNCLAIMED_REWARDS;
     cfg
         .staker_info
-        .set_pool_info(
+        .pool_info =
             Option::Some(
                 StakerPoolInfo {
                     pool_contract, unclaimed_rewards, ..cfg.staker_info.get_pool_info(),
                 },
-            ),
-        );
+            );
     cheat_reward_for_reward_supplier(
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards, :token_address,
     );
     let pool_balance_before_rewards = token_dispatcher.balance_of(account: pool_contract);
     let mut expected_staker_info = cfg.staker_info.clone();
     expected_staker_info
-        .set_pool_info(
+        .pool_info =
             Option::Some(
                 StakerPoolInfo {
                     unclaimed_rewards: Zero::zero(), ..cfg.staker_info.get_pool_info(),
                 },
-            ),
-        );
+            );
     // Send rewards to pool contract.
     state
         .send_rewards_to_delegation_pool(
@@ -269,14 +264,14 @@ fn test_send_rewards_to_staker() {
         .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
     // Setup staker_info and expected results before sending rewards.
     let unclaimed_rewards_own = STAKER_UNCLAIMED_REWARDS;
-    cfg.staker_info.set_unclaimed_rewards_own(unclaimed_rewards_own);
+    cfg.staker_info.unclaimed_rewards_own = unclaimed_rewards_own;
     let mut expected_staker_info = cfg.staker_info.clone();
-    expected_staker_info.set_unclaimed_rewards_own(Zero::zero());
+    expected_staker_info.unclaimed_rewards_own = Zero::zero();
     cheat_reward_for_reward_supplier(
         :cfg, :reward_supplier, expected_reward: unclaimed_rewards_own, :token_address,
     );
     let staker_balance_before_rewards = token_dispatcher
-        .balance_of(account: cfg.staker_info.reward_address());
+        .balance_of(account: cfg.staker_info.reward_address);
     // Send rewards to staker's reward address.
     state
         .send_rewards_to_staker(
@@ -287,7 +282,7 @@ fn test_send_rewards_to_staker() {
     // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
     assert_eq!(expected_staker_info, cfg.staker_info);
     let staker_balance_after_rewards = token_dispatcher
-        .balance_of(account: cfg.staker_info.reward_address());
+        .balance_of(account: cfg.staker_info.reward_address);
     assert_eq!(
         staker_balance_after_rewards, staker_balance_before_rewards + unclaimed_rewards_own.into(),
     );
@@ -299,7 +294,7 @@ fn test_update_rewards_unstake_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     let mut staker_info_expected = cfg.staker_info.clone();
-    staker_info_expected.set_unstake_time(Option::Some(Timestamp { seconds: 1 }));
+    staker_info_expected.unstake_time = Option::Some(Timestamp { seconds: 1 });
     let mut staker_info = staker_info_expected;
     state.update_rewards(ref :staker_info);
     assert_eq!(staker_info, staker_info_expected);
@@ -321,9 +316,9 @@ fn test_stake_from_same_staker_address() {
     );
     staking_dispatcher
         .stake(
-            reward_address: cfg.staker_info.reward_address(),
-            operational_address: cfg.staker_info.operational_address(),
-            amount: cfg.staker_info.amount_own(),
+            reward_address: cfg.staker_info.reward_address,
+            operational_address: cfg.staker_info.operational_address,
+            amount: cfg.staker_info.amount_own,
             pool_enabled: cfg.test_info.pool_enabled,
             commission: cfg.staker_info.get_pool_info().commission,
         );
@@ -346,9 +341,9 @@ fn test_stake_with_same_operational_address() {
     // Second stake with the same operational address.
     staking_dispatcher
         .stake(
-            reward_address: cfg.staker_info.reward_address(),
-            operational_address: cfg.staker_info.operational_address(),
-            amount: cfg.staker_info.amount_own(),
+            reward_address: cfg.staker_info.reward_address,
+            operational_address: cfg.staker_info.operational_address,
+            amount: cfg.staker_info.amount_own,
             pool_enabled: cfg.test_info.pool_enabled,
             commission: cfg.staker_info.get_pool_info().commission,
         );
@@ -358,7 +353,7 @@ fn test_stake_with_same_operational_address() {
 #[should_panic(expected: "Amount is less than min stake - try again with enough funds")]
 fn test_stake_with_less_than_min_stake() {
     let mut cfg: StakingInitConfig = Default::default();
-    cfg.staker_info.set_amount_own(cfg.staking_contract_info.min_stake - 1);
+    cfg.staker_info.amount_own = cfg.staking_contract_info.min_stake - 1;
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
@@ -374,7 +369,7 @@ fn test_stake_with_commission_out_of_range() {
     let staking_contract = cfg.test_info.staking_contract;
     let mut pool_info = cfg.staker_info.get_pool_info();
     pool_info.commission = COMMISSION_DENOMINATOR + 1;
-    cfg.staker_info.set_pool_info(Option::Some(pool_info));
+    cfg.staker_info.pool_info = Option::Some(pool_info);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
 }
 
@@ -388,14 +383,14 @@ fn test_claim_delegation_pool_rewards() {
     // Stake with pool enabled.
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     // Update index in staking contract.
-    let updated_index = cfg.staker_info.index() + BASE_VALUE;
+    let updated_index = cfg.staker_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
         serialized_value: array![updated_index.into()].span(),
     );
     // Funds reward supplier and set his unclaimed rewards.
-    let interest = updated_index - cfg.staker_info.index();
+    let interest = updated_index - cfg.staker_info.index;
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: cfg.staker_info.get_pool_info().amount, :interest,
     );
@@ -462,7 +457,7 @@ fn test_increase_stake_from_staker_address() {
     // Set the same staker address.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
-    let increase_amount = cfg.staker_info.amount_own();
+    let increase_amount = cfg.staker_info.amount_own;
     let expected_staker_info = StakerInfo {
         amount_own: staker_info_before.amount_own + increase_amount, ..staker_info_before,
     };
@@ -543,23 +538,23 @@ fn test_increase_stake_from_reward_address() {
     // Transfer amount from initial_owner to reward_address.
     fund(
         sender: cfg.test_info.owner_address,
-        recipient: cfg.staker_info.reward_address(),
+        recipient: cfg.staker_info.reward_address,
         amount: cfg.test_info.staker_initial_balance,
         :token_address,
     );
     // Approve the Staking contract to spend the reward's tokens.
     approve(
-        owner: cfg.staker_info.reward_address(),
+        owner: cfg.staker_info.reward_address,
         spender: staking_contract,
         amount: cfg.test_info.staker_initial_balance,
         :token_address,
     );
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
-    let increase_amount = cfg.staker_info.amount_own();
+    let increase_amount = cfg.staker_info.amount_own;
     let mut expected_staker_info = staker_info_before;
     expected_staker_info.amount_own += increase_amount;
-    let caller_address = cfg.staker_info.reward_address();
+    let caller_address = cfg.staker_info.reward_address;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher.increase_stake(:staker_address, amount: increase_amount);
@@ -589,7 +584,7 @@ fn test_increase_stake_staker_address_not_exist() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
-        .increase_stake(staker_address: NON_STAKER_ADDRESS(), amount: cfg.staker_info.amount_own());
+        .increase_stake(staker_address: NON_STAKER_ADDRESS(), amount: cfg.staker_info.amount_own);
 }
 
 #[test]
@@ -605,7 +600,7 @@ fn test_increase_stake_unstake_in_progress() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.increase_stake(:staker_address, amount: cfg.staker_info.amount_own());
+    staking_dispatcher.increase_stake(:staker_address, amount: cfg.staker_info.amount_own);
 }
 
 #[test]
@@ -635,7 +630,7 @@ fn test_increase_stake_caller_cannot_increase() {
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher
         .increase_stake(
-            staker_address: cfg.test_info.staker_address, amount: cfg.staker_info.amount_own(),
+            staker_address: cfg.test_info.staker_address, amount: cfg.staker_info.amount_own,
         );
 }
 
@@ -667,7 +662,7 @@ fn test_change_reward_address() {
         spied_event: events[0],
         :staker_address,
         new_address: other_reward_address,
-        old_address: cfg.staker_info.reward_address(),
+        old_address: cfg.staker_info.reward_address,
     );
 }
 
@@ -702,10 +697,10 @@ fn test_claim_rewards() {
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
-        serialized_value: array![(cfg.staker_info.index() + BASE_VALUE).into()].span(),
+        serialized_value: array![(cfg.staker_info.index + BASE_VALUE).into()].span(),
     );
     // Funds reward supplier and set his unclaimed rewards.
-    let expected_reward = cfg.staker_info.amount_own();
+    let expected_reward = cfg.staker_info.amount_own;
     cheat_reward_for_reward_supplier(:cfg, :reward_supplier, :expected_reward, :token_address);
     // Claim rewards and validate the results.
     let mut spy = snforge_std::spy_events();
@@ -719,7 +714,7 @@ fn test_claim_rewards() {
     assert_eq!(new_staker_info.unclaimed_rewards_own, 0);
 
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let balance = token_dispatcher.balance_of(cfg.staker_info.reward_address());
+    let balance = token_dispatcher.balance_of(cfg.staker_info.reward_address);
     assert_eq!(balance, reward.into());
     // Validate the single StakerRewardClaimed event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
@@ -727,7 +722,7 @@ fn test_claim_rewards() {
     assert_staker_reward_claimed_event(
         spied_event: events[0],
         :staker_address,
-        reward_address: cfg.staker_info.reward_address(),
+        reward_address: cfg.staker_info.reward_address,
         amount: reward,
     );
 }
@@ -784,12 +779,12 @@ fn test_unstake_intent() {
         spied_event: events[0],
         :staker_address,
         exit_timestamp: expected_time,
-        amount: cfg.staker_info.amount_own(),
+        amount: cfg.staker_info.amount_own,
     );
     assert_stake_balance_changed_event(
         spied_event: events[1],
         :staker_address,
-        old_self_stake: cfg.staker_info.amount_own(),
+        old_self_stake: cfg.staker_info.amount_own,
         old_delegated_stake: 0,
         new_self_stake: 0,
         new_delegated_stake: 0,
@@ -858,7 +853,7 @@ fn test_unstake_action() {
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
-    assert_eq!(staker_amount, cfg.staker_info.amount_own());
+    assert_eq!(staker_amount, cfg.staker_info.amount_own);
     let actual_staker_info: VersionedInternalStakerInfo = load_staker_info_from_map(
         staker_address: staker_address, contract: staking_contract,
     );
@@ -871,7 +866,7 @@ fn test_unstake_action() {
     assert_staker_reward_claimed_event(
         spied_event: events[1],
         :staker_address,
-        reward_address: cfg.staker_info.reward_address(),
+        reward_address: cfg.staker_info.reward_address,
         amount: unclaimed_rewards_own,
     );
     // Validate RewardsSuppliedToDelegationPool event.
@@ -885,8 +880,8 @@ fn test_unstake_action() {
     assert_delete_staker_event(
         spied_event: events[3],
         :staker_address,
-        reward_address: cfg.staker_info.reward_address(),
-        operational_address: cfg.staker_info.operational_address(),
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
         pool_contract: Option::Some(pool_contract),
     );
 }
@@ -930,12 +925,12 @@ fn test_get_total_stake() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     assert_eq!(staking_dispatcher.get_total_stake(), Zero::zero());
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own());
+    assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     // Set the same staker address.
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let amount = cfg.staker_info.amount_own();
+    let amount = cfg.staker_info.amount_own;
     staking_dispatcher.increase_stake(:staker_address, :amount);
     assert_eq!(
         staking_dispatcher.get_total_stake(),
@@ -953,14 +948,14 @@ fn test_stake_pool_enabled() {
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    if let Option::Some(mut pool_info) = cfg.staker_info.pool_info() {
+    if let Option::Some(mut pool_info) = cfg.staker_info.pool_info {
         pool_info
             .pool_contract = staking_dispatcher
             .staker_info(:staker_address)
             .pool_info
             .unwrap()
             .pool_contract;
-        cfg.staker_info.set_pool_info(Option::Some(pool_info));
+        cfg.staker_info.pool_info = Option::Some(pool_info);
     };
     let expected_staker_info = cfg.staker_info.into();
     // Check that the staker info was updated correctly.
@@ -979,16 +974,16 @@ fn test_stake_pool_enabled() {
     assert_new_staker_event(
         spied_event: events[1],
         :staker_address,
-        reward_address: cfg.staker_info.reward_address(),
-        operational_address: cfg.staker_info.operational_address(),
-        self_stake: cfg.staker_info.amount_own(),
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        self_stake: cfg.staker_info.amount_own,
     );
     assert_stake_balance_changed_event(
         spied_event: events[2],
         :staker_address,
         old_self_stake: Zero::zero(),
         old_delegated_stake: Zero::zero(),
-        new_self_stake: cfg.staker_info.amount_own(),
+        new_self_stake: cfg.staker_info.amount_own,
         new_delegated_stake: Zero::zero(),
     );
 }
@@ -1039,9 +1034,9 @@ fn test_add_stake_from_pool() {
     assert_eq!(pool_balance_after, pool_balance_before - pool_amount.into());
 
     // Validate staker info.
-    let interest = global_index - cfg.staker_info.index();
+    let interest = global_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards_rounded_down(
-        amount: cfg.staker_info.amount_own(), :interest,
+        amount: cfg.staker_info.amount_own, :interest,
     );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: Zero::zero(), :interest,
@@ -1086,9 +1081,9 @@ fn test_add_stake_from_pool() {
     assert_stake_balance_changed_event(
         spied_event: events[1],
         staker_address: cfg.test_info.staker_address,
-        old_self_stake: cfg.staker_info.amount_own(),
+        old_self_stake: cfg.staker_info.amount_own,
         old_delegated_stake: Zero::zero(),
-        new_self_stake: cfg.staker_info.amount_own(),
+        new_self_stake: cfg.staker_info.amount_own,
         new_delegated_stake: pool_amount,
     );
 }
@@ -1166,7 +1161,7 @@ fn test_remove_from_delegation_pool_intent() {
     let mut intent_amount = cfg.pool_member_info.amount / 2;
 
     // Increase index.
-    let mut global_index = cfg.staker_info.index() + BASE_VALUE;
+    let mut global_index = cfg.staker_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -1182,9 +1177,9 @@ fn test_remove_from_delegation_pool_intent() {
         );
 
     // Validate that the staker info is updated.
-    let interest = global_index - cfg.staker_info.index();
+    let interest = global_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards_rounded_down(
-        amount: cfg.staker_info.amount_own(), :interest,
+        amount: cfg.staker_info.amount_own, :interest,
     );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: initial_delegated_stake, :interest,
@@ -1197,10 +1192,10 @@ fn test_remove_from_delegation_pool_intent() {
     let mut pool_unclaimed_rewards = pool_rewards_including_commission - commission_amount;
     let mut cur_delegated_stake = initial_delegated_stake - intent_amount;
     let mut expected_staker_info = cfg.staker_info.clone();
-    expected_staker_info.set_unclaimed_rewards_own(staker_unclaimed_rewards);
-    expected_staker_info.set_index(global_index);
+    expected_staker_info.unclaimed_rewards_own = staker_unclaimed_rewards;
+    expected_staker_info.index = global_index;
     expected_staker_info
-        .set_pool_info(
+        .pool_info =
             Option::Some(
                 StakerPoolInfo {
                     pool_contract,
@@ -1208,8 +1203,7 @@ fn test_remove_from_delegation_pool_intent() {
                     unclaimed_rewards: pool_unclaimed_rewards,
                     ..cfg.staker_info.get_pool_info(),
                 },
-            ),
-        );
+            );
     assert_eq!(
         staking_dispatcher.staker_info(cfg.test_info.staker_address), expected_staker_info.into(),
     );
@@ -1249,9 +1243,9 @@ fn test_remove_from_delegation_pool_intent() {
     assert_stake_balance_changed_event(
         spied_event: events[1],
         staker_address: cfg.test_info.staker_address,
-        old_self_stake: cfg.staker_info.amount_own(),
+        old_self_stake: cfg.staker_info.amount_own,
         old_delegated_stake: initial_delegated_stake,
-        new_self_stake: cfg.staker_info.amount_own(),
+        new_self_stake: cfg.staker_info.amount_own,
         new_delegated_stake: cur_delegated_stake,
     );
 
@@ -1276,9 +1270,9 @@ fn test_remove_from_delegation_pool_intent() {
         );
 
     // Validate that the staker info is updated.
-    let interest = global_index - expected_staker_info.index();
+    let interest = global_index - expected_staker_info.index;
     let staker_rewards = compute_rewards_rounded_down(
-        amount: expected_staker_info.amount_own(), :interest,
+        amount: expected_staker_info.amount_own, :interest,
     );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: cur_delegated_stake, :interest,
@@ -1293,10 +1287,10 @@ fn test_remove_from_delegation_pool_intent() {
         - commission_amount;
     let prev_delegated_stake = cur_delegated_stake;
     cur_delegated_stake = initial_delegated_stake - new_intent_amount;
-    expected_staker_info.set_unclaimed_rewards_own(staker_unclaimed_rewards);
-    expected_staker_info.set_index(global_index);
+    expected_staker_info.unclaimed_rewards_own = staker_unclaimed_rewards;
+    expected_staker_info.index = global_index;
     expected_staker_info
-        .set_pool_info(
+        .pool_info =
             Option::Some(
                 StakerPoolInfo {
                     pool_contract,
@@ -1304,8 +1298,7 @@ fn test_remove_from_delegation_pool_intent() {
                     unclaimed_rewards: pool_unclaimed_rewards,
                     ..expected_staker_info.get_pool_info(),
                 },
-            ),
-        );
+            );
     assert_eq!(
         staking_dispatcher.staker_info(cfg.test_info.staker_address), expected_staker_info.into(),
     );
@@ -1346,9 +1339,9 @@ fn test_remove_from_delegation_pool_intent() {
     assert_stake_balance_changed_event(
         spied_event: events[3],
         staker_address: cfg.test_info.staker_address,
-        old_self_stake: cfg.staker_info.amount_own(),
+        old_self_stake: cfg.staker_info.amount_own,
         old_delegated_stake: prev_delegated_stake,
-        new_self_stake: expected_staker_info.amount_own(),
+        new_self_stake: expected_staker_info.amount_own,
         new_delegated_stake: cur_delegated_stake,
     );
 }
@@ -1548,7 +1541,7 @@ fn test_switch_staking_delegation_pool() {
     // Initialize to_staker.
     let to_staker = OTHER_STAKER_ADDRESS();
     cfg.test_info.staker_address = to_staker;
-    cfg.staker_info.set_operational_address(OTHER_OPERATIONAL_ADDRESS());
+    cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
     let to_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let to_pool_dispatcher = IPoolDispatcher { contract_address: to_pool_contract };
     let to_staker_info = staking_dispatcher.staker_info(staker_address: to_staker);
@@ -1565,7 +1558,7 @@ fn test_switch_staking_delegation_pool() {
     switch_pool_data.serialize(ref output: serialized_data);
 
     let switched_amount = cfg.pool_member_info.amount / 2;
-    let updated_index = cfg.staker_info.index() + BASE_VALUE;
+    let updated_index = cfg.staker_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -1582,9 +1575,9 @@ fn test_switch_staking_delegation_pool() {
             data: serialized_data.span(),
             identifier: pool_member.into(),
         );
-    let interest = updated_index - cfg.staker_info.index();
+    let interest = updated_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards_rounded_down(
-        amount: cfg.staker_info.amount_own(), :interest,
+        amount: cfg.staker_info.amount_own, :interest,
     );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: cfg.staker_info.get_pool_info().amount, :interest,
@@ -1716,7 +1709,7 @@ fn test_switch_staking_delegation_pool_assertions() {
     // Initialize to_staker.
     let to_staker = OTHER_STAKER_ADDRESS();
     cfg.test_info.staker_address = to_staker;
-    cfg.staker_info.set_operational_address(OTHER_OPERATIONAL_ADDRESS());
+    cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
     let to_pool = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 
     // Initialize SwitchPoolData.
@@ -1947,7 +1940,7 @@ fn test_declare_operational_address_operational_address_exists() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let operational_address = cfg.staker_info.operational_address();
+    let operational_address = cfg.staker_info.operational_address;
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: operational_address,
     );
@@ -1988,7 +1981,7 @@ fn test_change_operational_address() {
         spied_event: events[1],
         :staker_address,
         new_address: operational_address,
-        old_address: cfg.staker_info.operational_address(),
+        old_address: cfg.staker_info.operational_address,
     );
 }
 
@@ -2015,7 +2008,7 @@ fn test_change_operational_address_operational_address_exists() {
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
-    let operational_address = cfg.staker_info.operational_address();
+    let operational_address = cfg.staker_info.operational_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.change_operational_address(:operational_address);
 }
@@ -2099,7 +2092,7 @@ fn test_update_commission() {
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let interest = cfg.staking_contract_info.global_index - cfg.staker_info.index();
+    let interest = cfg.staking_contract_info.global_index - cfg.staker_info.index;
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before_update = staking_dispatcher.staker_info(:staker_address);
     assert_eq!(
@@ -2484,7 +2477,7 @@ fn test_staker_info() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let mut expected_staker_info = cfg.staker_info;
-    expected_staker_info.set_pool_info(Option::None);
+    expected_staker_info.pool_info = Option::None;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staker_info = staking_dispatcher.staker_info(:staker_address);
     assert_eq!(staker_info, expected_staker_info.into());
@@ -2513,7 +2506,7 @@ fn test_get_staker_info() {
     assert!(option_staker_info.is_none());
     // Check after staker enters.
     let mut expected_staker_info = cfg.staker_info;
-    expected_staker_info.set_pool_info(Option::None);
+    expected_staker_info.pool_info = Option::None;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let option_staker_info = staking_dispatcher.get_staker_info(:staker_address);
     assert_eq!(option_staker_info, Option::Some(expected_staker_info.into()));
@@ -2580,7 +2573,7 @@ fn test_get_staker_address_by_operational() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let operational_address = cfg.staker_info.operational_address();
+    let operational_address = cfg.staker_info.operational_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: DUMMY_ADDRESS());
     let staker_address = staking_dispatcher.get_staker_address_by_operational(:operational_address);
     assert_eq!(staker_address, cfg.test_info.staker_address);
@@ -2593,7 +2586,7 @@ fn test_get_staker_address_by_operational_assertions() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
-    let operational_address = cfg.staker_info.operational_address();
+    let operational_address = cfg.staker_info.operational_address;
 
     // Catch STAKER_NOT_EXISTS.
     let result = staking_safe_dispatcher.get_staker_address_by_operational(:operational_address);
@@ -2713,6 +2706,25 @@ fn test_undelegate_intent_assert_valid_panic() {
 }
 
 #[test]
+fn test_versioned_internal_staker_info_wrap_latest() {
+    let internal_staker_info = InternalStakerInfoLatest {
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    };
+    let versioned_internal_staker_info = VersionedInternalStakerInfoTrait::wrap_latest(
+        internal_staker_info,
+    );
+    assert_eq!(
+        versioned_internal_staker_info, VersionedInternalStakerInfo::V1(internal_staker_info),
+    );
+}
+
+#[test]
 fn test_versioned_internal_staker_info_new_latest() {
     let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
         reward_address: Zero::zero(),
@@ -2728,81 +2740,6 @@ fn test_versioned_internal_staker_info_new_latest() {
     } else {
         panic!("Expected Version V1");
     }
-}
-
-#[test]
-fn test_versioned_internal_staker_info_getters() {
-    let reward_address = contract_address_const::<'reward_address'>();
-    let operational_address = contract_address_const::<'operational_address'>();
-    let unstake_time = Option::Some(Time::now());
-    let amount_own = 1;
-    let index = 2;
-    let unclaimed_rewards_own = 3;
-    let pool_info = Option::Some(
-        StakerPoolInfo {
-            pool_contract: contract_address_const::<'pool_contract'>(),
-            amount: 4,
-            unclaimed_rewards: 5,
-            commission: 6,
-        },
-    );
-    let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address,
-        operational_address,
-        unstake_time,
-        amount_own,
-        index,
-        unclaimed_rewards_own,
-        pool_info,
-    );
-    assert_eq!(internal_staker_info.reward_address(), reward_address);
-    assert_eq!(internal_staker_info.operational_address(), operational_address);
-    assert_eq!(internal_staker_info.unstake_time(), unstake_time);
-    assert_eq!(internal_staker_info.amount_own(), amount_own);
-    assert_eq!(internal_staker_info.index(), index);
-    assert_eq!(internal_staker_info.unclaimed_rewards_own(), unclaimed_rewards_own);
-    assert_eq!(internal_staker_info.pool_info(), pool_info);
-}
-
-#[test]
-fn test_versioned_internal_staker_info_setters() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    let reward_address = contract_address_const::<'reward_address'>();
-    let operational_address = contract_address_const::<'operational_address'>();
-    let unstake_time = Option::Some(Time::now());
-    let amount_own = 1;
-    let index = 2;
-    let unclaimed_rewards_own = 3;
-    let pool_info = Option::Some(
-        StakerPoolInfo {
-            pool_contract: contract_address_const::<'pool_contract'>(),
-            amount: 4,
-            unclaimed_rewards: 5,
-            commission: 6,
-        },
-    );
-    internal_staker_info.set_reward_address(reward_address);
-    internal_staker_info.set_operational_address(operational_address);
-    internal_staker_info.set_unstake_time(unstake_time);
-    internal_staker_info.set_amount_own(amount_own);
-    internal_staker_info.set_index(index);
-    internal_staker_info.set_unclaimed_rewards_own(unclaimed_rewards_own);
-    internal_staker_info.set_pool_info(pool_info);
-    assert_eq!(internal_staker_info.reward_address(), reward_address);
-    assert_eq!(internal_staker_info.operational_address(), operational_address);
-    assert_eq!(internal_staker_info.unstake_time(), unstake_time);
-    assert_eq!(internal_staker_info.amount_own(), amount_own);
-    assert_eq!(internal_staker_info.index(), index);
-    assert_eq!(internal_staker_info.unclaimed_rewards_own(), unclaimed_rewards_own);
-    assert_eq!(internal_staker_info.pool_info(), pool_info);
 }
 
 #[test]
@@ -2832,32 +2769,6 @@ fn test_versioned_internal_staker_info_is_none() {
 }
 
 #[test]
-fn test_versioned_internal_staker_info_is_latest() {
-    let versioned_none = VersionedInternalStakerInfo::None;
-    let versioned_v0 = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    let versioned_latest = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    assert!(versioned_none.is_latest());
-    assert!(!versioned_v0.is_latest());
-    assert!(versioned_latest.is_latest());
-}
-
-#[test]
 fn test_internal_staker_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -2866,7 +2777,7 @@ fn test_internal_staker_info() {
     let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let mut expected_internal_staker_info = cfg.staker_info;
-    expected_internal_staker_info.set_pool_info(Option::None);
+    expected_internal_staker_info.pool_info = Option::None;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let internal_staker_info = staking_dispatcher.internal_staker_info(:staker_address);
     assert_eq!(internal_staker_info, expected_internal_staker_info);
@@ -2886,7 +2797,7 @@ fn test_internal_staker_info_staker_not_exist() {
 fn test_compute_unpool_time() {
     let exit_wait_window = DEFAULT_EXIT_WAIT_WINDOW;
     // Unstake_time is not set.
-    let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
+    let internal_staker_info = InternalStakerInfoLatest {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
@@ -2894,7 +2805,7 @@ fn test_compute_unpool_time() {
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-    );
+    };
     assert_eq!(
         internal_staker_info.compute_unpool_time(:exit_wait_window),
         Time::now().add(delta: exit_wait_window),
@@ -2902,7 +2813,7 @@ fn test_compute_unpool_time() {
 
     // Unstake_time is set.
     let unstake_time = Time::now().add(delta: Time::weeks(count: 1));
-    let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
+    let internal_staker_info = InternalStakerInfoLatest {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::Some(unstake_time),
@@ -2910,7 +2821,7 @@ fn test_compute_unpool_time() {
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-    );
+    };
 
     // Unstake time > current time.
     assert_eq!(Time::now(), Zero::zero());
@@ -2931,7 +2842,7 @@ fn test_get_pool_info() {
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
     };
-    let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
+    let internal_staker_info = InternalStakerInfoLatest {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
@@ -2939,14 +2850,14 @@ fn test_get_pool_info() {
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::Some(staker_pool_info),
-    );
+    };
     assert_eq!(internal_staker_info.get_pool_info(), staker_pool_info);
 }
 
 #[test]
 #[should_panic(expected: "Staker does not have a pool contract")]
 fn test_get_pool_info_panic() {
-    let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
+    let internal_staker_info = InternalStakerInfoLatest {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
@@ -2954,13 +2865,13 @@ fn test_get_pool_info_panic() {
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-    );
+    };
     internal_staker_info.get_pool_info();
 }
 
 #[test]
-fn test_versioned_internal_staker_info_into_staker_info() {
-    let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
+fn test_internal_staker_info_latest_into_staker_info() {
+    let internal_staker_info = InternalStakerInfoLatest {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
@@ -2968,7 +2879,7 @@ fn test_versioned_internal_staker_info_into_staker_info() {
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-    );
+    };
     let staker_info: StakerInfo = internal_staker_info.into();
     let expected_staker_info = StakerInfo {
         reward_address: Zero::zero(),
@@ -3048,7 +2959,7 @@ fn test_sanity_serde_versioned_internal_staker_info() {
 }
 
 #[test]
-fn test_staker_info_into_versioned_internal_staker_info() {
+fn test_staker_info_into_internal_staker_info_v1() {
     let staker_info = StakerInfo {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
@@ -3058,8 +2969,8 @@ fn test_staker_info_into_versioned_internal_staker_info() {
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
     };
-    let internal_staker_info: VersionedInternalStakerInfo = staker_info.into();
-    let expected_internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
+    let internal_staker_info: InternalStakerInfoV1 = staker_info.into();
+    let expected_internal_staker_info = InternalStakerInfoV1 {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
@@ -3067,382 +2978,8 @@ fn test_staker_info_into_versioned_internal_staker_info() {
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-    );
+    };
     assert_eq!(internal_staker_info, expected_internal_staker_info);
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_getters_reward_address_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.reward_address();
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_getters_operational_address_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.operational_address();
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_getters_unstake_time_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    let _ = internal_staker_info.unstake_time();
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_getters_amount_own_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.amount_own();
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_getters_index_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.index();
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_getters_unclaimed_rewards_own_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.unclaimed_rewards_own();
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_getters_pool_info_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    let _ = internal_staker_info.pool_info();
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_setters_reward_address_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.set_reward_address(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_setters_operational_address_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.set_operational_address(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_setters_unstake_time_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.set_unstake_time(Option::None);
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_setters_amount_own_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.set_amount_own(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_setters_index_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.set_index(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_setters_unclaimed_rewards_own_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.set_unclaimed_rewards_own(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_setters_pool_info_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.set_pool_info(Option::None);
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_getters_reward_address_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.reward_address();
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_getters_operational_address_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.operational_address();
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_getters_unstake_time_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    let _ = internal_staker_info.unstake_time();
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_getters_amount_own_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.amount_own();
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_getters_index_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.index();
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_getters_unclaimed_rewards_own_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.unclaimed_rewards_own();
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_getters_pool_info_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    let _ = internal_staker_info.pool_info();
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_setters_reward_address_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.set_reward_address(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_setters_operational_address_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.set_operational_address(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_setters_unstake_time_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.set_unstake_time(Option::None);
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_setters_amount_own_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.set_amount_own(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_setters_index_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.set_index(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_setters_unclaimed_rewards_own_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.set_unclaimed_rewards_own(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_setters_pool_info_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.set_pool_info(Option::None);
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_compute_unpool_time_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.compute_unpool_time(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_compute_unpool_time_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.compute_unpool_time(Zero::zero());
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_get_pool_info_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    internal_staker_info.get_pool_info();
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_get_pool_info_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    internal_staker_info.get_pool_info();
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_versioned_internal_staker_info_into_staker_info_staker_not_exists() {
-    let mut internal_staker_info = VersionedInternalStakerInfo::None;
-    let _: StakerInfo = internal_staker_info.into();
-}
-
-#[test]
-#[should_panic(expected: "Outdated version of Internal Staker Info")]
-fn test_versioned_internal_staker_info_into_staker_info_old_version() {
-    let mut internal_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    let _: StakerInfo = internal_staker_info.into();
 }
 
 #[test]
