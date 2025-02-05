@@ -51,7 +51,7 @@ use staking::staking::interface::{
     StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
-    EpochInfoTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait,
+    EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait,
     InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
     UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTestTrait,
     VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
@@ -3078,6 +3078,7 @@ fn test_set_epoch_length_not_token_admin() {
     staking_config_dispatcher.set_epoch_length(epoch_length: EPOCH_LENGTH);
 }
 
+#[test]
 fn test_staking_eic() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -3086,7 +3087,7 @@ fn test_staking_eic() {
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V0().into()].span(),
+        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -3105,4 +3106,37 @@ fn test_staking_eic() {
     )
         .at(0);
     assert_eq!(prev_class_hash.try_into().unwrap(), MAINNET_STAKING_CLASS_HASH_V0());
+
+    let mut loaded_value = snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("epoch_info"),
+        size: Store::<EpochInfo>::size().into(),
+    )
+        .span();
+    let loaded_epoch_info = Serde::<EpochInfo>::deserialize(ref loaded_value).unwrap();
+    let expected_epoch_info = EpochInfoTrait::new(
+        length: EPOCH_LENGTH, starting_block: get_block_number(),
+    );
+    assert_eq!(expected_epoch_info, loaded_epoch_info);
+}
+
+#[test]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_2')]
+fn test_staking_eic_with_wrong_number_of_data_elemnts() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    // Upgrade.
+    let eic_data = EICData { eic_hash: declare_staking_eic_contract(), eic_init_data: [].span() };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
+    };
+    // Cheat block timestamp to enable upgrade eligibility.
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: staking_contract, :implementation_data, :upgrade_governor,
+    );
 }

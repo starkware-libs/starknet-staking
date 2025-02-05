@@ -29,7 +29,7 @@ use staking::staking::interface::{
     StakerInfo, StakerInfoTrait,
 };
 use staking::staking::objects::EpochInfo;
-use staking::test_utils::constants::{EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS};
+use staking::test_utils::constants::{EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS};
 use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
 use staking::types::{Amount, Commission, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
@@ -779,7 +779,9 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
         self.staking.update_global_index_if_needed();
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
-            eic_init_data: array![MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0().into()]
+            eic_init_data: array![
+                MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into(),
+            ]
                 .span(),
         };
         let implementation_data = ImplementationData {
