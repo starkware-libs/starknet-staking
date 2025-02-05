@@ -48,7 +48,8 @@ use staking::staking::interface::{
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher,
     IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
-    StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
+    IStakingTestDispatcher, IStakingTestDispatcherTrait, StakerInfo, StakerInfoTrait,
+    StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
     EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait,
@@ -923,7 +924,10 @@ fn test_get_total_stake() {
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_test_dispatcher = IStakingTestDispatcher { contract_address: staking_contract };
     assert_eq!(staking_dispatcher.get_total_stake(), Zero::zero());
+    let (has_checkpoint, _, _) = staking_test_dispatcher.get_total_stake_latest_checkpoint();
+    assert_eq!(has_checkpoint, false);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -936,6 +940,12 @@ fn test_get_total_stake() {
         staking_dispatcher.get_total_stake(),
         staking_dispatcher.staker_info(:staker_address).amount_own,
     );
+    let (has_checkpoint, latest_epoch, total_stake) = staking_test_dispatcher
+        .get_total_stake_latest_checkpoint();
+    assert!(has_checkpoint);
+    let next_epoch = staking_dispatcher.get_current_epoch() + 1;
+    assert_eq!(latest_epoch, next_epoch);
+    assert_eq!(total_stake, staking_dispatcher.staker_info(:staker_address).amount_own);
 }
 
 #[test]
