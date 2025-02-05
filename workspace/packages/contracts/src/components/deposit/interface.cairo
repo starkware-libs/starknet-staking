@@ -8,9 +8,9 @@ use starknet::ContractAddress;
 pub trait IDeposit<TContractState> {
     fn deposit(
         ref self: TContractState,
+        beneficiary: u32,
         asset_id: felt252,
         quantized_amount: u128,
-        beneficiary: u32,
         salt: felt252,
     ) -> HashType;
     fn get_deposit_status(self: @TContractState, deposit_hash: HashType) -> DepositStatus;

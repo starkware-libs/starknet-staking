@@ -38,9 +38,9 @@ pub(crate) mod Deposit {
     > of IDeposit<ComponentState<TContractState>> {
         fn deposit(
             ref self: ComponentState<TContractState>,
+            beneficiary: u32,
             asset_id: felt252,
             quantized_amount: u128,
-            beneficiary: u32,
             salt: felt252,
         ) -> HashType {
             assert(quantized_amount > 0, errors::ZERO_AMOUNT);
@@ -115,9 +115,9 @@ pub(crate) mod Deposit {
         fn process_deposit(
             ref self: ComponentState<TContractState>,
             depositor: ContractAddress,
+            beneficiary: u32,
             asset_id: felt252,
             quantized_amount: u128,
-            beneficiary: u32,
             salt: felt252,
         ) -> HashType {
             assert(quantized_amount > 0, errors::ZERO_AMOUNT);
