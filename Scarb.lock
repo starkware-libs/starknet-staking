@@ -164,7 +164,7 @@ dependencies = [
 
 [[package]]
 name = "staking"
-version = "1.7.2"
+version = "1.7.3"
 dependencies = [
  "contracts_commons",
  "openzeppelin",
