@@ -171,6 +171,12 @@ pub trait IStakingConfig<TContractState> {
     fn set_epoch_length(ref self: TContractState, epoch_length: u16);
 }
 
+// TODO: Remove this once we remove `total_stake` from Staking contract storage.
+#[starknet::interface]
+pub trait IStakingTest<TContractState> {
+    fn get_total_stake_latest_checkpoint(self: @TContractState) -> (bool, Epoch, Amount);
+}
+
 pub mod Events {
     use contracts_commons::types::time::time::Timestamp;
     use staking::types::{Amount, Commission, Index};

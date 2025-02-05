@@ -72,6 +72,18 @@ pub impl MutableTraceImpl of MutableTraceTrait {
     fn push(self: StoragePath<Mutable<Trace>>, key: u64, value: u128) -> (u128, u128) {
         self.checkpoints.as_path()._insert(key, value)
     }
+
+    /// Returns the value in the most recent checkpoint, or zero if there are no checkpoints.
+    fn latest(self: StoragePath<Mutable<Trace>>) -> u128 {
+        let checkpoints = self.checkpoints;
+        let pos = checkpoints.len();
+
+        if pos == 0 {
+            0
+        } else {
+            checkpoints[pos - 1].read().value
+        }
+    }
 }
 
 #[generate_trait]

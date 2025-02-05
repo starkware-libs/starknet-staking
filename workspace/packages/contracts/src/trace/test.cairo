@@ -84,3 +84,14 @@ fn test_upper_lookup() {
     assert_eq!(mock_trace.upper_lookup(200), 2000);
     assert_eq!(mock_trace.upper_lookup(250), 2000);
 }
+
+#[test]
+fn test_latest_mutable() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    mock_trace.push(100, 1000);
+    mock_trace.push(200, 2000);
+
+    let latest = mock_trace.latest_mutable();
+    assert_eq!(latest, 2000);
+}

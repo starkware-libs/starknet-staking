@@ -201,6 +201,9 @@ pub mod Pool {
             pool_member_info.amount += amount;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
 
+            // Update the pool member's balance checkpoint.
+            self.increase_next_epoch_balance(:pool_member, :amount);
+
             // Emit events.
             self
                 .emit(
@@ -498,9 +501,9 @@ pub mod Pool {
             self.update_rewards(ref :pool_member_info, :updated_index);
             pool_member_info.commission = commission;
 
-            let new_amount = self.pool_member_epoch_balance.entry(pool_member).latest();
+            let new_amount = self.get_amount(:pool_member);
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
-            external_pool_member_info.new_amount = new_amount.into();
+            external_pool_member_info.new_amount = new_amount;
             external_pool_member_info
         }
 
@@ -697,11 +700,25 @@ pub mod Pool {
             staking_dispatcher.get_current_epoch() + 1
         }
 
+        // TODO: consider #[inline(always)]
+        fn get_amount(self: @ContractState, pool_member: ContractAddress) -> Amount {
+            self.pool_member_epoch_balance.entry(pool_member).latest()
+        }
+
         fn set_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) -> (Amount, Amount) {
             let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
-            member_checkpoint.push(key: self.get_next_epoch(), value: amount.into())
+            member_checkpoint.push(key: self.get_next_epoch(), value: amount)
+            // TODO: Emit event?
+        }
+
+        fn increase_next_epoch_balance(
+            ref self: ContractState, pool_member: ContractAddress, amount: Amount,
+        ) -> (Amount, Amount) {
+            let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
+            let current_balance = member_checkpoint.latest();
+            member_checkpoint.push(key: self.get_next_epoch(), value: current_balance + amount)
             // TODO: Emit event?
         }
     }

@@ -5,6 +5,7 @@ pub mod Staking {
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::{Describable, OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
+    use contracts_commons::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
@@ -24,7 +25,7 @@ pub mod Staking {
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         ConfigEvents, Events, IStaking, IStakingConfig, IStakingMigration, IStakingPause,
-        IStakingPool, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
+        IStakingPool, IStakingTest, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
     };
     use staking::staking::objects::{
         EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait,
@@ -101,6 +102,9 @@ pub mod Staking {
         attestation_contract: ContractAddress,
         // Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
+        // Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
+        // an epoch to the updated stake.
+        total_stake_trace: Trace,
     }
 
     #[event]
@@ -1026,6 +1030,13 @@ pub mod Staking {
         }
     }
 
+    #[abi(embed_v0)]
+    impl StakingTestImpl of IStakingTest<ContractState> {
+        fn get_total_stake_latest_checkpoint(self: @ContractState) -> (bool, Epoch, Amount) {
+            self.total_stake_trace.deref().latest_checkpoint()
+        }
+    }
+
     #[generate_trait]
     pub(crate) impl InternalStakingMigration of IStakingMigrationInternal {
         /// Returns the class hash of the previous contract version.
@@ -1236,11 +1247,17 @@ pub mod Staking {
         }
 
         fn add_to_total_stake(ref self: ContractState, amount: Amount) {
-            self.total_stake.write(self.total_stake.read() + amount);
+            self.update_total_stake(new_total_stake: self.total_stake.read() + amount);
         }
 
         fn remove_from_total_stake(ref self: ContractState, amount: Amount) {
-            self.total_stake.write(self.total_stake.read() - amount);
+            self.update_total_stake(new_total_stake: self.total_stake.read() - amount);
+        }
+
+        fn update_total_stake(ref self: ContractState, new_total_stake: Amount) {
+            self.total_stake.write(new_total_stake);
+            let next_epoch = self.get_current_epoch() + 1;
+            self.total_stake_trace.deref().push(key: next_epoch, value: new_total_stake);
         }
 
         fn is_index_update_needed(self: @ContractState) -> bool {
