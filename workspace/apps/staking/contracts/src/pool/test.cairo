@@ -637,9 +637,7 @@ fn test_exit_delegation_pool_intent() {
         unpool_time: Option::Some(expected_time),
         ..cfg.pool_member_info,
     };
-    // This should break when intent will update new_amount.
     let mut expected_pool_member_info: PoolMemberInfo = expected_pool_member_info.into();
-    expected_pool_member_info.new_amount = cfg.pool_member_info.amount;
     assert_eq!(
         pool_dispatcher.pool_member_info(cfg.test_info.pool_member_address),
         expected_pool_member_info,

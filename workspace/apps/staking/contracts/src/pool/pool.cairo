@@ -236,8 +236,12 @@ pub mod Pool {
                 pool_member_info.unpool_time = Option::Some(unpool_time);
             }
             pool_member_info.unpool_amount = amount;
-            pool_member_info.amount = total_amount - amount;
+            let new_delegated_stake = total_amount - amount;
+            pool_member_info.amount = new_delegated_stake;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+
+            // Update the pool member's balance checkpoint.
+            self.set_next_epoch_balance(:pool_member, amount: new_delegated_stake);
 
             // Emit events.
             self
@@ -249,9 +253,7 @@ pub mod Pool {
             self
                 .emit(
                     Events::PoolMemberBalanceChanged {
-                        pool_member,
-                        old_delegated_stake,
-                        new_delegated_stake: pool_member_info.amount,
+                        pool_member, old_delegated_stake, new_delegated_stake,
                     },
                 );
         }
