@@ -236,8 +236,12 @@ pub mod Pool {
                 pool_member_info.unpool_time = Option::Some(unpool_time);
             }
             pool_member_info.unpool_amount = amount;
-            pool_member_info.amount = total_amount - amount;
+            let new_delegated_stake = total_amount - amount;
+            pool_member_info.amount = new_delegated_stake;
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+
+            // Update the pool member's balance checkpoint.
+            self.set_next_epoch_balance(:pool_member, amount: new_delegated_stake);
 
             // Emit events.
             self
@@ -249,9 +253,7 @@ pub mod Pool {
             self
                 .emit(
                     Events::PoolMemberBalanceChanged {
-                        pool_member,
-                        old_delegated_stake,
-                        new_delegated_stake: pool_member_info.amount,
+                        pool_member, old_delegated_stake, new_delegated_stake,
                     },
                 );
         }
@@ -409,11 +411,13 @@ pub mod Pool {
                     );
                     self.update_rewards(ref :pool_member_info, updated_index: index);
                     pool_member_info.amount += amount;
+                    // Update the pool member's balance checkpoint.
+                    self.increase_next_epoch_balance(:pool_member, :amount);
                     pool_member_info
                 },
                 Option::None => {
                     // Pool member does not exist. Create a new record.
-                    InternalPoolMemberInfo {
+                    let pool_member_info = InternalPoolMemberInfo {
                         reward_address: switch_pool_data.reward_address,
                         amount,
                         index,
@@ -421,7 +425,10 @@ pub mod Pool {
                         commission: self.commission.read(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
-                    }
+                    };
+                    // Update the pool member's balance checkpoint.
+                    self.set_next_epoch_balance(:pool_member, :amount);
+                    pool_member_info
                 },
             };
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
