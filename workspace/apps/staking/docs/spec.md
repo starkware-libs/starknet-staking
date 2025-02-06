@@ -93,6 +93,7 @@
 - [L2 Reward supplier contract](#l2-reward-supplier-contract)
   - [Functions](#functions-2)
     - [calculate\_staking\_rewards](#calculate_staking_rewards)
+    - [current\_epoch\_rewards](#current_epoch_rewards)
     - [claim\_rewards](#claim_rewards-2)
     - [contract\_parameters](#contract_parameters-2)
     - [on\_receive](#on_receive)
@@ -275,6 +276,7 @@ classDiagram
     erc20_dispatcher,
     l1_reward_supplier,
     calculate_staking_rewards()
+    current_epoch_rewards()
     claim_rewards()
     on_receive()
     contract_parameters()
@@ -1704,6 +1706,23 @@ rewards: [Amount](#amount) - the rewards owed to stakers, in FRI.
 
 #### access control <!-- omit from toc -->
 Only staking contract.
+
+### current_epoch_rewards
+```rust
+fn current_epoch_rewards(self: @TContractState) -> Amount
+```
+#### description <!-- omit from toc -->
+Return the amount of rewards for the current epoch.
+#### return <!-- omit from toc -->
+rewards: [Amount](#amount) - the rewards for the current epoch, in FRI.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. Invoke the Minting Curve's [yearly_mint](#yearly-mint) to receive the theoretic yearly amount of rewards.
+2. Divide the yearly mint by the number of epochs in a year.
+
+#### access control <!-- omit from toc -->
+Any address can execute.
 
 ### claim_rewards
 ```rust

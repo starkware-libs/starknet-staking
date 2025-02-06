@@ -82,6 +82,10 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
         self.starting_block = self.calculate_next_epoch_starting_block();
         self.length = epoch_length;
     }
+
+    fn length(self: @EpochInfo) -> u16 {
+        *self.length
+    }
 }
 
 #[generate_trait]
