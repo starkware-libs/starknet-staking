@@ -25,7 +25,7 @@ pub mod Staking {
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         ConfigEvents, Events, IStaking, IStakingConfig, IStakingMigration, IStakingPause,
-        IStakingPool, IStakingTest, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
+        IStakingPool, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
     };
     use staking::staking::objects::{
         EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait,
@@ -40,6 +40,7 @@ pub mod Staking {
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::Map;
+    use starknet::storage::VecTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -82,8 +83,8 @@ pub mod Staking {
         eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
         // A dispatcher of the token contract.
         token_dispatcher: IERC20Dispatcher,
-        // The total stake in the system.
-        total_stake: Amount,
+        // Deprecated field of the total stake.
+        _deprecated_total_stake: Amount,
         // The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
         // Undelegate intents from pool contracts.
@@ -565,7 +566,11 @@ pub mod Staking {
         }
 
         fn get_total_stake(self: @ContractState) -> Amount {
-            self.total_stake.read()
+            self.total_stake_trace.deref().latest()
+        }
+
+        fn get_total_stake_at_current_epoch(self: @ContractState) -> Amount {
+            self.total_stake_trace.deref().upper_lookup(key: self.get_current_epoch())
         }
 
         fn get_pool_exit_intent(
@@ -1030,13 +1035,6 @@ pub mod Staking {
         }
     }
 
-    #[abi(embed_v0)]
-    impl StakingTestImpl of IStakingTest<ContractState> {
-        fn get_total_stake_latest_checkpoint(self: @ContractState) -> (bool, Epoch, Amount) {
-            self.total_stake_trace.deref().latest_checkpoint()
-        }
-    }
-
     #[generate_trait]
     pub(crate) impl InternalStakingMigration of IStakingMigrationInternal {
         /// Returns the class hash of the previous contract version.
@@ -1247,15 +1245,14 @@ pub mod Staking {
         }
 
         fn add_to_total_stake(ref self: ContractState, amount: Amount) {
-            self.update_total_stake(new_total_stake: self.total_stake.read() + amount);
+            self.update_total_stake(new_total_stake: self.get_total_stake() + amount);
         }
 
         fn remove_from_total_stake(ref self: ContractState, amount: Amount) {
-            self.update_total_stake(new_total_stake: self.total_stake.read() - amount);
+            self.update_total_stake(new_total_stake: self.get_total_stake() - amount);
         }
 
         fn update_total_stake(ref self: ContractState, new_total_stake: Amount) {
-            self.total_stake.write(new_total_stake);
             let next_epoch = self.get_current_epoch() + 1;
             self.total_stake_trace.deref().push(key: next_epoch, value: new_total_stake);
         }
