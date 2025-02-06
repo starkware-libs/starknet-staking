@@ -6,7 +6,7 @@ pub mod RewardSupplier {
     use contracts_commons::errors::OptionAuxTrait;
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::math::ceil_of_division;
-    use contracts_commons::types::time::time::{Time, Timestamp};
+    use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::Zero;
     use core::traits::TryInto;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -17,6 +17,8 @@ pub mod RewardSupplier {
     use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking::reward_supplier::errors::Error;
     use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfo};
+    use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+    use staking::staking::objects::EpochInfoTrait;
     use staking::types::Amount;
     use staking::utils::{CheckedIERC20DispatcherTrait, compute_threshold};
     use starknet::syscalls::send_message_to_l1_syscall;
@@ -39,6 +41,8 @@ pub mod RewardSupplier {
     impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
 
     pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 60 * 60;
+    // TODO: Pair this variable with the epoch info.
+    pub const BLOCK_DURATION: TimeDelta = TimeDelta { seconds: 30 };
 
     #[storage]
     struct Storage {
@@ -153,6 +157,20 @@ pub mod RewardSupplier {
                 );
 
             rewards
+        }
+
+        fn current_epoch_rewards(self: @ContractState) -> Amount {
+            let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
+            let staking_dispatcher = IStakingDispatcher {
+                contract_address: self.staking_contract.read(),
+            };
+
+            let yearly_mint = minting_curve_dispatcher.yearly_mint();
+            let epoch_length = staking_dispatcher.get_epoch_info().length();
+            self
+                .calculate_epoch_rewards(
+                    :yearly_mint, :epoch_length, block_duration: BLOCK_DURATION,
+                )
         }
 
         // This function is called by the staking contract, claiming an amount of owed rewards.
@@ -280,6 +298,14 @@ pub mod RewardSupplier {
             let payload: Span<felt252> = array![self.base_mint_amount.read().into()].span();
             let to_address = self.l1_reward_supplier.read();
             send_message_to_l1_syscall(:to_address, :payload).unwrap_syscall();
+        }
+
+        fn calculate_epoch_rewards(
+            self: @ContractState, yearly_mint: Amount, epoch_length: u16, block_duration: TimeDelta,
+        ) -> Amount {
+            let blocks_in_year = SECONDS_IN_YEAR / block_duration.seconds.into();
+            let epochs_in_year = blocks_in_year / epoch_length.into();
+            yearly_mint / epochs_in_year
         }
     }
 }

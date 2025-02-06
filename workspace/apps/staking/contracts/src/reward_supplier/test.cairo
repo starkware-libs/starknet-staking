@@ -25,6 +25,7 @@ use staking::errors::GenericError;
 use staking::event_test_utils::{
     assert_calculated_rewards_event, assert_mint_request_event, assert_number_of_events,
 };
+use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::pool::Pool;
 use staking::reward_supplier::interface::{
@@ -32,6 +33,8 @@ use staking::reward_supplier::interface::{
     IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfo,
 };
 use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::reward_supplier::reward_supplier::RewardSupplier::{BLOCK_DURATION, SECONDS_IN_YEAR};
+use staking::staking::objects::EpochInfoTrait;
 use staking::staking::staking::Staking;
 use staking::test_utils;
 use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
@@ -398,4 +401,28 @@ fn test_claim_rewards_assertions() {
     cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
     let result = reward_supplier_safe_dispatcher.claim_rewards(:amount);
     assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_TOO_HIGH.describe());
+}
+
+#[test]
+fn test_current_epoch_rewards() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let minting_curve_dispatcher = IMintingCurveDispatcher {
+        contract_address: cfg.reward_supplier.minting_curve_contract,
+    };
+    let yearly_mint = minting_curve_dispatcher.yearly_mint();
+    let rewards = reward_supplier_dispatcher.current_epoch_rewards();
+
+    // Expected rewards are computed by dividing the yearly mint by the number of epochs in a year.
+    let epoch_info = cfg.staking_contract_info.epoch_info;
+    let epoch_length = epoch_info.length();
+    let block_duration = BLOCK_DURATION;
+    let blocks_in_year = SECONDS_IN_YEAR / block_duration.seconds.into();
+    let epochs_in_year = blocks_in_year / epoch_length.into();
+    let expected_rewards = yearly_mint / epochs_in_year;
+    assert_eq!(rewards, expected_rewards);
 }
