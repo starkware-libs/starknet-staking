@@ -409,11 +409,13 @@ pub mod Pool {
                     );
                     self.update_rewards(ref :pool_member_info, updated_index: index);
                     pool_member_info.amount += amount;
+                    // Update the pool member's balance checkpoint.
+                    self.increase_next_epoch_balance(:pool_member, :amount);
                     pool_member_info
                 },
                 Option::None => {
                     // Pool member does not exist. Create a new record.
-                    InternalPoolMemberInfo {
+                    let pool_member_info = InternalPoolMemberInfo {
                         reward_address: switch_pool_data.reward_address,
                         amount,
                         index,
@@ -421,7 +423,10 @@ pub mod Pool {
                         commission: self.commission.read(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
-                    }
+                    };
+                    // Update the pool member's balance checkpoint.
+                    self.set_next_epoch_balance(:pool_member, :amount);
+                    pool_member_info
                 },
             };
             self.pool_member_info.write(pool_member, Option::Some(pool_member_info));

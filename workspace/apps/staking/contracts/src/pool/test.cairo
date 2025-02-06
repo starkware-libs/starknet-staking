@@ -1060,25 +1060,28 @@ fn test_enter_delegation_pool_from_staking_contract() {
         commission: cfg.pool_member_info.commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
-        new_amount: Zero::zero(),
+        new_amount: amount,
     };
     assert_eq!(pool_member_info, expected_pool_member_info);
 
     // Enter with an existing pool member.
     let updated_index = index + BASE_VALUE;
+    snforge_std::store(
+        target: staking_contract,
+        storage_address: selector!("global_index"),
+        serialized_value: array![updated_index.into()].span(),
+    );
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     pool_dispatcher
         .enter_delegation_pool_from_staking_contract(:amount, index: updated_index, :data);
-    let pool_member_info = load_pool_member_info_from_map(
-        key: pool_member, contract: pool_contract,
-    );
+    let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     let updated_amount = amount * 2;
     let interest = updated_index - index;
     let rewards_including_commission = compute_rewards_rounded_down(:amount, :interest);
     let commission_amount = compute_commission_amount_rounded_up(
         :rewards_including_commission, commission: cfg.staker_info.get_pool_info().commission,
     );
-    let expected_pool_member_info = InternalPoolMemberInfo {
+    let expected_pool_member_info = PoolMemberInfo {
         reward_address,
         amount: updated_amount,
         index: updated_index,
@@ -1086,8 +1089,9 @@ fn test_enter_delegation_pool_from_staking_contract() {
         commission: cfg.pool_member_info.commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
+        new_amount: updated_amount,
     };
-    assert_eq!(pool_member_info, Option::Some(expected_pool_member_info));
+    assert_eq!(pool_member_info, expected_pool_member_info);
 
     // Validate two PoolMemberBalanceChanged events.
     let events = spy.get_events().emitted_by(pool_contract).events;
