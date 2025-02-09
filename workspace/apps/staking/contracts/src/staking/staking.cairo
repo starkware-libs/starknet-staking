@@ -40,7 +40,6 @@ pub mod Staking {
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::Map;
-    use starknet::storage::VecTrait;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -566,7 +565,12 @@ pub mod Staking {
         }
 
         fn get_total_stake(self: @ContractState) -> Amount {
-            self.total_stake_trace.deref().latest()
+            let total_stake_trace = self.total_stake_trace.deref();
+            if total_stake_trace.length().is_zero() {
+                return Zero::zero();
+            }
+            let (_, total_stake) = total_stake_trace.latest();
+            total_stake
         }
 
         fn get_total_stake_at_current_epoch(self: @ContractState) -> Amount {
@@ -1254,7 +1258,7 @@ pub mod Staking {
 
         fn update_total_stake(ref self: ContractState, new_total_stake: Amount) {
             let next_epoch = self.get_current_epoch() + 1;
-            self.total_stake_trace.deref().push(key: next_epoch, value: new_total_stake);
+            self.total_stake_trace.deref().insert(key: next_epoch, value: new_total_stake);
         }
 
         fn is_index_update_needed(self: @ContractState) -> bool {

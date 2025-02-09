@@ -709,14 +709,15 @@ pub mod Pool {
 
         // TODO: consider #[inline(always)]
         fn get_amount(self: @ContractState, pool_member: ContractAddress) -> Amount {
-            self.pool_member_epoch_balance.entry(pool_member).latest()
+            let (_, amount) = self.pool_member_epoch_balance.entry(pool_member).latest();
+            amount
         }
 
         fn set_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) -> (Amount, Amount) {
             let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
-            member_checkpoint.push(key: self.get_next_epoch(), value: amount)
+            member_checkpoint.insert(key: self.get_next_epoch(), value: amount)
             // TODO: Emit event?
         }
 
@@ -725,7 +726,7 @@ pub mod Pool {
         ) -> (Amount, Amount) {
             let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
             let current_balance = member_checkpoint.latest();
-            member_checkpoint.push(key: self.get_next_epoch(), value: current_balance + amount)
+            member_checkpoint.insert(key: self.get_next_epoch(), value: current_balance + amount)
             // TODO: Emit event?
         }
     }
