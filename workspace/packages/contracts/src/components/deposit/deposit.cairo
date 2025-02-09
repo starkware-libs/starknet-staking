@@ -44,9 +44,10 @@ pub(crate) mod Deposit {
             salt: felt252,
         ) -> HashType {
             assert(quantized_amount > 0, errors::ZERO_AMOUNT);
+            let caller_address = get_caller_address();
             let deposit_hash = self
                 .deposit_hash(
-                    signer: get_caller_address(), :asset_id, :quantized_amount, :beneficiary, :salt,
+                    signer: caller_address, :beneficiary, :asset_id, :quantized_amount, :salt,
                 );
             assert(
                 self.get_deposit_status(:deposit_hash) == DepositStatus::NOT_EXIST,
@@ -62,15 +63,15 @@ pub(crate) mod Deposit {
             let token_contract = IERC20Dispatcher { contract_address: token_address };
             token_contract
                 .transfer_from(
-                    sender: get_caller_address(),
+                    sender: caller_address,
                     recipient: get_contract_address(),
-                    amount: quantized_amount.into() * quantum.into(),
+                    amount: unquantized_amount.into(),
                 );
             self
                 .emit(
                     events::Deposit {
                         position_id: beneficiary,
-                        depositing_address: get_caller_address(),
+                        depositing_address: caller_address,
                         asset_id,
                         quantized_amount,
                         unquantized_amount,
@@ -98,6 +99,7 @@ pub(crate) mod Deposit {
         TContractState, +HasComponent<TContractState>,
     > of InternalTrait<TContractState> {
         fn initialize(ref self: ComponentState<TContractState>) {
+            assert(self.cancellation_time.read().is_zero(), errors::ALREADY_INITIALIZED);
             self.cancellation_time.write(Time::weeks(count: 1));
         }
 
@@ -122,7 +124,7 @@ pub(crate) mod Deposit {
         ) -> HashType {
             assert(quantized_amount > 0, errors::ZERO_AMOUNT);
             let deposit_hash = self
-                .deposit_hash(signer: depositor, :asset_id, :quantized_amount, :beneficiary, :salt);
+                .deposit_hash(signer: depositor, :beneficiary, :asset_id, :quantized_amount, :salt);
             let deposit_status = self._get_deposit_status(:deposit_hash);
             match deposit_status {
                 DepositStatus::NOT_EXIST => { panic_with_felt(errors::DEPOSIT_NOT_REGISTERED) },
@@ -174,16 +176,16 @@ pub(crate) mod Deposit {
         fn deposit_hash(
             ref self: ComponentState<TContractState>,
             signer: ContractAddress,
+            beneficiary: u32,
             asset_id: felt252,
             quantized_amount: u128,
-            beneficiary: u32,
             salt: felt252,
         ) -> HashType {
             PoseidonTrait::new()
                 .update_with(value: signer)
+                .update_with(value: beneficiary)
                 .update_with(value: asset_id)
                 .update_with(value: quantized_amount)
-                .update_with(value: beneficiary)
                 .update_with(value: salt)
                 .finalize()
         }
