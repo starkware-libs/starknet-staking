@@ -33,7 +33,7 @@ mod StakingEIC {
             self.epoch_info.write(epoch_info);
 
             let total_stake: Amount = (*eic_init_data[2]).try_into().unwrap();
-            self.total_stake_trace.deref().push(key: Zero::zero(), value: total_stake);
+            self.total_stake_trace.deref().insert(key: Zero::zero(), value: total_stake);
         }
     }
 }

@@ -19,30 +19,25 @@ struct Checkpoint {
 
 #[generate_trait]
 pub impl TraceImpl of TraceTrait {
-    /// Returns the value in the most recent checkpoint, or zero if there are no checkpoints.
-    fn latest(self: StoragePath<Trace>) -> u128 {
+    /// Retrieves the most recent checkpoint from the trace structure.
+    ///
+    /// # Returns
+    /// A tuple containing:
+    /// - `u64`: Timestamp/key of the latest checkpoint
+    /// - `u128`: Value stored in the latest checkpoint
+    ///
+    /// # Panics
+    /// If the trace structure is empty (no checkpoints exist)
+    ///
+    /// # Note
+    /// This will return the last inserted checkpoint that maintains the structure's
+    /// invariant of non-decreasing keys.
+    fn latest(self: StoragePath<Trace>) -> (u64, u128) {
         let checkpoints = self.checkpoints;
         let pos = checkpoints.len();
-
-        if pos == 0 {
-            0
-        } else {
-            checkpoints[pos - 1].read().value
-        }
-    }
-
-    /// Returns whether there is a checkpoint in the structure (i.e. it is not empty),
-    /// and if so the key and value in the most recent checkpoint.
-    fn latest_checkpoint(self: StoragePath<Trace>) -> (bool, u64, u128) {
-        let checkpoints = self.checkpoints;
-        let pos = checkpoints.len();
-
-        if pos == 0 {
-            (false, 0, 0)
-        } else {
-            let checkpoint = checkpoints[pos - 1].read();
-            (true, checkpoint.key, checkpoint.value)
-        }
+        assert!(pos > 0, "{}", TraceErrors::EMPTY_TRACE);
+        let checkpoint = checkpoints[pos - 1].read();
+        (checkpoint.key, checkpoint.value)
     }
 
     /// Returns the total number of checkpoints.
@@ -67,9 +62,9 @@ pub impl TraceImpl of TraceTrait {
 
 #[generate_trait]
 pub impl MutableTraceImpl of MutableTraceTrait {
-    /// Pushes a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint
+    /// Inserts a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint
     /// and returns both the previous and the new value.
-    fn push(self: StoragePath<Mutable<Trace>>, key: u64, value: u128) -> (u128, u128) {
+    fn insert(self: StoragePath<Mutable<Trace>>, key: u64, value: u128) -> (u128, u128) {
         self.checkpoints.as_path()._insert(key, value)
     }
 
