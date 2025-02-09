@@ -3083,11 +3083,18 @@ fn test_staking_eic() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let upgrade_governor = cfg.test_info.upgrade_governor;
+    let expected_total_stake: Amount = 123;
+
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into()].span(),
+        eic_init_data: [
+            MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into(),
+            expected_total_stake.into(),
+        ]
+            .span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -3118,10 +3125,13 @@ fn test_staking_eic() {
         length: EPOCH_LENGTH, starting_block: get_block_number(),
     );
     assert_eq!(expected_epoch_info, loaded_epoch_info);
+
+    let actual_total_stake = staking_dispatcher.get_total_stake();
+    assert_eq!(expected_total_stake, actual_total_stake);
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_2')]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_3')]
 fn test_staking_eic_with_wrong_number_of_data_elemnts() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
