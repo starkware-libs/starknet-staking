@@ -48,8 +48,7 @@ use staking::staking::interface::{
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher,
     IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
-    IStakingTestDispatcher, IStakingTestDispatcherTrait, StakerInfo, StakerInfoTrait,
-    StakerPoolInfo, StakingContractInfo,
+    StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
     EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait,
@@ -924,10 +923,7 @@ fn test_get_total_stake() {
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let staking_test_dispatcher = IStakingTestDispatcher { contract_address: staking_contract };
     assert_eq!(staking_dispatcher.get_total_stake(), Zero::zero());
-    let (has_checkpoint, _, _) = staking_test_dispatcher.get_total_stake_latest_checkpoint();
-    assert_eq!(has_checkpoint, false);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -940,12 +936,6 @@ fn test_get_total_stake() {
         staking_dispatcher.get_total_stake(),
         staking_dispatcher.staker_info(:staker_address).amount_own,
     );
-    let (has_checkpoint, latest_epoch, total_stake) = staking_test_dispatcher
-        .get_total_stake_latest_checkpoint();
-    assert!(has_checkpoint);
-    let next_epoch = staking_dispatcher.get_current_epoch() + 1;
-    assert_eq!(latest_epoch, next_epoch);
-    assert_eq!(total_stake, staking_dispatcher.staker_info(:staker_address).amount_own);
 }
 
 #[test]
@@ -1789,7 +1779,7 @@ fn test_update_global_index_if_needed() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let mut spy = snforge_std::spy_events();
 
-    // Update global index (if enough time passed since last update).
+    // First update shouldn't change index (not enough time passed)
     staking_dispatcher.update_global_index_if_needed();
     let global_index_after_first_update: Index = load_one_felt(
         target: staking_contract, storage_address: selector!("global_index"),
@@ -1801,22 +1791,22 @@ fn test_update_global_index_if_needed() {
     // supply), which means that max_inflation * BASE_VALUE will be added to global_index.
     let global_index_increment = (cfg.minting_curve_contract_info.c_num.into()
         * BASE_VALUE
-        / cfg.minting_curve_contract_info.c_denom.into())
+        / cfg.minting_curve_contract_info.c_denom.into());
+    cfg
+        .test_info
+        .staker_initial_balance = cfg
+        .test_info
+        .initial_supply
         .try_into()
-        .expect('inflation not fit in u64');
+        .expect('intial_supply not fit in Amount');
+    cfg.staker_info.amount_own = cfg.test_info.staker_initial_balance;
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let global_index_last_update_timestamp = Time::now();
     let global_index_current_update_timestamp = global_index_last_update_timestamp
         .add(delta: Time::days(count: 365));
     start_cheat_block_timestamp_global(
         block_timestamp: global_index_current_update_timestamp.into(),
-    );
-    snforge_std::store(
-        target: staking_contract,
-        storage_address: selector!("total_stake"),
-        serialized_value: array![
-            cfg.test_info.initial_supply.try_into().expect('intial_supply not fit in felt'),
-        ]
-            .span(),
     );
     staking_dispatcher.update_global_index_if_needed();
     let global_index_after_second_update: Index = load_one_felt(
@@ -1827,11 +1817,11 @@ fn test_update_global_index_if_needed() {
     assert_eq!(
         global_index_after_second_update, global_index_after_first_update + global_index_increment,
     );
-    // Validate events.
+    // Validate `GlobalIndexUpdated` event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 1, message: "update_global_index");
+    assert_number_of_events(actual: events.len(), expected: 3, message: "update_global_index");
     assert_global_index_updated_event(
-        spied_event: events[0],
+        spied_event: events[2],
         old_index: global_index_before_first_update,
         new_index: global_index_after_second_update,
         :global_index_last_update_timestamp,
@@ -3093,11 +3083,18 @@ fn test_staking_eic() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let upgrade_governor = cfg.test_info.upgrade_governor;
+    let expected_total_stake: Amount = 123;
+
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into()].span(),
+        eic_init_data: [
+            MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into(),
+            expected_total_stake.into(),
+        ]
+            .span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -3128,10 +3125,13 @@ fn test_staking_eic() {
         length: EPOCH_LENGTH, starting_block: get_block_number(),
     );
     assert_eq!(expected_epoch_info, loaded_epoch_info);
+
+    let actual_total_stake = staking_dispatcher.get_total_stake();
+    assert_eq!(expected_total_stake, actual_total_stake);
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_2')]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_3')]
 fn test_staking_eic_with_wrong_number_of_data_elemnts() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

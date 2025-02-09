@@ -32,6 +32,7 @@
     - [update_rewards_from_work_contract](#update_rewards_from_work_contract)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
+    - [get\_total\_stake\_at\_current\_epoch](#get_total_stake_at_current_epoch)
     - [get\_pool\_exit\_intent](#get_pool_exit_intent)
     - [update\_rewards](#update_rewards)
     - [declare\_operational\_address](#declare_operational_address)
@@ -214,6 +215,7 @@ classDiagram
     contract_parameters()
     update_rewards()
     get_total_stake()
+    get_total_stake_at_current_epoch()
     get_pool_exit_intent()
     set_min_stake()
     set_exit_wait_window()
@@ -922,7 +924,19 @@ Return general parameters of the contract.
 get_total_stake(self: @ContractState) -> Amount
 ```
 #### description <!-- omit from toc -->
-Return the total stake amount.
+Return the latest total stake amount (which could be of the next epoch).
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+
+### get_total_stake_at_current_epoch
+```rust
+get_total_stake_at_current_epoch(self: @ContractState) -> Amount
+```
+#### description <!-- omit from toc -->
+Return the total stake amount at the current epoch.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->

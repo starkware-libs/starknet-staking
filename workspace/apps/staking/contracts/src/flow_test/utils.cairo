@@ -777,10 +777,13 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     /// Upgrades the staking contract in the system state with a local implementation.
     fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
         self.staking.update_global_index_if_needed();
+        let total_stake = self.staking.get_total_stake();
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
             eic_init_data: array![
-                MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into(),
+                MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0().into(),
+                EPOCH_LENGTH.into(),
+                total_stake.into(),
             ]
                 .span(),
         };

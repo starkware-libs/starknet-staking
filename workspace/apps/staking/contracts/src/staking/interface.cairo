@@ -41,6 +41,7 @@ pub trait IStaking<TContractState> {
     );
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
+    fn get_total_stake_at_current_epoch(self: @TContractState) -> Amount;
     fn get_pool_exit_intent(
         self: @TContractState, undelegate_intent_key: UndelegateIntentKey,
     ) -> UndelegateIntentValue;
@@ -169,12 +170,6 @@ pub trait IStakingConfig<TContractState> {
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
     fn set_epoch_length(ref self: TContractState, epoch_length: u16);
-}
-
-// TODO: Remove this once we remove `total_stake` from Staking contract storage.
-#[starknet::interface]
-pub trait IStakingTest<TContractState> {
-    fn get_total_stake_latest_checkpoint(self: @TContractState) -> (bool, Epoch, Amount);
 }
 
 pub mod Events {
