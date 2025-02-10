@@ -197,6 +197,13 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
     fn get_pool_info(self: @InternalStakerInfoLatest) -> StakerPoolInfo {
         (*self.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
+
+    fn get_total_amount(self: @InternalStakerInfoLatest) -> Amount {
+        if let Option::Some(pool_info) = *self.pool_info {
+            return pool_info.amount + *self.amount_own;
+        }
+        (*self.amount_own)
+    }
 }
 
 impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, StakerInfo> {
