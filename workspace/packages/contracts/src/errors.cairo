@@ -7,10 +7,6 @@ pub fn assert_with_byte_array(condition: bool, err: ByteArray) {
     }
 }
 
-pub fn panic_with_felt(err: felt252) -> core::never {
-    panic(data: array![err])
-}
-
 pub trait Describable<T> {
     fn describe(self: @T) -> ByteArray;
 }

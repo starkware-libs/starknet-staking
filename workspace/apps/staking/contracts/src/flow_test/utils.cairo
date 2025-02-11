@@ -2,6 +2,10 @@ use MainnetAddresses::{
     MAINNET_L2_BRIDGE_ADDRESS, MAINNET_MINTING_CURVE_ADDRESS, MAINNET_REWARD_SUPPLIER_ADDRESS,
     MAINNET_STAKING_CONTRCT_ADDRESS, MAINNET_UPGRADE_GOVERNOR,
 };
+use MainnetClassHashes::{
+    MAINNET_MINTING_CURVE_CLASS_HASH_V0, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0,
+    MAINNET_STAKING_CLASS_HASH_V0,
+};
 use contracts_commons::components::replaceability::interface::{
     EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
 };
@@ -32,7 +36,9 @@ use staking::staking::objects::EpochInfo;
 use staking::test_utils::constants::{EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS};
 use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
 use staking::types::{Amount, Commission, Index, InternalStakerInfoLatest};
+use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress};
+use starknet::{SyscallResultTrait};
 
 mod MainnetAddresses {
     use starknet::{ContractAddress, contract_address_const};
@@ -74,12 +80,12 @@ pub(crate) mod MainnetClassHashes {
     }
 
     /// Class hash of the first reward supplier contract deployed on mainnet.
-    fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash nopanic {
+    pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash nopanic {
         class_hash_const::<0x7cbbebcdbbce7bd45611d8b679e524b63586429adee0f858b7f0994d709d648>()
     }
 
     /// Class hash of the first minting curve contract deployed on mainnet.
-    fn MAINNET_MINTING_CURVE_CLASS_HASH_V0() -> ClassHash nopanic {
+    pub(crate) fn MAINNET_MINTING_CURVE_CLASS_HASH_V0() -> ClassHash nopanic {
         class_hash_const::<0xb00a4f0a3ba3f266837da66c0c3053c4676046a2d621e80d1f822fe9c9b5f6>()
     }
 }
@@ -139,6 +145,33 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.epoch_info.serialize(ref calldata);
         let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
         let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
+        let staking = StakingState {
+            address: staking_contract_address,
+            governance_admin: self.governance_admin,
+            roles: self.roles,
+        };
+        staking.set_roles();
+        staking
+    }
+
+    fn deploy_mainnet_contract_v0(
+        self: StakingConfig, token_address: ContractAddress,
+    ) -> StakingState {
+        let mut calldata = ArrayTrait::new();
+        token_address.serialize(ref calldata);
+        self.min_stake.serialize(ref calldata);
+        self.pool_contract_class_hash.serialize(ref calldata);
+        self.reward_supplier.serialize(ref calldata);
+        self.pool_contract_admin.serialize(ref calldata);
+        self.governance_admin.serialize(ref calldata);
+        let contract_address_salt: felt252 = Time::now().seconds.into();
+        let (staking_contract_address, _) = deploy_syscall(
+            class_hash: MAINNET_STAKING_CLASS_HASH_V0(),
+            :contract_address_salt,
+            calldata: calldata.span(),
+            deploy_from_zero: false,
+        )
+            .unwrap_syscall();
         let staking = StakingState {
             address: staking_contract_address,
             governance_admin: self.governance_admin,
@@ -265,6 +298,31 @@ impl MintingCurveImpl of MintingCurveTrait {
         minting_curve
     }
 
+    fn deploy_mainnet_contract_v0(
+        self: MintingCurveConfig, staking: StakingState,
+    ) -> MintingCurveState {
+        let mut calldata = ArrayTrait::new();
+        staking.address.serialize(ref calldata);
+        self.initial_supply.serialize(ref calldata);
+        self.l1_reward_supplier.serialize(ref calldata);
+        self.governance_admin.serialize(ref calldata);
+        let contract_address_salt: felt252 = Time::now().seconds.into();
+        let (minting_curve_contract_address, _) = deploy_syscall(
+            class_hash: MAINNET_MINTING_CURVE_CLASS_HASH_V0(),
+            :contract_address_salt,
+            calldata: calldata.span(),
+            deploy_from_zero: false,
+        )
+            .unwrap_syscall();
+        let minting_curve = MintingCurveState {
+            address: minting_curve_contract_address,
+            governance_admin: self.governance_admin,
+            roles: self.roles,
+        };
+        minting_curve.set_roles();
+        minting_curve
+    }
+
     fn dispatcher(self: MintingCurveState) -> IMintingCurveDispatcher nopanic {
         IMintingCurveDispatcher { contract_address: self.address }
     }
@@ -346,6 +404,37 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
         let (reward_supplier_contract_address, _) = reward_supplier_contract
             .deploy(@calldata)
             .unwrap();
+        let reward_supplier = RewardSupplierState {
+            address: reward_supplier_contract_address,
+            governance_admin: self.governance_admin,
+            roles: self.roles,
+        };
+        reward_supplier.set_roles();
+        reward_supplier
+    }
+
+    fn deploy_mainnet_contract_v0(
+        self: RewardSupplierConfig,
+        minting_curve: MintingCurveState,
+        staking: StakingState,
+        token_address: ContractAddress,
+    ) -> RewardSupplierState {
+        let mut calldata = ArrayTrait::new();
+        self.base_mint_amount.serialize(ref calldata);
+        minting_curve.address.serialize(ref calldata);
+        staking.address.serialize(ref calldata);
+        token_address.serialize(ref calldata);
+        self.l1_reward_supplier.serialize(ref calldata);
+        self.starkgate_address.serialize(ref calldata);
+        self.governance_admin.serialize(ref calldata);
+        let contract_address_salt: felt252 = Time::now().seconds.into();
+        let (reward_supplier_contract_address, _) = deploy_syscall(
+            class_hash: MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0(),
+            :contract_address_salt,
+            calldata: calldata.span(),
+            deploy_from_zero: false,
+        )
+            .unwrap_syscall();
         let reward_supplier = RewardSupplierState {
             address: reward_supplier_contract_address,
             governance_admin: self.governance_admin,
@@ -459,6 +548,33 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         let contract_address = staking.address;
         let staking_config_dispatcher = IStakingConfigDispatcher { contract_address };
         cheat_caller_address_once(:contract_address, caller_address: staking.roles.token_admin);
+        staking_config_dispatcher.set_reward_supplier(reward_supplier: reward_supplier.address);
+        advance_block_number_global(blocks: EPOCH_STARTING_BLOCK);
+        SystemState { token, staking, minting_curve, reward_supplier, base_account: 0x100000 }
+    }
+
+    /// Deploys the system configuration with the implementation of the deployed contracts
+    /// on Starknet mainnet. Returns the system state.
+    fn deploy_mainnet_contracts_v0(self: SystemConfig) -> SystemState<STRKTokenState> {
+        let token_address = STRK_TOKEN_ADDRESS();
+        let token = STRKTokenState { address: token_address };
+        let staking = self.staking.deploy_mainnet_contract_v0(:token_address);
+        let minting_curve = self.minting_curve.deploy_mainnet_contract_v0(:staking);
+        let reward_supplier = self
+            .reward_supplier
+            .deploy_mainnet_contract_v0(:minting_curve, :staking, :token_address);
+        // Fund reward supplier
+        token
+            .fund(
+                recipient: reward_supplier.address, amount: self.minting_curve.initial_supply / 10,
+            );
+        // Set reward_supplier in staking
+        let staking_config_dispatcher = IStakingConfigDispatcher {
+            contract_address: staking.address,
+        };
+        cheat_caller_address_once(
+            contract_address: staking.address, caller_address: staking.roles.token_admin,
+        );
         staking_config_dispatcher.set_reward_supplier(reward_supplier: reward_supplier.address);
         advance_block_number_global(blocks: EPOCH_STARTING_BLOCK);
         SystemState { token, staking, minting_curve, reward_supplier, base_account: 0x100000 }

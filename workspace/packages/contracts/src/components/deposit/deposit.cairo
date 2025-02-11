@@ -2,12 +2,12 @@
 pub(crate) mod Deposit {
     use contracts_commons::components::deposit::interface::{DepositStatus, IDeposit};
     use contracts_commons::components::deposit::{errors, events};
-    use contracts_commons::errors::panic_with_felt;
     use contracts_commons::types::HashType;
     use contracts_commons::types::time::time::{Time, TimeDelta};
     use contracts_commons::utils::{AddToStorage, SubFromStorage};
     use core::hash::{HashStateExTrait, HashStateTrait};
     use core::num::traits::Zero;
+    use core::panic_with_felt252;
     use core::poseidon::PoseidonTrait;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry};
@@ -36,6 +36,18 @@ pub(crate) mod Deposit {
     impl Deposit<
         TContractState, +HasComponent<TContractState>, +Drop<TContractState>,
     > of IDeposit<ComponentState<TContractState>> {
+        /// Deposit is called by the user to add a deposit request.
+        ///
+        /// Validations:
+        /// - The quantized amount must be greater than 0.
+        /// - The deposit requested does not exists.
+        ///
+        /// Execution:
+        /// - Transfers the quantized amount from the user to the contract.
+        /// - Registers the deposit request.
+        /// - Updates the deposit status to pending.
+        /// - Updates the aggregate_pending_deposit.
+        /// - Emits a Deposit event.
         fn deposit(
             ref self: ComponentState<TContractState>,
             beneficiary: u32,
@@ -127,9 +139,9 @@ pub(crate) mod Deposit {
                 .deposit_hash(signer: depositor, :beneficiary, :asset_id, :quantized_amount, :salt);
             let deposit_status = self._get_deposit_status(:deposit_hash);
             match deposit_status {
-                DepositStatus::NOT_EXIST => { panic_with_felt(errors::DEPOSIT_NOT_REGISTERED) },
-                DepositStatus::DONE => { panic_with_felt(errors::DEPOSIT_ALREADY_PROCESSED) },
-                DepositStatus::CANCELED => { panic_with_felt(errors::DEPOSIT_ALREADY_CANCELED) },
+                DepositStatus::NOT_EXIST => { panic_with_felt252(errors::DEPOSIT_NOT_REGISTERED) },
+                DepositStatus::DONE => { panic_with_felt252(errors::DEPOSIT_ALREADY_PROCESSED) },
+                DepositStatus::CANCELED => { panic_with_felt252(errors::DEPOSIT_ALREADY_CANCELED) },
                 DepositStatus::PENDING(_) => {
                     self.registered_deposits.write(deposit_hash, DepositStatus::DONE);
                     let (_, quantum) = self._get_asset_info(:asset_id);

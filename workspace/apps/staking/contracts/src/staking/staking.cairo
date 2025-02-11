@@ -5,6 +5,7 @@ pub mod Staking {
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::{Describable, OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
+    use contracts_commons::math::mul_wide_and_div;
     use contracts_commons::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;
@@ -540,8 +541,8 @@ pub mod Staking {
                 Error::CALLER_IS_NOT_ATTESTATION_CONTRACT,
             );
             let mut staker_info = self.internal_staker_info(:staker_address);
-            let total_rewards = self.calculate_total_rewards(:staker_info);
-            let staker_rewards = self.calculate_staker_rewards(:staker_info, :total_rewards);
+            let total_rewards = self.calculate_staker_total_rewards(:staker_info);
+            let staker_rewards = self.calculate_staker_own_rewards(:staker_info, :total_rewards);
             staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
             self.update_pool_rewards(:staker_info, :pool_rewards);
@@ -1371,15 +1372,20 @@ pub mod Staking {
             self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
         }
 
-        // TODO: implement
-        fn calculate_total_rewards(
+        fn calculate_staker_total_rewards(
             self: @ContractState, staker_info: InternalStakerInfoLatest,
         ) -> Amount {
-            0
+            let epoch_rewards = self.reward_supplier_dispatcher.read().current_epoch_rewards();
+            mul_wide_and_div(
+                lhs: epoch_rewards,
+                rhs: staker_info.get_total_amount(),
+                div: self.get_total_stake_at_current_epoch(),
+            )
+                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
 
         // TODO: implement
-        fn calculate_staker_rewards(
+        fn calculate_staker_own_rewards(
             self: @ContractState, staker_info: InternalStakerInfoLatest, total_rewards: Amount,
         ) -> Amount {
             0

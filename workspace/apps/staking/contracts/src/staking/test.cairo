@@ -66,7 +66,7 @@ use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
 use test_utils::{
-    StakingInitConfig, approve, cheat_reward_for_reward_supplier, constants,
+    StakingInitConfig, advance_epoch_global, approve, cheat_reward_for_reward_supplier, constants,
     declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
     deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
     general_contract_system_deployment, initialize_staking_state_from_cfg, load_from_simple_map,
@@ -2617,6 +2617,7 @@ fn test_update_rewards_from_attestation_contract() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);

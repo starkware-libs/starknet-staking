@@ -4,11 +4,11 @@ pub(crate) mod RequestApprovalsComponent {
     use contracts_commons::components::request_approvals::interface::{
         IRequestApprovals, RequestStatus,
     };
-    use contracts_commons::errors::panic_with_felt;
     use contracts_commons::message_hash::OffchainMessageHash;
     use contracts_commons::types::{HashType, PublicKey};
     use contracts_commons::utils::validate_stark_signature;
     use core::num::traits::Zero;
+    use core::panic_with_felt252;
     use openzeppelin::utils::snip12::StructHash;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_caller_address};
@@ -75,8 +75,8 @@ pub(crate) mod RequestApprovalsComponent {
             let request_hash = args.get_message_hash(:public_key);
             let request_status = self._get_request_status(:request_hash);
             match request_status {
-                RequestStatus::NOT_EXIST => panic_with_felt(errors::REQUEST_NOT_REGISTERED),
-                RequestStatus::DONE => panic_with_felt(errors::REQUEST_ALREADY_PROCESSED),
+                RequestStatus::NOT_EXIST => panic_with_felt252(errors::REQUEST_NOT_REGISTERED),
+                RequestStatus::DONE => panic_with_felt252(errors::REQUEST_ALREADY_PROCESSED),
                 RequestStatus::PENDING => {},
             };
             self.approved_requests.write(request_hash, RequestStatus::DONE);
