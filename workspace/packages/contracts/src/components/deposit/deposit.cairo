@@ -20,7 +20,7 @@ pub(crate) mod Deposit {
         // aggregate_pending_deposit is in unquantized amount
         pub aggregate_pending_deposit: Map<felt252, u128>,
         pub asset_info: Map<felt252, (ContractAddress, u64)>,
-        pub cancellation_time: TimeDelta,
+        pub cancellation_delay: TimeDelta,
     }
 
     #[event]
@@ -93,6 +93,50 @@ pub(crate) mod Deposit {
             deposit_hash
         }
 
+        fn cancel_deposit(
+            ref self: ComponentState<TContractState>,
+            beneficiary: u32,
+            asset_id: felt252,
+            quantized_amount: u128,
+            salt: felt252,
+        ) {
+            let caller_address = get_caller_address();
+            let deposit_hash = self
+                .deposit_hash(
+                    signer: caller_address, :beneficiary, :asset_id, :quantized_amount, :salt,
+                );
+
+            // Validations
+            match self.get_deposit_status(:deposit_hash) {
+                DepositStatus::PENDING(deposit_timestamp) => assert(
+                    deposit_timestamp.add(self.cancellation_delay.read()) < Time::now(),
+                    errors::DEPOSIT_NOT_CANCELABLE,
+                ),
+                DepositStatus::NOT_EXIST => panic_with_felt252(errors::DEPOSIT_NOT_REGISTERED),
+                DepositStatus::DONE => panic_with_felt252(errors::DEPOSIT_ALREADY_PROCESSED),
+                DepositStatus::CANCELED => panic_with_felt252(errors::DEPOSIT_ALREADY_CANCELED),
+            }
+
+            self.registered_deposits.write(key: deposit_hash, value: DepositStatus::CANCELED);
+            self.aggregate_pending_deposit.entry(asset_id).sub_and_write(quantized_amount);
+            let (token_address, quantum) = self.get_asset_info(:asset_id);
+
+            let token_contract = IERC20Dispatcher { contract_address: token_address };
+            let unquantized_amount = quantized_amount * quantum.into();
+            token_contract.transfer(recipient: caller_address, amount: unquantized_amount.into());
+            self
+                .emit(
+                    events::DepositCanceled {
+                        position_id: beneficiary,
+                        depositing_address: caller_address,
+                        asset_id,
+                        quantized_amount,
+                        unquantized_amount,
+                        deposit_request_hash: deposit_hash,
+                    },
+                );
+        }
+
         fn get_deposit_status(
             self: @ComponentState<TContractState>, deposit_hash: HashType,
         ) -> DepositStatus {
@@ -110,9 +154,10 @@ pub(crate) mod Deposit {
     pub impl InternalImpl<
         TContractState, +HasComponent<TContractState>,
     > of InternalTrait<TContractState> {
-        fn initialize(ref self: ComponentState<TContractState>) {
-            assert(self.cancellation_time.read().is_zero(), errors::ALREADY_INITIALIZED);
-            self.cancellation_time.write(Time::weeks(count: 1));
+        fn initialize(ref self: ComponentState<TContractState>, cancelation_delay: TimeDelta) {
+            assert(self.cancellation_delay.read().is_zero(), errors::ALREADY_INITIALIZED);
+            assert(cancelation_delay.is_non_zero(), errors::INVALID_CANCELLATION_DELAY);
+            self.cancellation_delay.write(cancelation_delay);
         }
 
         fn register_token(
