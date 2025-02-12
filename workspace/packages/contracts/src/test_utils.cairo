@@ -119,11 +119,6 @@ pub fn assert_expected_event_emitted<T, +starknet::Event<T>, +Drop<T>, +Debug<T>
     assert_eq!(expected_event, actual_event);
 }
 
-pub fn validate_balance(token_state: TokenState, address: ContractAddress, expected_balance: u128) {
-    let balance_to_check = token_state.balance_of(address);
-    assert_eq!(balance_to_check, expected_balance);
-}
-
 /// The `TokenConfig` struct is used to configure the initial settings for a token contract.
 /// It includes the initial supply of tokens and the owner's address.
 #[derive(Drop)]
