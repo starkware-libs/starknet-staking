@@ -93,6 +93,18 @@ pub(crate) mod Deposit {
             deposit_hash
         }
 
+        /// Cancel deposit is called by the user to cancel a deposit request which did not take
+        /// place yet.
+        ///
+        /// Validations:
+        /// - The deposit requested to cancel exists, is not canceled and is not processed.
+        /// - The cancellation delay has passed.
+        ///
+        /// Execution:
+        /// - Transfers the quantized amount back to the user.
+        /// - Updates the deposit status to canceled.
+        /// - Updates the aggregate_pending_deposit.
+        /// - Emits a DepositCanceled event.
         fn cancel_deposit(
             ref self: ComponentState<TContractState>,
             beneficiary: u32,
