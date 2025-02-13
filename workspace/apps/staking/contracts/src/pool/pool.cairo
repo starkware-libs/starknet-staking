@@ -62,7 +62,8 @@ pub mod Pool {
         staker_address: ContractAddress,
         // Map pool member to their pool member info.
         pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
-        // Holds the final staker index, in case the staker was erased from the staking contract.
+        // Stores the final global index of staking contract if the staker was active during the
+        // upgrade to V1. If the staker was erased in V0, it retains the final staker index.
         final_staker_index: Option<Index>,
         // Dispatcher for the staking contract's pool functions.
         staking_pool_dispatcher: IStakingPoolDispatcher,

@@ -60,7 +60,7 @@ use starknet::class_hash::ClassHash;
 use test_utils::{
     StakingInitConfig, approve, cheat_reward_for_reward_supplier, constants,
     create_rewards_for_pool_member, declare_pool_contract, declare_pool_eic_contract,
-    deploy_mock_erc20_contract, deploy_staking_contract,
+    deploy_mock_erc20_contract, deploy_staking_contract, deserialize_option,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     initialize_pool_state, load_from_simple_map, load_pool_member_info_from_map,
     stake_with_pool_enabled,
@@ -1603,10 +1603,12 @@ fn test_pool_eic() {
         governance_admin: cfg.test_info.pool_contract_admin,
     );
 
+    let final_index: Index = cfg.staking_contract_info.global_index;
+
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_pool_eic_contract(),
-        eic_init_data: [MAINNET_POOL_CLASS_HASH_V0().into()].span(),
+        eic_init_data: [MAINNET_POOL_CLASS_HASH_V0().into(), final_index.into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -1625,10 +1627,19 @@ fn test_pool_eic() {
     )
         .at(0);
     assert_eq!(prev_class_hash.try_into().unwrap(), MAINNET_POOL_CLASS_HASH_V0());
+
+    let mut span_final_staker_index = snforge_std::load(
+        target: pool_contract,
+        storage_address: selector!("final_staker_index"),
+        size: Store::<Option<Index>>::size().into(),
+    )
+        .span();
+    let final_staker_index: Option<Index> = deserialize_option(ref span_final_staker_index);
+    assert_eq!(final_staker_index, Option::Some(final_index));
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_1')]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_2')]
 fn test_pool_eic_with_wrong_number_of_data_elements() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
