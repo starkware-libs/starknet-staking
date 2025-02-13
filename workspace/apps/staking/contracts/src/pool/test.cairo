@@ -8,9 +8,11 @@ use constants::{
     POOL_MEMBER_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_FINAL_INDEX,
     STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS,
 };
+use contracts_commons::components::replaceability::interface::{EICData, ImplementationData};
 use contracts_commons::errors::Describable;
 use contracts_commons::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
+    set_account_as_upgrade_governor,
 };
 use contracts_commons::types::time::time::Time;
 use core::num::traits::zero::Zero;
@@ -30,6 +32,8 @@ use snforge_std::{
 };
 use staking::constants::BASE_VALUE;
 use staking::errors::GenericError;
+use staking::flow_test::utils::MainnetClassHashes::MAINNET_POOL_CLASS_HASH_V0;
+use staking::flow_test::utils::upgrade_implementation;
 use staking::pool::errors::Error;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
@@ -48,12 +52,14 @@ use staking::staking::objects::{
     InternalStakerInfoLatestTrait, UndelegateIntentKey, UndelegateIntentValue,
     UndelegateIntentValueZero,
 };
-use staking::test_utils::constants;
 use staking::types::{Index, InternalPoolMemberInfoLatest};
 use staking::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
 use staking::{event_test_utils, test_utils};
+use starknet::Store;
+use starknet::class_hash::ClassHash;
 use test_utils::{
-    StakingInitConfig, approve, cheat_reward_for_reward_supplier, create_rewards_for_pool_member,
+    StakingInitConfig, approve, cheat_reward_for_reward_supplier, constants,
+    create_rewards_for_pool_member, declare_pool_contract, declare_pool_eic_contract,
     deploy_mock_erc20_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     initialize_pool_state, load_from_simple_map, load_pool_member_info_from_map,
@@ -1580,4 +1586,73 @@ fn test_sanity_serde_versioned_internal_staker_info() {
         unpool_time: Option::None,
     );
     assert_eq!(v_pool_member_info, expected_v_pool_member_info);
+}
+
+#[test]
+fn test_pool_eic() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+
+    set_account_as_upgrade_governor(
+        contract: pool_contract,
+        account: upgrade_governor,
+        governance_admin: cfg.test_info.pool_contract_admin,
+    );
+
+    // Upgrade.
+    let eic_data = EICData {
+        eic_hash: declare_pool_eic_contract(),
+        eic_init_data: [MAINNET_POOL_CLASS_HASH_V0().into()].span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+    };
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: pool_contract, :implementation_data, :upgrade_governor,
+    );
+    // Test.
+    let map_selector = selector!("prev_class_hash");
+    let storage_address = snforge_std::map_entry_address(:map_selector, keys: [0].span());
+    let prev_class_hash = *snforge_std::load(
+        target: pool_contract, :storage_address, size: Store::<ClassHash>::size().into(),
+    )
+        .at(0);
+    assert_eq!(prev_class_hash.try_into().unwrap(), MAINNET_POOL_CLASS_HASH_V0());
+}
+
+#[test]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_1')]
+fn test_pool_eic_with_wrong_number_of_data_elements() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let upgrade_governor = cfg.test_info.pool_contract_admin;
+
+    set_account_as_upgrade_governor(
+        contract: pool_contract,
+        account: upgrade_governor,
+        governance_admin: cfg.test_info.pool_contract_admin,
+    );
+
+    // Upgrade.
+    let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+    };
+    // Cheat block timestamp to enable upgrade eligibility.
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: pool_contract, :implementation_data, :upgrade_governor,
+    );
 }

@@ -88,6 +88,11 @@ pub(crate) mod MainnetClassHashes {
     pub(crate) fn MAINNET_MINTING_CURVE_CLASS_HASH_V0() -> ClassHash nopanic {
         class_hash_const::<0xb00a4f0a3ba3f266837da66c0c3053c4676046a2d621e80d1f822fe9c9b5f6>()
     }
+
+    /// Class hash of the first pool contract deployed on mainnet.
+    pub(crate) fn MAINNET_POOL_CLASS_HASH_V0() -> ClassHash nopanic {
+        class_hash_const::<0x072ddc6cc22fb26453334e9cf1cbb92f12d2946d058e2b2b571c65d0f23d6516>()
+    }
 }
 
 /// The `StakingRoles` struct represents the various roles involved in the staking contract.

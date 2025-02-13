@@ -426,6 +426,10 @@ pub(crate) fn declare_staking_eic_contract() -> ClassHash {
     *snforge_std::declare("StakingEIC").unwrap().contract_class().class_hash
 }
 
+pub(crate) fn declare_pool_eic_contract() -> ClassHash {
+    *snforge_std::declare("PoolEIC").unwrap().contract_class().class_hash
+}
+
 pub(crate) fn fund(
     sender: ContractAddress,
     recipient: ContractAddress,
