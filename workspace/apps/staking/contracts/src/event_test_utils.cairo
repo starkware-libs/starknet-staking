@@ -29,7 +29,10 @@ pub(crate) fn assert_staker_exit_intent_event(
 ) {
     let expected_event = StakingEvents::StakerExitIntent { staker_address, exit_timestamp, amount };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("StakerExitIntent"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("StakerExitIntent"),
+        expected_event_name: "StakerExitIntent",
     );
 }
 
@@ -44,7 +47,10 @@ pub(crate) fn assert_new_staker_event(
         staker_address, reward_address, operational_address, self_stake,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("NewStaker"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("NewStaker"),
+        expected_event_name: "NewStaker",
     );
 }
 
@@ -60,7 +66,10 @@ pub(crate) fn assert_stake_balance_changed_event(
         staker_address, old_self_stake, old_delegated_stake, new_self_stake, new_delegated_stake,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("StakeBalanceChanged"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("StakeBalanceChanged"),
+        expected_event_name: "StakeBalanceChanged",
     );
 }
 
@@ -72,7 +81,10 @@ pub(crate) fn assert_pool_member_exit_intent_event(
 ) {
     let expected_event = PoolEvents::PoolMemberExitIntent { pool_member, exit_timestamp, amount };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("PoolMemberExitIntent"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("PoolMemberExitIntent"),
+        expected_event_name: "PoolMemberExitIntent",
     );
 }
 
@@ -81,7 +93,10 @@ pub(crate) fn assert_pool_member_exit_action_event(
 ) {
     let expected_event = PoolEvents::PoolMemberExitAction { pool_member, unpool_amount };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("PoolMemberExitAction"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("PoolMemberExitAction"),
+        expected_event_name: "PoolMemberExitAction",
     );
 }
 
@@ -98,6 +113,7 @@ pub(crate) fn assert_pool_member_reward_claimed_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("PoolMemberRewardClaimed"),
+        expected_event_name: "PoolMemberRewardClaimed",
     );
 }
 
@@ -114,6 +130,7 @@ pub(crate) fn assert_delegation_pool_member_balance_changed_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("PoolMemberBalanceChanged"),
+        expected_event_name: "PoolMemberBalanceChanged",
     );
 }
 
@@ -130,6 +147,7 @@ pub(crate) fn assert_staker_reward_address_change_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("StakerRewardAddressChanged"),
+        expected_event_name: "StakerRewardAddressChanged",
     );
 }
 
@@ -144,7 +162,10 @@ pub(crate) fn assert_commission_changed_event(
         staker_address, pool_contract, new_commission, old_commission,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("CommissionChanged"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("CommissionChanged"),
+        expected_event_name: "CommissionChanged",
     );
 }
 
@@ -162,7 +183,10 @@ pub(crate) fn assert_global_index_updated_event(
         global_index_current_update_timestamp,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("GlobalIndexUpdated"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("GlobalIndexUpdated"),
+        expected_event_name: "GlobalIndexUpdated",
     );
 }
 
@@ -176,7 +200,10 @@ pub(crate) fn assert_new_delegation_pool_event(
         staker_address, pool_contract, commission,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("NewDelegationPool"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("NewDelegationPool"),
+        expected_event_name: "NewDelegationPool",
     );
 }
 
@@ -195,6 +222,7 @@ pub(crate) fn assert_remove_from_delegation_pool_intent_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("RemoveFromDelegationPoolIntent"),
+        expected_event_name: "RemoveFromDelegationPoolIntent",
     );
 }
 
@@ -211,6 +239,7 @@ pub(crate) fn assert_remove_from_delegation_pool_action_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("RemoveFromDelegationPoolAction"),
+        expected_event_name: "RemoveFromDelegationPoolAction",
     );
 }
 
@@ -227,6 +256,7 @@ pub(crate) fn assert_pool_member_reward_address_change_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("PoolMemberRewardAddressChanged"),
+        expected_event_name: "PoolMemberRewardAddressChanged",
     );
 }
 
@@ -240,7 +270,10 @@ pub(crate) fn assert_staker_reward_claimed_event(
         staker_address, reward_address, amount,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("StakerRewardClaimed"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("StakerRewardClaimed"),
+        expected_event_name: "StakerRewardClaimed",
     );
 }
 
@@ -256,6 +289,7 @@ pub(crate) fn assert_declare_operational_address_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("OperationalAddressDeclared"),
+        expected_event_name: "OperationalAddressDeclared",
     );
 }
 
@@ -272,6 +306,7 @@ pub(crate) fn assert_change_operational_address_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("OperationalAddressChanged"),
+        expected_event_name: "OperationalAddressChanged",
     );
 }
 
@@ -282,7 +317,10 @@ pub(crate) fn assert_final_index_set_event(
 ) {
     let expected_event = PoolEvents::FinalIndexSet { staker_address, final_staker_index };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("FinalIndexSet"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("FinalIndexSet"),
+        expected_event_name: "FinalIndexSet",
     );
 }
 
@@ -296,7 +334,10 @@ pub(crate) fn assert_calculated_rewards_event(
         last_timestamp, new_timestamp, rewards_calculated,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("CalculatedRewards"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("CalculatedRewards"),
+        expected_event_name: "CalculatedRewards",
     );
 }
 
@@ -305,7 +346,10 @@ pub(crate) fn assert_mint_request_event(
 ) {
     let expected_event = RewardSupplierEvents::MintRequest { total_amount, num_msgs };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("MintRequest"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("MintRequest"),
+        expected_event_name: "MintRequest",
     );
 }
 
@@ -320,7 +364,10 @@ pub(crate) fn assert_delete_staker_event(
         staker_address, reward_address, operational_address, pool_contract,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("DeleteStaker"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("DeleteStaker"),
+        expected_event_name: "DeleteStaker",
     );
 }
 
@@ -331,7 +378,10 @@ pub(crate) fn assert_delete_pool_member_event(
 ) {
     let expected_event = PoolEvents::DeletePoolMember { pool_member, reward_address };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("DeletePoolMember"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("DeletePoolMember"),
+        expected_event_name: "DeletePoolMember",
     );
 }
 
@@ -345,7 +395,10 @@ pub(crate) fn assert_switch_delegation_pool_event(
         pool_member, new_delegation_pool, amount,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("SwitchDelegationPool"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("SwitchDelegationPool"),
+        expected_event_name: "SwitchDelegationPool",
     );
 }
 
@@ -363,6 +416,7 @@ pub(crate) fn assert_change_delegation_pool_intent_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("ChangeDelegationPoolIntent"),
+        expected_event_name: "ChangeDelegationPoolIntent",
     );
 }
 
@@ -377,7 +431,10 @@ pub(crate) fn assert_new_pool_member_event(
         pool_member, staker_address, reward_address, amount,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("NewPoolMember"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("NewPoolMember"),
+        expected_event_name: "NewPoolMember",
     );
 }
 
@@ -394,6 +451,7 @@ pub(crate) fn assert_rewards_supplied_to_delegation_pool_event(
         :spied_event,
         :expected_event,
         expected_event_selector: @selector!("RewardsSuppliedToDelegationPool"),
+        expected_event_name: "RewardsSuppliedToDelegationPool",
     );
 }
 
@@ -402,7 +460,10 @@ pub(crate) fn assert_paused_event(
 ) {
     let expected_event = StakingPauseEvents::Paused { account };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("Paused"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("Paused"),
+        expected_event_name: "Paused",
     );
 }
 
@@ -411,7 +472,10 @@ pub(crate) fn assert_unpaused_event(
 ) {
     let expected_event = StakingPauseEvents::Unpaused { account };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("Unpaused"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("Unpaused"),
+        expected_event_name: "Unpaused",
     );
 }
 
@@ -429,7 +493,10 @@ pub(crate) fn assert_minting_cap_changed_event(
 ) {
     let expected_event = MintingCurveConfigEvents::MintingCapChanged { old_c, new_c };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("MintingCapChanged"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("MintingCapChanged"),
+        expected_event_name: "MintingCapChanged",
     );
 }
 
@@ -438,7 +505,10 @@ pub(crate) fn assert_minimum_stake_changed_event(
 ) {
     let expected_event = StakingConfigEvents::MinimumStakeChanged { old_min_stake, new_min_stake };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("MinimumStakeChanged"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("MinimumStakeChanged"),
+        expected_event_name: "MinimumStakeChanged",
     );
 }
 
@@ -449,7 +519,10 @@ pub(crate) fn assert_exit_wait_window_changed_event(
         old_exit_window, new_exit_window,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("ExitWaitWindowChanged"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("ExitWaitWindowChanged"),
+        expected_event_name: "ExitWaitWindowChanged",
     );
 }
 
@@ -462,6 +535,9 @@ pub(crate) fn assert_reward_supplier_changed_event(
         old_reward_supplier, new_reward_supplier,
     };
     assert_expected_event_emitted(
-        :spied_event, :expected_event, expected_event_selector: @selector!("RewardSupplierChanged"),
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("RewardSupplierChanged"),
+        expected_event_name: "RewardSupplierChanged",
     );
 }
