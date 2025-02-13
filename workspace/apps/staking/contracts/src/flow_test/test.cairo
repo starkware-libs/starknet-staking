@@ -2,140 +2,131 @@ use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::TokenTrait;
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
-use flow_test_utils::{RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait};
-use flow_test_utils::{SystemStakerTrait, SystemTrait, test_flow_local, test_flow_mainnet};
-use flows::{
-    BasicStakeFlow, DelegatorIntentFlow, SetOpenForDelegationFlow, StakerInfoAfterUpgradeFlow,
-    StakerInfoUnstakeAfterUpgradeFlow, StakerInfoWithPoolAfterUpgradeFlow,
-};
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows;
-use staking::flow_test::flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow;
-use staking::flow_test::flows::DelegatorIntentAfterStakerActionFlow;
-use staking::flow_test::flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow;
-use staking::flow_test::flows::InternalStakerInfoAfterUpgradeFlow;
-use staking::flow_test::flows::InternalStakerInfoUnstakeAfterUpgradeFlow;
-use staking::flow_test::flows::InternalStakerInfoWithPoolAfterUpgradeFlow;
-use staking::flow_test::flows::OperationsAfterDeadStakerFlow;
-use staking::flow_test::flows::StakerIntentLastActionFirstFlow;
-use staking::flow_test::utils as flow_test_utils;
+use staking::flow_test::utils::{
+    RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemStakerTrait,
+    SystemTrait, test_flow_local, test_flow_mainnet,
+};
 use staking::test_utils::StakingInitConfig;
 
 #[test]
 fn basic_stake_flow_test() {
-    let flow = BasicStakeFlow {};
+    let flow = flows::BasicStakeFlow {};
     test_flow_local(:flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn basic_stake_flow_regression_test() {
-    let mut flow = BasicStakeFlow {};
+    let mut flow = flows::BasicStakeFlow {};
     test_flow_mainnet(ref :flow);
 }
 
 #[test]
 fn set_open_for_delegation_flow_test() {
-    let flow = SetOpenForDelegationFlow {};
+    let flow = flows::SetOpenForDelegationFlow {};
     test_flow_local(:flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn set_open_for_delegation_regression_test() {
-    let mut flow = SetOpenForDelegationFlow {};
+    let mut flow = flows::SetOpenForDelegationFlow {};
     test_flow_mainnet(ref :flow);
 }
 
 #[test]
 fn delegator_intent_after_staker_action_flow_test() {
-    let flow = DelegatorIntentAfterStakerActionFlow {};
+    let flow = flows::DelegatorIntentAfterStakerActionFlow {};
     test_flow_local(:flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn delegator_intent_after_staker_action_regression_test() {
-    let mut flow = DelegatorIntentAfterStakerActionFlow {};
+    let mut flow = flows::DelegatorIntentAfterStakerActionFlow {};
     test_flow_mainnet(ref :flow);
 }
 
 #[test]
 fn delegator_intent_flow_test() {
-    let flow = DelegatorIntentFlow {};
+    let flow = flows::DelegatorIntentFlow {};
     test_flow_local(:flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn delegator_intent_regression_test() {
-    let mut flow = DelegatorIntentFlow {};
+    let mut flow = flows::DelegatorIntentFlow {};
     test_flow_mainnet(ref :flow);
 }
 
 #[test]
 fn operations_after_dead_staker_flow_test() {
-    let flow = OperationsAfterDeadStakerFlow {};
+    let flow = flows::OperationsAfterDeadStakerFlow {};
     test_flow_local(:flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn operations_after_dead_staker_regression_test() {
-    let mut flow = OperationsAfterDeadStakerFlow {};
+    let mut flow = flows::OperationsAfterDeadStakerFlow {};
     test_flow_mainnet(ref :flow);
 }
 
 #[test]
 fn delegator_didnt_update_after_staker_update_commission_flow_test() {
-    let flow = DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
+    let flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
     test_flow_local(:flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn delegator_didnt_update_after_staker_update_commission_regression_test() {
-    let mut flow = DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
+    let mut flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
     test_flow_mainnet(ref :flow);
 }
 
 #[test]
 fn delegator_updated_after_staker_update_commission_flow_test() {
-    let flow = DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
+    let flow = flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
     test_flow_local(:flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn delegator_updated_after_staker_update_commission_regression_test() {
-    let mut flow = DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
+    let mut flow = flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
     test_flow_mainnet(ref :flow);
 }
 
 #[test]
 fn staker_intent_last_action_first_flow_test() {
-    let flow = StakerIntentLastActionFirstFlow {};
+    let flow = flows::StakerIntentLastActionFirstFlow {};
     test_flow_local(:flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_intent_last_action_first_regression_test() {
-    let mut flow = StakerIntentLastActionFirstFlow {};
+    let mut flow = flows::StakerIntentLastActionFirstFlow {};
     test_flow_mainnet(ref :flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_info_after_upgrade_regression_test() {
-    let mut flow = StakerInfoAfterUpgradeFlow { staker: Option::None, staker_info: Option::None };
+    let mut flow = flows::StakerInfoAfterUpgradeFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
     test_flow_mainnet(ref :flow);
 }
 
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_info_with_pool_after_upgrade_regression_test() {
-    let mut flow = StakerInfoWithPoolAfterUpgradeFlow {
+    let mut flow = flows::StakerInfoWithPoolAfterUpgradeFlow {
         staker: Option::None, staker_info: Option::None,
     };
     test_flow_mainnet(ref :flow);
@@ -144,7 +135,7 @@ fn staker_info_with_pool_after_upgrade_regression_test() {
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_info_unstake_after_upgrade_regression_test() {
-    let mut flow = StakerInfoUnstakeAfterUpgradeFlow {
+    let mut flow = flows::StakerInfoUnstakeAfterUpgradeFlow {
         staker: Option::None, staker_info: Option::None,
     };
     test_flow_mainnet(ref :flow);
@@ -153,7 +144,7 @@ fn staker_info_unstake_after_upgrade_regression_test() {
 #[test]
 #[fork("MAINNET_LATEST")]
 fn internal_staker_info_after_upgrade_regression_test() {
-    let mut flow = InternalStakerInfoAfterUpgradeFlow {
+    let mut flow = flows::InternalStakerInfoAfterUpgradeFlow {
         staker: Option::None, staker_info: Option::None,
     };
     test_flow_mainnet(ref :flow);
@@ -162,7 +153,7 @@ fn internal_staker_info_after_upgrade_regression_test() {
 #[test]
 #[fork("MAINNET_LATEST")]
 fn internal_staker_info_with_pool_after_upgrade_regression_test() {
-    let mut flow = InternalStakerInfoWithPoolAfterUpgradeFlow {
+    let mut flow = flows::InternalStakerInfoWithPoolAfterUpgradeFlow {
         staker: Option::None, staker_info: Option::None,
     };
     test_flow_mainnet(ref :flow);
@@ -171,7 +162,7 @@ fn internal_staker_info_with_pool_after_upgrade_regression_test() {
 #[test]
 #[fork("MAINNET_LATEST")]
 fn internal_staker_info_unstake_after_upgrade_regression_test() {
-    let mut flow = InternalStakerInfoUnstakeAfterUpgradeFlow {
+    let mut flow = flows::InternalStakerInfoUnstakeAfterUpgradeFlow {
         staker: Option::None, staker_info: Option::None,
     };
     test_flow_mainnet(ref :flow);
