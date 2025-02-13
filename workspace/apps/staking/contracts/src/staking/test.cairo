@@ -41,7 +41,9 @@ use staking::flow_test::utils::{declare_staking_contract, upgrade_implementation
 use staking::pool::errors::Error as PoolError;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
 use staking::pool::objects::SwitchPoolData;
-use staking::reward_supplier::interface::IRewardSupplierDispatcher;
+use staking::reward_supplier::interface::{
+    IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
+};
 use staking::staking::errors::Error;
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
@@ -2615,18 +2617,26 @@ fn test_update_rewards_from_attestation_contract() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    let epoch_rewards = reward_supplier_dispatcher.current_epoch_rewards();
+    let staker_info_expected = StakerInfo {
+        unclaimed_rewards_own: epoch_rewards, ..staker_info_before,
+    };
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: attestation_contract,
     );
     staking_dispatcher.update_rewards_from_attestation_contract(:staker_address);
     let staker_info_after = staking_dispatcher.staker_info(:staker_address);
-    assert_eq!(staker_info_after, staker_info_before);
+    assert_eq!(staker_info_after, staker_info_expected);
 }
 
 #[test]

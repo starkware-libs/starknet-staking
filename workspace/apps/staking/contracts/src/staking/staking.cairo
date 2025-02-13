@@ -543,7 +543,8 @@ pub mod Staking {
             let mut staker_info = self.internal_staker_info(:staker_address);
             let total_rewards = self.calculate_staker_total_rewards(:staker_info);
             self.update_reward_supplier(rewards: total_rewards);
-            let staker_rewards = self.calculate_staker_own_rewards(:staker_info, :total_rewards);
+            let staker_rewards = self
+                .calculate_staker_own_rewards_include_commission(:staker_info, :total_rewards);
             staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
             self.update_pool_rewards(:staker_info, :pool_rewards);
@@ -1384,11 +1385,15 @@ pub mod Staking {
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
 
-        // TODO: implement
-        fn calculate_staker_own_rewards(
+        fn calculate_staker_own_rewards_include_commission(
             self: @ContractState, staker_info: InternalStakerInfoLatest, total_rewards: Amount,
         ) -> Amount {
-            0
+            let own_rewards = self.get_staker_own_rewards(:staker_info, :total_rewards);
+            let commission_rewards = self
+                .get_staker_commission_rewards(
+                    :staker_info, pool_rewards: total_rewards - own_rewards,
+                );
+            own_rewards + commission_rewards
         }
 
         // TODO: implement
@@ -1397,11 +1402,32 @@ pub mod Staking {
             self: @ContractState, staker_info: InternalStakerInfoLatest, pool_rewards: Amount,
         ) {}
 
-        // TODO: implement
-        // TODO: emit events
         fn update_reward_supplier(self: @ContractState, rewards: Amount) {
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             reward_supplier_dispatcher.update_unclaimed_rewards_from_staking_contract(:rewards);
+        }
+
+        fn get_staker_own_rewards(
+            self: @ContractState, staker_info: InternalStakerInfoLatest, total_rewards: Amount,
+        ) -> Amount {
+            let own_rewards = mul_wide_and_div(
+                lhs: total_rewards,
+                rhs: staker_info.amount_own,
+                div: staker_info.get_total_amount(),
+            )
+                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+            own_rewards
+        }
+
+        fn get_staker_commission_rewards(
+            self: @ContractState, staker_info: InternalStakerInfoLatest, pool_rewards: Amount,
+        ) -> Amount {
+            if let Option::Some(pool_info) = staker_info.pool_info {
+                return compute_commission_amount_rounded_down(
+                    rewards_including_commission: pool_rewards, commission: pool_info.commission,
+                );
+            }
+            Zero::zero()
         }
     }
 }
