@@ -173,6 +173,22 @@ pub mod RewardSupplier {
                 )
         }
 
+        // TODO: emit events
+        fn update_unclaimed_rewards_from_staking_contract(
+            ref self: ContractState, rewards: Amount,
+        ) {
+            assert!(
+                get_caller_address() == self.staking_contract.read(),
+                "{}",
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
+            );
+
+            let unclaimed_rewards = self.unclaimed_rewards.read() + rewards;
+            self.unclaimed_rewards.write(unclaimed_rewards);
+            // Request funds from L1 if needed.
+            self.request_funds(:unclaimed_rewards);
+        }
+
         // This function is called by the staking contract, claiming an amount of owed rewards.
         fn claim_rewards(ref self: ContractState, amount: Amount) {
             // Asserts.

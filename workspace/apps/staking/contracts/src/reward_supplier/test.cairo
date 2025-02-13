@@ -40,6 +40,7 @@ use staking::test_utils;
 use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use staking::types::Amount;
 use staking::utils::compute_threshold;
+use starknet::Store;
 use test_utils::{
     StakingInitConfig, deploy_minting_curve_contract, deploy_mock_erc20_contract,
     deploy_staking_contract, fund, general_contract_system_deployment,
@@ -425,4 +426,56 @@ fn test_current_epoch_rewards() {
     let epochs_in_year = blocks_in_year / epoch_length.into();
     let expected_rewards = yearly_mint / epochs_in_year;
     assert_eq!(rewards, expected_rewards);
+}
+
+#[test]
+fn test_update_unclaimed_rewards_from_staking_contract() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let mut spy = snforge_std::spy_events();
+    let staking_contract = cfg.test_info.staking_contract;
+    let amount = STRK_IN_FRIS;
+    let unclaimed_rewards_before = *snforge_std::load(
+        target: reward_supplier,
+        storage_address: selector!("unclaimed_rewards"),
+        size: Store::<Amount>::size().into(),
+    )
+        .at(0);
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
+    reward_supplier_dispatcher.update_unclaimed_rewards_from_staking_contract(rewards: amount);
+    let unclaimed_rewards_after = *snforge_std::load(
+        target: reward_supplier,
+        storage_address: selector!("unclaimed_rewards"),
+        size: Store::<Amount>::size().into(),
+    )
+        .at(0);
+    assert_eq!(unclaimed_rewards_after, unclaimed_rewards_before + amount.into());
+    // Asserts events, the only one is the mint request.
+    let events = spy.get_events().emitted_by(contract_address: reward_supplier).events;
+    assert_number_of_events(
+        actual: events.len(),
+        expected: 1,
+        message: "update_unclaimed_rewards_from_staking_contract",
+    );
+}
+
+#[test]
+#[should_panic(expected: "Caller is not staking contract")]
+fn test_update_unclaimed_rewards_from_staking_contract_caller_not_staking() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS();
+    cheat_caller_address_once(
+        contract_address: reward_supplier, caller_address: not_staking_contract,
+    );
+    reward_supplier_dispatcher
+        .update_unclaimed_rewards_from_staking_contract(rewards: STRK_IN_FRIS);
 }

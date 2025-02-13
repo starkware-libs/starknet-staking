@@ -8,6 +8,8 @@ pub trait IRewardSupplier<TContractState> {
     fn calculate_staking_rewards(ref self: TContractState) -> Amount;
     // Calculates the rewards for the current epoch.
     fn current_epoch_rewards(self: @TContractState) -> Amount;
+    // Updates the unclaimed rewards from the staking contract.
+    fn update_unclaimed_rewards_from_staking_contract(ref self: TContractState, rewards: Amount);
     // Transfers rewards to the staking contract.
     fn claim_rewards(ref self: TContractState, amount: Amount);
     fn on_receive(
