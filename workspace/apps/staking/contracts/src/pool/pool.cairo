@@ -25,11 +25,12 @@ pub mod Pool {
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
         IStakingPoolDispatcherTrait, StakerInfo,
     };
-    use staking::types::{Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest};
+    use staking::types::{Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, Version};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_up,
         compute_rewards_rounded_down,
     };
+    use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
     use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
@@ -71,6 +72,8 @@ pub mod Pool {
         commission: Commission,
         // Map pool member to their epoch-balance info.
         pool_member_epoch_balance: Map<ContractAddress, Trace>,
+        // Map version to class hash of the contract.
+        prev_class_hash: Map<Version, ClassHash>,
     }
 
     #[event]
