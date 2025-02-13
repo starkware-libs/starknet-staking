@@ -879,9 +879,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
             eic_init_data: array![
-                MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0().into(),
-                EPOCH_LENGTH.into(),
-                total_stake.into(),
+                MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into(), total_stake.into(),
             ]
                 .span(),
         };
