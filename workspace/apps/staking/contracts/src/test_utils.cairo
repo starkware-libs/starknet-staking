@@ -26,7 +26,7 @@ use staking::constants::{BASE_VALUE, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_W
 use staking::minting_curve::interface::MintingCurveContractInfo;
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
-use staking::pool::objects::InternalPoolMemberInfo;
+use staking::pool::objects::{VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait};
 use staking::pool::pool::Pool;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
@@ -38,7 +38,9 @@ use staking::staking::objects::{
     VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
-use staking::types::{Amount, Commission, Index, InternalStakerInfoLatest};
+use staking::types::{
+    Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
+};
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_commission_amount_rounded_up,
     compute_rewards_rounded_down, compute_rewards_rounded_up,
@@ -627,7 +629,7 @@ pub(crate) fn load_option_from_simple_map<
 
 pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
     key: K, contract: ContractAddress,
-) -> Option<InternalPoolMemberInfo> {
+) -> VInternalPoolMemberInfo {
     let map_selector = selector!("pool_member_info");
     let mut keys = array![];
     key.serialize(ref keys);
@@ -635,15 +637,15 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
     let mut raw_serialized_value = snforge_std::load(
         target: contract,
         :storage_address,
-        size: Store::<Option<InternalPoolMemberInfo>>::size().into(),
+        size: Store::<Option<InternalPoolMemberInfoLatest>>::size().into(),
     );
     let idx = raw_serialized_value.pop_front().expect('Failed pop_front');
     if idx.is_zero() {
-        return Option::None;
+        return VInternalPoolMemberInfo::None;
     }
-    assert!(idx == 1, "Invalid Option loaded from map");
+    assert!(idx == 2, "Invalid Option loaded from map");
     let mut span = raw_serialized_value.span();
-    let mut pool_member_info = InternalPoolMemberInfo {
+    let mut pool_member_info = InternalPoolMemberInfoLatest {
         reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
         amount: Serde::<Amount>::deserialize(ref span).expect('Failed amount'),
         index: Serde::<Index>::deserialize(ref span).expect('Failed index'),
@@ -661,7 +663,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
                     Serde::<Timestamp>::deserialize(ref span).expect('Failed unpool_time'),
                 );
     }
-    return Option::Some(pool_member_info);
+    return VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info);
 }
 
 pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -> felt252 {
@@ -875,7 +877,7 @@ struct RewardSupplierInfo {
 #[derive(Drop, Copy)]
 pub(crate) struct StakingInitConfig {
     pub staker_info: InternalStakerInfoLatest,
-    pub pool_member_info: InternalPoolMemberInfo,
+    pub pool_member_info: InternalPoolMemberInfoLatest,
     pub staking_contract_info: StakingContractInfoCfg,
     pub minting_curve_contract_info: MintingCurveContractInfo,
     pub test_info: TestInfo,
@@ -900,7 +902,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
                 },
             ),
         };
-        let pool_member_info = InternalPoolMemberInfo {
+        let pool_member_info = InternalPoolMemberInfoLatest {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             amount: POOL_MEMBER_STAKE_AMOUNT,
             index: Zero::zero(),

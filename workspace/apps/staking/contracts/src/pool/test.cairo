@@ -5,8 +5,8 @@ use Pool::{
 use constants::{
     COMMISSION, DUMMY_ADDRESS, NON_POOL_MEMBER_ADDRESS, NOT_STAKING_CONTRACT_ADDRESS,
     OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS, OTHER_STAKER_ADDRESS, POOL_CONTRACT_ADMIN,
-    POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_FINAL_INDEX, STAKING_CONTRACT_ADDRESS,
-    TOKEN_ADDRESS,
+    POOL_MEMBER_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_FINAL_INDEX,
+    STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS,
 };
 use contracts_commons::errors::Describable;
 use contracts_commons::test_utils::{
@@ -35,7 +35,11 @@ use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
     PoolContractInfo, PoolMemberInfo,
 };
-use staking::pool::objects::{InternalPoolMemberInfo, SwitchPoolData};
+use staking::pool::objects::{
+    InternalPoolMemberInfoConvertTrait, InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1,
+    SwitchPoolData, VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait,
+    VInternalPoolMemberInfoTrait, VStorageContractTest,
+};
 use staking::pool::pool::Pool;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
@@ -45,15 +49,15 @@ use staking::staking::objects::{
     UndelegateIntentValueZero,
 };
 use staking::test_utils::constants;
-use staking::types::Index;
+use staking::types::{Index, InternalPoolMemberInfoLatest};
 use staking::utils::{compute_commission_amount_rounded_up, compute_rewards_rounded_down};
 use staking::{event_test_utils, test_utils};
 use test_utils::{
     StakingInitConfig, approve, cheat_reward_for_reward_supplier, create_rewards_for_pool_member,
     deploy_mock_erc20_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    initialize_pool_state, load_from_simple_map, load_option_from_simple_map,
-    load_pool_member_info_from_map, stake_with_pool_enabled,
+    initialize_pool_state, load_from_simple_map, load_pool_member_info_from_map,
+    stake_with_pool_enabled,
 };
 
 #[test]
@@ -84,7 +88,7 @@ fn test_update_rewards() {
     );
 
     let updated_index: Index = cfg.staker_info.index + BASE_VALUE;
-    let mut pool_member_info = InternalPoolMemberInfo {
+    let mut pool_member_info = InternalPoolMemberInfoLatest {
         reward_address: cfg.staker_info.reward_address,
         amount: cfg.staker_info.amount_own,
         index: cfg.staker_info.index,
@@ -103,7 +107,7 @@ fn test_update_rewards() {
     let unclaimed_rewards = rewards_including_commission - commission_amount;
     state.update_rewards(ref :pool_member_info, :updated_index);
 
-    let mut expected_pool_member_info = InternalPoolMemberInfo {
+    let mut expected_pool_member_info = InternalPoolMemberInfoLatest {
         index: cfg.staker_info.index + BASE_VALUE, unclaimed_rewards, ..pool_member_info,
     };
     assert_eq!(pool_member_info, expected_pool_member_info);
@@ -136,7 +140,7 @@ fn test_send_rewards_to_member() {
     );
     let member_balance_before_rewards = token_dispatcher
         .balance_of(account: cfg.pool_member_info.reward_address);
-    let expected_pool_member_info = InternalPoolMemberInfo {
+    let expected_pool_member_info = InternalPoolMemberInfoLatest {
         unclaimed_rewards: Zero::zero(), ..cfg.pool_member_info,
     };
     // Send rewards to pool member's reward address.
@@ -631,7 +635,7 @@ fn test_exit_delegation_pool_intent() {
     // Validate the expected pool member info and staker info.
     let expected_time = Time::now()
         .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
-    let mut expected_pool_member_info = InternalPoolMemberInfo {
+    let mut expected_pool_member_info = InternalPoolMemberInfoLatest {
         amount: Zero::zero(),
         unpool_amount: cfg.pool_member_info.amount,
         unpool_time: Option::Some(expected_time),
@@ -776,10 +780,8 @@ fn test_exit_delegation_pool_action() {
     let returned_amount = pool_dispatcher
         .exit_delegation_pool_action(pool_member: cfg.test_info.pool_member_address);
     assert_eq!(returned_amount, cfg.pool_member_info.amount);
-    let pool_member: Option<InternalPoolMemberInfo> = load_option_from_simple_map(
-        map_selector: selector!("pool_member_info"),
-        key: cfg.test_info.pool_member_address,
-        contract: pool_contract,
+    let pool_member: VInternalPoolMemberInfo = load_pool_member_info_from_map(
+        key: cfg.test_info.pool_member_address, contract: pool_contract,
     );
     assert!(pool_member.is_none());
     let balance_after_action = token_dispatcher.balance_of(cfg.test_info.pool_member_address);
@@ -873,25 +875,29 @@ fn test_switch_delegation_pool() {
     );
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
+    let pool_member_info_before_switch: InternalPoolMemberInfoLatest =
+        load_pool_member_info_from_map(
+        key: cfg.test_info.pool_member_address, contract: pool_contract,
+    )
+        .unwrap_latest();
     let amount_left = pool_dispatcher
         .switch_delegation_pool(
             to_staker: OTHER_STAKER_ADDRESS(),
             to_pool: to_staker_pool_contract,
             amount: switch_amount,
         );
-    let actual_pool_member_info: Option<InternalPoolMemberInfo> = load_option_from_simple_map(
-        map_selector: selector!("pool_member_info"),
-        key: cfg.test_info.pool_member_address,
-        contract: pool_contract,
+    let actual_pool_member_info: VInternalPoolMemberInfo = load_pool_member_info_from_map(
+        key: cfg.test_info.pool_member_address, contract: pool_contract,
     );
-    let expected_pool_member_info = InternalPoolMemberInfo {
-        amount: Zero::zero(),
+    let expected_pool_member_info = InternalPoolMemberInfoLatest {
         unpool_amount: cfg.pool_member_info.amount - switch_amount,
-        unclaimed_rewards: unclaimed_rewards_member,
-        ..cfg.pool_member_info,
+        ..pool_member_info_before_switch,
     };
     assert_eq!(amount_left, cfg.pool_member_info.amount - switch_amount);
-    assert_eq!(actual_pool_member_info, Option::Some(expected_pool_member_info));
+    assert_eq!(
+        actual_pool_member_info,
+        VInternalPoolMemberInfoTrait::wrap_latest(expected_pool_member_info),
+    );
     let mut spy = snforge_std::spy_events();
     let amount_left = pool_dispatcher
         .switch_delegation_pool(
@@ -899,10 +905,8 @@ fn test_switch_delegation_pool() {
             to_pool: to_staker_pool_contract,
             amount: switch_amount,
         );
-    let actual_pool_member_info: Option<InternalPoolMemberInfo> = load_option_from_simple_map(
-        map_selector: selector!("pool_member_info"),
-        key: cfg.test_info.pool_member_address,
-        contract: pool_contract,
+    let actual_pool_member_info: VInternalPoolMemberInfo = load_pool_member_info_from_map(
+        key: cfg.test_info.pool_member_address, contract: pool_contract,
     );
     assert_eq!(amount_left, 0);
     assert!(actual_pool_member_info.is_none());
@@ -1299,17 +1303,20 @@ fn test_partial_undelegate() {
     pool_dispatcher.exit_delegation_pool_intent(amount: intent_amount);
     cfg.pool_member_info.unpool_amount = intent_amount;
     cfg.pool_member_info.amount = total_pool_member_amount - intent_amount;
-    let actual_pool_member_info: Option<InternalPoolMemberInfo> = load_pool_member_info_from_map(
+    let actual_pool_member_info: VInternalPoolMemberInfo = load_pool_member_info_from_map(
         key: cfg.test_info.pool_member_address, contract: pool_contract,
     );
     let expected_time = Time::now()
         .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
-    let expected_pool_member_info = InternalPoolMemberInfo {
+    let expected_pool_member_info = InternalPoolMemberInfoLatest {
         unclaimed_rewards: unclaimed_rewards_member,
         unpool_time: Option::Some(expected_time),
         ..cfg.pool_member_info,
     };
-    assert_eq!(actual_pool_member_info, Option::Some(expected_pool_member_info));
+    assert_eq!(
+        actual_pool_member_info,
+        VInternalPoolMemberInfoTrait::wrap_latest(expected_pool_member_info),
+    );
     // Validate that the data is written in the exit intents map in staking contract.
     let undelegate_intent_key = UndelegateIntentKey {
         pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
@@ -1333,15 +1340,18 @@ fn test_partial_undelegate() {
     pool_dispatcher.exit_delegation_pool_intent(amount: intent_amount);
     cfg.pool_member_info.unpool_amount = intent_amount;
     cfg.pool_member_info.amount = total_pool_member_amount - intent_amount;
-    let actual_pool_member_info: Option<InternalPoolMemberInfo> = load_pool_member_info_from_map(
+    let actual_pool_member_info: VInternalPoolMemberInfo = load_pool_member_info_from_map(
         key: cfg.test_info.pool_member_address, contract: pool_contract,
     );
-    let expected_pool_member_info = InternalPoolMemberInfo {
+    let expected_pool_member_info = InternalPoolMemberInfoLatest {
         unclaimed_rewards: unclaimed_rewards_member,
         unpool_time: Option::None,
         ..cfg.pool_member_info,
     };
-    assert_eq!(actual_pool_member_info, Option::Some(expected_pool_member_info));
+    assert_eq!(
+        actual_pool_member_info,
+        VInternalPoolMemberInfoTrait::wrap_latest(expected_pool_member_info),
+    );
     // Validate that the intent is removed from the exit intents map in staking contract.
     let actual_undelegate_intent_value = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),
@@ -1410,4 +1420,164 @@ fn test_pool_member_info_pool_member_doesnt_exist() {
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     pool_dispatcher.pool_member_info(pool_member: NON_POOL_MEMBER_ADDRESS());
+}
+
+#[test]
+fn test_internal_pool_member_info_convert() {
+    let internal_pool_member_info = InternalPoolMemberInfoTestTrait::new(
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    );
+    let internal_pool_member_info_v1 = internal_pool_member_info.convert();
+    let expected_internal_pool_member_info_v1 = InternalPoolMemberInfoV1 {
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    };
+    assert_eq!(internal_pool_member_info_v1, expected_internal_pool_member_info_v1);
+}
+
+#[test]
+fn test_v_internal_pool_member_info_wrap_latest() {
+    let internal_pool_member_info_latest = InternalPoolMemberInfoLatest {
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    };
+    let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::wrap_latest(
+        internal_pool_member_info_latest,
+    );
+    assert_eq!(
+        v_internal_pool_member_info, VInternalPoolMemberInfo::V1(internal_pool_member_info_latest),
+    );
+}
+
+#[test]
+fn test_v_internal_pool_member_info_new_latest() {
+    let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    );
+    let expected_v_internal_pool_member_info = VInternalPoolMemberInfo::V1(
+        InternalPoolMemberInfoLatest {
+            reward_address: Zero::zero(),
+            amount: Zero::zero(),
+            index: Zero::zero(),
+            unclaimed_rewards: Zero::zero(),
+            commission: Zero::zero(),
+            unpool_amount: Zero::zero(),
+            unpool_time: Option::None,
+        },
+    );
+    assert_eq!(v_internal_pool_member_info, expected_v_internal_pool_member_info);
+}
+
+#[test]
+fn test_v_internal_pool_member_info_is_none() {
+    let v_none = VInternalPoolMemberInfo::None;
+    let v_v0 = VInternalPoolMemberInfoTestTrait::new_v0(
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    );
+    let v_latest = VInternalPoolMemberInfoTrait::new_latest(
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    );
+    assert!(v_none.is_none());
+    assert!(!v_v0.is_none());
+    assert!(!v_latest.is_none());
+}
+
+
+#[test]
+fn test_sanity_storage_versioned_internal_pool_member_info() {
+    let mut state = VStorageContractTest::contract_state_for_testing();
+    state
+        .pool_member_info
+        .write(
+            POOL_MEMBER_ADDRESS(),
+            Option::Some(
+                InternalPoolMemberInfoTestTrait::new(
+                    reward_address: Zero::zero(),
+                    amount: Zero::zero(),
+                    index: Zero::zero(),
+                    unclaimed_rewards: Zero::zero(),
+                    commission: Zero::zero(),
+                    unpool_amount: Zero::zero(),
+                    unpool_time: Option::None,
+                ),
+            ),
+        );
+    assert_eq!(
+        state.new_pool_member_info.read(POOL_MEMBER_ADDRESS()),
+        VInternalPoolMemberInfoTestTrait::new_v0(
+            reward_address: Zero::zero(),
+            amount: Zero::zero(),
+            index: Zero::zero(),
+            unclaimed_rewards: Zero::zero(),
+            commission: Zero::zero(),
+            unpool_amount: Zero::zero(),
+            unpool_time: Option::None,
+        ),
+    );
+}
+
+#[test]
+fn test_sanity_serde_versioned_internal_staker_info() {
+    let option_internal_pool_member_info = Option::Some(
+        InternalPoolMemberInfoTestTrait::new(
+            reward_address: Zero::zero(),
+            amount: Zero::zero(),
+            index: Zero::zero(),
+            unclaimed_rewards: Zero::zero(),
+            commission: Zero::zero(),
+            unpool_amount: Zero::zero(),
+            unpool_time: Option::None,
+        ),
+    );
+    let mut arr = array![];
+    option_internal_pool_member_info.serialize(ref arr);
+    let mut span = arr.span();
+    let v_pool_member_info: VInternalPoolMemberInfo = Serde::<
+        VInternalPoolMemberInfo,
+    >::deserialize(ref span)
+        .unwrap();
+    let expected_v_pool_member_info = VInternalPoolMemberInfoTestTrait::new_v0(
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    );
+    assert_eq!(v_pool_member_info, expected_v_pool_member_info);
 }
