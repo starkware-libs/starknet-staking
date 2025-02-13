@@ -102,7 +102,10 @@ pub fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArra
 }
 
 pub fn assert_expected_event_emitted<T, +starknet::Event<T>, +Drop<T>, +Debug<T>, +PartialEq<T>>(
-    spied_event: @(ContractAddress, Event), expected_event: T, expected_event_selector: @felt252,
+    spied_event: @(ContractAddress, Event),
+    expected_event: T,
+    expected_event_selector: @felt252,
+    expected_event_name: ByteArray,
 ) {
     let (_, raw_event) = spied_event;
     let mut data = raw_event.data.span();
@@ -112,7 +115,9 @@ pub fn assert_expected_event_emitted<T, +starknet::Event<T>, +Drop<T>, +Debug<T>
     // `sn_keccak` hash of the event name, which is currently not included in the
     // expected event's keys.
     if keys.pop_front() != Option::Some(expected_event_selector) {
-        panic!("Expected event type does not match the actual event type");
+        panic!(
+            "The expected event type '{expected_event_name}' does not match the actual event type",
+        );
     };
 
     let actual_event = starknet::Event::<T>::deserialize(ref :keys, ref :data).unwrap();
