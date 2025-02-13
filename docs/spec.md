@@ -95,6 +95,7 @@
   - [Functions](#functions-2)
     - [calculate\_staking\_rewards](#calculate_staking_rewards)
     - [current\_epoch\_rewards](#current_epoch_rewards)
+    - [update\_unclaimed\_rewards\_from\_staking\_contract](#update_unclaimed_rewards_from_staking_contract)
     - [claim\_rewards](#claim_rewards-2)
     - [contract\_parameters](#contract_parameters-2)
     - [on\_receive](#on_receive)
@@ -279,6 +280,7 @@ classDiagram
     l1_reward_supplier,
     calculate_staking_rewards()
     current_epoch_rewards()
+    update_unclaimed_rewards_from_staking_contract()
     claim_rewards()
     on_receive()
     contract_parameters()
@@ -1737,6 +1739,22 @@ rewards: [Amount](#amount) - the rewards for the current epoch, in FRI.
 
 #### access control <!-- omit from toc -->
 Any address can execute.
+
+### update_unclaimed_rewards_from_staking_contract
+```rust
+fn update_unclaimed_rewards_from_staking_contract(ref self: TContractState, rewards: Amount)
+```
+#### description <!-- omit from toc -->
+Updates the unclaimed rewards from the staking contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+#### logic <!-- omit from toc -->
+1. Increase `unclaimed_rewards` by `rewards`.
+2. Request funds from L1 if needed.
+
+#### access control <!-- omit from toc -->
+Only staking contract.
 
 ### claim_rewards
 ```rust

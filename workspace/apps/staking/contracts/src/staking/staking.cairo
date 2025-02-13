@@ -542,11 +542,11 @@ pub mod Staking {
             );
             let mut staker_info = self.internal_staker_info(:staker_address);
             let total_rewards = self.calculate_staker_total_rewards(:staker_info);
+            self.update_reward_supplier(rewards: total_rewards);
             let staker_rewards = self.calculate_staker_own_rewards(:staker_info, :total_rewards);
             staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
             self.update_pool_rewards(:staker_info, :pool_rewards);
-            self.update_reward_supplier(:staker_rewards);
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
@@ -1399,6 +1399,9 @@ pub mod Staking {
 
         // TODO: implement
         // TODO: emit events
-        fn update_reward_supplier(self: @ContractState, staker_rewards: Amount) {}
+        fn update_reward_supplier(self: @ContractState, rewards: Amount) {
+            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
+            reward_supplier_dispatcher.update_unclaimed_rewards_from_staking_contract(:rewards);
+        }
     }
 }
