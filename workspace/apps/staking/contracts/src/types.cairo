@@ -1,3 +1,4 @@
+use staking::pool::objects::InternalPoolMemberInfoV1;
 use staking::staking::objects::InternalStakerInfoV1;
 
 // If we change the type, make sure the errors still show the right type.
@@ -9,3 +10,5 @@ pub(crate) type Epoch = u64;
 pub(crate) type Version = u8;
 // **Note**: This alias should be updated in the next version.
 pub(crate) type InternalStakerInfoLatest = InternalStakerInfoV1;
+// **Note**: This alias should be updated in the next version.
+pub(crate) type InternalPoolMemberInfoLatest = InternalPoolMemberInfoV1;

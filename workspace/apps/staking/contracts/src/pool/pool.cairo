@@ -3,12 +3,13 @@ pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
     use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::OptionAuxTrait;
+    use contracts_commons::errors::{Describable, OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     use contracts_commons::types::time::time::{Time, Timestamp};
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
+    use core::panics::panic_with_byte_array;
     use core::serde::Serde;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -16,12 +17,15 @@ pub mod Pool {
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, PoolContractInfo, PoolMemberInfo};
-    use staking::pool::objects::{InternalPoolMemberInfo, SwitchPoolData};
+    use staking::pool::objects::{
+        InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
+        VInternalPoolMemberInfoTrait,
+    };
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
         IStakingPoolDispatcherTrait, StakerInfo,
     };
-    use staking::types::{Amount, Commission, Epoch, Index};
+    use staking::types::{Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_up,
         compute_rewards_rounded_down,
@@ -56,7 +60,7 @@ pub mod Pool {
         roles: RolesComponent::Storage,
         staker_address: ContractAddress,
         // Map pool member to their pool member info.
-        pool_member_info: Map<ContractAddress, Option<InternalPoolMemberInfo>>,
+        pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
         // Holds the final staker index, in case the staker was erased from the staking contract.
         final_staker_index: Option<Index>,
         // Dispatcher for the staking contract's pool functions.
@@ -147,16 +151,14 @@ pub mod Pool {
                 .pool_member_info
                 .write(
                     pool_member,
-                    Option::Some(
-                        InternalPoolMemberInfo {
-                            reward_address: reward_address,
-                            amount: amount,
-                            index: updated_index,
-                            unclaimed_rewards: Zero::zero(),
-                            commission: self.commission.read(),
-                            unpool_time: Option::None,
-                            unpool_amount: Zero::zero(),
-                        },
+                    VInternalPoolMemberInfoTrait::new_latest(
+                        reward_address: reward_address,
+                        amount: amount,
+                        index: updated_index,
+                        unclaimed_rewards: Zero::zero(),
+                        commission: self.commission.read(),
+                        unpool_amount: Zero::zero(),
+                        unpool_time: Option::None,
                     ),
                 );
             self.set_next_epoch_balance(:pool_member, :amount);
@@ -199,7 +201,9 @@ pub mod Pool {
             self.update_index_and_update_rewards(ref :pool_member_info);
             let old_delegated_stake = pool_member_info.amount;
             pool_member_info.amount += amount;
-            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            self
+                .pool_member_info
+                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
 
             // Update the pool member's balance checkpoint.
             self.increase_next_epoch_balance(:pool_member, :amount);
@@ -238,7 +242,9 @@ pub mod Pool {
             pool_member_info.unpool_amount = amount;
             let new_delegated_stake = total_amount - amount;
             pool_member_info.amount = new_delegated_stake;
-            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            self
+                .pool_member_info
+                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
 
             // Update the pool member's balance checkpoint.
             self.set_next_epoch_balance(:pool_member, amount: new_delegated_stake);
@@ -297,7 +303,11 @@ pub mod Pool {
                 self.remove_pool_member(:pool_member);
             } else {
                 pool_member_info.unpool_time = Option::None;
-                self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+                self
+                    .pool_member_info
+                    .write(
+                        pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info),
+                    );
             }
 
             unpool_amount
@@ -319,7 +329,9 @@ pub mod Pool {
             let rewards = pool_member_info.unclaimed_rewards;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
-            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            self
+                .pool_member_info
+                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
 
             rewards
         }
@@ -351,7 +363,11 @@ pub mod Pool {
                     // unpool_amount is zero, clear unpool_time.
                     pool_member_info.unpool_time = Option::None;
                 }
-                self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+                self
+                    .pool_member_info
+                    .write(
+                        pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info),
+                    );
             }
 
             // Serialize the switch pool data and invoke the staking contract to switch pool.
@@ -400,7 +416,7 @@ pub mod Pool {
 
             // Create or update the pool member info, depending on whether the pool member exists,
             // and then commit to storage.
-            let pool_member_info = match self.pool_member_info.read(pool_member) {
+            let pool_member_info = match self.internal_pool_member_info_no_panic(pool_member) {
                 Option::Some(mut pool_member_info) => {
                     // Pool member already exists. Need to update pool_member_info to account for
                     // the accrued rewards and then update the delegated amount.
@@ -417,7 +433,7 @@ pub mod Pool {
                 },
                 Option::None => {
                     // Pool member does not exist. Create a new record.
-                    let pool_member_info = InternalPoolMemberInfo {
+                    let pool_member_info = InternalPoolMemberInfoLatest {
                         reward_address: switch_pool_data.reward_address,
                         amount,
                         index,
@@ -431,7 +447,9 @@ pub mod Pool {
                     pool_member_info
                 },
             };
-            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            self
+                .pool_member_info
+                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
 
             // Emit event.
             self
@@ -478,7 +496,9 @@ pub mod Pool {
 
             // Update reward_address and commit to storage.
             pool_member_info.reward_address = reward_address;
-            self.pool_member_info.write(pool_member, Option::Some(pool_member_info));
+            self
+                .pool_member_info
+                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
 
             // Emit event.
             self
@@ -553,16 +573,31 @@ pub mod Pool {
     pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
         fn internal_pool_member_info(
             self: @ContractState, pool_member: ContractAddress,
-        ) -> InternalPoolMemberInfo {
-            self
-                .pool_member_info
-                .read(pool_member)
-                .expect_with_err(Error::POOL_MEMBER_DOES_NOT_EXIST)
+        ) -> InternalPoolMemberInfoLatest {
+            let v_internal_pool_member_info = self.pool_member_info.read(pool_member);
+            match v_internal_pool_member_info {
+                VInternalPoolMemberInfo::None => panic_with_byte_array(
+                    err: @Error::POOL_MEMBER_DOES_NOT_EXIST.describe(),
+                ),
+                VInternalPoolMemberInfo::V0(info_v0) => info_v0.convert(),
+                VInternalPoolMemberInfo::V1(info_v1) => info_v1,
+            }
+        }
+
+        fn internal_pool_member_info_no_panic(
+            self: @ContractState, pool_member: ContractAddress,
+        ) -> Option<InternalPoolMemberInfoLatest> {
+            let v_internal_pool_member_info = self.pool_member_info.read(pool_member);
+            match v_internal_pool_member_info {
+                VInternalPoolMemberInfo::None => Option::None,
+                VInternalPoolMemberInfo::V0(info_v0) => Option::Some(info_v0.convert()),
+                VInternalPoolMemberInfo::V1(info_v1) => Option::Some(info_v1),
+            }
         }
 
         fn remove_pool_member(ref self: ContractState, pool_member: ContractAddress) {
             let reward_address = self.internal_pool_member_info(:pool_member).reward_address;
-            self.pool_member_info.write(pool_member, Option::None);
+            self.pool_member_info.write(pool_member, VInternalPoolMemberInfo::None);
             self.emit(Events::DeletePoolMember { pool_member, reward_address });
         }
 
@@ -588,7 +623,7 @@ pub mod Pool {
         /// - commission
         fn update_rewards(
             self: @ContractState,
-            ref pool_member_info: InternalPoolMemberInfo,
+            ref pool_member_info: InternalPoolMemberInfoLatest,
             updated_index: Index,
         ) {
             let interest: Index = updated_index - pool_member_info.index;
@@ -605,7 +640,7 @@ pub mod Pool {
         }
 
         fn update_index_and_update_rewards(
-            self: @ContractState, ref pool_member_info: InternalPoolMemberInfo,
+            self: @ContractState, ref pool_member_info: InternalPoolMemberInfoLatest,
         ) {
             let updated_index = self.receive_index_and_funds_from_staker();
             self.update_rewards(ref :pool_member_info, :updated_index)
@@ -644,7 +679,7 @@ pub mod Pool {
         /// After calling this function, one must write the updated pool_member_info to the storage.
         fn send_rewards_to_member(
             ref self: ContractState,
-            ref pool_member_info: InternalPoolMemberInfo,
+            ref pool_member_info: InternalPoolMemberInfoLatest,
             pool_member: ContractAddress,
             token_dispatcher: IERC20Dispatcher,
         ) {
