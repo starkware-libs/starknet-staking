@@ -7,7 +7,6 @@ use contracts_commons::components::replaceability::interface::{
     EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
 };
 use contracts_commons::constants::{NAME, SYMBOL};
-use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::{
     Deployable, TokenConfig, TokenState, TokenTrait, advance_block_number_global,
     cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
@@ -18,7 +17,6 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
-use staking::constants::STRK_IN_FRIS;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::reward_supplier::interface::{
@@ -978,8 +976,6 @@ pub(crate) fn test_flow_local<TFlow, +FlowTrait<TFlow, TokenState>, +Drop<TFlow>
 ) {
     let mut system = SystemFactoryTrait::local_system();
     flow.test(ref :system, system_type: SystemType::Local);
-    assert!(system.token.balance_of(account: system.staking.address).is_zero());
-    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 }
 
 pub(crate) fn test_flow_mainnet<
