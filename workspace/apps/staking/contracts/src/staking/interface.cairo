@@ -52,6 +52,7 @@ pub trait IStaking<TContractState> {
     fn is_paused(self: @TContractState) -> bool;
 }
 
+// **Note**: This trait must be reimplemented in the next version of the contract.
 #[starknet::interface]
 pub trait IStakingMigration<TContractState> {
     /// Reads the internal staker information for the given `staker_address` from storage and

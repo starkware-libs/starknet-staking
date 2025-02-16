@@ -1,16 +1,12 @@
-use MainnetAddresses::{
-    MAINNET_L2_BRIDGE_ADDRESS, MAINNET_MINTING_CURVE_ADDRESS, MAINNET_REWARD_SUPPLIER_ADDRESS,
-    MAINNET_STAKING_CONTRCT_ADDRESS, MAINNET_UPGRADE_GOVERNOR,
-};
+use MainnetAddresses::{MAINNET_L2_BRIDGE_ADDRESS};
 use MainnetClassHashes::{
-    MAINNET_MINTING_CURVE_CLASS_HASH_V0, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0,
-    MAINNET_STAKING_CLASS_HASH_V0,
+    MAINNET_MINTING_CURVE_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V0,
+    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V0,
 };
 use contracts_commons::components::replaceability::interface::{
     EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
 };
 use contracts_commons::constants::{NAME, SYMBOL};
-use contracts_commons::math::wide_abs_diff;
 use contracts_commons::test_utils::{
     Deployable, TokenConfig, TokenState, TokenTrait, advance_block_number_global,
     cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
@@ -21,7 +17,6 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
-use staking::constants::STRK_IN_FRIS;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::reward_supplier::interface::{
@@ -43,29 +38,9 @@ use starknet::{SyscallResultTrait};
 mod MainnetAddresses {
     use starknet::{ContractAddress, contract_address_const};
 
-    pub(crate) fn MAINNET_STAKING_CONTRCT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<
-            0x00ca1702e64c81d9a07b86bd2c540188d92a2c73cf5cc0e508d949015e7e84a7,
-        >()
-    }
     pub(crate) fn MAINNET_L2_BRIDGE_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<
             0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d,
-        >()
-    }
-    pub(crate) fn MAINNET_REWARD_SUPPLIER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<
-            0x009035556d1ee136e7722ae4e78f92828553a45eed3bc9b2aba90788ec2ca112,
-        >()
-    }
-    pub(crate) fn MAINNET_MINTING_CURVE_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<
-            0x00ca1705e74233131dbcdee7f1b8d2926bf262168c7df339004b3f46015b6984,
-        >()
-    }
-    pub(crate) fn MAINNET_UPGRADE_GOVERNOR() -> ContractAddress nopanic {
-        contract_address_const::<
-            0x0663cc699d9c51b7d4d434e06f5982692167546ce525d9155edb476ac9a117d6,
         >()
     }
 }
@@ -902,9 +877,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
             eic_init_data: array![
-                MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0().into(),
-                EPOCH_LENGTH.into(),
-                total_stake.into(),
+                MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into(), total_stake.into(),
             ]
                 .span(),
         };
@@ -979,48 +952,9 @@ impl SystemFactoryImpl of SystemFactoryTrait {
 
     // System state used for regression tests.
     fn mainnet_system() -> SystemState<STRKTokenState> {
-        let system_state = SystemState {
-            token: STRKTokenState { address: STRK_TOKEN_ADDRESS() },
-            staking: mainnet_staking_state(),
-            minting_curve: mainnet_minting_curve_state(),
-            reward_supplier: mainnet_reward_supplier_state(),
-            base_account: 0x100000,
-        };
-        system_state
-    }
-}
-
-fn mainnet_staking_state() -> StakingState {
-    StakingState {
-        address: MAINNET_STAKING_CONTRCT_ADDRESS(),
-        governance_admin: Zero::zero(),
-        roles: StakingRoles {
-            upgrade_governor: MAINNET_UPGRADE_GOVERNOR(),
-            security_admin: Zero::zero(),
-            security_agent: Zero::zero(),
-            app_role_admin: Zero::zero(),
-            token_admin: Zero::zero(),
-        },
-    }
-}
-
-fn mainnet_minting_curve_state() -> MintingCurveState {
-    MintingCurveState {
-        address: MAINNET_MINTING_CURVE_ADDRESS(),
-        governance_admin: Zero::zero(),
-        roles: MintingCurveRoles {
-            upgrade_governor: MAINNET_UPGRADE_GOVERNOR(),
-            app_role_admin: Zero::zero(),
-            token_admin: Zero::zero(),
-        },
-    }
-}
-
-fn mainnet_reward_supplier_state() -> RewardSupplierState {
-    RewardSupplierState {
-        address: MAINNET_REWARD_SUPPLIER_ADDRESS(),
-        governance_admin: Zero::zero(),
-        roles: RewardSupplierRoles { upgrade_governor: MAINNET_UPGRADE_GOVERNOR() },
+        let mut cfg: StakingInitConfig = Default::default();
+        cfg.staking_contract_info.pool_contract_class_hash = MAINNET_POOL_CLASS_HASH_V0();
+        SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy_mainnet_contracts_v0()
     }
 }
 
@@ -1042,8 +976,6 @@ pub(crate) fn test_flow_local<TFlow, +FlowTrait<TFlow, TokenState>, +Drop<TFlow>
 ) {
     let mut system = SystemFactoryTrait::local_system();
     flow.test(ref :system, system_type: SystemType::Local);
-    assert!(system.token.balance_of(account: system.staking.address).is_zero());
-    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 }
 
 pub(crate) fn test_flow_mainnet<

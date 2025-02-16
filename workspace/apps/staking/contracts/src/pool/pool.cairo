@@ -62,7 +62,8 @@ pub mod Pool {
         staker_address: ContractAddress,
         // Map pool member to their pool member info.
         pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
-        // Holds the final staker index, in case the staker was erased from the staking contract.
+        // Stores the final global index of staking contract if the staker was active during the
+        // upgrade to V1. If the staker was erased in V0, it retains the final staker index.
         final_staker_index: Option<Index>,
         // Dispatcher for the staking contract's pool functions.
         staking_pool_dispatcher: IStakingPoolDispatcher,
@@ -419,7 +420,7 @@ pub mod Pool {
 
             // Create or update the pool member info, depending on whether the pool member exists,
             // and then commit to storage.
-            let pool_member_info = match self.internal_pool_member_info_no_panic(pool_member) {
+            let pool_member_info = match self.get_internal_pool_member_info(:pool_member) {
                 Option::Some(mut pool_member_info) => {
                     // Pool member already exists. Need to update pool_member_info to account for
                     // the accrued rewards and then update the delegated amount.
@@ -587,7 +588,7 @@ pub mod Pool {
             }
         }
 
-        fn internal_pool_member_info_no_panic(
+        fn get_internal_pool_member_info(
             self: @ContractState, pool_member: ContractAddress,
         ) -> Option<InternalPoolMemberInfoLatest> {
             let v_internal_pool_member_info = self.pool_member_info.read(pool_member);

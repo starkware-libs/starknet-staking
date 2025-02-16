@@ -8,7 +8,11 @@ pub(crate) type Index = u128;
 pub(crate) type Inflation = u16;
 pub(crate) type Epoch = u64;
 pub(crate) type Version = u8;
-// **Note**: This alias should be updated in the next version.
+
+// ------ Migration ------ //
+// **Note**: These aliases should be updated in the next version.
 pub(crate) type InternalStakerInfoLatest = InternalStakerInfoV1;
-// **Note**: This alias should be updated in the next version.
 pub(crate) type InternalPoolMemberInfoLatest = InternalPoolMemberInfoV1;
+// ---------------------- //
+
+

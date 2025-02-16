@@ -837,7 +837,7 @@ pub(crate) fn load_staker_info_from_map(
 }
 
 /// Deserialize an Option<T> from the given data.
-fn deserialize_option<T, +Serde<T>, +Drop<T>>(ref data: Span<felt252>) -> Option<T> {
+pub(crate) fn deserialize_option<T, +Serde<T>, +Drop<T>>(ref data: Span<felt252>) -> Option<T> {
     let idx = *data.pop_front().expect('Failed pop_front');
     // Deserialize consumes the data (i.e. the size of T is removed from the front of the data).
     // It's important to consume it even if the Option is None, as the calling function expects it.
