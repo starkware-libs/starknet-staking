@@ -14,8 +14,8 @@ pub struct StakerBalanceTrace {
 
 #[derive(Copy, Drop, Serde, starknet::Store, Debug, PartialEq)]
 pub(crate) struct StakerBalance {
-    pub(crate) amount_own: Amount,
-    pub(crate) total_amount: Amount,
+    amount_own: Amount,
+    total_amount: Amount,
 }
 
 pub(crate) impl StakerBalanceZero of core::num::traits::Zero<StakerBalance> {
@@ -29,6 +29,21 @@ pub(crate) impl StakerBalanceZero of core::num::traits::Zero<StakerBalance> {
     #[inline(always)]
     fn is_non_zero(self: @StakerBalance) -> bool {
         !self.is_zero()
+    }
+}
+
+#[generate_trait]
+pub(crate) impl StakerBalanceImpl of StakerBalanceTrait {
+    fn new(amount: Amount) -> StakerBalance {
+        StakerBalance { amount_own: amount, total_amount: amount }
+    }
+
+    fn amount_own(self: @StakerBalance) -> Amount {
+        *self.amount_own
+    }
+
+    fn total_amount(self: @StakerBalance) -> Amount {
+        *self.total_amount
     }
 }
 

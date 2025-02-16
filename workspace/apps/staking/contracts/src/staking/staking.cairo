@@ -23,6 +23,9 @@ pub mod Staking {
     use staking::reward_supplier::interface::{
         IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     };
+    use staking::staker_balance_trace::trace::{
+        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTrait,
+    };
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         ConfigEvents, Events, IStaking, IStakingConfig, IStakingMigration, IStakingPause,
@@ -41,6 +44,7 @@ pub mod Staking {
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::Map;
+    use starknet::storage::StoragePathEntry;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -106,6 +110,8 @@ pub mod Staking {
         // Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
         // an epoch to the updated stake.
         total_stake_trace: Trace,
+        // Map staker address to their balance trace.
+        staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
     }
 
     #[event]
@@ -234,6 +240,9 @@ pub mod Staking {
                 Option::None
             };
 
+            let staker_balance = StakerBalanceTrait::new(:amount);
+            self.insert_staker_balance(:staker_address, :staker_balance);
+
             // Create the record for the staker.
             self
                 .staker_info
@@ -243,7 +252,7 @@ pub mod Staking {
                         reward_address,
                         operational_address,
                         unstake_time: Option::None,
-                        amount_own: amount,
+                        amount_own: self.get_amount_own(:staker_address),
                         index: self.global_index.read(),
                         unclaimed_rewards_own: Zero::zero(),
                         pool_info: pool_info,
@@ -1428,6 +1437,23 @@ pub mod Staking {
                 );
             }
             Zero::zero()
+        }
+
+        fn get_next_epoch(self: @ContractState) -> Epoch {
+            self.get_current_epoch() + 1
+        }
+
+        fn insert_staker_balance(
+            ref self: ContractState, staker_address: ContractAddress, staker_balance: StakerBalance,
+        ) {
+            self
+                .staker_balance_trace
+                .entry(staker_address)
+                .insert(key: self.get_next_epoch(), value: staker_balance);
+        }
+
+        fn get_amount_own(ref self: ContractState, staker_address: ContractAddress) -> Amount {
+            self.staker_balance_trace.entry(staker_address).latest().amount_own()
         }
     }
 }
