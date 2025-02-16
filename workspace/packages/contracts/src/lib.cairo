@@ -15,6 +15,7 @@ pub mod errors;
 #[cfg(test)]
 pub mod event_test_utils;
 pub mod interfaces;
+pub mod iterable_map;
 pub mod math;
 pub mod message_hash;
 pub mod span_utils;

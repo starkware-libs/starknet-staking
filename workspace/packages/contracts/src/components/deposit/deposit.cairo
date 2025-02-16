@@ -20,7 +20,7 @@ pub(crate) mod Deposit {
         // aggregate_pending_deposit is in unquantized amount
         pub aggregate_pending_deposit: Map<felt252, u128>,
         pub asset_info: Map<felt252, (ContractAddress, u64)>,
-        pub cancellation_delay: TimeDelta,
+        pub deposit_grace_period: TimeDelta,
     }
 
     #[event]
@@ -121,7 +121,7 @@ pub(crate) mod Deposit {
             // Validations
             match self.get_deposit_status(:deposit_hash) {
                 DepositStatus::PENDING(deposit_timestamp) => assert(
-                    deposit_timestamp.add(self.cancellation_delay.read()) < Time::now(),
+                    deposit_timestamp.add(self.deposit_grace_period.read()) < Time::now(),
                     errors::DEPOSIT_NOT_CANCELABLE,
                 ),
                 DepositStatus::NOT_EXIST => panic_with_felt252(errors::DEPOSIT_NOT_REGISTERED),
@@ -166,10 +166,10 @@ pub(crate) mod Deposit {
     pub impl InternalImpl<
         TContractState, +HasComponent<TContractState>,
     > of InternalTrait<TContractState> {
-        fn initialize(ref self: ComponentState<TContractState>, cancelation_delay: TimeDelta) {
-            assert(self.cancellation_delay.read().is_zero(), errors::ALREADY_INITIALIZED);
-            assert(cancelation_delay.is_non_zero(), errors::INVALID_CANCELLATION_DELAY);
-            self.cancellation_delay.write(cancelation_delay);
+        fn initialize(ref self: ComponentState<TContractState>, deposit_grace_period: TimeDelta) {
+            assert(self.deposit_grace_period.read().is_zero(), errors::ALREADY_INITIALIZED);
+            assert(deposit_grace_period.is_non_zero(), errors::INVALID_DEPOSIT_GRACE_PERIOD);
+            self.deposit_grace_period.write(deposit_grace_period);
         }
 
         fn register_token(
