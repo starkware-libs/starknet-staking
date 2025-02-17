@@ -168,6 +168,15 @@ fn internal_staker_info_unstake_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn pool_upgrade_flow_regression_test() {
+    let mut flow = flows::PoolUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None, delegated_amount: Zero::zero(),
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

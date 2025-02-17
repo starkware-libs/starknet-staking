@@ -28,11 +28,16 @@ use staking::staking::interface::{
     StakerInfo, StakerInfoTrait,
 };
 use staking::staking::objects::EpochInfo;
-use staking::test_utils::constants::{EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS};
-use staking::test_utils::{StakingInitConfig, declare_staking_eic_contract};
+use staking::test_utils::constants::{
+    EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS, UPGRADE_GOVERNOR,
+};
+use staking::test_utils::{
+    StakingInitConfig, declare_pool_contract, declare_pool_eic_contract,
+    declare_staking_eic_contract,
+};
 use staking::types::{Amount, Commission, Index, InternalStakerInfoLatest};
 use starknet::syscalls::deploy_syscall;
-use starknet::{ClassHash, ContractAddress};
+use starknet::{ClassHash, ContractAddress, Store};
 use starknet::{SyscallResultTrait};
 
 mod MainnetAddresses {
@@ -220,6 +225,16 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn get_global_index(self: StakingState) -> Index {
         self.dispatcher().contract_parameters().global_index
+    }
+
+    fn get_pool_contract_admin(self: StakingState) -> ContractAddress {
+        let pool_contract_admin = *snforge_std::load(
+            target: self.address,
+            storage_address: selector!("pool_contract_admin"),
+            size: Store::<ContractAddress>::size().into(),
+        )
+            .at(0);
+        pool_contract_admin.try_into().unwrap()
     }
 }
 
@@ -441,6 +456,22 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
     }
 }
 
+/// The `PoolRoles` struct represents the various roles involved in the pool contract.
+/// It includes the address for the upgrade governor role.
+#[derive(Drop, Copy)]
+pub(crate) struct PoolRoles {
+    pub upgrade_governor: ContractAddress,
+}
+
+/// The `PoolState` struct represents the state of the pool contract.
+/// It includes the contract address and roles.
+#[derive(Drop, Copy)]
+pub(crate) struct PoolState {
+    pub address: ContractAddress,
+    pub governance_admin: ContractAddress,
+    pub roles: PoolRoles,
+}
+
 /// The `SystemConfig` struct represents the configuration settings for the entire system.
 /// It includes configurations for the token, staking, minting curve, and reward supplier contracts.
 #[derive(Drop)]
@@ -460,6 +491,7 @@ pub(crate) struct SystemState<TTokenState> {
     pub staking: StakingState,
     pub minting_curve: MintingCurveState,
     pub reward_supplier: RewardSupplierState,
+    pub pool: Option<PoolState>,
     pub base_account: felt252,
 }
 
@@ -530,7 +562,14 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         cheat_caller_address_once(:contract_address, caller_address: staking.roles.token_admin);
         staking_config_dispatcher.set_reward_supplier(reward_supplier: reward_supplier.address);
         advance_block_number_global(blocks: EPOCH_STARTING_BLOCK);
-        SystemState { token, staking, minting_curve, reward_supplier, base_account: 0x100000 }
+        SystemState {
+            token,
+            staking,
+            minting_curve,
+            reward_supplier,
+            pool: Option::None,
+            base_account: 0x100000,
+        }
     }
 
     /// Deploys the system configuration with the implementation of the deployed contracts
@@ -557,7 +596,14 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         );
         staking_config_dispatcher.set_reward_supplier(reward_supplier: reward_supplier.address);
         advance_block_number_global(blocks: EPOCH_STARTING_BLOCK);
-        SystemState { token, staking, minting_curve, reward_supplier, base_account: 0x100000 }
+        SystemState {
+            token,
+            staking,
+            minting_curve,
+            reward_supplier,
+            pool: Option::None,
+            base_account: 0x100000,
+        }
     }
 }
 
@@ -591,6 +637,25 @@ pub(crate) impl SystemImpl<
     /// Advances the block timestamp by the specified amount of time.
     fn advance_time(ref self: SystemState<TTokenState>, time: TimeDelta) {
         start_cheat_block_timestamp_global(block_timestamp: Time::now().add(delta: time).into())
+    }
+
+    fn set_pool_for_upgrade(ref self: SystemState<TTokenState>, pool_address: ContractAddress) {
+        let pool_contract_admin = self.staking.get_pool_contract_admin();
+        let upgrade_governor = UPGRADE_GOVERNOR();
+        set_account_as_upgrade_governor(
+            contract: pool_address,
+            account: upgrade_governor,
+            governance_admin: pool_contract_admin,
+        );
+        self
+            .pool =
+                Option::Some(
+                    PoolState {
+                        address: pool_address,
+                        governance_admin: pool_contract_admin,
+                        roles: PoolRoles { upgrade_governor },
+                    },
+                );
     }
 }
 
@@ -865,14 +930,18 @@ impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
 impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     /// Upgrades the contracts in the system state with local implementations.
     fn upgrade_contracts_implementation(self: SystemState<STRKTokenState>) {
+        self.staking.update_global_index_if_needed();
+        let final_index = self.staking.get_global_index();
         self.upgrade_staking_implementation();
         self.upgrade_reward_supplier_implementation();
         self.upgrade_minting_curve_implementation();
+        if let Option::Some(pool) = self.pool {
+            self.upgrade_pool_implementation(:pool, :final_index);
+        }
     }
 
     /// Upgrades the staking contract in the system state with a local implementation.
     fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
-        self.staking.update_global_index_if_needed();
         let total_stake = self.staking.get_total_stake();
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
@@ -912,6 +981,24 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
             contract_address: self.minting_curve.address,
             :implementation_data,
             upgrade_governor: self.minting_curve.roles.upgrade_governor,
+        );
+    }
+
+    /// Upgrades the pool contract in the system state with a local implementation.
+    fn upgrade_pool_implementation(
+        self: SystemState<STRKTokenState>, pool: PoolState, final_index: Index,
+    ) {
+        let eic_data = EICData {
+            eic_hash: declare_pool_eic_contract(),
+            eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into(), final_index.into()].span(),
+        };
+        let implementation_data = ImplementationData {
+            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+        };
+        upgrade_implementation(
+            contract_address: pool.address,
+            :implementation_data,
+            upgrade_governor: pool.roles.upgrade_governor,
         );
     }
 }
@@ -967,6 +1054,7 @@ pub(crate) enum SystemType {
 pub(crate) trait FlowTrait<
     TFlow, TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > {
+    fn get_pool_address(self: TFlow) -> Option<ContractAddress>;
     fn setup(ref self: TFlow, ref system: SystemState<TTokenState>);
     fn test(self: TFlow, ref system: SystemState<TTokenState>, system_type: SystemType);
 }
@@ -985,6 +1073,9 @@ pub(crate) fn test_flow_mainnet<
 ) {
     let mut system = SystemFactoryTrait::mainnet_system();
     flow.setup(ref :system);
+    if let Option::Some(pool_address) = flow.get_pool_address() {
+        system.set_pool_for_upgrade(pool_address);
+    };
     system.upgrade_contracts_implementation();
     flow.test(ref :system, system_type: SystemType::Mainnet);
 }
