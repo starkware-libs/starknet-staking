@@ -310,17 +310,15 @@ pub(crate) fn assert_change_operational_address_event(
     );
 }
 
-pub(crate) fn assert_final_index_set_event(
-    spied_event: @(ContractAddress, Event),
-    staker_address: ContractAddress,
-    final_staker_index: Index,
+pub(crate) fn assert_staker_removed_event(
+    spied_event: @(ContractAddress, Event), staker_address: ContractAddress,
 ) {
-    let expected_event = PoolEvents::FinalIndexSet { staker_address, final_staker_index };
+    let expected_event = PoolEvents::StakerRemoved { staker_address };
     assert_expected_event_emitted(
         :spied_event,
         :expected_event,
-        expected_event_selector: @selector!("FinalIndexSet"),
-        expected_event_name: "FinalIndexSet",
+        expected_event_selector: @selector!("StakerRemoved"),
+        expected_event_name: "StakerRemoved",
     );
 }
 

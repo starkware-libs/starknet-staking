@@ -20,9 +20,9 @@ use core::option::OptionTrait;
 use core::serde::Serde;
 use event_test_utils::{
     assert_delegation_pool_member_balance_changed_event, assert_delete_pool_member_event,
-    assert_final_index_set_event, assert_new_pool_member_event, assert_number_of_events,
-    assert_pool_member_exit_action_event, assert_pool_member_exit_intent_event,
-    assert_pool_member_reward_address_change_event, assert_pool_member_reward_claimed_event,
+    assert_new_pool_member_event, assert_number_of_events, assert_pool_member_exit_action_event,
+    assert_pool_member_exit_intent_event, assert_pool_member_reward_address_change_event,
+    assert_pool_member_reward_claimed_event, assert_staker_removed_event,
     assert_switch_delegation_pool_event,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -253,10 +253,10 @@ fn test_enter_delegation_pool_assertions() {
     let amount = cfg.pool_member_info.amount;
 
     // Catch STAKER_INACTIVE.
-    snforge_std::store(pool_contract, selector!("final_staker_index"), array![true.into()].span());
+    snforge_std::store(pool_contract, selector!("staker_removed"), array![true.into()].span());
     let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, :amount);
     assert_panic_with_error(:result, expected_error: Error::STAKER_INACTIVE.describe());
-    snforge_std::store(pool_contract, selector!("final_staker_index"), array![false.into()].span());
+    snforge_std::store(pool_contract, selector!("staker_removed"), array![false.into()].span());
 
     // Catch AMOUNT_IS_ZERO.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
@@ -342,10 +342,10 @@ fn test_add_to_delegation_pool_assertions() {
     let amount = 1;
 
     // Catch STAKER_INACTIVE.
-    snforge_std::store(pool_contract, selector!("final_staker_index"), array![true.into()].span());
+    snforge_std::store(pool_contract, selector!("staker_removed"), array![true.into()].span());
     let result = pool_safe_dispatcher.add_to_delegation_pool(:pool_member, :amount);
     assert_panic_with_error(:result, expected_error: Error::STAKER_INACTIVE.describe());
-    snforge_std::store(pool_contract, selector!("final_staker_index"), array![false.into()].span());
+    snforge_std::store(pool_contract, selector!("staker_removed"), array![false.into()].span());
 
     // Catch POOL_MEMBER_DOES_NOT_EXIST.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
@@ -420,7 +420,7 @@ fn test_assert_staker_is_active() {
         commission: COMMISSION,
         governance_admin: POOL_CONTRACT_ADMIN(),
     );
-    assert!(state.final_staker_index.read().is_none());
+    assert!(state.staker_removed.read() == false);
     state.assert_staker_is_active();
 }
 
@@ -434,7 +434,7 @@ fn test_assert_staker_is_active_panic() {
         commission: COMMISSION,
         governance_admin: POOL_CONTRACT_ADMIN(),
     );
-    state.final_staker_index.write(Option::Some(5));
+    state.staker_removed.write(true);
     state.assert_staker_is_active();
 }
 
@@ -451,17 +451,16 @@ fn test_set_final_staker_index() {
     cheat_caller_address_once(
         contract_address: test_address(), caller_address: STAKING_CONTRACT_ADDRESS(),
     );
-    assert!(state.final_staker_index.read().is_none());
+    assert!(state.final_staker_index.read().is_none()); // TODO: Remove
     let mut spy = snforge_std::spy_events();
     state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
-    assert_eq!(state.final_staker_index.read().unwrap(), STAKER_FINAL_INDEX);
-    // Validate the single FinalIndexSet event.
+    assert_eq!(state.final_staker_index.read().unwrap(), STAKER_FINAL_INDEX); // TODO: Remove
+    assert_eq!(state.staker_removed.read(), true);
+    // Validate the single StakerRemoved event.
     let events = spy.get_events().emitted_by(contract_address: test_address()).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_final_staker_index");
-    assert_final_index_set_event(
-        spied_event: events[0],
-        staker_address: cfg.test_info.staker_address,
-        final_staker_index: STAKER_FINAL_INDEX,
+    assert_staker_removed_event(
+        spied_event: events[0], staker_address: cfg.test_info.staker_address,
     );
 }
 
@@ -483,8 +482,8 @@ fn test_set_final_staker_index_caller_is_not_staking_contract() {
 }
 
 #[test]
-#[should_panic(expected: "Final staker index already set")]
-fn test_set_final_staker_index_already_set() {
+#[should_panic(expected: "Staker already removed")]
+fn test_set_final_staker_index_already_removed() {
     let cfg: StakingInitConfig = Default::default();
     let mut state = initialize_pool_state(
         staker_address: cfg.test_info.staker_address,
@@ -724,7 +723,7 @@ fn test_exit_delegation_pool_intent_assertions() {
     // Catch UNDELEGATE_IN_PROGRESS.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     pool_dispatcher.exit_delegation_pool_intent(:amount);
-    snforge_std::store(pool_contract, selector!("final_staker_index"), array![true.into()].span());
+    snforge_std::store(pool_contract, selector!("staker_removed"), array![true.into()].span());
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher.exit_delegation_pool_intent(:amount);
     assert_panic_with_error(:result, expected_error: Error::UNDELEGATE_IN_PROGRESS.describe());
@@ -1194,6 +1193,7 @@ fn test_contract_parameters() {
         staking_contract,
         token_address,
         commission: cfg.staker_info.get_pool_info().commission,
+        staker_removed: false,
     };
     assert_eq!(pool_dispatcher.contract_parameters(), expected_pool_contract_info);
 }
