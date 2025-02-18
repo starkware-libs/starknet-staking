@@ -591,8 +591,7 @@ pub mod Pool {
             let v_internal_pool_member_info = self.pool_member_info.read(pool_member);
             match v_internal_pool_member_info {
                 VInternalPoolMemberInfo::None => Option::None,
-                VInternalPoolMemberInfo::V0(info_v0) => Option::Some(info_v0.convert()),
-                VInternalPoolMemberInfo::V1(info_v1) => Option::Some(info_v1),
+                _ => Option::Some(self.internal_pool_member_info(:pool_member)),
             }
         }
 
