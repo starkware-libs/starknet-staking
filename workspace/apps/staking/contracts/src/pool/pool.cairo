@@ -530,7 +530,7 @@ pub mod Pool {
 
             let new_amount = self.get_amount(:pool_member);
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
-            external_pool_member_info.new_amount = new_amount;
+            external_pool_member_info.amount = new_amount;
             external_pool_member_info
         }
 
