@@ -12,7 +12,7 @@ pub trait IDeposit<TContractState> {
         asset_id: felt252,
         quantized_amount: u128,
         salt: felt252,
-    ) -> HashType;
+    );
     fn cancel_deposit(
         ref self: TContractState,
         beneficiary: u32,
@@ -23,6 +23,10 @@ pub trait IDeposit<TContractState> {
     fn get_deposit_status(self: @TContractState, deposit_hash: HashType) -> DepositStatus;
     fn get_asset_info(self: @TContractState, asset_id: felt252) -> (ContractAddress, u64);
 }
+
+const NOT_EXIST_CONSTANT: u64 = 0;
+const DONE_CONSTANT: u64 = 1;
+const CANCELED_CONSTANT: u64 = 2;
 
 #[derive(Debug, Drop, PartialEq, Serde)]
 pub enum DepositStatus {
@@ -35,19 +39,22 @@ pub enum DepositStatus {
 impl DepositStatusPacking of StorePacking<DepositStatus, u64> {
     fn pack(value: DepositStatus) -> u64 {
         match value {
-            DepositStatus::NOT_EXIST => 0,
-            DepositStatus::DONE => 1,
-            DepositStatus::CANCELED => 2,
+            DepositStatus::NOT_EXIST => NOT_EXIST_CONSTANT,
+            DepositStatus::DONE => DONE_CONSTANT,
+            DepositStatus::CANCELED => CANCELED_CONSTANT,
             DepositStatus::PENDING(time) => { time.into() },
         }
     }
 
     fn unpack(value: u64) -> DepositStatus {
-        match value {
-            0 => DepositStatus::NOT_EXIST,
-            1 => DepositStatus::DONE,
-            2 => DepositStatus::CANCELED,
-            _ => DepositStatus::PENDING(Timestamp { seconds: value }),
+        if (value == NOT_EXIST_CONSTANT) {
+            DepositStatus::NOT_EXIST
+        } else if (value == DONE_CONSTANT) {
+            DepositStatus::DONE
+        } else if (value == CANCELED_CONSTANT) {
+            DepositStatus::CANCELED
+        } else {
+            DepositStatus::PENDING(Timestamp { seconds: value })
         }
     }
 }

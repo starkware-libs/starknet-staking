@@ -16,24 +16,32 @@ pub enum RequestStatus {
     PENDING,
 }
 
+const NOT_EXIST_CONSTANT: u8 = 0;
+const DONE_CONSTANT: u8 = 1;
+const PENDING_CONSTANT: u8 = 2;
+
 const STATUS_MASK: u8 = 0x3;
 
 impl RequestStatusPacking of StorePacking<RequestStatus, u8> {
     fn pack(value: RequestStatus) -> u8 {
         match value {
-            RequestStatus::NOT_EXIST => 0,
-            RequestStatus::DONE => 1,
-            RequestStatus::PENDING => 2,
+            RequestStatus::NOT_EXIST => NOT_EXIST_CONSTANT,
+            RequestStatus::DONE => DONE_CONSTANT,
+            RequestStatus::PENDING => PENDING_CONSTANT,
         }
     }
 
     fn unpack(value: u8) -> RequestStatus {
         let status = value & STATUS_MASK;
-        match status {
-            0 => RequestStatus::NOT_EXIST,
-            1 => RequestStatus::DONE,
-            2 => RequestStatus::PENDING,
-            _ => panic_with_felt252(errors::INVALID_STATUS),
+
+        if (status == NOT_EXIST_CONSTANT) {
+            RequestStatus::NOT_EXIST
+        } else if (value == DONE_CONSTANT) {
+            RequestStatus::DONE
+        } else if (value == PENDING_CONSTANT) {
+            RequestStatus::PENDING
+        } else {
+            panic_with_felt252(errors::INVALID_STATUS)
         }
     }
 }

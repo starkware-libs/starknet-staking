@@ -121,7 +121,6 @@ pub struct PoolMemberInfo {
     pub commission: Commission,
     pub unpool_amount: Amount,
     pub unpool_time: Option<Timestamp>,
-    pub new_amount: Amount,
 }
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]

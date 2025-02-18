@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-pub(crate) type RoleId = felt252;
+pub type RoleId = felt252;
 
 // Role                |   Role Admin
 // ----------------------------------------
@@ -13,35 +13,32 @@ pub(crate) type RoleId = felt252;
 // SECURITY_AGENT      |   SECURITY_ADMIN.
 
 // int.from_bytes(Web3.keccak(text="ROLE_APP_GOVERNOR"), "big") & MASK_250 .
-pub(crate) const APP_GOVERNOR: RoleId =
-    0xd2ead78c620e94b02d0a996e99298c59ddccfa1d8a0149080ac3a20de06068;
+pub const APP_GOVERNOR: RoleId = 0xd2ead78c620e94b02d0a996e99298c59ddccfa1d8a0149080ac3a20de06068;
 
 // int.from_bytes(Web3.keccak(text="ROLE_APP_ROLE_ADMIN"), "big") & MASK_250 .
-pub(crate) const APP_ROLE_ADMIN: RoleId =
+pub const APP_ROLE_ADMIN: RoleId =
     0x3e615638e0b79444a70f8c695bf8f2a47033bf1cf95691ec3130f64939cee99;
 
 // int.from_bytes(Web3.keccak(text="ROLE_GOVERNANCE_ADMIN"), "big") & MASK_250 .
-pub(crate) const GOVERNANCE_ADMIN: RoleId =
+pub const GOVERNANCE_ADMIN: RoleId =
     0x3711c9d994faf6055172091cb841fd4831aa743e6f3315163b06a122c841846;
 
 // int.from_bytes(Web3.keccak(text="ROLE_OPERATOR"), "big") & MASK_250 .
-pub(crate) const OPERATOR: RoleId =
-    0x023edb77f7c8cc9e38e8afe78954f703aeeda7fffe014eeb6e56ea84e62f6da7;
+pub const OPERATOR: RoleId = 0x023edb77f7c8cc9e38e8afe78954f703aeeda7fffe014eeb6e56ea84e62f6da7;
 
 // int.from_bytes(Web3.keccak(text="ROLE_TOKEN_ADMIN"), "big") & MASK_250 .
-pub(crate) const TOKEN_ADMIN: RoleId =
-    0x0128d63adbf6b09002c26caf55c47e2f26635807e3ef1b027218aa74c8d61a3e;
+pub const TOKEN_ADMIN: RoleId = 0x0128d63adbf6b09002c26caf55c47e2f26635807e3ef1b027218aa74c8d61a3e;
 
 // int.from_bytes(Web3.keccak(text="ROLE_UPGRADE_GOVERNOR"), "big") & MASK_250 .
-pub(crate) const UPGRADE_GOVERNOR: RoleId =
+pub const UPGRADE_GOVERNOR: RoleId =
     0x251e864ca2a080f55bce5da2452e8cfcafdbc951a3e7fff5023d558452ec228;
 
 // int.from_bytes(Web3.keccak(text="ROLE_SECURITY_ADMIN"), "big") & MASK_250 .
-pub(crate) const SECURITY_ADMIN: RoleId =
+pub const SECURITY_ADMIN: RoleId =
     0x26bd110619d11cfdfc28e281df893bc24828e89177318e9dbd860cdaedeb6b3;
 
 // int.from_bytes(Web3.keccak(text="ROLE_SECURITY_AGENT"), "big") & MASK_250 .
-pub(crate) const SECURITY_AGENT: RoleId =
+pub const SECURITY_AGENT: RoleId =
     0x37693ba312785932d430dccf0f56ffedd0aa7c0f8b6da2cc4530c2717689b96;
 
 #[starknet::interface]
@@ -74,7 +71,7 @@ pub trait IRoles<TContractState> {
 }
 
 #[starknet::interface]
-pub(crate) trait IMinimalRoles<TContractState> {
+pub trait IMinimalRoles<TContractState> {
     fn is_governance_admin(self: @TContractState, account: ContractAddress) -> bool;
     fn is_upgrade_governor(self: @TContractState, account: ContractAddress) -> bool;
     fn register_governance_admin(ref self: TContractState, account: ContractAddress);

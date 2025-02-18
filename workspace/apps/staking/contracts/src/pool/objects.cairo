@@ -1,5 +1,4 @@
 use contracts_commons::types::time::time::Timestamp;
-use core::num::traits::zero::Zero;
 use staking::pool::interface::PoolMemberInfo;
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest};
 use starknet::ContractAddress;
@@ -110,8 +109,6 @@ pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfo of Into<
             commission: self.commission,
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
-            // TODO: Remove.
-            new_amount: Zero::zero(),
         }
     }
 }
@@ -219,7 +216,6 @@ mod internal_pool_member_info_latest_tests {
             commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
-            new_amount: Zero::zero(),
         };
         assert_eq!(pool_member_info, expected_pool_member_info);
     }
