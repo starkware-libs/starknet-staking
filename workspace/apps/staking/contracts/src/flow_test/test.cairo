@@ -1,4 +1,4 @@
-use contracts_commons::math::wide_abs_diff;
+use contracts_commons::math::abs::wide_abs_diff;
 use contracts_commons::test_utils::TokenTrait;
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
