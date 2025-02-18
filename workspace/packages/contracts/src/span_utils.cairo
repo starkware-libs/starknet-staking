@@ -24,8 +24,8 @@ pub fn validate_median<T, +Drop<T>, +Copy<T>, +PartialOrd<T>>(median: T, span: S
             equal_amount += 1;
         }
     };
-    assert(2 * (lower_amount + equal_amount) >= span.len(), 'Invalid median: too skewed');
-    assert(2 * (higher_amount + equal_amount) >= span.len(), 'Invalid median: too skewed');
+    assert(2 * (lower_amount + equal_amount) >= span.len(), 'INVALID_MEDIAN');
+    assert(2 * (higher_amount + equal_amount) >= span.len(), 'INVALID_MEDIAN');
 }
 
 
@@ -75,7 +75,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: 'Invalid median: too skewed')]
+    #[should_panic(expected: 'INVALID_MEDIAN')]
     fn test_validate_median_odd_length_bad_flow() {
         let span: Span<u128> = array![450, 150, 350, 250, 50].span();
         validate_median(median: 240, :span);
@@ -90,7 +90,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: 'Invalid median: too skewed')]
+    #[should_panic(expected: 'INVALID_MEDIAN')]
     fn test_validate_median_even_length_bad_flow() {
         let span: Span<u128> = array![150, 50, 250, 350].span();
         validate_median(median: 260, :span);
@@ -109,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: 'Invalid median: too skewed')]
+    #[should_panic(expected: 'INVALID_MEDIAN')]
     fn test_validate_median_duplicate_values_bad_flow() {
         let span: Span<u128> = array![100, 200, 400, 200, 300, 400, 100].span();
         validate_median(median: 250, :span);

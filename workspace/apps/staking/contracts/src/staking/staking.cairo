@@ -5,7 +5,7 @@ pub mod Staking {
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::{Describable, OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
-    use contracts_commons::math::mul_wide_and_div;
+    use contracts_commons::math::utils::mul_wide_and_div;
     use contracts_commons::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;

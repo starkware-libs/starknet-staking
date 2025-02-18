@@ -36,7 +36,7 @@ pub trait IPool<TContractState> {
 
 pub mod Events {
     use contracts_commons::types::time::time::Timestamp;
-    use staking::types::{Amount, Index};
+    use staking::types::Amount;
     use starknet::ContractAddress;
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
@@ -80,10 +80,9 @@ pub mod Events {
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
-    pub struct FinalIndexSet {
+    pub struct StakerRemoved {
         #[key]
         pub staker_address: ContractAddress,
-        pub final_staker_index: Index,
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
@@ -128,8 +127,9 @@ pub struct PoolMemberInfo {
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct PoolContractInfo {
     pub staker_address: ContractAddress,
-    pub final_staker_index: Option<Index>,
+    pub final_staker_index: Option<Index>, // TODO: remove?
     pub staking_contract: ContractAddress,
     pub token_address: ContractAddress,
     pub commission: Commission,
+    pub staker_removed: bool,
 }

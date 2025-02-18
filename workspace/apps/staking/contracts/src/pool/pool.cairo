@@ -63,7 +63,7 @@ pub mod Pool {
         // Map pool member to their pool member info.
         pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
         // Stores the final global index of staking contract if the staker was active during the
-        // upgrade to V1. If the staker was erased in V0, it retains the final staker index.
+        // upgrade to V1. If the staker was removed in V0, it retains the final staker index.
         final_staker_index: Option<Index>,
         // Dispatcher for the staking contract's pool functions.
         staking_pool_dispatcher: IStakingPoolDispatcher,
@@ -75,6 +75,8 @@ pub mod Pool {
         pool_member_epoch_balance: Map<ContractAddress, Trace>,
         // Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
+        // Indicates whether the staker has been removed from the staking contract.
+        staker_removed: bool,
     }
 
     #[event]
@@ -91,7 +93,7 @@ pub mod Pool {
         PoolMemberExitIntent: Events::PoolMemberExitIntent,
         PoolMemberBalanceChanged: Events::PoolMemberBalanceChanged,
         PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
-        FinalIndexSet: Events::FinalIndexSet,
+        StakerRemoved: Events::StakerRemoved,
         PoolMemberRewardClaimed: Events::PoolMemberRewardClaimed,
         DeletePoolMember: Events::DeletePoolMember,
         NewPoolMember: Events::NewPoolMember,
@@ -117,6 +119,7 @@ pub mod Pool {
             .write(IStakingPoolDispatcher { contract_address: staking_contract });
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.commission.write(commission);
+        self.staker_removed.write(false);
     }
 
     #[abi(embed_v0)]
@@ -467,7 +470,9 @@ pub mod Pool {
         }
 
         /// This function is called by the staking contract to notify the pool that the staker has
-        /// been erased from the staking contract.
+        /// been removed from the staking contract.
+        ///
+        /// TODO: Rename and remove index parameter.
         fn set_final_staker_index(ref self: ContractState, final_staker_index: Index) {
             // Asserts.
             assert!(
@@ -475,22 +480,13 @@ pub mod Pool {
                 "{}",
                 GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
-            assert!(
-                self.final_staker_index.read().is_none(),
-                "{}",
-                Error::FINAL_STAKER_INDEX_ALREADY_SET,
-            );
-
+            assert!(!self.staker_removed.read(), "{}", Error::STAKER_ALREADY_REMOVED);
             // All future functionality that requires the staker index, will use this final index.
-            self.final_staker_index.write(Option::Some(final_staker_index));
+            self.final_staker_index.write(Option::Some(final_staker_index)); // TODO: Remove
 
+            self.staker_removed.write(true);
             // Emit event.
-            self
-                .emit(
-                    Events::FinalIndexSet {
-                        staker_address: self.staker_address.read(), final_staker_index,
-                    },
-                );
+            self.emit(Events::StakerRemoved { staker_address: self.staker_address.read() });
         }
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
@@ -554,6 +550,7 @@ pub mod Pool {
                 staking_contract: self.staking_pool_dispatcher.read().contract_address,
                 token_address: self.token_dispatcher.read().contract_address,
                 commission: self.commission.read(),
+                staker_removed: self.staker_removed.read(),
             }
         }
 
@@ -594,8 +591,7 @@ pub mod Pool {
             let v_internal_pool_member_info = self.pool_member_info.read(pool_member);
             match v_internal_pool_member_info {
                 VInternalPoolMemberInfo::None => Option::None,
-                VInternalPoolMemberInfo::V0(info_v0) => Option::Some(info_v0.convert()),
-                VInternalPoolMemberInfo::V1(info_v1) => Option::Some(info_v1),
+                _ => Option::Some(self.internal_pool_member_info(:pool_member)),
             }
         }
 
@@ -655,7 +651,7 @@ pub mod Pool {
         }
 
         fn is_staker_active(self: @ContractState) -> bool {
-            self.final_staker_index.read().is_none()
+            !self.staker_removed.read()
         }
 
         fn undelegate_from_staking_contract_intent(

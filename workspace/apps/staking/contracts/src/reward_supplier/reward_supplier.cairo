@@ -5,7 +5,7 @@ pub mod RewardSupplier {
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::OptionAuxTrait;
     use contracts_commons::interfaces::identity::Identity;
-    use contracts_commons::math::ceil_of_division;
+    use contracts_commons::math::utils::ceil_of_division;
     use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::Zero;
     use core::traits::TryInto;

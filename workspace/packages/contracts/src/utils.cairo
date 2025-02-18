@@ -1,5 +1,5 @@
 use contracts_commons::errors::assert_with_byte_array;
-use contracts_commons::math::FractionTrait;
+use contracts_commons::math::fraction::FractionTrait;
 use contracts_commons::types::time::time::{Time, Timestamp};
 use contracts_commons::types::{HashType, PublicKey, Signature};
 use openzeppelin::account::utils::is_valid_stark_signature;

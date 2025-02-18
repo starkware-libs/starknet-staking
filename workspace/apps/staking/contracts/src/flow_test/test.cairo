@@ -1,4 +1,4 @@
-use contracts_commons::math::wide_abs_diff;
+use contracts_commons::math::abs::wide_abs_diff;
 use contracts_commons::test_utils::TokenTrait;
 use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
@@ -164,6 +164,15 @@ fn internal_staker_info_with_pool_after_upgrade_regression_test() {
 fn internal_staker_info_unstake_after_upgrade_regression_test() {
     let mut flow = flows::InternalStakerInfoUnstakeAfterUpgradeFlow {
         staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn pool_upgrade_flow_regression_test() {
+    let mut flow = flows::PoolUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None, delegated_amount: Zero::zero(),
     };
     test_flow_mainnet(ref :flow);
 }

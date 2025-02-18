@@ -7,7 +7,7 @@ use RewardSupplier::{
 };
 use Staking::{CONTRACT_IDENTITY as staking_identity, CONTRACT_VERSION as staking_version};
 use contracts_commons::errors::Describable;
-use contracts_commons::math::ceil_of_division;
+use contracts_commons::math::utils::ceil_of_division;
 use contracts_commons::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
