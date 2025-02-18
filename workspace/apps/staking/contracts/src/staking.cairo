@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod align_upg_vars_eic;
-#[cfg(test)]
+mod assign_root_gov_eic;
 mod eic;
 pub(crate) mod errors;
 pub mod interface;
