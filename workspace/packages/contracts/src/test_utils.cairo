@@ -90,6 +90,15 @@ pub fn assert_panic_with_error<T, +Drop<T>>(
     };
 }
 
+pub fn assert_panic_with_felt_error<T, +Drop<T>>(
+    result: Result<T, Array<felt252>>, expected_error: felt252,
+) {
+    match result {
+        Result::Ok(_) => panic!("Expected to fail with: {}", expected_error),
+        Result::Err(error_data) => assert!(*error_data[0] == expected_error),
+    };
+}
+
 pub fn assert_expected_error(error_data: Span<felt252>, expected_error: ByteArray) {
     match try_deserialize_bytearray_error(error_data) {
         Result::Ok(error) => assert_eq!(error, expected_error),

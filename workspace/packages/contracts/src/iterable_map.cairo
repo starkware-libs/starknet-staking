@@ -6,7 +6,7 @@ use starknet::storage::StoragePathEntry;
 use starknet::storage::{
     FlattenedStorage, Map, Mutable, MutableVecTrait, PendingStoragePath, PendingStoragePathTrait,
     StorageAsPath, StorageBase, StorageNode, StorageNodeMut, StoragePath, StorageTrait,
-    StorageTraitMut, Vec,
+    StorageTraitMut, Vec, VecTrait,
 };
 
 /// A Map like struct that represents a map in a contract storage that can also be iterated over.
@@ -24,7 +24,7 @@ const INNER_MAP_FIELD_NAME_HASH: felt252 = selector!("_inner_map");
 const NEXT_KEYS_FIELD_NAME_HASH: felt252 = selector!("_next_keys");
 
 #[derive(Drop, Copy)]
-pub struct IterableMapStorageBase<K, V> {
+struct IterableMapStorageBase<K, V> {
     _inner_map: StorageBase<Map<K, Option<V>>>,
     _next_keys: StorageBase<Vec<K>>,
 }
@@ -39,7 +39,7 @@ impl IterableMapStorageImpl<K, V> of StorageTrait<IterableMap<K, V>> {
 }
 
 #[derive(Drop, Copy)]
-pub struct IterableMapStorageBaseMut<K, V> {
+struct IterableMapStorageBaseMut<K, V> {
     _inner_map: StorageBase<Mutable<Map<K, Option<V>>>>,
     _next_keys: StorageBase<Mutable<Vec<K>>>,
 }
@@ -56,12 +56,12 @@ impl IterableMapStorageImplMut<K, V> of StorageTraitMut<IterableMap<K, V>> {
 }
 
 #[derive(Copy, Drop)]
-pub struct IterableMapStorageNode<K, V> {
+struct IterableMapStorageNode<K, V> {
     _inner_map: PendingStoragePath<Map<K, Option<V>>>,
     _next_keys: PendingStoragePath<Vec<K>>,
 }
 
-pub impl IterableMapStorageNodeImpl<K, V> of StorageNode<IterableMap<K, V>> {
+impl IterableMapStorageNodeImpl<K, V> of StorageNode<IterableMap<K, V>> {
     type NodeType = IterableMapStorageNode<K, V>;
     fn storage_node(self: StoragePath<IterableMap<K, V>>) -> IterableMapStorageNode<K, V> {
         let _inner_map = PendingStoragePathTrait::new(@self, INNER_MAP_FIELD_NAME_HASH);
@@ -71,12 +71,12 @@ pub impl IterableMapStorageNodeImpl<K, V> of StorageNode<IterableMap<K, V>> {
 }
 
 #[derive(Copy, Drop)]
-pub struct IterableMapStorageNodeMut<K, V> {
+struct IterableMapStorageNodeMut<K, V> {
     _inner_map: PendingStoragePath<Mutable<Map<K, Option<V>>>>,
     _next_keys: PendingStoragePath<Mutable<Vec<K>>>,
 }
 
-pub impl IterableMapStorageNodeMutImpl<K, V> of StorageNodeMut<IterableMap<K, V>> {
+impl IterableMapStorageNodeMutImpl<K, V> of StorageNodeMut<IterableMap<K, V>> {
     type NodeType = IterableMapStorageNodeMut<K, V>;
     fn storage_node_mut(
         self: StoragePath<Mutable<IterableMap<K, V>>>,
@@ -90,7 +90,17 @@ pub impl IterableMapStorageNodeMutImpl<K, V> of StorageNodeMut<IterableMap<K, V>
 
 /// Read and write access trait implementations:
 
-pub impl IterableMapReadAccessImpl<
+impl StoragePathIterableMapReadAccessImpl<
+    K, V, +Drop<K>, +Store<Option<V>>, +Hash<K, HashState>,
+> of StorageMapReadAccess<StoragePath<IterableMap<K, V>>> {
+    type Key = K;
+    type Value = Option<V>;
+    fn read(self: StoragePath<IterableMap<K, V>>, key: Self::Key) -> Self::Value {
+        self._inner_map.entry(key).read()
+    }
+}
+
+impl StoragePathMutableIterableMapReadAccessImpl<
     K, V, +Drop<K>, +Store<Option<V>>, +Hash<K, HashState>,
 > of StorageMapReadAccess<StoragePath<Mutable<IterableMap<K, V>>>> {
     type Key = K;
@@ -100,7 +110,21 @@ pub impl IterableMapReadAccessImpl<
     }
 }
 
-pub impl IterableMapWriteAccessImpl<
+pub impl IterableMapReadAccessImpl<
+    T,
+    +Drop<T>,
+    impl StorageAsPathImpl: StorageAsPath<T>,
+    impl StoragePathImpl: StorageMapReadAccess<StoragePath<StorageAsPathImpl::Value>>,
+    +Drop<StoragePathImpl::Key>,
+> of StorageMapReadAccess<T> {
+    type Key = StoragePathImpl::Key;
+    type Value = StoragePathImpl::Value;
+    fn read(self: T, key: Self::Key) -> Self::Value {
+        self.as_path().read(key)
+    }
+}
+
+impl StoragePathIterableMapWriteAccessImpl<
     K, V, +Drop<K>, +Drop<V>, +Store<K>, +Store<V>, +Hash<K, HashState>, +Copy<K>,
 > of StorageMapWriteAccess<StoragePath<Mutable<IterableMap<K, V>>>> {
     type Key = K;
@@ -114,7 +138,58 @@ pub impl IterableMapWriteAccessImpl<
     }
 }
 
+pub impl IterableMapWriteAccessImpl<
+    T,
+    +Drop<T>,
+    impl StorageAsPathImpl: StorageAsPath<T>,
+    impl StoragePathImpl: StorageMapWriteAccess<StoragePath<StorageAsPathImpl::Value>>,
+    +Drop<StoragePathImpl::Key>,
+    +Drop<StoragePathImpl::Value>,
+> of StorageMapWriteAccess<T> {
+    type Key = StoragePathImpl::Key;
+    type Value = StoragePathImpl::Value;
+    fn write(self: T, key: Self::Key, value: Self::Value) {
+        self.as_path().write(key, value)
+    }
+}
+
 /// Iterator and IntoItarator implementations:
+
+#[derive(Copy, Drop)]
+struct MapIterator<K, V> {
+    _inner_map: StoragePath<Map<K, Option<V>>>,
+    _next_keys: StoragePath<Vec<K>>,
+    _next_index: u64,
+}
+
+pub impl IterableMapIteratorImpl<
+    K, V, +Drop<K>, +Store<K>, +Hash<K, HashState>, +Copy<K>, +Store<Option<V>>,
+> of Iterator<MapIterator<K, V>> {
+    type Item = (K, V);
+    fn next(ref self: MapIterator<K, V>) -> Option<Self::Item> {
+        if let Option::Some(key) = self._next_keys.get(self._next_index) {
+            self._next_index += 1;
+            let key = key.read();
+            let value = self._inner_map.read(key).unwrap();
+            Option::Some((key, value))
+        } else {
+            Option::None
+        }
+    }
+}
+
+impl StoragePathIterableMapIntoIteratorImpl<
+    K, V, +Drop<K>, +Store<K>, +Hash<K, HashState>, +Copy<K>, +Store<Option<V>>,
+> of IntoIterator<StoragePath<IterableMap<K, V>>> {
+    type IntoIter = MapIterator<K, V>;
+    fn into_iter(self: StoragePath<IterableMap<K, V>>) -> Self::IntoIter {
+        MapIterator {
+            _inner_map: self._inner_map.as_path(),
+            _next_keys: self._next_keys.as_path(),
+            _next_index: 0,
+        }
+    }
+}
 
 #[derive(Copy, Drop)]
 struct MapIteratorMut<K, V> {
@@ -139,7 +214,7 @@ pub impl IterableMapIteratorMutImpl<
     }
 }
 
-impl IterableMapIntoIteratorStoragePathMutImpl<
+impl StoragePathMutableIterableMapIntoIteratorImpl<
     K, V, +Drop<K>, +Store<K>, +Hash<K, HashState>, +Copy<K>, +Store<Option<V>>,
 > of IntoIterator<StoragePath<Mutable<IterableMap<K, V>>>> {
     type IntoIter = MapIteratorMut<K, V>;

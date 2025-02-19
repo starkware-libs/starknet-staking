@@ -4,7 +4,9 @@ use contracts_commons::components::roles::test_utils;
 use contracts_commons::components::roles::test_utils::Constants;
 use contracts_commons::errors::Describable;
 use contracts_commons::event_test_utils::assert_number_of_events;
-use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
+use contracts_commons::test_utils::{
+    assert_panic_with_error, assert_panic_with_felt_error, cheat_caller_address_once,
+};
 use core::num::traits::zero::Zero;
 use interface::{
     IRolesDispatcher, IRolesDispatcherTrait, IRolesSafeDispatcher, IRolesSafeDispatcherTrait,
@@ -12,17 +14,6 @@ use interface::{
 use openzeppelin::access::accesscontrol::AccessControlComponent::Errors as OZAccessErrors;
 use roles::{event_test_utils, interface};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-
-
-fn assert_panic_with_felt_error<T, +Drop<T>>(
-    result: Result<T, Array<felt252>>, expected_error: felt252,
-) {
-    match result {
-        Result::Ok(_) => panic!("Expected to fail with: {}", expected_error),
-        Result::Err(error_data) => assert!(*error_data[0] == expected_error),
-    };
-}
-
 
 #[test]
 fn test_register_app_role_admin() {
