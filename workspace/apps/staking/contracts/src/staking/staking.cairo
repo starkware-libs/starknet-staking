@@ -315,9 +315,10 @@ pub mod Staking {
                 );
 
             // Update staker's staked amount, and total stake.
-            let new_self_stake = old_self_stake + amount;
+            self.increase_staker_own_amount(:staker_address, :amount);
+            let staker_balance = self.staker_balance_trace.entry(key: staker_address).latest();
+            let new_self_stake = staker_balance.amount_own();
             staker_info.amount_own = new_self_stake;
-            let mut staker_total_stake = new_self_stake;
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
@@ -329,7 +330,6 @@ pub mod Staking {
             if let Option::Some(pool_info) = staker_info.pool_info {
                 old_delegated_stake = pool_info.amount;
                 new_delegated_stake = pool_info.amount;
-                staker_total_stake += pool_info.amount;
             }
             self
                 .emit(
@@ -341,7 +341,7 @@ pub mod Staking {
                         new_delegated_stake,
                     },
                 );
-            staker_total_stake
+            staker_balance.total_amount()
         }
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> Amount {
@@ -744,8 +744,14 @@ pub mod Staking {
                 );
 
             // Update the staker's staked amount, and add to total_stake.
+            self.update_staker_pool_amount(:staker_address, amount: pool_info.amount + amount);
             let old_delegated_stake = pool_info.amount;
-            pool_info.amount += amount;
+            pool_info
+                .amount = self
+                .staker_balance_trace
+                .entry(key: staker_address)
+                .latest()
+                .pool_amount();
             staker_info.pool_info = Option::Some(pool_info);
             self
                 .staker_info
@@ -788,7 +794,10 @@ pub mod Staking {
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let old_intent_amount = self.get_pool_exit_intent(:undelegate_intent_key).amount;
             let new_intent_amount = amount;
-            self.update_delegated_stake(ref :staker_info, :old_intent_amount, :new_intent_amount);
+            self
+                .update_delegated_stake(
+                    :staker_address, ref :staker_info, :old_intent_amount, :new_intent_amount,
+                );
             self
                 .update_undelegate_intent_value(
                     :staker_info, :undelegate_intent_key, :new_intent_amount,
@@ -906,7 +915,16 @@ pub mod Staking {
             let old_delegated_stake = to_staker_pool_info.amount;
 
             // Update `to_staker`'s delegated stake amount, and add to total stake.
-            to_staker_pool_info.amount += switched_amount;
+            self
+                .update_staker_pool_amount(
+                    staker_address: to_staker, amount: to_staker_pool_info.amount + switched_amount,
+                );
+            to_staker_pool_info
+                .amount = self
+                .staker_balance_trace
+                .entry(key: to_staker)
+                .latest()
+                .pool_amount();
             to_staker_info.pool_info = Option::Some(to_staker_pool_info);
             self
                 .staker_info
@@ -1176,6 +1194,7 @@ pub mod Staking {
             staker_address: ContractAddress,
             staker_info: InternalStakerInfoLatest,
         ) {
+            self.insert_staker_balance(:staker_address, staker_balance: Zero::zero());
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
             let operational_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(operational_address, Zero::zero());
@@ -1342,6 +1361,7 @@ pub mod Staking {
         /// the intent amount. Also updates the total stake accordingly.
         fn update_delegated_stake(
             ref self: ContractState,
+            staker_address: ContractAddress,
             ref staker_info: InternalStakerInfoLatest,
             old_intent_amount: Amount,
             new_intent_amount: Amount,
@@ -1360,7 +1380,13 @@ pub mod Staking {
                         :old_delegated_stake, :new_delegated_stake,
                     )
             }
-            pool_info.amount = new_delegated_stake;
+            self.update_staker_pool_amount(:staker_address, amount: new_delegated_stake);
+            pool_info
+                .amount = self
+                .staker_balance_trace
+                .entry(key: staker_address)
+                .latest()
+                .pool_amount();
             staker_info.pool_info = Option::Some(pool_info);
         }
 
@@ -1454,6 +1480,22 @@ pub mod Staking {
 
         fn get_amount_own(ref self: ContractState, staker_address: ContractAddress) -> Amount {
             self.staker_balance_trace.entry(staker_address).latest().amount_own()
+        }
+
+        fn increase_staker_own_amount(
+            ref self: ContractState, staker_address: ContractAddress, amount: Amount,
+        ) {
+            let mut staker_balance = self.staker_balance_trace.entry(key: staker_address).latest();
+            staker_balance.increase_own_amount(:amount);
+            self.insert_staker_balance(:staker_address, :staker_balance);
+        }
+
+        fn update_staker_pool_amount(
+            ref self: ContractState, staker_address: ContractAddress, amount: Amount,
+        ) {
+            let mut staker_balance = self.staker_balance_trace.entry(key: staker_address).latest();
+            staker_balance.update_pool_amount(:amount);
+            self.insert_staker_balance(:staker_address, :staker_balance);
         }
     }
 }

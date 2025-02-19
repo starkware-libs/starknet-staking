@@ -90,3 +90,34 @@ fn test_latest_mutable() {
     let latest = mock_trace.latest_mutable();
     assert_eq!(latest, StakerBalanceTrait::new(amount: 200));
 }
+
+#[test]
+fn test_staker_balance_new() {
+    let mut staker_balance = StakerBalanceTrait::new(amount: 100);
+    assert_eq!(staker_balance.amount_own(), 100);
+    assert_eq!(staker_balance.total_amount(), 100);
+    assert_eq!(staker_balance.pool_amount(), 0);
+}
+
+#[test]
+fn test_staker_balance_increase_own_amount() {
+    let mut staker_balance = StakerBalanceTrait::new(amount: 100);
+    staker_balance.increase_own_amount(amount: 200);
+    assert_eq!(staker_balance.amount_own(), 300);
+    assert_eq!(staker_balance.total_amount(), 300);
+    assert_eq!(staker_balance.pool_amount(), 0);
+}
+
+#[test]
+fn test_staker_balance_update_pool_amount() {
+    let mut staker_balance = StakerBalanceTrait::new(amount: 100);
+    staker_balance.update_pool_amount(amount: 200);
+    assert_eq!(staker_balance.amount_own(), 100);
+    assert_eq!(staker_balance.total_amount(), 300);
+    assert_eq!(staker_balance.pool_amount(), 200);
+
+    staker_balance.update_pool_amount(amount: 50);
+    assert_eq!(staker_balance.amount_own(), 100);
+    assert_eq!(staker_balance.total_amount(), 150);
+    assert_eq!(staker_balance.pool_amount(), 50);
+}

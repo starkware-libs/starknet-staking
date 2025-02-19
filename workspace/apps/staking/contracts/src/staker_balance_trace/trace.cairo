@@ -45,6 +45,26 @@ pub(crate) impl StakerBalanceImpl of StakerBalanceTrait {
     fn total_amount(self: @StakerBalance) -> Amount {
         *self.total_amount
     }
+
+    fn pool_amount(self: @StakerBalance) -> Amount {
+        *self.total_amount - *self.amount_own
+    }
+
+    fn increase_own_amount(ref self: StakerBalance, amount: Amount) {
+        self.amount_own += amount;
+        self.total_amount += amount;
+    }
+
+    fn update_pool_amount(ref self: StakerBalance, amount: Amount) {
+        let pool_amount = self.pool_amount();
+        if amount > pool_amount {
+            let diff = amount - pool_amount;
+            self.total_amount += diff;
+        } else {
+            let diff = pool_amount - amount;
+            self.total_amount -= diff;
+        }
+    }
 }
 
 #[derive(Copy, Drop, Serde, starknet::Store)]
