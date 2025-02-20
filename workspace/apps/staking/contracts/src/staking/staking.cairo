@@ -24,7 +24,8 @@ pub mod Staking {
         IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     };
     use staking::staker_balance_trace::trace::{
-        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTrait,
+        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
+        StakerBalanceTrait,
     };
     use staking::staking::errors::Error;
     use staking::staking::interface::{
@@ -1478,8 +1479,9 @@ pub mod Staking {
                 .insert(key: self.get_next_epoch(), value: staker_balance);
         }
 
-        fn get_amount_own(ref self: ContractState, staker_address: ContractAddress) -> Amount {
-            self.staker_balance_trace.entry(staker_address).latest().amount_own()
+        fn get_amount_own(self: @ContractState, staker_address: ContractAddress) -> Amount {
+            let (_, staker_balance) = self.staker_balance_trace.entry(key: staker_address).latest();
+            staker_balance.amount_own()
         }
 
         fn increase_staker_own_amount(
