@@ -8,6 +8,7 @@ pub(crate) type Index = u128;
 pub(crate) type Inflation = u16;
 pub(crate) type Epoch = u64;
 pub(crate) type Version = u8;
+pub(crate) type VecIndex = u64;
 
 // ------ Migration ------ //
 // **Note**: These aliases should be updated in the next version.
