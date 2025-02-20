@@ -3,50 +3,60 @@ use core::num::traits::one::One;
 use core::num::traits::zero::Zero;
 
 #[derive(Copy, Debug, Drop, Hash, Serde)]
-struct Fraction {
-    numerator: i128,
-    denominator: u128,
+struct Fraction<N, D> {
+    numerator: N,
+    denominator: D,
 }
 
 #[generate_trait]
-pub impl FractionlImpl<
-    N, D, +Into<N, i128>, +Drop<N>, +Into<D, u128>, +Drop<D>,
+pub impl FractionImpl<
+    N, D, +Drop<N>, +Drop<D>, +Zero<D>, +Copy<N>, +Copy<D>,
 > of FractionTrait<N, D> {
-    fn new(numerator: N, denominator: D) -> Fraction {
+    fn new<N1, D1, +Into<N1, N>, +Into<D1, D>, +Drop<D1>>(
+        numerator: N1, denominator: D1,
+    ) -> Fraction<N, D> {
         /// TODO : consider  reducing a fraction to its simplest form.
-        let numerator: i128 = numerator.into();
-        let denominator: u128 = denominator.into();
-        assert(denominator != 0, 'Denominator must be non-zero');
+        let numerator = numerator.into();
+        let denominator = denominator.into();
+        assert(denominator.is_non_zero(), 'Denominator must be non-zero');
         Fraction { numerator, denominator }
+    }
+
+    fn numerator(self: @Fraction<N, D>) -> N {
+        *self.numerator
+    }
+
+    fn denominator(self: @Fraction<N, D>) -> D {
+        *self.denominator
     }
 }
 
-impl FractionNeg of Neg<Fraction> {
-    fn neg(a: Fraction) -> Fraction {
+impl FractionNegI128U128 of Neg<Fraction<i128, u128>> {
+    fn neg(a: Fraction<i128, u128>) -> Fraction<i128, u128> {
         Fraction { numerator: -a.numerator, denominator: a.denominator }
     }
 }
 
-impl FractionZero of Zero<Fraction> {
-    fn zero() -> Fraction {
+impl FractionZeroI128U128 of Zero<Fraction<i128, u128>> {
+    fn zero() -> Fraction<i128, u128> {
         Fraction { numerator: 0, denominator: 1 }
     }
 
-    fn is_zero(self: @Fraction) -> bool {
+    fn is_zero(self: @Fraction<i128, u128>) -> bool {
         *self.numerator == 0
     }
 
-    fn is_non_zero(self: @Fraction) -> bool {
+    fn is_non_zero(self: @Fraction<i128, u128>) -> bool {
         !self.is_zero()
     }
 }
 
-impl FractionOne of One<Fraction> {
-    fn one() -> Fraction {
+impl FractionOneI128U128 of One<Fraction<i128, u128>> {
+    fn one() -> Fraction<i128, u128> {
         Fraction { numerator: 1, denominator: 1 }
     }
 
-    fn is_one(self: @Fraction) -> bool {
+    fn is_one(self: @Fraction<i128, u128>) -> bool {
         let numerator: i128 = *self.numerator;
         let denominator: u128 = *self.denominator;
         if numerator < 0 {
@@ -55,19 +65,19 @@ impl FractionOne of One<Fraction> {
         numerator.abs() == denominator
     }
     /// Returns `false` if `self` is equal to the multiplicative identity.
-    fn is_non_one(self: @Fraction) -> bool {
+    fn is_non_one(self: @Fraction<i128, u128>) -> bool {
         !self.is_one()
     }
 }
 
-impl FractionPartialEq of PartialEq<Fraction> {
-    fn eq(lhs: @Fraction, rhs: @Fraction) -> bool {
+impl FractionPartialEqI128U128 of PartialEq<Fraction<i128, u128>> {
+    fn eq(lhs: @Fraction<i128, u128>, rhs: @Fraction<i128, u128>) -> bool {
         (lhs <= rhs) && (lhs >= rhs)
     }
 }
 
-impl FractionPartialOrd of PartialOrd<Fraction> {
-    fn lt(lhs: Fraction, rhs: Fraction) -> bool {
+impl FractionPartialOrdI128U128 of PartialOrd<Fraction<i128, u128>> {
+    fn lt(lhs: Fraction<i128, u128>, rhs: Fraction<i128, u128>) -> bool {
         /// denote lhs as a/b and rhs as c/d
         /// case a <= 0 and c > 0
         if lhs.numerator <= 0 && rhs.numerator > 0 {
@@ -101,6 +111,7 @@ impl FractionPartialOrd of PartialOrd<Fraction> {
     }
 }
 
+impl FractionTraitI128U128 = FractionImpl<i128, u128>;
 
 #[cfg(test)]
 mod tests {
@@ -114,19 +125,19 @@ mod tests {
     fn fraction_constructor_test() {
         // Signed numerator and unsigned denominator.
         assert_eq!(
-            FractionTrait::new(numerator: (-317_i32), denominator: 54_u128),
-            FractionTrait::new(numerator: (-634_i32), denominator: 108_u128),
+            FractionTraitI128U128::new(numerator: (-317_i32), denominator: 54_u128),
+            FractionTraitI128U128::new(numerator: (-634_i32), denominator: 108_u128),
             "Fraction equality failed",
         );
         // Both are unsigned, from different types.
         assert_eq!(
-            FractionTrait::new(numerator: 1_i8, denominator: 32_u64),
-            FractionTrait::new(numerator: 4_i16, denominator: 128_u128),
+            FractionTraitI128U128::new(numerator: 1_i8, denominator: 32_u64),
+            FractionTraitI128U128::new(numerator: 4_i16, denominator: 128_u128),
             "Fraction equality failed",
         );
         assert_eq!(
-            FractionTrait::new(numerator: 5_u8, denominator: 2_u8),
-            FractionTrait::new(numerator: 10_u64, denominator: 4_u8),
+            FractionTraitI128U128::new(numerator: 5_u8, denominator: 2_u8),
+            FractionTraitI128U128::new(numerator: 10_u64, denominator: 4_u8),
             "Fraction equality failed",
         );
     }
@@ -169,7 +180,7 @@ mod tests {
     #[test]
     #[should_panic(expected: 'Denominator must be non-zero')]
     fn fraction_new_test_panic() {
-        FractionTrait::new(numerator: 1_u8, denominator: 0_u8);
+        FractionTraitI128U128::new(numerator: 1_u8, denominator: 0_u8);
     }
 
     #[test]
@@ -184,5 +195,17 @@ mod tests {
         assert!(-f1 < -f2, "Fraction partial ord failed");
         assert!(f2 <= f1, "Fraction partial ord failed");
         assert!(-f1 <= -f2, "Fraction partial ord failed");
+    }
+
+    #[test]
+    fn fraction_numerator_test() {
+        let f: Fraction<u8, u8> = FractionTrait::new(numerator: 1_u8, denominator: 2_u8);
+        assert_eq!(f.numerator(), 1_u8);
+    }
+
+    #[test]
+    fn fraction_denominator_test() {
+        let f: Fraction<u8, u8> = FractionTrait::new(numerator: 1_u8, denominator: 2_u8);
+        assert_eq!(f.denominator(), 2_u8);
     }
 }
