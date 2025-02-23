@@ -2,6 +2,7 @@
 pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::{Describable, OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
@@ -161,7 +162,7 @@ pub mod Staking {
         epoch_info: EpochInfo,
     ) {
         self.roles.initialize(:governance_admin);
-        self.replaceability.upgrade_delay.write(Zero::zero());
+        self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);
         self.pool_contract_class_hash.write(pool_contract_class_hash);

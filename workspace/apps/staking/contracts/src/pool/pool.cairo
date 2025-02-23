@@ -2,6 +2,7 @@
 pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::{Describable, OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
@@ -112,7 +113,7 @@ pub mod Pool {
         governance_admin: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
-        self.replaceability.upgrade_delay.write(Zero::zero());
+        self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.staker_address.write(staker_address);
         self
             .staking_pool_dispatcher
