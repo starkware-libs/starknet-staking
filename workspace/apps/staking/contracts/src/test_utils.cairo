@@ -25,7 +25,7 @@ use snforge_std::{
 use staking::constants::{BASE_VALUE, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
 use staking::minting_curve::interface::MintingCurveContractInfo;
 use staking::minting_curve::minting_curve::MintingCurve;
-use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
+use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolMemberInfo};
 use staking::pool::objects::{VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait};
 use staking::pool::pool::Pool;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
@@ -1005,6 +1005,25 @@ pub(crate) fn staker_update_rewards(staker_info: StakerInfo, global_index: Index
         unclaimed_rewards_own: staker_info.unclaimed_rewards_own + staker_rewards,
         pool_info: staker_pool_info,
         ..staker_info,
+    }
+}
+
+/// Update rewards for pool.
+pub(crate) fn pool_update_rewards(
+    pool_member_info: PoolMemberInfo, updated_index: Index,
+) -> PoolMemberInfo {
+    let interest: Index = updated_index - pool_member_info.index;
+    let rewards_including_commission = compute_rewards_rounded_down(
+        amount: pool_member_info.amount, :interest,
+    );
+    let commission_amount = compute_commission_amount_rounded_up(
+        :rewards_including_commission, commission: pool_member_info.commission,
+    );
+    let rewards = rewards_including_commission - commission_amount;
+    PoolMemberInfo {
+        unclaimed_rewards: pool_member_info.unclaimed_rewards + rewards,
+        index: updated_index,
+        ..pool_member_info,
     }
 }
 

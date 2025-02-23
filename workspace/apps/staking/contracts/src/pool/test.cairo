@@ -36,13 +36,14 @@ use staking::flow_test::utils::MainnetClassHashes::MAINNET_POOL_CLASS_HASH_V0;
 use staking::flow_test::utils::upgrade_implementation;
 use staking::pool::errors::Error;
 use staking::pool::interface::{
-    IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
-    PoolContractInfo, PoolMemberInfo,
+    IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher,
+    IPoolMigrationDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo,
+    PoolMemberInfo,
 };
 use staking::pool::objects::{
-    InternalPoolMemberInfoConvertTrait, InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1,
-    SwitchPoolData, VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait,
-    VInternalPoolMemberInfoTrait, VStorageContractTest,
+    InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1, SwitchPoolData,
+    VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait,
+    VStorageContractTest,
 };
 use staking::pool::pool::Pool;
 use staking::staking::interface::{
@@ -1421,30 +1422,6 @@ fn test_pool_member_info_pool_member_doesnt_exist() {
 }
 
 #[test]
-fn test_internal_pool_member_info_convert() {
-    let internal_pool_member_info = InternalPoolMemberInfoTestTrait::new(
-        reward_address: Zero::zero(),
-        amount: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards: Zero::zero(),
-        commission: Zero::zero(),
-        unpool_amount: Zero::zero(),
-        unpool_time: Option::None,
-    );
-    let internal_pool_member_info_v1 = internal_pool_member_info.convert();
-    let expected_internal_pool_member_info_v1 = InternalPoolMemberInfoV1 {
-        reward_address: Zero::zero(),
-        amount: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards: Zero::zero(),
-        commission: Zero::zero(),
-        unpool_amount: Zero::zero(),
-        unpool_time: Option::None,
-    };
-    assert_eq!(internal_pool_member_info_v1, expected_internal_pool_member_info_v1);
-}
-
-#[test]
 fn test_v_internal_pool_member_info_wrap_latest() {
     let internal_pool_member_info_latest = InternalPoolMemberInfoLatest {
         reward_address: Zero::zero(),
@@ -1514,6 +1491,29 @@ fn test_v_internal_pool_member_info_is_none() {
     assert!(!v_latest.is_none());
 }
 
+#[test]
+fn test_pool_member_info_into_internal_pool_member_info_v1() {
+    let pool_member_info = PoolMemberInfo {
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    };
+    let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.into();
+    let expected_internal_pool_member_info = InternalPoolMemberInfoV1 {
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    };
+    assert_eq!(internal_pool_mamber_info, expected_internal_pool_member_info);
+}
 
 #[test]
 fn test_sanity_storage_versioned_internal_pool_member_info() {
@@ -1658,4 +1658,60 @@ fn test_pool_eic_with_wrong_number_of_data_elements() {
     upgrade_implementation(
         contract_address: pool_contract, :implementation_data, :upgrade_governor,
     );
+}
+
+#[test]
+fn test_internal_pool_member_info() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let pool_member = cfg.test_info.pool_member_address;
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_dispatcher = IPoolMigrationDispatcher { contract_address: pool_contract };
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
+    let pool_member_info = pool_dispatcher.internal_pool_member_info(:pool_member);
+    assert_eq!(pool_member_info, expected_pool_member_info);
+
+    // Check after staker exits.
+    let staker_address = cfg.test_info.staker_address;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let unstake_time = staking_dispatcher.unstake_intent();
+    start_cheat_block_timestamp_global(block_timestamp: unstake_time.into());
+    staking_dispatcher.unstake_action(:staker_address);
+    let pool_member_info = pool_dispatcher.internal_pool_member_info(:pool_member);
+    assert_eq!(pool_member_info, expected_pool_member_info);
+}
+
+#[test]
+#[should_panic(expected: "Pool member does not exist")]
+fn test_internal_pool_member_info_pool_member_doesnt_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_dispatcher = IPoolMigrationDispatcher { contract_address: pool_contract };
+    pool_dispatcher.internal_pool_member_info(pool_member: NON_POOL_MEMBER_ADDRESS());
+}
+
+#[test]
+fn test_get_internal_pool_member_info() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    // Check before enter the pool.
+    let pool_member = cfg.test_info.pool_member_address;
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_dispatcher = IPoolMigrationDispatcher { contract_address: pool_contract };
+    let option_pool_member_info = pool_dispatcher.get_internal_pool_member_info(:pool_member);
+    assert!(option_pool_member_info.is_none());
+    // Check after enter the pool.
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
+    let option_pool_member_info = pool_dispatcher.get_internal_pool_member_info(:pool_member);
+    assert_eq!(option_pool_member_info, Option::Some(expected_pool_member_info));
 }

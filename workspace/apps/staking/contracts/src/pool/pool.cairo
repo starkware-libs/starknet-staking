@@ -17,7 +17,7 @@ pub mod Pool {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
-    use staking::pool::interface::{Events, IPool, PoolContractInfo, PoolMemberInfo};
+    use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
     use staking::pool::objects::{
         InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
         VInternalPoolMemberInfoTrait,
@@ -571,8 +571,8 @@ pub mod Pool {
         }
     }
 
-    #[generate_trait]
-    pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
+    #[abi(embed_v0)]
+    impl PoolMigrationImpl of IPoolMigration<ContractState> {
         fn internal_pool_member_info(
             self: @ContractState, pool_member: ContractAddress,
         ) -> InternalPoolMemberInfoLatest {
@@ -581,7 +581,8 @@ pub mod Pool {
                 VInternalPoolMemberInfo::None => panic_with_byte_array(
                     err: @Error::POOL_MEMBER_DOES_NOT_EXIST.describe(),
                 ),
-                VInternalPoolMemberInfo::V0(info_v0) => info_v0.convert(),
+                VInternalPoolMemberInfo::V0(info_v0) => info_v0
+                    .convert(self.get_prev_class_hash(), pool_member),
                 VInternalPoolMemberInfo::V1(info_v1) => info_v1,
             }
         }
@@ -595,7 +596,20 @@ pub mod Pool {
                 _ => Option::Some(self.internal_pool_member_info(:pool_member)),
             }
         }
+    }
 
+    #[generate_trait]
+    pub(crate) impl InternalPoolMigration of IPoolMigrationInternal {
+        /// Returns the class hash of the previous contract version.
+        ///
+        /// **Note**: This function must be reimplemented in the next version of the contract.
+        fn get_prev_class_hash(self: @ContractState) -> ClassHash {
+            self.prev_class_hash.read(0)
+        }
+    }
+
+    #[generate_trait]
+    pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
         fn remove_pool_member(ref self: ContractState, pool_member: ContractAddress) {
             let reward_address = self.internal_pool_member_info(:pool_member).reward_address;
             self.pool_member_info.write(pool_member, VInternalPoolMemberInfo::None);

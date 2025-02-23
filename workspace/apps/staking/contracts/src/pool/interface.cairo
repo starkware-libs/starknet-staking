@@ -1,5 +1,6 @@
 use contracts_commons::types::time::time::Timestamp;
-use staking::types::{Amount, Commission, Index};
+use staking::pool::objects::InternalPoolMemberInfoV1;
+use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest};
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -32,6 +33,25 @@ pub trait IPool<TContractState> {
     ) -> Option<PoolMemberInfo>;
     fn contract_parameters(self: @TContractState) -> PoolContractInfo;
     fn update_commission_from_staking_contract(ref self: TContractState, commission: Commission);
+}
+
+// **Note**: This trait must be reimplemented in the next version of the contract.
+#[starknet::interface]
+pub trait IPoolMigration<TContractState> {
+    /// Reads the internal pool member information for the given `pool_member` from storage and
+    /// returns the latest version of this struct. panic if the pool member does not exist.
+    ///
+    /// Use this function instead of directly accessing storage to ensure you retrieve the
+    /// latest version of the struct. Direct storage access may return an outdated version,
+    /// which could be misaligned with the code and probably cause panics.
+    fn internal_pool_member_info(
+        self: @TContractState, pool_member: ContractAddress,
+    ) -> InternalPoolMemberInfoLatest;
+    /// Reads the internal pool member information for the given `pool_member` from storage and
+    /// returns the latest version of this struct. if the pool member does not exist, returns None.
+    fn get_internal_pool_member_info(
+        self: @TContractState, pool_member: ContractAddress,
+    ) -> Option<InternalPoolMemberInfoLatest>;
 }
 
 pub mod Events {
@@ -121,6 +141,25 @@ pub struct PoolMemberInfo {
     pub commission: Commission,
     pub unpool_amount: Amount,
     pub unpool_time: Option<Timestamp>,
+}
+
+pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<
+    PoolMemberInfo, InternalPoolMemberInfoV1,
+> {
+    /// This function is used during convertion from `InternalPoolMemberInfo` to
+    /// `InternalPoolMemberInfoV1`.
+    #[inline(always)]
+    fn into(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 nopanic {
+        InternalPoolMemberInfoV1 {
+            reward_address: self.reward_address,
+            amount: self.amount,
+            index: self.index,
+            unclaimed_rewards: self.unclaimed_rewards,
+            commission: self.commission,
+            unpool_amount: self.unpool_amount,
+            unpool_time: self.unpool_time,
+        }
+    }
 }
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
