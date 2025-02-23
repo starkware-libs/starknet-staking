@@ -101,6 +101,11 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
         self.checkpoints.len()
     }
 
+    /// Returns whether the trace is initialized.
+    fn is_initialized(self: StoragePath<StakerBalanceTrace>) -> bool {
+        self.checkpoints.len().is_non_zero()
+    }
+
     /// Returns the value in the last (most recent) checkpoint with the key lower than or equal to
     /// the search key, or zero if there is none.
     fn upper_lookup(self: StoragePath<StakerBalanceTrace>, key: Epoch) -> StakerBalance {

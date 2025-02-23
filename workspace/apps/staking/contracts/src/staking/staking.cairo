@@ -303,7 +303,7 @@ pub mod Staking {
 
             // Update the staker info to account for accumulated rewards, before updating their
             // staked amount.
-            let old_self_stake = staker_info.amount_own;
+            let old_self_stake = self.get_amount_own(:staker_address);
             self.update_rewards(ref :staker_info);
 
             // Transfer funds from caller (which is either the staker or their reward address).
@@ -1481,8 +1481,20 @@ pub mod Staking {
         }
 
         fn get_amount_own(self: @ContractState, staker_address: ContractAddress) -> Amount {
-            let (_, staker_balance) = self.staker_balance_trace.entry(key: staker_address).latest();
-            staker_balance.amount_own()
+            // After upgrading to V1, `staker_balance_trace` remains uninitialized
+            // until the staker's balance is modified for the first time. If initialized, return
+            // the `amount_own` recorded in the trace, which reflects the latest staked amount.
+            // Otherwise, return `staker_info.amount_own`.
+            //
+            // TODO: Consider initializing `staker_balance_trace` before calling `get_amount_own` to
+            // avoid this conditional check.
+            let trace = self.staker_balance_trace.entry(key: staker_address);
+            if trace.is_initialized() {
+                let (_, staker_balance) = trace.latest();
+                staker_balance.amount_own()
+            } else {
+                self.internal_staker_info(:staker_address).amount_own
+            }
         }
 
         fn increase_staker_own_amount(
