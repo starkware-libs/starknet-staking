@@ -972,7 +972,7 @@ pub mod Staking {
                 );
 
             // Emit event.
-            let to_staker_self_stake = to_staker_info.amount_own;
+            let to_staker_self_stake = self.get_amount_own(staker_address: to_staker);
             self
                 .emit(
                     Events::StakeBalanceChanged {
