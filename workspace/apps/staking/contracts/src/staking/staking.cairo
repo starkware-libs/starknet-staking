@@ -564,7 +564,9 @@ pub mod Staking {
             let total_rewards = self.calculate_staker_total_rewards(:staker_info);
             self.update_reward_supplier(rewards: total_rewards);
             let staker_rewards = self
-                .calculate_staker_own_rewards_include_commission(:staker_info, :total_rewards);
+                .calculate_staker_own_rewards_include_commission(
+                    :staker_info, :total_rewards, :staker_address,
+                );
             staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
             self.update_pool_rewards(:staker_info, :pool_rewards);
@@ -1452,9 +1454,12 @@ pub mod Staking {
         }
 
         fn calculate_staker_own_rewards_include_commission(
-            self: @ContractState, staker_info: InternalStakerInfoLatest, total_rewards: Amount,
+            self: @ContractState,
+            staker_info: InternalStakerInfoLatest,
+            total_rewards: Amount,
+            staker_address: ContractAddress,
         ) -> Amount {
-            let own_rewards = self.get_staker_own_rewards(:staker_info, :total_rewards);
+            let own_rewards = self.get_staker_own_rewards(:staker_address, :total_rewards);
             let commission_rewards = self
                 .get_staker_commission_rewards(
                     :staker_info, pool_rewards: total_rewards - own_rewards,
@@ -1474,12 +1479,12 @@ pub mod Staking {
         }
 
         fn get_staker_own_rewards(
-            self: @ContractState, staker_info: InternalStakerInfoLatest, total_rewards: Amount,
+            self: @ContractState, staker_address: ContractAddress, total_rewards: Amount,
         ) -> Amount {
             let own_rewards = mul_wide_and_div(
                 lhs: total_rewards,
-                rhs: staker_info.amount_own,
-                div: staker_info.get_total_amount(),
+                rhs: self.get_amount_own(:staker_address),
+                div: self.get_total_amount(:staker_address),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
             own_rewards
@@ -1523,6 +1528,24 @@ pub mod Staking {
                 staker_balance.amount_own()
             } else {
                 self.internal_staker_info(:staker_address).amount_own
+            }
+        }
+
+        fn get_total_amount(self: @ContractState, staker_address: ContractAddress) -> Amount {
+            // After upgrading to V1, `staker_balance_trace` remains uninitialized
+            // until the staker's balance is modified for the first time. If initialized, return
+            // the `total_amount` recorded in the trace, which reflects the latest total amount
+            // (staked + delegated amount).
+            // Otherwise, return `staker_info.total_amount`.
+            //
+            // TODO: Consider initializing `staker_balance_trace` before calling this function to
+            // avoid this conditional check.
+            let trace = self.staker_balance_trace.entry(key: staker_address);
+            if trace.is_initialized() {
+                let (_, staker_balance) = trace.latest();
+                staker_balance.total_amount()
+            } else {
+                self.internal_staker_info(:staker_address).get_total_amount()
             }
         }
 
