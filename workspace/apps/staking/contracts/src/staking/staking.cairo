@@ -401,7 +401,7 @@ pub mod Staking {
             } else {
                 Zero::zero()
             };
-            let old_self_stake = staker_info.amount_own;
+            let old_self_stake = self.get_amount_own(:staker_address);
             let amount = old_self_stake + amount_pool;
             self.remove_from_total_stake(:amount);
 
