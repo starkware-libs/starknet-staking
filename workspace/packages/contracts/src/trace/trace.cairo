@@ -1,4 +1,5 @@
 use contracts_commons::trace::errors::TraceErrors;
+use core::num::traits::Zero;
 use openzeppelin::utils::math::average;
 use starknet::storage::{Mutable, MutableVecTrait, StorageAsPath, StoragePath, Vec, VecTrait};
 use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
@@ -78,6 +79,16 @@ pub impl MutableTraceImpl of MutableTraceTrait {
         } else {
             checkpoints[pos - 1].read().value
         }
+    }
+
+    /// Returns the total number of checkpoints.
+    fn length(self: StoragePath<Mutable<Trace>>) -> u64 {
+        self.checkpoints.len()
+    }
+
+    /// Returns `true` is the trace is empty.
+    fn is_empty(self: StoragePath<Mutable<Trace>>) -> bool {
+        self.length().is_zero()
     }
 }
 

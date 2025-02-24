@@ -88,3 +88,27 @@ fn test_latest_mutable() {
     let latest = mock_trace.latest_mutable();
     assert_eq!(latest, 2000);
 }
+
+#[test]
+fn test_length_mutable() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    assert_eq!(mock_trace.length_mutable(), 0);
+
+    mock_trace.insert(100, 1000);
+    assert_eq!(mock_trace.length_mutable(), 1);
+
+    mock_trace.insert(200, 2000);
+    assert_eq!(mock_trace.length_mutable(), 2);
+}
+
+#[test]
+fn test_is_empty() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    assert!(mock_trace.is_empty());
+
+    mock_trace.insert(100, 1000);
+
+    assert!(!mock_trace.is_empty());
+}

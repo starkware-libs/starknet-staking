@@ -5,6 +5,8 @@ pub trait IMockTrace<TContractState> {
     fn length(self: @TContractState) -> u64;
     fn upper_lookup(self: @TContractState, key: u64) -> u128;
     fn latest_mutable(ref self: TContractState) -> u128;
+    fn length_mutable(ref self: TContractState) -> u64;
+    fn is_empty(ref self: TContractState) -> bool;
 }
 
 #[starknet::contract]
@@ -36,6 +38,14 @@ pub mod MockTrace {
 
         fn latest_mutable(ref self: ContractState) -> u128 {
             self.trace.deref().latest()
+        }
+
+        fn length_mutable(ref self: ContractState) -> u64 {
+            self.trace.deref().length()
+        }
+
+        fn is_empty(ref self: ContractState) -> bool {
+            self.trace.deref().is_empty()
         }
     }
 }

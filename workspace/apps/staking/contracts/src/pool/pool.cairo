@@ -29,7 +29,7 @@ pub mod Pool {
     use staking::types::{Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, Version};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_up,
-        compute_rewards_rounded_down,
+        compute_global_index_diff, compute_rewards_rounded_down,
     };
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
@@ -78,6 +78,10 @@ pub mod Pool {
         prev_class_hash: Map<Version, ClassHash>,
         // Indicates whether the staker has been removed from the staking contract.
         staker_removed: bool,
+        // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
+        // calculation.
+        // Updated whenever rewards are received from the staking contract.
+        rewards_info: Trace,
     }
 
     #[event]
@@ -570,6 +574,35 @@ pub mod Pool {
             );
 
             self.commission.write(commission);
+        }
+
+        /// **Note:** This function is not tested yet.
+        fn update_rewards_from_staking_contract(
+            ref self: ContractState, rewards: Amount, pool_balance: Amount,
+        ) {
+            assert!(
+                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
+                "{}",
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
+            );
+            let latest = {
+                if self.rewards_info.deref().is_empty() {
+                    0
+                } else {
+                    self.rewards_info.deref().latest()
+                }
+            };
+            self
+                .rewards_info
+                .deref()
+                .insert(
+                    key: self.get_current_epoch(),
+                    value: latest
+                        + compute_global_index_diff(
+                            staking_rewards: rewards, total_stake: pool_balance,
+                        ),
+                );
+            // TODO: emit event.
         }
     }
 

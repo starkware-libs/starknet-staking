@@ -1,6 +1,8 @@
 use contracts_commons::math::abs::Abs;
 use core::num::traits::{One, WideMul, Zero};
 
+pub impl FractionTraitI128U128 = FractionImpl<i128, u128>;
+
 #[derive(Copy, Debug, Drop, Hash, Serde)]
 struct Fraction<N, D> {
     numerator: N,
@@ -69,26 +71,40 @@ impl FractionOneI128U128 of One<Fraction<i128, u128>> {
     }
 }
 
-impl FractionPartialEqI128U128 of PartialEq<Fraction<i128, u128>> {
-    fn eq(lhs: @Fraction<i128, u128>, rhs: @Fraction<i128, u128>) -> bool {
+impl FractionPartialEq<N, D, +PartialOrd<@Fraction<N, D>>> of PartialEq<Fraction<N, D>> {
+    fn eq(lhs: @Fraction<N, D>, rhs: @Fraction<N, D>) -> bool {
         (lhs <= rhs) && (lhs >= rhs)
     }
 }
 
-impl FractionPartialOrdI128U128 of PartialOrd<Fraction<i128, u128>> {
-    fn lt(lhs: Fraction<i128, u128>, rhs: Fraction<i128, u128>) -> bool {
+impl FractionPartialOrd<
+    N,
+    D,
+    X,
+    +PartialOrd<N>,
+    +PartialEq<N>,
+    +Zero<N>,
+    +Abs<N, X>,
+    +Into<D, u256>,
+    +Into<X, u256>,
+    +Copy<N>,
+    +Drop<N>,
+    +Drop<D>,
+    +Copy<Fraction<N, D>>,
+> of PartialOrd<Fraction<N, D>> {
+    fn lt(lhs: Fraction<N, D>, rhs: Fraction<N, D>) -> bool {
         /// denote lhs as a/b and rhs as c/d
         /// case a <= 0 and c > 0
-        if lhs.numerator <= 0 && rhs.numerator > 0 {
+        if lhs.numerator <= Zero::zero() && rhs.numerator > Zero::zero() {
             return true;
         }
         /// case a >= 0 and c <= 0
-        if lhs.numerator >= 0 && rhs.numerator <= 0 {
+        if lhs.numerator >= Zero::zero() && rhs.numerator <= Zero::zero() {
             return false;
         }
 
         // case a < 0 and c = 0
-        if lhs.numerator < 0 && rhs.numerator == 0 {
+        if lhs.numerator < Zero::zero() && rhs.numerator == Zero::zero() {
             return true;
         }
 
@@ -102,7 +118,7 @@ impl FractionPartialOrdI128U128 of PartialOrd<Fraction<i128, u128>> {
         right = right * lhs.denominator.into();
 
         /// case a > 0 and c > 0
-        if lhs.numerator > 0 && rhs.numerator > 0 {
+        if lhs.numerator > Zero::zero() && rhs.numerator > Zero::zero() {
             return left < right;
         }
         /// The remaining case is a < 0 and c < 0
@@ -125,8 +141,6 @@ impl FractionWideMul<
         Fraction { numerator, denominator }
     }
 }
-
-impl FractionTraitI128U128 = FractionImpl<i128, u128>;
 
 #[cfg(test)]
 mod tests {
@@ -159,7 +173,7 @@ mod tests {
 
     #[test]
     fn fraction_neg_test() {
-        let f1 = FractionTrait::new(numerator: 1_u8, denominator: 2_u8);
+        let f1 = FractionTraitI128U128::new(numerator: 1_u8, denominator: 2_u8);
         let f2 = -f1;
         assert!(f2.numerator == -1 && f2.denominator == 2, "Fraction negation failed");
     }
@@ -167,8 +181,8 @@ mod tests {
 
     #[test]
     fn fraction_eq_test() {
-        let f1 = FractionTrait::new(numerator: 1_u8, denominator: 2_u8);
-        let f2 = FractionTrait::new(numerator: 6_u8, denominator: 12_u8);
+        let f1 = FractionTraitI128U128::new(numerator: 1_u8, denominator: 2_u8);
+        let f2 = FractionTraitI128U128::new(numerator: 6_u8, denominator: 12_u8);
         assert!(f1 == f2, "Fraction equality failed");
     }
 
