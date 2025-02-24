@@ -167,6 +167,7 @@ pub mod Pool {
                         commission: self.commission.read(),
                         unpool_amount: Zero::zero(),
                         unpool_time: Option::None,
+                        last_claimed_epoch: self.get_current_epoch(),
                     ),
                 );
             self.set_next_epoch_balance(:pool_member, :amount);
@@ -449,6 +450,7 @@ pub mod Pool {
                         commission: self.commission.read(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
+                        last_claimed_epoch: self.get_current_epoch(),
                     };
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);
@@ -750,11 +752,15 @@ pub mod Pool {
             updated_index
         }
 
-        fn get_next_epoch(self: @ContractState) -> Epoch {
+        fn get_current_epoch(self: @ContractState) -> Epoch {
             let staking_dispatcher = IStakingDispatcher {
                 contract_address: self.staking_pool_dispatcher.read().contract_address,
             };
-            staking_dispatcher.get_current_epoch() + 1
+            staking_dispatcher.get_current_epoch()
+        }
+
+        fn get_next_epoch(self: @ContractState) -> Epoch {
+            self.get_current_epoch() + 1
         }
 
         // TODO: consider #[inline(always)]

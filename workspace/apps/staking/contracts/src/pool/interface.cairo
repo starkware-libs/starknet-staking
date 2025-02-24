@@ -1,4 +1,5 @@
 use contracts_commons::types::time::time::Timestamp;
+use core::num::traits::zero::Zero;
 use staking::pool::objects::InternalPoolMemberInfoV1;
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest};
 use starknet::ContractAddress;
@@ -149,7 +150,7 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<
     /// This function is used during convertion from `InternalPoolMemberInfo` to
     /// `InternalPoolMemberInfoV1`.
     #[inline(always)]
-    fn into(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 nopanic {
+    fn into(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address: self.reward_address,
             amount: self.amount,
@@ -158,6 +159,7 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<
             commission: self.commission,
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
+            last_claimed_epoch: Zero::zero(),
         }
     }
 }

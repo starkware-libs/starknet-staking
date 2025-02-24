@@ -39,7 +39,7 @@ use staking::staking::objects::{
 };
 use staking::staking::staking::Staking;
 use staking::types::{
-    Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
+    Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
 };
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_commission_amount_rounded_up,
@@ -657,6 +657,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
         commission: Serde::<Commission>::deserialize(ref span).expect('Failed commission'),
         unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed unpool_amount'),
         unpool_time: Option::None,
+        last_claimed_epoch: Zero::zero(),
     };
     let idx = *span.pop_front().expect('Failed pop_front');
     if idx.is_non_zero() {
@@ -666,7 +667,15 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
                 Option::Some(
                     Serde::<Timestamp>::deserialize(ref span).expect('Failed unpool_time'),
                 );
+    } else {
+        // If idx is zero, the unpool_time is Option::None.
+        // Since Option<Timestamp> takes 2 felts in storage, we need to pop both felts before
+        // deserializing the next field last_claimed_epoch.
+        let _ = span.pop_front();
     }
+    pool_member_info
+        .last_claimed_epoch = Serde::<Epoch>::deserialize(ref span)
+        .expect('Failed last_claimed_epoch');
     return VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info);
 }
 
@@ -914,6 +923,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             commission: COMMISSION,
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),
+            last_claimed_epoch: Zero::zero(),
         };
         let staking_contract_info = StakingContractInfoCfg {
             min_stake: MIN_STAKE,
