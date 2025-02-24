@@ -175,7 +175,7 @@ fn test_update_rewards() {
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     let mut staker_info = cfg.staker_info;
     let interest = state.global_index.read() - staker_info.index;
-    state.update_rewards(ref :staker_info);
+    state.update_rewards(ref :staker_info, staker_amount_own: staker_info.amount_own);
     let staker_rewards = compute_rewards_rounded_down(amount: staker_info.amount_own, :interest);
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: staker_info.get_pool_info().amount, :interest,
@@ -298,7 +298,7 @@ fn test_update_rewards_unstake_intent() {
     let mut staker_info_expected = cfg.staker_info.clone();
     staker_info_expected.unstake_time = Option::Some(Timestamp { seconds: 1 });
     let mut staker_info = staker_info_expected;
-    state.update_rewards(ref :staker_info);
+    state.update_rewards(ref :staker_info, staker_amount_own: staker_info.amount_own);
     assert_eq!(staker_info, staker_info_expected);
 }
 
