@@ -837,13 +837,14 @@ pub mod Staking {
             // an event indicating the staked amount (own and delegated) to be zero
             // had already been emitted, thus unneeded now.
             if staker_info.unstake_time.is_none() {
+                let staker_amount_own = self.get_amount_own(:staker_address);
                 self
                     .emit(
                         Events::StakeBalanceChanged {
                             staker_address,
-                            old_self_stake: staker_info.amount_own,
+                            old_self_stake: staker_amount_own,
                             old_delegated_stake,
-                            new_self_stake: staker_info.amount_own,
+                            new_self_stake: staker_amount_own,
                             new_delegated_stake: staker_info.get_pool_info().amount,
                         },
                     );
