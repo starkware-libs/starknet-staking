@@ -440,7 +440,7 @@ pub mod Staking {
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
 
             // Return stake to staker, return delegated stake to pool, and remove staker.
-            let staker_amount = staker_info.amount_own;
+            let staker_amount = self.get_amount_own(:staker_address);
             token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
             self.transfer_to_pool_when_unstake(:staker_address, ref :staker_info);
