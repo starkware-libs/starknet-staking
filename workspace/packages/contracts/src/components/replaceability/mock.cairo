@@ -2,6 +2,7 @@
 pub(crate) mod ReplaceabilityMock {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use contracts_commons::components::roles::RolesComponent;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -36,7 +37,7 @@ pub(crate) mod ReplaceabilityMock {
     #[constructor]
     fn constructor(ref self: ContractState, upgrade_delay: u64, governance_admin: ContractAddress) {
         self.roles.initialize(:governance_admin);
-        self.replaceability.upgrade_delay.write(upgrade_delay);
+        self.replaceability.initialize(:upgrade_delay);
     }
 
     #[abi(embed_v0)]

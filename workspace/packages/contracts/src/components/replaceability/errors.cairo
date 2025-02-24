@@ -2,6 +2,7 @@ use contracts_commons::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]
 pub(crate) enum ReplaceErrors {
+    ALREADY_INITIALIZED,
     FINALIZED,
     UNKNOWN_IMPLEMENTATION,
     NOT_ENABLED_YET,
@@ -14,6 +15,7 @@ impl DescribableError of Describable<ReplaceErrors> {
     #[inline(always)]
     fn describe(self: @ReplaceErrors) -> ByteArray {
         match self {
+            ReplaceErrors::ALREADY_INITIALIZED => "ALREADY_INITIALIZED",
             ReplaceErrors::FINALIZED => "FINALIZED",
             ReplaceErrors::UNKNOWN_IMPLEMENTATION => "UNKNOWN_IMPLEMENTATION",
             ReplaceErrors::NOT_ENABLED_YET => "NOT_ENABLED_YET",

@@ -3,6 +3,7 @@ use core::iter::{IntoIterator, Iterator};
 use core::num::traits::zero::Zero;
 use core::num::traits::{BitSize, Bounded};
 use core::starknet::storage_access::StorePacking;
+use core::traits::{BitAnd, BitOr, BitXor};
 
 pub(crate) type BitSetU8 = BitSet<u8>;
 pub(crate) type BitSetU16 = BitSet<u16>;

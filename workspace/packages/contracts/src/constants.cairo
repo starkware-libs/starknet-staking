@@ -10,6 +10,7 @@ pub const MAX_U256: u256 = Bounded::<u256>::MAX;
 pub const TWO_POW_8: u16 = 0x100;
 pub const TWO_POW_16: u32 = 0x10000;
 pub const TWO_POW_32: u64 = 0x100000000;
+pub const TWO_POW_40: u64 = 0x10000000000;
 pub const TWO_POW_64: u128 = 0x10000000000000000;
 pub const TWO_POW_128: u256 = 0x100000000000000000000000000000000;
 

@@ -2,6 +2,8 @@
 #[starknet::contract]
 pub(crate) mod EICTestContract {
     use contracts_commons::components::replaceability::interface::IEICInitializable;
+    use starknet::storage::StoragePointerReadAccess;
+    use starknet::storage::StoragePointerWriteAccess;
 
     #[storage]
     struct Storage {

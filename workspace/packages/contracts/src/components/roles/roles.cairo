@@ -14,7 +14,7 @@ pub(crate) mod RolesComponent {
     use starknet::{ContractAddress, get_caller_address};
 
     #[storage]
-    struct Storage {}
+    pub struct Storage {}
 
     #[event]
     #[derive(Copy, Drop, PartialEq, starknet::Event)]

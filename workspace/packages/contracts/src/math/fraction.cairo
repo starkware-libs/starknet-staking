@@ -1,6 +1,5 @@
 use contracts_commons::math::abs::Abs;
-use core::num::traits::one::One;
-use core::num::traits::zero::Zero;
+use core::num::traits::{One, WideMul, Zero};
 
 #[derive(Copy, Debug, Drop, Hash, Serde)]
 struct Fraction<N, D> {
@@ -111,6 +110,22 @@ impl FractionPartialOrdI128U128 of PartialOrd<Fraction<i128, u128>> {
     }
 }
 
+impl FractionWideMul<
+    N,
+    D,
+    impl NWideMul: WideMul<N, N>,
+    impl DWideMul: WideMul<D, D>,
+    +Drop<NWideMul::Target>,
+    +Drop<D>,
+> of WideMul<Fraction<N, D>, Fraction<N, D>> {
+    type Target = Fraction<NWideMul::Target, DWideMul::Target>;
+    fn wide_mul(self: Fraction<N, D>, other: Fraction<N, D>) -> Self::Target {
+        let numerator: NWideMul::Target = self.numerator.wide_mul(other.numerator);
+        let denominator: DWideMul::Target = self.denominator.wide_mul(other.denominator);
+        Fraction { numerator, denominator }
+    }
+}
+
 impl FractionTraitI128U128 = FractionImpl<i128, u128>;
 
 #[cfg(test)]
@@ -195,6 +210,24 @@ mod tests {
         assert!(-f1 < -f2, "Fraction partial ord failed");
         assert!(f2 <= f1, "Fraction partial ord failed");
         assert!(-f1 <= -f2, "Fraction partial ord failed");
+    }
+
+    #[test]
+    fn fraction_wide_mul_test() {
+        let f1 = FractionTrait::<u8, u8>::new(numerator: 1_u8, denominator: 2_u8);
+        let f2 = FractionTrait::new(numerator: 1_u8, denominator: 3_u8);
+        let f3: Fraction<u16, u16> = f1.wide_mul(f2);
+        assert!(f3.numerator == 1_u16 && f3.denominator == 6_u16, "Fraction wide mul failed");
+
+        let f1 = FractionTrait::<u128, u128>::new(numerator: 1_u8, denominator: 2_u8);
+        let f2 = FractionTrait::new(numerator: 1_u8, denominator: 3_u8);
+        let f3: Fraction<u256, u256> = f1.wide_mul(f2);
+        assert!(f3.numerator == 1_u256 && f3.denominator == 6_u256, "Fraction wide mul failed");
+
+        let f1 = FractionTrait::<i8, u8>::new(numerator: -1_i8, denominator: 2_u8);
+        let f2 = FractionTrait::new(numerator: 1_i8, denominator: 3_u8);
+        let f3: Fraction<i16, u16> = f1.wide_mul(f2);
+        assert!(f3.numerator == -1_i16 && f3.denominator == 6_u16, "Fraction wide mul failed");
     }
 
     #[test]

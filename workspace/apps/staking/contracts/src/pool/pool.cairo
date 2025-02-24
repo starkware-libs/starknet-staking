@@ -2,6 +2,7 @@
 pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::{Describable, OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
@@ -16,7 +17,7 @@ pub mod Pool {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
-    use staking::pool::interface::{Events, IPool, PoolContractInfo, PoolMemberInfo};
+    use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
     use staking::pool::objects::{
         InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
         VInternalPoolMemberInfoTrait,
@@ -112,7 +113,7 @@ pub mod Pool {
         governance_admin: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
-        self.replaceability.upgrade_delay.write(Zero::zero());
+        self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.staker_address.write(staker_address);
         self
             .staking_pool_dispatcher
@@ -166,6 +167,7 @@ pub mod Pool {
                         commission: self.commission.read(),
                         unpool_amount: Zero::zero(),
                         unpool_time: Option::None,
+                        last_claimed_epoch: self.get_current_epoch(),
                     ),
                 );
             self.set_next_epoch_balance(:pool_member, :amount);
@@ -448,6 +450,7 @@ pub mod Pool {
                         commission: self.commission.read(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
+                        last_claimed_epoch: self.get_current_epoch(),
                     };
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);
@@ -570,8 +573,8 @@ pub mod Pool {
         }
     }
 
-    #[generate_trait]
-    pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
+    #[abi(embed_v0)]
+    impl PoolMigrationImpl of IPoolMigration<ContractState> {
         fn internal_pool_member_info(
             self: @ContractState, pool_member: ContractAddress,
         ) -> InternalPoolMemberInfoLatest {
@@ -580,7 +583,8 @@ pub mod Pool {
                 VInternalPoolMemberInfo::None => panic_with_byte_array(
                     err: @Error::POOL_MEMBER_DOES_NOT_EXIST.describe(),
                 ),
-                VInternalPoolMemberInfo::V0(info_v0) => info_v0.convert(),
+                VInternalPoolMemberInfo::V0(info_v0) => info_v0
+                    .convert(self.get_prev_class_hash(), pool_member),
                 VInternalPoolMemberInfo::V1(info_v1) => info_v1,
             }
         }
@@ -594,7 +598,20 @@ pub mod Pool {
                 _ => Option::Some(self.internal_pool_member_info(:pool_member)),
             }
         }
+    }
 
+    #[generate_trait]
+    pub(crate) impl InternalPoolMigration of IPoolMigrationInternal {
+        /// Returns the class hash of the previous contract version.
+        ///
+        /// **Note**: This function must be reimplemented in the next version of the contract.
+        fn get_prev_class_hash(self: @ContractState) -> ClassHash {
+            self.prev_class_hash.read(0)
+        }
+    }
+
+    #[generate_trait]
+    pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
         fn remove_pool_member(ref self: ContractState, pool_member: ContractAddress) {
             let reward_address = self.internal_pool_member_info(:pool_member).reward_address;
             self.pool_member_info.write(pool_member, VInternalPoolMemberInfo::None);
@@ -735,11 +752,15 @@ pub mod Pool {
             updated_index
         }
 
-        fn get_next_epoch(self: @ContractState) -> Epoch {
+        fn get_current_epoch(self: @ContractState) -> Epoch {
             let staking_dispatcher = IStakingDispatcher {
                 contract_address: self.staking_pool_dispatcher.read().contract_address,
             };
-            staking_dispatcher.get_current_epoch() + 1
+            staking_dispatcher.get_current_epoch()
+        }
+
+        fn get_next_epoch(self: @ContractState) -> Epoch {
+            self.get_current_epoch() + 1
         }
 
         // TODO: consider #[inline(always)]

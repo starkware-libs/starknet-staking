@@ -10,6 +10,9 @@ pub(crate) mod Deposit {
     use core::panic_with_felt252;
     use core::poseidon::PoseidonTrait;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use starknet::storage::StorageMapWriteAccess;
+    use starknet::storage::StoragePointerReadAccess;
+    use starknet::storage::StoragePointerWriteAccess;
     use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
 
@@ -17,10 +20,9 @@ pub(crate) mod Deposit {
     #[storage]
     pub struct Storage {
         registered_deposits: Map<HashType, DepositStatus>,
-        // aggregate_pending_deposit is in unquantized amount
-        pub aggregate_pending_deposit: Map<felt252, u128>,
+        aggregate_quantized_pending_deposits: Map<felt252, u128>,
         // asset_id -> (ContractAddress, quantum)
-        pub asset_info: Map<felt252, (ContractAddress, u64)>,
+        asset_info: Map<felt252, (ContractAddress, u64)>,
         deposit_grace_period: TimeDelta,
     }
 
@@ -47,7 +49,7 @@ pub(crate) mod Deposit {
         /// - Transfers the quantized amount from the user to the contract.
         /// - Registers the deposit request.
         /// - Updates the deposit status to pending.
-        /// - Updates the aggregate_pending_deposit.
+        /// - Updates the aggregate_quantized_pending_deposits.
         /// - Emits a Deposit event.
         fn deposit(
             ref self: ComponentState<TContractState>,
@@ -59,7 +61,7 @@ pub(crate) mod Deposit {
             assert(quantized_amount > 0, errors::ZERO_AMOUNT);
             let caller_address = get_caller_address();
             let deposit_hash = deposit_hash(
-                signer: caller_address, :beneficiary, :asset_id, :quantized_amount, :salt,
+                depositor: caller_address, :beneficiary, :asset_id, :quantized_amount, :salt,
             );
             assert(
                 self._get_deposit_status(:deposit_hash) == DepositStatus::NOT_EXIST,
@@ -69,9 +71,12 @@ pub(crate) mod Deposit {
                 .registered_deposits
                 .write(key: deposit_hash, value: DepositStatus::PENDING(Time::now()));
             let (token_address, quantum) = self._get_asset_info(:asset_id);
-            let unquantized_amount = quantized_amount * quantum.into();
-            self.aggregate_pending_deposit.entry(asset_id).add_and_write(unquantized_amount);
+            self
+                .aggregate_quantized_pending_deposits
+                .entry(asset_id)
+                .add_and_write(quantized_amount);
 
+            let unquantized_amount = quantized_amount * quantum.into();
             let token_contract = IERC20Dispatcher { contract_address: token_address };
             token_contract
                 .transfer_from(
@@ -82,7 +87,7 @@ pub(crate) mod Deposit {
             self
                 .emit(
                     events::Deposit {
-                        position_id: beneficiary,
+                        beneficiary,
                         depositing_address: caller_address,
                         asset_id,
                         quantized_amount,
@@ -102,7 +107,7 @@ pub(crate) mod Deposit {
         /// Execution:
         /// - Transfers the quantized amount back to the user.
         /// - Updates the deposit status to canceled.
-        /// - Updates the aggregate_pending_deposit.
+        /// - Updates the aggregate_quantized_pending_deposits.
         /// - Emits a DepositCanceled event.
         fn cancel_deposit(
             ref self: ComponentState<TContractState>,
@@ -113,7 +118,7 @@ pub(crate) mod Deposit {
         ) {
             let caller_address = get_caller_address();
             let deposit_hash = deposit_hash(
-                signer: caller_address, :beneficiary, :asset_id, :quantized_amount, :salt,
+                depositor: caller_address, :beneficiary, :asset_id, :quantized_amount, :salt,
             );
 
             // Validations
@@ -128,7 +133,10 @@ pub(crate) mod Deposit {
             }
 
             self.registered_deposits.write(key: deposit_hash, value: DepositStatus::CANCELED);
-            self.aggregate_pending_deposit.entry(asset_id).sub_and_write(quantized_amount);
+            self
+                .aggregate_quantized_pending_deposits
+                .entry(asset_id)
+                .sub_and_write(quantized_amount);
             let (token_address, quantum) = self._get_asset_info(:asset_id);
 
             let token_contract = IERC20Dispatcher { contract_address: token_address };
@@ -137,7 +145,7 @@ pub(crate) mod Deposit {
             self
                 .emit(
                     events::DepositCanceled {
-                        position_id: beneficiary,
+                        beneficiary,
                         depositing_address: caller_address,
                         asset_id,
                         quantized_amount,
@@ -195,34 +203,39 @@ pub(crate) mod Deposit {
         ) {
             assert(quantized_amount > 0, errors::ZERO_AMOUNT);
             let deposit_hash = deposit_hash(
-                signer: depositor, :beneficiary, :asset_id, :quantized_amount, :salt,
+                :depositor, :beneficiary, :asset_id, :quantized_amount, :salt,
             );
             let deposit_status = self._get_deposit_status(:deposit_hash);
             match deposit_status {
                 DepositStatus::NOT_EXIST => { panic_with_felt252(errors::DEPOSIT_NOT_REGISTERED) },
                 DepositStatus::DONE => { panic_with_felt252(errors::DEPOSIT_ALREADY_PROCESSED) },
                 DepositStatus::CANCELED => { panic_with_felt252(errors::DEPOSIT_ALREADY_CANCELED) },
-                DepositStatus::PENDING(_) => {
-                    self.registered_deposits.write(deposit_hash, DepositStatus::DONE);
-                    let (_, quantum) = self._get_asset_info(:asset_id);
-                    let unquantized_amount = quantized_amount * quantum.into();
-                    self
-                        .aggregate_pending_deposit
-                        .entry(asset_id)
-                        .sub_and_write(unquantized_amount);
-                    self
-                        .emit(
-                            events::DepositProcessed {
-                                position_id: beneficiary,
-                                depositing_address: depositor,
-                                asset_id,
-                                quantized_amount,
-                                unquantized_amount,
-                                deposit_request_hash: deposit_hash,
-                            },
-                        );
-                },
+                DepositStatus::PENDING(_) => {},
             };
+            let (_, quantum) = self._get_asset_info(:asset_id);
+            self
+                .aggregate_quantized_pending_deposits
+                .entry(asset_id)
+                .sub_and_write(quantized_amount);
+            let unquantized_amount = quantized_amount * quantum.into();
+            self
+                .emit(
+                    events::DepositProcessed {
+                        beneficiary,
+                        depositing_address: depositor,
+                        asset_id,
+                        quantized_amount,
+                        unquantized_amount,
+                        deposit_request_hash: deposit_hash,
+                    },
+                );
+            self.registered_deposits.write(deposit_hash, DepositStatus::DONE);
+        }
+
+        fn get_asset_aggregate_quantized_pending_deposits(
+            self: @ComponentState<TContractState>, asset_id: felt252,
+        ) -> u128 {
+            self.aggregate_quantized_pending_deposits.read(asset_id)
         }
     }
 
@@ -246,14 +259,14 @@ pub(crate) mod Deposit {
     }
 
     fn deposit_hash(
-        signer: ContractAddress,
+        depositor: ContractAddress,
         beneficiary: u32,
         asset_id: felt252,
         quantized_amount: u128,
         salt: felt252,
     ) -> HashType {
         PoseidonTrait::new()
-            .update_with(value: signer)
+            .update_with(value: depositor)
             .update_with(value: beneficiary)
             .update_with(value: asset_id)
             .update_with(value: quantized_amount)

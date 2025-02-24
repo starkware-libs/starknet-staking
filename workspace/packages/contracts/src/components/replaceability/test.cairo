@@ -3,9 +3,11 @@ mod ReplaceabilityTests {
     use contracts_commons::test_utils::cheat_caller_address_once;
     use core::num::traits::zero::Zero;
     use replaceability::ReplaceabilityComponent;
+    use replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use replaceability::interface::{
-        IReplaceableDispatcherTrait, IReplaceableSafeDispatcher, IReplaceableSafeDispatcherTrait,
-        ImplementationAdded, ImplementationFinalized, ImplementationRemoved, ImplementationReplaced,
+        IReplaceable, IReplaceableDispatcherTrait, IReplaceableSafeDispatcher,
+        IReplaceableSafeDispatcherTrait, ImplementationAdded, ImplementationFinalized,
+        ImplementationRemoved, ImplementationReplaced,
     };
     use replaceability::mock::ReplaceabilityMock;
     use replaceability::test_utils::Constants::{
@@ -28,6 +30,32 @@ mod ReplaceabilityTests {
     fn test_get_upgrade_delay() {
         let replaceable_dispatcher = deploy_replaceability_mock();
         assert!(replaceable_dispatcher.get_upgrade_delay() == DEFAULT_UPGRADE_DELAY);
+    }
+
+    #[test]
+    fn test_initialize() {
+        let mut state: ReplaceabilityComponent::ComponentState<ReplaceabilityMock::ContractState> =
+            ReplaceabilityComponent::component_state_for_testing();
+        assert!(state.get_upgrade_delay() == Zero::zero(), "Upgrade delay should be zero");
+        state.initialize(upgrade_delay: DEFAULT_UPGRADE_DELAY);
+        assert!(
+            state.get_upgrade_delay() == DEFAULT_UPGRADE_DELAY,
+            "Upgrade delay should be {DEFAULT_UPGRADE_DELAY}",
+        );
+    }
+
+    #[test]
+    #[should_panic(expected: "ALREADY_INITIALIZED")]
+    fn test_initialize_already_initialized() {
+        let mut state: ReplaceabilityComponent::ComponentState<ReplaceabilityMock::ContractState> =
+            ReplaceabilityComponent::component_state_for_testing();
+        assert!(state.get_upgrade_delay() == Zero::zero(), "Upgrade delay should be zero");
+        state.initialize(upgrade_delay: DEFAULT_UPGRADE_DELAY);
+        assert!(
+            state.get_upgrade_delay() == DEFAULT_UPGRADE_DELAY,
+            "Upgrade delay should be {DEFAULT_UPGRADE_DELAY}",
+        );
+        state.initialize(upgrade_delay: DEFAULT_UPGRADE_DELAY);
     }
 
     #[test]

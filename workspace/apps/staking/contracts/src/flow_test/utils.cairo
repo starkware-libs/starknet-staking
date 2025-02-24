@@ -18,7 +18,10 @@ use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
 use staking::minting_curve::interface::IMintingCurveDispatcher;
-use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
+use staking::pool::interface::{
+    IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
+    PoolMemberInfo,
+};
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
@@ -35,7 +38,9 @@ use staking::test_utils::{
     StakingInitConfig, declare_pool_contract, declare_pool_eic_contract,
     declare_staking_eic_contract,
 };
-use staking::types::{Amount, Commission, Index, InternalStakerInfoLatest};
+use staking::types::{
+    Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
+};
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, Store};
 use starknet::{SyscallResultTrait};
@@ -884,6 +889,29 @@ pub(crate) impl SystemDelegatorImpl<
         );
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.add_to_delegation_pool(pool_member: delegator.delegator.address, :amount)
+    }
+
+    fn pool_member_info(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+    ) -> PoolMemberInfo {
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.pool_member_info(pool_member: delegator.delegator.address)
+    }
+
+    fn internal_pool_member_info(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+    ) -> InternalPoolMemberInfoLatest {
+        let pool_migration_dispatcher = IPoolMigrationDispatcher { contract_address: pool };
+        pool_migration_dispatcher
+            .internal_pool_member_info(pool_member: delegator.delegator.address)
+    }
+
+    fn get_internal_pool_member_info(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+    ) -> Option<InternalPoolMemberInfoLatest> {
+        let pool_migration_dispatcher = IPoolMigrationDispatcher { contract_address: pool };
+        pool_migration_dispatcher
+            .get_internal_pool_member_info(pool_member: delegator.delegator.address)
     }
 }
 

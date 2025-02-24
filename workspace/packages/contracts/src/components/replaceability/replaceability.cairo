@@ -13,11 +13,16 @@ pub(crate) mod ReplaceabilityComponent {
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::get_block_timestamp;
     use starknet::storage::Map;
+    use starknet::storage::StorageMapReadAccess;
+    use starknet::storage::StorageMapWriteAccess;
+    use starknet::storage::StoragePointerReadAccess;
+    use starknet::storage::StoragePointerWriteAccess;
     use starknet::syscalls::{library_call_syscall, replace_class_syscall};
 
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
+        initialized: bool,
         // Delay in seconds before performing an upgrade.
         upgrade_delay: u64,
         // Timestamp by which implementation can be activated.
@@ -125,7 +130,7 @@ pub(crate) mod ReplaceabilityComponent {
             // We emit now so that finalize emits last (if it does).
             self.emit(ImplementationReplaced { implementation_data });
 
-            // Finalize imeplementation, if needed.
+            // Finalize implementation, if needed.
             if (implementation_data.final) {
                 self.finalize();
                 self.emit(ImplementationFinalized { impl_hash: implementation_data.impl_hash });
@@ -134,7 +139,7 @@ pub(crate) mod ReplaceabilityComponent {
             // Handle EIC.
             match implementation_data.eic_data {
                 Option::Some(eic_data) => {
-                    // Wrap the calldata as a span, as preperation for the library_call_syscall
+                    // Wrap the calldata as a span, as preparation for the library_call_syscall
                     // invocation.
                     let mut calldata_wrapper = ArrayTrait::new();
                     eic_data.eic_init_data.serialize(ref calldata_wrapper);
@@ -154,16 +159,26 @@ pub(crate) mod ReplaceabilityComponent {
             let result = replace_class_syscall(implementation_data.impl_hash);
             assert!(result.is_ok(), "{}", ReplaceErrors::REPLACE_CLASS_HASH_FAILED);
 
-            // Remove implementation data, as it was comsumed.
+            // Remove implementation data, as it was consumed.
             self.set_impl_activation_time(:implementation_data, activation_time: 0);
             self.set_impl_expiration_time(:implementation_data, expiration_time: 0);
         }
     }
+    #[generate_trait]
+    pub impl InternalReplaceabilityImpl<
+        TContractState, +HasComponent<TContractState>, +Drop<TContractState>,
+    > of InternalReplaceabilityTrait<TContractState> {
+        fn initialize(ref self: ComponentState<TContractState>, upgrade_delay: u64) {
+            assert!(!self.initialized.read(), "{}", ReplaceErrors::ALREADY_INITIALIZED);
+            self.upgrade_delay.write(upgrade_delay);
+            self.initialized.write(true);
+        }
+    }
 
     #[generate_trait]
-    impl InternalReplaceability<
+    impl PrivateReplaceabilityImpl<
         TContractState, +HasComponent<TContractState>, +Drop<TContractState>,
-    > of InternalReplaceableTrait<TContractState> {
+    > of PrivateReplaceabilityTrait<TContractState> {
         fn is_finalized(self: @ComponentState<TContractState>) -> bool {
             self.finalized.read()
         }

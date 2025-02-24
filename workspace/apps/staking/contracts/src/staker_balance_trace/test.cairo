@@ -121,3 +121,12 @@ fn test_staker_balance_update_pool_amount() {
     assert_eq!(staker_balance.total_amount(), 150);
     assert_eq!(staker_balance.pool_amount(), 50);
 }
+
+#[test]
+fn test_is_initialized() {
+    let mut mock_trace = CONTRACT_STATE();
+    assert_eq!(mock_trace.is_initialized(), false);
+
+    mock_trace.insert(100, StakerBalanceTrait::new(amount: 100));
+    assert_eq!(mock_trace.is_initialized(), true);
+}

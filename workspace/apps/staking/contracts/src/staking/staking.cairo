@@ -2,6 +2,7 @@
 pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::{Describable, OptionAuxTrait};
     use contracts_commons::interfaces::identity::Identity;
@@ -24,7 +25,8 @@ pub mod Staking {
         IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     };
     use staking::staker_balance_trace::trace::{
-        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTrait,
+        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
+        StakerBalanceTrait,
     };
     use staking::staking::errors::Error;
     use staking::staking::interface::{
@@ -160,7 +162,7 @@ pub mod Staking {
         epoch_info: EpochInfo,
     ) {
         self.roles.initialize(:governance_admin);
-        self.replaceability.upgrade_delay.write(Zero::zero());
+        self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);
         self.pool_contract_class_hash.write(pool_contract_class_hash);
@@ -301,8 +303,8 @@ pub mod Staking {
 
             // Update the staker info to account for accumulated rewards, before updating their
             // staked amount.
-            let old_self_stake = staker_info.amount_own;
-            self.update_rewards(ref :staker_info);
+            let old_self_stake = self.get_amount_own(:staker_address);
+            self.update_rewards(ref :staker_info, staker_amount_own: old_self_stake);
 
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
@@ -356,7 +358,10 @@ pub mod Staking {
                 Error::CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
             );
 
-            self.update_rewards(ref :staker_info);
+            self
+                .update_rewards(
+                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
+                );
 
             // Transfer rewards to staker's reward address and write updated staker info to storage.
             // Note: `send_rewards_to_staker` alters `staker_info` thus commit to storage is
@@ -378,7 +383,10 @@ pub mod Staking {
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
             // Updating rewards last time for the staker, as they're about to exit.
-            self.update_rewards(ref :staker_info);
+            self
+                .update_rewards(
+                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
+                );
 
             // Set the unstake time.
             let unstake_time = Time::now().add(delta: self.exit_wait_window.read());
@@ -393,7 +401,7 @@ pub mod Staking {
             } else {
                 Zero::zero()
             };
-            let old_self_stake = staker_info.amount_own;
+            let old_self_stake = self.get_amount_own(:staker_address);
             let amount = old_self_stake + amount_pool;
             self.remove_from_total_stake(:amount);
 
@@ -504,7 +512,10 @@ pub mod Staking {
         // If the staker does not exist, it panics.
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let mut staker_info = self.internal_staker_info(:staker_address);
-            self.update_rewards(ref :staker_info);
+            self
+                .update_rewards(
+                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
+                );
             staker_info.into()
         }
 
@@ -673,7 +684,10 @@ pub mod Staking {
             assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
 
             // Update rewards using the existing commission before changing the commission.
-            self.update_rewards(ref :staker_info);
+            self
+                .update_rewards(
+                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
+                );
 
             // Update commission in this contract, and in the associated pool contract.
             {
@@ -728,7 +742,10 @@ pub mod Staking {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-            self.update_rewards(ref :staker_info);
+            self
+                .update_rewards(
+                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
+                );
             let mut pool_info = staker_info.get_pool_info();
             let pool_contract = pool_info.pool_contract;
             assert!(
@@ -782,7 +799,10 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            self.update_rewards(ref :staker_info);
+            self
+                .update_rewards(
+                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
+                );
             self.assert_caller_is_pool_contract(staker_info: @staker_info);
 
             let (old_delegated_stake, pool_contract) = {
@@ -900,7 +920,11 @@ pub mod Staking {
             // Update rewards for `to_staker` before editing the staker_info, and send them to the
             // pool.
             let mut to_staker_info = self.internal_staker_info(staker_address: to_staker);
-            self.update_rewards(ref staker_info: to_staker_info);
+            self
+                .update_rewards(
+                    ref staker_info: to_staker_info,
+                    staker_amount_own: self.get_amount_own(staker_address: to_staker),
+                );
             let token_dispatcher = self.token_dispatcher.read();
             self
                 .send_rewards_to_delegation_pool(
@@ -978,7 +1002,10 @@ pub mod Staking {
             let pool_address = staker_info.get_pool_info().pool_contract;
             assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
 
-            self.update_rewards(ref :staker_info);
+            self
+                .update_rewards(
+                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
+                );
 
             // Send rewards to pool contract, and commit to storage.
             // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
@@ -1229,7 +1256,11 @@ pub mod Staking {
         /// - unclaimed_rewards_own
         /// - unclaimed_rewards
         /// - index
-        fn update_rewards(self: @ContractState, ref staker_info: InternalStakerInfoLatest) {
+        fn update_rewards(
+            self: @ContractState,
+            ref staker_info: InternalStakerInfoLatest,
+            staker_amount_own: Amount,
+        ) {
             if (staker_info.unstake_time.is_some()) {
                 return;
             }
@@ -1237,9 +1268,7 @@ pub mod Staking {
             let interest = global_index - staker_info.index;
             staker_info.index = global_index;
 
-            let staker_rewards = compute_rewards_rounded_down(
-                amount: staker_info.amount_own, :interest,
-            );
+            let staker_rewards = compute_rewards_rounded_down(amount: staker_amount_own, :interest);
             staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
             self.calculate_and_update_pool_rewards(:interest, ref :staker_info);
         }
@@ -1478,8 +1507,21 @@ pub mod Staking {
                 .insert(key: self.get_next_epoch(), value: staker_balance);
         }
 
-        fn get_amount_own(ref self: ContractState, staker_address: ContractAddress) -> Amount {
-            self.staker_balance_trace.entry(staker_address).latest().amount_own()
+        fn get_amount_own(self: @ContractState, staker_address: ContractAddress) -> Amount {
+            // After upgrading to V1, `staker_balance_trace` remains uninitialized
+            // until the staker's balance is modified for the first time. If initialized, return
+            // the `amount_own` recorded in the trace, which reflects the latest staked amount.
+            // Otherwise, return `staker_info.amount_own`.
+            //
+            // TODO: Consider initializing `staker_balance_trace` before calling `get_amount_own` to
+            // avoid this conditional check.
+            let trace = self.staker_balance_trace.entry(key: staker_address);
+            if trace.is_initialized() {
+                let (_, staker_balance) = trace.latest();
+                staker_balance.amount_own()
+            } else {
+                self.internal_staker_info(:staker_address).amount_own
+            }
         }
 
         fn increase_staker_own_amount(

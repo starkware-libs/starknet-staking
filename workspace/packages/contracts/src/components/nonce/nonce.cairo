@@ -5,6 +5,8 @@
 #[starknet::component]
 pub mod NonceComponent {
     use contracts_commons::components::nonce::interface::INonce;
+    use starknet::storage::StoragePointerReadAccess;
+    use starknet::storage::StoragePointerWriteAccess;
 
     #[storage]
     pub struct Storage {

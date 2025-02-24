@@ -13,7 +13,7 @@ pub(crate) mod RequestApprovalsComponent {
     use starknet::{ContractAddress, get_caller_address};
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         approved_requests: Map<HashType, RequestStatus>,
     }
 

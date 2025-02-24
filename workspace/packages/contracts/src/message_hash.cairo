@@ -4,11 +4,13 @@ use core::poseidon::PoseidonTrait;
 use openzeppelin::utils::snip12::{SNIP12Metadata, StarknetDomain, StructHash};
 use starknet::get_tx_info;
 
-
 /// Trait for calculating the hash of a message given the `public_key`
 pub trait OffchainMessageHash<T> {
     fn get_message_hash(self: @T, public_key: PublicKey) -> HashType;
 }
+
+const REVISION: felt252 = '1';
+const STARKNET_MESSAGE: felt252 = 'StarkNet Message';
 
 pub(crate) impl OffchainMessageHashImpl<
     T, +StructHash<T>, impl metadata: SNIP12Metadata,
@@ -18,13 +20,13 @@ pub(crate) impl OffchainMessageHashImpl<
             name: metadata::name(),
             version: metadata::version(),
             chain_id: get_tx_info().unbox().chain_id,
-            revision: '1',
+            revision: REVISION,
         };
-        let mut state = PoseidonTrait::new();
-        state = state.update_with('StarkNet Message');
-        state = state.update_with(domain.hash_struct());
-        state = state.update_with(public_key);
-        state = state.update_with(self.hash_struct());
-        state.finalize()
+        PoseidonTrait::new()
+            .update_with(STARKNET_MESSAGE)
+            .update_with(domain.hash_struct())
+            .update_with(public_key)
+            .update_with(self.hash_struct())
+            .finalize()
     }
 }

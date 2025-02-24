@@ -3,10 +3,12 @@ use core::iter::{IntoIterator, Iterator};
 use core::pedersen::HashState;
 use starknet::Store;
 use starknet::storage::StoragePathEntry;
+use starknet::storage::StoragePointerReadAccess;
+use starknet::storage::StoragePointerWriteAccess;
 use starknet::storage::{
     FlattenedStorage, Map, Mutable, MutableVecTrait, PendingStoragePath, PendingStoragePathTrait,
-    StorageAsPath, StorageBase, StorageNode, StorageNodeMut, StoragePath, StorageTrait,
-    StorageTraitMut, Vec, VecTrait,
+    StorageAsPath, StorageBase, StorageMapReadAccess, StorageMapWriteAccess, StorageNode,
+    StorageNodeMut, StoragePath, StorageTrait, StorageTraitMut, Vec, VecTrait,
 };
 
 /// A Map like struct that represents a map in a contract storage that can also be iterated over.

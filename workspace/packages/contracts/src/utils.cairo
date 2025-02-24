@@ -4,6 +4,8 @@ use contracts_commons::types::time::time::{Time, Timestamp};
 use contracts_commons::types::{HashType, PublicKey, Signature};
 use openzeppelin::account::utils::is_valid_stark_signature;
 use starknet::Store;
+use starknet::storage::StoragePointerReadAccess;
+use starknet::storage::StoragePointerWriteAccess;
 use starknet::storage::{Mutable, StorageAsPointer, StoragePointer};
 
 pub trait AddToStorage<T> {
