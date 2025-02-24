@@ -34,6 +34,9 @@ pub trait IPool<TContractState> {
     ) -> Option<PoolMemberInfo>;
     fn contract_parameters(self: @TContractState) -> PoolContractInfo;
     fn update_commission_from_staking_contract(ref self: TContractState, commission: Commission);
+    fn update_rewards_from_staking_contract(
+        ref self: TContractState, rewards: Amount, pool_balance: Amount,
+    );
 }
 
 // **Note**: This trait must be reimplemented in the next version of the contract.

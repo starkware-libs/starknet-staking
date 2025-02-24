@@ -1279,6 +1279,22 @@ fn test_update_commission_with_same_commission() {
 }
 
 #[test]
+#[should_panic(expected: "Caller is not staking contract")]
+fn test_update_rewards_from_staking_contract_caller_not_staking_contract() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    cheat_caller_address_once(
+        contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
+    );
+    pool_dispatcher.update_rewards_from_staking_contract(rewards: 1, pool_balance: 1000);
+}
+
+#[test]
 fn test_partial_undelegate() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

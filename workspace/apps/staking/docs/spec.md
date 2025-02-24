@@ -81,6 +81,7 @@
     - [get\_pool\_member\_info](#get_pool_member_info)
     - [contract\_parameters](#contract_parameters-1)
     - [update\_rewards](#update_rewards-1)
+    - [update\_rewards\_from\_staking\_contract](#update_rewards_from_staking_contract)
   - [Events](#events-1)
     - [Pool Member Balance Changed](#pool-member-balance-changed)
     - [Pool Member Exit Intent](#pool-member-exit-intent)
@@ -243,6 +244,7 @@ classDiagram
     enter_delegation_pool_from_staking_contract()
     set_final_staker_index()
     update_rewards()
+    update_rewards_from_staking_contract()
   }
   class StakerInfo{
     reward_address
@@ -1637,6 +1639,25 @@ internal function.
 1. Update index.
 2. Update rewards for `pool_member_info`.
 3. Update `unclaimed_rewards`.
+
+### update_rewards_from_staking_contract
+```rust
+fn update_rewards_from_staking_contract(
+    ref self: ContractState, 
+    rewards: Amount, 
+    pool_balance: Amount
+)
+```
+#### description <!-- omit from toc -->
+Update rewards info in pool trace.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only staking contract can execute.
+#### logic <!-- omit from toc -->
+1. Update the cumulative sum in the pool trace with `rewards` / `pool_balance` for the current epoch.
 
 ## Events
 ### Pool Member Balance Changed
