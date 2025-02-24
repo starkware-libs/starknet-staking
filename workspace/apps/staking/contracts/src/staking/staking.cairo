@@ -320,7 +320,6 @@ pub mod Staking {
             self.increase_staker_own_amount(:staker_address, :amount);
             let staker_balance = self.staker_balance_trace.entry(key: staker_address).latest();
             let new_self_stake = staker_balance.amount_own();
-            staker_info.amount_own = new_self_stake;
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
@@ -512,6 +511,7 @@ pub mod Staking {
         // If the staker does not exist, it panics.
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let mut staker_info = self.internal_staker_info(:staker_address);
+            staker_info.amount_own = self.get_amount_own(:staker_address);
             self
                 .update_rewards(
                     ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
