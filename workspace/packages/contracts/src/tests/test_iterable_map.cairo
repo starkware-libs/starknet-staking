@@ -6,12 +6,14 @@ pub trait IIterableMapTestContract<TContractState> {
     fn get_value(ref self: TContractState, key: u8) -> Option<i32>;
     fn set_value(ref self: TContractState, key: u8, value: i32);
     fn get_all_values(ref self: TContractState) -> Span<(u8, i32)>;
+    fn get_len(self: @TContractState) -> u64;
 }
 
 #[starknet::contract]
 mod IterableMapTestContract {
     use contracts_commons::iterable_map::{
-        IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
+        IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapTrait,
+        IterableMapWriteAccessImpl,
     };
 
     #[storage]
@@ -36,6 +38,10 @@ mod IterableMapTestContract {
             };
 
             array.span()
+        }
+
+        fn get_len(self: @ContractState) -> u64 {
+            self.iterable_map.len()
         }
     }
 }
@@ -103,4 +109,22 @@ fn test_iterator() {
     for i in 0..read_pairs.len() {
         assert_eq!(inserted_pairs.at(i), read_pairs.at(i));
     }
+}
+
+#[test]
+fn test_len() {
+    let dispatcher = IIterableMapTestContractDispatcher {
+        contract_address: deploy_iterable_map_test_contract(),
+    };
+
+    let mut expected_len = 0;
+    assert_eq!(dispatcher.get_len(), expected_len);
+
+    let inserted_pairs = array![(1_u8, -10_i32), (2_u8, -20_i32), (3_u8, -30_i32)].span();
+
+    for (key, value) in inserted_pairs {
+        dispatcher.set_value(*key, *value);
+        expected_len += 1;
+        assert_eq!(dispatcher.get_len(), expected_len);
+    };
 }

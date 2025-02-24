@@ -22,11 +22,17 @@ pub mod Pool {
         InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
         VInternalPoolMemberInfoTrait,
     };
+    use staking::pool::pool_member_balance_trace::trace::{
+        MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
+        PoolMemberBalanceTrait,
+    };
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
         IStakingPoolDispatcherTrait, StakerInfo,
     };
-    use staking::types::{Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, Version};
+    use staking::types::{
+        Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
+    };
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_up,
         compute_global_index_diff, compute_rewards_rounded_down,
@@ -73,7 +79,7 @@ pub mod Pool {
         // The commission rate for the pool, in BPS.
         commission: Commission,
         // Map pool member to their epoch-balance info.
-        pool_member_epoch_balance: Map<ContractAddress, Trace>,
+        pool_member_epoch_balance: Map<ContractAddress, PoolMemberBalanceTrace>,
         // Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
         // Indicates whether the staker has been removed from the staking contract.
@@ -798,25 +804,38 @@ pub mod Pool {
 
         // TODO: consider #[inline(always)]
         fn get_amount(self: @ContractState, pool_member: ContractAddress) -> Amount {
-            let (_, amount) = self.pool_member_epoch_balance.entry(pool_member).latest();
-            amount
+            let (_, pool_member_balance) = self
+                .pool_member_epoch_balance
+                .entry(pool_member)
+                .latest();
+            pool_member_balance.balance()
         }
 
         fn set_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
-        ) -> (Amount, Amount) {
+        ) {
             let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
-            member_checkpoint.insert(key: self.get_next_epoch(), value: amount)
+            let pool_member_balance = PoolMemberBalanceTrait::new(
+                balance: amount, rewards_info_idx: self.rewards_info_length(),
+            );
+            member_checkpoint.insert(key: self.get_next_epoch(), value: pool_member_balance);
             // TODO: Emit event?
         }
 
         fn increase_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
-        ) -> (Amount, Amount) {
+        ) {
             let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
-            let current_balance = member_checkpoint.latest();
-            member_checkpoint.insert(key: self.get_next_epoch(), value: current_balance + amount)
+            let current_balance = member_checkpoint.latest().balance();
+            let pool_member_balance = PoolMemberBalanceTrait::new(
+                balance: current_balance + amount, rewards_info_idx: self.rewards_info_length(),
+            );
+            member_checkpoint.insert(key: self.get_next_epoch(), value: pool_member_balance);
             // TODO: Emit event?
+        }
+
+        fn rewards_info_length(self: @ContractState) -> VecIndex {
+            self.rewards_info.deref().length()
         }
     }
 }

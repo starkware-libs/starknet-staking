@@ -776,13 +776,14 @@ pub mod Staking {
             self.add_to_total_stake(:amount);
 
             // Emit event.
+            let self_stake = self.get_amount_own(:staker_address);
             self
                 .emit(
                     Events::StakeBalanceChanged {
                         staker_address,
-                        old_self_stake: staker_info.amount_own,
+                        old_self_stake: self_stake,
                         old_delegated_stake,
-                        new_self_stake: staker_info.amount_own,
+                        new_self_stake: self_stake,
                         new_delegated_stake: pool_info.amount,
                     },
                 );
