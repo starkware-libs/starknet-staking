@@ -52,6 +52,9 @@ pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
 // TODO: pack
 #[derive(Debug, Hash, Drop, Serde, Copy, PartialEq, starknet::Store)]
 pub(crate) struct EpochInfo {
+    // The duration of a block in seconds.
+    block_duration: u16,
+    // The length of the epoch in blocks.
     length: u16,
     // The first block of the first epoch with this length.
     starting_block: u64,
@@ -61,9 +64,10 @@ pub(crate) struct EpochInfo {
 
 #[generate_trait]
 pub(crate) impl EpochInfoImpl of EpochInfoTrait {
-    fn new(length: u16, starting_block: u64) -> EpochInfo {
+    fn new(block_duration: u16, length: u16, starting_block: u64) -> EpochInfo {
         assert!(length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
-        EpochInfo { length, starting_block, starting_epoch: Zero::zero() }
+        assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
+        EpochInfo { block_duration, length, starting_block, starting_epoch: Zero::zero() }
     }
 
     fn current_epoch(self: @EpochInfo) -> Epoch {
@@ -83,8 +87,10 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
         self.length = epoch_length;
     }
 
-    fn length(self: @EpochInfo) -> u16 {
-        *self.length
+    fn epochs_in_year(self: @EpochInfo) -> u64 {
+        let seconds_in_year = 365 * 24 * 60 * 60;
+        let blocks_in_year = seconds_in_year / (*self.block_duration).into();
+        blocks_in_year / (*self.length).into()
     }
 }
 

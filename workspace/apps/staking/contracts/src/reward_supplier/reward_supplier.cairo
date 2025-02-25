@@ -6,7 +6,7 @@ pub mod RewardSupplier {
     use contracts_commons::errors::OptionAuxTrait;
     use contracts_commons::interfaces::identity::Identity;
     use contracts_commons::math::utils::ceil_of_division;
-    use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
+    use contracts_commons::types::time::time::{Time, Timestamp};
     use core::num::traits::Zero;
     use core::traits::TryInto;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -41,8 +41,6 @@ pub mod RewardSupplier {
     impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
 
     pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 60 * 60;
-    // TODO: Pair this variable with the epoch info.
-    pub const BLOCK_DURATION: TimeDelta = TimeDelta { seconds: 30 };
 
     #[storage]
     struct Storage {
@@ -166,11 +164,8 @@ pub mod RewardSupplier {
             };
 
             let yearly_mint = minting_curve_dispatcher.yearly_mint();
-            let epoch_length = staking_dispatcher.get_epoch_info().length();
-            self
-                .calculate_epoch_rewards(
-                    :yearly_mint, :epoch_length, block_duration: BLOCK_DURATION,
-                )
+            let epochs_in_year = staking_dispatcher.get_epoch_info().epochs_in_year();
+            yearly_mint / epochs_in_year.into()
         }
 
         // TODO: emit events
@@ -314,14 +309,6 @@ pub mod RewardSupplier {
             let payload: Span<felt252> = array![self.base_mint_amount.read().into()].span();
             let to_address = self.l1_reward_supplier.read();
             send_message_to_l1_syscall(:to_address, :payload).unwrap_syscall();
-        }
-
-        fn calculate_epoch_rewards(
-            self: @ContractState, yearly_mint: Amount, epoch_length: u16, block_duration: TimeDelta,
-        ) -> Amount {
-            let blocks_in_year = SECONDS_IN_YEAR / block_duration.seconds.into();
-            let epochs_in_year = blocks_in_year / epoch_length.into();
-            yearly_mint / epochs_in_year
         }
     }
 }

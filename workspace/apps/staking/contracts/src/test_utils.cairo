@@ -70,6 +70,7 @@ pub(crate) mod constants {
     pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
     pub const EPOCH_LENGTH: u16 = 300;
     pub const EPOCH_STARTING_BLOCK: u64 = 463476;
+    pub const BLOCK_DURATION: u16 = 30;
 
     pub fn CALLER_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'CALLER_ADDRESS'>()
@@ -194,7 +195,11 @@ pub(crate) mod constants {
         contract_address_const::<'ATTESTATION_CONTRACT_ADDRESS'>()
     }
     pub fn DEFAULT_EPOCH_INFO() -> EpochInfo {
-        EpochInfoTrait::new(length: EPOCH_LENGTH, starting_block: EPOCH_STARTING_BLOCK)
+        EpochInfoTrait::new(
+            block_duration: BLOCK_DURATION,
+            length: EPOCH_LENGTH,
+            starting_block: EPOCH_STARTING_BLOCK,
+        )
     }
 }
 pub(crate) fn initialize_staking_state_from_cfg(

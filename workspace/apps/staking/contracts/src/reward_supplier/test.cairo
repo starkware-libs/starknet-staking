@@ -33,7 +33,6 @@ use staking::reward_supplier::interface::{
     IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfo,
 };
 use staking::reward_supplier::reward_supplier::RewardSupplier;
-use staking::reward_supplier::reward_supplier::RewardSupplier::{BLOCK_DURATION, SECONDS_IN_YEAR};
 use staking::staking::objects::EpochInfoTrait;
 use staking::staking::staking::Staking;
 use staking::test_utils;
@@ -419,12 +418,8 @@ fn test_current_epoch_rewards() {
     let rewards = reward_supplier_dispatcher.current_epoch_rewards();
 
     // Expected rewards are computed by dividing the yearly mint by the number of epochs in a year.
-    let epoch_info = cfg.staking_contract_info.epoch_info;
-    let epoch_length = epoch_info.length();
-    let block_duration = BLOCK_DURATION;
-    let blocks_in_year = SECONDS_IN_YEAR / block_duration.seconds.into();
-    let epochs_in_year = blocks_in_year / epoch_length.into();
-    let expected_rewards = yearly_mint / epochs_in_year;
+    let epochs_in_year = cfg.staking_contract_info.epoch_info.epochs_in_year();
+    let expected_rewards = yearly_mint / epochs_in_year.into();
     assert_eq!(rewards, expected_rewards);
 }
 

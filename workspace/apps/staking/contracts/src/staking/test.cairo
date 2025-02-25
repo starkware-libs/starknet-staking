@@ -1,9 +1,9 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
-    CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
-    NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
-    OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, POOL_CONTRACT_ADDRESS,
-    POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS,
+    BLOCK_DURATION, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_LENGTH,
+    EPOCH_STARTING_BLOCK, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
+    OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
+    POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS,
     STAKER_UNCLAIMED_REWARDS,
 };
 use contracts_commons::components::replaceability::interface::{EICData, ImplementationData};
@@ -2996,15 +2996,28 @@ fn test_staker_info_into_internal_staker_info_v1() {
 #[test]
 #[should_panic(expected: "Invalid epoch length, must be greater than 0")]
 fn test_epoch_info_new_invalid_length() {
-    EpochInfoTrait::new(length: Zero::zero(), starting_block: get_block_number());
+    EpochInfoTrait::new(
+        block_duration: BLOCK_DURATION, length: Zero::zero(), starting_block: get_block_number(),
+    );
+}
+
+#[test]
+#[should_panic(expected: "Invalid block duration, must be greater than 0")]
+fn test_epoch_info_new_invalid_block_duration() {
+    EpochInfoTrait::new(
+        block_duration: Zero::zero(), length: EPOCH_LENGTH, starting_block: get_block_number(),
+    );
 }
 
 #[test]
 fn test_epoch_info_current_epoch() {
     let block_number = EPOCH_STARTING_BLOCK;
     let length = EPOCH_LENGTH;
+    let block_duration = BLOCK_DURATION;
     start_cheat_block_number_global(:block_number);
-    let epoch_info = EpochInfoTrait::new(:length, starting_block: get_block_number());
+    let epoch_info = EpochInfoTrait::new(
+        :block_duration, :length, starting_block: get_block_number(),
+    );
     assert_eq!(epoch_info.current_epoch(), Zero::zero());
     advance_block_number_global(blocks: length.into() - 1);
     assert_eq!(epoch_info.current_epoch(), Zero::zero());
@@ -3013,16 +3026,19 @@ fn test_epoch_info_current_epoch() {
 }
 
 #[test]
-fn test_epoch_info_update() {
+fn test_epoch_info_update_only_length() {
     let block_number = EPOCH_STARTING_BLOCK;
     let length = EPOCH_LENGTH;
+    let block_duration = BLOCK_DURATION;
     start_cheat_block_number_global(:block_number);
-    let mut epoch_info = EpochInfoTrait::new(:length, starting_block: get_block_number());
+    let mut epoch_info = EpochInfoTrait::new(
+        :block_duration, :length, starting_block: get_block_number(),
+    );
     let first_epoch = 10;
     advance_block_number_global(blocks: first_epoch * length.into());
     assert_eq!(epoch_info.current_epoch(), first_epoch);
 
-    // Update in the first block of the epoch.
+    // Update length in the first block of the epoch.
     let new_epoch_length = length + 1;
     epoch_info.update(epoch_length: new_epoch_length);
     assert_eq!(epoch_info.current_epoch(), first_epoch);
@@ -3037,7 +3053,7 @@ fn test_epoch_info_update() {
     advance_block_number_global(blocks: 1);
     assert_eq!(epoch_info.current_epoch(), first_epoch + 2);
 
-    // Update in the last block of the epoch.
+    // Update length in the last block of the epoch.
     advance_block_number_global(blocks: length.into());
     epoch_info.update(epoch_length: EPOCH_LENGTH - 1);
     assert_eq!(epoch_info.current_epoch(), first_epoch + 2);
@@ -3102,7 +3118,7 @@ fn test_staking_eic() {
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
         eic_init_data: [
-            MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into(),
+            MAINNET_STAKING_CLASS_HASH_V0().into(), BLOCK_DURATION.into(), EPOCH_LENGTH.into(),
             expected_total_stake.into(),
         ]
             .span(),
@@ -3133,7 +3149,7 @@ fn test_staking_eic() {
         .span();
     let loaded_epoch_info = Serde::<EpochInfo>::deserialize(ref loaded_value).unwrap();
     let expected_epoch_info = EpochInfoTrait::new(
-        length: EPOCH_LENGTH, starting_block: get_block_number(),
+        block_duration: BLOCK_DURATION, length: EPOCH_LENGTH, starting_block: get_block_number(),
     );
     assert_eq!(expected_epoch_info, loaded_epoch_info);
 
@@ -3142,7 +3158,7 @@ fn test_staking_eic() {
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_3')]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_4')]
 fn test_staking_eic_with_wrong_number_of_data_elemnts() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
