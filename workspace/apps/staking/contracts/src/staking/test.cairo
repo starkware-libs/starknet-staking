@@ -46,11 +46,12 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::errors::Error;
 use staking::staking::interface::{
-    IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
-    IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
-    IStakingPoolDispatcher, IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher,
-    IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
-    StakerInfo, StakerInfoTrait, StakerPoolInfo, StakingContractInfo,
+    IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingConfigSafeDispatcher,
+    IStakingConfigSafeDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
+    IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
+    IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
+    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait,
+    StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
     EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait,
@@ -3040,7 +3041,7 @@ fn test_epoch_info_update_only_length() {
 
     // Update length in the first block of the epoch.
     let new_epoch_length = length + 1;
-    epoch_info.update(epoch_length: new_epoch_length);
+    epoch_info.update(:block_duration, epoch_length: new_epoch_length);
     assert_eq!(epoch_info.current_epoch(), first_epoch);
     // Still the same length.
     advance_block_number_global(blocks: length.into() - 1);
@@ -3055,7 +3056,7 @@ fn test_epoch_info_update_only_length() {
 
     // Update length in the last block of the epoch.
     advance_block_number_global(blocks: length.into());
-    epoch_info.update(epoch_length: EPOCH_LENGTH - 1);
+    epoch_info.update(:block_duration, epoch_length: EPOCH_LENGTH - 1);
     assert_eq!(epoch_info.current_epoch(), first_epoch + 2);
     advance_block_number_global(blocks: 1);
     assert_eq!(epoch_info.current_epoch(), first_epoch + 3);
@@ -3066,18 +3067,39 @@ fn test_epoch_info_update_only_length() {
 }
 
 #[test]
-fn test_set_epoch_length() {
+fn test_epoch_info_update_only_block_duration() {
+    let block_number = EPOCH_STARTING_BLOCK;
+    let length = EPOCH_LENGTH;
+    let block_duration = BLOCK_DURATION;
+    start_cheat_block_number_global(:block_number);
+    let mut epoch_info = EpochInfoTrait::new(
+        :block_duration, :length, starting_block: get_block_number(),
+    );
+    let first_epoch = 10;
+    advance_block_number_global(blocks: first_epoch * length.into());
+    assert_eq!(epoch_info.current_epoch(), first_epoch);
+
+    let block_duration = BLOCK_DURATION / 10;
+    let expected_epochs_in_year = epoch_info.epochs_in_year() * 10;
+    epoch_info.update(:block_duration, epoch_length: length);
+    assert_eq!(expected_epochs_in_year, epoch_info.epochs_in_year());
+}
+
+#[test]
+fn test_set_epoch_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let new_block_duration = BLOCK_DURATION / 2;
     let new_length = 2 * EPOCH_LENGTH;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
-    staking_config_dispatcher.set_epoch_length(epoch_length: new_length);
+    staking_config_dispatcher
+        .set_epoch_info(block_duration: new_block_duration, epoch_length: new_length);
     advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
     assert_eq!(staking_dispatcher.get_current_epoch(), 0);
     advance_block_number_global(blocks: 1);
@@ -3090,19 +3112,49 @@ fn test_set_epoch_length() {
     assert_eq!(staking_dispatcher.get_current_epoch(), 2);
     // Events.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 0, message: "set_epoch_length");
+    assert_number_of_events(actual: events.len(), expected: 0, message: "set_epoch_info");
 }
 
 #[test]
 #[should_panic(expected: "ONLY_TOKEN_ADMIN")]
-fn test_set_epoch_length_not_token_admin() {
+fn test_set_epoch_info_not_token_admin() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let non_token_admin = NON_TOKEN_ADMIN();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: non_token_admin);
-    staking_config_dispatcher.set_epoch_length(epoch_length: EPOCH_LENGTH);
+    staking_config_dispatcher
+        .set_epoch_info(block_duration: BLOCK_DURATION, epoch_length: EPOCH_LENGTH);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_epoch_info_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_safe_dispatcher = IStakingConfigSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    let block_duration = BLOCK_DURATION;
+    let epoch_length = EPOCH_LENGTH;
+
+    // Catch INVALID_EPOCH_LENGTH.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
+    );
+    let result = staking_safe_dispatcher
+        .set_epoch_info(:block_duration, epoch_length: Zero::zero());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH_LENGTH.describe());
+
+    // Catch INVALID_BLOCK_DURATION.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
+    );
+    let result = staking_safe_dispatcher
+        .set_epoch_info(block_duration: Zero::zero(), :epoch_length);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_BLOCK_DURATION.describe());
 }
 
 #[test]

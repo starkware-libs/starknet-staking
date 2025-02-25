@@ -80,11 +80,13 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
         ((current_block - *self.starting_block) / (*self.length).into()) + *self.starting_epoch
     }
 
-    fn update(ref self: EpochInfo, epoch_length: u16) {
+    fn update(ref self: EpochInfo, block_duration: u16, epoch_length: u16) {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
+        assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
         self.starting_epoch = self.next_epoch();
         self.starting_block = self.calculate_next_epoch_starting_block();
         self.length = epoch_length;
+        self.block_duration = block_duration;
     }
 
     fn epochs_in_year(self: @EpochInfo) -> u64 {

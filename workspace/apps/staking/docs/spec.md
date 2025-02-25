@@ -44,7 +44,7 @@
     - [set\_min\_stake](#set_min_stake)
     - [set\_exit\_wait\_window](#set_exit_wait_window)
     - [set\_reward\_supplier](#set_reward_supplier)
-    - [set\_epoch\_length](#set_epoch_length)
+    - [set\_epoch\_info](#set_epoch_info)
     - [convert\_from\_upgraded\_contract](#convert_from_upgraded_contract)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
@@ -151,6 +151,8 @@
     - [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
     - [OPERATIONAL\_IN\_USE](#operational_in_use)
     - [WORK\_IS\_DONE](#work_is_done)
+    - [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
+    - [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -222,7 +224,7 @@ classDiagram
     set_min_stake()
     set_exit_wait_window()
     set_reward_supplier()
-    set_epoch_length()
+    set_epoch_info()
     convert_from_upgraded_contract()
   }
   class DelegationPoolContract{
@@ -1138,15 +1140,17 @@ Set the reward supplier.
 Only token admin.
 #### logic <!-- omit from toc -->
 
-### set_epoch_length
+### set_epoch_info
 ```rust
-fn set_epoch_length(ref self: ContractState, epoch_length: u16)
+fn set_epoch_info(ref self: ContractState, block_duration: u16, epoch_length: u16)
 ```
 #### description <!-- omit from toc -->
-Set the epoch length.
+Set the epoch info.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+2. [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
+3. [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only token admin.
@@ -2034,6 +2038,12 @@ Any address can execute.
 
 ### OPERATIONAL_IN_USE
 "Operational address already exists"
+
+### INVALID_EPOCH_LENGTH
+"Invalid epoch length, must be greater than 0"
+
+### INVALID_BLOCK_DURATION
+"Invalid block duration, must be greater than 0"
 
 # Structs
 ### StakerPoolInfo
