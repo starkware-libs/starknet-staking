@@ -124,11 +124,8 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
 #[generate_trait]
 pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
     /// Inserts a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint
-    /// and returns both the previous and the new value.
-    fn insert(
-        self: StoragePath<Mutable<StakerBalanceTrace>>, key: Epoch, value: StakerBalance,
-    ) -> (StakerBalance, StakerBalance) {
-        self.checkpoints.as_path()._insert(key, value)
+    fn insert(self: StoragePath<Mutable<StakerBalanceTrace>>, key: Epoch, value: StakerBalance) {
+        self.checkpoints.as_path()._insert(key, value);
     }
 
     /// Returns the value in the most recent checkpoint, or zero if there are no checkpoints.
@@ -150,7 +147,7 @@ impl MutableStakerBalanceCheckpointImpl of MutableStakerBalanceCheckpointTrait {
     /// new checkpoint, or by updating the last one.
     fn _insert(
         self: StoragePath<Mutable<Vec<StakerBalanceCheckpoint>>>, key: Epoch, value: StakerBalance,
-    ) -> (StakerBalance, StakerBalance) {
+    ) {
         let pos = self.len();
 
         if pos > 0 {
@@ -166,11 +163,9 @@ impl MutableStakerBalanceCheckpointImpl of MutableStakerBalanceCheckpointTrait {
                 assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
                 self.append().write(StakerBalanceCheckpoint { key, value });
             }
-            (prev, value)
         } else {
             self.append().write(StakerBalanceCheckpoint { key, value });
-            (Zero::zero(), value)
-        }
+        };
     }
 
     /// Returns the index of the last (most recent) checkpoint with the key lower than or equal to

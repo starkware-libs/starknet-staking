@@ -8,18 +8,15 @@ fn CONTRACT_STATE() -> MockTrace::ContractState {
 fn test_insert() {
     let mut mock_trace = CONTRACT_STATE();
 
-    let (prev, new) = mock_trace.insert(100, 1000);
-    assert_eq!(prev, 0);
-    assert_eq!(new, 1000);
+    mock_trace.insert(100, 1000);
+    assert_eq!(mock_trace.latest(), (100, 1000));
 
-    let (prev, new) = mock_trace.insert(200, 2000);
-    assert_eq!(prev, 1000);
-    assert_eq!(new, 2000);
+    mock_trace.insert(200, 2000);
+    assert_eq!(mock_trace.latest(), (200, 2000));
     assert_eq!(mock_trace.length(), 2);
 
-    let (prev, new) = mock_trace.insert(200, 500);
-    assert_eq!(prev, 2000);
-    assert_eq!(new, 500);
+    mock_trace.insert(200, 500);
+    assert_eq!(mock_trace.latest(), (200, 500));
     assert_eq!(mock_trace.length(), 2);
 }
 

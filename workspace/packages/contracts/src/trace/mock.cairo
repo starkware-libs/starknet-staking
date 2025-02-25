@@ -1,6 +1,6 @@
 #[starknet::interface]
 pub trait IMockTrace<TContractState> {
-    fn insert(ref self: TContractState, key: u64, value: u128) -> (u128, u128);
+    fn insert(ref self: TContractState, key: u64, value: u128);
     fn latest(self: @TContractState) -> (u64, u128);
     fn length(self: @TContractState) -> u64;
     fn upper_lookup(self: @TContractState, key: u64) -> u128;
@@ -20,7 +20,7 @@ pub mod MockTrace {
 
     #[abi(embed_v0)]
     impl MockTraceImpl of super::IMockTrace<ContractState> {
-        fn insert(ref self: ContractState, key: u64, value: u128) -> (u128, u128) {
+        fn insert(ref self: ContractState, key: u64, value: u128) {
             self.trace.deref().insert(:key, :value)
         }
 

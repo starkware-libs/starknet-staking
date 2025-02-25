@@ -3,9 +3,7 @@ use staking::types::Epoch;
 
 #[starknet::interface]
 pub trait IMockTrace<TContractState> {
-    fn insert(
-        ref self: TContractState, key: Epoch, value: StakerBalance,
-    ) -> (StakerBalance, StakerBalance);
+    fn insert(ref self: TContractState, key: Epoch, value: StakerBalance);
     fn latest(self: @TContractState) -> (Epoch, StakerBalance);
     fn length(self: @TContractState) -> u64;
     fn upper_lookup(self: @TContractState, key: Epoch) -> StakerBalance;
@@ -27,10 +25,8 @@ pub mod MockTrace {
 
     #[abi(embed_v0)]
     impl MockTraceImpl of super::IMockTrace<ContractState> {
-        fn insert(
-            ref self: ContractState, key: Epoch, value: StakerBalance,
-        ) -> (StakerBalance, StakerBalance) {
-            self.trace.deref().insert(:key, :value)
+        fn insert(ref self: ContractState, key: Epoch, value: StakerBalance) {
+            self.trace.deref().insert(:key, :value);
         }
 
         fn latest(self: @ContractState) -> (Epoch, StakerBalance) {

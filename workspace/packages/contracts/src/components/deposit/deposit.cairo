@@ -58,7 +58,7 @@ pub(crate) mod Deposit {
             quantized_amount: u128,
             salt: felt252,
         ) {
-            assert(quantized_amount > 0, errors::ZERO_AMOUNT);
+            assert(quantized_amount.is_non_zero(), errors::ZERO_AMOUNT);
             let caller_address = get_caller_address();
             let deposit_hash = deposit_hash(
                 depositor: caller_address, :beneficiary, :asset_id, :quantized_amount, :salt,
@@ -201,7 +201,7 @@ pub(crate) mod Deposit {
             quantized_amount: u128,
             salt: felt252,
         ) {
-            assert(quantized_amount > 0, errors::ZERO_AMOUNT);
+            assert(quantized_amount.is_non_zero(), errors::ZERO_AMOUNT);
             let deposit_hash = deposit_hash(
                 :depositor, :beneficiary, :asset_id, :quantized_amount, :salt,
             );

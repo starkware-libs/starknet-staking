@@ -63,9 +63,8 @@ pub impl TraceImpl of TraceTrait {
 
 #[generate_trait]
 pub impl MutableTraceImpl of MutableTraceTrait {
-    /// Inserts a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint
-    /// and returns both the previous and the new value.
-    fn insert(self: StoragePath<Mutable<Trace>>, key: u64, value: u128) -> (u128, u128) {
+    /// Inserts a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint.
+    fn insert(self: StoragePath<Mutable<Trace>>, key: u64, value: u128) {
         self.checkpoints.as_path()._insert(key, value)
     }
 
@@ -96,14 +95,13 @@ pub impl MutableTraceImpl of MutableTraceTrait {
 impl MutableCheckpointImpl of MutableCheckpointTrait {
     /// Pushes a (`key`, `value`) pair into an ordered list of checkpoints, either by inserting a
     /// new checkpoint, or by updating the last one.
-    fn _insert(self: StoragePath<Mutable<Vec<Checkpoint>>>, key: u64, value: u128) -> (u128, u128) {
+    fn _insert(self: StoragePath<Mutable<Vec<Checkpoint>>>, key: u64, value: u128) {
         let pos = self.len();
 
         if pos > 0 {
             let mut last = self[pos - 1].read();
 
             // Update or append new checkpoint
-            let prev = last.value;
             if last.key == key {
                 last.value = value;
                 self[pos - 1].write(last);
@@ -112,11 +110,9 @@ impl MutableCheckpointImpl of MutableCheckpointTrait {
                 assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
                 self.append().write(Checkpoint { key, value });
             }
-            (prev, value)
         } else {
             self.append().write(Checkpoint { key, value });
-            (0, value)
-        }
+        };
     }
 
     /// Returns the index of the last (most recent) checkpoint with the key lower than or equal to
