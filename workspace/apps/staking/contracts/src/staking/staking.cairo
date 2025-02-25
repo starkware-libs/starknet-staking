@@ -590,11 +590,10 @@ pub mod Staking {
 
         fn get_total_stake(self: @ContractState) -> Amount {
             let total_stake_trace = self.total_stake_trace.deref();
-            if total_stake_trace.length().is_zero() {
-                return Zero::zero();
+            match total_stake_trace.latest() {
+                Result::Ok((_, total_stake)) => total_stake,
+                Result::Err(_) => 0,
             }
-            let (_, total_stake) = total_stake_trace.latest();
-            total_stake
         }
 
         fn get_total_stake_at_current_epoch(self: @ContractState) -> Amount {

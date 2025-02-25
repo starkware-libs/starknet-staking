@@ -154,7 +154,6 @@ impl MutableStakerBalanceCheckpointImpl of MutableStakerBalanceCheckpointTrait {
             let mut last = self[pos - 1].read();
 
             // Update or append new checkpoint
-            let prev = last.value;
             if last.key == key {
                 last.value = value;
                 self[pos - 1].write(last);

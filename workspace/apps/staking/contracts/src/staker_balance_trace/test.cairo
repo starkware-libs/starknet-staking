@@ -1,4 +1,3 @@
-use core::num::traits::Zero;
 use staking::staker_balance_trace::mock::{IMockTrace, MockTrace};
 use staking::staker_balance_trace::trace::{StakerBalanceTrait};
 
