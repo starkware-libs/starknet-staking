@@ -1090,7 +1090,6 @@ pub mod Staking {
 
         fn set_epoch_length(ref self: ContractState, epoch_length: u16) {
             // TODO: roles
-            // TODO: assert length
             self.roles.only_token_admin();
             let mut epoch_info = self.epoch_info.read();
             epoch_info.update(:epoch_length);

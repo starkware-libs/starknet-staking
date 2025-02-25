@@ -32,7 +32,7 @@ use staking::staking::interface::{
 };
 use staking::staking::objects::EpochInfo;
 use staking::test_utils::constants::{
-    EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS, UPGRADE_GOVERNOR,
+    BLOCK_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, declare_pool_contract, declare_pool_eic_contract,
@@ -974,7 +974,10 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
             eic_init_data: array![
-                MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_LENGTH.into(), total_stake.into(),
+                MAINNET_STAKING_CLASS_HASH_V0().into(),
+                BLOCK_DURATION.into(),
+                EPOCH_LENGTH.into(),
+                total_stake.into(),
             ]
                 .span(),
         };

@@ -24,15 +24,18 @@ mod StakingEIC {
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
-            assert(eic_init_data.len() == 3, 'EXPECTED_DATA_LENGTH_3');
+            assert(eic_init_data.len() == 4, 'EXPECTED_DATA_LENGTH_4');
             let class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             self.prev_class_hash.write(0, class_hash);
 
-            let length: u16 = (*eic_init_data[1]).try_into().unwrap();
-            let epoch_info = EpochInfoTrait::new(:length, starting_block: get_block_number());
+            let block_duration: u16 = (*eic_init_data[1]).try_into().unwrap();
+            let length: u16 = (*eic_init_data[2]).try_into().unwrap();
+            let epoch_info = EpochInfoTrait::new(
+                :block_duration, :length, starting_block: get_block_number(),
+            );
             self.epoch_info.write(epoch_info);
 
-            let total_stake: Amount = (*eic_init_data[2]).try_into().unwrap();
+            let total_stake: Amount = (*eic_init_data[3]).try_into().unwrap();
             self.total_stake_trace.deref().insert(key: Zero::zero(), value: total_stake);
         }
     }

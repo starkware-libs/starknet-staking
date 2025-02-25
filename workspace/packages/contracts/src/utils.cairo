@@ -73,7 +73,7 @@ pub fn validate_stark_signature(public_key: PublicKey, msg_hash: HashType, signa
 }
 
 pub fn validate_expiration(expiration: Timestamp, err: felt252) {
-    assert(Time::now() < expiration, err);
+    assert(Time::now() <= expiration, err);
 }
 
 pub fn validate_ratio<N, D, +Into<N, i128>, +Drop<N>, +Into<D, u128>, +Drop<D>>(
