@@ -34,13 +34,13 @@ pub impl FractionImpl<
 
 impl FractionNegI128U128 of Neg<Fraction<i128, u128>> {
     fn neg(a: Fraction<i128, u128>) -> Fraction<i128, u128> {
-        Fraction { numerator: -a.numerator, denominator: a.denominator }
+        FractionTrait::new(numerator: -a.numerator, denominator: a.denominator)
     }
 }
 
 impl FractionZeroI128U128 of Zero<Fraction<i128, u128>> {
     fn zero() -> Fraction<i128, u128> {
-        Fraction { numerator: 0, denominator: 1 }
+        FractionTrait::new(numerator: 0_i128, denominator: 1_u128)
     }
 
     fn is_zero(self: @Fraction<i128, u128>) -> bool {
@@ -54,7 +54,7 @@ impl FractionZeroI128U128 of Zero<Fraction<i128, u128>> {
 
 impl FractionOneI128U128 of One<Fraction<i128, u128>> {
     fn one() -> Fraction<i128, u128> {
-        Fraction { numerator: 1, denominator: 1 }
+        FractionTrait::new(numerator: 1_i128, denominator: 1_u128)
     }
 
     fn is_one(self: @Fraction<i128, u128>) -> bool {
@@ -132,13 +132,17 @@ impl FractionWideMul<
     impl NWideMul: WideMul<N, N>,
     impl DWideMul: WideMul<D, D>,
     +Drop<NWideMul::Target>,
+    +Drop<DWideMul::Target>,
+    +Zero<DWideMul::Target>,
+    +Copy<NWideMul::Target>,
+    +Copy<DWideMul::Target>,
     +Drop<D>,
 > of WideMul<Fraction<N, D>, Fraction<N, D>> {
     type Target = Fraction<NWideMul::Target, DWideMul::Target>;
     fn wide_mul(self: Fraction<N, D>, other: Fraction<N, D>) -> Self::Target {
         let numerator: NWideMul::Target = self.numerator.wide_mul(other.numerator);
         let denominator: DWideMul::Target = self.denominator.wide_mul(other.denominator);
-        Fraction { numerator, denominator }
+        FractionTrait::new(:numerator, :denominator)
     }
 }
 
