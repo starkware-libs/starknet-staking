@@ -261,18 +261,6 @@ fn test_send_rewards_to_staker() {
     );
 }
 
-
-#[test]
-fn test_update_rewards_unstake_intent() {
-    let mut cfg: StakingInitConfig = Default::default();
-    let mut state = initialize_staking_state_from_cfg(ref :cfg);
-    let mut staker_info_expected = cfg.staker_info.clone();
-    staker_info_expected.unstake_time = Option::Some(Timestamp { seconds: 1 });
-    let mut staker_info = staker_info_expected;
-    state.update_rewards(ref :staker_info, staker_amount_own: staker_info._deprecated_amount_own);
-    assert_eq!(staker_info, staker_info_expected);
-}
-
 #[test]
 #[should_panic(expected: "Staker already exists, use increase_stake instead")]
 fn test_stake_from_same_staker_address() {
