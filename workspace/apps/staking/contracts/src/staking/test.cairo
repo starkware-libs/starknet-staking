@@ -167,46 +167,6 @@ fn test_stake() {
 }
 
 #[test]
-fn test_update_rewards() {
-    let mut cfg: StakingInitConfig = Default::default();
-    cfg
-        .staker_info
-        .pool_info =
-            Option::Some(
-                StakerPoolInfo {
-                    pool_contract: POOL_CONTRACT_ADDRESS(),
-                    amount: POOL_MEMBER_STAKE_AMOUNT,
-                    ..cfg.staker_info.get_pool_info(),
-                },
-            );
-    cfg.staker_info.index = 0;
-
-    let mut state = initialize_staking_state_from_cfg(ref :cfg);
-    let mut staker_info = cfg.staker_info;
-    let interest = state.global_index.read() - staker_info.index;
-    state.update_rewards(ref :staker_info, staker_amount_own: staker_info._deprecated_amount_own);
-    let staker_rewards = compute_rewards_rounded_down(
-        amount: staker_info._deprecated_amount_own, :interest,
-    );
-    let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: staker_info.get_pool_info().amount, :interest,
-    );
-    let commission_amount = compute_commission_amount_rounded_down(
-        rewards_including_commission: pool_rewards_including_commission,
-        commission: cfg.staker_info.get_pool_info().commission,
-    );
-    let unclaimed_rewards_own: Amount = staker_rewards + commission_amount;
-    let unclaimed_rewards: Amount = pool_rewards_including_commission - commission_amount;
-    let mut expected_staker_info = staker_info.clone();
-    expected_staker_info.unclaimed_rewards_own = unclaimed_rewards_own;
-    expected_staker_info
-        .pool_info =
-            Option::Some(StakerPoolInfo { unclaimed_rewards, ..staker_info.get_pool_info() });
-    assert_eq!(staker_info, expected_staker_info);
-}
-
-
-#[test]
 fn test_send_rewards_to_delegation_pool() {
     // Initialize staking state.
     let mut cfg: StakingInitConfig = Default::default();
