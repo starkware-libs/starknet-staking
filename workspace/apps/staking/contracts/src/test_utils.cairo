@@ -10,6 +10,8 @@ use constants::{
     STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use contracts_commons::constants::{NAME, SYMBOL};
+use contracts_commons::errors::OptionAuxTrait;
+use contracts_commons::math::utils::mul_wide_and_div;
 use contracts_commons::test_utils::{
     advance_block_number_global, cheat_caller_address_once, set_account_as_app_role_admin,
     set_account_as_security_admin, set_account_as_security_agent, set_account_as_token_admin,
@@ -23,7 +25,9 @@ use snforge_std::{
     ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global, test_address,
 };
 use staking::constants::{BASE_VALUE, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
+use staking::errors::GenericError;
 use staking::minting_curve::interface::MintingCurveContractInfo;
+use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolMemberInfo};
 use staking::pool::objects::{VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait};
@@ -33,6 +37,7 @@ use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
 };
+use staking::staking::objects::EpochInfoTrait;
 use staking::staking::objects::{
     EpochInfo, InternalStakerInfoLatestTrait, VersionedInternalStakerInfo,
     VersionedInternalStakerInfoTrait,
@@ -1046,4 +1051,66 @@ pub(crate) fn pool_update_rewards(
 /// Advance one epoch.
 pub(crate) fn advance_epoch_global() {
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
+}
+
+pub(crate) fn calculate_staker_total_rewards(
+    staker_info: StakerInfo,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+) -> Amount {
+    let epoch_rewards = current_epoch_rewards(:staking_contract, :minting_curve_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    mul_wide_and_div(
+        lhs: epoch_rewards,
+        rhs: get_total_amount(:staker_info),
+        div: staking_dispatcher.get_total_stake_at_current_epoch(),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+}
+
+fn current_epoch_rewards(
+    staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
+) -> Amount {
+    let minting_curve_dispatcher = IMintingCurveDispatcher {
+        contract_address: minting_curve_contract,
+    };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+
+    let yearly_mint = minting_curve_dispatcher.yearly_mint();
+    let epochs_in_year = staking_dispatcher.get_epoch_info().epochs_in_year();
+    yearly_mint / epochs_in_year.into()
+}
+
+pub(crate) fn calculate_staker_own_rewards_include_commission(
+    staker_info: StakerInfo, total_rewards: Amount,
+) -> Amount {
+    let own_rewards = get_staker_own_rewards(:staker_info, :total_rewards);
+    let commission_rewards = get_staker_commission_rewards(
+        :staker_info, pool_rewards: total_rewards - own_rewards,
+    );
+    own_rewards + commission_rewards
+}
+
+fn get_staker_own_rewards(staker_info: StakerInfo, total_rewards: Amount) -> Amount {
+    let own_rewards = mul_wide_and_div(
+        lhs: total_rewards, rhs: staker_info.amount_own, div: get_total_amount(:staker_info),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    own_rewards
+}
+
+fn get_staker_commission_rewards(staker_info: StakerInfo, pool_rewards: Amount) -> Amount {
+    if let Option::Some(pool_info) = staker_info.pool_info {
+        return compute_commission_amount_rounded_down(
+            rewards_including_commission: pool_rewards, commission: pool_info.commission,
+        );
+    }
+    Zero::zero()
+}
+
+fn get_total_amount(staker_info: StakerInfo) -> Amount {
+    if let Option::Some(pool_info) = staker_info.pool_info {
+        return pool_info.amount + staker_info.amount_own;
+    }
+    (staker_info.amount_own)
 }

@@ -34,6 +34,9 @@ use snforge_std::{
     CheatSpan, cheat_account_contract_address, cheat_caller_address,
     start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
+use staking::attestation::interface::{
+    AttestInfo, IAttestationDispatcher, IAttestationDispatcherTrait,
+};
 use staking::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
 use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0;
@@ -69,12 +72,14 @@ use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
 use test_utils::{
-    StakingInitConfig, advance_epoch_global, approve, cheat_reward_for_reward_supplier, constants,
-    declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
-    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
-    general_contract_system_deployment, initialize_staking_state_from_cfg, load_from_simple_map,
-    load_one_felt, load_staker_info_from_map, stake_for_testing_using_dispatcher,
-    stake_from_zero_address, stake_with_pool_enabled, store_to_simple_map,
+    StakingInitConfig, advance_epoch_global, approve,
+    calculate_staker_own_rewards_include_commission, calculate_staker_total_rewards,
+    cheat_reward_for_reward_supplier, constants, declare_staking_eic_contract,
+    deploy_mock_erc20_contract, deploy_reward_supplier_contract, deploy_staking_contract,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    initialize_staking_state_from_cfg, load_from_simple_map, load_one_felt,
+    load_staker_info_from_map, stake_for_testing_using_dispatcher, stake_from_zero_address,
+    stake_with_pool_enabled, store_to_simple_map,
 };
 
 #[test]
@@ -736,6 +741,73 @@ fn test_claim_rewards() {
         :staker_address,
         reward_address: cfg.staker_info.reward_address,
         amount: reward,
+    );
+}
+
+// TODO: Rename to `test_claim_rewards` when the old `test_claim_rewards` is removed.
+#[test]
+fn test_claim_rewards_with_new_rewards_mechanism() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+    let staker_address = cfg.test_info.staker_address;
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
+
+    // Stake.
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+
+    // Advance the epoch to ensure the total stake in the current epoch is nonzero, preventing a
+    // division by zero when calculating rewards.
+    advance_epoch_global();
+
+    // Calculate the expected staker rewards.
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let total_rewards = calculate_staker_total_rewards(
+        :staker_info, :staking_contract, :minting_curve_contract,
+    );
+    let expected_staker_rewards = calculate_staker_own_rewards_include_commission(
+        :staker_info, :total_rewards,
+    );
+
+    // Funds reward supplier.
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: reward_supplier,
+        amount: expected_staker_rewards,
+        :token_address,
+    );
+
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: cfg.staker_info.operational_address,
+    );
+    attestation_dispatcher.attest(attest_info: AttestInfo {});
+
+    // Claim rewards and validate the results.
+    let mut spy = snforge_std::spy_events();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let staker_rewards = staking_dispatcher.claim_rewards(:staker_address);
+    assert_eq!(staker_rewards, expected_staker_rewards);
+
+    let staker_info_after_claim = staking_dispatcher.staker_info(:staker_address);
+    assert_eq!(staker_info_after_claim.unclaimed_rewards_own, Zero::zero());
+
+    let staker_reward_address_balance = token_dispatcher
+        .balance_of(account: cfg.staker_info.reward_address);
+    assert_eq!(staker_reward_address_balance, staker_rewards.into());
+    // Validate the single StakerRewardClaimed event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "claim_rewards");
+    assert_staker_reward_claimed_event(
+        spied_event: events[0],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        amount: staker_rewards,
     );
 }
 
