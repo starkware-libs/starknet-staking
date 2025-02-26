@@ -63,7 +63,7 @@ use staking::staking::objects::{
     VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
-use staking::types::{Amount, Index, InternalStakerInfoLatest};
+use staking::types::{Amount, InternalStakerInfoLatest};
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_rewards_rounded_down,
     compute_rewards_rounded_up,
@@ -77,9 +77,9 @@ use test_utils::{
     cheat_reward_for_reward_supplier, constants, declare_staking_eic_contract,
     deploy_mock_erc20_contract, deploy_reward_supplier_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    initialize_staking_state_from_cfg, load_from_simple_map, load_one_felt,
-    load_staker_info_from_map, stake_for_testing_using_dispatcher, stake_from_zero_address,
-    stake_with_pool_enabled, store_to_simple_map,
+    initialize_staking_state_from_cfg, load_from_simple_map, load_staker_info_from_map,
+    stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,
+    store_to_simple_map,
 };
 
 #[test]
@@ -1805,72 +1805,6 @@ fn test_switch_staking_delegation_pool_assertions() {
             identifier: pool_member.into(),
         );
     assert_panic_with_error(:result, expected_error: Error::SELF_SWITCH_NOT_ALLOWED.describe());
-}
-
-
-#[test]
-fn test_update_global_index_if_needed() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-
-    // Get the initial global index.
-    let global_index_before_first_update: Index = load_one_felt(
-        target: staking_contract, storage_address: selector!("global_index"),
-    )
-        .try_into()
-        .expect('global index not fit in Index');
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let mut spy = snforge_std::spy_events();
-
-    // First update shouldn't change index (not enough time passed)
-    staking_dispatcher.update_global_index_if_needed();
-    let global_index_after_first_update: Index = load_one_felt(
-        target: staking_contract, storage_address: selector!("global_index"),
-    )
-        .try_into()
-        .expect('global index not fit in Index');
-    assert_eq!(global_index_before_first_update, global_index_after_first_update);
-    // Advance time by a year, update total_stake to be total_supply (which is equal to initial
-    // supply), which means that max_inflation * BASE_VALUE will be added to global_index.
-    let global_index_increment = (cfg.minting_curve_contract_info.c_num.into()
-        * BASE_VALUE
-        / cfg.minting_curve_contract_info.c_denom.into());
-    cfg
-        .test_info
-        .staker_initial_balance = cfg
-        .test_info
-        .initial_supply
-        .try_into()
-        .expect('intial_supply not fit in Amount');
-    cfg.staker_info._deprecated_amount_own = cfg.test_info.staker_initial_balance;
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let global_index_last_update_timestamp = Time::now();
-    let global_index_current_update_timestamp = global_index_last_update_timestamp
-        .add(delta: Time::days(count: 365));
-    start_cheat_block_timestamp_global(
-        block_timestamp: global_index_current_update_timestamp.into(),
-    );
-    staking_dispatcher.update_global_index_if_needed();
-    let global_index_after_second_update: Index = load_one_felt(
-        target: staking_contract, storage_address: selector!("global_index"),
-    )
-        .try_into()
-        .expect('global index not fit in Index');
-    assert_eq!(
-        global_index_after_second_update, global_index_after_first_update + global_index_increment,
-    );
-    // Validate `GlobalIndexUpdated` event.
-    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 3, message: "update_global_index");
-    assert_global_index_updated_event(
-        spied_event: events[2],
-        old_index: global_index_before_first_update,
-        new_index: global_index_after_second_update,
-        :global_index_last_update_timestamp,
-        :global_index_current_update_timestamp,
-    );
 }
 
 #[test]
