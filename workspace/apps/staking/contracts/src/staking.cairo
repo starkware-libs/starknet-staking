@@ -7,6 +7,7 @@ pub mod interface;
 pub(crate) mod objects;
 #[cfg(test)]
 mod pause_test;
+pub(crate) mod staker_balance_trace;
 pub mod staking;
 #[cfg(test)]
 mod test;

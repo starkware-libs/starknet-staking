@@ -8,7 +8,6 @@ mod flow_test;
 pub mod minting_curve;
 pub mod pool;
 pub mod reward_supplier;
-pub(crate) mod staker_balance_trace;
 pub mod staking;
 #[cfg(test)]
 pub(crate) mod test_utils;

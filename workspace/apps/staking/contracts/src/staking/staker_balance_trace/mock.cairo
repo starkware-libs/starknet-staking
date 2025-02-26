@@ -1,4 +1,4 @@
-use staking::staker_balance_trace::trace::StakerBalance;
+use staking::staking::staker_balance_trace::trace::StakerBalance;
 use staking::types::Epoch;
 
 #[starknet::interface]
@@ -13,7 +13,7 @@ pub trait IMockTrace<TContractState> {
 
 #[starknet::contract]
 pub mod MockTrace {
-    use staking::staker_balance_trace::trace::{
+    use staking::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTraceTrait,
     };
     use super::{Epoch, StakerBalance};

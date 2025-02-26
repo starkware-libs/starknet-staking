@@ -24,10 +24,6 @@ pub mod Staking {
     use staking::reward_supplier::interface::{
         IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     };
-    use staking::staker_balance_trace::trace::{
-        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
-        StakerBalanceTrait,
-    };
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         ConfigEvents, Events, IStaking, IStakingConfig, IStakingMigration, IStakingPause,
@@ -37,6 +33,10 @@ pub mod Staking {
         EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait,
         UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
         UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
+    };
+    use staking::staking::staker_balance_trace::trace::{
+        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
+        StakerBalanceTrait,
     };
     use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest, Version};
     use staking::utils::{
