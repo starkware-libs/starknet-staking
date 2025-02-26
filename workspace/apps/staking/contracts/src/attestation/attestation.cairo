@@ -95,16 +95,19 @@ pub mod Attestation {
         }
 
         fn get_last_epoch_attestation_done(
-            self: @ContractState, address: ContractAddress,
+            self: @ContractState, staker_address: ContractAddress,
         ) -> Epoch {
-            self.staker_last_attested_epoch.read(address).expect_with_err(Error::NO_ATTEST_DONE)
+            self
+                .staker_last_attested_epoch
+                .read(staker_address)
+                .expect_with_err(Error::NO_ATTEST_DONE)
         }
 
         fn is_attestation_done_in_curr_epoch(
-            self: @ContractState, address: ContractAddress,
+            self: @ContractState, staker_address: ContractAddress,
         ) -> bool {
             let current_epoch = self.staking_dispatcher.read().get_current_epoch();
-            self.get_last_epoch_attestation_done(:address) == current_epoch
+            self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
     }
 

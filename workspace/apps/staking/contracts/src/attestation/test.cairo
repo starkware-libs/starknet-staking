@@ -37,7 +37,7 @@ fn test_attest() {
     let attest_info = AttestInfo {};
     attestation_dispatcher.attest(:attest_info);
     let is_attestation_done = attestation_dispatcher
-        .is_attestation_done_in_curr_epoch(address: staker_address);
+        .is_attestation_done_in_curr_epoch(:staker_address);
     assert_eq!(is_attestation_done, true);
     let events = spy.get_events().emitted_by(contract_address: attestation_contract).events;
     assert_number_of_events(actual: events.len(), expected: 0, message: "attest");
@@ -89,7 +89,7 @@ fn test_is_attestation_done_in_curr_epoch() {
     let attest_info = AttestInfo {};
     attestation_dispatcher.attest(:attest_info);
     let is_attestation_done = attestation_dispatcher
-        .is_attestation_done_in_curr_epoch(address: staker_address);
+        .is_attestation_done_in_curr_epoch(:staker_address);
     assert_eq!(is_attestation_done, true);
 }
 
@@ -107,8 +107,7 @@ fn test_is_attestation_done_in_curr_epoch_assertions() {
     };
     let staker_address = cfg.test_info.staker_address;
     // Catch NO_ATTEST_DONE.
-    let result = attestation_safe_dispatcher
-        .is_attestation_done_in_curr_epoch(address: staker_address);
+    let result = attestation_safe_dispatcher.is_attestation_done_in_curr_epoch(:staker_address);
     assert_panic_with_error(:result, expected_error: Error::NO_ATTEST_DONE.describe());
 }
 
@@ -130,7 +129,7 @@ fn test_get_last_epoch_attestation_done() {
     let attest_info = AttestInfo {};
     attestation_dispatcher.attest(:attest_info);
     let last_epoch_attesation_done = attestation_dispatcher
-        .get_last_epoch_attestation_done(address: staker_address);
+        .get_last_epoch_attestation_done(:staker_address);
     assert_eq!(last_epoch_attesation_done, 1);
 }
 
@@ -148,8 +147,7 @@ fn test_get_last_epoch_attestation_done_assertions() {
     };
     let staker_address = cfg.test_info.staker_address;
     // Catch NO_ATTEST_DONE.
-    let result = attestation_safe_dispatcher
-        .get_last_epoch_attestation_done(address: staker_address);
+    let result = attestation_safe_dispatcher.get_last_epoch_attestation_done(:staker_address);
     assert_panic_with_error(:result, expected_error: Error::NO_ATTEST_DONE.describe());
 }
 
