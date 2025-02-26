@@ -29,7 +29,7 @@
     - [get\_staker\_info](#get_staker_info)
     - [get\_staker\_address\_by\_operational](#get_staker_address_by_operational)
     - [get\_current\_epoch](#get_current_epoch)
-    - [update_rewards_from_work_contract](#update_rewards_from_work_contract)
+    - [update\_rewards\_from\_attestation\_contract](#update_rewards_from_attestation_contract)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
     - [get\_total\_stake\_at\_current\_epoch](#get_total_stake_at_current_epoch)
@@ -109,11 +109,11 @@
   - [Events](#events-3)
     - [Total Supply Changed](#total-supply-changed)
     - [Minting Cap Changed](#minting-cap-changed)
-- [Work Contract](#work-contract)
+- [Attestation Contract](#attestation-contract)
   - [Functions](#functions-4)
-    - [work](#work)
-    - [is\_work\_done\_in\_curr\_epoch](#is_work_done_in_curr_epoch)
-    - [get\_last\_epoch\_work\_done](#get_last_epoch_work_done)
+    - [attest](#attest)
+    - [is\_attestation\_done\_in\_curr\_epoch](#is_attestation_done_in_curr_epoch)
+    - [get\_last\_epoch\_attestation\_done](#get_last_epoch_attestation_done)
   - [Events](#events-4)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
@@ -150,7 +150,6 @@
     - [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
     - [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
     - [OPERATIONAL\_IN\_USE](#operational_in_use)
-    - [WORK\_IS\_DONE](#work_is_done)
     - [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
     - [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
 - [Structs](#structs)
@@ -296,21 +295,21 @@ classDiagram
     yearly_mint()
     set_c_num()
   }
-  class Work {
+  class Attestation {
     staking_dispatcher,
     Map< staker_address, Epoch >,
-    work()
-    is_work_done_in_curr_epoch()
-    get_last_epoch_work_done()
+    attest()
+    is_attestation_done_in_curr_epoch()
+    get_last_epoch_attestation_done()
   }
-  class WorkInfo{
+  class AttestInfo{
   }
   StakingContract o-- StakerInfo
   StakerInfo o-- StakerPoolInfo
   DelegationPoolContract o-- PoolMemberInfo
   StakingContract o-- RewardSupplier
   RewardSupplier o-- MintingCurve
-  Work o-- WorkInfo
+  Attestation o-- AttestInfo
 ```
 
 ## L1 Contracts block diagram
@@ -894,9 +893,9 @@ Any address can execute.
 1. Calculate the current epoch
 2. Returns the current epoch.
 
-### update_rewards_from_work_contract
+### update_rewards_from_attestation_contract
 ```rust
-fn update_rewards_from_work_contract(ref self: ContractState,
+fn update_rewards_from_attestation_contract(ref self: ContractState,
  staker_address: ContractAddress) 
 ```
 #### description <!-- omit from toc -->
@@ -905,7 +904,7 @@ Returns the current epoch.
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
-Only work contract.
+Only attestation contract.
 #### logic <!-- omit from toc -->
 1. Calculate total rewards for `staker_address` in this epoch.
 2. Calculate staker rewards (include commission)
@@ -1179,48 +1178,48 @@ Staking contract of latest version.
 ### Stake Balance Changed
 | data                | type              | keyed |
 | ------------------- | ----------------- | ----- |
-| staker_address      | address           | ✅    |
-| old_self_stake      | [Amount](#amount) | ❌    |
-| old_delegated_stake | [Amount](#amount) | ❌    |
-| new_self_stake      | [Amount](#amount) | ❌    |
-| new_delegated_stake | [Amount](#amount) | ❌    |
+| staker_address      | address           | ✅     |
+| old_self_stake      | [Amount](#amount) | ❌     |
+| old_delegated_stake | [Amount](#amount) | ❌     |
+| new_self_stake      | [Amount](#amount) | ❌     |
+| new_delegated_stake | [Amount](#amount) | ❌     |
 
 ### New Delegation Pool
 | data           | type                      | keyed |
 | -------------- | ------------------------- | ----- |
-| staker_address | address                   | ✅    |
-| pool_contract  | address                   | ✅    |
-| commission     | [Commission](#commission) | ❌    |
+| staker_address | address                   | ✅     |
+| pool_contract  | address                   | ✅     |
+| commission     | [Commission](#commission) | ❌     |
 
 ### New Staker
 | data                | type              | keyed |
 | ------------------- | ----------------- | ----- |
-| staker_address      | address           | ✅    |
-| reward_address      | address           | ❌    |
-| operational_address | address           | ❌    |
-| self_stake          | [Amount](#amount) | ❌    |
+| staker_address      | address           | ✅     |
+| reward_address      | address           | ❌     |
+| operational_address | address           | ❌     |
+| self_stake          | [Amount](#amount) | ❌     |
 
 ### Staker Exit intent
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
-| staker_address | address           | ✅    |
-| exit_timestamp | time              | ❌    |
-| amount         | [Amount](#amount) | ❌    |
+| staker_address | address           | ✅     |
+| exit_timestamp | time              | ❌     |
+| amount         | [Amount](#amount) | ❌     |
 
 ### Rewards Supplied To Delegation Pool
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
-| staker_address | address           | ✅    |
-| pool_address   | address           | ✅    |
-| amount         | [Amount](#amount) | ❌    |
+| staker_address | address           | ✅     |
+| pool_address   | address           | ✅     |
+| amount         | [Amount](#amount) | ❌     |
 
 ### Change Delegation Pool Intent
 | data              | type              | keyed |
 | ----------------- | ----------------- | ----- |
-| pool_contract     | address           | ✅    |
-| identifier        | felt252           | ✅    |
-| old_intent_amount | [Amount](#amount) | ❌    |
-| new_intent_amount | [Amount](#amount) | ❌    |
+| pool_contract     | address           | ✅     |
+| identifier        | felt252           | ✅     |
+| old_intent_amount | [Amount](#amount) | ❌     |
+| new_intent_amount | [Amount](#amount) | ❌     |
 
 ### Delete Staker
 | data                | type            | keyed |
@@ -1233,9 +1232,9 @@ Staking contract of latest version.
 ### Staker Reward Claimed
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
-| staker_address | address           | ✅    |
-| reward_address | address           | ❌    |
-| amount         | [Amount](#amount) | ❌    |
+| staker_address | address           | ✅     |
+| reward_address | address           | ❌     |
+| amount         | [Amount](#amount) | ❌     |
 
 ### Staker Reward Address Changed
 | data           | type    | keyed |
@@ -1247,8 +1246,8 @@ Staking contract of latest version.
 ### Operational Address Declared
 | data                | type    | keyed |
 | ------------------- | ------- | ----- |
-| operational_address | address |  ✅   |
-| staker_address      | address |  ✅   |
+| operational_address | address | ✅     |
+| staker_address      | address | ✅     |
 
 ### Operational Address Changed
 | data           | type    | keyed |
@@ -1258,8 +1257,8 @@ Staking contract of latest version.
 | old_address    | address | ❌     |
 
 ### Remove From Delegation Pool Intent
-| data              | type              | keyed  |
-| ----------------- | ----------------- | ------ |
+| data              | type              | keyed |
+| ----------------- | ----------------- | ----- |
 | staker_address    | address           | ✅     |
 | pool_contract     | address           | ✅     |
 | identifier        | felt252           | ✅     |
@@ -1267,47 +1266,47 @@ Staking contract of latest version.
 | new_intent_amount | [Amount](#amount) | ❌     |
 
 ### Remove From Delegation Pool Action
-| data              | type              | keyed  |
-| ----------------- | ----------------- | ------ |
-| pool_contract     | address           | ✅     |
-| identifier        | felt252           | ✅     |
-| amount            | [Amount](#amount) | ❌     |
+| data          | type              | keyed |
+| ------------- | ----------------- | ----- |
+| pool_contract | address           | ✅     |
+| identifier    | felt252           | ✅     |
+| amount        | [Amount](#amount) | ❌     |
 
 ### Global Index Updated
 | data                                  | type                    | keyed |
 | ------------------------------------- | ----------------------- | ----- |
-| old_index                             | [Index](#index)         | ❌    |
-| new_index                             | [Index](#index)         | ❌    |
-| global_index_last_update_timestamp    | [TimeStamp](#timestamp) | ❌    |
-| global_index_current_update_timestamp | [TimeStamp](#timestamp) | ❌    |
+| old_index                             | [Index](#index)         | ❌     |
+| new_index                             | [Index](#index)         | ❌     |
+| global_index_last_update_timestamp    | [TimeStamp](#timestamp) | ❌     |
+| global_index_current_update_timestamp | [TimeStamp](#timestamp) | ❌     |
 
 ### Paused
 | data    | type    | keyed |
 | ------- | ------- | ----- |
-| account | address | ❌    |
+| account | address | ❌     |
 
 ### Unpaused
 | data    | type    | keyed |
 | ------- | ------- | ----- |
-| account | address | ❌    |
+| account | address | ❌     |
 
 ### Minimum Stake Changed
 | data          | type              | keyed |
 | ------------- | ----------------- | ----- |
-| old_min_stake | [Amount](#amount) | ❌    |
-| new_min_stake | [Amount](#amount) | ❌    |
+| old_min_stake | [Amount](#amount) | ❌     |
+| new_min_stake | [Amount](#amount) | ❌     |
 
 ### Exit Wait Window Changed
 | data            | type                    | keyed |
 | --------------- | ----------------------- | ----- |
-| old_exit_window | [TimeDelta](#timedelta) | ❌    |
-| new_exit_window | [TimeDelta](#timedelta) | ❌    |
+| old_exit_window | [TimeDelta](#timedelta) | ❌     |
+| new_exit_window | [TimeDelta](#timedelta) | ❌     |
 
 ### Reward Supplier Changed
 | data                | type            | keyed |
 | ------------------- | --------------- | ----- |
-| old_reward_supplier | ContractAddress | ❌    |
-| new_reward_supplier | ContractAddress | ❌    |
+| old_reward_supplier | ContractAddress | ❌     |
+| new_reward_supplier | ContractAddress | ❌     |
 
 # Delegation pool contract
 
@@ -1667,36 +1666,36 @@ Only staking contract can execute.
 ### Pool Member Balance Changed
 | data                | type              | keyed |
 | ------------------- | ----------------- | ----- |
-| pool_member         | address           | ✅    |
-| old_delegated_stake | [Amount](#amount) | ❌    |
-| new_delegated_stake | [Amount](#amount) | ❌    |
+| pool_member         | address           | ✅     |
+| old_delegated_stake | [Amount](#amount) | ❌     |
+| new_delegated_stake | [Amount](#amount) | ❌     |
 
 ### Pool Member Exit Intent
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
-| pool_member    | address           | ✅    |
-| exit_timestamp | time              | ❌    |
-| amount         | [Amount](#amount) | ❌    |
+| pool_member    | address           | ✅     |
+| exit_timestamp | time              | ❌     |
+| amount         | [Amount](#amount) | ❌     |
 
 ### Pool Member Exit Action
 | data          | type              | keyed |
 | ------------- | ----------------- | ----- |
-| pool_member   | address           | ✅    |
-| unpool_amount | [Amount](#amount) | ❌    |
+| pool_member   | address           | ✅     |
+| unpool_amount | [Amount](#amount) | ❌     |
 
 ### Final Index Set
 | data               | type    | keyed |
 | ------------------ | ------- | ----- |
-| staker_address     | address | ✅    |
-| final_staker_index | Index   | ❌    |
+| staker_address     | address | ✅     |
+| final_staker_index | Index   | ❌     |
 
 ### New Pool Member
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
-| pool_member    | address           | ✅    |
-| staker_address | address           | ✅    |
-| reward_address | address           | ❌    |
-| amount         | [Amount](#amount) | ❌    |
+| pool_member    | address           | ✅     |
+| staker_address | address           | ✅     |
+| reward_address | address           | ❌     |
+| amount         | [Amount](#amount) | ❌     |
 
 ### Delete Pool Member
 | data           | type    | keyed |
@@ -1707,23 +1706,23 @@ Only staking contract can execute.
 ### Pool Member Reward Claimed
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
-| pool_member    | address           | ✅    |
-| reward_address | address           | ✅    |
-| amount         | [Amount](#amount) | ❌    |
+| pool_member    | address           | ✅     |
+| reward_address | address           | ✅     |
+| amount         | [Amount](#amount) | ❌     |
 
 ### Pool Member Reward Address Changed
-| data           | type    | keyed |
-| -------------- | ------- | ----- |
-| pool_member    | address | ✅    |
-| new_address    | address | ❌    |
-| old_address    | address | ❌    |
+| data        | type    | keyed |
+| ----------- | ------- | ----- |
+| pool_member | address | ✅     |
+| new_address | address | ❌     |
+| old_address | address | ❌     |
 
 ### Switch Delegation Pool
 | data                | type              | keyed |
 | ------------------- | ----------------- | ----- |
-| pool_member         | address           | ✅    |
-| new_delegation_pool | address           | ✅    |
-| amount              | [Amount](#amount) | ❌    |
+| pool_member         | address           | ✅     |
+| new_delegation_pool | address           | ✅     |
+| amount              | [Amount](#amount) | ❌     |
 
 # L2 Reward supplier contract
 
@@ -1841,8 +1840,8 @@ variable is set to 0.
 ### Mint Request
 | data         | type              | keyed |
 | ------------ | ----------------- | ----- |
-| total_amount | [Amount](#amount) | ❌    |
-| num_msgs     | u128              | ❌    |
+| total_amount | [Amount](#amount) | ❌     |
+| num_msgs     | u128              | ❌     |
 
 # Minting Curve Contract
 
@@ -1881,53 +1880,53 @@ Only token admin.
 ### Total Supply Changed
 | data             | type              | keyed |
 | ---------------- | ----------------- | ----- |
-| old_total_supply | [Amount](#amount) | ❌    |
-| new_total_supply | [Amount](#amount) | ❌    |
+| old_total_supply | [Amount](#amount) | ❌     |
+| new_total_supply | [Amount](#amount) | ❌     |
 
 ### Minting Cap Changed
 | data  | type                    | keyed |
 | ----- | ----------------------- | ----- |
-| old_c | [Inflation](#inflation) | ❌    |
-| new_c | [Inflation](#inflation) | ❌    |
+| old_c | [Inflation](#inflation) | ❌     |
+| new_c | [Inflation](#inflation) | ❌     |
 
-# Work Contract
+# Attestation Contract
 
 ## Functions
-### work
+### attest
 ```rust
-fn work(ref self: ContractState, work_info: WorkInfo) 
+fn attest(ref self: ContractState, attest_info: AttestInfo) 
 ```
 #### description <!-- omit from toc -->
-Validates the work of a staker and call staking [update_rewards_from_work_contract](#update_rewards_from_work_contract).
+Validates the attestation of a staker and call staking [update_rewards_from_attestation_contract](#update_rewards_from_attestation_contract).
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
-1. Validate the work.
-2. [update_rewards_from_work_contract](#update_rewards_from_work_contract).
+1. Validate the attestation.
+2. [update_rewards_from_attestation_contract](#update_rewards_from_attestation_contract).
 
 #### access control <!-- omit from toc -->
 Any address can execute.
 
-### is_work_done_in_curr_epoch
+### is_attestation_done_in_curr_epoch
 ```rust
-fn is_work_done_in_curr_epoch(self: @TContractState, address: ContractAddress) -> bool;
+fn is_attestation_done_in_curr_epoch(self: @TContractState, staker_address: ContractAddress) -> bool;
 ```
 
 #### description <!-- omit from toc -->
-Returns true if work is done for this `address` in current epoch, else returns false.
+Returns true if attestation is done for this `staker_address` in current epoch, else returns false.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Any address can execute.
 
-### get_last_epoch_work_done
+### get_last_epoch_attestation_done
 ```rust
-fn get_last_epoch_work_done(self: @TContractState, address: ContractAddress) -> Epoch;
+fn get_last_epoch_attestation_done(self: @TContractState, staker_address: ContractAddress) -> Epoch;
 ```
 
 #### description <!-- omit from toc -->
-Returns the last epoch that `address` finished his job.
+Returns the last epoch that `staker_address` finished his job.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
@@ -2102,10 +2101,10 @@ Any address can execute.
 | l1_pending_requested_amount | [Amount](#amount)       |
 
 ### UndelegateIntentKey
-| name          | type      |
-| ------------- | --------- |
-| pool_contract | address   |
-| identifier    | felt252   |
+| name          | type    |
+| ------------- | ------- |
+| pool_contract | address |
+| identifier    | felt252 |
 
 ### UndelegateIntentValue
 | name        | type                    |
@@ -2114,14 +2113,14 @@ Any address can execute.
 | amount      | [Amount](#amount)       |
 
 ### TimeStamp
-| name    | type  |
-| ------- | ----- |
-| seconds | u64   |
+| name    | type |
+| ------- | ---- |
+| seconds | u64  |
 
 ### TimeDelta
-| name    | type  |
-| ------- | ----- |
-| seconds | u64   |
+| name    | type |
+| ------- | ---- |
+| seconds | u64  |
 
 # Type aliases
 ### Amount

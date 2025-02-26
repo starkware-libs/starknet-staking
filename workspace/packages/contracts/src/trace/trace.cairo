@@ -18,6 +18,12 @@ struct Checkpoint {
     value: u128,
 }
 
+pub impl CheckpointIntoPair of Into<Checkpoint, (u64, u128)> {
+    fn into(self: Checkpoint) -> (u64, u128) {
+        (self.key, self.value)
+    }
+}
+
 #[generate_trait]
 pub impl TraceImpl of TraceTrait {
     /// Retrieves the most recent checkpoint from the trace structure.
@@ -40,7 +46,7 @@ pub impl TraceImpl of TraceTrait {
             return Result::Err(TraceErrors::EMPTY_TRACE);
         }
         let checkpoint = checkpoints[pos - 1].read();
-        Result::Ok((checkpoint.key, checkpoint.value))
+        Result::Ok(checkpoint.into())
     }
 
     /// Returns the total number of checkpoints.
@@ -79,7 +85,7 @@ pub impl MutableTraceImpl of MutableTraceTrait {
             return Result::Err(TraceErrors::EMPTY_TRACE);
         }
         let checkpoint = checkpoints[pos - 1].read();
-        Result::Ok((checkpoint.key, checkpoint.value))
+        Result::Ok(checkpoint.into())
     }
 
     /// Returns the total number of checkpoints.
