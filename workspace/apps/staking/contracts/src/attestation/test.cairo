@@ -1,6 +1,11 @@
+use contracts_commons::components::replaceability::interface::{
+    IReplaceableDispatcher, IReplaceableDispatcherTrait,
+};
+use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use contracts_commons::errors::Describable;
 use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
+use staking::attestation::attestation::Attestation;
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{
     AttestInfo, IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
@@ -146,4 +151,43 @@ fn test_get_last_epoch_attestation_done_assertions() {
     let result = attestation_safe_dispatcher
         .get_last_epoch_attestation_done(address: staker_address);
     assert_panic_with_error(:result, expected_error: Error::NO_ATTEST_DONE.describe());
+}
+
+
+#[test]
+fn test_constructor() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut state = Attestation::contract_state_for_testing();
+    Attestation::constructor(
+        ref state,
+        staking_contract: cfg.test_info.staking_contract,
+        governance_admin: cfg.test_info.governance_admin,
+    );
+    assert_eq!(state.staking_dispatcher.read().contract_address, cfg.test_info.staking_contract);
+}
+
+#[test]
+fn test_contract_admin_role() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+
+    // Assert the correct governance admins is set.
+    let attestation_roles_dispatcher = IRolesDispatcher {
+        contract_address: cfg.test_info.attestation_contract,
+    };
+    assert!(
+        attestation_roles_dispatcher.is_governance_admin(account: cfg.test_info.governance_admin),
+    );
+}
+
+#[test]
+fn test_contract_upgrade_delay() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+
+    // Assert the upgrade delay is properly set.
+    let attestation_replaceable_dispatcher = IReplaceableDispatcher {
+        contract_address: cfg.test_info.attestation_contract,
+    };
+    assert_eq!(attestation_replaceable_dispatcher.get_upgrade_delay(), 0);
 }

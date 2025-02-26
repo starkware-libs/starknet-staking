@@ -418,6 +418,7 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
 pub(crate) fn deploy_attestation_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     cfg.test_info.staking_contract.serialize(ref calldata);
+    cfg.test_info.governance_admin.serialize(ref calldata);
     let attestation_contract = snforge_std::declare("Attestation").unwrap().contract_class();
     let (attestation_contract_address, _) = attestation_contract.deploy(@calldata).unwrap();
     attestation_contract_address
