@@ -418,6 +418,7 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
 pub(crate) fn deploy_attestation_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     cfg.test_info.staking_contract.serialize(ref calldata);
+    cfg.test_info.governance_admin.serialize(ref calldata);
     let attestation_contract = snforge_std::declare("Attestation").unwrap().contract_class();
     let (attestation_contract_address, _) = attestation_contract.deploy(@calldata).unwrap();
     attestation_contract_address
@@ -487,7 +488,7 @@ pub(crate) fn stake_for_testing(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info._deprecated_amount_own,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -505,7 +506,7 @@ pub(crate) fn stake_for_testing_using_dispatcher(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info._deprecated_amount_own,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -522,7 +523,7 @@ pub(crate) fn stake_from_zero_address(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info._deprecated_amount_own,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -908,7 +909,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
-            amount_own: STAKE_AMOUNT,
+            _deprecated_amount_own: STAKE_AMOUNT,
             index: Zero::zero(),
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(

@@ -134,10 +134,13 @@ fn test_stake() {
     // Check that the staker's tokens were transferred to the Staking contract.
     assert_eq!(
         token_dispatcher.balance_of(staker_address),
-        (cfg.test_info.staker_initial_balance - cfg.staker_info.amount_own).into(),
+        (cfg.test_info.staker_initial_balance - cfg.staker_info._deprecated_amount_own).into(),
     );
-    assert_eq!(token_dispatcher.balance_of(staking_contract), cfg.staker_info.amount_own.into());
-    assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own);
+    assert_eq!(
+        token_dispatcher.balance_of(staking_contract),
+        cfg.staker_info._deprecated_amount_own.into(),
+    );
+    assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info._deprecated_amount_own);
     // Validate StakeBalanceChanged and NewStaker event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 2, message: "stake");
@@ -146,14 +149,14 @@ fn test_stake() {
         :staker_address,
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
-        self_stake: cfg.staker_info.amount_own,
+        self_stake: cfg.staker_info._deprecated_amount_own,
     );
     assert_stake_balance_changed_event(
         spied_event: events[1],
         :staker_address,
         old_self_stake: Zero::zero(),
         old_delegated_stake: Zero::zero(),
-        new_self_stake: cfg.staker_info.amount_own,
+        new_self_stake: cfg.staker_info._deprecated_amount_own,
         new_delegated_stake: Zero::zero(),
     );
 }
@@ -176,8 +179,10 @@ fn test_update_rewards() {
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     let mut staker_info = cfg.staker_info;
     let interest = state.global_index.read() - staker_info.index;
-    state.update_rewards(ref :staker_info, staker_amount_own: staker_info.amount_own);
-    let staker_rewards = compute_rewards_rounded_down(amount: staker_info.amount_own, :interest);
+    state.update_rewards(ref :staker_info, staker_amount_own: staker_info._deprecated_amount_own);
+    let staker_rewards = compute_rewards_rounded_down(
+        amount: staker_info._deprecated_amount_own, :interest,
+    );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: staker_info.get_pool_info().amount, :interest,
     );
@@ -299,7 +304,7 @@ fn test_update_rewards_unstake_intent() {
     let mut staker_info_expected = cfg.staker_info.clone();
     staker_info_expected.unstake_time = Option::Some(Timestamp { seconds: 1 });
     let mut staker_info = staker_info_expected;
-    state.update_rewards(ref :staker_info, staker_amount_own: staker_info.amount_own);
+    state.update_rewards(ref :staker_info, staker_amount_own: staker_info._deprecated_amount_own);
     assert_eq!(staker_info, staker_info_expected);
 }
 
@@ -321,7 +326,7 @@ fn test_stake_from_same_staker_address() {
         .stake(
             reward_address: cfg.staker_info.reward_address,
             operational_address: cfg.staker_info.operational_address,
-            amount: cfg.staker_info.amount_own,
+            amount: cfg.staker_info._deprecated_amount_own,
             pool_enabled: cfg.test_info.pool_enabled,
             commission: cfg.staker_info.get_pool_info().commission,
         );
@@ -346,7 +351,7 @@ fn test_stake_with_same_operational_address() {
         .stake(
             reward_address: cfg.staker_info.reward_address,
             operational_address: cfg.staker_info.operational_address,
-            amount: cfg.staker_info.amount_own,
+            amount: cfg.staker_info._deprecated_amount_own,
             pool_enabled: cfg.test_info.pool_enabled,
             commission: cfg.staker_info.get_pool_info().commission,
         );
@@ -356,7 +361,7 @@ fn test_stake_with_same_operational_address() {
 #[should_panic(expected: "Amount is less than min stake - try again with enough funds")]
 fn test_stake_with_less_than_min_stake() {
     let mut cfg: StakingInitConfig = Default::default();
-    cfg.staker_info.amount_own = cfg.staking_contract_info.min_stake - 1;
+    cfg.staker_info._deprecated_amount_own = cfg.staking_contract_info.min_stake - 1;
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
@@ -460,7 +465,7 @@ fn test_increase_stake_from_staker_address() {
     // Set the same staker address.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
-    let increase_amount = cfg.staker_info.amount_own;
+    let increase_amount = cfg.staker_info._deprecated_amount_own;
     let expected_staker_info = StakerInfo {
         amount_own: staker_info_before.amount_own + increase_amount, ..staker_info_before,
     };
@@ -554,7 +559,7 @@ fn test_increase_stake_from_reward_address() {
     );
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
-    let increase_amount = cfg.staker_info.amount_own;
+    let increase_amount = cfg.staker_info._deprecated_amount_own;
     let mut expected_staker_info = staker_info_before;
     expected_staker_info.amount_own += increase_amount;
     let caller_address = cfg.staker_info.reward_address;
@@ -587,7 +592,9 @@ fn test_increase_stake_staker_address_not_exist() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
-        .increase_stake(staker_address: NON_STAKER_ADDRESS(), amount: cfg.staker_info.amount_own);
+        .increase_stake(
+            staker_address: NON_STAKER_ADDRESS(), amount: cfg.staker_info._deprecated_amount_own,
+        );
 }
 
 #[test]
@@ -603,7 +610,8 @@ fn test_increase_stake_unstake_in_progress() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.increase_stake(:staker_address, amount: cfg.staker_info.amount_own);
+    staking_dispatcher
+        .increase_stake(:staker_address, amount: cfg.staker_info._deprecated_amount_own);
 }
 
 #[test]
@@ -633,7 +641,8 @@ fn test_increase_stake_caller_cannot_increase() {
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher
         .increase_stake(
-            staker_address: cfg.test_info.staker_address, amount: cfg.staker_info.amount_own,
+            staker_address: cfg.test_info.staker_address,
+            amount: cfg.staker_info._deprecated_amount_own,
         );
 }
 
@@ -703,7 +712,7 @@ fn test_claim_rewards() {
         serialized_value: array![(cfg.staker_info.index + BASE_VALUE).into()].span(),
     );
     // Funds reward supplier and set his unclaimed rewards.
-    let expected_reward = cfg.staker_info.amount_own;
+    let expected_reward = cfg.staker_info._deprecated_amount_own;
     cheat_reward_for_reward_supplier(:cfg, :reward_supplier, :expected_reward, :token_address);
     // Claim rewards and validate the results.
     let mut spy = snforge_std::spy_events();
@@ -782,12 +791,12 @@ fn test_unstake_intent() {
         spied_event: events[0],
         :staker_address,
         exit_timestamp: expected_time,
-        amount: cfg.staker_info.amount_own,
+        amount: cfg.staker_info._deprecated_amount_own,
     );
     assert_stake_balance_changed_event(
         spied_event: events[1],
         :staker_address,
-        old_self_stake: cfg.staker_info.amount_own,
+        old_self_stake: cfg.staker_info._deprecated_amount_own,
         old_delegated_stake: 0,
         new_self_stake: 0,
         new_delegated_stake: 0,
@@ -856,7 +865,7 @@ fn test_unstake_action() {
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
-    assert_eq!(staker_amount, cfg.staker_info.amount_own);
+    assert_eq!(staker_amount, cfg.staker_info._deprecated_amount_own);
     let actual_staker_info: VersionedInternalStakerInfo = load_staker_info_from_map(
         staker_address: staker_address, contract: staking_contract,
     );
@@ -928,12 +937,12 @@ fn test_get_total_stake() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     assert_eq!(staking_dispatcher.get_total_stake(), Zero::zero());
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info.amount_own);
+    assert_eq!(staking_dispatcher.get_total_stake(), cfg.staker_info._deprecated_amount_own);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     // Set the same staker address.
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let amount = cfg.staker_info.amount_own;
+    let amount = cfg.staker_info._deprecated_amount_own;
     staking_dispatcher.increase_stake(:staker_address, :amount);
     assert_eq!(
         staking_dispatcher.get_total_stake(),
@@ -979,14 +988,14 @@ fn test_stake_pool_enabled() {
         :staker_address,
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
-        self_stake: cfg.staker_info.amount_own,
+        self_stake: cfg.staker_info._deprecated_amount_own,
     );
     assert_stake_balance_changed_event(
         spied_event: events[2],
         :staker_address,
         old_self_stake: Zero::zero(),
         old_delegated_stake: Zero::zero(),
-        new_self_stake: cfg.staker_info.amount_own,
+        new_self_stake: cfg.staker_info._deprecated_amount_own,
         new_delegated_stake: Zero::zero(),
     );
 }
@@ -1039,7 +1048,7 @@ fn test_add_stake_from_pool() {
     // Validate staker info.
     let interest = global_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards_rounded_down(
-        amount: cfg.staker_info.amount_own, :interest,
+        amount: cfg.staker_info._deprecated_amount_own, :interest,
     );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: Zero::zero(), :interest,
@@ -1084,9 +1093,9 @@ fn test_add_stake_from_pool() {
     assert_stake_balance_changed_event(
         spied_event: events[1],
         staker_address: cfg.test_info.staker_address,
-        old_self_stake: cfg.staker_info.amount_own,
+        old_self_stake: cfg.staker_info._deprecated_amount_own,
         old_delegated_stake: Zero::zero(),
-        new_self_stake: cfg.staker_info.amount_own,
+        new_self_stake: cfg.staker_info._deprecated_amount_own,
         new_delegated_stake: pool_amount,
     );
 }
@@ -1182,7 +1191,7 @@ fn test_remove_from_delegation_pool_intent() {
     // Validate that the staker info is updated.
     let interest = global_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards_rounded_down(
-        amount: cfg.staker_info.amount_own, :interest,
+        amount: cfg.staker_info._deprecated_amount_own, :interest,
     );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: initial_delegated_stake, :interest,
@@ -1246,9 +1255,9 @@ fn test_remove_from_delegation_pool_intent() {
     assert_stake_balance_changed_event(
         spied_event: events[1],
         staker_address: cfg.test_info.staker_address,
-        old_self_stake: cfg.staker_info.amount_own,
+        old_self_stake: cfg.staker_info._deprecated_amount_own,
         old_delegated_stake: initial_delegated_stake,
-        new_self_stake: cfg.staker_info.amount_own,
+        new_self_stake: cfg.staker_info._deprecated_amount_own,
         new_delegated_stake: cur_delegated_stake,
     );
 
@@ -1275,7 +1284,7 @@ fn test_remove_from_delegation_pool_intent() {
     // Validate that the staker info is updated.
     let interest = global_index - expected_staker_info.index;
     let staker_rewards = compute_rewards_rounded_down(
-        amount: expected_staker_info.amount_own, :interest,
+        amount: expected_staker_info._deprecated_amount_own, :interest,
     );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: cur_delegated_stake, :interest,
@@ -1342,9 +1351,9 @@ fn test_remove_from_delegation_pool_intent() {
     assert_stake_balance_changed_event(
         spied_event: events[3],
         staker_address: cfg.test_info.staker_address,
-        old_self_stake: cfg.staker_info.amount_own,
+        old_self_stake: cfg.staker_info._deprecated_amount_own,
         old_delegated_stake: prev_delegated_stake,
-        new_self_stake: expected_staker_info.amount_own,
+        new_self_stake: expected_staker_info._deprecated_amount_own,
         new_delegated_stake: cur_delegated_stake,
     );
 }
@@ -1580,7 +1589,7 @@ fn test_switch_staking_delegation_pool() {
         );
     let interest = updated_index - cfg.staker_info.index;
     let staker_rewards = compute_rewards_rounded_down(
-        amount: cfg.staker_info.amount_own, :interest,
+        amount: cfg.staker_info._deprecated_amount_own, :interest,
     );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: cfg.staker_info.get_pool_info().amount, :interest,
@@ -1802,7 +1811,7 @@ fn test_update_global_index_if_needed() {
         .initial_supply
         .try_into()
         .expect('intial_supply not fit in Amount');
-    cfg.staker_info.amount_own = cfg.test_info.staker_initial_balance;
+    cfg.staker_info._deprecated_amount_own = cfg.test_info.staker_initial_balance;
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let global_index_last_update_timestamp = Time::now();
@@ -2723,7 +2732,7 @@ fn test_versioned_internal_staker_info_wrap_latest() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        amount_own: Zero::zero(),
+        _deprecated_amount_own: Zero::zero(),
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
@@ -2813,7 +2822,7 @@ fn test_compute_unpool_time() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        amount_own: Zero::zero(),
+        _deprecated_amount_own: Zero::zero(),
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
@@ -2829,7 +2838,7 @@ fn test_compute_unpool_time() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::Some(unstake_time),
-        amount_own: Zero::zero(),
+        _deprecated_amount_own: Zero::zero(),
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
@@ -2858,7 +2867,7 @@ fn test_get_pool_info() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        amount_own: Zero::zero(),
+        _deprecated_amount_own: Zero::zero(),
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::Some(staker_pool_info),
@@ -2873,7 +2882,7 @@ fn test_get_pool_info_panic() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        amount_own: Zero::zero(),
+        _deprecated_amount_own: Zero::zero(),
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
@@ -2887,7 +2896,7 @@ fn test_internal_staker_info_latest_into_staker_info() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        amount_own: Zero::zero(),
+        _deprecated_amount_own: Zero::zero(),
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
@@ -2986,7 +2995,7 @@ fn test_staker_info_into_internal_staker_info_v1() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        amount_own: Zero::zero(),
+        _deprecated_amount_own: Zero::zero(),
         index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,

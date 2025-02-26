@@ -129,7 +129,8 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) reward_address: ContractAddress,
     pub(crate) operational_address: ContractAddress,
     pub(crate) unstake_time: Option<Timestamp>,
-    pub(crate) amount_own: Amount,
+    // **Note**: This field was used in V0 and is replaced by `staker_balance_trace` in V1.
+    pub(crate) _deprecated_amount_own: Amount,
     pub(crate) index: Index,
     pub(crate) unclaimed_rewards_own: Amount,
     pub(crate) pool_info: Option<StakerPoolInfo>,
@@ -176,7 +177,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 reward_address,
                 operational_address,
                 unstake_time,
-                amount_own,
+                _deprecated_amount_own: amount_own,
                 index,
                 unclaimed_rewards_own,
                 pool_info,
@@ -209,9 +210,9 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
 
     fn get_total_amount(self: @InternalStakerInfoLatest) -> Amount {
         if let Option::Some(pool_info) = *self.pool_info {
-            return pool_info.amount + *self.amount_own;
+            return pool_info.amount + *self._deprecated_amount_own;
         }
-        (*self.amount_own)
+        (*self._deprecated_amount_own)
     }
 }
 
@@ -222,7 +223,7 @@ impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, St
             reward_address: self.reward_address,
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
-            amount_own: self.amount_own,
+            amount_own: self._deprecated_amount_own,
             index: self.index,
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,

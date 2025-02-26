@@ -1,9 +1,12 @@
 #[starknet::contract]
 pub mod Attestation {
+    use RolesComponent::InternalTrait as RolesInternalTrait;
     use contracts_commons::components::replaceability::ReplaceabilityComponent;
+    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use contracts_commons::components::roles::RolesComponent;
     use contracts_commons::errors::OptionAuxTrait;
     use contracts_commons::interfaces::identity::Identity;
+    use core::num::traits::Zero;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
@@ -55,9 +58,14 @@ pub mod Attestation {
         src5Event: SRC5Component::Event,
     }
 
-    // TODO: initialize roles?
     #[constructor]
-    pub fn constructor(ref self: ContractState, staking_contract: ContractAddress) {
+    pub fn constructor(
+        ref self: ContractState,
+        staking_contract: ContractAddress,
+        governance_admin: ContractAddress,
+    ) {
+        self.roles.initialize(:governance_admin);
+        self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
     }
 
