@@ -9,6 +9,8 @@ use staking::staking::interface::{
 use staking::types::{Amount, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
 
+const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
+
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct UndelegateIntentKey {
     pub pool_contract: ContractAddress,
@@ -80,16 +82,17 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
         ((current_block - *self.starting_block) / (*self.length).into()) + *self.starting_epoch
     }
 
-    fn update(ref self: EpochInfo, epoch_length: u16) {
+    fn update(ref self: EpochInfo, block_duration: u16, epoch_length: u16) {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
+        assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
         self.starting_epoch = self.next_epoch();
         self.starting_block = self.calculate_next_epoch_starting_block();
         self.length = epoch_length;
+        self.block_duration = block_duration;
     }
 
     fn epochs_in_year(self: @EpochInfo) -> u64 {
-        let seconds_in_year = 365 * 24 * 60 * 60;
-        let blocks_in_year = seconds_in_year / (*self.block_duration).into();
+        let blocks_in_year = SECONDS_IN_YEAR / (*self.block_duration).into();
         blocks_in_year / (*self.length).into()
     }
 }

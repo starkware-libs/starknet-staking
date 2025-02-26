@@ -304,6 +304,7 @@ pub(crate) mod RolesComponent {
             let un_initialized = access_comp.get_role_admin(role: GOVERNANCE_ADMIN).is_zero();
             assert!(un_initialized, "{}", AccessErrors::ALREADY_INITIALIZED);
             access_comp.initializer();
+            assert!(governance_admin.is_non_zero(), "{}", AccessErrors::ZERO_ADDRESS_GOV_ADMIN);
             access_comp._grant_role(role: GOVERNANCE_ADMIN, account: governance_admin);
             access_comp.set_role_admin(role: APP_GOVERNOR, admin_role: APP_ROLE_ADMIN);
             access_comp.set_role_admin(role: APP_ROLE_ADMIN, admin_role: GOVERNANCE_ADMIN);

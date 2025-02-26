@@ -33,12 +33,14 @@ pub impl TraceImpl of TraceTrait {
     /// # Note
     /// This will return the last inserted checkpoint that maintains the structure's
     /// invariant of non-decreasing keys.
-    fn latest(self: StoragePath<Trace>) -> (u64, u128) {
+    fn latest(self: StoragePath<Trace>) -> Result<(u64, u128), TraceErrors> {
         let checkpoints = self.checkpoints;
         let pos = checkpoints.len();
-        assert!(pos > 0, "{}", TraceErrors::EMPTY_TRACE);
+        if pos == 0 {
+            return Result::Err(TraceErrors::EMPTY_TRACE);
+        }
         let checkpoint = checkpoints[pos - 1].read();
-        (checkpoint.key, checkpoint.value)
+        Result::Ok((checkpoint.key, checkpoint.value))
     }
 
     /// Returns the total number of checkpoints.
@@ -69,15 +71,15 @@ pub impl MutableTraceImpl of MutableTraceTrait {
     }
 
     /// Returns the value in the most recent checkpoint, or zero if there are no checkpoints.
-    fn latest(self: StoragePath<Mutable<Trace>>) -> u128 {
+    fn latest(self: StoragePath<Mutable<Trace>>) -> Result<(u64, u128), TraceErrors> {
         let checkpoints = self.checkpoints;
         let pos = checkpoints.len();
 
         if pos == 0 {
-            0
-        } else {
-            checkpoints[pos - 1].read().value
+            return Result::Err(TraceErrors::EMPTY_TRACE);
         }
+        let checkpoint = checkpoints[pos - 1].read();
+        Result::Ok((checkpoint.key, checkpoint.value))
     }
 
     /// Returns the total number of checkpoints.

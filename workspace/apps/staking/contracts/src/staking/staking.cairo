@@ -24,10 +24,6 @@ pub mod Staking {
     use staking::reward_supplier::interface::{
         IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     };
-    use staking::staker_balance_trace::trace::{
-        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
-        StakerBalanceTrait,
-    };
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         ConfigEvents, Events, IStaking, IStakingConfig, IStakingMigration, IStakingPause,
@@ -37,6 +33,10 @@ pub mod Staking {
         EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait,
         UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
         UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
+    };
+    use staking::staking::staker_balance_trace::trace::{
+        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
+        StakerBalanceTrait,
     };
     use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest, Version};
     use staking::utils::{
@@ -590,11 +590,10 @@ pub mod Staking {
 
         fn get_total_stake(self: @ContractState) -> Amount {
             let total_stake_trace = self.total_stake_trace.deref();
-            if total_stake_trace.length().is_zero() {
-                return Zero::zero();
+            match total_stake_trace.latest() {
+                Result::Ok((_, total_stake)) => total_stake,
+                Result::Err(_) => 0,
             }
-            let (_, total_stake) = total_stake_trace.latest();
-            total_stake
         }
 
         fn get_total_stake_at_current_epoch(self: @ContractState) -> Amount {
@@ -1088,11 +1087,11 @@ pub mod Staking {
                 );
         }
 
-        fn set_epoch_length(ref self: ContractState, epoch_length: u16) {
+        fn set_epoch_info(ref self: ContractState, block_duration: u16, epoch_length: u16) {
             // TODO: roles
             self.roles.only_token_admin();
             let mut epoch_info = self.epoch_info.read();
-            epoch_info.update(:epoch_length);
+            epoch_info.update(:block_duration, :epoch_length);
             self.epoch_info.write(epoch_info);
             // TODO: emit event
         }

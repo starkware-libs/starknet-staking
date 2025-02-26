@@ -1,6 +1,5 @@
-use core::num::traits::Zero;
-use staking::staker_balance_trace::mock::{IMockTrace, MockTrace};
-use staking::staker_balance_trace::trace::{StakerBalanceTrait};
+use staking::staking::staker_balance_trace::mock::{IMockTrace, MockTrace};
+use staking::staking::staker_balance_trace::trace::{StakerBalanceTrait};
 
 fn CONTRACT_STATE() -> MockTrace::ContractState {
     MockTrace::contract_state_for_testing()

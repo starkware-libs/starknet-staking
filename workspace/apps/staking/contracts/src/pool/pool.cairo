@@ -591,12 +591,9 @@ pub mod Pool {
                 "{}",
                 GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
-            let latest = {
-                if self.rewards_info.deref().is_empty() {
-                    0
-                } else {
-                    self.rewards_info.deref().latest()
-                }
+            let latest = match self.rewards_info.deref().latest() {
+                Result::Ok((_, latest)) => latest,
+                Result::Err(_) => 0,
             };
             self
                 .rewards_info

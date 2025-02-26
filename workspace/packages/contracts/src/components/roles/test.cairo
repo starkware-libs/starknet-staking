@@ -16,6 +16,12 @@ use roles::{event_test_utils, interface};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 
 #[test]
+#[should_panic(expected: "INVALID_ZERO_ADDRESS_GOV_ADMIN")]
+fn test_initialize_with_zero_address() {
+    test_utils::deploy_mock_contract_with_zero();
+}
+
+#[test]
 fn test_register_app_role_admin() {
     // Deploy mock contract.
     let contract_address = test_utils::deploy_mock_contract();

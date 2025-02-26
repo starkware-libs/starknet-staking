@@ -82,7 +82,8 @@ fn test_latest_mutable() {
     mock_trace.insert(100, 1000);
     mock_trace.insert(200, 2000);
 
-    let latest = mock_trace.latest_mutable();
+    let (key, latest) = mock_trace.latest_mutable();
+    assert_eq!(key, 200);
     assert_eq!(latest, 2000);
 }
 

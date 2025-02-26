@@ -4,7 +4,7 @@ pub trait IMockTrace<TContractState> {
     fn latest(self: @TContractState) -> (u64, u128);
     fn length(self: @TContractState) -> u64;
     fn upper_lookup(self: @TContractState, key: u64) -> u128;
-    fn latest_mutable(ref self: TContractState) -> u128;
+    fn latest_mutable(ref self: TContractState) -> (u64, u128);
     fn length_mutable(ref self: TContractState) -> u64;
     fn is_empty(ref self: TContractState) -> bool;
 }
@@ -25,7 +25,10 @@ pub mod MockTrace {
         }
 
         fn latest(self: @ContractState) -> (u64, u128) {
-            self.trace.deref().latest()
+            match self.trace.deref().latest() {
+                Result::Ok((key, value)) => (key, value),
+                Result::Err(e) => panic!("{}", e),
+            }
         }
 
         fn length(self: @ContractState) -> u64 {
@@ -36,8 +39,11 @@ pub mod MockTrace {
             self.trace.deref().upper_lookup(:key)
         }
 
-        fn latest_mutable(ref self: ContractState) -> u128 {
-            self.trace.deref().latest()
+        fn latest_mutable(ref self: ContractState) -> (u64, u128) {
+            match self.trace.deref().latest() {
+                Result::Ok((key, value)) => (key, value),
+                Result::Err(e) => panic!("{}", e),
+            }
         }
 
         fn length_mutable(ref self: ContractState) -> u64 {
