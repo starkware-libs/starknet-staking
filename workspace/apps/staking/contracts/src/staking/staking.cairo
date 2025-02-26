@@ -511,7 +511,7 @@ pub mod Staking {
         // If the staker does not exist, it panics.
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let mut staker_info = self.internal_staker_info(:staker_address);
-            staker_info.amount_own = self.get_amount_own(:staker_address);
+            staker_info._deprecated_amount_own = self.get_amount_own(:staker_address);
             self
                 .update_rewards(
                     ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
@@ -1525,7 +1525,7 @@ pub mod Staking {
                 let (_, staker_balance) = trace.latest();
                 staker_balance.amount_own()
             } else {
-                self.internal_staker_info(:staker_address).amount_own
+                self.internal_staker_info(:staker_address)._deprecated_amount_own
             }
         }
 

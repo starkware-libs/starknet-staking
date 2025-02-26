@@ -97,7 +97,7 @@ fn test_update_rewards() {
     let updated_index: Index = cfg.staker_info.index + BASE_VALUE;
     let mut pool_member_info = InternalPoolMemberInfoLatest {
         reward_address: cfg.staker_info.reward_address,
-        amount: cfg.staker_info.amount_own,
+        amount: cfg.staker_info._deprecated_amount_own,
         index: cfg.staker_info.index,
         unclaimed_rewards: cfg.staker_info.get_pool_info().unclaimed_rewards,
         commission: cfg.staker_info.get_pool_info().commission,
@@ -199,7 +199,9 @@ fn test_enter_delegation_pool() {
     // Check that all the pool amount was transferred to the staking contract.
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = token_dispatcher.balance_of(staking_contract);
-    assert_eq!(balance, cfg.staker_info.amount_own.into() + cfg.pool_member_info.amount.into());
+    assert_eq!(
+        balance, cfg.staker_info._deprecated_amount_own.into() + cfg.pool_member_info.amount.into(),
+    );
     let balance = token_dispatcher.balance_of(pool_contract);
     assert_eq!(balance, 0);
     // Check that the staker info was updated correctly.
@@ -208,7 +210,7 @@ fn test_enter_delegation_pool() {
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
         unstake_time: Option::None,
-        amount_own: cfg.staker_info.amount_own,
+        amount_own: cfg.staker_info._deprecated_amount_own,
         index: cfg.staker_info.index,
         unclaimed_rewards_own: 0,
         pool_info: Option::Some(

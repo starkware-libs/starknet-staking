@@ -488,7 +488,7 @@ pub(crate) fn stake_for_testing(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info._deprecated_amount_own,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -506,7 +506,7 @@ pub(crate) fn stake_for_testing_using_dispatcher(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info._deprecated_amount_own,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -523,7 +523,7 @@ pub(crate) fn stake_from_zero_address(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info.amount_own,
+            cfg.staker_info._deprecated_amount_own,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -909,7 +909,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
-            amount_own: STAKE_AMOUNT,
+            _deprecated_amount_own: STAKE_AMOUNT,
             index: Zero::zero(),
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(
