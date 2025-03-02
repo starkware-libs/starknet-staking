@@ -568,7 +568,7 @@ pub mod Staking {
                 );
             staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
-            self.update_pool_rewards(:staker_info, :pool_rewards);
+            self.update_pool_rewards(:staker_address, :staker_info, :pool_rewards);
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
@@ -1145,6 +1145,7 @@ pub mod Staking {
         /// Sends the rewards to `staker_address`'s pool contract.
         /// Important note:
         /// After calling this function, one must write the updated staker_info to the storage.
+        // TODO: remove this function once old rewards mechanism is removed.
         fn send_rewards_to_delegation_pool(
             ref self: ContractState,
             staker_address: ContractAddress,
@@ -1159,6 +1160,26 @@ pub mod Staking {
             pool_info.unclaimed_rewards = Zero::zero();
             staker_info.pool_info = Option::Some(pool_info);
 
+            self
+                .emit(
+                    Events::RewardsSuppliedToDelegationPool {
+                        staker_address, pool_address, amount,
+                    },
+                );
+        }
+
+        /// Sends the rewards to `staker_address`'s pool contract.
+        /// Important note:
+        /// After calling this function, one must write the updated staker_info to the storage.
+        // TODO: Delete V1 from the function name when the old one is removed.
+        fn send_rewards_to_delegation_pool_V1(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            pool_address: ContractAddress,
+            amount: Amount,
+            token_dispatcher: IERC20Dispatcher,
+        ) {
+            self.send_rewards(reward_address: pool_address, :amount, :token_dispatcher);
             self
                 .emit(
                     Events::RewardsSuppliedToDelegationPool {
@@ -1452,11 +1473,28 @@ pub mod Staking {
             own_rewards + commission_rewards
         }
 
-        // TODO: implement
         // TODO: emit events
         fn update_pool_rewards(
-            ref self: ContractState, staker_info: InternalStakerInfoLatest, pool_rewards: Amount,
-        ) {}
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            staker_info: InternalStakerInfoLatest,
+            pool_rewards: Amount,
+        ) {
+            if let Option::Some(mut pool_info) = staker_info.pool_info {
+                let pool_contract = pool_info.pool_contract;
+                let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+                let pool_balance = self.get_pool_balance_curr_epoch(:staker_address);
+                pool_dispatcher
+                    .update_rewards_from_staking_contract(rewards: pool_rewards, :pool_balance);
+                self
+                    .send_rewards_to_delegation_pool_V1(
+                        :staker_address,
+                        pool_address: pool_contract,
+                        amount: pool_rewards,
+                        token_dispatcher: self.token_dispatcher.read(),
+                    );
+            }
+        }
 
         fn update_reward_supplier(ref self: ContractState, rewards: Amount) {
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
@@ -1531,6 +1569,25 @@ pub mod Staking {
                 staker_balance.total_amount()
             } else {
                 self.internal_staker_info(:staker_address).get_total_amount()
+            }
+        }
+
+        fn get_pool_balance_curr_epoch(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> Amount {
+            self.get_staker_balance_curr_epoch(:staker_address).pool_amount()
+        }
+
+        fn get_staker_balance_curr_epoch(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> StakerBalance {
+            let trace = self.staker_balance_trace.entry(key: staker_address);
+            let (epoch, staker_balance) = trace.latest();
+            if epoch == self.get_current_epoch() {
+                staker_balance
+            } else {
+                let (_, staker_balance) = trace.penultimate();
+                staker_balance
             }
         }
 

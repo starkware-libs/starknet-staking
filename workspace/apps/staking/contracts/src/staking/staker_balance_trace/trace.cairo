@@ -96,6 +96,14 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
         (checkpoint.key, checkpoint.value)
     }
 
+    fn penultimate(self: StoragePath<StakerBalanceTrace>) -> (Epoch, StakerBalance) {
+        let checkpoints = self.checkpoints;
+        let pos = checkpoints.len();
+        assert!(pos > 1, "{}", TraceErrors::EMPTY_TRACE);
+        let checkpoint = checkpoints[pos - 2].read();
+        (checkpoint.key, checkpoint.value)
+    }
+
     /// Returns the total number of checkpoints.
     fn length(self: StoragePath<StakerBalanceTrace>) -> u64 {
         self.checkpoints.len()
