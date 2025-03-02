@@ -175,7 +175,7 @@ pub trait IStakingConfig<TContractState> {
 
 pub mod Events {
     use contracts_commons::types::time::time::Timestamp;
-    use staking::types::{Amount, Commission, Index};
+    use staking::types::{Amount, Commission};
     use starknet::ContractAddress;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakeBalanceChanged {
@@ -253,14 +253,6 @@ pub mod Events {
         pub staker_address: ContractAddress,
         pub reward_address: ContractAddress,
         pub amount: Amount,
-    }
-
-    #[derive(Debug, Drop, PartialEq, starknet::Event)]
-    pub struct GlobalIndexUpdated {
-        pub old_index: Index,
-        pub new_index: Index,
-        pub global_index_last_update_timestamp: Timestamp,
-        pub global_index_current_update_timestamp: Timestamp,
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]

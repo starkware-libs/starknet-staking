@@ -132,7 +132,6 @@ pub mod Staking {
         StakerExitIntent: Events::StakerExitIntent,
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
         OperationalAddressChanged: Events::OperationalAddressChanged,
-        GlobalIndexUpdated: Events::GlobalIndexUpdated,
         NewStaker: Events::NewStaker,
         CommissionChanged: Events::CommissionChanged,
         StakerRewardClaimed: Events::StakerRewardClaimed,
@@ -1342,20 +1341,8 @@ pub mod Staking {
             self.global_index.write(new_index);
 
             // Update global index timestamp.
-            let global_index_last_update_timestamp = self.global_index_last_update_timestamp.read();
             let global_index_current_update_timestamp = Time::now();
             self.global_index_last_update_timestamp.write(global_index_current_update_timestamp);
-
-            // Emit event.
-            self
-                .emit(
-                    Events::GlobalIndexUpdated {
-                        old_index,
-                        new_index,
-                        global_index_last_update_timestamp,
-                        global_index_current_update_timestamp,
-                    },
-                );
         }
 
         /// Wrap initial operations required in any public staking function.

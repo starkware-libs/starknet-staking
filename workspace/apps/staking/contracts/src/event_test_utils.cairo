@@ -7,7 +7,7 @@ use staking::reward_supplier::interface::Events as RewardSupplierEvents;
 use staking::staking::interface::{
     ConfigEvents as StakingConfigEvents, Events as StakingEvents, PauseEvents as StakingPauseEvents,
 };
-use staking::types::{Amount, Commission, Index, Inflation};
+use staking::types::{Amount, Commission, Inflation};
 use starknet::ContractAddress;
 
 pub(crate) fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
@@ -166,27 +166,6 @@ pub(crate) fn assert_commission_changed_event(
         :expected_event,
         expected_event_selector: @selector!("CommissionChanged"),
         expected_event_name: "CommissionChanged",
-    );
-}
-
-pub(crate) fn assert_global_index_updated_event(
-    spied_event: @(ContractAddress, Event),
-    old_index: Index,
-    new_index: Index,
-    global_index_last_update_timestamp: Timestamp,
-    global_index_current_update_timestamp: Timestamp,
-) {
-    let expected_event = StakingEvents::GlobalIndexUpdated {
-        old_index,
-        new_index,
-        global_index_last_update_timestamp,
-        global_index_current_update_timestamp,
-    };
-    assert_expected_event_emitted(
-        :spied_event,
-        :expected_event,
-        expected_event_selector: @selector!("GlobalIndexUpdated"),
-        expected_event_name: "GlobalIndexUpdated",
     );
 }
 

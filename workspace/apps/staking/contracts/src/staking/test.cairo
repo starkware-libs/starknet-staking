@@ -3,8 +3,7 @@ use constants::{
     BLOCK_DURATION, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_LENGTH,
     EPOCH_STARTING_BLOCK, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
     OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
-    POOL_CONTRACT_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS,
-    STAKER_UNCLAIMED_REWARDS,
+    POOL_CONTRACT_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
 };
 use contracts_commons::components::replaceability::interface::{EICData, ImplementationData};
 use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
@@ -20,9 +19,8 @@ use event_test_utils::{
     assert_change_delegation_pool_intent_event, assert_change_operational_address_event,
     assert_commission_changed_event, assert_declare_operational_address_event,
     assert_delete_staker_event, assert_exit_wait_window_changed_event,
-    assert_global_index_updated_event, assert_minimum_stake_changed_event,
-    assert_new_delegation_pool_event, assert_new_staker_event, assert_number_of_events,
-    assert_remove_from_delegation_pool_action_event,
+    assert_minimum_stake_changed_event, assert_new_delegation_pool_event, assert_new_staker_event,
+    assert_number_of_events, assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
     assert_rewards_supplied_to_delegation_pool_event, assert_stake_balance_changed_event,
     assert_staker_exit_intent_event, assert_staker_reward_address_change_event,
@@ -891,26 +889,26 @@ fn test_unstake_action() {
     );
     assert!(actual_staker_info.is_none());
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
-    // GlobalIndexUpdated, StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
+    // StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
     // events.
-    assert_number_of_events(actual: events.len(), expected: 4, message: "unstake_action");
+    assert_number_of_events(actual: events.len(), expected: 3, message: "unstake_action");
     // Validate StakerRewardClaimed event.
     assert_staker_reward_claimed_event(
-        spied_event: events[1],
+        spied_event: events[0],
         :staker_address,
         reward_address: cfg.staker_info.reward_address,
         amount: unclaimed_rewards_own,
     );
     // Validate RewardsSuppliedToDelegationPool event.
     assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[2],
+        spied_event: events[1],
         staker_address: cfg.test_info.staker_address,
         pool_address: pool_contract,
         amount: Zero::zero(),
     );
     // Validate DeleteStaker event.
     assert_delete_staker_event(
-        spied_event: events[3],
+        spied_event: events[2],
         :staker_address,
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
@@ -1100,18 +1098,11 @@ fn test_add_stake_from_pool() {
     );
     assert_eq!(loaded_staker_info_after, expected_staker_info);
 
-    // Validate `GlobalIndexUpdated` and `StakeBalanceChanged` events.
+    // Validate `StakeBalanceChanged` event.
     let events = spy.get_events().emitted_by(staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 2, message: "add_stake_from_pool");
-    assert_global_index_updated_event(
-        spied_event: events[0],
-        old_index: cfg.staking_contract_info.global_index,
-        new_index: global_index,
-        global_index_last_update_timestamp: Zero::zero(),
-        global_index_current_update_timestamp: Time::now(),
-    );
+    assert_number_of_events(actual: events.len(), expected: 1, message: "add_stake_from_pool");
     assert_stake_balance_changed_event(
-        spied_event: events[1],
+        spied_event: events[0],
         staker_address: cfg.test_info.staker_address,
         old_self_stake: cfg.staker_info._deprecated_amount_own,
         old_delegated_stake: Zero::zero(),
@@ -1493,13 +1484,13 @@ fn test_remove_from_delegation_pool_action() {
     assert_eq!(
         pool_balance_after_action, pool_balance_before_action + cfg.pool_member_info.amount.into(),
     );
-    // Validate RemoveFromDelegationPoolAction event, the second one is UpdateGlobalIndex.
+    // Validate RemoveFromDelegationPoolAction event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 2, message: "remove_from_delegation_pool_action",
+        actual: events.len(), expected: 1, message: "remove_from_delegation_pool_action",
     );
     assert_remove_from_delegation_pool_action_event(
-        spied_event: events[1],
+        spied_event: events[0],
         :pool_contract,
         identifier: cfg.test_info.pool_member_address.into(),
         amount: cfg.pool_member_info.amount,
