@@ -645,54 +645,8 @@ fn test_change_reward_address_staker_not_exist() {
     staking_dispatcher.change_reward_address(reward_address: DUMMY_ADDRESS());
 }
 
-
 #[test]
 fn test_claim_rewards() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let staking_contract = cfg.test_info.staking_contract;
-    let reward_supplier = cfg.staking_contract_info.reward_supplier;
-
-    // Stake.
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    // Update index in staking contract.
-    snforge_std::store(
-        target: staking_contract,
-        storage_address: selector!("global_index"),
-        serialized_value: array![(cfg.staker_info.index + BASE_VALUE).into()].span(),
-    );
-    // Funds reward supplier and set his unclaimed rewards.
-    let expected_reward = cfg.staker_info._deprecated_amount_own;
-    cheat_reward_for_reward_supplier(:cfg, :reward_supplier, :expected_reward, :token_address);
-    // Claim rewards and validate the results.
-    let mut spy = snforge_std::spy_events();
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let staker_address = cfg.test_info.staker_address;
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let reward = staking_dispatcher.claim_rewards(:staker_address);
-    assert_eq!(reward, expected_reward);
-
-    let new_staker_info = staking_dispatcher.staker_info(:staker_address);
-    assert_eq!(new_staker_info.unclaimed_rewards_own, 0);
-
-    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let balance = token_dispatcher.balance_of(cfg.staker_info.reward_address);
-    assert_eq!(balance, reward.into());
-    // Validate the single StakerRewardClaimed event.
-    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 1, message: "claim_rewards");
-    assert_staker_reward_claimed_event(
-        spied_event: events[0],
-        :staker_address,
-        reward_address: cfg.staker_info.reward_address,
-        amount: reward,
-    );
-}
-
-// TODO: Rename to `test_claim_rewards` when the old `test_claim_rewards` is removed.
-#[test]
-fn test_claim_rewards_with_new_rewards_mechanism() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
