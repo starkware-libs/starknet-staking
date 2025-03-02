@@ -1,6 +1,6 @@
 use contracts_commons::types::time::time::Timestamp;
 use staking::pool::interface::{IPoolDispatcherTrait, IPoolLibraryDispatcher, PoolMemberInfo};
-use staking::types::{Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest};
+use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest, VecIndex};
 use starknet::{ClassHash, ContractAddress};
 
 #[derive(Debug, Drop, Serde, Copy)]
@@ -30,7 +30,7 @@ pub(crate) struct InternalPoolMemberInfoV1 {
     pub(crate) commission: Commission,
     pub(crate) unpool_amount: Amount,
     pub(crate) unpool_time: Option<Timestamp>,
-    pub(crate) last_claimed_epoch: Epoch,
+    pub(crate) last_claimed_idx_in_member_vec: VecIndex,
 }
 
 // **Note**: This struct should be updated in the next version of Internal Pool Member Info.
@@ -68,7 +68,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
         commission: Commission,
         unpool_amount: Amount,
         unpool_time: Option<Timestamp>,
-        last_claimed_epoch: Epoch,
+        last_claimed_idx_in_member_vec: VecIndex,
     ) -> VInternalPoolMemberInfo nopanic {
         VInternalPoolMemberInfo::V1(
             InternalPoolMemberInfoV1 {
@@ -79,7 +79,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
                 commission,
                 unpool_amount,
                 unpool_time,
-                last_claimed_epoch,
+                last_claimed_idx_in_member_vec,
             },
         )
     }
@@ -202,7 +202,7 @@ mod internal_pool_member_info_latest_tests {
             commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
-            last_claimed_epoch: Zero::zero(),
+            last_claimed_idx_in_member_vec: Zero::zero(),
         };
         let pool_member_info: PoolMemberInfo = internal_pool_member_info.into();
         let expected_pool_member_info = PoolMemberInfo {

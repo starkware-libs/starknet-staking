@@ -161,7 +161,7 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<
             commission: self.commission,
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
-            last_claimed_epoch: Zero::zero(),
+            last_claimed_idx_in_member_vec: Zero::zero(),
         }
     }
 }

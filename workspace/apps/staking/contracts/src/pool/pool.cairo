@@ -177,7 +177,7 @@ pub mod Pool {
                         commission: self.commission.read(),
                         unpool_amount: Zero::zero(),
                         unpool_time: Option::None,
-                        last_claimed_epoch: self.get_current_epoch(),
+                        last_claimed_idx_in_member_vec: Zero::zero(),
                     ),
                 );
             self.set_next_epoch_balance(:pool_member, :amount);
@@ -460,7 +460,7 @@ pub mod Pool {
                         commission: self.commission.read(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
-                        last_claimed_epoch: self.get_current_epoch(),
+                        last_claimed_idx_in_member_vec: Zero::zero(),
                     };
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);

@@ -103,7 +103,7 @@ fn test_update_rewards() {
         commission: cfg.staker_info.get_pool_info().commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
-        last_claimed_epoch: cfg.pool_member_info.last_claimed_epoch,
+        last_claimed_idx_in_member_vec: cfg.pool_member_info.last_claimed_idx_in_member_vec,
     };
     let interest = updated_index - pool_member_info.index;
     let rewards_including_commission = compute_rewards_rounded_down(
@@ -1450,7 +1450,7 @@ fn test_v_internal_pool_member_info_wrap_latest() {
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
-        last_claimed_epoch: Zero::zero(),
+        last_claimed_idx_in_member_vec: Zero::zero(),
     };
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::wrap_latest(
         internal_pool_member_info_latest,
@@ -1470,7 +1470,7 @@ fn test_v_internal_pool_member_info_new_latest() {
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
-        last_claimed_epoch: Zero::zero(),
+        last_claimed_idx_in_member_vec: Zero::zero(),
     );
     let expected_v_internal_pool_member_info = VInternalPoolMemberInfo::V1(
         InternalPoolMemberInfoLatest {
@@ -1481,7 +1481,7 @@ fn test_v_internal_pool_member_info_new_latest() {
             commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
-            last_claimed_epoch: Zero::zero(),
+            last_claimed_idx_in_member_vec: Zero::zero(),
         },
     );
     assert_eq!(v_internal_pool_member_info, expected_v_internal_pool_member_info);
@@ -1507,7 +1507,7 @@ fn test_v_internal_pool_member_info_is_none() {
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
-        last_claimed_epoch: Zero::zero(),
+        last_claimed_idx_in_member_vec: Zero::zero(),
     );
     assert!(v_none.is_none());
     assert!(!v_v0.is_none());
@@ -1534,7 +1534,7 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
-        last_claimed_epoch: Zero::zero(),
+        last_claimed_idx_in_member_vec: Zero::zero(),
     };
     assert_eq!(internal_pool_mamber_info, expected_internal_pool_member_info);
 }
