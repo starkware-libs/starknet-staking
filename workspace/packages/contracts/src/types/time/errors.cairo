@@ -12,7 +12,6 @@ pub(crate) enum TimeErrors {
 }
 
 impl DescribableError of Describable<TimeErrors> {
-    #[inline(always)]
     fn describe(self: @TimeErrors) -> ByteArray {
         match self {
             TimeErrors::TIMEDELTA_ADD_OVERFLOW => "TimeDelta_add Overflow",

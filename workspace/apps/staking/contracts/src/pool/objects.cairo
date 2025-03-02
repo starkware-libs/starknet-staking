@@ -96,7 +96,6 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
 pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfo of Into<
     InternalPoolMemberInfoLatest, PoolMemberInfo,
 > {
-    #[inline(always)]
     fn into(self: InternalPoolMemberInfoLatest) -> PoolMemberInfo {
         PoolMemberInfo {
             reward_address: self.reward_address,

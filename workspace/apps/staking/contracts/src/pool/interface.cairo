@@ -152,7 +152,6 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<
 > {
     /// This function is used during convertion from `InternalPoolMemberInfo` to
     /// `InternalPoolMemberInfoV1`.
-    #[inline(always)]
     fn into(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address: self.reward_address,

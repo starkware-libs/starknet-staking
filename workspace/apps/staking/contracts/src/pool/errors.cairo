@@ -16,7 +16,6 @@ pub(crate) enum Error {
 }
 
 impl DescribableError of Describable<Error> {
-    #[inline(always)]
     fn describe(self: @Error) -> ByteArray {
         match self {
             Error::POOL_MEMBER_DOES_NOT_EXIST => "Pool member does not exist",

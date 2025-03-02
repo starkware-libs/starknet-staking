@@ -22,11 +22,11 @@ pub(crate) impl PoolMemberBalanceZero of core::num::traits::Zero<PoolMemberBalan
     fn zero() -> PoolMemberBalance {
         PoolMemberBalance { balance: Zero::zero(), rewards_info_idx: Zero::zero() }
     }
-    #[inline(always)]
+
     fn is_zero(self: @PoolMemberBalance) -> bool {
         *self == Self::zero()
     }
-    #[inline(always)]
+
     fn is_non_zero(self: @PoolMemberBalance) -> bool {
         !self.is_zero()
     }

@@ -1468,10 +1468,10 @@ pub mod Staking {
         // TODO: implement
         // TODO: emit events
         fn update_pool_rewards(
-            self: @ContractState, staker_info: InternalStakerInfoLatest, pool_rewards: Amount,
+            ref self: ContractState, staker_info: InternalStakerInfoLatest, pool_rewards: Amount,
         ) {}
 
-        fn update_reward_supplier(self: @ContractState, rewards: Amount) {
+        fn update_reward_supplier(ref self: ContractState, rewards: Amount) {
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             reward_supplier_dispatcher.update_unclaimed_rewards_from_staking_contract(:rewards);
         }

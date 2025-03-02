@@ -12,7 +12,6 @@ pub(crate) enum ReplaceErrors {
 }
 
 impl DescribableError of Describable<ReplaceErrors> {
-    #[inline(always)]
     fn describe(self: @ReplaceErrors) -> ByteArray {
         match self {
             ReplaceErrors::ALREADY_INITIALIZED => "ALREADY_INITIALIZED",

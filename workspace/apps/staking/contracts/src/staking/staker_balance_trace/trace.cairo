@@ -22,11 +22,11 @@ pub(crate) impl StakerBalanceZero of core::num::traits::Zero<StakerBalance> {
     fn zero() -> StakerBalance {
         StakerBalance { amount_own: Zero::zero(), total_amount: Zero::zero() }
     }
-    #[inline(always)]
+
     fn is_zero(self: @StakerBalance) -> bool {
         *self == Self::zero()
     }
-    #[inline(always)]
+
     fn is_non_zero(self: @StakerBalance) -> bool {
         !self.is_zero()
     }

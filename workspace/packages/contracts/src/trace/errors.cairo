@@ -7,7 +7,6 @@ pub enum TraceErrors {
 }
 
 impl DescribableError of Describable<TraceErrors> {
-    #[inline(always)]
     fn describe(self: @TraceErrors) -> ByteArray {
         match self {
             TraceErrors::UNORDERED_INSERTION => "Unordered insertion",

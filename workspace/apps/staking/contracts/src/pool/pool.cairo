@@ -799,7 +799,6 @@ pub mod Pool {
             self.get_current_epoch() + 1
         }
 
-        // TODO: consider #[inline(always)]
         fn get_amount(self: @ContractState, pool_member: ContractAddress) -> Amount {
             let (_, pool_member_balance) = self
                 .pool_member_epoch_balance

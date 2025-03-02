@@ -21,7 +21,6 @@ pub(crate) enum AccessErrors {
 }
 
 impl DescribableError of Describable<AccessErrors> {
-    #[inline(always)]
     fn describe(self: @AccessErrors) -> ByteArray {
         match self {
             AccessErrors::INVALID_MINTER => "INVALID_MINTER_ADDRESS",

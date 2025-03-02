@@ -30,7 +30,6 @@ pub(crate) enum GenericError {
 }
 
 impl DescribableGenericError of Describable<GenericError> {
-    #[inline(always)]
     fn describe(self: @GenericError) -> ByteArray {
         match self {
             GenericError::Erc20Error(err) => err.describe(),
@@ -64,7 +63,6 @@ pub(crate) enum Erc20Error {
 }
 
 impl DescribableErc20Error of Describable<Erc20Error> {
-    #[inline(always)]
     fn describe(self: @Erc20Error) -> ByteArray {
         match self {
             Erc20Error::INSUFFICIENT_BALANCE => "Insufficient ERC20 balance",
