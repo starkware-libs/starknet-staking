@@ -30,7 +30,6 @@ pub(crate) enum Error {
 }
 
 impl DescribableError of Describable<Error> {
-    #[inline(always)]
     fn describe(self: @Error) -> ByteArray {
         match self {
             Error::OPERATIONAL_NOT_ELIGIBLE => "Operational address had not been declared by staker",

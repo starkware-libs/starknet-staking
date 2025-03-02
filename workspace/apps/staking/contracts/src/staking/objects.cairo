@@ -29,11 +29,11 @@ pub(crate) impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateI
     fn zero() -> UndelegateIntentValue {
         UndelegateIntentValue { unpool_time: Zero::zero(), amount: Zero::zero() }
     }
-    #[inline(always)]
+
     fn is_zero(self: @UndelegateIntentValue) -> bool {
         *self == Self::zero()
     }
-    #[inline(always)]
+
     fn is_non_zero(self: @UndelegateIntentValue) -> bool {
         !self.is_zero()
     }
@@ -217,7 +217,6 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
 }
 
 impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, StakerInfo> {
-    #[inline(always)]
     fn into(self: InternalStakerInfoLatest) -> StakerInfo nopanic {
         StakerInfo {
             reward_address: self.reward_address,

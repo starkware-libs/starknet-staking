@@ -9,7 +9,6 @@ pub(crate) enum Error {
 }
 
 impl DescribableError of Describable<Error> {
-    #[inline(always)]
     fn describe(self: @Error) -> ByteArray {
         match self {
             Error::UNAUTHORIZED_MESSAGE_SENDER => "Unauthorized message sender",

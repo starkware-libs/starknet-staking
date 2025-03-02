@@ -6,7 +6,6 @@ pub(crate) enum Error {
 }
 
 impl DescribableError of Describable<Error> {
-    #[inline(always)]
     fn describe(self: @Error) -> ByteArray {
         match self {
             Error::NO_ATTEST_DONE => "No attestation is done for this staker",

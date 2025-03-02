@@ -372,7 +372,7 @@ pub struct StakerInfo {
 
 pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalStakerInfoV1> {
     /// This function is used during convertion from `InternalStakerInfo` to `InternalStakerInfoV1`.
-    #[inline(always)]
+
     fn into(self: StakerInfo) -> InternalStakerInfoV1 nopanic {
         InternalStakerInfoV1 {
             reward_address: self.reward_address,

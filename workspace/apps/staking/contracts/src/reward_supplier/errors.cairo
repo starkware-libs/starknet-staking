@@ -7,7 +7,6 @@ pub(crate) enum Error {
 }
 
 impl DescribableError of Describable<Error> {
-    #[inline(always)]
     fn describe(self: @Error) -> ByteArray {
         match self {
             Error::ON_RECEIVE_NOT_FROM_STARKGATE => "Only StarkGate can call on_receive",
