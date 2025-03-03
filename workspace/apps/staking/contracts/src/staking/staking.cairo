@@ -995,6 +995,7 @@ pub mod Staking {
                 );
         }
 
+        // TODO: remove this function and update specs.
         fn claim_delegation_pool_rewards(
             ref self: ContractState, staker_address: ContractAddress,
         ) -> Index {
@@ -1008,6 +1009,30 @@ pub mod Staking {
                 .update_rewards(
                     ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
                 );
+
+            // Send rewards to pool contract, and commit to storage.
+            // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
+            // is performed only after that.
+            let updated_index = staker_info.index;
+            let token_dispatcher = self.token_dispatcher.read();
+            self
+                .send_rewards_to_delegation_pool(
+                    :staker_address, ref :staker_info, :token_dispatcher,
+                );
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
+
+            updated_index
+        }
+
+        fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
+            // Prerequisites and asserts.
+            self.assert_caller_is_not_zero();
+            self.update_global_index_if_needed();
+            let mut staker_info = self.internal_staker_info(:staker_address);
+            let pool_address = staker_info.get_pool_info().pool_contract;
+            assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
 
             // Send rewards to pool contract, and commit to storage.
             // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage

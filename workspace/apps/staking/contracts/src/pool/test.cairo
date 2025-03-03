@@ -1610,6 +1610,7 @@ fn test_pool_eic() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let upgrade_governor = cfg.test_info.upgrade_governor;
 
@@ -1619,12 +1620,12 @@ fn test_pool_eic() {
         governance_admin: cfg.test_info.pool_contract_admin,
     );
 
-    let final_index: Index = cfg.staking_contract_info.global_index;
+    let final_index: Index = staking_dispatcher.contract_parameters().global_index;
 
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_pool_eic_contract(),
-        eic_init_data: [MAINNET_POOL_CLASS_HASH_V0().into(), final_index.into()].span(),
+        eic_init_data: [MAINNET_POOL_CLASS_HASH_V0().into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -1655,7 +1656,7 @@ fn test_pool_eic() {
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_2')]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_1')]
 fn test_pool_eic_with_wrong_number_of_data_elements() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

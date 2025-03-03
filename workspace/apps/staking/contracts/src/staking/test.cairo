@@ -384,6 +384,43 @@ fn test_claim_delegation_pool_rewards() {
     );
 }
 
+// **Note**: The migration tests will be part of the flow tests.
+// TODO: Test the rewards part here for latest internal staker info, i.e test the rewards are sent
+// to the pool and the right index is returned.
+#[ignore]
+#[test]
+fn test_pool_migration() {}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_pool_migration_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+
+    // Should catch STAKER_NOT_EXISTS.
+    let result = staking_pool_safe_dispatcher.pool_migration(:staker_address);
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+
+    // Should catch MISSING_POOL_CONTRACT.
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let result = staking_pool_safe_dispatcher.pool_migration(:staker_address);
+    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.describe());
+
+    // Should catch CALLER_IS_NOT_POOL_CONTRACT.
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let commission = cfg.staker_info.get_pool_info().commission;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_open_for_delegation(:commission);
+    let result = staking_pool_safe_dispatcher.pool_migration(:staker_address);
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
+}
+
 #[test]
 fn test_contract_parameters() {
     let mut cfg: StakingInitConfig = Default::default();
