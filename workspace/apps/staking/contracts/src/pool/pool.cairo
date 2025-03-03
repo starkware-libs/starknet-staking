@@ -541,9 +541,8 @@ pub mod Pool {
             self.update_rewards(ref :pool_member_info, :updated_index);
             pool_member_info.commission = commission;
 
-            let new_amount = self.get_amount(:pool_member);
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
-            external_pool_member_info.amount = new_amount;
+            external_pool_member_info.amount = self.get_amount(:pool_member);
             external_pool_member_info
         }
 
