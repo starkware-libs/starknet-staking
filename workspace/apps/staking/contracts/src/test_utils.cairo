@@ -223,6 +223,7 @@ pub(crate) fn initialize_staking_state_from_cfg(
         governance_admin: cfg.test_info.governance_admin,
         prev_class_hash: cfg.staking_contract_info.prev_staking_contract_class_hash,
         epoch_info: cfg.staking_contract_info.epoch_info,
+        attestation_contract: cfg.test_info.attestation_contract,
     )
 }
 pub(crate) fn initialize_staking_state(
@@ -234,6 +235,7 @@ pub(crate) fn initialize_staking_state(
     governance_admin: ContractAddress,
     prev_class_hash: ClassHash,
     epoch_info: EpochInfo,
+    attestation_contract: ContractAddress,
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
@@ -247,6 +249,7 @@ pub(crate) fn initialize_staking_state(
         :governance_admin,
         :prev_class_hash,
         :epoch_info,
+        :attestation_contract,
     );
     state
 }
@@ -345,6 +348,7 @@ pub(crate) fn deploy_staking_contract(
     cfg.test_info.governance_admin.serialize(ref calldata);
     cfg.staking_contract_info.prev_staking_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.epoch_info.serialize(ref calldata);
+    cfg.test_info.attestation_contract.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     set_default_roles(staking_contract: staking_contract_address, :cfg);

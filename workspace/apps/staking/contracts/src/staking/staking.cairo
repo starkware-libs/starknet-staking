@@ -159,6 +159,7 @@ pub mod Staking {
         governance_admin: ContractAddress,
         prev_class_hash: ClassHash,
         epoch_info: EpochInfo,
+        attestation_contract: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
@@ -175,6 +176,7 @@ pub mod Staking {
         self.is_paused.write(false);
         self.prev_class_hash.write(0, prev_class_hash);
         self.epoch_info.write(epoch_info);
+        self.attestation_contract.write(attestation_contract);
     }
 
     #[abi(embed_v0)]
