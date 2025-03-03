@@ -1,6 +1,6 @@
 [package]
 name = "staking"
-version = "1.9.2"
+version = "1.10.0"
 edition = "2023_11"
 
 [dependencies]
