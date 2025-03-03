@@ -24,7 +24,7 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global, test_address,
 };
-use staking::constants::{BASE_VALUE, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
+use staking::constants::{C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
 use staking::errors::GenericError;
 use staking::minting_curve::interface::MintingCurveContractInfo;
 use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
@@ -752,26 +752,6 @@ pub(crate) fn cheat_reward_for_reward_supplier(
         storage_address: selector!("unclaimed_rewards"),
         serialized_value: array![expected_reward.into()].span(),
     );
-}
-
-pub(crate) fn create_rewards_for_pool_member(ref cfg: StakingInitConfig) -> Amount {
-    let index_before = cfg.pool_member_info.index;
-    cfg.pool_member_info.index += BASE_VALUE;
-    let updated_index = cfg.pool_member_info.index;
-    change_global_index(ref :cfg, index: updated_index);
-
-    let unclaimed_rewards_member = compute_unclaimed_rewards_member(
-        amount: cfg.pool_member_info.amount,
-        interest: updated_index - index_before,
-        commission: cfg.staker_info.get_pool_info().commission,
-    );
-    add_reward_for_reward_supplier(
-        :cfg,
-        reward_supplier: cfg.staking_contract_info.reward_supplier,
-        reward: unclaimed_rewards_member,
-        token_address: cfg.staking_contract_info.token_address,
-    );
-    unclaimed_rewards_member
 }
 
 fn change_global_index(ref cfg: StakingInitConfig, index: Index) {

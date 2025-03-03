@@ -166,6 +166,10 @@ pub(crate) mod Deposit {
         ) -> (ContractAddress, u64) {
             self._get_asset_info(:asset_id)
         }
+
+        fn get_deposit_grace_period(self: @ComponentState<TContractState>) -> TimeDelta {
+            self.deposit_grace_period.read()
+        }
     }
 
     #[generate_trait]

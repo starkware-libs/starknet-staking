@@ -1,5 +1,5 @@
 use contracts_commons::types::HashType;
-use contracts_commons::types::time::time::Timestamp;
+use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use core::starknet::storage_access::StorePacking;
 use starknet::ContractAddress;
 
@@ -22,6 +22,7 @@ pub trait IDeposit<TContractState> {
     );
     fn get_deposit_status(self: @TContractState, deposit_hash: HashType) -> DepositStatus;
     fn get_asset_info(self: @TContractState, asset_id: felt252) -> (ContractAddress, u64);
+    fn get_deposit_grace_period(self: @TContractState) -> TimeDelta;
 }
 
 const NOT_EXIST_CONSTANT: u64 = 0;

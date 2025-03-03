@@ -33,10 +33,7 @@ pub mod Pool {
     use staking::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
     };
-    use staking::utils::{
-        CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_up,
-        compute_global_index_diff, compute_rewards_rounded_down,
-    };
+    use staking::utils::{CheckedIERC20DispatcherTrait, compute_global_index_diff};
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
     use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
@@ -215,9 +212,7 @@ pub mod Pool {
             self.transfer_from_delegator(pool_member: caller_address, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
-            // Update the pool member's record to account for accrued rewards and increased stake,
-            // and commit record to storage.
-            self.update_index_and_update_rewards(ref :pool_member_info);
+            // Update the pool member's amount record and commit it to storage.
             let old_delegated_stake = pool_member_info.amount;
             pool_member_info.amount += amount;
             self
@@ -248,8 +243,7 @@ pub mod Pool {
             assert!(amount <= total_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
             let old_delegated_stake = pool_member_info.amount;
 
-            // Update rewards and notify the staking contract of the removal intent.
-            self.update_index_and_update_rewards(ref :pool_member_info);
+            // Notify the staking contract of the removal intent.
             let unpool_time = self.undelegate_from_staking_contract_intent(:pool_member, :amount);
 
             // Edit the pool member to reflect the removal intent, and write to storage.
@@ -343,8 +337,7 @@ pub mod Pool {
                 Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
             );
 
-            // Update index and rewards, send them to the pool member and commit to storage.
-            self.update_index_and_update_rewards(ref :pool_member_info);
+            pool_member_info.unclaimed_rewards += self.calculate_rewards(:pool_member);
             let rewards = pool_member_info.unclaimed_rewards;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
@@ -444,7 +437,6 @@ pub mod Pool {
                         "{}",
                         Error::REWARD_ADDRESS_MISMATCH,
                     );
-                    self.update_rewards(ref :pool_member_info, updated_index: index);
                     pool_member_info.amount += amount;
                     // Update the pool member's balance checkpoint.
                     self.increase_next_epoch_balance(:pool_member, :amount);
@@ -526,23 +518,9 @@ pub mod Pool {
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
 
-            // Retrieve the staker's index before calculating the rewards.
-            let updated_index = {
-                if let Option::Some(final_index) = self.final_staker_index.read() {
-                    final_index
-                } else {
-                    self.staker_info().index
-                }
-            };
-
-            // Update rewards to show the viewer the accurate pending rewards.
-            // The commission must be reversed to the original value.
-            let commission = pool_member_info.commission;
-            self.update_rewards(ref :pool_member_info, :updated_index);
-            pool_member_info.commission = commission;
-
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
             external_pool_member_info.amount = self.get_amount(:pool_member);
+            external_pool_member_info.unclaimed_rewards += self.calculate_rewards(:pool_member);
             external_pool_member_info
         }
 
@@ -662,42 +640,6 @@ pub mod Pool {
             staking_pool_dispatcher.claim_delegation_pool_rewards(self.staker_address.read())
         }
 
-        /// Calculates the rewards for a pool member.
-        ///
-        /// The caller for this function should validate that the pool member exists.
-        ///
-        /// rewards formula:
-        /// $$ rewards = (staker\_index-pooler\_index) * pooler\_amount $$
-        ///
-        /// Fields that are changed in pool_member_info:
-        /// - unclaimed_rewards
-        /// - index
-        /// - commission
-        fn update_rewards(
-            self: @ContractState,
-            ref pool_member_info: InternalPoolMemberInfoLatest,
-            updated_index: Index,
-        ) {
-            let interest: Index = updated_index - pool_member_info.index;
-            pool_member_info.index = updated_index;
-            let rewards_including_commission = compute_rewards_rounded_down(
-                amount: pool_member_info.amount, :interest,
-            );
-            let commission_amount = compute_commission_amount_rounded_up(
-                :rewards_including_commission, commission: pool_member_info.commission,
-            );
-            let rewards = rewards_including_commission - commission_amount;
-            pool_member_info.unclaimed_rewards += rewards;
-            pool_member_info.commission = self.commission.read();
-        }
-
-        fn update_index_and_update_rewards(
-            self: @ContractState, ref pool_member_info: InternalPoolMemberInfoLatest,
-        ) {
-            let updated_index = self.receive_index_and_funds_from_staker();
-            self.update_rewards(ref :pool_member_info, :updated_index)
-        }
-
         fn assert_staker_is_active(self: @ContractState) {
             assert!(self.is_staker_active(), "{}", Error::STAKER_INACTIVE);
         }
@@ -726,7 +668,7 @@ pub mod Pool {
                 )
         }
 
-        /// Sends the rewards to the `pool_member`'s reward address.
+        /// Sends the rewards to the `pool_member`'s reward address, and zeroes unclaimed_rewards.
         /// Important note:
         /// After calling this function, one must write the updated pool_member_info to the storage.
         fn send_rewards_to_member(
@@ -740,6 +682,8 @@ pub mod Pool {
 
             token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
             pool_member_info.unclaimed_rewards = Zero::zero();
+
+            // TODO: update last_claimed_idx_in_member_vec of pool member info.
 
             self.emit(Events::PoolMemberRewardClaimed { pool_member, reward_address, amount });
         }
@@ -843,6 +787,11 @@ pub mod Pool {
 
         fn rewards_info_length(self: @ContractState) -> VecIndex {
             self.rewards_info.deref().length()
+        }
+
+        /// TODO: Implement.
+        fn calculate_rewards(self: @ContractState, pool_member: ContractAddress) -> Amount {
+            Zero::zero()
         }
     }
 }
