@@ -564,7 +564,7 @@ fn flow_4_switch_member_back_and_forth_test() {
 
     // 1. Token balance virtually zero on stakers. Zero on staking contract.
     assert!(system.token.balance_of(account: system.staking.address).is_zero());
-    assert!(system.token.balance_of(account: pool_A) < 100);
+    assert!(system.token.balance_of(account: pool_A) == 0);
     assert!(system.token.balance_of(account: pool_B) < 100);
 
     // 2. Stakers and delegator balances are the staked amounts.

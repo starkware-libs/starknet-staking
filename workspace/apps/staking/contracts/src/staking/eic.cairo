@@ -19,12 +19,14 @@ mod StakingEIC {
         // Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
         // an epoch to the updated stake.
         total_stake_trace: Trace,
+        // The class hash of the delegation pool contract.
+        pool_contract_class_hash: ClassHash,
     }
 
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
-            assert(eic_init_data.len() == 4, 'EXPECTED_DATA_LENGTH_4');
+            assert(eic_init_data.len() == 5, 'EXPECTED_DATA_LENGTH_5');
             let class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             self.prev_class_hash.write(0, class_hash);
 
@@ -37,6 +39,9 @@ mod StakingEIC {
 
             let total_stake: Amount = (*eic_init_data[3]).try_into().unwrap();
             self.total_stake_trace.deref().insert(key: Zero::zero(), value: total_stake);
+
+            let pool_contract_class_hash: ClassHash = (*eic_init_data[4]).try_into().unwrap();
+            self.pool_contract_class_hash.write(pool_contract_class_hash);
         }
     }
 }

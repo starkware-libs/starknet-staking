@@ -541,9 +541,8 @@ pub mod Pool {
             self.update_rewards(ref :pool_member_info, :updated_index);
             pool_member_info.commission = commission;
 
-            let new_amount = self.get_amount(:pool_member);
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
-            external_pool_member_info.amount = new_amount;
+            external_pool_member_info.amount = self.get_amount(:pool_member);
             external_pool_member_info
         }
 
@@ -800,11 +799,21 @@ pub mod Pool {
         }
 
         fn get_amount(self: @ContractState, pool_member: ContractAddress) -> Amount {
-            let (_, pool_member_balance) = self
-                .pool_member_epoch_balance
-                .entry(pool_member)
-                .latest();
-            pool_member_balance.balance()
+            // After upgrading to V1, `pool_member_epoch_balance` remains uninitialized
+            // until the pool member's balance is modified for the first time. If initialized,
+            // return the `amount` recorded in the trace, which reflects the latest delegated
+            // amount.
+            // Otherwise, return `pool_member_info.amount`.
+            //
+            // TODO: Consider initializing `pool_member_epoch_balance` before calling `get_amount`
+            // to avoid this conditional check.
+            let trace = self.pool_member_epoch_balance.entry(key: pool_member);
+            if trace.is_initialized() {
+                let (_, pool_member_balance) = trace.latest();
+                pool_member_balance.balance()
+            } else {
+                self.internal_pool_member_info(:pool_member).amount
+            }
         }
 
         fn set_next_epoch_balance(
@@ -821,12 +830,14 @@ pub mod Pool {
         fn increase_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) {
-            let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
-            let current_balance = member_checkpoint.latest().balance();
+            let current_balance = self.get_amount(:pool_member);
             let pool_member_balance = PoolMemberBalanceTrait::new(
                 balance: current_balance + amount, rewards_info_idx: self.rewards_info_length(),
             );
-            member_checkpoint.insert(key: self.get_next_epoch(), value: pool_member_balance);
+            self
+                .pool_member_epoch_balance
+                .entry(pool_member)
+                .insert(key: self.get_next_epoch(), value: pool_member_balance);
             // TODO: Emit event?
         }
 

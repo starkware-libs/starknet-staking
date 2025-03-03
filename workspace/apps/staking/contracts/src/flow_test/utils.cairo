@@ -109,6 +109,7 @@ pub(crate) struct StakingConfig {
     pub governance_admin: ContractAddress,
     pub prev_staking_contract_class_hash: ClassHash,
     pub epoch_info: EpochInfo,
+    pub attestation_contract: ContractAddress,
     pub roles: StakingRoles,
 }
 
@@ -133,6 +134,7 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.governance_admin.serialize(ref calldata);
         self.prev_staking_contract_class_hash.serialize(ref calldata);
         self.epoch_info.serialize(ref calldata);
+        self.attestation_contract.serialize(ref calldata);
         let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
         let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
         let staking = StakingState {
@@ -522,6 +524,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
                 .staking_contract_info
                 .prev_staking_contract_class_hash,
             epoch_info: cfg.staking_contract_info.epoch_info,
+            attestation_contract: cfg.test_info.attestation_contract,
             roles: StakingRoles {
                 upgrade_governor: cfg.test_info.upgrade_governor,
                 security_admin: cfg.test_info.security_admin,
@@ -977,6 +980,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
                 BLOCK_DURATION.into(),
                 EPOCH_LENGTH.into(),
                 total_stake.into(),
+                declare_pool_contract().into(),
             ]
                 .span(),
         };

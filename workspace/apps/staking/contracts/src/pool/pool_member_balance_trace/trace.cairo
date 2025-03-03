@@ -81,6 +81,11 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
         self.checkpoints.len()
     }
 
+    /// Returns whether the trace is initialized.
+    fn is_initialized(self: StoragePath<PoolMemberBalanceTrace>) -> bool {
+        self.checkpoints.len().is_non_zero()
+    }
+
     /// Returns the value in the last (most recent) checkpoint with the key lower than or equal to
     /// the search key, or zero if there is none.
     fn upper_lookup(self: StoragePath<PoolMemberBalanceTrace>, key: Epoch) -> PoolMemberBalance {

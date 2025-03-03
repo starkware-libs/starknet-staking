@@ -435,7 +435,7 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
 
         // Assert pools' balances are low.
         assert!(system.token.balance_of(account: staker1_pool) < 100);
-        assert!(system.token.balance_of(account: staker1_second_pool) < 100);
+        assert!(system.token.balance_of(account: staker1_second_pool) == 0);
         assert!(system.token.balance_of(account: staker2_pool) < 100);
 
         // Assert all staked amounts were transferred back.
