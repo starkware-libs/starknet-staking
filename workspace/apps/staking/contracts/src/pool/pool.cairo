@@ -821,12 +821,14 @@ pub mod Pool {
         fn increase_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) {
-            let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
-            let current_balance = member_checkpoint.latest().balance();
+            let current_balance = self.get_amount(:pool_member);
             let pool_member_balance = PoolMemberBalanceTrait::new(
                 balance: current_balance + amount, rewards_info_idx: self.rewards_info_length(),
             );
-            member_checkpoint.insert(key: self.get_next_epoch(), value: pool_member_balance);
+            self
+                .pool_member_epoch_balance
+                .entry(pool_member)
+                .insert(key: self.get_next_epoch(), value: pool_member_balance);
             // TODO: Emit event?
         }
 
