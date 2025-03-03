@@ -980,6 +980,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
                 BLOCK_DURATION.into(),
                 EPOCH_LENGTH.into(),
                 total_stake.into(),
+                declare_pool_contract().into(),
             ]
                 .span(),
         };

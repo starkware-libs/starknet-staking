@@ -72,12 +72,12 @@ use starknet::{ContractAddress, Store, get_block_number};
 use test_utils::{
     StakingInitConfig, advance_epoch_global, approve,
     calculate_staker_own_rewards_include_commission, calculate_staker_total_rewards,
-    cheat_reward_for_reward_supplier, constants, declare_staking_eic_contract,
-    deploy_mock_erc20_contract, deploy_reward_supplier_contract, deploy_staking_contract,
-    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    initialize_staking_state_from_cfg, load_from_simple_map, load_staker_info_from_map,
-    stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,
-    store_to_simple_map,
+    cheat_reward_for_reward_supplier, constants, declare_pool_contract,
+    declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
+    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
+    general_contract_system_deployment, initialize_staking_state_from_cfg, load_from_simple_map,
+    load_staker_info_from_map, stake_for_testing_using_dispatcher, stake_from_zero_address,
+    stake_with_pool_enabled, store_to_simple_map,
 };
 
 #[test]
@@ -3173,7 +3173,7 @@ fn test_staking_eic() {
         eic_hash: declare_staking_eic_contract(),
         eic_init_data: [
             MAINNET_STAKING_CLASS_HASH_V0().into(), BLOCK_DURATION.into(), EPOCH_LENGTH.into(),
-            expected_total_stake.into(),
+            expected_total_stake.into(), declare_pool_contract().into(),
         ]
             .span(),
     };
@@ -3209,10 +3209,18 @@ fn test_staking_eic() {
 
     let actual_total_stake = staking_dispatcher.get_total_stake();
     assert_eq!(expected_total_stake, actual_total_stake);
+
+    let pool_contract_class_hash = *snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("pool_contract_class_hash"),
+        size: Store::<ClassHash>::size().into(),
+    )
+        .at(0);
+    assert_eq!(pool_contract_class_hash.try_into().unwrap(), declare_pool_contract());
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_4')]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_5')]
 fn test_staking_eic_with_wrong_number_of_data_elemnts() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
