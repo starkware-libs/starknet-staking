@@ -60,7 +60,6 @@
     - [Operational Address Changed](#operational-address-changed)
     - [Remove From Delegation Pool Intent](#remove-from-delegation-pool-intent)
     - [Remove From Delegation Pool Action](#remove-from-delegation-pool-action)
-    - [Global Index Updated](#global-index-updated)
     - [Paused](#paused)
     - [Unpaused](#unpaused)
     - [Minimum Stake Changed](#minimum-stake-changed)
@@ -1038,7 +1037,6 @@ Update the global index if enough time has passed since the last update.
 This function is called in every staking function that alter the state.
 Return `true` if the index has been updated.
 #### emits <!-- omit from toc -->
-1. [Global Index Updated](#global-index-updated)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 #### pre-condition <!-- omit from toc -->
@@ -1271,14 +1269,6 @@ Staking contract of latest version.
 | pool_contract | address           | ✅     |
 | identifier    | felt252           | ✅     |
 | amount        | [Amount](#amount) | ❌     |
-
-### Global Index Updated
-| data                                  | type                    | keyed |
-| ------------------------------------- | ----------------------- | ----- |
-| old_index                             | [Index](#index)         | ❌     |
-| new_index                             | [Index](#index)         | ❌     |
-| global_index_last_update_timestamp    | [TimeStamp](#timestamp) | ❌     |
-| global_index_current_update_timestamp | [TimeStamp](#timestamp) | ❌     |
 
 ### Paused
 | data    | type    | keyed |

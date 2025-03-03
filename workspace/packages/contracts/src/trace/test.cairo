@@ -76,6 +76,14 @@ fn test_upper_lookup() {
 }
 
 #[test]
+#[should_panic(expected: "Empty trace")]
+fn test_latest_mutable_empty_trace() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    let _ = mock_trace.latest();
+}
+
+#[test]
 fn test_latest_mutable() {
     let mut mock_trace = CONTRACT_STATE();
 

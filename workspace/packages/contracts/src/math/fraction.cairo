@@ -11,7 +11,7 @@ struct Fraction<N, D> {
 
 #[generate_trait]
 pub impl FractionImpl<
-    N, D, +Drop<N>, +Drop<D>, +Zero<D>, +Copy<N>, +Copy<D>,
+    N, D, +Drop<N>, +Drop<D>, +Zero<D>, +Copy<N>, +Copy<D>, +PartialOrd<D>,
 > of FractionTrait<N, D> {
     fn new<N1, D1, +Into<N1, N>, +Into<D1, D>, +Drop<D1>>(
         numerator: N1, denominator: D1,
@@ -19,7 +19,7 @@ pub impl FractionImpl<
         /// TODO : consider  reducing a fraction to its simplest form.
         let numerator = numerator.into();
         let denominator = denominator.into();
-        assert(denominator.is_non_zero(), 'Denominator must be non-zero');
+        assert(denominator > Zero::zero(), 'Denominator must be positive');
         Fraction { numerator, denominator }
     }
 
@@ -136,6 +136,7 @@ impl FractionWideMul<
     +Zero<DWideMul::Target>,
     +Copy<NWideMul::Target>,
     +Copy<DWideMul::Target>,
+    +PartialOrd<DWideMul::Target>,
     +Drop<D>,
 > of WideMul<Fraction<N, D>, Fraction<N, D>> {
     type Target = Fraction<NWideMul::Target, DWideMul::Target>;
@@ -176,6 +177,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected: 'Denominator must be positive')]
+    fn fraction_constructor_assertion() {
+        FractionTrait::<u32, i128>::new(numerator: (317_u32), denominator: -54_i128);
+    }
+
+    #[test]
     fn fraction_neg_test() {
         let f1 = FractionTraitI128U128::new(numerator: 1_u8, denominator: 2_u8);
         let f2 = -f1;
@@ -211,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected: 'Denominator must be non-zero')]
+    #[should_panic(expected: 'Denominator must be positive')]
     fn fraction_new_test_panic() {
         FractionTraitI128U128::new(numerator: 1_u8, denominator: 0_u8);
     }

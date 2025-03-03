@@ -959,12 +959,11 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     /// Upgrades the contracts in the system state with local implementations.
     fn upgrade_contracts_implementation(self: SystemState<STRKTokenState>) {
         self.staking.update_global_index_if_needed();
-        let final_index = self.staking.get_global_index();
         self.upgrade_staking_implementation();
         self.upgrade_reward_supplier_implementation();
         self.upgrade_minting_curve_implementation();
         if let Option::Some(pool) = self.pool {
-            self.upgrade_pool_implementation(:pool, :final_index);
+            self.upgrade_pool_implementation(:pool);
         }
     }
 
@@ -1016,12 +1015,10 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     }
 
     /// Upgrades the pool contract in the system state with a local implementation.
-    fn upgrade_pool_implementation(
-        self: SystemState<STRKTokenState>, pool: PoolState, final_index: Index,
-    ) {
+    fn upgrade_pool_implementation(self: SystemState<STRKTokenState>, pool: PoolState) {
         let eic_data = EICData {
             eic_hash: declare_pool_eic_contract(),
-            eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into(), final_index.into()].span(),
+            eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into()].span(),
         };
         let implementation_data = ImplementationData {
             impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,

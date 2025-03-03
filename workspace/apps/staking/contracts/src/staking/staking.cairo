@@ -132,7 +132,6 @@ pub mod Staking {
         StakerExitIntent: Events::StakerExitIntent,
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
         OperationalAddressChanged: Events::OperationalAddressChanged,
-        GlobalIndexUpdated: Events::GlobalIndexUpdated,
         NewStaker: Events::NewStaker,
         CommissionChanged: Events::CommissionChanged,
         StakerRewardClaimed: Events::StakerRewardClaimed,
@@ -569,7 +568,7 @@ pub mod Staking {
                 );
             staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
-            self.update_pool_rewards(:staker_info, :pool_rewards);
+            self.update_pool_rewards(:staker_address, :staker_info, :pool_rewards);
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
@@ -996,6 +995,7 @@ pub mod Staking {
                 );
         }
 
+        // TODO: remove this function and update specs.
         fn claim_delegation_pool_rewards(
             ref self: ContractState, staker_address: ContractAddress,
         ) -> Index {
@@ -1009,6 +1009,30 @@ pub mod Staking {
                 .update_rewards(
                     ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
                 );
+
+            // Send rewards to pool contract, and commit to storage.
+            // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
+            // is performed only after that.
+            let updated_index = staker_info.index;
+            let token_dispatcher = self.token_dispatcher.read();
+            self
+                .send_rewards_to_delegation_pool(
+                    :staker_address, ref :staker_info, :token_dispatcher,
+                );
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
+
+            updated_index
+        }
+
+        fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
+            // Prerequisites and asserts.
+            self.assert_caller_is_not_zero();
+            self.update_global_index_if_needed();
+            let mut staker_info = self.internal_staker_info(:staker_address);
+            let pool_address = staker_info.get_pool_info().pool_contract;
+            assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
 
             // Send rewards to pool contract, and commit to storage.
             // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
@@ -1146,6 +1170,7 @@ pub mod Staking {
         /// Sends the rewards to `staker_address`'s pool contract.
         /// Important note:
         /// After calling this function, one must write the updated staker_info to the storage.
+        // TODO: remove this function once old rewards mechanism is removed.
         fn send_rewards_to_delegation_pool(
             ref self: ContractState,
             staker_address: ContractAddress,
@@ -1160,6 +1185,26 @@ pub mod Staking {
             pool_info.unclaimed_rewards = Zero::zero();
             staker_info.pool_info = Option::Some(pool_info);
 
+            self
+                .emit(
+                    Events::RewardsSuppliedToDelegationPool {
+                        staker_address, pool_address, amount,
+                    },
+                );
+        }
+
+        /// Sends the rewards to `staker_address`'s pool contract.
+        /// Important note:
+        /// After calling this function, one must write the updated staker_info to the storage.
+        // TODO: Delete V1 from the function name when the old one is removed.
+        fn send_rewards_to_delegation_pool_V1(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            pool_address: ContractAddress,
+            amount: Amount,
+            token_dispatcher: IERC20Dispatcher,
+        ) {
+            self.send_rewards(reward_address: pool_address, :amount, :token_dispatcher);
             self
                 .emit(
                     Events::RewardsSuppliedToDelegationPool {
@@ -1342,20 +1387,8 @@ pub mod Staking {
             self.global_index.write(new_index);
 
             // Update global index timestamp.
-            let global_index_last_update_timestamp = self.global_index_last_update_timestamp.read();
             let global_index_current_update_timestamp = Time::now();
             self.global_index_last_update_timestamp.write(global_index_current_update_timestamp);
-
-            // Emit event.
-            self
-                .emit(
-                    Events::GlobalIndexUpdated {
-                        old_index,
-                        new_index,
-                        global_index_last_update_timestamp,
-                        global_index_current_update_timestamp,
-                    },
-                );
         }
 
         /// Wrap initial operations required in any public staking function.
@@ -1465,11 +1498,28 @@ pub mod Staking {
             own_rewards + commission_rewards
         }
 
-        // TODO: implement
         // TODO: emit events
         fn update_pool_rewards(
-            ref self: ContractState, staker_info: InternalStakerInfoLatest, pool_rewards: Amount,
-        ) {}
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            staker_info: InternalStakerInfoLatest,
+            pool_rewards: Amount,
+        ) {
+            if let Option::Some(mut pool_info) = staker_info.pool_info {
+                let pool_contract = pool_info.pool_contract;
+                let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+                let pool_balance = self.get_pool_balance_curr_epoch(:staker_address);
+                pool_dispatcher
+                    .update_rewards_from_staking_contract(rewards: pool_rewards, :pool_balance);
+                self
+                    .send_rewards_to_delegation_pool_V1(
+                        :staker_address,
+                        pool_address: pool_contract,
+                        amount: pool_rewards,
+                        token_dispatcher: self.token_dispatcher.read(),
+                    );
+            }
+        }
 
         fn update_reward_supplier(ref self: ContractState, rewards: Amount) {
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
@@ -1544,6 +1594,25 @@ pub mod Staking {
                 staker_balance.total_amount()
             } else {
                 self.internal_staker_info(:staker_address).get_total_amount()
+            }
+        }
+
+        fn get_pool_balance_curr_epoch(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> Amount {
+            self.get_staker_balance_curr_epoch(:staker_address).pool_amount()
+        }
+
+        fn get_staker_balance_curr_epoch(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> StakerBalance {
+            let trace = self.staker_balance_trace.entry(key: staker_address);
+            let (epoch, staker_balance) = trace.latest();
+            if epoch == self.get_current_epoch() {
+                staker_balance
+            } else {
+                let (_, staker_balance) = trace.penultimate();
+                staker_balance
             }
         }
 

@@ -103,7 +103,7 @@ fn test_update_rewards() {
         commission: cfg.staker_info.get_pool_info().commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
-        last_claimed_epoch: cfg.pool_member_info.last_claimed_epoch,
+        last_claimed_idx_in_member_vec: cfg.pool_member_info.last_claimed_idx_in_member_vec,
     };
     let interest = updated_index - pool_member_info.index;
     let rewards_including_commission = compute_rewards_rounded_down(
@@ -1450,7 +1450,7 @@ fn test_v_internal_pool_member_info_wrap_latest() {
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
-        last_claimed_epoch: Zero::zero(),
+        last_claimed_idx_in_member_vec: Zero::zero(),
     };
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::wrap_latest(
         internal_pool_member_info_latest,
@@ -1470,7 +1470,7 @@ fn test_v_internal_pool_member_info_new_latest() {
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
-        last_claimed_epoch: Zero::zero(),
+        last_claimed_idx_in_member_vec: Zero::zero(),
     );
     let expected_v_internal_pool_member_info = VInternalPoolMemberInfo::V1(
         InternalPoolMemberInfoLatest {
@@ -1481,7 +1481,7 @@ fn test_v_internal_pool_member_info_new_latest() {
             commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
-            last_claimed_epoch: Zero::zero(),
+            last_claimed_idx_in_member_vec: Zero::zero(),
         },
     );
     assert_eq!(v_internal_pool_member_info, expected_v_internal_pool_member_info);
@@ -1507,7 +1507,7 @@ fn test_v_internal_pool_member_info_is_none() {
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
-        last_claimed_epoch: Zero::zero(),
+        last_claimed_idx_in_member_vec: Zero::zero(),
     );
     assert!(v_none.is_none());
     assert!(!v_v0.is_none());
@@ -1534,7 +1534,7 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
-        last_claimed_epoch: Zero::zero(),
+        last_claimed_idx_in_member_vec: Zero::zero(),
     };
     assert_eq!(internal_pool_mamber_info, expected_internal_pool_member_info);
 }
@@ -1610,6 +1610,7 @@ fn test_pool_eic() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let upgrade_governor = cfg.test_info.upgrade_governor;
 
@@ -1619,12 +1620,12 @@ fn test_pool_eic() {
         governance_admin: cfg.test_info.pool_contract_admin,
     );
 
-    let final_index: Index = cfg.staking_contract_info.global_index;
+    let final_index: Index = staking_dispatcher.contract_parameters().global_index;
 
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_pool_eic_contract(),
-        eic_init_data: [MAINNET_POOL_CLASS_HASH_V0().into(), final_index.into()].span(),
+        eic_init_data: [MAINNET_POOL_CLASS_HASH_V0().into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -1655,7 +1656,7 @@ fn test_pool_eic() {
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_2')]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_1')]
 fn test_pool_eic_with_wrong_number_of_data_elements() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

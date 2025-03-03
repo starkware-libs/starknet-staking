@@ -76,11 +76,22 @@ pub impl MutableTraceImpl of MutableTraceTrait {
         self.checkpoints.as_path()._insert(key, value)
     }
 
-    /// Returns the value in the most recent checkpoint, or zero if there are no checkpoints.
+    /// Retrieves the most recent checkpoint from the trace structure.
+    ///
+    /// # Returns
+    /// A tuple containing:
+    /// - `u64`: Timestamp/key of the latest checkpoint
+    /// - `u128`: Value stored in the latest checkpoint
+    ///
+    /// # Panics
+    /// If the trace structure is empty (no checkpoints exist)
+    ///
+    /// # Note
+    /// This will return the last inserted checkpoint that maintains the structure's
+    /// invariant of non-decreasing keys.
     fn latest(self: StoragePath<Mutable<Trace>>) -> Result<(u64, u128), TraceErrors> {
         let checkpoints = self.checkpoints;
         let pos = checkpoints.len();
-
         if pos == 0 {
             return Result::Err(TraceErrors::EMPTY_TRACE);
         }

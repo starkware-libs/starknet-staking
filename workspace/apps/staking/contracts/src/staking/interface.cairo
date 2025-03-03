@@ -148,6 +148,7 @@ pub trait IStakingPool<TContractState> {
         identifier: felt252,
     );
 
+    // TODO: remove this function and update specs.
     /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
     ///
     /// The flow:
@@ -157,6 +158,17 @@ pub trait IStakingPool<TContractState> {
     fn claim_delegation_pool_rewards(
         ref self: TContractState, staker_address: ContractAddress,
     ) -> Index;
+
+    /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
+    /// Used only for upgrade purposes.
+    ///
+    /// The flow:
+    /// 1. StakerInfo migration.
+    /// 2. Update the rewards for `staker_address`.
+    /// 3. Send `pool_info.unclaimed_rewards` FRI to the pool contract.
+    /// 4. Set pool_info.unclaimed_rewards to zero.
+    /// 5. Return the final index.
+    fn pool_migration(ref self: TContractState, staker_address: ContractAddress) -> Index;
 }
 
 #[starknet::interface]
@@ -175,7 +187,7 @@ pub trait IStakingConfig<TContractState> {
 
 pub mod Events {
     use contracts_commons::types::time::time::Timestamp;
-    use staking::types::{Amount, Commission, Index};
+    use staking::types::{Amount, Commission};
     use starknet::ContractAddress;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakeBalanceChanged {
@@ -253,14 +265,6 @@ pub mod Events {
         pub staker_address: ContractAddress,
         pub reward_address: ContractAddress,
         pub amount: Amount,
-    }
-
-    #[derive(Debug, Drop, PartialEq, starknet::Event)]
-    pub struct GlobalIndexUpdated {
-        pub old_index: Index,
-        pub new_index: Index,
-        pub global_index_last_update_timestamp: Timestamp,
-        pub global_index_current_update_timestamp: Timestamp,
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]

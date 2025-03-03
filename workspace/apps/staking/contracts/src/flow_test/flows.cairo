@@ -1218,3 +1218,13 @@ pub(crate) impl InternalPoolMemberInfoUndelegateAfterUpgradeFlowImpl<
         );
     }
 }
+// TODO: Implement this flow test.
+/// Test calling pool migration after upgrade.
+/// Should do nothing because pool migration is called in the upgrade proccess.
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Upgrade
+/// Pool call pool_migration - final index and pool balance as before.
+
+
