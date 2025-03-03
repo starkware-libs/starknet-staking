@@ -799,11 +799,21 @@ pub mod Pool {
         }
 
         fn get_amount(self: @ContractState, pool_member: ContractAddress) -> Amount {
-            let (_, pool_member_balance) = self
-                .pool_member_epoch_balance
-                .entry(pool_member)
-                .latest();
-            pool_member_balance.balance()
+            // After upgrading to V1, `pool_member_epoch_balance` remains uninitialized
+            // until the pool member's balance is modified for the first time. If initialized,
+            // return the `amount` recorded in the trace, which reflects the latest delegated
+            // amount.
+            // Otherwise, return `pool_member_info.amount`.
+            //
+            // TODO: Consider initializing `pool_member_epoch_balance` before calling `get_amount`
+            // to avoid this conditional check.
+            let trace = self.pool_member_epoch_balance.entry(key: pool_member);
+            if trace.is_initialized() {
+                let (_, pool_member_balance) = trace.latest();
+                pool_member_balance.balance()
+            } else {
+                self.internal_pool_member_info(:pool_member).amount
+            }
         }
 
         fn set_next_epoch_balance(

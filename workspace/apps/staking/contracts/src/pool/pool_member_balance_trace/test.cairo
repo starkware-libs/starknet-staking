@@ -120,3 +120,13 @@ fn test_rewards_info_idx() {
     let trace = PoolMemberBalanceTrait::new(balance: 5, rewards_info_idx: 10);
     assert_eq!(trace.rewards_info_idx(), 10);
 }
+
+#[test]
+fn test_is_initialized() {
+    let mut mock_trace = CONTRACT_STATE();
+    assert_eq!(mock_trace.is_initialized(), false);
+
+    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+    assert_eq!(mock_trace.is_initialized(), true);
+}
+
