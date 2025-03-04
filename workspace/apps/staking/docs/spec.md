@@ -27,9 +27,9 @@
     - [claim\_delegation\_pool\_rewards](#claim_delegation_pool_rewards)
     - [staker\_info](#staker_info)
     - [get\_staker\_info](#get_staker_info)
-    - [get\_staker\_address\_by\_operational](#get_staker_address_by_operational)
     - [get\_current\_epoch](#get_current_epoch)
     - [update\_rewards\_from\_attestation\_contract](#update_rewards_from_attestation_contract)
+    - [fn get\_attestation\_info\_by\_operational\_address](#fn-get_attestation_info_by_operational_address)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
     - [get\_total\_stake\_at\_current\_epoch](#get_total_stake_at_current_epoch)
@@ -162,6 +162,7 @@
     - [UndelegateIntentValue](#undelegateintentvalue)
     - [TimeStamp](#timestamp)
     - [TimeDelta](#timedelta)
+    - [AttestationInfo](#attestationinfo)
 - [Type aliases](#type-aliases)
     - [Amount](#amount)
     - [Commission](#commission)
@@ -858,25 +859,6 @@ Any address can execute.
 #### logic <!-- omit from toc -->
 1. Returns `Option::Some` with [StakerInfo](#stakerinfo) if exists, otherwise `Option::None`.
 
-### get_staker_address_by_operational
-```rust
-fn get_staker_address_by_operational(
-  self: @ContractState, 
-  operational_address: ContractAddress
-) -> ContractAddress
-```
-#### description <!-- omit from toc -->
-Returns `staker_address` of the given `operational_address`.
-#### emits <!-- omit from toc -->
-#### errors <!-- omit from toc -->
-1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-#### pre-condition <!-- omit from toc -->
-1. Staker exist in the contract.
-#### access control <!-- omit from toc -->
-Any address can execute.
-#### logic <!-- omit from toc -->
-1. Returns `staker_address`.
-
 ### get_current_epoch
 ```rust
 fn get_current_epoch(self: @ContractState) -> Epoch
@@ -898,7 +880,8 @@ fn update_rewards_from_attestation_contract(ref self: ContractState,
  staker_address: ContractAddress) 
 ```
 #### description <!-- omit from toc -->
-Returns the current epoch.
+Calculate and update rewards for the staker for the current epoch.
+Send pool rewards to the pool.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -910,6 +893,23 @@ Only attestation contract.
 3. Update `unclaimed_rewards_own` of the staker
 4. Update and transfer to the pool, if exist.
 5. Update `RewardSupplier Contract unclaimed_rewards`
+
+
+### fn get_attestation_info_by_operational_address
+```rust
+fn get_attestation_info_by_operational_address(
+        self: @TContractState, operational_address: ContractAddress,
+    ) -> AttestationInfo;
+```
+#### description <!-- omit from toc -->
+Returns the attestation info for the staker based on it's operational address.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. Collect info needed for attestation validation.
+2. Return the info.
 
 ### contract_parameters
 ```rust
@@ -2111,6 +2111,12 @@ Any address can execute.
 | name    | type |
 | ------- | ---- |
 | seconds | u64  |
+
+### AttestationInfo
+| name           | type            |
+| -------------- | --------------- |
+| staker_address | ContractAddress |
+| current_epoch  | Epoch           |
 
 # Type aliases
 ### Amount

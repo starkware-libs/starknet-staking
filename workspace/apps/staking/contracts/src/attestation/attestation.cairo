@@ -11,7 +11,10 @@ pub mod Attestation {
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
     use staking::attestation::interface::{AttestInfo, IAttestation};
-    use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+    use staking::staking::interface::{
+        IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
+        IStakingDispatcherTrait,
+    };
     use staking::types::Epoch;
     use starknet::storage::Map;
     use starknet::{ContractAddress, get_caller_address};
@@ -40,7 +43,7 @@ pub mod Attestation {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        staking_dispatcher: IStakingDispatcher,
+        staking_contract: ContractAddress,
         // Maps staker address to the last epoch he attested.
         staker_last_attested_epoch: Map<ContractAddress, Option<Epoch>>,
     }
@@ -66,7 +69,7 @@ pub mod Attestation {
     ) {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
-        self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
+        self.staking_contract.write(staking_contract);
     }
 
     #[abi(embed_v0)]
@@ -84,11 +87,14 @@ pub mod Attestation {
     impl AttestationImpl of IAttestation<ContractState> {
         fn attest(ref self: ContractState, attest_info: AttestInfo) {
             let operational_address = get_caller_address();
-            let staking_dispatcher = self.staking_dispatcher.read();
+            let staking_dispatcher = IStakingAttestationDispatcher {
+                contract_address: self.staking_contract.read(),
+            };
             // Note: This function checks for a zero staker address and will panic if so.
-            let staker_address = staking_dispatcher
-                .get_staker_address_by_operational(:operational_address);
-            let current_epoch = staking_dispatcher.get_current_epoch();
+            let staking_attestation_info = staking_dispatcher
+                .get_attestation_info_by_operational_address(:operational_address);
+            let (staker_address, current_epoch): (ContractAddress, Epoch) = staking_attestation_info
+                .into();
             self._validate_attestation(:attest_info, :staker_address, :current_epoch);
             staking_dispatcher.update_rewards_from_attestation_contract(:staker_address);
             // TODO: emit event.
@@ -106,7 +112,10 @@ pub mod Attestation {
         fn is_attestation_done_in_curr_epoch(
             self: @ContractState, staker_address: ContractAddress,
         ) -> bool {
-            let current_epoch = self.staking_dispatcher.read().get_current_epoch();
+            let staking_dispatcher = IStakingDispatcher {
+                contract_address: self.staking_contract.read(),
+            };
+            let current_epoch = staking_dispatcher.get_current_epoch();
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
     }

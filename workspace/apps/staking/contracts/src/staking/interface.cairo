@@ -30,15 +30,8 @@ pub trait IStaking<TContractState> {
     fn get_staker_info(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Option<StakerInfo>;
-    fn get_staker_address_by_operational(
-        self: @TContractState, operational_address: ContractAddress,
-    ) -> ContractAddress;
     fn get_current_epoch(self: @TContractState) -> Epoch;
     fn get_epoch_info(self: @TContractState) -> EpochInfo;
-    // TODO: Rename once internal update_rewards is deleted.
-    fn update_rewards_from_attestation_contract(
-        ref self: TContractState, staker_address: ContractAddress,
-    );
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn get_total_stake_at_current_epoch(self: @TContractState) -> Amount;
@@ -183,6 +176,17 @@ pub trait IStakingConfig<TContractState> {
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
     fn set_epoch_info(ref self: TContractState, block_duration: u16, epoch_length: u16);
+}
+
+#[starknet::interface]
+pub trait IStakingAttestation<TContractState> {
+    // TODO: Rename once internal update_rewards is deleted.
+    fn update_rewards_from_attestation_contract(
+        ref self: TContractState, staker_address: ContractAddress,
+    );
+    fn get_attestation_info_by_operational_address(
+        self: @TContractState, operational_address: ContractAddress,
+    ) -> AttestationInfo;
 }
 
 pub mod Events {
@@ -404,3 +408,23 @@ pub impl StakerInfoImpl of StakerInfoTrait {
         self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 }
+
+#[derive(Serde, Drop, Copy)]
+pub struct AttestationInfo {
+    staker_address: ContractAddress,
+    current_epoch: Epoch,
+}
+
+pub impl AttestationInfoIntoTupleImpl of Into<AttestationInfo, (ContractAddress, Epoch)> {
+    fn into(self: AttestationInfo) -> (ContractAddress, Epoch) {
+        (self.staker_address, self.current_epoch)
+    }
+}
+
+#[generate_trait]
+pub impl AttestationInfoImpl of AttestationInfoTrait {
+    fn new(staker_address: ContractAddress, current_epoch: Epoch) -> AttestationInfo {
+        AttestationInfo { staker_address, current_epoch }
+    }
+}
+
