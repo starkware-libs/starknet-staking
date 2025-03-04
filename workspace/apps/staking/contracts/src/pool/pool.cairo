@@ -435,7 +435,7 @@ pub mod Pool {
                     // Pool member does not exist. Create a new record.
                     let pool_member_info = InternalPoolMemberInfoLatest {
                         reward_address: switch_pool_data.reward_address,
-                        amount: Zero::zero(),
+                        _deprecated_amount: Zero::zero(),
                         _deprecated_index: Zero::zero(),
                         unclaimed_rewards: Zero::zero(),
                         commission: self.commission.read(),
@@ -747,7 +747,7 @@ pub mod Pool {
                 let (_, pool_member_balance) = trace.latest();
                 pool_member_balance.balance()
             } else {
-                self.internal_pool_member_info(:pool_member).amount
+                self.internal_pool_member_info(:pool_member)._deprecated_amount
             }
         }
 

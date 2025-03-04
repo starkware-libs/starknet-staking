@@ -1113,7 +1113,7 @@ fn test_add_stake_from_pool_assertions() {
     };
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-    let amount = cfg.pool_member_info.amount;
+    let amount = cfg.pool_member_info._deprecated_amount;
 
     // Should catch CALLER_IS_ZERO_ADDRESS.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: Zero::zero());
@@ -1172,7 +1172,7 @@ fn test_remove_from_delegation_pool_intent() {
     let old_total_stake = staking_dispatcher.get_total_stake();
     let mut spy = snforge_std::spy_events();
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    let mut intent_amount = cfg.pool_member_info.amount / 2;
+    let mut intent_amount = cfg.pool_member_info._deprecated_amount / 2;
 
     // Increase index.
     let mut global_index = cfg.staker_info.index + BASE_VALUE;
@@ -1447,7 +1447,7 @@ fn test_remove_from_delegation_pool_action() {
         .remove_from_delegation_pool_intent(
             staker_address: cfg.test_info.staker_address,
             identifier: cfg.test_info.pool_member_address.into(),
-            amount: cfg.pool_member_info.amount,
+            amount: cfg.pool_member_info._deprecated_amount,
         );
     // Remove from delegation pool action, and then check that the intent was removed correctly.
     start_cheat_block_timestamp_global(
@@ -1473,7 +1473,8 @@ fn test_remove_from_delegation_pool_action() {
     // Check that the amount was transferred correctly.
     let pool_balance_after_action = token_dispatcher.balance_of(pool_contract);
     assert_eq!(
-        pool_balance_after_action, pool_balance_before_action + cfg.pool_member_info.amount.into(),
+        pool_balance_after_action,
+        pool_balance_before_action + cfg.pool_member_info._deprecated_amount.into(),
     );
     // Validate RemoveFromDelegationPoolAction event.
     let events = spy.get_events().emitted_by(staking_contract).events;
@@ -1484,7 +1485,7 @@ fn test_remove_from_delegation_pool_action() {
         spied_event: events[0],
         :pool_contract,
         identifier: cfg.test_info.pool_member_address.into(),
-        amount: cfg.pool_member_info.amount,
+        amount: cfg.pool_member_info._deprecated_amount,
     );
 }
 
@@ -1528,7 +1529,7 @@ fn test_remove_from_delegation_pool_action_intent_not_finished() {
         .remove_from_delegation_pool_intent(
             staker_address: cfg.test_info.staker_address,
             identifier: cfg.test_info.pool_member_address.into(),
-            amount: cfg.pool_member_info.amount,
+            amount: cfg.pool_member_info._deprecated_amount,
         );
     // Try to action before the intent window is finished.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
@@ -1562,7 +1563,8 @@ fn test_switch_staking_delegation_pool() {
     // Pool member remove_from_delegation_pool_intent.
     let pool_member = cfg.test_info.pool_member_address;
     cheat_caller_address_once(contract_address: from_pool_contract, caller_address: pool_member);
-    from_pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
+    from_pool_dispatcher
+        .exit_delegation_pool_intent(amount: cfg.pool_member_info._deprecated_amount);
     let total_stake_before_switching = staking_dispatcher.get_total_stake();
     // Initialize SwitchPoolData.
     let switch_pool_data = SwitchPoolData {
@@ -1571,7 +1573,7 @@ fn test_switch_staking_delegation_pool() {
     let mut serialized_data = array![];
     switch_pool_data.serialize(ref output: serialized_data);
 
-    let switched_amount = cfg.pool_member_info.amount / 2;
+    let switched_amount = cfg.pool_member_info._deprecated_amount / 2;
     let updated_index = cfg.staker_info.index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
@@ -1618,7 +1620,8 @@ fn test_switch_staking_delegation_pool() {
     let actual_total_stake = staking_dispatcher.get_total_stake();
     assert_eq!(actual_total_stake, expected_total_stake);
     // Check that the pool member's intent amount was decreased.
-    let expected_undelegate_intent_value_amount = cfg.pool_member_info.amount - switched_amount;
+    let expected_undelegate_intent_value_amount = cfg.pool_member_info._deprecated_amount
+        - switched_amount;
     let undelegate_intent_key = UndelegateIntentKey {
         pool_contract: from_pool_contract, identifier: pool_member.into(),
     };
@@ -1675,8 +1678,8 @@ fn test_switch_staking_delegation_pool() {
         spied_event: events[2],
         pool_contract: from_pool_contract,
         identifier: pool_member.into(),
-        old_intent_amount: cfg.pool_member_info.amount,
-        new_intent_amount: cfg.pool_member_info.amount - switched_amount,
+        old_intent_amount: cfg.pool_member_info._deprecated_amount,
+        new_intent_amount: cfg.pool_member_info._deprecated_amount - switched_amount,
     );
     assert_rewards_supplied_to_delegation_pool_event(
         spied_event: events[3],
@@ -1696,7 +1699,7 @@ fn test_switch_staking_delegation_pool() {
         spied_event: events[5],
         pool_contract: from_pool_contract,
         identifier: pool_member.into(),
-        old_intent_amount: cfg.pool_member_info.amount - switched_amount,
+        old_intent_amount: cfg.pool_member_info._deprecated_amount - switched_amount,
         new_intent_amount: Zero::zero(),
     );
 }
@@ -1748,10 +1751,11 @@ fn test_switch_staking_delegation_pool_assertions() {
     );
 
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
-    from_pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
+    from_pool_dispatcher
+        .exit_delegation_pool_intent(amount: cfg.pool_member_info._deprecated_amount);
 
     // Catch AMOUNT_TOO_HIGH.
-    let switched_amount = cfg.pool_member_info.amount + 1;
+    let switched_amount = cfg.pool_member_info._deprecated_amount + 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: from_pool);
     let result = staking_pool_safe_dispatcher
         .switch_staking_delegation_pool(

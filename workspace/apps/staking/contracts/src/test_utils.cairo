@@ -566,7 +566,7 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
     approve(
         owner: cfg.test_info.pool_member_address,
         spender: pool_contract,
-        amount: cfg.pool_member_info.amount,
+        amount: cfg.pool_member_info._deprecated_amount,
         :token_address,
     );
 
@@ -578,7 +578,7 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
     pool_dispatcher
         .enter_delegation_pool(
             reward_address: cfg.pool_member_info.reward_address,
-            amount: cfg.pool_member_info.amount,
+            amount: cfg.pool_member_info._deprecated_amount,
         )
 }
 
@@ -666,7 +666,8 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
     let mut span = raw_serialized_value.span();
     let mut pool_member_info = InternalPoolMemberInfoLatest {
         reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
-        amount: Serde::<Amount>::deserialize(ref span).expect('Failed amount'),
+        _deprecated_amount: Serde::<Amount>::deserialize(ref span)
+            .expect('Failed _deprecated_amount'),
         _deprecated_index: Serde::<Index>::deserialize(ref span).expect('Failed _deprecated_index'),
         unclaimed_rewards: Serde::<Amount>::deserialize(ref span).expect('Failed unclaimed'),
         commission: Serde::<Commission>::deserialize(ref span).expect('Failed commission'),
@@ -912,7 +913,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         };
         let pool_member_info = InternalPoolMemberInfoLatest {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
-            amount: POOL_MEMBER_STAKE_AMOUNT,
+            _deprecated_amount: POOL_MEMBER_STAKE_AMOUNT,
             _deprecated_index: Zero::zero(),
             unclaimed_rewards: Zero::zero(),
             commission: COMMISSION,

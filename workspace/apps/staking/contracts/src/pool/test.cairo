@@ -138,7 +138,7 @@ fn test_enter_delegation_pool() {
 
     // Check that the pool member info was updated correctly.
     let expected_pool_member_info: PoolMemberInfo = PoolMemberInfo {
-        amount: cfg.pool_member_info.amount,
+        amount: cfg.pool_member_info._deprecated_amount,
         index: cfg.pool_member_info._deprecated_index,
         unpool_time: Option::None,
         reward_address: cfg.pool_member_info.reward_address,
@@ -156,7 +156,9 @@ fn test_enter_delegation_pool() {
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = token_dispatcher.balance_of(staking_contract);
     assert_eq!(
-        balance, cfg.staker_info._deprecated_amount_own.into() + cfg.pool_member_info.amount.into(),
+        balance,
+        cfg.staker_info._deprecated_amount_own.into()
+            + cfg.pool_member_info._deprecated_amount.into(),
     );
     let balance = token_dispatcher.balance_of(pool_contract);
     assert_eq!(balance, 0);
@@ -172,7 +174,7 @@ fn test_enter_delegation_pool() {
         pool_info: Option::Some(
             StakerPoolInfo {
                 pool_contract,
-                amount: cfg.pool_member_info.amount,
+                amount: cfg.pool_member_info._deprecated_amount,
                 unclaimed_rewards: Zero::zero(),
                 commission: cfg.staker_info.get_pool_info().commission,
             },
@@ -188,13 +190,13 @@ fn test_enter_delegation_pool() {
         pool_member: cfg.test_info.pool_member_address,
         staker_address: cfg.test_info.staker_address,
         reward_address: cfg.pool_member_info.reward_address,
-        amount: cfg.pool_member_info.amount,
+        amount: cfg.pool_member_info._deprecated_amount,
     );
     assert_delegation_pool_member_balance_changed_event(
         spied_event: events[1],
         pool_member: cfg.test_info.pool_member_address,
         old_delegated_stake: Zero::zero(),
-        new_delegated_stake: cfg.pool_member_info.amount,
+        new_delegated_stake: cfg.pool_member_info._deprecated_amount,
     );
 }
 
@@ -209,7 +211,7 @@ fn test_enter_delegation_pool_assertions() {
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
     let reward_address = cfg.pool_member_info.reward_address;
-    let amount = cfg.pool_member_info.amount;
+    let amount = cfg.pool_member_info._deprecated_amount;
 
     // Catch STAKER_INACTIVE.
     snforge_std::store(pool_contract, selector!("staker_removed"), array![true.into()].span());
@@ -248,7 +250,7 @@ fn test_add_to_delegation_pool() {
 
     // First pool member adds to the delegation pool.
     let pool_member_info_before_add = pool_dispatcher.pool_member_info(:pool_member);
-    let delegate_amount = pool_member_info.amount;
+    let delegate_amount = pool_member_info._deprecated_amount;
     approve(owner: pool_member, spender: pool_contract, amount: delegate_amount, :token_address);
     let mut spy = snforge_std::spy_events();
     let unclaimed_rewards_member =
@@ -342,7 +344,7 @@ fn test_add_to_delegation_pool_from_reward_address() {
     let unclaimed_rewards_member =
         Zero::zero(); // TODO: Change this after implement calculate_rewards.
 
-    let delegate_amount = pool_member_info.amount;
+    let delegate_amount = pool_member_info._deprecated_amount;
     fund(
         sender: cfg.test_info.owner_address,
         recipient: cfg.pool_member_info.reward_address,
@@ -586,13 +588,13 @@ fn test_exit_delegation_pool_intent() {
     );
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
+    pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info._deprecated_amount);
     // Validate the expected pool member info and staker info.
     let expected_time = Time::now()
         .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
     let mut expected_pool_member_info = InternalPoolMemberInfoLatest {
-        amount: Zero::zero(),
-        unpool_amount: cfg.pool_member_info.amount,
+        _deprecated_amount: Zero::zero(),
+        unpool_amount: cfg.pool_member_info._deprecated_amount,
         unpool_time: Option::Some(expected_time),
         ..cfg.pool_member_info,
     };
@@ -632,12 +634,12 @@ fn test_exit_delegation_pool_intent() {
         spied_event: events[0],
         pool_member: cfg.test_info.pool_member_address,
         exit_timestamp: expected_time,
-        amount: cfg.pool_member_info.amount,
+        amount: cfg.pool_member_info._deprecated_amount,
     );
     assert_delegation_pool_member_balance_changed_event(
         spied_event: events[1],
         pool_member: cfg.test_info.pool_member_address,
-        old_delegated_stake: cfg.pool_member_info.amount,
+        old_delegated_stake: cfg.pool_member_info._deprecated_amount,
         new_delegated_stake: Zero::zero(),
     );
 }
@@ -667,7 +669,7 @@ fn test_exit_delegation_pool_intent_assertions() {
     // Catch AMOUNT_TOO_HIGH.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher
-        .exit_delegation_pool_intent(amount: cfg.pool_member_info.amount + 1);
+        .exit_delegation_pool_intent(amount: cfg.pool_member_info._deprecated_amount + 1);
     assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_TOO_HIGH.describe());
 
     // Catch UNDELEGATE_IN_PROGRESS.
@@ -700,7 +702,7 @@ fn test_exit_delegation_pool_action() {
         serialized_value: array![updated_index.into()].span(),
     );
     // Calculate the expected rewards and commission.
-    let delegate_amount = cfg.pool_member_info.amount;
+    let delegate_amount = cfg.pool_member_info._deprecated_amount;
     let unclaimed_rewards_member =
         Zero::zero(); // TODO: Change this after implement calculate_rewards.
     cheat_reward_for_reward_supplier(
@@ -728,7 +730,7 @@ fn test_exit_delegation_pool_action() {
     let mut spy = snforge_std::spy_events();
     let returned_amount = pool_dispatcher
         .exit_delegation_pool_action(pool_member: cfg.test_info.pool_member_address);
-    assert_eq!(returned_amount, cfg.pool_member_info.amount);
+    assert_eq!(returned_amount, cfg.pool_member_info._deprecated_amount);
     let pool_member: VInternalPoolMemberInfo = load_pool_member_info_from_map(
         key: cfg.test_info.pool_member_address, contract: pool_contract,
     );
@@ -736,7 +738,10 @@ fn test_exit_delegation_pool_action() {
     let balance_after_action = token_dispatcher.balance_of(cfg.test_info.pool_member_address);
     let reward_account_balance_after = token_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
-    assert_eq!(balance_after_action, balance_before_action + cfg.pool_member_info.amount.into());
+    assert_eq!(
+        balance_after_action,
+        balance_before_action + cfg.pool_member_info._deprecated_amount.into(),
+    );
     assert_eq!(
         reward_account_balance_after,
         reward_account_balance_before + unclaimed_rewards_member.into(),
@@ -808,23 +813,21 @@ fn test_switch_delegation_pool() {
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     // Create other staker with pool.
-    let switch_amount = cfg.pool_member_info.amount / 2;
+    let switch_amount = cfg.pool_member_info._deprecated_amount / 2;
     cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
     let to_staker_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-
     let unclaimed_rewards_member =
         Zero::zero(); // TODO: Change this after implement calculate_rewards.
     let reward_account_balance_before = token_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
-
     cheat_caller_address(
         contract_address: pool_contract,
         caller_address: cfg.test_info.pool_member_address,
         span: CheatSpan::TargetCalls(5),
     );
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
+    pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info._deprecated_amount);
     let pool_member_info_before_switch: PoolMemberInfo = pool_dispatcher
         .pool_member_info(pool_member: cfg.test_info.pool_member_address);
     let amount_left = pool_dispatcher
@@ -836,10 +839,10 @@ fn test_switch_delegation_pool() {
     let actual_pool_member_info: PoolMemberInfo = pool_dispatcher
         .pool_member_info(pool_member: cfg.test_info.pool_member_address);
     let expected_pool_member_info: PoolMemberInfo = PoolMemberInfo {
-        unpool_amount: cfg.pool_member_info.amount - switch_amount,
+        unpool_amount: cfg.pool_member_info._deprecated_amount - switch_amount,
         ..pool_member_info_before_switch,
     };
-    assert_eq!(amount_left, cfg.pool_member_info.amount - switch_amount);
+    assert_eq!(amount_left, cfg.pool_member_info._deprecated_amount - switch_amount);
     assert_eq!(actual_pool_member_info, expected_pool_member_info);
     let mut spy = snforge_std::spy_events();
     let amount_left = pool_dispatcher
@@ -898,7 +901,7 @@ fn test_switch_delegation_pool_assertions() {
     cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
     let to_pool = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let switch_amount = cfg.pool_member_info.amount / 2;
+    let switch_amount = cfg.pool_member_info._deprecated_amount / 2;
     let pool_dispatcher = IPoolDispatcher { contract_address: from_pool };
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: from_pool };
     let pool_member = cfg.test_info.pool_member_address;
@@ -991,7 +994,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
     let data = data.span();
 
     // Enter with a new pool member.
-    let amount = cfg.pool_member_info.amount;
+    let amount = cfg.pool_member_info._deprecated_amount;
     let index = cfg.pool_member_info._deprecated_index;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :index, :data);
@@ -1065,7 +1068,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     let pool_member = cfg.test_info.pool_member_address;
     let reward_address = cfg.pool_member_info.reward_address;
     let index = cfg.pool_member_info._deprecated_index;
-    let switch_amount = cfg.pool_member_info.amount / 2;
+    let switch_amount = cfg.pool_member_info._deprecated_amount / 2;
 
     // Serialize the switch pool data.
     let switch_pool_data = SwitchPoolData { pool_member, reward_address };
@@ -1241,7 +1244,7 @@ fn test_partial_undelegate() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     // Create a variable that will be constant throughout the test, and will be the sum of the pool
     // member's amount and unpool amount.
-    let total_pool_member_amount = cfg.pool_member_info.amount;
+    let total_pool_member_amount = cfg.pool_member_info._deprecated_amount;
     // Make sure the pool member has unclaimed rewards to see it's updated.
     let unclaimed_rewards_member =
         Zero::zero(); // TODO: Change this after implement calculate_rewards.
@@ -1254,10 +1257,10 @@ fn test_partial_undelegate() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
 
     // Intent half the amount.
-    let intent_amount = cfg.pool_member_info.amount / 2;
+    let intent_amount = cfg.pool_member_info._deprecated_amount / 2;
     pool_dispatcher.exit_delegation_pool_intent(amount: intent_amount);
     cfg.pool_member_info.unpool_amount = intent_amount;
-    cfg.pool_member_info.amount = total_pool_member_amount - intent_amount;
+    cfg.pool_member_info._deprecated_amount = total_pool_member_amount - intent_amount;
     let actual_pool_member_info: PoolMemberInfo = pool_dispatcher
         .pool_member_info(pool_member: cfg.test_info.pool_member_address);
     let expected_time = Time::now()
@@ -1285,13 +1288,13 @@ fn test_partial_undelegate() {
     assert_eq!(actual_undelegate_intent_value, expected_undelegate_intent_value);
 
     let staker_info = staking_dispatcher.staker_info(cfg.test_info.staker_address);
-    assert_eq!(staker_info.get_pool_info().amount, cfg.pool_member_info.amount);
+    assert_eq!(staker_info.get_pool_info().amount, cfg.pool_member_info._deprecated_amount);
 
     // Intent 0 and see that the unpool_time is now optional.
     let intent_amount = Zero::zero();
     pool_dispatcher.exit_delegation_pool_intent(amount: intent_amount);
     cfg.pool_member_info.unpool_amount = intent_amount;
-    cfg.pool_member_info.amount = total_pool_member_amount - intent_amount;
+    cfg.pool_member_info._deprecated_amount = total_pool_member_amount - intent_amount;
     let actual_pool_member_info: PoolMemberInfo = pool_dispatcher
         .pool_member_info(pool_member: cfg.test_info.pool_member_address);
     let expected_pool_member_info: PoolMemberInfo = InternalPoolMemberInfoLatest {
@@ -1310,7 +1313,7 @@ fn test_partial_undelegate() {
     let expected_undelegate_intent_value: UndelegateIntentValue = Zero::zero();
     assert_eq!(actual_undelegate_intent_value, expected_undelegate_intent_value);
     let staker_info = staking_dispatcher.staker_info(cfg.test_info.staker_address);
-    assert_eq!(staker_info.get_pool_info().amount, cfg.pool_member_info.amount);
+    assert_eq!(staker_info.get_pool_info().amount, cfg.pool_member_info._deprecated_amount);
 }
 
 #[test]
@@ -1373,7 +1376,7 @@ fn test_pool_member_info_pool_member_doesnt_exist() {
 fn test_v_internal_pool_member_info_wrap_latest() {
     let internal_pool_member_info_latest = InternalPoolMemberInfoLatest {
         reward_address: Zero::zero(),
-        amount: Zero::zero(),
+        _deprecated_amount: Zero::zero(),
         _deprecated_index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
@@ -1402,7 +1405,7 @@ fn test_v_internal_pool_member_info_new_latest() {
     let expected_v_internal_pool_member_info = VInternalPoolMemberInfo::V1(
         InternalPoolMemberInfoLatest {
             reward_address: Zero::zero(),
-            amount: Zero::zero(),
+            _deprecated_amount: Zero::zero(),
             _deprecated_index: Zero::zero(),
             unclaimed_rewards: Zero::zero(),
             commission: Zero::zero(),
@@ -1453,7 +1456,7 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
     let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.into();
     let expected_internal_pool_member_info = InternalPoolMemberInfoV1 {
         reward_address: Zero::zero(),
-        amount: Zero::zero(),
+        _deprecated_amount: Zero::zero(),
         _deprecated_index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
@@ -1621,7 +1624,7 @@ fn test_internal_pool_member_info() {
     let pool_dispatcher = IPoolMigrationDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
-    expected_pool_member_info.amount = Zero::zero();
+    expected_pool_member_info._deprecated_amount = Zero::zero();
     let pool_member_info = pool_dispatcher.internal_pool_member_info(:pool_member);
     assert_eq!(pool_member_info, expected_pool_member_info);
 
@@ -1663,7 +1666,7 @@ fn test_get_internal_pool_member_info() {
     // Check after enter the pool.
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
-    expected_pool_member_info.amount = Zero::zero();
+    expected_pool_member_info._deprecated_amount = Zero::zero();
     let option_pool_member_info = pool_dispatcher.get_internal_pool_member_info(:pool_member);
     assert_eq!(option_pool_member_info, Option::Some(expected_pool_member_info));
 }
