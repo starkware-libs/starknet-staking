@@ -437,7 +437,7 @@ pub mod Pool {
                         _deprecated_amount: Zero::zero(),
                         _deprecated_index: Zero::zero(),
                         unclaimed_rewards: Zero::zero(),
-                        commission: Zero::zero(),
+                        _deprecated_commission: Zero::zero(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
                         last_claimed_idx_in_member_vec: Zero::zero(),

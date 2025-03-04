@@ -142,7 +142,7 @@ fn test_enter_delegation_pool() {
         index: cfg.pool_member_info._deprecated_index,
         unpool_time: Option::None,
         reward_address: cfg.pool_member_info.reward_address,
-        commission: cfg.pool_member_info.commission,
+        commission: cfg.pool_member_info._deprecated_commission,
         unclaimed_rewards: cfg.pool_member_info.unclaimed_rewards,
         unpool_amount: Zero::zero(),
     };
@@ -1005,7 +1005,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
         amount,
         index,
         unclaimed_rewards: Zero::zero(),
-        commission: cfg.pool_member_info.commission,
+        commission: cfg.pool_member_info._deprecated_commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
     };
@@ -1029,7 +1029,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
         amount: updated_amount,
         index,
         unclaimed_rewards: expected_reward,
-        commission: cfg.pool_member_info.commission,
+        commission: cfg.pool_member_info._deprecated_commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
     };
@@ -1379,7 +1379,7 @@ fn test_v_internal_pool_member_info_wrap_latest() {
         _deprecated_amount: Zero::zero(),
         _deprecated_index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
-        commission: Zero::zero(),
+        _deprecated_commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
         last_claimed_idx_in_member_vec: Zero::zero(),
@@ -1407,7 +1407,7 @@ fn test_v_internal_pool_member_info_new_latest() {
             _deprecated_amount: Zero::zero(),
             _deprecated_index: Zero::zero(),
             unclaimed_rewards: Zero::zero(),
-            commission: Zero::zero(),
+            _deprecated_commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
             last_claimed_idx_in_member_vec: Zero::zero(),
@@ -1457,7 +1457,7 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
         _deprecated_amount: Zero::zero(),
         _deprecated_index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
-        commission: Zero::zero(),
+        _deprecated_commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
         last_claimed_idx_in_member_vec: Zero::zero(),
@@ -1623,7 +1623,7 @@ fn test_internal_pool_member_info() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
     expected_pool_member_info._deprecated_amount = Zero::zero();
-    expected_pool_member_info.commission = Zero::zero();
+    expected_pool_member_info._deprecated_commission = Zero::zero();
     let pool_member_info = pool_dispatcher.internal_pool_member_info(:pool_member);
     assert_eq!(pool_member_info, expected_pool_member_info);
 
@@ -1666,7 +1666,7 @@ fn test_get_internal_pool_member_info() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
     expected_pool_member_info._deprecated_amount = Zero::zero();
-    expected_pool_member_info.commission = Zero::zero();
+    expected_pool_member_info._deprecated_commission = Zero::zero();
     let option_pool_member_info = pool_dispatcher.get_internal_pool_member_info(:pool_member);
     assert_eq!(option_pool_member_info, Option::Some(expected_pool_member_info));
 }

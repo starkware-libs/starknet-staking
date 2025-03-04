@@ -158,7 +158,7 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<
             _deprecated_amount: self.amount,
             _deprecated_index: self.index,
             unclaimed_rewards: self.unclaimed_rewards,
-            commission: self.commission,
+            _deprecated_commission: self.commission,
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
             last_claimed_idx_in_member_vec: Zero::zero(),
