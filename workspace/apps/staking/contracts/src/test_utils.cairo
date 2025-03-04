@@ -667,7 +667,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
     let mut pool_member_info = InternalPoolMemberInfoLatest {
         reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
         amount: Serde::<Amount>::deserialize(ref span).expect('Failed amount'),
-        index: Serde::<Index>::deserialize(ref span).expect('Failed index'),
+        _deprecated_index: Serde::<Index>::deserialize(ref span).expect('Failed _deprecated_index'),
         unclaimed_rewards: Serde::<Amount>::deserialize(ref span).expect('Failed unclaimed'),
         commission: Serde::<Commission>::deserialize(ref span).expect('Failed commission'),
         unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed unpool_amount'),
@@ -913,7 +913,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         let pool_member_info = InternalPoolMemberInfoLatest {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             amount: POOL_MEMBER_STAKE_AMOUNT,
-            index: Zero::zero(),
+            _deprecated_index: Zero::zero(),
             unclaimed_rewards: Zero::zero(),
             commission: COMMISSION,
             unpool_time: Option::None,

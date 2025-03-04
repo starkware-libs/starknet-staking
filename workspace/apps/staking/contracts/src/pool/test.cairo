@@ -139,7 +139,7 @@ fn test_enter_delegation_pool() {
     // Check that the pool member info was updated correctly.
     let expected_pool_member_info: PoolMemberInfo = PoolMemberInfo {
         amount: cfg.pool_member_info.amount,
-        index: cfg.pool_member_info.index,
+        index: cfg.pool_member_info._deprecated_index,
         unpool_time: Option::None,
         reward_address: cfg.pool_member_info.reward_address,
         commission: cfg.pool_member_info.commission,
@@ -693,7 +693,7 @@ fn test_exit_delegation_pool_action() {
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     // Change global index and exit delegation pool intent.
-    let updated_index = cfg.pool_member_info.index + BASE_VALUE;
+    let updated_index = cfg.pool_member_info._deprecated_index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -999,7 +999,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
 
     // Enter with a new pool member.
     let amount = cfg.pool_member_info.amount;
-    let index = cfg.pool_member_info.index;
+    let index = cfg.pool_member_info._deprecated_index;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :index, :data);
 
@@ -1071,7 +1071,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
     let reward_address = cfg.pool_member_info.reward_address;
-    let index = cfg.pool_member_info.index;
+    let index = cfg.pool_member_info._deprecated_index;
     let switch_amount = cfg.pool_member_info.amount / 2;
 
     // Serialize the switch pool data.
@@ -1387,7 +1387,7 @@ fn test_v_internal_pool_member_info_wrap_latest() {
     let internal_pool_member_info_latest = InternalPoolMemberInfoLatest {
         reward_address: Zero::zero(),
         amount: Zero::zero(),
-        index: Zero::zero(),
+        _deprecated_index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
@@ -1407,7 +1407,6 @@ fn test_v_internal_pool_member_info_new_latest() {
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
         amount: Zero::zero(),
-        index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
@@ -1418,7 +1417,7 @@ fn test_v_internal_pool_member_info_new_latest() {
         InternalPoolMemberInfoLatest {
             reward_address: Zero::zero(),
             amount: Zero::zero(),
-            index: Zero::zero(),
+            _deprecated_index: Zero::zero(),
             unclaimed_rewards: Zero::zero(),
             commission: Zero::zero(),
             unpool_amount: Zero::zero(),
@@ -1444,7 +1443,6 @@ fn test_v_internal_pool_member_info_is_none() {
     let v_latest = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
         amount: Zero::zero(),
-        index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
@@ -1471,7 +1469,7 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
     let expected_internal_pool_member_info = InternalPoolMemberInfoV1 {
         reward_address: Zero::zero(),
         amount: Zero::zero(),
-        index: Zero::zero(),
+        _deprecated_index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),

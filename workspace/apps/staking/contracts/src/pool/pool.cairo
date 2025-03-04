@@ -158,8 +158,7 @@ pub mod Pool {
             let token_dispatcher = self.token_dispatcher.read();
             let staker_address = self.staker_address.read();
             self.transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
-            let updated_index = self
-                .transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
+            self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
             // Create the pool member record.
             self
@@ -169,7 +168,6 @@ pub mod Pool {
                     VInternalPoolMemberInfoTrait::new_latest(
                         reward_address: reward_address,
                         amount: amount,
-                        index: updated_index,
                         unclaimed_rewards: Zero::zero(),
                         commission: self.commission.read(),
                         unpool_amount: Zero::zero(),
@@ -447,7 +445,7 @@ pub mod Pool {
                     let pool_member_info = InternalPoolMemberInfoLatest {
                         reward_address: switch_pool_data.reward_address,
                         amount,
-                        index,
+                        _deprecated_index: Zero::zero(),
                         unclaimed_rewards: Zero::zero(),
                         commission: self.commission.read(),
                         unpool_time: Option::None,
