@@ -821,33 +821,26 @@ fn test_switch_delegation_pool() {
     cheat_caller_address(
         contract_address: pool_contract,
         caller_address: cfg.test_info.pool_member_address,
-        span: CheatSpan::TargetCalls(3),
+        span: CheatSpan::TargetCalls(5),
     );
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info.amount);
-    let pool_member_info_before_switch: InternalPoolMemberInfoLatest =
-        load_pool_member_info_from_map(
-        key: cfg.test_info.pool_member_address, contract: pool_contract,
-    )
-        .unwrap_latest();
+    let pool_member_info_before_switch: PoolMemberInfo = pool_dispatcher
+        .pool_member_info(pool_member: cfg.test_info.pool_member_address);
     let amount_left = pool_dispatcher
         .switch_delegation_pool(
             to_staker: OTHER_STAKER_ADDRESS(),
             to_pool: to_staker_pool_contract,
             amount: switch_amount,
         );
-    let actual_pool_member_info: VInternalPoolMemberInfo = load_pool_member_info_from_map(
-        key: cfg.test_info.pool_member_address, contract: pool_contract,
-    );
-    let expected_pool_member_info = InternalPoolMemberInfoLatest {
+    let actual_pool_member_info: PoolMemberInfo = pool_dispatcher
+        .pool_member_info(pool_member: cfg.test_info.pool_member_address);
+    let expected_pool_member_info: PoolMemberInfo = PoolMemberInfo {
         unpool_amount: cfg.pool_member_info.amount - switch_amount,
         ..pool_member_info_before_switch,
     };
     assert_eq!(amount_left, cfg.pool_member_info.amount - switch_amount);
-    assert_eq!(
-        actual_pool_member_info,
-        VInternalPoolMemberInfoTrait::wrap_latest(expected_pool_member_info),
-    );
+    assert_eq!(actual_pool_member_info, expected_pool_member_info);
     let mut spy = snforge_std::spy_events();
     let amount_left = pool_dispatcher
         .switch_delegation_pool(
@@ -1265,20 +1258,17 @@ fn test_partial_undelegate() {
     pool_dispatcher.exit_delegation_pool_intent(amount: intent_amount);
     cfg.pool_member_info.unpool_amount = intent_amount;
     cfg.pool_member_info.amount = total_pool_member_amount - intent_amount;
-    let actual_pool_member_info: VInternalPoolMemberInfo = load_pool_member_info_from_map(
-        key: cfg.test_info.pool_member_address, contract: pool_contract,
-    );
+    let actual_pool_member_info: PoolMemberInfo = pool_dispatcher
+        .pool_member_info(pool_member: cfg.test_info.pool_member_address);
     let expected_time = Time::now()
         .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
-    let expected_pool_member_info = InternalPoolMemberInfoLatest {
+    let expected_pool_member_info: PoolMemberInfo = InternalPoolMemberInfoLatest {
         unclaimed_rewards: unclaimed_rewards_member,
         unpool_time: Option::Some(expected_time),
         ..cfg.pool_member_info,
-    };
-    assert_eq!(
-        actual_pool_member_info,
-        VInternalPoolMemberInfoTrait::wrap_latest(expected_pool_member_info),
-    );
+    }
+        .into();
+    assert_eq!(actual_pool_member_info, expected_pool_member_info);
     // Validate that the data is written in the exit intents map in staking contract.
     let undelegate_intent_key = UndelegateIntentKey {
         pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
@@ -1302,18 +1292,15 @@ fn test_partial_undelegate() {
     pool_dispatcher.exit_delegation_pool_intent(amount: intent_amount);
     cfg.pool_member_info.unpool_amount = intent_amount;
     cfg.pool_member_info.amount = total_pool_member_amount - intent_amount;
-    let actual_pool_member_info: VInternalPoolMemberInfo = load_pool_member_info_from_map(
-        key: cfg.test_info.pool_member_address, contract: pool_contract,
-    );
-    let expected_pool_member_info = InternalPoolMemberInfoLatest {
+    let actual_pool_member_info: PoolMemberInfo = pool_dispatcher
+        .pool_member_info(pool_member: cfg.test_info.pool_member_address);
+    let expected_pool_member_info: PoolMemberInfo = InternalPoolMemberInfoLatest {
         unclaimed_rewards: unclaimed_rewards_member,
         unpool_time: Option::None,
         ..cfg.pool_member_info,
-    };
-    assert_eq!(
-        actual_pool_member_info,
-        VInternalPoolMemberInfoTrait::wrap_latest(expected_pool_member_info),
-    );
+    }
+        .into();
+    assert_eq!(actual_pool_member_info, expected_pool_member_info);
     // Validate that the intent is removed from the exit intents map in staking contract.
     let actual_undelegate_intent_value = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),
