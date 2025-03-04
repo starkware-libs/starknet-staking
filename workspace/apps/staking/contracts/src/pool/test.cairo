@@ -1397,7 +1397,6 @@ fn test_v_internal_pool_member_info_new_latest() {
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
-        commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
         last_claimed_idx_in_member_vec: Zero::zero(),
@@ -1432,7 +1431,6 @@ fn test_v_internal_pool_member_info_is_none() {
     let v_latest = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
-        commission: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
         last_claimed_idx_in_member_vec: Zero::zero(),
@@ -1625,6 +1623,7 @@ fn test_internal_pool_member_info() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
     expected_pool_member_info._deprecated_amount = Zero::zero();
+    expected_pool_member_info.commission = Zero::zero();
     let pool_member_info = pool_dispatcher.internal_pool_member_info(:pool_member);
     assert_eq!(pool_member_info, expected_pool_member_info);
 
@@ -1667,6 +1666,7 @@ fn test_get_internal_pool_member_info() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
     expected_pool_member_info._deprecated_amount = Zero::zero();
+    expected_pool_member_info.commission = Zero::zero();
     let option_pool_member_info = pool_dispatcher.get_internal_pool_member_info(:pool_member);
     assert_eq!(option_pool_member_info, Option::Some(expected_pool_member_info));
 }

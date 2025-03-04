@@ -168,7 +168,6 @@ pub mod Pool {
                     VInternalPoolMemberInfoTrait::new_latest(
                         reward_address: reward_address,
                         unclaimed_rewards: Zero::zero(),
-                        commission: self.commission.read(),
                         unpool_amount: Zero::zero(),
                         unpool_time: Option::None,
                         last_claimed_idx_in_member_vec: Zero::zero(),
@@ -438,7 +437,7 @@ pub mod Pool {
                         _deprecated_amount: Zero::zero(),
                         _deprecated_index: Zero::zero(),
                         unclaimed_rewards: Zero::zero(),
-                        commission: self.commission.read(),
+                        commission: Zero::zero(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
                         last_claimed_idx_in_member_vec: Zero::zero(),
@@ -512,6 +511,7 @@ pub mod Pool {
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
             external_pool_member_info.amount = self.get_amount(:pool_member);
             external_pool_member_info.unclaimed_rewards += self.calculate_rewards(:pool_member);
+            external_pool_member_info.commission = self.commission.read();
             external_pool_member_info
         }
 
