@@ -1,4 +1,5 @@
 use contracts_commons::types::time::time::Timestamp;
+use core::num::traits::Zero;
 use staking::pool::interface::{IPoolDispatcherTrait, IPoolLibraryDispatcher, PoolMemberInfo};
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest, VecIndex};
 use starknet::{ClassHash, ContractAddress};
@@ -24,8 +25,10 @@ struct InternalPoolMemberInfo {
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub(crate) struct InternalPoolMemberInfoV1 {
     pub(crate) reward_address: ContractAddress,
-    pub(crate) amount: Amount,
-    pub(crate) index: Index,
+    // **Note**: This field was used in V0 and is replaced by `pool_member_epoch_balance` in V1.
+    pub(crate) _deprecated_amount: Amount,
+    // **Note**: This field was used in V0, in V1, rewards are calculated based on epochs.
+    pub(crate) _deprecated_index: Index,
     pub(crate) unclaimed_rewards: Amount,
     pub(crate) commission: Commission,
     pub(crate) unpool_amount: Amount,
@@ -62,19 +65,17 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
 
     fn new_latest(
         reward_address: ContractAddress,
-        amount: Amount,
-        index: Index,
         unclaimed_rewards: Amount,
         commission: Commission,
         unpool_amount: Amount,
         unpool_time: Option<Timestamp>,
         last_claimed_idx_in_member_vec: VecIndex,
-    ) -> VInternalPoolMemberInfo nopanic {
+    ) -> VInternalPoolMemberInfo {
         VInternalPoolMemberInfo::V1(
             InternalPoolMemberInfoV1 {
                 reward_address,
-                amount,
-                index,
+                _deprecated_amount: Zero::zero(),
+                _deprecated_index: Zero::zero(),
                 unclaimed_rewards,
                 commission,
                 unpool_amount,
@@ -99,8 +100,8 @@ pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfo of Into<
     fn into(self: InternalPoolMemberInfoLatest) -> PoolMemberInfo {
         PoolMemberInfo {
             reward_address: self.reward_address,
-            amount: self.amount,
-            index: self.index,
+            amount: self._deprecated_amount,
+            index: self._deprecated_index,
             unclaimed_rewards: self.unclaimed_rewards,
             commission: self.commission,
             unpool_amount: self.unpool_amount,
@@ -196,8 +197,8 @@ mod internal_pool_member_info_latest_tests {
     fn test_into() {
         let internal_pool_member_info = InternalPoolMemberInfoLatest {
             reward_address: Zero::zero(),
-            amount: Zero::zero(),
-            index: Zero::zero(),
+            _deprecated_amount: Zero::zero(),
+            _deprecated_index: Zero::zero(),
             unclaimed_rewards: Zero::zero(),
             commission: Zero::zero(),
             unpool_amount: Zero::zero(),

@@ -155,8 +155,8 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<
     fn into(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address: self.reward_address,
-            amount: self.amount,
-            index: self.index,
+            _deprecated_amount: self.amount,
+            _deprecated_index: self.index,
             unclaimed_rewards: self.unclaimed_rewards,
             commission: self.commission,
             unpool_amount: self.unpool_amount,
