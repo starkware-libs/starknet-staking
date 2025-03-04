@@ -10,6 +10,8 @@ pub trait IAttestation<TContractState> {
     fn get_last_epoch_attestation_done(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Epoch;
+    fn attestation_window(self: @TContractState) -> u8;
+    fn set_attestation_window(ref self: TContractState, attestation_window: u8);
 }
 
 // TODO: implement

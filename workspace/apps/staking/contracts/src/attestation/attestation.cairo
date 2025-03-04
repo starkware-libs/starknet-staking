@@ -11,6 +11,7 @@ pub mod Attestation {
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
     use staking::attestation::interface::{AttestInfo, IAttestation};
+    use staking::constants::MIN_ATTESTATION_WINDOW;
     use staking::staking::interface::{
         IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
         IStakingDispatcherTrait,
@@ -46,6 +47,8 @@ pub mod Attestation {
         staking_contract: ContractAddress,
         // Maps staker address to the last epoch he attested.
         staker_last_attested_epoch: Map<ContractAddress, Option<Epoch>>,
+        // Number of blocks where the staker can attest after the expected attestation block.
+        attestation_window: u8,
     }
 
     #[event]
@@ -66,10 +69,15 @@ pub mod Attestation {
         ref self: ContractState,
         staking_contract: ContractAddress,
         governance_admin: ContractAddress,
+        attestation_window: u8,
     ) {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.staking_contract.write(staking_contract);
+        assert_gt!(
+            attestation_window, MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL,
+        );
+        self.attestation_window.write(attestation_window);
     }
 
     #[abi(embed_v0)]
@@ -117,6 +125,19 @@ pub mod Attestation {
             };
             let current_epoch = staking_dispatcher.get_current_epoch();
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
+        }
+
+        fn attestation_window(self: @ContractState) -> u8 {
+            self.attestation_window.read()
+        }
+
+        fn set_attestation_window(ref self: ContractState, attestation_window: u8) {
+            self.roles.only_app_governor();
+            assert!(
+                attestation_window > MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL,
+            );
+            self.attestation_window.write(attestation_window);
+            // TODO: emit event.
         }
     }
 
