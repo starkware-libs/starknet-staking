@@ -210,36 +210,30 @@ pub mod Pool {
             self.transfer_from_delegator(pool_member: caller_address, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
-            // Update the pool member's amount record and commit it to storage.
-            let old_delegated_stake = pool_member_info.amount;
-            pool_member_info.amount += amount;
-            self
-                .pool_member_info
-                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
+            let old_delegated_stake = self.get_amount(:pool_member);
 
             // Update the pool member's balance checkpoint.
             self.increase_next_epoch_balance(:pool_member, :amount);
+            let new_delegated_stake = old_delegated_stake + amount;
 
             // Emit events.
             self
                 .emit(
                     Events::PoolMemberBalanceChanged {
-                        pool_member,
-                        old_delegated_stake,
-                        new_delegated_stake: pool_member_info.amount,
+                        pool_member, old_delegated_stake, new_delegated_stake,
                     },
                 );
 
-            pool_member_info.amount
+            new_delegated_stake
         }
 
         fn exit_delegation_pool_intent(ref self: ContractState, amount: Amount) {
             // Asserts.
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
-            let total_amount = pool_member_info.amount + pool_member_info.unpool_amount;
+            let old_delegated_stake = self.get_amount(:pool_member);
+            let total_amount = old_delegated_stake + pool_member_info.unpool_amount;
             assert!(amount <= total_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
-            let old_delegated_stake = pool_member_info.amount;
 
             // Notify the staking contract of the removal intent.
             let unpool_time = self.undelegate_from_staking_contract_intent(:pool_member, :amount);
@@ -252,7 +246,6 @@ pub mod Pool {
             }
             pool_member_info.unpool_amount = amount;
             let new_delegated_stake = total_amount - amount;
-            pool_member_info.amount = new_delegated_stake;
             self
                 .pool_member_info
                 .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
@@ -308,7 +301,7 @@ pub mod Pool {
             token_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
 
             // Write the updated pool member info to storage (remove if needed).
-            if pool_member_info.amount.is_zero() {
+            if self.get_amount(:pool_member).is_zero() {
                 // Transfer rewards to delegator's reward address.
                 self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
                 self.remove_pool_member(:pool_member);
@@ -362,13 +355,13 @@ pub mod Pool {
 
             // Update pool_member_info and write to storage.
             pool_member_info.unpool_amount -= amount;
-            if pool_member_info.unpool_amount.is_zero() && pool_member_info.amount.is_zero() {
+            if pool_member_info.unpool_amount.is_zero() && self.get_amount(:pool_member).is_zero() {
                 // Both unpool_amount and amount are zero, send rewards and remove pool member.
                 let token_dispatcher = self.token_dispatcher.read();
                 self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
                 self.remove_pool_member(:pool_member);
             } else {
-                // One of pool_member_info.unpool_amount or pool_member_info.amount is non-zero.
+                // One of pool member unpool_amount or amount is non-zero.
                 if pool_member_info.unpool_amount.is_zero() {
                     // unpool_amount is zero, clear unpool_time.
                     pool_member_info.unpool_time = Option::None;
@@ -435,7 +428,6 @@ pub mod Pool {
                         "{}",
                         Error::REWARD_ADDRESS_MISMATCH,
                     );
-                    pool_member_info.amount += amount;
                     // Update the pool member's balance checkpoint.
                     self.increase_next_epoch_balance(:pool_member, :amount);
                     pool_member_info
@@ -461,13 +453,15 @@ pub mod Pool {
                 .pool_member_info
                 .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
 
+            let new_delegated_stake = self.get_amount(:pool_member);
+
             // Emit event.
             self
                 .emit(
                     Events::PoolMemberBalanceChanged {
                         pool_member,
-                        old_delegated_stake: pool_member_info.amount - amount,
-                        new_delegated_stake: pool_member_info.amount,
+                        old_delegated_stake: new_delegated_stake - amount,
+                        new_delegated_stake,
                     },
                 );
         }
