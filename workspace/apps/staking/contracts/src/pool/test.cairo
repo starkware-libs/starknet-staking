@@ -1396,7 +1396,6 @@ fn test_v_internal_pool_member_info_wrap_latest() {
 fn test_v_internal_pool_member_info_new_latest() {
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
-        unclaimed_rewards: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
         last_claimed_idx_in_member_vec: Zero::zero(),
@@ -1430,7 +1429,6 @@ fn test_v_internal_pool_member_info_is_none() {
     );
     let v_latest = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
-        unclaimed_rewards: Zero::zero(),
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
         last_claimed_idx_in_member_vec: Zero::zero(),
