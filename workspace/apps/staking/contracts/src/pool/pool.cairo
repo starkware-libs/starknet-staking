@@ -167,7 +167,6 @@ pub mod Pool {
                     pool_member,
                     VInternalPoolMemberInfoTrait::new_latest(
                         reward_address: reward_address,
-                        unclaimed_rewards: Zero::zero(),
                         unpool_amount: Zero::zero(),
                         unpool_time: Option::None,
                         last_claimed_idx_in_member_vec: Zero::zero(),
