@@ -684,7 +684,8 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
         _deprecated_amount: Serde::<Amount>::deserialize(ref span)
             .expect('Failed _deprecated_amount'),
         _deprecated_index: Serde::<Index>::deserialize(ref span).expect('Failed _deprecated_index'),
-        unclaimed_rewards: Serde::<Amount>::deserialize(ref span).expect('Failed unclaimed'),
+        _deprecated_unclaimed_rewards: Serde::<Amount>::deserialize(ref span)
+            .expect('Failed _deprecated_unclaimed'),
         _deprecated_commission: Serde::<Commission>::deserialize(ref span)
             .expect('Failed _deprecated_commission'),
         unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed unpool_amount'),
@@ -933,7 +934,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             _deprecated_amount: POOL_MEMBER_STAKE_AMOUNT,
             _deprecated_index: Zero::zero(),
-            unclaimed_rewards: Zero::zero(),
+            _deprecated_unclaimed_rewards: Zero::zero(),
             _deprecated_commission: COMMISSION,
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),

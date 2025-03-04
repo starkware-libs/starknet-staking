@@ -29,7 +29,9 @@ pub(crate) struct InternalPoolMemberInfoV1 {
     pub(crate) _deprecated_amount: Amount,
     // **Note**: This field was used in V0, in V1, rewards are calculated based on epochs.
     pub(crate) _deprecated_index: Index,
-    pub(crate) unclaimed_rewards: Amount,
+    // **Note**: This field was used in V0, in V1 it only holds unclaimed rewards from before the
+    // upgrade.
+    pub(crate) _deprecated_unclaimed_rewards: Amount,
     // **Note**: This field was used in V0 for rewards calculation. In V1, rewards are transferred
     // to the pool after commission deduction.
     pub(crate) _deprecated_commission: Commission,
@@ -76,7 +78,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
                 reward_address,
                 _deprecated_amount: Zero::zero(),
                 _deprecated_index: Zero::zero(),
-                unclaimed_rewards: Zero::zero(),
+                _deprecated_unclaimed_rewards: Zero::zero(),
                 _deprecated_commission: Zero::zero(),
                 unpool_amount,
                 unpool_time,
@@ -102,7 +104,7 @@ pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfo of Into<
             reward_address: self.reward_address,
             amount: self._deprecated_amount,
             index: self._deprecated_index,
-            unclaimed_rewards: self.unclaimed_rewards,
+            unclaimed_rewards: self._deprecated_unclaimed_rewards,
             commission: self._deprecated_commission,
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
@@ -199,7 +201,7 @@ mod internal_pool_member_info_latest_tests {
             reward_address: Zero::zero(),
             _deprecated_amount: Zero::zero(),
             _deprecated_index: Zero::zero(),
-            unclaimed_rewards: Zero::zero(),
+            _deprecated_unclaimed_rewards: Zero::zero(),
             _deprecated_commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,

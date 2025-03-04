@@ -325,8 +325,8 @@ pub mod Pool {
                 Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
             );
 
-            pool_member_info.unclaimed_rewards += self.calculate_rewards(:pool_member);
-            let rewards = pool_member_info.unclaimed_rewards;
+            pool_member_info._deprecated_unclaimed_rewards += self.calculate_rewards(:pool_member);
+            let rewards = pool_member_info._deprecated_unclaimed_rewards;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
             self
@@ -435,7 +435,7 @@ pub mod Pool {
                         reward_address: switch_pool_data.reward_address,
                         _deprecated_amount: Zero::zero(),
                         _deprecated_index: Zero::zero(),
-                        unclaimed_rewards: Zero::zero(),
+                        _deprecated_unclaimed_rewards: Zero::zero(),
                         _deprecated_commission: Zero::zero(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
@@ -668,10 +668,10 @@ pub mod Pool {
             token_dispatcher: IERC20Dispatcher,
         ) {
             let reward_address = pool_member_info.reward_address;
-            let amount = pool_member_info.unclaimed_rewards;
+            let amount = pool_member_info._deprecated_unclaimed_rewards;
 
             token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
-            pool_member_info.unclaimed_rewards = Zero::zero();
+            pool_member_info._deprecated_unclaimed_rewards = Zero::zero();
 
             // TODO: update last_claimed_idx_in_member_vec of pool member info.
 
