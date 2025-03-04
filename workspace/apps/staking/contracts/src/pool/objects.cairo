@@ -64,7 +64,6 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
 
     fn new_latest(
         reward_address: ContractAddress,
-        amount: Amount,
         unclaimed_rewards: Amount,
         commission: Commission,
         unpool_amount: Amount,
@@ -74,7 +73,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
         VInternalPoolMemberInfo::V1(
             InternalPoolMemberInfoV1 {
                 reward_address,
-                amount,
+                amount: Zero::zero(),
                 _deprecated_index: Zero::zero(),
                 unclaimed_rewards,
                 commission,

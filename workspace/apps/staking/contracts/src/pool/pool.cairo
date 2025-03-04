@@ -167,7 +167,6 @@ pub mod Pool {
                     pool_member,
                     VInternalPoolMemberInfoTrait::new_latest(
                         reward_address: reward_address,
-                        amount: amount,
                         unclaimed_rewards: Zero::zero(),
                         commission: self.commission.read(),
                         unpool_amount: Zero::zero(),
@@ -436,7 +435,7 @@ pub mod Pool {
                     // Pool member does not exist. Create a new record.
                     let pool_member_info = InternalPoolMemberInfoLatest {
                         reward_address: switch_pool_data.reward_address,
-                        amount,
+                        amount: Zero::zero(),
                         _deprecated_index: Zero::zero(),
                         unclaimed_rewards: Zero::zero(),
                         commission: self.commission.read(),

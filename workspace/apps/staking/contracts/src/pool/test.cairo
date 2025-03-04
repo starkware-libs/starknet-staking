@@ -1393,7 +1393,6 @@ fn test_v_internal_pool_member_info_wrap_latest() {
 fn test_v_internal_pool_member_info_new_latest() {
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
-        amount: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
@@ -1429,7 +1428,6 @@ fn test_v_internal_pool_member_info_is_none() {
     );
     let v_latest = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
-        amount: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
@@ -1623,6 +1621,7 @@ fn test_internal_pool_member_info() {
     let pool_dispatcher = IPoolMigrationDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
+    expected_pool_member_info.amount = Zero::zero();
     let pool_member_info = pool_dispatcher.internal_pool_member_info(:pool_member);
     assert_eq!(pool_member_info, expected_pool_member_info);
 
@@ -1664,6 +1663,7 @@ fn test_get_internal_pool_member_info() {
     // Check after enter the pool.
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
+    expected_pool_member_info.amount = Zero::zero();
     let option_pool_member_info = pool_dispatcher.get_internal_pool_member_info(:pool_member);
     assert_eq!(option_pool_member_info, Option::Some(expected_pool_member_info));
 }
