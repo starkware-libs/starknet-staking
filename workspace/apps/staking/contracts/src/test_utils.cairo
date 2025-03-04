@@ -1,21 +1,21 @@
 use Staking::ContractState;
 use constants::{
-    APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BUFFER, COMMISSION,
-    DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN,
-    INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS,
-    OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS,
-    POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
-    REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
-    STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
-    STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
+    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BUFFER,
+    COMMISSION, DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
+    GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE,
+    OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN,
+    POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS,
+    POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT,
+    STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
+    STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use contracts_commons::constants::{NAME, SYMBOL};
 use contracts_commons::errors::OptionAuxTrait;
 use contracts_commons::math::utils::mul_wide_and_div;
 use contracts_commons::test_utils::{
-    advance_block_number_global, cheat_caller_address_once, set_account_as_app_role_admin,
-    set_account_as_security_admin, set_account_as_security_agent, set_account_as_token_admin,
-    set_account_as_upgrade_governor,
+    advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
+    set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
+    set_account_as_token_admin, set_account_as_upgrade_governor,
 };
 use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
@@ -24,6 +24,7 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global, test_address,
 };
+use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::constants::{C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
 use staking::errors::GenericError;
 use staking::minting_curve::interface::MintingCurveContractInfo;
@@ -189,6 +190,9 @@ pub(crate) mod constants {
     }
     pub fn UPGRADE_GOVERNOR() -> ContractAddress nopanic {
         contract_address_const::<'UPGRADE_GOVERNOR'>()
+    }
+    pub fn APP_GOVERNOR() -> ContractAddress nopanic {
+        contract_address_const::<'APP_GOVERNOR'>()
     }
     pub fn STARKGATE_ADDRESS() -> ContractAddress nopanic {
         contract_address_const::<'STARKGATE_ADDRESS'>()
@@ -428,8 +432,19 @@ pub(crate) fn deploy_attestation_contract(cfg: StakingInitConfig) -> ContractAdd
     let mut calldata = ArrayTrait::new();
     cfg.test_info.staking_contract.serialize(ref calldata);
     cfg.test_info.governance_admin.serialize(ref calldata);
+    cfg.test_info.attestation_window.serialize(ref calldata);
     let attestation_contract = snforge_std::declare("Attestation").unwrap().contract_class();
     let (attestation_contract_address, _) = attestation_contract.deploy(@calldata).unwrap();
+    set_account_as_app_role_admin(
+        contract: attestation_contract_address,
+        account: cfg.test_info.app_role_admin,
+        governance_admin: cfg.test_info.governance_admin,
+    );
+    set_account_as_app_governor(
+        contract: attestation_contract_address,
+        account: cfg.test_info.app_governor,
+        governance_admin: cfg.test_info.app_role_admin,
+    );
     attestation_contract_address
 }
 
@@ -669,7 +684,8 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
         _deprecated_amount: Serde::<Amount>::deserialize(ref span)
             .expect('Failed _deprecated_amount'),
         _deprecated_index: Serde::<Index>::deserialize(ref span).expect('Failed _deprecated_index'),
-        unclaimed_rewards: Serde::<Amount>::deserialize(ref span).expect('Failed unclaimed'),
+        _deprecated_unclaimed_rewards: Serde::<Amount>::deserialize(ref span)
+            .expect('Failed _deprecated_unclaimed'),
         _deprecated_commission: Serde::<Commission>::deserialize(ref span)
             .expect('Failed _deprecated_commission'),
         unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed unpool_amount'),
@@ -873,6 +889,8 @@ pub(crate) struct TestInfo {
     pub app_role_admin: ContractAddress,
     pub upgrade_governor: ContractAddress,
     pub attestation_contract: ContractAddress,
+    pub attestation_window: u8,
+    pub app_governor: ContractAddress,
 }
 
 #[derive(Drop, Copy)]
@@ -916,7 +934,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             _deprecated_amount: POOL_MEMBER_STAKE_AMOUNT,
             _deprecated_index: Zero::zero(),
-            unclaimed_rewards: Zero::zero(),
+            _deprecated_unclaimed_rewards: Zero::zero(),
             _deprecated_commission: COMMISSION,
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),
@@ -952,6 +970,8 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             app_role_admin: APP_ROLE_ADMIN(),
             upgrade_governor: UPGRADE_GOVERNOR(),
             attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
+            attestation_window: MIN_ATTESTATION_WINDOW + 1,
+            app_governor: APP_GOVERNOR(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,

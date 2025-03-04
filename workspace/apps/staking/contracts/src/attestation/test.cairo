@@ -11,6 +11,7 @@ use staking::attestation::interface::{
     AttestInfo, IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
+use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::event_test_utils::assert_number_of_events;
 use staking::test_utils;
 use test_utils::{
@@ -160,8 +161,22 @@ fn test_constructor() {
         ref state,
         staking_contract: cfg.test_info.staking_contract,
         governance_admin: cfg.test_info.governance_admin,
+        attestation_window: MIN_ATTESTATION_WINDOW + 1,
     );
     assert_eq!(state.staking_contract.read(), cfg.test_info.staking_contract);
+}
+
+#[test]
+#[should_panic(expected: "Attestation window is too small, must be larger then 10 blocks")]
+fn test_constructor_assertions() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut state = Attestation::contract_state_for_testing();
+    Attestation::constructor(
+        ref state,
+        staking_contract: cfg.test_info.staking_contract,
+        governance_admin: cfg.test_info.governance_admin,
+        attestation_window: MIN_ATTESTATION_WINDOW,
+    );
 }
 
 #[test]
@@ -188,4 +203,47 @@ fn test_contract_upgrade_delay() {
         contract_address: cfg.test_info.attestation_contract,
     };
     assert_eq!(attestation_replaceable_dispatcher.get_upgrade_delay(), 0);
+}
+
+#[test]
+fn test_set_attestation_window() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
+    assert_eq!(attestation_dispatcher.attestation_window(), MIN_ATTESTATION_WINDOW + 1);
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: cfg.test_info.app_governor,
+    );
+    attestation_dispatcher.set_attestation_window(attestation_window: MIN_ATTESTATION_WINDOW + 2);
+    assert_eq!(attestation_dispatcher.attestation_window(), MIN_ATTESTATION_WINDOW + 2);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_attestation_window_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_safe_dispatcher = IAttestationSafeDispatcher {
+        contract_address: attestation_contract,
+    };
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: cfg.test_info.app_governor,
+    );
+    // Catch ATTEST_WINDOW_TOO_SMALL.
+    let result = attestation_safe_dispatcher
+        .set_attestation_window(attestation_window: MIN_ATTESTATION_WINDOW);
+    assert_panic_with_error(:result, expected_error: Error::ATTEST_WINDOW_TOO_SMALL.describe());
+}
+
+#[test]
+#[should_panic(expected: "ONLY_APP_GOVERNOR")]
+fn test_attest_role_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
+    // Catch ONLY_APP_GOVERNOR.
+    attestation_dispatcher.set_attestation_window(attestation_window: MIN_ATTESTATION_WINDOW);
 }
