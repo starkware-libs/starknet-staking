@@ -47,6 +47,8 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::errors::Error;
 use staking::staking::interface::{
+    IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
+    IStakingAttestationSafeDispatcher, IStakingAttestationSafeDispatcherTrait,
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingConfigSafeDispatcher,
     IStakingConfigSafeDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
@@ -61,7 +63,7 @@ use staking::staking::objects::{
     VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
-use staking::types::{Amount, InternalStakerInfoLatest};
+use staking::types::{Amount, Epoch, InternalStakerInfoLatest};
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_rewards_rounded_down,
     compute_rewards_rounded_up,
@@ -2518,31 +2520,36 @@ fn test_get_pool_exit_intent() {
 }
 
 #[test]
-fn test_get_staker_address_by_operational() {
+#[feature("safe_dispatcher")]
+fn test_get_attestation_info_by_operational_address_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let operational_address = cfg.staker_info.operational_address;
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: DUMMY_ADDRESS());
-    let staker_address = staking_dispatcher.get_staker_address_by_operational(:operational_address);
-    assert_eq!(staker_address, cfg.test_info.staker_address);
+    let staking_safe_dispatcher = IStakingAttestationSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    let operational_address = DUMMY_ADDRESS();
+
+    // Catch STAKER_NOT_EXISTS.
+    let result = staking_safe_dispatcher
+        .get_attestation_info_by_operational_address(:operational_address);
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 }
 
 #[test]
-#[feature("safe_dispatcher")]
-fn test_get_staker_address_by_operational_assertions() {
+fn test_get_attestation_info_by_operational_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
-    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+    let staking_dispatcher = IStakingAttestationDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let operational_address = cfg.staker_info.operational_address;
-
-    // Catch STAKER_NOT_EXISTS.
-    let result = staking_safe_dispatcher.get_staker_address_by_operational(:operational_address);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    let attestation_info = staking_dispatcher
+        .get_attestation_info_by_operational_address(:operational_address);
+    let (staker_address, current_epoch): (ContractAddress, Epoch) = attestation_info.into();
+    assert_eq!(staker_address, cfg.test_info.staker_address);
+    assert_eq!(current_epoch, 0);
 }
 
 #[test]
@@ -2567,6 +2574,9 @@ fn test_update_rewards_from_attestation_contract_only_staker() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_attestation_dispatcher = IStakingAttestationDispatcher {
+        contract_address: staking_contract,
+    };
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
         contract_address: reward_supplier,
@@ -2584,7 +2594,7 @@ fn test_update_rewards_from_attestation_contract_only_staker() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: attestation_contract,
     );
-    staking_dispatcher.update_rewards_from_attestation_contract(:staker_address);
+    staking_attestation_dispatcher.update_rewards_from_attestation_contract(:staker_address);
     let staker_info_after = staking_dispatcher.staker_info(:staker_address);
     assert_eq!(staker_info_after, staker_info_expected);
 }
@@ -2595,6 +2605,9 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_attestation_dispatcher = IStakingAttestationDispatcher {
+        contract_address: staking_contract,
+    };
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
@@ -2636,7 +2649,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: attestation_contract,
     );
-    staking_dispatcher.update_rewards_from_attestation_contract(:staker_address);
+    staking_attestation_dispatcher.update_rewards_from_attestation_contract(:staker_address);
 
     // Assert staker rewards update.
     let staker_info_after = staking_dispatcher.staker_info(:staker_address);
@@ -2652,7 +2665,9 @@ fn test_update_rewards_from_attestation_contract_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
-    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+    let staking_safe_dispatcher = IStakingAttestationSafeDispatcher {
+        contract_address: staking_contract,
+    };
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
 

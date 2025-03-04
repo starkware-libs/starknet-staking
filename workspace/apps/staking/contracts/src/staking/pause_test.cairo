@@ -4,8 +4,9 @@ use staking::event_test_utils::{
     assert_number_of_events, assert_paused_event, assert_unpaused_event,
 };
 use staking::staking::interface::{
-    IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
-    IStakingPauseDispatcherTrait, IStakingPoolDispatcher, IStakingPoolDispatcherTrait,
+    IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
+    IStakingDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
+    IStakingPoolDispatcher, IStakingPoolDispatcherTrait,
 };
 use staking::test_utils::constants::{
     DUMMY_ADDRESS, DUMMY_IDENTIFIER, NON_SECURITY_ADMIN, NON_SECURITY_AGENT,
@@ -327,7 +328,7 @@ fn test_update_rewards_from_attestation_contract_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
-    let staking_dispatcher = IStakingDispatcher {
+    let staking_dispatcher = IStakingAttestationDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.update_rewards_from_attestation_contract(staker_address: DUMMY_ADDRESS());

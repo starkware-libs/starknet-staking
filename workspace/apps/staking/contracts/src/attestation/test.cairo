@@ -161,7 +161,7 @@ fn test_constructor() {
         staking_contract: cfg.test_info.staking_contract,
         governance_admin: cfg.test_info.governance_admin,
     );
-    assert_eq!(state.staking_dispatcher.read().contract_address, cfg.test_info.staking_contract);
+    assert_eq!(state.staking_contract.read(), cfg.test_info.staking_contract);
 }
 
 #[test]

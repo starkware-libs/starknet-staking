@@ -30,7 +30,9 @@ pub(crate) struct InternalPoolMemberInfoV1 {
     // **Note**: This field was used in V0, in V1, rewards are calculated based on epochs.
     pub(crate) _deprecated_index: Index,
     pub(crate) unclaimed_rewards: Amount,
-    pub(crate) commission: Commission,
+    // **Note**: This field was used in V0 for rewards calculation. In V1, rewards are transferred
+    // to the pool after commission deduction.
+    pub(crate) _deprecated_commission: Commission,
     pub(crate) unpool_amount: Amount,
     pub(crate) unpool_time: Option<Timestamp>,
     pub(crate) last_claimed_idx_in_member_vec: VecIndex,
@@ -76,7 +78,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
                 _deprecated_amount: Zero::zero(),
                 _deprecated_index: Zero::zero(),
                 unclaimed_rewards,
-                commission: Zero::zero(),
+                _deprecated_commission: Zero::zero(),
                 unpool_amount,
                 unpool_time,
                 last_claimed_idx_in_member_vec,
@@ -102,7 +104,7 @@ pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfo of Into<
             amount: self._deprecated_amount,
             index: self._deprecated_index,
             unclaimed_rewards: self.unclaimed_rewards,
-            commission: self.commission,
+            commission: self._deprecated_commission,
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
         }
@@ -199,7 +201,7 @@ mod internal_pool_member_info_latest_tests {
             _deprecated_amount: Zero::zero(),
             _deprecated_index: Zero::zero(),
             unclaimed_rewards: Zero::zero(),
-            commission: Zero::zero(),
+            _deprecated_commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
             last_claimed_idx_in_member_vec: Zero::zero(),

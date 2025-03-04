@@ -26,8 +26,9 @@ pub mod Staking {
     };
     use staking::staking::errors::Error;
     use staking::staking::interface::{
-        ConfigEvents, Events, IStaking, IStakingConfig, IStakingMigration, IStakingPause,
-        IStakingPool, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
+        AttestationInfo, AttestationInfoTrait, ConfigEvents, Events, IStaking, IStakingAttestation,
+        IStakingConfig, IStakingMigration, IStakingPause, IStakingPool, PauseEvents, StakerInfo,
+        StakerPoolInfo, StakingContractInfo,
     };
     use staking::staking::objects::{
         EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait,
@@ -531,50 +532,12 @@ pub mod Staking {
             Option::Some(self.staker_info(:staker_address))
         }
 
-        fn get_staker_address_by_operational(
-            self: @ContractState, operational_address: ContractAddress,
-        ) -> ContractAddress {
-            let staker_address = self
-                .operational_address_to_staker_address
-                .read(operational_address);
-            assert!(staker_address.is_non_zero(), "{}", GenericError::STAKER_NOT_EXISTS);
-            staker_address
-        }
-
         fn get_current_epoch(self: @ContractState) -> Epoch {
             self.epoch_info.read().current_epoch()
         }
 
         fn get_epoch_info(self: @ContractState) -> EpochInfo {
             self.epoch_info.read()
-        }
-
-        // TODO: implement
-        // TODO: rounding issues in the rewards calculation
-        fn update_rewards_from_attestation_contract(
-            ref self: ContractState, staker_address: ContractAddress,
-        ) {
-            self.general_prerequisites();
-            // Assert caller is attesation contract
-            assert!(
-                get_caller_address() == self.attestation_contract.read(),
-                "{}",
-                Error::CALLER_IS_NOT_ATTESTATION_CONTRACT,
-            );
-            let mut staker_info = self.internal_staker_info(:staker_address);
-            let total_rewards = self.calculate_staker_total_rewards(:staker_info);
-            self.update_reward_supplier(rewards: total_rewards);
-            let staker_rewards = self
-                .calculate_staker_own_rewards_include_commission(
-                    :staker_info, :total_rewards, :staker_address,
-                );
-            staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
-            let pool_rewards = total_rewards - staker_rewards;
-            self.update_pool_rewards(:staker_address, :staker_info, :pool_rewards);
-            self
-                .staker_info
-                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
-            // TODO: emit events
         }
 
 
@@ -1123,6 +1086,45 @@ pub mod Staking {
         }
     }
 
+    #[abi(embed_v0)]
+    impl StakingAttestationImpl of IStakingAttestation<ContractState> {
+        // TODO: implement
+        // TODO: rounding issues in the rewards calculation
+        fn update_rewards_from_attestation_contract(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) {
+            self.general_prerequisites();
+            // Assert caller is attesation contract
+            assert!(
+                get_caller_address() == self.attestation_contract.read(),
+                "{}",
+                Error::CALLER_IS_NOT_ATTESTATION_CONTRACT,
+            );
+            let mut staker_info = self.internal_staker_info(:staker_address);
+            let total_rewards = self.calculate_staker_total_rewards(:staker_info);
+            self.update_reward_supplier(rewards: total_rewards);
+            let staker_rewards = self
+                .calculate_staker_own_rewards_include_commission(
+                    :staker_info, :total_rewards, :staker_address,
+                );
+            staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
+            let pool_rewards = total_rewards - staker_rewards;
+            self.update_pool_rewards(:staker_address, :staker_info, :pool_rewards);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
+            // TODO: emit events
+        }
+
+        fn get_attestation_info_by_operational_address(
+            self: @ContractState, operational_address: ContractAddress,
+        ) -> AttestationInfo {
+            let staker_address = self.get_staker_address_by_operational(:operational_address);
+            let current_epoch = self.get_current_epoch();
+            AttestationInfoTrait::new(:staker_address, :current_epoch)
+        }
+    }
+
     #[generate_trait]
     pub(crate) impl InternalStakingMigration of IStakingMigrationInternal {
         /// Returns the class hash of the previous contract version.
@@ -1632,6 +1634,16 @@ pub mod Staking {
             let mut staker_balance = self.staker_balance_trace.entry(key: staker_address).latest();
             staker_balance.update_pool_amount(:amount);
             self.insert_staker_balance(:staker_address, :staker_balance);
+        }
+
+        fn get_staker_address_by_operational(
+            self: @ContractState, operational_address: ContractAddress,
+        ) -> ContractAddress {
+            let staker_address = self
+                .operational_address_to_staker_address
+                .read(operational_address);
+            assert!(staker_address.is_non_zero(), "{}", GenericError::STAKER_NOT_EXISTS);
+            staker_address
         }
     }
 }
