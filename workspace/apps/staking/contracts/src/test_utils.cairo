@@ -690,7 +690,7 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
             .expect('Failed _deprecated_commission'),
         unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed unpool_amount'),
         unpool_time: Option::None,
-        last_claimed_idx_in_member_vec: Zero::zero(),
+        entry_to_claim_from: Zero::zero(),
     };
     let idx = *span.pop_front().expect('Failed pop_front');
     if idx.is_non_zero() {
@@ -707,8 +707,8 @@ pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
         let _ = span.pop_front();
     }
     pool_member_info
-        .last_claimed_idx_in_member_vec = Serde::<VecIndex>::deserialize(ref span)
-        .expect('Failed last_claimed');
+        .entry_to_claim_from = Serde::<VecIndex>::deserialize(ref span)
+        .expect('Failed entry_to_claim_from');
     return VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info);
 }
 
@@ -938,7 +938,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             _deprecated_commission: COMMISSION,
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),
-            last_claimed_idx_in_member_vec: Zero::zero(),
+            entry_to_claim_from: Zero::zero(),
         };
         let staking_contract_info = StakingContractInfoCfg {
             min_stake: MIN_STAKE,

@@ -169,7 +169,7 @@ pub mod Pool {
                         reward_address: reward_address,
                         unpool_amount: Zero::zero(),
                         unpool_time: Option::None,
-                        last_claimed_idx_in_member_vec: Zero::zero(),
+                        entry_to_claim_from: Zero::zero(),
                     ),
                 );
             self.set_next_epoch_balance(:pool_member, :amount);
@@ -439,7 +439,7 @@ pub mod Pool {
                         _deprecated_commission: Zero::zero(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
-                        last_claimed_idx_in_member_vec: Zero::zero(),
+                        entry_to_claim_from: Zero::zero(),
                     };
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);
