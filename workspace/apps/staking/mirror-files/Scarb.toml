@@ -7,7 +7,7 @@ starknet = "2.9.2"
 assert_macros = "2.9.2"
 openzeppelin = "0.20.0"
 openzeppelin_testing = "0.20.0"
-snforge_std = "0.34.0"
+snforge_std = "0.34.1"
 contracts_commons = { path = "workspace/packages/contracts" }
 
 [scripts]
