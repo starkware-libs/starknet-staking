@@ -1,5 +1,5 @@
-use contracts_commons::errors::{Describable, ErrorDisplay};
 use staking::constants::MAX_C_NUM;
+use starkware_utils::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]
 pub(crate) enum Error {

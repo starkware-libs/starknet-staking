@@ -1,5 +1,3 @@
-use contracts_commons::errors::OptionAuxTrait;
-use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
@@ -8,6 +6,8 @@ use staking::staking::interface::{
 };
 use staking::types::{Amount, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
+use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
 

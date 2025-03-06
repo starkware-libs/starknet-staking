@@ -1,4 +1,3 @@
-use contracts_commons::test_utils::cheat_caller_address_once;
 use core::num::traits::{Sqrt, WideMul};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::constants::MAX_C_NUM;
@@ -12,6 +11,7 @@ use staking::test_utils::{
     StakingInitConfig, general_contract_system_deployment, stake_for_testing_using_dispatcher,
 };
 use staking::types::Amount;
+use starkware_utils::test_utils::cheat_caller_address_once;
 
 #[test]
 fn test_yearly_mint() {

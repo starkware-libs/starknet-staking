@@ -6,12 +6,6 @@ use RewardSupplier::{
     CONTRACT_IDENTITY as reward_supplier_identity, CONTRACT_VERSION as reward_supplier_version,
 };
 use Staking::{CONTRACT_IDENTITY as staking_identity, CONTRACT_VERSION as staking_version};
-use contracts_commons::errors::Describable;
-use contracts_commons::math::utils::ceil_of_division;
-use contracts_commons::test_utils::{
-    assert_panic_with_error, cheat_caller_address_once, check_identity,
-};
-use contracts_commons::types::time::time::Time;
 use core::num::traits::{Sqrt, Zero};
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -40,6 +34,12 @@ use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE
 use staking::types::Amount;
 use staking::utils::compute_threshold;
 use starknet::Store;
+use starkware_utils::errors::Describable;
+use starkware_utils::math::utils::ceil_of_division;
+use starkware_utils::test_utils::{
+    assert_panic_with_error, cheat_caller_address_once, check_identity,
+};
+use starkware_utils::types::time::time::Time;
 use test_utils::{
     StakingInitConfig, deploy_minting_curve_contract, deploy_mock_erc20_contract,
     deploy_staking_contract, fund, general_contract_system_deployment,

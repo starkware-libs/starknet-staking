@@ -1,9 +1,9 @@
-use contracts_commons::trace::errors::TraceErrors;
 use core::num::traits::Zero;
 use openzeppelin::utils::math::average;
 use staking::types::{Amount, Epoch};
 use starknet::storage::{Mutable, MutableVecTrait, StorageAsPath, StoragePath, Vec, VecTrait};
 use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+use starkware_utils::trace::errors::TraceErrors;
 
 /// `Trace` struct, for checkpointing values as they change at different points in
 /// time, and later looking up past values by block timestamp.

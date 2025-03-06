@@ -1,9 +1,3 @@
-use contracts_commons::components::replaceability::interface::{
-    IReplaceableDispatcher, IReplaceableDispatcherTrait,
-};
-use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts_commons::errors::Describable;
-use contracts_commons::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::attestation::attestation::Attestation;
 use staking::attestation::errors::Error;
@@ -14,6 +8,12 @@ use staking::attestation::interface::{
 use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::event_test_utils::assert_number_of_events;
 use staking::test_utils;
+use starkware_utils::components::replaceability::interface::{
+    IReplaceableDispatcher, IReplaceableDispatcherTrait,
+};
+use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+use starkware_utils::errors::Describable;
+use starkware_utils::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 use test_utils::{
     StakingInitConfig, advance_epoch_global, general_contract_system_deployment,
     stake_for_testing_using_dispatcher,

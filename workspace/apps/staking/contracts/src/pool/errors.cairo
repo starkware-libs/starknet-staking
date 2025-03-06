@@ -1,4 +1,4 @@
-use contracts_commons::errors::{Describable, ErrorDisplay};
+use starkware_utils::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]
 pub(crate) enum Error {

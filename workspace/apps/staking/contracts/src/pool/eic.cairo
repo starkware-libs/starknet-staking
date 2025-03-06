@@ -1,12 +1,12 @@
 // An External Initializer Contract to upgrade a pool contract.
 #[starknet::contract]
 mod PoolEIC {
-    use contracts_commons::components::replaceability::interface::IEICInitializable;
     use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
     use staking::types::{Index, Version};
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
     use starknet::storage::Map;
+    use starkware_utils::components::replaceability::interface::IEICInitializable;
 
     #[storage]
     struct Storage {

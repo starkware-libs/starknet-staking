@@ -1,5 +1,3 @@
-use contracts_commons::test_utils::assert_expected_event_emitted;
-use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use snforge_std::cheatcodes::events::{Event, EventSpy, EventSpyTrait};
 use staking::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
 use staking::pool::interface::Events as PoolEvents;
@@ -9,6 +7,8 @@ use staking::staking::interface::{
 };
 use staking::types::{Amount, Commission, Inflation};
 use starknet::ContractAddress;
+use starkware_utils::test_utils::assert_expected_event_emitted;
+use starkware_utils::types::time::time::{TimeDelta, Timestamp};
 
 pub(crate) fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert_eq!(

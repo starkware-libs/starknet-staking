@@ -1,4 +1,3 @@
-use contracts_commons::test_utils::cheat_caller_address_once;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::event_test_utils::{
     assert_number_of_events, assert_paused_event, assert_unpaused_event,
@@ -15,6 +14,7 @@ use staking::test_utils::{
     StakingInitConfig, general_contract_system_deployment, load_one_felt, pause_staking_contract,
     stake_for_testing_using_dispatcher,
 };
+use starkware_utils::test_utils::cheat_caller_address_once;
 
 #[test]
 fn test_pause() {

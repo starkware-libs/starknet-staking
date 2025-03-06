@@ -6,7 +6,7 @@ edition = "2023_11"
 [dependencies]
 starknet.workspace = true
 openzeppelin.workspace = true
-contracts_commons.workspace = true
+starkware_utils.workspace = true
 
 [dev-dependencies]
 assert_macros.workspace = true
@@ -21,7 +21,7 @@ test = "SNFORGE_BACKTRACE=1 snforge test"
 
 [[test]]
 name = "contracts_unittest"
-build-external-contracts = ["contracts_commons::erc20_mocks::DualCaseERC20Mock"]
+build-external-contracts = ["starkware_utils::erc20_mocks::DualCaseERC20Mock"]
 
 [tool.fmt]
 sort-module-level-items = true

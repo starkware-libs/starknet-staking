@@ -9,15 +9,6 @@ use constants::{
     STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
     STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
-use contracts_commons::constants::{NAME, SYMBOL};
-use contracts_commons::errors::OptionAuxTrait;
-use contracts_commons::math::utils::mul_wide_and_div;
-use contracts_commons::test_utils::{
-    advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
-    set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
-    set_account_as_token_admin, set_account_as_upgrade_governor,
-};
-use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -52,6 +43,15 @@ use staking::utils::{
     compute_rewards_rounded_down, compute_rewards_rounded_up,
 };
 use starknet::{ClassHash, ContractAddress, Store};
+use starkware_utils::constants::{NAME, SYMBOL};
+use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::math::utils::mul_wide_and_div;
+use starkware_utils::test_utils::{
+    advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
+    set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
+    set_account_as_token_admin, set_account_as_upgrade_governor,
+};
+use starkware_utils::types::time::time::{TimeDelta, Timestamp};
 
 pub(crate) mod constants {
     use staking::constants::STRK_IN_FRIS;
@@ -443,7 +443,7 @@ pub(crate) fn deploy_attestation_contract(cfg: StakingInitConfig) -> ContractAdd
     set_account_as_app_governor(
         contract: attestation_contract_address,
         account: cfg.test_info.app_governor,
-        governance_admin: cfg.test_info.app_role_admin,
+        app_role_admin: cfg.test_info.app_role_admin,
     );
     attestation_contract_address
 }

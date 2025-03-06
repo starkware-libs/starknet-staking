@@ -1,8 +1,8 @@
-use contracts_commons::errors::{Describable, ErrorDisplay};
 use staking::minting_curve::errors::Error as MintingError;
 use staking::pool::errors::Error as PoolError;
 use staking::reward_supplier::errors::Error as RewardsSupplierError;
 use staking::staking::errors::Error as StakingError;
+use starkware_utils::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]
 pub(crate) enum GenericError {

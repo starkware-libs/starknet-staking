@@ -1,11 +1,6 @@
 #[starknet::contract]
 pub mod Attestation {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
-    use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::OptionAuxTrait;
-    use contracts_commons::interfaces::identity::Identity;
     use core::num::traits::Zero;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -19,6 +14,11 @@ pub mod Attestation {
     use staking::types::Epoch;
     use starknet::storage::Map;
     use starknet::{ContractAddress, get_caller_address};
+    use starkware_utils::components::replaceability::ReplaceabilityComponent;
+    use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
+    use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::errors::OptionAuxTrait;
+    use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Attestation';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 

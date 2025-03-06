@@ -1,8 +1,8 @@
-use contracts_commons::types::time::time::Timestamp;
 use core::num::traits::Zero;
 use staking::pool::interface::{IPoolDispatcherTrait, IPoolLibraryDispatcher, PoolMemberInfo};
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest, VecIndex};
 use starknet::{ClassHash, ContractAddress};
+use starkware_utils::types::time::time::Timestamp;
 
 #[derive(Debug, Drop, Serde, Copy)]
 pub struct SwitchPoolData {

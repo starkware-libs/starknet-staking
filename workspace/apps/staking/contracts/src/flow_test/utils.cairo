@@ -3,16 +3,6 @@ use MainnetClassHashes::{
     MAINNET_MINTING_CURVE_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V0,
     MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V0,
 };
-use contracts_commons::components::replaceability::interface::{
-    EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
-};
-use contracts_commons::constants::{NAME, SYMBOL};
-use contracts_commons::test_utils::{
-    Deployable, TokenConfig, TokenState, TokenTrait, advance_block_number_global,
-    cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
-    set_account_as_security_agent, set_account_as_token_admin, set_account_as_upgrade_governor,
-};
-use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -44,6 +34,16 @@ use staking::types::{
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, Store};
 use starknet::{SyscallResultTrait};
+use starkware_utils::components::replaceability::interface::{
+    EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
+};
+use starkware_utils::constants::{NAME, SYMBOL};
+use starkware_utils::test_utils::{
+    Deployable, TokenConfig, TokenState, TokenTrait, advance_block_number_global,
+    cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
+    set_account_as_security_agent, set_account_as_token_admin, set_account_as_upgrade_governor,
+};
+use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 mod MainnetAddresses {
     use starknet::{ContractAddress, contract_address_const};

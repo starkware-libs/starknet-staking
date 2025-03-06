@@ -1,11 +1,11 @@
-use contracts_commons::errors::OptionAuxTrait;
-use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use staking::staking::errors::Error;
 use staking::staking::objects::{
     EpochInfo, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
 };
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
+use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::types::time::time::{TimeDelta, Timestamp};
 
 /// Public interface for the staking contract.
 #[starknet::interface]
@@ -190,9 +190,9 @@ pub trait IStakingAttestation<TContractState> {
 }
 
 pub mod Events {
-    use contracts_commons::types::time::time::Timestamp;
     use staking::types::{Amount, Commission};
     use starknet::ContractAddress;
+    use starkware_utils::types::time::time::Timestamp;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakeBalanceChanged {
         #[key]
@@ -335,9 +335,9 @@ pub mod PauseEvents {
 }
 
 pub mod ConfigEvents {
-    use contracts_commons::types::time::time::TimeDelta;
     use staking::types::Amount;
     use starknet::ContractAddress;
+    use starkware_utils::types::time::time::TimeDelta;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct MinimumStakeChanged {
         pub old_min_stake: Amount,

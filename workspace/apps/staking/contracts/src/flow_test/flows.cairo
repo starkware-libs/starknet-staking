@@ -1,6 +1,3 @@
-use contracts_commons::math::abs::wide_abs_diff;
-use contracts_commons::test_utils::TokenTrait;
-use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::utils::{
@@ -12,6 +9,9 @@ use staking::staking::interface::StakerInfo;
 use staking::test_utils::{pool_update_rewards, staker_update_rewards};
 use staking::types::Amount;
 use starknet::ContractAddress;
+use starkware_utils::math::abs::wide_abs_diff;
+use starkware_utils::test_utils::TokenTrait;
+use starkware_utils::types::time::time::Time;
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true

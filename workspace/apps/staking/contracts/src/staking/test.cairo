@@ -5,14 +5,6 @@ use constants::{
     OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
     POOL_CONTRACT_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
 };
-use contracts_commons::components::replaceability::interface::{EICData, ImplementationData};
-use contracts_commons::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use contracts_commons::constants::DAY;
-use contracts_commons::errors::Describable;
-use contracts_commons::test_utils::{
-    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
-};
-use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::num::traits::Zero;
 use core::option::OptionTrait;
 use event_test_utils::{
@@ -71,6 +63,14 @@ use staking::utils::{
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
+use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
+use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+use starkware_utils::constants::DAY;
+use starkware_utils::errors::Describable;
+use starkware_utils::test_utils::{
+    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
+};
+use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use test_utils::{
     StakingInitConfig, advance_epoch_global, approve,
     calculate_staker_own_rewards_include_commission, calculate_staker_total_rewards,

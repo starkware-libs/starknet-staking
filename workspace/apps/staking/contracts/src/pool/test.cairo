@@ -8,13 +8,6 @@ use constants::{
     POOL_MEMBER_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_FINAL_INDEX,
     STAKING_CONTRACT_ADDRESS, TOKEN_ADDRESS,
 };
-use contracts_commons::components::replaceability::interface::{EICData, ImplementationData};
-use contracts_commons::errors::Describable;
-use contracts_commons::test_utils::{
-    assert_panic_with_error, cheat_caller_address_once, check_identity,
-    set_account_as_upgrade_governor,
-};
-use contracts_commons::types::time::time::Time;
 use core::num::traits::zero::Zero;
 use core::option::OptionTrait;
 use core::serde::Serde;
@@ -57,6 +50,13 @@ use staking::types::{Index, InternalPoolMemberInfoLatest};
 use staking::{event_test_utils, test_utils};
 use starknet::Store;
 use starknet::class_hash::ClassHash;
+use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
+use starkware_utils::errors::Describable;
+use starkware_utils::test_utils::{
+    assert_panic_with_error, cheat_caller_address_once, check_identity,
+    set_account_as_upgrade_governor,
+};
+use starkware_utils::types::time::time::Time;
 use test_utils::{
     StakingInitConfig, approve, cheat_reward_for_reward_supplier, constants, declare_pool_contract,
     declare_pool_eic_contract, deploy_mock_erc20_contract, deploy_staking_contract,

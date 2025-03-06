@@ -8,7 +8,7 @@ assert_macros = "2.10.1"
 openzeppelin = "0.20.0"
 openzeppelin_testing = "0.20.0"
 snforge_std = "0.34.1"
-contracts_commons = { path = "workspace/packages/contracts" }
+starkware_utils = { path = "workspace/packages/contracts" }
 
 [scripts]
 test = "snforge test"

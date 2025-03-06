@@ -1,9 +1,6 @@
 #[starknet::contract]
 pub mod MintingCurve {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::interfaces::identity::Identity;
     use core::num::traits::{Sqrt, WideMul};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -15,6 +12,9 @@ pub mod MintingCurve {
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use staking::types::{Amount, Inflation};
     use starknet::ContractAddress;
+    use starkware_utils::components::replaceability::ReplaceabilityComponent;
+    use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 

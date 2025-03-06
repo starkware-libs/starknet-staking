@@ -1,14 +1,6 @@
 #[starknet::contract]
 pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
-    use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::{Describable, OptionAuxTrait};
-    use contracts_commons::interfaces::identity::Identity;
-    use contracts_commons::math::utils::mul_wide_and_div;
-    use contracts_commons::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
-    use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use core::panics::panic_with_byte_array;
@@ -49,6 +41,14 @@ pub mod Staking {
     use starknet::storage::Map;
     use starknet::storage::StoragePathEntry;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starkware_utils::components::replaceability::ReplaceabilityComponent;
+    use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
+    use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::errors::{Describable, OptionAuxTrait};
+    use starkware_utils::interfaces::identity::Identity;
+    use starkware_utils::math::utils::mul_wide_and_div;
+    use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
+    use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
