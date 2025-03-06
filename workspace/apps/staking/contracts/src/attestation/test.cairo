@@ -39,7 +39,7 @@ fn test_attest() {
     attestation_dispatcher.attest(:attest_info);
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
-    assert_eq!(is_attestation_done, true);
+    assert!(is_attestation_done == true);
     let events = spy.get_events().emitted_by(contract_address: attestation_contract).events;
     assert_number_of_events(actual: events.len(), expected: 0, message: "attest");
 }
@@ -91,7 +91,7 @@ fn test_is_attestation_done_in_curr_epoch() {
     attestation_dispatcher.attest(:attest_info);
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
-    assert_eq!(is_attestation_done, true);
+    assert!(is_attestation_done == true);
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn test_get_last_epoch_attestation_done() {
     attestation_dispatcher.attest(:attest_info);
     let last_epoch_attesation_done = attestation_dispatcher
         .get_last_epoch_attestation_done(:staker_address);
-    assert_eq!(last_epoch_attesation_done, 1);
+    assert!(last_epoch_attesation_done == 1);
 }
 
 #[test]
@@ -163,7 +163,7 @@ fn test_constructor() {
         governance_admin: cfg.test_info.governance_admin,
         attestation_window: MIN_ATTESTATION_WINDOW + 1,
     );
-    assert_eq!(state.staking_contract.read(), cfg.test_info.staking_contract);
+    assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
 }
 
 #[test]
@@ -202,7 +202,7 @@ fn test_contract_upgrade_delay() {
     let attestation_replaceable_dispatcher = IReplaceableDispatcher {
         contract_address: cfg.test_info.attestation_contract,
     };
-    assert_eq!(attestation_replaceable_dispatcher.get_upgrade_delay(), 0);
+    assert!(attestation_replaceable_dispatcher.get_upgrade_delay() == 0);
 }
 
 #[test]
@@ -211,12 +211,12 @@ fn test_set_attestation_window() {
     general_contract_system_deployment(ref :cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
-    assert_eq!(attestation_dispatcher.attestation_window(), MIN_ATTESTATION_WINDOW + 1);
+    assert!(attestation_dispatcher.attestation_window() == MIN_ATTESTATION_WINDOW + 1);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: cfg.test_info.app_governor,
     );
     attestation_dispatcher.set_attestation_window(attestation_window: MIN_ATTESTATION_WINDOW + 2);
-    assert_eq!(attestation_dispatcher.attestation_window(), MIN_ATTESTATION_WINDOW + 2);
+    assert!(attestation_dispatcher.attestation_window() == MIN_ATTESTATION_WINDOW + 2);
 }
 
 #[test]

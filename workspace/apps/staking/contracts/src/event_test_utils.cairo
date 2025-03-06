@@ -11,8 +11,9 @@ use starkware_utils::test_utils::assert_expected_event_emitted;
 use starkware_utils::types::time::time::{TimeDelta, Timestamp};
 
 pub(crate) fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
-    assert_eq!(
-        actual, expected, "{actual} events were emitted instead of {expected}. Context: {message}",
+    assert!(
+        actual == expected,
+        "{actual} events were emitted instead of {expected}. Context: {message}",
     );
 }
 

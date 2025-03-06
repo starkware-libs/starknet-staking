@@ -218,6 +218,6 @@ mod internal_pool_member_info_latest_tests {
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
         };
-        assert_eq!(pool_member_info, expected_pool_member_info);
+        assert!(pool_member_info == expected_pool_member_info);
     }
 }

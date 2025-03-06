@@ -26,7 +26,7 @@ fn test_pause() {
     let is_paused = load_one_felt(
         target: staking_contract, storage_address: selector!("is_paused"),
     );
-    assert_eq!(is_paused, 0);
+    assert!(is_paused == 0);
     assert!(!staking_dispatcher.is_paused());
     let mut spy = snforge_std::spy_events();
     // Pause with security agent.
@@ -37,7 +37,7 @@ fn test_pause() {
     let is_paused = load_one_felt(
         target: staking_contract, storage_address: selector!("is_paused"),
     );
-    assert_ne!(is_paused, 0);
+    assert!(is_paused != 0);
     assert!(staking_dispatcher.is_paused());
     // Unpause with security admin.
     cheat_caller_address_once(
@@ -62,7 +62,7 @@ fn test_already_paused_and_unpaused() {
     let is_paused = load_one_felt(
         target: staking_contract, storage_address: selector!("is_paused"),
     );
-    assert_eq!(is_paused, 0);
+    assert!(is_paused == 0);
     assert!(!staking_dispatcher.is_paused());
     let mut spy = snforge_std::spy_events();
     // Unpause with security admin when already unpaused should change nothing and emit nothing.
@@ -73,7 +73,7 @@ fn test_already_paused_and_unpaused() {
     let is_paused = load_one_felt(
         target: staking_contract, storage_address: selector!("is_paused"),
     );
-    assert_eq!(is_paused, 0);
+    assert!(is_paused == 0);
     assert!(!staking_dispatcher.is_paused());
     // Pause with security agent.
     cheat_caller_address_once(
