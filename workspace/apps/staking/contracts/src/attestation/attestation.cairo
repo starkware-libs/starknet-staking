@@ -74,9 +74,7 @@ pub mod Attestation {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.staking_contract.write(staking_contract);
-        assert_gt!(
-            attestation_window, MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL,
-        );
+        assert!(attestation_window > MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL);
         self.attestation_window.write(attestation_window);
     }
 
