@@ -2,15 +2,6 @@
 version = 1
 
 [[package]]
-name = "contracts_commons"
-version = "0.1.0"
-dependencies = [
- "openzeppelin",
- "openzeppelin_testing",
- "snforge_std",
-]
-
-[[package]]
 name = "openzeppelin"
 version = "0.20.0"
 source = "registry+https://scarbs.xyz/"
@@ -141,10 +132,10 @@ checksum = "sha256:44f32d242af1e43982decc49c563e613a9b67ade552f5c3d5cde504e92f74
 name = "perpetuals"
 version = "0.1.0"
 dependencies = [
- "contracts_commons",
  "openzeppelin",
  "openzeppelin_testing",
  "snforge_std",
+ "starkware_utils",
 ]
 
 [[package]]
@@ -166,7 +157,16 @@ dependencies = [
 name = "staking"
 version = "1.10.8"
 dependencies = [
- "contracts_commons",
+ "openzeppelin",
+ "snforge_std",
+ "starkware_utils",
+]
+
+[[package]]
+name = "starkware_utils"
+version = "0.1.0"
+source = "git+https://github.com/starkware-libs/starkware-starknet-utils?rev=c74907a6583ee912f40201852b9a18772fe0f118#c74907a6583ee912f40201852b9a18772fe0f118"
+dependencies = [
  "openzeppelin",
  "snforge_std",
 ]
