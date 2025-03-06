@@ -309,7 +309,7 @@ fn test_on_receive() {
                 .contract_parameters()
                 .l1_pending_requested_amount == expected_l1_pending_requested_amount,
         );
-    };
+    }
 
     // One more time to cover an amount that's bigger than requested amount.
     cheat_caller_address_once(

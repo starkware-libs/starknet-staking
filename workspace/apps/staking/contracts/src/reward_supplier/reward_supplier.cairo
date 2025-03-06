@@ -296,7 +296,7 @@ pub mod RewardSupplier {
                 let total_amount = num_msgs * base_mint_amount;
                 for _ in 0..num_msgs {
                     self.send_mint_request_to_l1_reward_supplier();
-                };
+                }
                 self.emit(Events::MintRequest { total_amount, num_msgs });
                 l1_pending_requested_amount += total_amount;
             }

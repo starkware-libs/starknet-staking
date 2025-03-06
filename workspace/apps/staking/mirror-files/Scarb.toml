@@ -3,11 +3,12 @@ members = ["workspace/apps/staking/contracts", "workspace/packages/contracts"]
 
 
 [workspace.dependencies]
-starknet = "2.10.1"
-assert_macros = "2.10.1"
+starknet = "2.11.0"
+assert_macros = "2.11.0"
 openzeppelin = "0.20.0"
 openzeppelin_testing = "0.20.0"
-snforge_std = "0.34.1"
+snforge_std = "0.34.0"
+snforge_scarb_plugin = "0.34.0"
 starkware_utils = { path = "workspace/packages/contracts" }
 
 [scripts]

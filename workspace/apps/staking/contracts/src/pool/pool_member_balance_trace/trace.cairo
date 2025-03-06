@@ -1,8 +1,10 @@
 use core::num::traits::Zero;
 use openzeppelin::utils::math::average;
 use staking::types::{Amount, Epoch, VecIndex};
-use starknet::storage::{Mutable, MutableVecTrait, StorageAsPath, StoragePath, Vec, VecTrait};
-use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+use starknet::storage::{
+    Mutable, MutableVecTrait, StorageAsPath, StoragePath, StoragePointerReadAccess,
+    StoragePointerWriteAccess, Vec, VecTrait,
+};
 use starkware_utils::trace::errors::TraceErrors;
 
 /// `Trace` struct, for checkpointing values as they change at different points in
@@ -146,11 +148,11 @@ impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpoin
             } else {
                 // Checkpoint keys must be non-decreasing
                 assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
-                self.append().write(PoolMemberBalanceCheckpoint { key, value });
+                self.push(PoolMemberBalanceCheckpoint { key, value });
             }
             (prev, value)
         } else {
-            self.append().write(PoolMemberBalanceCheckpoint { key, value });
+            self.push(PoolMemberBalanceCheckpoint { key, value });
             (Zero::zero(), value)
         }
     }
@@ -173,7 +175,7 @@ impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpoin
             } else {
                 _low = mid + 1;
             };
-        };
+        }
         _high
     }
 }

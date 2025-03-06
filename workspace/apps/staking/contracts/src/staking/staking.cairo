@@ -38,8 +38,7 @@ pub mod Staking {
         compute_rewards_rounded_up, deploy_delegation_pool_contract,
     };
     use starknet::class_hash::ClassHash;
-    use starknet::storage::Map;
-    use starknet::storage::StoragePathEntry;
+    use starknet::storage::{Map, StoragePathEntry};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;

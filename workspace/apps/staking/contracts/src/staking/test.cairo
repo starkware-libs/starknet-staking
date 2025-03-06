@@ -992,7 +992,7 @@ fn test_stake_pool_enabled() {
             .unwrap()
             .pool_contract;
         cfg.staker_info.pool_info = Option::Some(pool_info);
-    };
+    }
     let expected_staker_info = cfg.staker_info.into();
     // Check that the staker info was updated correctly.
     assert!(expected_staker_info == staking_dispatcher.staker_info(:staker_address));
@@ -1627,7 +1627,7 @@ fn test_switch_staking_delegation_pool() {
         pool_info.amount = amount;
         pool_info.unclaimed_rewards = unclaimed_rewards_pool;
         expected_staker_info.pool_info = Option::Some(pool_info);
-    };
+    }
     let actual_staker_info = staking_dispatcher.staker_info(staker_address: to_staker);
     assert!(actual_staker_info == expected_staker_info);
     // Check total_stake was updated.

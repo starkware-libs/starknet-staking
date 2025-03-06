@@ -15,11 +15,11 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global, test_address,
 };
-use staking::constants::MIN_ATTESTATION_WINDOW;
-use staking::constants::{C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
+use staking::constants::{C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW};
 use staking::errors::GenericError;
-use staking::minting_curve::interface::MintingCurveContractInfo;
-use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
+use staking::minting_curve::interface::{
+    IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
+};
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolMemberInfo};
 use staking::pool::objects::{VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait};
@@ -29,9 +29,8 @@ use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
 };
-use staking::staking::objects::EpochInfoTrait;
 use staking::staking::objects::{
-    EpochInfo, InternalStakerInfoLatestTrait, VersionedInternalStakerInfo,
+    EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait, VersionedInternalStakerInfo,
     VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
@@ -57,8 +56,8 @@ pub(crate) mod constants {
     use staking::constants::STRK_IN_FRIS;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Commission, Index};
-    use starknet::class_hash::{ClassHash, class_hash_const};
-    use starknet::{ContractAddress, contract_address_const};
+    use starknet::ContractAddress;
+    use starknet::class_hash::ClassHash;
 
     pub const STAKER_INITIAL_BALANCE: Amount = 1000000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000 * STRK_IN_FRIS;
@@ -78,130 +77,128 @@ pub(crate) mod constants {
     pub const EPOCH_STARTING_BLOCK: u64 = 463476;
     pub const BLOCK_DURATION: u16 = 30;
 
-    pub fn CALLER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'CALLER_ADDRESS'>()
+    pub fn CALLER_ADDRESS() -> ContractAddress {
+        'CALLER_ADDRESS'.try_into().unwrap()
     }
-    pub fn DUMMY_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'DUMMY_ADDRESS'>()
+    pub fn DUMMY_ADDRESS() -> ContractAddress {
+        'DUMMY_ADDRESS'.try_into().unwrap()
     }
-    pub fn STAKER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'STAKER_ADDRESS'>()
+    pub fn STAKER_ADDRESS() -> ContractAddress {
+        'STAKER_ADDRESS'.try_into().unwrap()
     }
-    pub fn NON_STAKER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'NON_STAKER_ADDRESS'>()
+    pub fn NON_STAKER_ADDRESS() -> ContractAddress {
+        'NON_STAKER_ADDRESS'.try_into().unwrap()
     }
-    pub fn POOL_MEMBER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_MEMBER_ADDRESS'>()
+    pub fn POOL_MEMBER_ADDRESS() -> ContractAddress {
+        'POOL_MEMBER_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_POOL_MEMBER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_POOL_MEMBER_ADDRESS'>()
+    pub fn OTHER_POOL_MEMBER_ADDRESS() -> ContractAddress {
+        'OTHER_POOL_MEMBER_ADDRESS'.try_into().unwrap()
     }
-    pub fn NON_POOL_MEMBER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'NON_POOL_MEMBER_ADDRESS'>()
+    pub fn NON_POOL_MEMBER_ADDRESS() -> ContractAddress {
+        'NON_POOL_MEMBER_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_STAKER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_STAKER_ADDRESS'>()
+    pub fn OTHER_STAKER_ADDRESS() -> ContractAddress {
+        'OTHER_STAKER_ADDRESS'.try_into().unwrap()
     }
-    pub fn OPERATIONAL_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OPERATIONAL_ADDRESS'>()
+    pub fn OPERATIONAL_ADDRESS() -> ContractAddress {
+        'OPERATIONAL_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_OPERATIONAL_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_OPERATIONAL_ADDRESS'>()
+    pub fn OTHER_OPERATIONAL_ADDRESS() -> ContractAddress {
+        'OTHER_OPERATIONAL_ADDRESS'.try_into().unwrap()
     }
-    pub fn OWNER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OWNER_ADDRESS'>()
+    pub fn OWNER_ADDRESS() -> ContractAddress {
+        'OWNER_ADDRESS'.try_into().unwrap()
     }
-    pub fn GOVERNANCE_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'GOVERNANCE_ADMIN'>()
+    pub fn GOVERNANCE_ADMIN() -> ContractAddress {
+        'GOVERNANCE_ADMIN'.try_into().unwrap()
     }
-    pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'STAKING_CONTRACT_ADDRESS'>()
+    pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress {
+        'STAKING_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'NOT_STAKING_CONTRACT_ADDRESS'>()
+    pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress {
+        'NOT_STAKING_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn POOL_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_CONTRACT_ADDRESS'>()
+    pub fn POOL_CONTRACT_ADDRESS() -> ContractAddress {
+        'POOL_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_POOL_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_POOL_CONTRACT_ADDRESS'>()
+    pub fn OTHER_POOL_CONTRACT_ADDRESS() -> ContractAddress {
+        'OTHER_POOL_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn MINTING_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'MINTING_CONTRACT_ADDRESS'>()
+    pub fn MINTING_CONTRACT_ADDRESS() -> ContractAddress {
+        'MINTING_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'REWARD_SUPPLIER_ADDRESS'>()
+    pub fn REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress {
+        'REWARD_SUPPLIER_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_REWARD_SUPPLIER_ADDRESS'>()
+    pub fn OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress {
+        'OTHER_REWARD_SUPPLIER_ADDRESS'.try_into().unwrap()
     }
-    pub fn RECIPIENT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'RECIPIENT_ADDRESS'>()
+    pub fn RECIPIENT_ADDRESS() -> ContractAddress {
+        'RECIPIENT_ADDRESS'.try_into().unwrap()
     }
-    pub fn STAKER_REWARD_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'STAKER_REWARD_ADDRESS'>()
+    pub fn STAKER_REWARD_ADDRESS() -> ContractAddress {
+        'STAKER_REWARD_ADDRESS'.try_into().unwrap()
     }
-    pub fn POOL_MEMBER_REWARD_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_MEMBER_REWARD_ADDRESS'>()
+    pub fn POOL_MEMBER_REWARD_ADDRESS() -> ContractAddress {
+        'POOL_MEMBER_REWARD_ADDRESS'.try_into().unwrap()
     }
-    pub fn POOL_REWARD_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_REWARD_ADDRESS'>()
+    pub fn POOL_REWARD_ADDRESS() -> ContractAddress {
+        'POOL_REWARD_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_REWARD_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_REWARD_ADDRESS'>()
+    pub fn OTHER_REWARD_ADDRESS() -> ContractAddress {
+        'OTHER_REWARD_ADDRESS'.try_into().unwrap()
     }
-    pub fn SPENDER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'SPENDER_ADDRESS'>()
+    pub fn SPENDER_ADDRESS() -> ContractAddress {
+        'SPENDER_ADDRESS'.try_into().unwrap()
     }
-    pub fn NON_TOKEN_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'NON_TOKEN_ADMIN'>()
+    pub fn NON_TOKEN_ADMIN() -> ContractAddress {
+        'NON_TOKEN_ADMIN'.try_into().unwrap()
     }
-    pub fn NON_SECURITY_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'NON_SECURITY_ADMIN'>()
+    pub fn NON_SECURITY_ADMIN() -> ContractAddress {
+        'NON_SECURITY_ADMIN'.try_into().unwrap()
     }
-    pub fn NON_SECURITY_AGENT() -> ContractAddress nopanic {
-        contract_address_const::<'NON_SECURITY_AGENT'>()
+    pub fn NON_SECURITY_AGENT() -> ContractAddress {
+        'NON_SECURITY_AGENT'.try_into().unwrap()
     }
-    pub fn STRK_TOKEN_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<
-            0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d,
-        >()
+    pub fn STRK_TOKEN_ADDRESS() -> ContractAddress {
+        0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d.try_into().unwrap()
     }
-    pub fn TOKEN_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'TOKEN_ADDRESS'>()
+    pub fn TOKEN_ADDRESS() -> ContractAddress {
+        'TOKEN_ADDRESS'.try_into().unwrap()
     }
-    pub fn DUMMY_CLASS_HASH() -> ClassHash nopanic {
-        class_hash_const::<'DUMMY'>()
+    pub fn DUMMY_CLASS_HASH() -> ClassHash {
+        'DUMMY'.try_into().unwrap()
     }
-    pub fn POOL_CONTRACT_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_CONTRACT_ADMIN'>()
+    pub fn POOL_CONTRACT_ADMIN() -> ContractAddress {
+        'POOL_CONTRACT_ADMIN'.try_into().unwrap()
     }
-    pub fn SECURITY_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'SECURITY_ADMIN'>()
+    pub fn SECURITY_ADMIN() -> ContractAddress {
+        'SECURITY_ADMIN'.try_into().unwrap()
     }
-    pub fn SECURITY_AGENT() -> ContractAddress nopanic {
-        contract_address_const::<'SECURITY_AGENT'>()
+    pub fn SECURITY_AGENT() -> ContractAddress {
+        'SECURITY_AGENT'.try_into().unwrap()
     }
-    pub fn TOKEN_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'TOKEN_ADMIN'>()
+    pub fn TOKEN_ADMIN() -> ContractAddress {
+        'TOKEN_ADMIN'.try_into().unwrap()
     }
-    pub fn APP_ROLE_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'APP_ROLE_ADMIN'>()
+    pub fn APP_ROLE_ADMIN() -> ContractAddress {
+        'APP_ROLE_ADMIN'.try_into().unwrap()
     }
-    pub fn UPGRADE_GOVERNOR() -> ContractAddress nopanic {
-        contract_address_const::<'UPGRADE_GOVERNOR'>()
+    pub fn UPGRADE_GOVERNOR() -> ContractAddress {
+        'UPGRADE_GOVERNOR'.try_into().unwrap()
     }
-    pub fn APP_GOVERNOR() -> ContractAddress nopanic {
-        contract_address_const::<'APP_GOVERNOR'>()
+    pub fn APP_GOVERNOR() -> ContractAddress {
+        'APP_GOVERNOR'.try_into().unwrap()
     }
-    pub fn STARKGATE_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'STARKGATE_ADDRESS'>()
+    pub fn STARKGATE_ADDRESS() -> ContractAddress {
+        'STARKGATE_ADDRESS'.try_into().unwrap()
     }
-    pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'NOT_STARKGATE_ADDRESS'>()
+    pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress {
+        'NOT_STARKGATE_ADDRESS'.try_into().unwrap()
     }
-    pub fn ATTESTATION_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'ATTESTATION_CONTRACT_ADDRESS'>()
+    pub fn ATTESTATION_CONTRACT_ADDRESS() -> ContractAddress {
+        'ATTESTATION_CONTRACT_ADDRESS'.try_into().unwrap()
     }
     pub fn DEFAULT_EPOCH_INFO() -> EpochInfo {
         EpochInfoTrait::new(
@@ -1026,7 +1023,7 @@ pub(crate) fn staker_update_rewards(staker_info: StakerInfo, global_index: Index
                     unclaimed_rewards: pool_info.unclaimed_rewards + pool_rewards, ..pool_info,
                 },
             );
-    };
+    }
     StakerInfo {
         index: global_index,
         unclaimed_rewards_own: staker_info.unclaimed_rewards_own + staker_rewards,

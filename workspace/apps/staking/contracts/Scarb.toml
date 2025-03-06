@@ -11,6 +11,7 @@ starkware_utils.workspace = true
 [dev-dependencies]
 assert_macros.workspace = true
 snforge_std.workspace = true
+snforge_scarb_plugin.workspace = true
 
 [scripts]
 test = "SNFORGE_BACKTRACE=1 snforge test"

@@ -1,4 +1,4 @@
-use MainnetAddresses::{MAINNET_L2_BRIDGE_ADDRESS};
+use MainnetAddresses::MAINNET_L2_BRIDGE_ADDRESS;
 use MainnetClassHashes::{
     MAINNET_MINTING_CURVE_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V0,
     MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V0,
@@ -32,8 +32,7 @@ use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
 };
 use starknet::syscalls::deploy_syscall;
-use starknet::{ClassHash, ContractAddress, Store};
-use starknet::{SyscallResultTrait};
+use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait};
 use starkware_utils::components::replaceability::interface::{
     EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
 };
@@ -46,37 +45,35 @@ use starkware_utils::test_utils::{
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 mod MainnetAddresses {
-    use starknet::{ContractAddress, contract_address_const};
+    use starknet::ContractAddress;
 
-    pub(crate) fn MAINNET_L2_BRIDGE_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<
-            0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d,
-        >()
+    pub(crate) fn MAINNET_L2_BRIDGE_ADDRESS() -> ContractAddress {
+        0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d.try_into().unwrap()
     }
 }
 
 /// Contains class hashes of mainnet contracts.
 pub(crate) mod MainnetClassHashes {
-    use starknet::class_hash::{ClassHash, class_hash_const};
+    use starknet::class_hash::ClassHash;
 
     /// Class hash of the first staking contract deployed on mainnet.
-    pub(crate) fn MAINNET_STAKING_CLASS_HASH_V0() -> ClassHash nopanic {
-        class_hash_const::<0x31578ba8535c5be427c03412d596fe17d3cecfc2b4a3040b841c009fe4ac5f5>()
+    pub(crate) fn MAINNET_STAKING_CLASS_HASH_V0() -> ClassHash {
+        0x31578ba8535c5be427c03412d596fe17d3cecfc2b4a3040b841c009fe4ac5f5.try_into().unwrap()
     }
 
     /// Class hash of the first reward supplier contract deployed on mainnet.
-    pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash nopanic {
-        class_hash_const::<0x7cbbebcdbbce7bd45611d8b679e524b63586429adee0f858b7f0994d709d648>()
+    pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash {
+        0x7cbbebcdbbce7bd45611d8b679e524b63586429adee0f858b7f0994d709d648.try_into().unwrap()
     }
 
     /// Class hash of the first minting curve contract deployed on mainnet.
-    pub(crate) fn MAINNET_MINTING_CURVE_CLASS_HASH_V0() -> ClassHash nopanic {
-        class_hash_const::<0xb00a4f0a3ba3f266837da66c0c3053c4676046a2d621e80d1f822fe9c9b5f6>()
+    pub(crate) fn MAINNET_MINTING_CURVE_CLASS_HASH_V0() -> ClassHash {
+        0xb00a4f0a3ba3f266837da66c0c3053c4676046a2d621e80d1f822fe9c9b5f6.try_into().unwrap()
     }
 
     /// Class hash of the first pool contract deployed on mainnet.
-    pub(crate) fn MAINNET_POOL_CLASS_HASH_V0() -> ClassHash nopanic {
-        class_hash_const::<0x072ddc6cc22fb26453334e9cf1cbb92f12d2946d058e2b2b571c65d0f23d6516>()
+    pub(crate) fn MAINNET_POOL_CLASS_HASH_V0() -> ClassHash {
+        0x072ddc6cc22fb26453334e9cf1cbb92f12d2946d058e2b2b571c65d0f23d6516.try_into().unwrap()
     }
 }
 
@@ -1107,7 +1104,7 @@ pub(crate) fn test_flow_mainnet<
     flow.setup(ref :system);
     if let Option::Some(pool_address) = flow.get_pool_address() {
         system.set_pool_for_upgrade(pool_address);
-    };
+    }
     system.upgrade_contracts_implementation();
     flow.test(ref :system, system_type: SystemType::Mainnet);
 }
