@@ -1,6 +1,8 @@
 use core::num::traits::Zero;
 use staking::pool::pool_member_balance_trace::mock::{IMockTrace, MockTrace};
-use staking::pool::pool_member_balance_trace::trace::PoolMemberBalanceTrait;
+use staking::pool::pool_member_balance_trace::trace::{
+    PoolMemberBalanceTrait, PoolMemberCheckpointTrait,
+};
 
 fn CONTRACT_STATE() -> MockTrace::ContractState {
     MockTrace::contract_state_for_testing()
@@ -130,3 +132,35 @@ fn test_is_initialized() {
     assert!(mock_trace.is_initialized() == true);
 }
 
+#[test]
+fn test_at() {
+    let mut mock_trace = CONTRACT_STATE();
+    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+    mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+
+    let pool_member_checkpoint = mock_trace.at(0);
+    assert!(pool_member_checkpoint.epoch() == 100);
+    assert!(pool_member_checkpoint.balance() == 1000);
+    assert!(pool_member_checkpoint.rewards_info_idx() == 1);
+
+    let pool_member_checkpoint = mock_trace.at(1);
+    assert!(pool_member_checkpoint.epoch() == 200);
+    assert!(pool_member_checkpoint.balance() == 2000);
+    assert!(pool_member_checkpoint.rewards_info_idx() == 2);
+}
+
+#[test]
+#[should_panic(expected: "Index out of bounds")]
+fn test_at_out_of_bounds() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    mock_trace.at(0);
+}
+
+#[test]
+fn test_pool_member_checkpoint_getters() {
+    let trace = PoolMemberCheckpointTrait::new(epoch: 100, balance: 5, rewards_info_idx: 10);
+    assert!(trace.epoch() == 100);
+    assert!(trace.balance() == 5);
+    assert!(trace.rewards_info_idx() == 10);
+}

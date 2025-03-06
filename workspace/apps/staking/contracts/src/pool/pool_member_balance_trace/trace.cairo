@@ -55,6 +55,32 @@ struct PoolMemberBalanceCheckpoint {
     value: PoolMemberBalance,
 }
 
+#[derive(Copy, Drop, Serde)]
+pub(crate) struct PoolMemberCheckpoint {
+    epoch: Epoch,
+    balance: Amount,
+    rewards_info_idx: VecIndex,
+}
+
+#[generate_trait]
+pub(crate) impl PoolMemberCheckpointImpl of PoolMemberCheckpointTrait {
+    fn new(epoch: Epoch, balance: Amount, rewards_info_idx: VecIndex) -> PoolMemberCheckpoint {
+        PoolMemberCheckpoint { epoch, balance, rewards_info_idx }
+    }
+
+    fn epoch(self: @PoolMemberCheckpoint) -> Epoch {
+        *self.epoch
+    }
+
+    fn balance(self: @PoolMemberCheckpoint) -> Amount {
+        *self.balance
+    }
+
+    fn rewards_info_idx(self: @PoolMemberCheckpoint) -> VecIndex {
+        *self.rewards_info_idx
+    }
+}
+
 #[generate_trait]
 pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
     /// Retrieves the most recent checkpoint from the trace structure.
@@ -100,6 +126,22 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
         } else {
             checkpoints[pos - 1].read().value
         }
+    }
+
+    /// Returns the checkpoint at the given position.
+    ///
+    /// # Panics
+    /// If the position is out of bounds.
+    fn at(self: StoragePath<PoolMemberBalanceTrace>, pos: VecIndex) -> PoolMemberCheckpoint {
+        let checkpoints = self.checkpoints;
+        let len = checkpoints.len();
+        assert!(pos < len, "{}", TraceErrors::INDEX_OUT_OF_BOUNDS);
+        let checkpoint = checkpoints[pos].read();
+        PoolMemberCheckpointTrait::new(
+            epoch: checkpoint.key,
+            balance: checkpoint.value.balance,
+            rewards_info_idx: checkpoint.value.rewards_info_idx,
+        )
     }
 }
 
