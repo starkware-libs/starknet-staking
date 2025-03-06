@@ -16,7 +16,6 @@ fn basic_stake_flow_test() {
     test_flow_local(:flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn basic_stake_flow_regression_test() {
@@ -30,7 +29,6 @@ fn set_open_for_delegation_flow_test() {
     test_flow_local(:flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn set_open_for_delegation_regression_test() {
@@ -44,7 +42,6 @@ fn delegator_intent_after_staker_action_flow_test() {
     test_flow_local(:flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn delegator_intent_after_staker_action_regression_test() {
@@ -58,7 +55,6 @@ fn delegator_intent_flow_test() {
     test_flow_local(:flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn delegator_intent_regression_test() {
@@ -72,7 +68,6 @@ fn operations_after_dead_staker_flow_test() {
     test_flow_local(:flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn operations_after_dead_staker_regression_test() {
@@ -86,7 +81,6 @@ fn delegator_didnt_update_after_staker_update_commission_flow_test() {
     test_flow_local(:flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn delegator_didnt_update_after_staker_update_commission_regression_test() {
@@ -100,7 +94,6 @@ fn delegator_updated_after_staker_update_commission_flow_test() {
     test_flow_local(:flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn delegator_updated_after_staker_update_commission_regression_test() {
@@ -114,7 +107,6 @@ fn staker_intent_last_action_first_flow_test() {
     test_flow_local(:flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_intent_last_action_first_regression_test() {
@@ -122,7 +114,6 @@ fn staker_intent_last_action_first_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_info_after_upgrade_regression_test() {
@@ -132,7 +123,6 @@ fn staker_info_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_info_with_pool_after_upgrade_regression_test() {
@@ -142,7 +132,6 @@ fn staker_info_with_pool_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_info_unstake_after_upgrade_regression_test() {
@@ -152,7 +141,6 @@ fn staker_info_unstake_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn internal_staker_info_after_upgrade_regression_test() {
@@ -162,7 +150,6 @@ fn internal_staker_info_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn internal_staker_info_with_pool_after_upgrade_regression_test() {
@@ -172,7 +159,6 @@ fn internal_staker_info_with_pool_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn internal_staker_info_unstake_after_upgrade_regression_test() {
@@ -182,7 +168,6 @@ fn internal_staker_info_unstake_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn pool_upgrade_flow_regression_test() {
@@ -192,7 +177,6 @@ fn pool_upgrade_flow_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn internal_pool_member_info_after_upgrade_regression_test() {
@@ -202,7 +186,6 @@ fn internal_pool_member_info_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-#[ignore]
 #[test]
 #[fork("MAINNET_LATEST")]
 fn internal_pool_member_info_undelegate_after_upgrade_regression_test() {
