@@ -9,7 +9,7 @@ openzeppelin = "0.20.0"
 openzeppelin_testing = "0.20.0"
 snforge_std = "0.34.0"
 snforge_scarb_plugin = "0.34.0"
-starkware_utils = { path = "workspace/packages/contracts" }
+starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "401110207fa8400490ae4048d161d5afbb8eecc2" }
 
 [scripts]
 test = "snforge test"
