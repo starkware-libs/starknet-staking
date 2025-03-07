@@ -1,4 +1,7 @@
+use core::hash::HashStateTrait;
+use core::poseidon::PoseidonTrait;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
+use snforge_std::{CheatSpan, cheat_caller_address};
 use staking::attestation::attestation::Attestation;
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{
@@ -7,6 +10,7 @@ use staking::attestation::interface::{
 };
 use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::event_test_utils::assert_number_of_events;
+use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils;
 use starkware_utils::components::replaceability::interface::{
     IReplaceableDispatcher, IReplaceableDispatcherTrait,
@@ -203,6 +207,55 @@ fn test_contract_upgrade_delay() {
         contract_address: cfg.test_info.attestation_contract,
     };
     assert!(attestation_replaceable_dispatcher.get_upgrade_delay() == 0);
+}
+
+#[test]
+fn test_validate_next_planned_attestation_block() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
+
+    // Calculate the next planned attestation block number.
+    let hash = PoseidonTrait::new()
+        .update(cfg.staker_info._deprecated_amount_own.into())
+        .update(cfg.staking_contract_info.epoch_info.current_epoch().into() + 1)
+        .update(cfg.test_info.staker_address.into())
+        .finalize();
+    // TODO: Change the magic number to the const default attestation window.
+    let block_offset: u256 = hash
+        .into() % (cfg.staking_contract_info.epoch_info.epoch_len_in_blocks()
+            - (MIN_ATTESTATION_WINDOW.into() + 1))
+        .into();
+    // TODO: Change starting block once set in the staking contract.
+    let planned_attestation_block_number = 0 + block_offset.try_into().unwrap();
+
+    cheat_caller_address(
+        contract_address: attestation_contract,
+        caller_address: cfg.staker_info.operational_address,
+        span: CheatSpan::TargetCalls(3),
+    );
+    assert!(
+        attestation_dispatcher
+            .validate_next_planned_attestation_block(
+                block_number: planned_attestation_block_number,
+            ),
+    );
+    assert!(
+        !attestation_dispatcher
+            .validate_next_planned_attestation_block(
+                block_number: planned_attestation_block_number - 1,
+            ),
+    );
+    assert!(
+        !attestation_dispatcher
+            .validate_next_planned_attestation_block(
+                block_number: planned_attestation_block_number + 1,
+            ),
+    );
 }
 
 #[test]

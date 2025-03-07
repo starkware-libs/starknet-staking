@@ -113,6 +113,7 @@
     - [attest](#attest)
     - [is\_attestation\_done\_in\_curr\_epoch](#is_attestation_done_in_curr_epoch)
     - [get\_last\_epoch\_attestation\_done](#get_last_epoch_attestation_done)
+    - [validate\_next\_planned\_attestation\_block](#validate_next_planned_attestation_block)
   - [Events](#events-4)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
@@ -301,6 +302,7 @@ classDiagram
     attest()
     is_attestation_done_in_curr_epoch()
     get_last_epoch_attestation_done()
+    validate_next_planned_attestation_block()
   }
   class AttestInfo{
   }
@@ -1920,6 +1922,22 @@ Returns the last epoch that `staker_address` finished his job.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### validate_next_planned_attestation_block
+```rust
+fn validate_next_planned_attestation_block(self: @TContractState, block_number: u64) -> bool;
+```
+
+#### description <!-- omit from toc -->
+Receives a block number and checks if this is the next block this caller should attest to.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. assumes the caller is an operational address.
+2. calculates the expected attestation block for next epoch
+3. compares the result with the given block number
 #### access control <!-- omit from toc -->
 Any address can execute.
 

@@ -443,6 +443,9 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
     fn epoch_id(self: AttestationInfo) -> Epoch {
         self.epoch_id
     }
+    fn set_epoch_id(self: AttestationInfo, epoch_id: Epoch) -> AttestationInfo {
+        AttestationInfo { epoch_id, ..self }
+    }
     fn current_epoch_starting_block(self: AttestationInfo) -> u64 {
         self.current_epoch_starting_block
     }

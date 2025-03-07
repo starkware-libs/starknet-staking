@@ -1,7 +1,9 @@
 #[starknet::contract]
 pub mod Attestation {
     use RolesComponent::InternalTrait as RolesInternalTrait;
+    use core::hash::HashStateTrait;
     use core::num::traits::Zero;
+    use core::poseidon::PoseidonTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
@@ -127,6 +129,25 @@ pub mod Attestation {
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
 
+        fn validate_next_planned_attestation_block(
+            self: @ContractState, block_number: u64,
+        ) -> bool {
+            let operational_address = get_caller_address();
+            let attestation_window = self.attestation_window.read();
+            let staking_dispatcher = IStakingAttestationDispatcher {
+                contract_address: self.staking_contract.read(),
+            };
+            let mut staking_attestation_info = staking_dispatcher
+                .get_attestation_info_by_operational_address(:operational_address);
+            staking_attestation_info = staking_attestation_info
+                .set_epoch_id(staking_attestation_info.epoch_id() + 1);
+            let expected_attestation_block = self
+                ._calculate_expected_attestation_block(
+                    :staking_attestation_info, :attestation_window,
+                );
+            expected_attestation_block == block_number
+        }
+
         fn attestation_window(self: @ContractState) -> u8 {
             self.attestation_window.read()
         }
@@ -171,6 +192,27 @@ pub mod Attestation {
             ref self: ContractState, staker_address: ContractAddress, current_epoch: Epoch,
         ) {
             self.staker_last_attested_epoch.write(staker_address, Option::Some(current_epoch));
+        }
+
+        fn _calculate_expected_attestation_block(
+            self: @ContractState,
+            staking_attestation_info: StakingAttestaionInfo,
+            attestation_window: u8,
+        ) -> u64 {
+            // Compute staker hash for the attestation.
+            let hash = PoseidonTrait::new()
+                .update(staking_attestation_info.stake().into())
+                .update(staking_attestation_info.epoch_id().into())
+                .update(staking_attestation_info.staker_address().into())
+                .finalize();
+            // Calculate staker's block number in this epoch.
+            let block_offset: u256 = hash
+                .into() % (staking_attestation_info.epoch_len() - attestation_window.into())
+                .into();
+            // Calculate actual block number for attestation.
+            let expected_attestation_block = staking_attestation_info.current_epoch_starting_block()
+                + block_offset.try_into().unwrap();
+            expected_attestation_block
         }
     }
 }
