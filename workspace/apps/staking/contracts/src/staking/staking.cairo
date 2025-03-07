@@ -1119,8 +1119,19 @@ pub mod Staking {
             self: @ContractState, operational_address: ContractAddress,
         ) -> AttestationInfo {
             let staker_address = self.get_staker_address_by_operational(:operational_address);
-            let current_epoch = self.get_current_epoch();
-            AttestationInfoTrait::new(:staker_address, :current_epoch)
+            let staker_info = self.internal_staker_info(:staker_address);
+            let epoch_info = self.get_epoch_info();
+            let epoch_len = epoch_info.epoch_len_in_blocks();
+            let epoch_id = epoch_info.current_epoch();
+            let current_epoch_starting_block = 0;
+            AttestationInfoTrait::new(
+                staker_address: staker_address,
+                // Todo: use the correct stake (previous epoch)
+                stake: staker_info.get_total_amount(),
+                epoch_len: epoch_len,
+                epoch_id: epoch_id,
+                current_epoch_starting_block: current_epoch_starting_block,
+            )
         }
     }
 

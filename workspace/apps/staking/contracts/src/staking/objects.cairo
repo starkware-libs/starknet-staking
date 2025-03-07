@@ -95,6 +95,10 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
         let blocks_in_year = SECONDS_IN_YEAR / (*self.block_duration).into();
         blocks_in_year / (*self.length).into()
     }
+
+    fn epoch_len_in_blocks(self: @EpochInfo) -> u16 {
+        *self.length
+    }
 }
 
 #[generate_trait]

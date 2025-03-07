@@ -39,7 +39,7 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::errors::Error;
 use staking::staking::interface::{
-    IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
+    AttestationInfoTrait, IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
     IStakingAttestationSafeDispatcher, IStakingAttestationSafeDispatcherTrait,
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingConfigSafeDispatcher,
     IStakingConfigSafeDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
@@ -55,7 +55,7 @@ use staking::staking::objects::{
     VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
-use staking::types::{Amount, Epoch, InternalStakerInfoLatest};
+use staking::types::{Amount, InternalStakerInfoLatest};
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_rewards_rounded_down,
     compute_rewards_rounded_up,
@@ -2564,9 +2564,11 @@ fn test_get_attestation_info_by_operational_address() {
     let operational_address = cfg.staker_info.operational_address;
     let attestation_info = staking_dispatcher
         .get_attestation_info_by_operational_address(:operational_address);
-    let (staker_address, current_epoch): (ContractAddress, Epoch) = attestation_info.into();
-    assert!(staker_address == cfg.test_info.staker_address);
-    assert!(current_epoch == 0);
+    assert!(attestation_info.staker_address() == cfg.test_info.staker_address);
+    assert!(attestation_info.stake() == cfg.staker_info._deprecated_amount_own);
+    assert!(attestation_info.epoch_len() == EPOCH_LENGTH);
+    assert!(attestation_info.epoch_id() == 0);
+    assert!(attestation_info.current_epoch_starting_block() == 0);
 }
 
 #[test]

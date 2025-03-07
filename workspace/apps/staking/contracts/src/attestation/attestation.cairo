@@ -8,8 +8,8 @@ pub mod Attestation {
     use staking::attestation::interface::{AttestInfo, IAttestation};
     use staking::constants::MIN_ATTESTATION_WINDOW;
     use staking::staking::interface::{
-        IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
-        IStakingDispatcherTrait,
+        AttestationInfo as StakingAttestaionInfo, IStakingAttestationDispatcher,
+        IStakingAttestationDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
     };
     use staking::types::Epoch;
     use starknet::storage::Map;
@@ -19,6 +19,7 @@ pub mod Attestation {
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::errors::OptionAuxTrait;
     use starkware_utils::interfaces::identity::Identity;
+    use super::super::super::staking::interface::AttestationInfoTrait;
     pub const CONTRACT_IDENTITY: felt252 = 'Attestation';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
@@ -99,10 +100,11 @@ pub mod Attestation {
             // Note: This function checks for a zero staker address and will panic if so.
             let staking_attestation_info = staking_dispatcher
                 .get_attestation_info_by_operational_address(:operational_address);
-            let (staker_address, current_epoch): (ContractAddress, Epoch) = staking_attestation_info
-                .into();
-            self._validate_attestation(:attest_info, :staker_address, :current_epoch);
-            staking_dispatcher.update_rewards_from_attestation_contract(:staker_address);
+            self._validate_attestation(:attest_info, :staking_attestation_info);
+            staking_dispatcher
+                .update_rewards_from_attestation_contract(
+                    staker_address: staking_attestation_info.staker_address(),
+                );
             // TODO: emit event.
         }
 
@@ -144,9 +146,10 @@ pub mod Attestation {
         fn _validate_attestation(
             ref self: ContractState,
             attest_info: AttestInfo,
-            staker_address: ContractAddress,
-            current_epoch: Epoch,
+            staking_attestation_info: StakingAttestaionInfo,
         ) {
+            let staker_address = staking_attestation_info.staker_address();
+            let current_epoch = staking_attestation_info.epoch_id();
             self._assert_attestation_is_not_done(:staker_address, :current_epoch);
             // TODO: Validate the attestaion.
             // Work is one tx per epoch.

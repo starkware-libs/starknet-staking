@@ -409,22 +409,42 @@ pub impl StakerInfoImpl of StakerInfoTrait {
     }
 }
 
-#[derive(Serde, Drop, Copy)]
+// Todo: move to objects file
+#[derive(Serde, Drop, Copy, Debug)]
 pub struct AttestationInfo {
     staker_address: ContractAddress,
-    current_epoch: Epoch,
-}
-
-pub impl AttestationInfoIntoTupleImpl of Into<AttestationInfo, (ContractAddress, Epoch)> {
-    fn into(self: AttestationInfo) -> (ContractAddress, Epoch) {
-        (self.staker_address, self.current_epoch)
-    }
+    stake: Amount,
+    epoch_len: u16,
+    epoch_id: Epoch,
+    current_epoch_starting_block: u64,
 }
 
 #[generate_trait]
 pub impl AttestationInfoImpl of AttestationInfoTrait {
-    fn new(staker_address: ContractAddress, current_epoch: Epoch) -> AttestationInfo {
-        AttestationInfo { staker_address, current_epoch }
+    fn new(
+        staker_address: ContractAddress,
+        stake: Amount,
+        epoch_len: u16,
+        epoch_id: Epoch,
+        current_epoch_starting_block: u64,
+    ) -> AttestationInfo {
+        AttestationInfo { staker_address, stake, epoch_len, epoch_id, current_epoch_starting_block }
+    }
+
+    fn staker_address(self: AttestationInfo) -> ContractAddress {
+        self.staker_address
+    }
+    fn stake(self: AttestationInfo) -> Amount {
+        self.stake
+    }
+    fn epoch_len(self: AttestationInfo) -> u16 {
+        self.epoch_len
+    }
+    fn epoch_id(self: AttestationInfo) -> Epoch {
+        self.epoch_id
+    }
+    fn current_epoch_starting_block(self: AttestationInfo) -> u64 {
+        self.current_epoch_starting_block
     }
 }
 
