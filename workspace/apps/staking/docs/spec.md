@@ -1931,15 +1931,15 @@ fn validate_next_planned_attestation_block(self: @TContractState, block_number: 
 ```
 
 #### description <!-- omit from toc -->
-Receives a block number and checks if this is the next block this caller should attest to.
+Receives a block number and checks if this is the block in the next epoch this caller should attest to.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
-1. assumes the caller is an operational address.
-2. calculates the expected attestation block for next epoch
-3. compares the result with the given block number
+1. Assumes the caller is an operational address.
+2. Calculates the expected attestation block for next epoch
+3. Compares the result with the given block number
 #### access control <!-- omit from toc -->
-Any address can execute.
+Any address can execute, only a registered Operational address of an existing staker will result correctly.
 
 ## Events
 
