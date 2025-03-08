@@ -1,6 +1,6 @@
 use staking::staking::errors::Error;
 use staking::staking::objects::{
-    EpochInfo, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
+    AttestationInfo, EpochInfo, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
 };
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
@@ -406,49 +406,6 @@ pub struct StakerPoolInfo {
 pub impl StakerInfoImpl of StakerInfoTrait {
     fn get_pool_info(self: StakerInfo) -> StakerPoolInfo {
         self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)
-    }
-}
-
-// Todo: move to objects file
-#[derive(Serde, Drop, Copy, Debug)]
-pub struct AttestationInfo {
-    staker_address: ContractAddress,
-    stake: Amount,
-    epoch_len: u16,
-    epoch_id: Epoch,
-    current_epoch_starting_block: u64,
-}
-
-#[generate_trait]
-pub impl AttestationInfoImpl of AttestationInfoTrait {
-    fn new(
-        staker_address: ContractAddress,
-        stake: Amount,
-        epoch_len: u16,
-        epoch_id: Epoch,
-        current_epoch_starting_block: u64,
-    ) -> AttestationInfo {
-        AttestationInfo { staker_address, stake, epoch_len, epoch_id, current_epoch_starting_block }
-    }
-
-    fn staker_address(self: AttestationInfo) -> ContractAddress {
-        self.staker_address
-    }
-    fn stake(self: AttestationInfo) -> Amount {
-        self.stake
-    }
-    fn epoch_len(self: AttestationInfo) -> u16 {
-        self.epoch_len
-    }
-    fn epoch_id(self: AttestationInfo) -> Epoch {
-        self.epoch_id
-    }
-    fn set_epoch_id(ref self: AttestationInfo, epoch_id: Epoch) -> AttestationInfo {
-        self.epoch_id = epoch_id;
-        self
-    }
-    fn current_epoch_starting_block(self: AttestationInfo) -> u64 {
-        self.current_epoch_starting_block
     }
 }
 

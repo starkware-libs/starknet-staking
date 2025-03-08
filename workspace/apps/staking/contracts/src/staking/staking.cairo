@@ -18,14 +18,14 @@ pub mod Staking {
     };
     use staking::staking::errors::Error;
     use staking::staking::interface::{
-        AttestationInfo, AttestationInfoTrait, ConfigEvents, Events, IStaking, IStakingAttestation,
-        IStakingConfig, IStakingMigration, IStakingPause, IStakingPool, PauseEvents, StakerInfo,
-        StakerPoolInfo, StakingContractInfo,
+        ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig, IStakingMigration,
+        IStakingPause, IStakingPool, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
     };
     use staking::staking::objects::{
-        EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait,
-        UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
-        UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
+        AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
+        InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait, UndelegateIntentKey,
+        UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
+        VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,

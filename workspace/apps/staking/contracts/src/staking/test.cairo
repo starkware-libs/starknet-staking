@@ -39,7 +39,7 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::errors::Error;
 use staking::staking::interface::{
-    AttestationInfoTrait, IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
+    IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
     IStakingAttestationSafeDispatcher, IStakingAttestationSafeDispatcherTrait,
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingConfigSafeDispatcher,
     IStakingConfigSafeDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
@@ -49,10 +49,11 @@ use staking::staking::interface::{
     StakerPoolInfo, StakingContractInfo,
 };
 use staking::staking::objects::{
-    EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait,
-    InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
-    UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTestTrait,
-    VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
+    AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait,
+    InternalStakerInfoTestTrait, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
+    UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
+    VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
+    VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
 use staking::types::{Amount, InternalStakerInfoLatest};

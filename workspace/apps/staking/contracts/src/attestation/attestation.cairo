@@ -10,9 +10,10 @@ pub mod Attestation {
     use staking::attestation::interface::{AttestInfo, IAttestation};
     use staking::constants::MIN_ATTESTATION_WINDOW;
     use staking::staking::interface::{
-        AttestationInfo as StakingAttestaionInfo, IStakingAttestationDispatcher,
-        IStakingAttestationDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
+        IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
+        IStakingDispatcherTrait,
     };
+    use staking::staking::objects::{AttestationInfo as StakingAttestaionInfo, AttestationInfoTrait};
     use staking::types::Epoch;
     use starknet::storage::Map;
     use starknet::{ContractAddress, get_caller_address};
@@ -21,7 +22,6 @@ pub mod Attestation {
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::errors::OptionAuxTrait;
     use starkware_utils::interfaces::identity::Identity;
-    use super::super::super::staking::interface::AttestationInfoTrait;
     pub const CONTRACT_IDENTITY: felt252 = 'Attestation';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
