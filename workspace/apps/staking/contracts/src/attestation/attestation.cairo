@@ -139,8 +139,7 @@ pub mod Attestation {
             };
             let mut staking_attestation_info = staking_dispatcher
                 .get_attestation_info_by_operational_address(:operational_address);
-            staking_attestation_info = staking_attestation_info
-                .set_epoch_id(staking_attestation_info.epoch_id() + 1);
+            staking_attestation_info.set_epoch_id(staking_attestation_info.epoch_id() + 1);
             let expected_attestation_block = self
                 ._calculate_expected_attestation_block(
                     :staking_attestation_info, :attestation_window,
