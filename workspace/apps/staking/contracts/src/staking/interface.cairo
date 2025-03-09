@@ -34,7 +34,7 @@ pub trait IStaking<TContractState> {
     fn get_epoch_info(self: @TContractState) -> EpochInfo;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
-    fn get_total_stake_at_current_epoch(self: @TContractState) -> Amount;
+    fn get_current_total_staking_power(self: @TContractState) -> Amount;
     fn get_pool_exit_intent(
         self: @TContractState, undelegate_intent_key: UndelegateIntentKey,
     ) -> UndelegateIntentValue;

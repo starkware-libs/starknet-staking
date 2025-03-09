@@ -559,7 +559,7 @@ pub mod Staking {
             }
         }
 
-        fn get_total_stake_at_current_epoch(self: @ContractState) -> Amount {
+        fn get_current_total_staking_power(self: @ContractState) -> Amount {
             self.total_stake_trace.deref().upper_lookup(key: self.get_current_epoch())
         }
 
@@ -1493,7 +1493,7 @@ pub mod Staking {
             mul_wide_and_div(
                 lhs: epoch_rewards,
                 rhs: staker_info.get_total_amount(),
-                div: self.get_total_stake_at_current_epoch(),
+                div: self.get_current_total_staking_power(),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }

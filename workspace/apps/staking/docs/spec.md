@@ -32,7 +32,7 @@
     - [fn get\_attestation\_info\_by\_operational\_address](#fn-get_attestation_info_by_operational_address)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
-    - [get\_total\_stake\_at\_current\_epoch](#get_total_stake_at_current_epoch)
+    - [get\_total\_stake\_at\_current\_epoch](#get_current_total_staking_power)
     - [get\_pool\_exit\_intent](#get_pool_exit_intent)
     - [update\_rewards](#update_rewards)
     - [declare\_operational\_address](#declare_operational_address)
@@ -219,7 +219,7 @@ classDiagram
     contract_parameters()
     update_rewards()
     get_total_stake()
-    get_total_stake_at_current_epoch()
+    get_current_total_staking_power()
     get_pool_exit_intent()
     set_min_stake()
     set_exit_wait_window()
@@ -937,9 +937,9 @@ Return the latest total stake amount (which could be of the next epoch).
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 
-### get_total_stake_at_current_epoch
+### get_current_total_staking_power
 ```rust
-get_total_stake_at_current_epoch(self: @ContractState) -> Amount
+get_current_total_staking_power(self: @ContractState) -> Amount
 ```
 #### description <!-- omit from toc -->
 Return the total stake amount at the current epoch.

@@ -1066,7 +1066,7 @@ pub(crate) fn calculate_staker_total_rewards(
     mul_wide_and_div(
         lhs: epoch_rewards,
         rhs: get_total_amount(:staker_info),
-        div: staking_dispatcher.get_total_stake_at_current_epoch(),
+        div: staking_dispatcher.get_current_total_staking_power(),
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
