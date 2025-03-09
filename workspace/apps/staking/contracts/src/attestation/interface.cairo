@@ -15,8 +15,16 @@ pub trait IAttestation<TContractState> {
     fn set_attestation_window(ref self: TContractState, attestation_window: u8);
 }
 
-// TODO: implement
-pub mod Events {}
+pub mod Events {
+    use staking::types::Epoch;
+    use starknet::ContractAddress;
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct StakerAttestationSuccessful {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub epoch: Epoch,
+    }
+}
 
 // TODO: implement
 #[derive(Debug, Copy, Drop, Serde, PartialEq)]

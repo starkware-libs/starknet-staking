@@ -1,11 +1,12 @@
 use snforge_std::cheatcodes::events::{Event, EventSpy, EventSpyTrait};
+use staking::attestation::interface::Events as AttestationEvents;
 use staking::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
 use staking::pool::interface::Events as PoolEvents;
 use staking::reward_supplier::interface::Events as RewardSupplierEvents;
 use staking::staking::interface::{
     ConfigEvents as StakingConfigEvents, Events as StakingEvents, PauseEvents as StakingPauseEvents,
 };
-use staking::types::{Amount, Commission, Inflation};
+use staking::types::{Amount, Commission, Epoch, Inflation};
 use starknet::ContractAddress;
 use starkware_utils::test_utils::assert_expected_event_emitted;
 use starkware_utils::types::time::time::{TimeDelta, Timestamp};
@@ -517,5 +518,17 @@ pub(crate) fn assert_reward_supplier_changed_event(
         :expected_event,
         expected_event_selector: @selector!("RewardSupplierChanged"),
         expected_event_name: "RewardSupplierChanged",
+    );
+}
+
+pub(crate) fn assert_staker_attestation_successful_event(
+    spied_event: @(ContractAddress, Event), staker_address: ContractAddress, epoch: Epoch,
+) {
+    let expected_event = AttestationEvents::StakerAttestationSuccessful { staker_address, epoch };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("StakerAttestationSuccessful"),
+        expected_event_name: "StakerAttestationSuccessful",
     );
 }

@@ -115,6 +115,7 @@
     - [get\_last\_epoch\_attestation\_done](#get_last_epoch_attestation_done)
     - [validate\_next\_planned\_attestation\_block](#validate_next_planned_attestation_block)
   - [Events](#events-4)
+    - [Staker Attestation Successful](#staker-attestation-successful)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -1891,6 +1892,7 @@ fn attest(ref self: ContractState, attest_info: AttestInfo)
 #### description <!-- omit from toc -->
 Validates the attestation of a staker and call staking [update_rewards_from_attestation_contract](#update_rewards_from_attestation_contract).
 #### emits <!-- omit from toc -->
+1. [Staker Attestation Successful](#staker-attestation-successful)
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 1. Validate the attestation.
@@ -1942,6 +1944,12 @@ Receives a block number and checks if this is the block in the next epoch this c
 Any address can execute, only a registered Operational address of an existing staker will result correctly.
 
 ## Events
+
+### Staker Attestation Successful
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| staker_address | address           | ✅    |
+| epoch          | Epoch             | ❌    |
 
 # Errors
 ### STAKER_EXISTS

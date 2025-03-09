@@ -9,7 +9,10 @@ use staking::attestation::interface::{
     IAttestationSafeDispatcherTrait,
 };
 use staking::constants::MIN_ATTESTATION_WINDOW;
-use staking::event_test_utils::assert_number_of_events;
+use staking::event_test_utils::{
+    assert_number_of_events, assert_staker_attestation_successful_event,
+};
+use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils;
 use starkware_utils::components::replaceability::interface::{
@@ -28,6 +31,7 @@ fn test_attest() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let attestation_contract = cfg.test_info.attestation_contract;
@@ -40,12 +44,14 @@ fn test_attest() {
         contract_address: attestation_contract, caller_address: operational_address,
     );
     let attest_info = AttestInfo {};
+    let epoch = staking_dispatcher.get_current_epoch();
     attestation_dispatcher.attest(:attest_info);
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
     assert!(is_attestation_done == true);
     let events = spy.get_events().emitted_by(contract_address: attestation_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 0, message: "attest");
+    assert_number_of_events(actual: events.len(), expected: 1, message: "attest");
+    assert_staker_attestation_successful_event(spied_event: events[0], :staker_address, :epoch);
 }
 
 #[test]

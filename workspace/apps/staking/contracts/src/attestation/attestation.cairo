@@ -7,7 +7,7 @@ pub mod Attestation {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
-    use staking::attestation::interface::{AttestInfo, IAttestation};
+    use staking::attestation::interface::{AttestInfo, Events, IAttestation};
     use staking::constants::MIN_ATTESTATION_WINDOW;
     use staking::staking::interface::{
         IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
@@ -65,6 +65,7 @@ pub mod Attestation {
         accesscontrolEvent: AccessControlComponent::Event,
         #[flat]
         src5Event: SRC5Component::Event,
+        StakerAttestationSuccessful: Events::StakerAttestationSuccessful,
     }
 
     #[constructor]
@@ -107,7 +108,6 @@ pub mod Attestation {
                 .update_rewards_from_attestation_contract(
                     staker_address: staking_attestation_info.staker_address(),
                 );
-            // TODO: emit event.
         }
 
         fn get_last_epoch_attestation_done(
@@ -191,6 +191,7 @@ pub mod Attestation {
             ref self: ContractState, staker_address: ContractAddress, current_epoch: Epoch,
         ) {
             self.staker_last_attested_epoch.write(staker_address, Option::Some(current_epoch));
+            self.emit(Events::StakerAttestationSuccessful { staker_address, epoch: current_epoch });
         }
 
         fn _calculate_expected_attestation_block(
