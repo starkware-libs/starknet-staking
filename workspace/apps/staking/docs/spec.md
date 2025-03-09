@@ -65,6 +65,7 @@
     - [Minimum Stake Changed](#minimum-stake-changed)
     - [Exit Wait Window Changed](#exit-wait-window-changed)
     - [Reward Supplier Changed](#reward-supplier-changed)
+    - [Epoch Info Changed](#epoch-info-changed)
 - [Delegation pool contract](#delegation-pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -1300,6 +1301,12 @@ Staking contract of latest version.
 | ------------------- | --------------- | ----- |
 | old_reward_supplier | ContractAddress | ❌     |
 | new_reward_supplier | ContractAddress | ❌     |
+
+### Epoch Info Changed
+| data                | type            | keyed |
+| ------------------- | --------------- | ----- |
+| block_duration      | u16             | ❌     |
+| epoch_length        | u16             | ❌     |
 
 # Delegation pool contract
 

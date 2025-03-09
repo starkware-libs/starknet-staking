@@ -355,6 +355,12 @@ pub mod ConfigEvents {
         pub old_reward_supplier: ContractAddress,
         pub new_reward_supplier: ContractAddress,
     }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct EpochInfoChanged {
+        pub block_duration: u16,
+        pub epoch_length: u16,
+    }
 }
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]

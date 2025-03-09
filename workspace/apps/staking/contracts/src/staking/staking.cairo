@@ -142,6 +142,7 @@ pub mod Staking {
         MinimumStakeChanged: ConfigEvents::MinimumStakeChanged,
         ExitWaitWindowChanged: ConfigEvents::ExitWaitWindowChanged,
         RewardSupplierChanged: ConfigEvents::RewardSupplierChanged,
+        EpochInfoChanged: ConfigEvents::EpochInfoChanged,
         OperationalAddressDeclared: Events::OperationalAddressDeclared,
         RemoveFromDelegationPoolIntent: Events::RemoveFromDelegationPoolIntent,
         RemoveFromDelegationPoolAction: Events::RemoveFromDelegationPoolAction,
@@ -1081,7 +1082,7 @@ pub mod Staking {
             let mut epoch_info = self.epoch_info.read();
             epoch_info.update(:block_duration, :epoch_length);
             self.epoch_info.write(epoch_info);
-            // TODO: emit event
+            self.emit(ConfigEvents::EpochInfoChanged { block_duration, epoch_length });
         }
     }
 

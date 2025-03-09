@@ -491,6 +491,18 @@ pub(crate) fn assert_minimum_stake_changed_event(
     );
 }
 
+pub(crate) fn assert_epoch_info_changed_event(
+    spied_event: @(ContractAddress, Event), block_duration: u16, epoch_length: u16,
+) {
+    let expected_event = StakingConfigEvents::EpochInfoChanged { block_duration, epoch_length };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("EpochInfoChanged"),
+        expected_event_name: "EpochInfoChanged",
+    );
+}
+
 pub(crate) fn assert_exit_wait_window_changed_event(
     spied_event: @(ContractAddress, Event), old_exit_window: TimeDelta, new_exit_window: TimeDelta,
 ) {
