@@ -62,7 +62,7 @@ use test_utils::{
     declare_pool_eic_contract, deploy_mock_erc20_contract, deploy_staking_contract,
     deserialize_option, enter_delegation_pool_for_testing_using_dispatcher, fund,
     general_contract_system_deployment, initialize_pool_state, load_from_simple_map,
-    load_pool_member_info_from_map, stake_with_pool_enabled,
+    stake_with_pool_enabled,
 };
 
 #[test]
@@ -736,9 +736,8 @@ fn test_exit_delegation_pool_action() {
     let returned_amount = pool_dispatcher
         .exit_delegation_pool_action(pool_member: cfg.test_info.pool_member_address);
     assert!(returned_amount == cfg.pool_member_info._deprecated_amount);
-    let pool_member: VInternalPoolMemberInfo = load_pool_member_info_from_map(
-        key: cfg.test_info.pool_member_address, contract: pool_contract,
-    );
+    let pool_member = pool_dispatcher
+        .get_pool_member_info(pool_member: cfg.test_info.pool_member_address);
     assert!(pool_member.is_none());
     let balance_after_action = token_dispatcher.balance_of(cfg.test_info.pool_member_address);
     let reward_account_balance_after = token_dispatcher
@@ -856,9 +855,8 @@ fn test_switch_delegation_pool() {
             to_pool: to_staker_pool_contract,
             amount: switch_amount,
         );
-    let actual_pool_member_info: VInternalPoolMemberInfo = load_pool_member_info_from_map(
-        key: cfg.test_info.pool_member_address, contract: pool_contract,
-    );
+    let actual_pool_member_info = pool_dispatcher
+        .get_pool_member_info(pool_member: cfg.test_info.pool_member_address);
     assert!(amount_left == 0);
     assert!(actual_pool_member_info.is_none());
     let reward_account_balance_after = token_dispatcher

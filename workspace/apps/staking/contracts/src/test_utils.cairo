@@ -658,57 +658,6 @@ pub(crate) fn load_option_from_simple_map<
     }
 }
 
-pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
-    key: K, contract: ContractAddress,
-) -> VInternalPoolMemberInfo {
-    let map_selector = selector!("pool_member_info");
-    let mut keys = array![];
-    key.serialize(ref keys);
-    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
-    let mut raw_serialized_value = snforge_std::load(
-        target: contract,
-        :storage_address,
-        size: Store::<Option<InternalPoolMemberInfoLatest>>::size().into(),
-    );
-    let idx = raw_serialized_value.pop_front().expect('Failed pop_front');
-    if idx.is_zero() {
-        return VInternalPoolMemberInfo::None;
-    }
-    assert!(idx == 2, "Invalid Option loaded from map");
-    let mut span = raw_serialized_value.span();
-    let mut pool_member_info = InternalPoolMemberInfoLatest {
-        reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
-        _deprecated_amount: Serde::<Amount>::deserialize(ref span)
-            .expect('Failed _deprecated_amount'),
-        _deprecated_index: Serde::<Index>::deserialize(ref span).expect('Failed _deprecated_index'),
-        _deprecated_unclaimed_rewards: Serde::<Amount>::deserialize(ref span)
-            .expect('Failed _deprecated_unclaimed'),
-        _deprecated_commission: Serde::<Commission>::deserialize(ref span)
-            .expect('Failed _deprecated_commission'),
-        unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed unpool_amount'),
-        unpool_time: Option::None,
-        entry_to_claim_from: Zero::zero(),
-    };
-    let idx = *span.pop_front().expect('Failed pop_front');
-    if idx.is_non_zero() {
-        assert!(idx == 1, "Invalid Option loaded from map");
-        pool_member_info
-            .unpool_time =
-                Option::Some(
-                    Serde::<Timestamp>::deserialize(ref span).expect('Failed unpool_time'),
-                );
-    } else {
-        // If idx is zero, the unpool_time is Option::None.
-        // Since Option<Timestamp> takes 2 felts in storage, we need to pop both felts before
-        // deserializing the next field last_claimed_idx_in_member_vec.
-        let _ = span.pop_front();
-    }
-    pool_member_info
-        .entry_to_claim_from = Serde::<VecIndex>::deserialize(ref span)
-        .expect('Failed entry_to_claim_from');
-    return VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info);
-}
-
 pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -> felt252 {
     let value = snforge_std::load(:target, :storage_address, size: 1);
     *value[0]
