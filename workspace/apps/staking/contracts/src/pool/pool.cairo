@@ -128,6 +128,7 @@ pub mod Pool {
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.commission.write(commission);
         self.staker_removed.write(false);
+        self.rewards_info.deref().insert(key: self.get_current_epoch(), value: 0);
     }
 
     #[abi(embed_v0)]

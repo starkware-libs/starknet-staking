@@ -82,13 +82,12 @@ fn test_identity() {
 fn test_send_rewards_to_member() {
     // Initialize pool state.
     let mut cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address,
-    );
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let mut state = initialize_pool_state(
         staker_address: cfg.test_info.staker_address,
-        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        staking_contract: cfg.test_info.staking_contract,
         :token_address,
         commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
@@ -373,12 +372,14 @@ fn test_add_to_delegation_pool_from_reward_address() {
 
 #[test]
 fn test_assert_staker_is_active() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
     let mut state = initialize_pool_state(
-        staker_address: STAKER_ADDRESS(),
-        staking_contract: STAKING_CONTRACT_ADDRESS(),
-        token_address: TOKEN_ADDRESS(),
-        commission: COMMISSION,
-        governance_admin: POOL_CONTRACT_ADMIN(),
+        staker_address: cfg.test_info.staker_address,
+        staking_contract: cfg.test_info.staking_contract,
+        token_address: cfg.staking_contract_info.token_address,
+        commission: cfg.staker_info.get_pool_info().commission,
+        governance_admin: cfg.test_info.pool_contract_admin,
     );
     assert!(state.staker_removed.read() == false);
     state.assert_staker_is_active();
@@ -387,12 +388,14 @@ fn test_assert_staker_is_active() {
 #[test]
 #[should_panic(expected: "Staker inactive")]
 fn test_assert_staker_is_active_panic() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
     let mut state = initialize_pool_state(
-        staker_address: STAKER_ADDRESS(),
-        staking_contract: STAKING_CONTRACT_ADDRESS(),
-        token_address: TOKEN_ADDRESS(),
-        commission: COMMISSION,
-        governance_admin: POOL_CONTRACT_ADMIN(),
+        staker_address: cfg.test_info.staker_address,
+        staking_contract: cfg.test_info.staking_contract,
+        token_address: cfg.staking_contract_info.token_address,
+        commission: cfg.staker_info.get_pool_info().commission,
+        governance_admin: cfg.test_info.pool_contract_admin,
     );
     state.staker_removed.write(true);
     state.assert_staker_is_active();
@@ -400,16 +403,17 @@ fn test_assert_staker_is_active_panic() {
 
 #[test]
 fn test_set_final_staker_index() {
-    let cfg: StakingInitConfig = Default::default();
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
     let mut state = initialize_pool_state(
         staker_address: cfg.test_info.staker_address,
-        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        staking_contract: cfg.test_info.staking_contract,
         token_address: cfg.staking_contract_info.token_address,
         commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     cheat_caller_address_once(
-        contract_address: test_address(), caller_address: STAKING_CONTRACT_ADDRESS(),
+        contract_address: test_address(), caller_address: cfg.test_info.staking_contract,
     );
     assert!(state.final_staker_index.read().is_none()); // TODO: Remove
     let mut spy = snforge_std::spy_events();
@@ -427,10 +431,11 @@ fn test_set_final_staker_index() {
 #[test]
 #[should_panic(expected: "Caller is not staking contract")]
 fn test_set_final_staker_index_caller_is_not_staking_contract() {
-    let cfg: StakingInitConfig = Default::default();
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
     let mut state = initialize_pool_state(
         staker_address: cfg.test_info.staker_address,
-        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        staking_contract: cfg.test_info.staking_contract,
         token_address: cfg.staking_contract_info.token_address,
         commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
@@ -444,17 +449,18 @@ fn test_set_final_staker_index_caller_is_not_staking_contract() {
 #[test]
 #[should_panic(expected: "Staker already removed")]
 fn test_set_final_staker_index_already_removed() {
-    let cfg: StakingInitConfig = Default::default();
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
     let mut state = initialize_pool_state(
         staker_address: cfg.test_info.staker_address,
-        staking_contract: STAKING_CONTRACT_ADDRESS(),
+        staking_contract: cfg.test_info.staking_contract,
         token_address: cfg.staking_contract_info.token_address,
         commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     cheat_caller_address(
         contract_address: test_address(),
-        caller_address: STAKING_CONTRACT_ADDRESS(),
+        caller_address: cfg.test_info.staking_contract,
         span: CheatSpan::TargetCalls(2),
     );
     state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
@@ -939,14 +945,12 @@ fn test_switch_delegation_pool_assertions() {
 #[test]
 #[should_panic(expected: "Pool member does not exist")]
 fn test_claim_rewards_pool_member_not_exist() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
-    );
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
     let mut state = initialize_pool_state(
         staker_address: cfg.test_info.staker_address,
-        staking_contract: STAKING_CONTRACT_ADDRESS(),
-        :token_address,
+        staking_contract: cfg.test_info.staking_contract,
+        token_address: cfg.staking_contract_info.token_address,
         commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
@@ -1581,6 +1585,7 @@ fn test_pool_eic() {
         .span();
     let final_staker_index: Option<Index> = deserialize_option(ref span_final_staker_index);
     assert!(final_staker_index == Option::Some(final_index));
+    // TODO: Test rewards_info.
 }
 
 #[test]
