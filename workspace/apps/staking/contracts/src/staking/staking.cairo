@@ -1120,15 +1120,13 @@ pub mod Staking {
             self: @ContractState, operational_address: ContractAddress,
         ) -> AttestationInfo {
             let staker_address = self.get_staker_address_by_operational(:operational_address);
-            let staker_info = self.internal_staker_info(:staker_address);
             let epoch_info = self.get_epoch_info();
             let epoch_len = epoch_info.epoch_len_in_blocks();
             let epoch_id = epoch_info.current_epoch();
             let current_epoch_starting_block = 0;
             AttestationInfoTrait::new(
                 staker_address: staker_address,
-                // Todo: use the correct stake (previous epoch)
-                stake: staker_info.get_total_amount(),
+                stake: self.get_staker_balance_curr_epoch(:staker_address).total_amount(),
                 epoch_len: epoch_len,
                 epoch_id: epoch_id,
                 current_epoch_starting_block: current_epoch_starting_block,
@@ -1621,6 +1619,9 @@ pub mod Staking {
         fn get_staker_balance_curr_epoch(
             self: @ContractState, staker_address: ContractAddress,
         ) -> StakerBalance {
+            /// This logic breaks when there is an insert to the trace in the first epoch.
+            /// This is becase the trace.latest().epoch is 1, thus the else branch is taken.
+            /// However, the trace length is 1 and the penultimate funciton errors.
             let trace = self.staker_balance_trace.entry(key: staker_address);
             let (epoch, staker_balance) = trace.latest();
             if epoch == self.get_current_epoch() {

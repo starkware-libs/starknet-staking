@@ -222,6 +222,7 @@ fn test_validate_next_planned_attestation_block() {
     let staking_contract = cfg.test_info.staking_contract;
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    advance_epoch_global();
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
 

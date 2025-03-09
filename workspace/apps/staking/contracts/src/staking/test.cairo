@@ -2563,13 +2563,14 @@ fn test_get_attestation_info_by_operational_address() {
     let staking_dispatcher = IStakingAttestationDispatcher { contract_address: staking_contract };
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    advance_epoch_global();
     let operational_address = cfg.staker_info.operational_address;
     let attestation_info = staking_dispatcher
         .get_attestation_info_by_operational_address(:operational_address);
     assert!(attestation_info.staker_address() == cfg.test_info.staker_address);
     assert!(attestation_info.stake() == cfg.staker_info._deprecated_amount_own);
     assert!(attestation_info.epoch_len() == EPOCH_LENGTH);
-    assert!(attestation_info.epoch_id() == 0);
+    assert!(attestation_info.epoch_id() == 1);
     assert!(attestation_info.current_epoch_starting_block() == 0);
 }
 
