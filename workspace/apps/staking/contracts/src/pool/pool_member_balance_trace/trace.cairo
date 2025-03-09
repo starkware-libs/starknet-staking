@@ -166,6 +166,11 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
             checkpoints[pos - 1].read().value
         }
     }
+
+    /// Returns whether the trace is initialized.
+    fn is_initialized(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> bool {
+        self.checkpoints.len().is_non_zero()
+    }
 }
 
 #[generate_trait]
