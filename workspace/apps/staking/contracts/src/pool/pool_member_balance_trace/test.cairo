@@ -107,8 +107,9 @@ fn test_latest_mutable() {
     mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
     mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
 
-    let latest = mock_trace.latest_mutable();
-    assert!(latest == PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+    let (key, value) = mock_trace.latest();
+    assert!(key == 200);
+    assert!(value == PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
 }
 
 #[test]
