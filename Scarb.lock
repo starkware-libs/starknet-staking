@@ -157,7 +157,7 @@ dependencies = [
 
 [[package]]
 name = "staking"
-version = "1.10.8"
+version = "1.10.9"
 dependencies = [
  "openzeppelin",
  "snforge_scarb_plugin",
