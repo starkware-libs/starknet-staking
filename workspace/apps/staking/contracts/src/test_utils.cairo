@@ -1028,7 +1028,7 @@ fn get_total_amount(staker_info: StakerInfo) -> Amount {
 }
 
 pub(crate) fn calculate_block_offset(
-    stake: u128,
+    stake: Amount,
     epoch_id: u64,
     staker_address: ContractAddress,
     epoch_len: u64,

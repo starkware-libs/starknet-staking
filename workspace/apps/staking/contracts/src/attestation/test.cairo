@@ -1,4 +1,3 @@
-use core::hash::HashStateTrait;
 use core::num::traits::Zero;
 use core::poseidon::PoseidonTrait;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
@@ -34,7 +33,7 @@ use test_utils::{
 #[test]
 fn test_attest() {
     /// this test is a lie. it runs through the code but doesn't check the block hash correctly.
-    /// the test runner currently always return 0 for any block hash in get_block_hash_syscall.
+    /// the test runner currently doesn't support get_block_hash_syscall.
     /// this test should be fixed when the test runner is fixed.
     /// https://github.com/foundry-rs/starknet-foundry/issues/684
     let mut cfg: StakingInitConfig = Default::default();
@@ -48,7 +47,10 @@ fn test_attest() {
     let operational_address = cfg.staker_info.operational_address;
     let staker_address = cfg.test_info.staker_address;
     let mut spy = snforge_std::spy_events();
+    // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
+    // advance into the attestation window.
+    advance_block_into_attestation_window(:cfg);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -155,6 +157,8 @@ fn test_is_attestation_done_in_curr_epoch() {
     let operational_address = cfg.staker_info.operational_address;
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
+    // advance into the attestation window.
+    advance_block_into_attestation_window(:cfg);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );

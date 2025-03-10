@@ -72,7 +72,7 @@ use starkware_utils::test_utils::{
 };
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use test_utils::{
-    StakingInitConfig, advance_epoch_global, approve,
+    StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, approve,
     calculate_staker_own_rewards_include_commission, calculate_staker_total_rewards,
     cheat_reward_for_reward_supplier, constants, declare_pool_contract,
     declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
@@ -623,6 +623,7 @@ fn test_claim_rewards() {
     // Advance the epoch to ensure the total stake in the current epoch is nonzero, preventing a
     // division by zero when calculating rewards.
     advance_epoch_global();
+    advance_block_into_attestation_window(:cfg);
 
     // Calculate the expected staker rewards.
     let staker_info = staking_dispatcher.staker_info(:staker_address);
