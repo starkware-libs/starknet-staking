@@ -24,7 +24,7 @@ pub trait IPool<TContractState> {
         amount: Amount,
     ) -> Amount;
     fn enter_delegation_pool_from_staking_contract(
-        ref self: TContractState, amount: Amount, index: Index, data: Span<felt252>,
+        ref self: TContractState, amount: Amount, data: Span<felt252>,
     );
     fn set_final_staker_index(ref self: TContractState, final_staker_index: Index);
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);

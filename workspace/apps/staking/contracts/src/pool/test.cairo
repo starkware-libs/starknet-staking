@@ -167,7 +167,7 @@ fn test_enter_delegation_pool() {
         operational_address: cfg.staker_info.operational_address,
         unstake_time: Option::None,
         amount_own: cfg.staker_info._deprecated_amount_own,
-        index: cfg.staker_info.index,
+        index: cfg.staker_info._deprecated_index,
         unclaimed_rewards_own: 0,
         pool_info: Option::Some(
             StakerPoolInfo {
@@ -547,7 +547,7 @@ fn test_claim_rewards() {
             .pool_member_info(cfg.test_info.pool_member_address) == expected_pool_member_info,
     );
     // Update index for testing.
-    let updated_index: Index = cfg.staker_info.index + BASE_VALUE;
+    let updated_index: Index = cfg.staker_info._deprecated_index + BASE_VALUE;
     snforge_std::store(
         staking_contract, selector!("global_index"), array![updated_index.into()].span(),
     );
@@ -998,7 +998,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
     let amount = cfg.pool_member_info._deprecated_amount;
     let index = cfg.pool_member_info._deprecated_index;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
-    pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :index, :data);
+    pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :data);
 
     let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     let expected_pool_member_info = PoolMemberInfo {
@@ -1020,8 +1020,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
         serialized_value: array![updated_index.into()].span(),
     );
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
-    pool_dispatcher
-        .enter_delegation_pool_from_staking_contract(:amount, index: updated_index, :data);
+    pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :data);
     let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     let updated_amount = amount * 2;
     let expected_reward = Zero::zero(); // TODO: Change this after implement calculate_rewards.
@@ -1068,7 +1067,6 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
     let reward_address = cfg.pool_member_info.reward_address;
-    let index = cfg.pool_member_info._deprecated_index;
     let switch_amount = cfg.pool_member_info._deprecated_amount / 2;
 
     // Serialize the switch pool data.
@@ -1080,7 +1078,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     // Catch AMOUNT_IS_ZERO.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     let result = pool_safe_dispatcher
-        .enter_delegation_pool_from_staking_contract(amount: Zero::zero(), :index, :data);
+        .enter_delegation_pool_from_staking_contract(amount: Zero::zero(), :data);
     assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_IS_ZERO.describe());
 
     // Catch CALLER_IS_NOT_STAKING_CONTRACT.
@@ -1088,7 +1086,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
         contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
     );
     let result = pool_safe_dispatcher
-        .enter_delegation_pool_from_staking_contract(amount: switch_amount, :index, :data);
+        .enter_delegation_pool_from_staking_contract(amount: switch_amount, :data);
     assert_panic_with_error(
         :result, expected_error: GenericError::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
     );
@@ -1097,7 +1095,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     let data = array![].span();
     let result = pool_safe_dispatcher
-        .enter_delegation_pool_from_staking_contract(amount: switch_amount, :index, :data);
+        .enter_delegation_pool_from_staking_contract(amount: switch_amount, :data);
     assert_panic_with_error(
         :result, expected_error: Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED.describe(),
     );
@@ -1110,7 +1108,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     let data = data.span();
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     let result = pool_safe_dispatcher
-        .enter_delegation_pool_from_staking_contract(amount: switch_amount, :index, :data);
+        .enter_delegation_pool_from_staking_contract(amount: switch_amount, :data);
     assert_panic_with_error(:result, expected_error: Error::REWARD_ADDRESS_MISMATCH.describe());
 }
 

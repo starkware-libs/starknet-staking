@@ -254,8 +254,6 @@ pub mod Staking {
                         operational_address,
                         unstake_time: Option::None,
                         amount_own: self.get_amount_own(:staker_address),
-                        // TODO: remove index from `new_latest()`.
-                        index: Zero::zero(),
                         unclaimed_rewards_own: Zero::zero(),
                         pool_info: pool_info,
                     ),
@@ -675,7 +673,7 @@ pub mod Staking {
     impl StakingPoolImpl of IStakingPool<ContractState> {
         fn add_stake_from_pool(
             ref self: ContractState, staker_address: ContractAddress, amount: Amount,
-        ) -> Index {
+        ) {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
@@ -721,8 +719,6 @@ pub mod Staking {
                         new_delegated_stake: pool_info.amount,
                     },
                 );
-
-            staker_info.index
         }
 
         fn remove_from_delegation_pool_intent(
@@ -893,9 +889,7 @@ pub mod Staking {
             // Notify `to_pool` about the new delegation.
             let to_pool_dispatcher = IPoolDispatcher { contract_address: to_pool };
             to_pool_dispatcher
-                .enter_delegation_pool_from_staking_contract(
-                    amount: switched_amount, index: to_staker_info.index, :data,
-                );
+                .enter_delegation_pool_from_staking_contract(amount: switched_amount, :data);
 
             // Emit event.
             let to_staker_self_stake = self.get_amount_own(staker_address: to_staker);
@@ -921,9 +915,7 @@ pub mod Staking {
         }
 
         // TODO: remove this function and update specs.
-        fn claim_delegation_pool_rewards(
-            ref self: ContractState, staker_address: ContractAddress,
-        ) -> Index {
+        fn claim_delegation_pool_rewards(ref self: ContractState, staker_address: ContractAddress) {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
@@ -933,7 +925,6 @@ pub mod Staking {
             // Send rewards to pool contract, and commit to storage.
             // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
             // is performed only after that.
-            let updated_index = staker_info.index;
             let token_dispatcher = self.token_dispatcher.read();
             self
                 .send_rewards_to_delegation_pool(
@@ -942,8 +933,6 @@ pub mod Staking {
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
-
-            updated_index
         }
 
         fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
@@ -957,7 +946,7 @@ pub mod Staking {
             // Send rewards to pool contract, and commit to storage.
             // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
             // is performed only after that.
-            let updated_index = staker_info.index;
+            let updated_index = staker_info._deprecated_index;
             let token_dispatcher = self.token_dispatcher.read();
             self
                 .send_rewards_to_delegation_pool(
@@ -1227,7 +1216,8 @@ pub mod Staking {
                         recipient: pool_info.pool_contract, amount: pool_info.amount.into(),
                     );
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_info.pool_contract };
-                pool_dispatcher.set_final_staker_index(final_staker_index: staker_info.index);
+                pool_dispatcher
+                    .set_final_staker_index(final_staker_index: staker_info._deprecated_index);
             }
         }
 

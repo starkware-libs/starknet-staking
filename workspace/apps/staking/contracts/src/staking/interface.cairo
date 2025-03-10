@@ -1,3 +1,4 @@
+use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::objects::{
     AttestationInfo, EpochInfo, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
@@ -75,7 +76,7 @@ pub trait IStakingPool<TContractState> {
     /// 4. Increase the total_stake by `amount`.
     fn add_stake_from_pool(
         ref self: TContractState, staker_address: ContractAddress, amount: Amount,
-    ) -> Index;
+    );
 
     /// Registers an intention to remove `amount` FRI of pooled stake from the staking contract.
     /// Returns the timestmap when the pool is allowed to remove the `amount` for `identifier`.
@@ -148,9 +149,7 @@ pub trait IStakingPool<TContractState> {
     /// 1. Update the rewards for `staker_address`.
     /// 2. Send `pool_info.unclaimed_rewards` FRI to the pool contract.
     /// 3. Set pool_info.unclaimed_rewards to zero.
-    fn claim_delegation_pool_rewards(
-        ref self: TContractState, staker_address: ContractAddress,
-    ) -> Index;
+    fn claim_delegation_pool_rewards(ref self: TContractState, staker_address: ContractAddress);
 
     /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
     /// Used only for upgrade purposes.
@@ -387,13 +386,13 @@ pub struct StakerInfo {
 pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalStakerInfoV1> {
     /// This function is used during convertion from `InternalStakerInfo` to `InternalStakerInfoV1`.
 
-    fn into(self: StakerInfo) -> InternalStakerInfoV1 nopanic {
+    fn into(self: StakerInfo) -> InternalStakerInfoV1 {
         InternalStakerInfoV1 {
             reward_address: self.reward_address,
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
             _deprecated_amount_own: self.amount_own,
-            index: self.index,
+            _deprecated_index: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,
         }
