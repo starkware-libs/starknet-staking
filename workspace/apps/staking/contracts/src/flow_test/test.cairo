@@ -240,7 +240,7 @@
 // /// Staker exit_intent.
 // /// Advance time less than exit_wait_window.
 // /// Delegator delegate.
-// /// Delegator claim rewards - cover `claim_delegation_pool_rewards` when staker in intent.
+// /// Delegator claim rewards - cover `claim_rewards` when staker in intent.
 // /// Delegator intent - cover pool in intent when staker still alive but in intent. Ignores if
 // /// `unstake_time` is none in `remove_from_delegation_pool_intent`.
 // /// Delegator action - cover action when A in intent.

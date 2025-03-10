@@ -300,18 +300,6 @@ fn test_switch_staking_delegation_pool_when_paused() {
 
 #[test]
 #[should_panic(expected: "Contract is paused")]
-fn test_claim_delegation_pool_rewards_when_paused() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    pause_staking_contract(:cfg);
-    let staking_pool_dispatcher = IStakingPoolDispatcher {
-        contract_address: cfg.test_info.staking_contract,
-    };
-    staking_pool_dispatcher.claim_delegation_pool_rewards(staker_address: DUMMY_ADDRESS());
-}
-
-#[test]
-#[should_panic(expected: "Contract is paused")]
 fn test_update_rewards_from_attestation_contract_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
