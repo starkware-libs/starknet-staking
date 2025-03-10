@@ -32,12 +32,10 @@
     - [fn get\_attestation\_info\_by\_operational\_address](#fn-get_attestation_info_by_operational_address)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
-    - [get\_total\_stake\_at\_current\_epoch](#get_current_total_staking_power)
+    - [get\_current\_total\_staking\_power](#get_current_total_staking_power)
     - [get\_pool\_exit\_intent](#get_pool_exit_intent)
-    - [update\_rewards](#update_rewards)
     - [declare\_operational\_address](#declare_operational_address)
     - [change\_operational\_address](#change_operational_address)
-    - [update\_global\_index\_if\_needed](#update_global_index_if_needed)
     - [is\_paused](#is_paused)
     - [pause](#pause)
     - [unpause](#unpause)
@@ -80,7 +78,7 @@
     - [pool\_member\_info](#pool_member_info)
     - [get\_pool\_member\_info](#get_pool_member_info)
     - [contract\_parameters](#contract_parameters-1)
-    - [update\_rewards](#update_rewards-1)
+    - [update\_rewards](#update_rewards)
     - [update\_rewards\_from\_staking\_contract](#update_rewards_from_staking_contract)
   - [Events](#events-1)
     - [Pool Member Balance Changed](#pool-member-balance-changed)
@@ -966,29 +964,6 @@ Return the [UndelegateIntentValue](#undelegateintentvalue).
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 
-### update_rewards
->**note:** internal logic
-```rust
-fn update_rewards(
-  ref self: ContractState, 
-  ref staker_info: StakerInfo
-)
-```
-#### description <!-- omit from toc -->
-Update rewards, add amount to unclaimed_rewards, update index.
-#### emits <!-- omit from toc -->
-#### errors <!-- omit from toc -->
-#### pre-condition <!-- omit from toc -->
-#### access control <!-- omit from toc -->
-Internal function.
-#### logic <!-- omit from toc -->
-1. If Staker is in an exit window, return false.
-2. Update index.
-3. Update rewards for `amount_own`.
-4. Update rewards for `pool_info.amount`.
-5. Update `unclaimed_rewards_own` with own rewards + pool rewards commission.
-6. Update `pool_info.unclaimed_rewards` with pool rewards without commission. 
-
 ### declare_operational_address
 ```rust
 fn declare_operational_address(
@@ -1031,27 +1006,6 @@ Change the operational address for a staker.
 Only staker address.
 #### logic <!-- omit from toc -->
 1. Change registered `operational_address` for the staker.
-
-### update_global_index_if_needed
-```rust
-fn update_global_index_if_needed(ref self: TContractState) -> bool
-```
-#### description <!-- omit from toc -->
-Update the global index if enough time has passed since the last update.
-This function is called in every staking function that alter the state.
-Return `true` if the index has been updated.
-#### emits <!-- omit from toc -->
-#### errors <!-- omit from toc -->
-1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-#### pre-condition <!-- omit from toc -->
-1. Staking contract is unpaused.
-#### access control <!-- omit from toc -->
-Any address can execute.
-#### logic <!-- omit from toc -->
-1. Check if enough time has passed since the last update, if not, return `false`.
-2. [calculate\_staking\_rewards](#calculate_staking_rewards).
-3. [get_total_stake](#get_total_stake).
-4. Update the global index.
 
 ### is_paused
 ```rust

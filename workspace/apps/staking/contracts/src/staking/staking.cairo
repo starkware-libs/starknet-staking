@@ -7,9 +7,7 @@ pub mod Staking {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::{
-        DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, MIN_TIME_BETWEEN_INDEX_UPDATES,
-    };
+    use staking::constants::{DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -34,8 +32,7 @@ pub mod Staking {
     use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest, Version};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
-        compute_global_index_diff, compute_new_delegated_stake, compute_rewards_rounded_down,
-        compute_rewards_rounded_up, deploy_delegation_pool_contract,
+        compute_new_delegated_stake, compute_rewards_rounded_up, deploy_delegation_pool_contract,
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::{Map, StoragePathEntry};
@@ -257,7 +254,8 @@ pub mod Staking {
                         operational_address,
                         unstake_time: Option::None,
                         amount_own: self.get_amount_own(:staker_address),
-                        index: self.global_index.read(),
+                        // TODO: remove index from `new_latest()`.
+                        index: Zero::zero(),
                         unclaimed_rewards_own: Zero::zero(),
                         pool_info: pool_info,
                     ),
@@ -306,7 +304,6 @@ pub mod Staking {
             // Update the staker info to account for accumulated rewards, before updating their
             // staked amount.
             let old_self_stake = self.get_amount_own(:staker_address);
-            self.update_rewards(ref :staker_info, staker_amount_own: old_self_stake);
 
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
@@ -359,11 +356,6 @@ pub mod Staking {
                 Error::CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
             );
 
-            self
-                .update_rewards(
-                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
-                );
-
             // Transfer rewards to staker's reward address and write updated staker info to storage.
             // Note: `send_rewards_to_staker` alters `staker_info` thus commit to storage is
             // performed only after that.
@@ -382,12 +374,6 @@ pub mod Staking {
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-
-            // Updating rewards last time for the staker, as they're about to exit.
-            self
-                .update_rewards(
-                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
-                );
 
             // Set the unstake time.
             let unstake_time = Time::now().add(delta: self.exit_wait_window.read());
@@ -514,10 +500,6 @@ pub mod Staking {
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let mut staker_info = self.internal_staker_info(:staker_address);
             staker_info._deprecated_amount_own = self.get_amount_own(:staker_address);
-            self
-                .update_rewards(
-                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
-                );
             staker_info.into()
         }
 
@@ -573,12 +555,9 @@ pub mod Staking {
             undelegate_intent_value
         }
 
+        // TODO: Remove this function.
         fn update_global_index_if_needed(ref self: ContractState) -> bool {
             self.assert_is_unpaused();
-            if self.is_index_update_needed() {
-                self.update_global_index();
-                return true;
-            }
             false
         }
 
@@ -648,12 +627,6 @@ pub mod Staking {
 
             assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
 
-            // Update rewards using the existing commission before changing the commission.
-            self
-                .update_rewards(
-                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
-                );
-
             // Update commission in this contract, and in the associated pool contract.
             {
                 let mut pool_info = staker_info.get_pool_info();
@@ -707,10 +680,6 @@ pub mod Staking {
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-            self
-                .update_rewards(
-                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
-                );
             let mut pool_info = staker_info.get_pool_info();
             let pool_contract = pool_info.pool_contract;
             assert!(
@@ -765,10 +734,6 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let mut staker_info = self.internal_staker_info(:staker_address);
-            self
-                .update_rewards(
-                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
-                );
             self.assert_caller_is_pool_contract(staker_info: @staker_info);
 
             let (old_delegated_stake, pool_contract) = {
@@ -887,11 +852,6 @@ pub mod Staking {
             // Update rewards for `to_staker` before editing the staker_info, and send them to the
             // pool.
             let mut to_staker_info = self.internal_staker_info(staker_address: to_staker);
-            self
-                .update_rewards(
-                    ref staker_info: to_staker_info,
-                    staker_amount_own: self.get_amount_own(staker_address: to_staker),
-                );
             let token_dispatcher = self.token_dispatcher.read();
             self
                 .send_rewards_to_delegation_pool(
@@ -969,11 +929,6 @@ pub mod Staking {
             let mut staker_info = self.internal_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info().pool_contract;
             assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
-
-            self
-                .update_rewards(
-                    ref :staker_info, staker_amount_own: self.get_amount_own(:staker_address),
-                );
 
             // Send rewards to pool contract, and commit to storage.
             // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
@@ -1299,40 +1254,6 @@ pub mod Staking {
                 );
         }
 
-        /// Calculates the rewards for a given staker.
-        ///
-        /// The caller for this function should validate that the staker exists.
-        ///
-        /// rewards formula:
-        /// $$ interest = (global\_index-self\_index) $$
-        ///
-        /// single staker:
-        /// $$ rewards = staker\_amount\_own * interest $$
-        ///
-        /// staker with pool:
-        /// $$ rewards = interest * (staker\_amount\_own + staker\_amount\_pool * rev\_share) $$
-        ///
-        /// Fields that are changed in staker_info:
-        /// - unclaimed_rewards_own
-        /// - unclaimed_rewards
-        /// - index
-        fn update_rewards(
-            self: @ContractState,
-            ref staker_info: InternalStakerInfoLatest,
-            staker_amount_own: Amount,
-        ) {
-            if (staker_info.unstake_time.is_some()) {
-                return;
-            }
-            let global_index = self.global_index.read();
-            let interest = global_index - staker_info.index;
-            staker_info.index = global_index;
-
-            let staker_rewards = compute_rewards_rounded_down(amount: staker_amount_own, :interest);
-            staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
-            self.calculate_and_update_pool_rewards(:interest, ref :staker_info);
-        }
-
         fn deploy_delegation_pool_from_staking_contract(
             ref self: ContractState,
             staker_address: ContractAddress,
@@ -1378,30 +1299,6 @@ pub mod Staking {
         fn update_total_stake(ref self: ContractState, new_total_stake: Amount) {
             let next_epoch = self.get_current_epoch() + 1;
             self.total_stake_trace.deref().insert(key: next_epoch, value: new_total_stake);
-        }
-
-        fn is_index_update_needed(self: @ContractState) -> bool {
-            let time_diff = Time::now().sub(other: self.global_index_last_update_timestamp.read());
-            time_diff >= MIN_TIME_BETWEEN_INDEX_UPDATES
-        }
-
-        fn update_global_index(ref self: ContractState) {
-            // Get the new system-wide rewards accrued since last update.
-            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
-            let staking_rewards = reward_supplier_dispatcher.calculate_staking_rewards();
-
-            // Update the global index.
-            // The index difference reflects the interest rate for the time since last update.
-            // see `compute_global_index_diff()` for more details.
-            let total_stake = self.get_total_stake();
-            let global_index_diff = compute_global_index_diff(:staking_rewards, :total_stake);
-            let old_index = self.global_index.read();
-            let new_index = old_index + global_index_diff;
-            self.global_index.write(new_index);
-
-            // Update global index timestamp.
-            let global_index_current_update_timestamp = Time::now();
-            self.global_index_last_update_timestamp.write(global_index_current_update_timestamp);
         }
 
         /// Wrap initial operations required in any public staking function.
