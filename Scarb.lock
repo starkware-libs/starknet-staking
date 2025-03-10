@@ -168,7 +168,7 @@ dependencies = [
 [[package]]
 name = "starkware_utils"
 version = "0.1.0"
-source = "git+https://github.com/starkware-libs/starkware-starknet-utils?rev=1ca5c0a0a7ce6288f560635d7e6546b413f8f51d#1ca5c0a0a7ce6288f560635d7e6546b413f8f51d"
+source = "git+https://github.com/starkware-libs/starkware-starknet-utils?rev=c71a626ec1793a83a3382cbd74dfc3ebf13fac74#c71a626ec1793a83a3382cbd74dfc3ebf13fac74"
 dependencies = [
  "openzeppelin",
  "snforge_std",
