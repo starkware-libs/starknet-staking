@@ -6,12 +6,6 @@ use RewardSupplier::{
     CONTRACT_IDENTITY as reward_supplier_identity, CONTRACT_VERSION as reward_supplier_version,
 };
 use Staking::{CONTRACT_IDENTITY as staking_identity, CONTRACT_VERSION as staking_version};
-use contracts_commons::errors::Describable;
-use contracts_commons::math::utils::ceil_of_division;
-use contracts_commons::test_utils::{
-    assert_panic_with_error, cheat_caller_address_once, check_identity,
-};
-use contracts_commons::types::time::time::Time;
 use core::num::traits::{Sqrt, Zero};
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -40,6 +34,12 @@ use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE
 use staking::types::Amount;
 use staking::utils::compute_threshold;
 use starknet::Store;
+use starkware_utils::errors::Describable;
+use starkware_utils::math::utils::ceil_of_division;
+use starkware_utils::test_utils::{
+    assert_panic_with_error, cheat_caller_address_once, check_identity,
+};
+use starkware_utils::types::time::time::Time;
 use test_utils::{
     StakingInitConfig, deploy_minting_curve_contract, deploy_mock_erc20_contract,
     deploy_staking_contract, fund, general_contract_system_deployment,
@@ -49,15 +49,15 @@ use test_utils::{
 
 #[test]
 fn test_identity() {
-    assert_eq!(staking_identity, 'Staking Core Contract');
-    assert_eq!(reward_supplier_identity, 'Reward Supplier');
-    assert_eq!(mint_curve_identity, 'Minting Curve');
-    assert_eq!(pool_identity, 'Staking Delegation Pool');
+    assert!(staking_identity == 'Staking Core Contract');
+    assert!(reward_supplier_identity == 'Reward Supplier');
+    assert!(mint_curve_identity == 'Minting Curve');
+    assert!(pool_identity == 'Staking Delegation Pool');
 
-    assert_eq!(staking_version, '1.0.0');
-    assert_eq!(reward_supplier_version, '1.0.0');
-    assert_eq!(mint_curve_version, '1.0.0');
-    assert_eq!(pool_version, '1.0.0');
+    assert!(staking_version == '1.0.0');
+    assert!(reward_supplier_version == '1.0.0');
+    assert!(mint_curve_version == '1.0.0');
+    assert!(pool_version == '1.0.0');
 
     // Test identity on deployed instances.
     let mut cfg: StakingInitConfig = Default::default();
@@ -84,17 +84,21 @@ fn test_reward_supplier_constructor() {
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
     let state = @initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
-    assert_eq!(state.staking_contract.read(), cfg.test_info.staking_contract);
-    assert_eq!(state.token_dispatcher.read().contract_address, token_address);
-    assert_eq!(state.l1_pending_requested_amount.read(), Zero::zero());
-    assert_eq!(state.base_mint_amount.read(), cfg.reward_supplier.base_mint_amount);
-    assert_eq!(
-        state.minting_curve_dispatcher.read().contract_address,
-        cfg.reward_supplier.minting_curve_contract,
+    assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
+    assert!(state.token_dispatcher.read().contract_address == token_address);
+    assert!(state.l1_pending_requested_amount.read() == Zero::zero());
+    assert!(state.base_mint_amount.read() == cfg.reward_supplier.base_mint_amount);
+    assert!(
+        state
+            .minting_curve_dispatcher
+            .read()
+            .contract_address == cfg
+            .reward_supplier
+            .minting_curve_contract,
     );
-    assert_eq!(state.l1_reward_supplier.read(), cfg.reward_supplier.l1_reward_supplier);
-    assert_eq!(state.last_timestamp.read(), Time::now());
-    assert_eq!(state.unclaimed_rewards.read(), STRK_IN_FRIS);
+    assert!(state.l1_reward_supplier.read() == cfg.reward_supplier.l1_reward_supplier);
+    assert!(state.last_timestamp.read() == Time::now());
+    assert!(state.unclaimed_rewards.read() == STRK_IN_FRIS);
 }
 
 #[test]
@@ -124,12 +128,12 @@ fn test_claim_rewards() {
     cheat_caller_address_once(contract_address: test_address(), caller_address: staking_contract);
     state.claim_rewards(:amount);
     // Validate that the rewards were claimed.
-    assert_eq!(state.unclaimed_rewards.read(), Zero::zero());
+    assert!(state.unclaimed_rewards.read() == Zero::zero());
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_balance = token_dispatcher.balance_of(account: staking_contract);
-    assert_eq!(staking_balance, amount.into() * 2);
+    assert!(staking_balance == amount.into() * 2);
     let reward_supplier_balance = token_dispatcher.balance_of(account: test_address());
-    assert_eq!(reward_supplier_balance, Zero::zero());
+    assert!(reward_supplier_balance == Zero::zero());
 }
 
 #[test]
@@ -173,14 +177,14 @@ fn test_calculate_staking_rewards() {
     let expected_rewards = cfg.minting_curve_contract_info.c_num.into()
         * unadjusted_expected_rewards
         / cfg.minting_curve_contract_info.c_denom.into();
-    assert_eq!(rewards, expected_rewards);
+    assert!(rewards == expected_rewards);
     let expected_unclaimed_rewards = rewards + STRK_IN_FRIS;
-    assert_eq!(state.unclaimed_rewards.read(), expected_unclaimed_rewards);
+    assert!(state.unclaimed_rewards.read() == expected_unclaimed_rewards);
     let base_mint_amount = cfg.reward_supplier.base_mint_amount;
     let diff = expected_unclaimed_rewards + compute_threshold(base_mint_amount) - balance;
     let num_msgs = ceil_of_division(dividend: diff, divisor: base_mint_amount);
     let expected_l1_pending_requested_amount = num_msgs * base_mint_amount;
-    assert_eq!(state.l1_pending_requested_amount.read(), expected_l1_pending_requested_amount);
+    assert!(state.l1_pending_requested_amount.read() == expected_l1_pending_requested_amount);
     // Validate MintRequest and CalculatedRewards events.
     let events = spy.get_events().emitted_by(contract_address: test_address()).events;
     assert_number_of_events(
@@ -245,7 +249,7 @@ fn test_contract_parameters() {
         unclaimed_rewards: STRK_IN_FRIS,
         l1_pending_requested_amount: Zero::zero(),
     };
-    assert_eq!(state.contract_parameters(), expected_info);
+    assert!(state.contract_parameters() == expected_info);
 }
 
 #[test]
@@ -276,9 +280,10 @@ fn test_on_receive() {
     let diff = debit + threshold - credit;
     let num_msgs = ceil_of_division(dividend: diff, divisor: base_mint_amount);
     let mut expected_l1_pending_requested_amount = num_msgs * base_mint_amount;
-    assert_eq!(
-        reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
-        expected_l1_pending_requested_amount,
+    assert!(
+        reward_supplier_dispatcher
+            .contract_parameters()
+            .l1_pending_requested_amount == expected_l1_pending_requested_amount,
     );
     for _ in 0..num_msgs {
         cheat_caller_address_once(
@@ -299,11 +304,12 @@ fn test_on_receive() {
                 ),
         );
         expected_l1_pending_requested_amount -= base_mint_amount;
-        assert_eq!(
-            reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount,
-            expected_l1_pending_requested_amount,
+        assert!(
+            reward_supplier_dispatcher
+                .contract_parameters()
+                .l1_pending_requested_amount == expected_l1_pending_requested_amount,
         );
-    };
+    }
 
     // One more time to cover an amount that's bigger than requested amount.
     cheat_caller_address_once(
@@ -323,8 +329,10 @@ fn test_on_receive() {
                 message: array![].span(),
             ),
     );
-    assert_eq!(
-        reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount, Zero::zero(),
+    assert!(
+        reward_supplier_dispatcher
+            .contract_parameters()
+            .l1_pending_requested_amount == Zero::zero(),
     );
 }
 
@@ -420,7 +428,7 @@ fn test_current_epoch_rewards() {
     // Expected rewards are computed by dividing the yearly mint by the number of epochs in a year.
     let epochs_in_year = cfg.staking_contract_info.epoch_info.epochs_in_year();
     let expected_rewards = yearly_mint / epochs_in_year.into();
-    assert_eq!(rewards, expected_rewards);
+    assert!(rewards == expected_rewards);
 }
 
 #[test]
@@ -448,7 +456,7 @@ fn test_update_unclaimed_rewards_from_staking_contract() {
         size: Store::<Amount>::size().into(),
     )
         .at(0);
-    assert_eq!(unclaimed_rewards_after, unclaimed_rewards_before + amount.into());
+    assert!(unclaimed_rewards_after == unclaimed_rewards_before + amount.into());
     // Asserts events, the only one is the mint request.
     let events = spy.get_events().emitted_by(contract_address: reward_supplier).events;
     assert_number_of_events(

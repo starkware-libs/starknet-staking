@@ -1,6 +1,3 @@
-use contracts_commons::math::abs::wide_abs_diff;
-use contracts_commons::test_utils::TokenTrait;
-use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::utils::{
@@ -12,6 +9,9 @@ use staking::staking::interface::StakerInfo;
 use staking::test_utils::{pool_update_rewards, staker_update_rewards};
 use staking::types::Amount;
 use starknet::ContractAddress;
+use starkware_utils::math::abs::wide_abs_diff;
+use starkware_utils::test_utils::TokenTrait;
+use starkware_utils::types::time::time::Time;
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
@@ -69,16 +69,17 @@ pub(crate) impl BasicStakeFlowImpl<
         assert!(
             system.token.balance_of(account: pool) > 100,
         ); // TODO: Change this after implement calculate_rewards.
-        assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount * 2);
-        assert_eq!(system.token.balance_of(account: delegator.delegator.address), stake_amount);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
+        assert!(system.token.balance_of(account: delegator.delegator.address) == stake_amount);
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
         assert!(
             system.token.balance_of(account: delegator.reward.address).is_zero(),
         ); // TODO: Change this after implement calculate_rewards.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-        assert_eq!(
-            initial_reward_supplier_balance,
-            system.token.balance_of(account: system.reward_supplier.address)
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
                 + system.token.balance_of(account: staker.reward.address)
                 + system.token.balance_of(account: delegator.reward.address)
                 + system.token.balance_of(account: pool),
@@ -147,16 +148,17 @@ pub(crate) impl DelegatorIntentAfterStakerActionFlowImpl<
         assert!(
             system.token.balance_of(account: pool) > 100,
         ); // TODO: Change this after implement calculate_rewards.
-        assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount * 2);
-        assert_eq!(system.token.balance_of(account: delegator.delegator.address), stake_amount);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
+        assert!(system.token.balance_of(account: delegator.delegator.address) == stake_amount);
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
         assert!(
             system.token.balance_of(account: delegator.reward.address).is_zero(),
         ); // TODO: Change this after implement calculate_rewards.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-        assert_eq!(
-            initial_reward_supplier_balance,
-            system.token.balance_of(account: system.reward_supplier.address)
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
                 + system.token.balance_of(account: staker.reward.address)
                 + system.token.balance_of(account: delegator.reward.address)
                 + system.token.balance_of(account: pool),
@@ -226,20 +228,21 @@ pub(crate) impl SetOpenForDelegationFlowImpl<
         assert!(
             system.token.balance_of(account: pool) > 100,
         ); // TODO: Change this after implement calculate_rewards.
-        assert_eq!(
-            system.token.balance_of(account: staker.staker.address), initial_stake_amount * 2,
+        assert!(
+            system.token.balance_of(account: staker.staker.address) == initial_stake_amount * 2,
         );
-        assert_eq!(
-            system.token.balance_of(account: delegator.delegator.address), initial_stake_amount,
+        assert!(
+            system.token.balance_of(account: delegator.delegator.address) == initial_stake_amount,
         );
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
         assert!(
             system.token.balance_of(account: delegator.reward.address).is_zero(),
         ); // TODO: Change this after implement calculate_rewards.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-        assert_eq!(
-            initial_reward_supplier_balance,
-            system.token.balance_of(account: system.reward_supplier.address)
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
                 + system.token.balance_of(account: staker.reward.address)
                 + system.token.balance_of(account: delegator.reward.address)
                 + system.token.balance_of(account: pool),
@@ -311,16 +314,17 @@ pub(crate) impl DelegatorIntentFlowImpl<
         assert!(
             system.token.balance_of(account: pool) > 100,
         ); // TODO: Change this after implement calculate_rewards.
-        assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
-        assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
+        assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
         assert!(
             system.token.balance_of(account: delegator.reward.address).is_zero(),
         ); // TODO: Change this after implement calculate_rewards.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-        assert_eq!(
-            initial_reward_supplier_balance,
-            system.token.balance_of(account: system.reward_supplier.address)
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
                 + system.token.balance_of(account: staker.reward.address)
                 + system.token.balance_of(account: delegator.reward.address)
                 + system.token.balance_of(account: pool),
@@ -399,7 +403,7 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
         let staker1_second_pool = system.staking.get_pool(staker: staker1);
         system.advance_time(time: one_week);
-        assert_ne!(staker1_pool, staker1_second_pool);
+        assert!(staker1_pool != staker1_second_pool);
 
         // After the following, delegator has delegated_amount / 2 in staker1, delegated_amount
         // / 4 in intent, and delegated_amount / 4 in staker2.
@@ -462,9 +466,9 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
 
         // Assert all staked amounts were transferred back.
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
-        assert_eq!(system.token.balance_of(account: staker1.staker.address), stake_amount);
-        assert_eq!(system.token.balance_of(account: staker2.staker.address), stake_amount);
-        assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+        assert!(system.token.balance_of(account: staker1.staker.address) == stake_amount);
+        assert!(system.token.balance_of(account: staker2.staker.address) == stake_amount);
+        assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
 
         // Asserts reward addresses are not empty.
         assert!(system.token.balance_of(account: staker1.reward.address).is_non_zero());
@@ -475,9 +479,10 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
 
         // Assert all funds that moved from rewards supplier, were moved to correct addresses.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-        assert_eq!(
-            initial_reward_supplier_balance,
-            system.token.balance_of(account: system.reward_supplier.address)
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
                 + system.token.balance_of(account: staker1.reward.address)
                 + system.token.balance_of(account: staker2.reward.address)
                 + system.token.balance_of(account: delegator.reward.address)
@@ -555,8 +560,8 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
 
         // Assert all staked amounts were transferred back.
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
-        assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
-        assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
+        assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
 
         // Assert staker reward address is not empty.
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
@@ -566,9 +571,10 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
 
         // Assert all funds that moved from rewards supplier, were moved to correct addresses.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-        assert_eq!(
-            initial_reward_supplier_balance,
-            system.token.balance_of(account: system.reward_supplier.address)
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
                 + system.token.balance_of(account: staker.reward.address)
                 + system.token.balance_of(account: pool),
         );
@@ -629,7 +635,7 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl<
 
         // Delegator claim_rewards to update commission to 0%
         system.delegator_claim_rewards(:delegator, :pool);
-        assert_eq!(system.token.balance_of(account: delegator.reward.address), Zero::zero());
+        assert!(system.token.balance_of(account: delegator.reward.address) == Zero::zero());
         system.advance_time(time: one_week);
 
         system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
@@ -648,8 +654,8 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl<
 
         // Assert all staked amounts were transferred back.
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
-        assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
-        assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
+        assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
 
         // Asserts reward addresses are not empty.
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
@@ -659,9 +665,10 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl<
 
         // Assert all funds that moved from rewards supplier, were moved to correct addresses.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-        assert_eq!(
-            initial_reward_supplier_balance,
-            system.token.balance_of(account: system.reward_supplier.address)
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
                 + system.token.balance_of(account: staker.reward.address)
                 + system.token.balance_of(account: delegator.reward.address)
                 + system.token.balance_of(account: pool),
@@ -725,20 +732,21 @@ pub(crate) impl StakerIntentLastActionFirstFlowImpl<
         assert!(
             system.token.balance_of(account: pool) > 100,
         ); // TODO: Change this after implement calculate_rewards.
-        assert_eq!(
-            system.token.balance_of(account: staker.staker.address), initial_stake_amount * 2,
+        assert!(
+            system.token.balance_of(account: staker.staker.address) == initial_stake_amount * 2,
         );
-        assert_eq!(
-            system.token.balance_of(account: delegator.delegator.address), initial_stake_amount,
+        assert!(
+            system.token.balance_of(account: delegator.delegator.address) == initial_stake_amount,
         );
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
         assert!(
             system.token.balance_of(account: delegator.reward.address).is_zero(),
         ); // TODO: Change this after implement calculate_rewards.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-        assert_eq!(
-            initial_reward_supplier_balance,
-            system.token.balance_of(account: system.reward_supplier.address)
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
                 + system.token.balance_of(account: staker.reward.address)
                 + system.token.balance_of(account: delegator.reward.address)
                 + system.token.balance_of(account: pool),
@@ -789,7 +797,7 @@ pub(crate) impl StakerInfoAfterUpgradeFlowImpl<
         let expected_staker_info = staker_update_rewards(
             staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
         );
-        assert_eq!(staker_info_after_upgrade, expected_staker_info);
+        assert!(staker_info_after_upgrade == expected_staker_info);
     }
 }
 
@@ -842,7 +850,7 @@ pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
         let expected_staker_info = staker_update_rewards(
             staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
         );
-        assert_eq!(staker_info_after_upgrade, expected_staker_info);
+        assert!(staker_info_after_upgrade == expected_staker_info);
     }
 }
 
@@ -892,7 +900,7 @@ pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
     ) {
         let staker_info_after_upgrade = system.staker_info(staker: self.staker.unwrap());
         let expected_staker_info = self.staker_info.unwrap();
-        assert_eq!(staker_info_after_upgrade, expected_staker_info);
+        assert!(staker_info_after_upgrade == expected_staker_info);
     }
 }
 
@@ -940,7 +948,7 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
         let expected_staker_info = staker_update_rewards(
             staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
         );
-        assert_eq!(internal_staker_info_after_upgrade, expected_staker_info.into());
+        assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }
 
@@ -998,7 +1006,7 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
         let expected_staker_info = staker_update_rewards(
             staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
         );
-        assert_eq!(internal_staker_info_after_upgrade, expected_staker_info.into());
+        assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }
 
@@ -1053,7 +1061,7 @@ pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
         let internal_staker_info_after_upgrade = system
             .internal_staker_info(staker: self.staker.unwrap());
         let expected_staker_info = self.staker_info.unwrap();
-        assert_eq!(internal_staker_info_after_upgrade, expected_staker_info.into());
+        assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }
 
@@ -1102,8 +1110,8 @@ pub(crate) impl PoolUpgradeFlowImpl<
         system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.delegator_exit_action(:delegator, :pool);
-        assert_eq!(system.token.balance_of(account: pool), Zero::zero());
-        assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+        assert!(system.token.balance_of(account: pool) == Zero::zero());
+        assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
     }
 }
 
@@ -1167,10 +1175,11 @@ pub(crate) impl InternalPoolMemberInfoAfterUpgradeFlowImpl<
             pool_member_info: self.delegator_info.unwrap(),
             updated_index: system.staking.get_global_index(),
         );
-        assert_eq!(internal_pool_member_info_after_upgrade, expected_pool_member_info.into());
-        assert_eq!(
-            get_internal_pool_member_info_after_upgrade,
-            Option::Some(expected_pool_member_info.into()),
+        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.into());
+        assert!(
+            get_internal_pool_member_info_after_upgrade == Option::Some(
+                expected_pool_member_info.into(),
+            ),
         );
     }
 }
@@ -1241,10 +1250,11 @@ pub(crate) impl InternalPoolMemberInfoUndelegateAfterUpgradeFlowImpl<
             .get_internal_pool_member_info(:delegator, :pool);
         let mut expected_pool_member_info = self.delegator_info.unwrap();
         expected_pool_member_info.index = system.staking.get_global_index();
-        assert_eq!(internal_pool_member_info_after_upgrade, expected_pool_member_info.into());
-        assert_eq!(
-            get_internal_pool_member_info_after_upgrade,
-            Option::Some(expected_pool_member_info.into()),
+        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.into());
+        assert!(
+            get_internal_pool_member_info_after_upgrade == Option::Some(
+                expected_pool_member_info.into(),
+            ),
         );
     }
 }

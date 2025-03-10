@@ -1,18 +1,20 @@
-use contracts_commons::test_utils::assert_expected_event_emitted;
-use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use snforge_std::cheatcodes::events::{Event, EventSpy, EventSpyTrait};
+use staking::attestation::interface::Events as AttestationEvents;
 use staking::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
 use staking::pool::interface::Events as PoolEvents;
 use staking::reward_supplier::interface::Events as RewardSupplierEvents;
 use staking::staking::interface::{
     ConfigEvents as StakingConfigEvents, Events as StakingEvents, PauseEvents as StakingPauseEvents,
 };
-use staking::types::{Amount, Commission, Inflation};
+use staking::types::{Amount, Commission, Epoch, Inflation};
 use starknet::ContractAddress;
+use starkware_utils::test_utils::assert_expected_event_emitted;
+use starkware_utils::types::time::time::{TimeDelta, Timestamp};
 
 pub(crate) fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
-    assert_eq!(
-        actual, expected, "{actual} events were emitted instead of {expected}. Context: {message}",
+    assert!(
+        actual == expected,
+        "{actual} events were emitted instead of {expected}. Context: {message}",
     );
 }
 
@@ -489,6 +491,18 @@ pub(crate) fn assert_minimum_stake_changed_event(
     );
 }
 
+pub(crate) fn assert_epoch_info_changed_event(
+    spied_event: @(ContractAddress, Event), block_duration: u16, epoch_length: u16,
+) {
+    let expected_event = StakingConfigEvents::EpochInfoChanged { block_duration, epoch_length };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("EpochInfoChanged"),
+        expected_event_name: "EpochInfoChanged",
+    );
+}
+
 pub(crate) fn assert_exit_wait_window_changed_event(
     spied_event: @(ContractAddress, Event), old_exit_window: TimeDelta, new_exit_window: TimeDelta,
 ) {
@@ -516,5 +530,17 @@ pub(crate) fn assert_reward_supplier_changed_event(
         :expected_event,
         expected_event_selector: @selector!("RewardSupplierChanged"),
         expected_event_name: "RewardSupplierChanged",
+    );
+}
+
+pub(crate) fn assert_staker_attestation_successful_event(
+    spied_event: @(ContractAddress, Event), staker_address: ContractAddress, epoch: Epoch,
+) {
+    let expected_event = AttestationEvents::StakerAttestationSuccessful { staker_address, epoch };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("StakerAttestationSuccessful"),
+        expected_event_name: "StakerAttestationSuccessful",
     );
 }

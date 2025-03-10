@@ -9,26 +9,17 @@ use constants::{
     STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
     STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
-use contracts_commons::constants::{NAME, SYMBOL};
-use contracts_commons::errors::OptionAuxTrait;
-use contracts_commons::math::utils::mul_wide_and_div;
-use contracts_commons::test_utils::{
-    advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
-    set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
-    set_account_as_token_admin, set_account_as_upgrade_governor,
-};
-use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global, test_address,
 };
-use staking::constants::MIN_ATTESTATION_WINDOW;
-use staking::constants::{C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW};
+use staking::constants::{C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW};
 use staking::errors::GenericError;
-use staking::minting_curve::interface::MintingCurveContractInfo;
-use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
+use staking::minting_curve::interface::{
+    IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
+};
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolMemberInfo};
 use staking::pool::objects::{VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait};
@@ -38,9 +29,8 @@ use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
 };
-use staking::staking::objects::EpochInfoTrait;
 use staking::staking::objects::{
-    EpochInfo, InternalStakerInfoLatestTrait, VersionedInternalStakerInfo,
+    EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait, VersionedInternalStakerInfo,
     VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
@@ -52,13 +42,22 @@ use staking::utils::{
     compute_rewards_rounded_down, compute_rewards_rounded_up,
 };
 use starknet::{ClassHash, ContractAddress, Store};
+use starkware_utils::constants::{NAME, SYMBOL};
+use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::math::utils::mul_wide_and_div;
+use starkware_utils::test_utils::{
+    advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
+    set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
+    set_account_as_token_admin, set_account_as_upgrade_governor,
+};
+use starkware_utils::types::time::time::{TimeDelta, Timestamp};
 
 pub(crate) mod constants {
     use staking::constants::STRK_IN_FRIS;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Commission, Index};
-    use starknet::class_hash::{ClassHash, class_hash_const};
-    use starknet::{ContractAddress, contract_address_const};
+    use starknet::ContractAddress;
+    use starknet::class_hash::ClassHash;
 
     pub const STAKER_INITIAL_BALANCE: Amount = 1000000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000 * STRK_IN_FRIS;
@@ -78,130 +77,128 @@ pub(crate) mod constants {
     pub const EPOCH_STARTING_BLOCK: u64 = 463476;
     pub const BLOCK_DURATION: u16 = 30;
 
-    pub fn CALLER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'CALLER_ADDRESS'>()
+    pub fn CALLER_ADDRESS() -> ContractAddress {
+        'CALLER_ADDRESS'.try_into().unwrap()
     }
-    pub fn DUMMY_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'DUMMY_ADDRESS'>()
+    pub fn DUMMY_ADDRESS() -> ContractAddress {
+        'DUMMY_ADDRESS'.try_into().unwrap()
     }
-    pub fn STAKER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'STAKER_ADDRESS'>()
+    pub fn STAKER_ADDRESS() -> ContractAddress {
+        'STAKER_ADDRESS'.try_into().unwrap()
     }
-    pub fn NON_STAKER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'NON_STAKER_ADDRESS'>()
+    pub fn NON_STAKER_ADDRESS() -> ContractAddress {
+        'NON_STAKER_ADDRESS'.try_into().unwrap()
     }
-    pub fn POOL_MEMBER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_MEMBER_ADDRESS'>()
+    pub fn POOL_MEMBER_ADDRESS() -> ContractAddress {
+        'POOL_MEMBER_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_POOL_MEMBER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_POOL_MEMBER_ADDRESS'>()
+    pub fn OTHER_POOL_MEMBER_ADDRESS() -> ContractAddress {
+        'OTHER_POOL_MEMBER_ADDRESS'.try_into().unwrap()
     }
-    pub fn NON_POOL_MEMBER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'NON_POOL_MEMBER_ADDRESS'>()
+    pub fn NON_POOL_MEMBER_ADDRESS() -> ContractAddress {
+        'NON_POOL_MEMBER_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_STAKER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_STAKER_ADDRESS'>()
+    pub fn OTHER_STAKER_ADDRESS() -> ContractAddress {
+        'OTHER_STAKER_ADDRESS'.try_into().unwrap()
     }
-    pub fn OPERATIONAL_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OPERATIONAL_ADDRESS'>()
+    pub fn OPERATIONAL_ADDRESS() -> ContractAddress {
+        'OPERATIONAL_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_OPERATIONAL_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_OPERATIONAL_ADDRESS'>()
+    pub fn OTHER_OPERATIONAL_ADDRESS() -> ContractAddress {
+        'OTHER_OPERATIONAL_ADDRESS'.try_into().unwrap()
     }
-    pub fn OWNER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OWNER_ADDRESS'>()
+    pub fn OWNER_ADDRESS() -> ContractAddress {
+        'OWNER_ADDRESS'.try_into().unwrap()
     }
-    pub fn GOVERNANCE_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'GOVERNANCE_ADMIN'>()
+    pub fn GOVERNANCE_ADMIN() -> ContractAddress {
+        'GOVERNANCE_ADMIN'.try_into().unwrap()
     }
-    pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'STAKING_CONTRACT_ADDRESS'>()
+    pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress {
+        'STAKING_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'NOT_STAKING_CONTRACT_ADDRESS'>()
+    pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress {
+        'NOT_STAKING_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn POOL_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_CONTRACT_ADDRESS'>()
+    pub fn POOL_CONTRACT_ADDRESS() -> ContractAddress {
+        'POOL_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_POOL_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_POOL_CONTRACT_ADDRESS'>()
+    pub fn OTHER_POOL_CONTRACT_ADDRESS() -> ContractAddress {
+        'OTHER_POOL_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn MINTING_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'MINTING_CONTRACT_ADDRESS'>()
+    pub fn MINTING_CONTRACT_ADDRESS() -> ContractAddress {
+        'MINTING_CONTRACT_ADDRESS'.try_into().unwrap()
     }
-    pub fn REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'REWARD_SUPPLIER_ADDRESS'>()
+    pub fn REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress {
+        'REWARD_SUPPLIER_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_REWARD_SUPPLIER_ADDRESS'>()
+    pub fn OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress {
+        'OTHER_REWARD_SUPPLIER_ADDRESS'.try_into().unwrap()
     }
-    pub fn RECIPIENT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'RECIPIENT_ADDRESS'>()
+    pub fn RECIPIENT_ADDRESS() -> ContractAddress {
+        'RECIPIENT_ADDRESS'.try_into().unwrap()
     }
-    pub fn STAKER_REWARD_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'STAKER_REWARD_ADDRESS'>()
+    pub fn STAKER_REWARD_ADDRESS() -> ContractAddress {
+        'STAKER_REWARD_ADDRESS'.try_into().unwrap()
     }
-    pub fn POOL_MEMBER_REWARD_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_MEMBER_REWARD_ADDRESS'>()
+    pub fn POOL_MEMBER_REWARD_ADDRESS() -> ContractAddress {
+        'POOL_MEMBER_REWARD_ADDRESS'.try_into().unwrap()
     }
-    pub fn POOL_REWARD_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_REWARD_ADDRESS'>()
+    pub fn POOL_REWARD_ADDRESS() -> ContractAddress {
+        'POOL_REWARD_ADDRESS'.try_into().unwrap()
     }
-    pub fn OTHER_REWARD_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'OTHER_REWARD_ADDRESS'>()
+    pub fn OTHER_REWARD_ADDRESS() -> ContractAddress {
+        'OTHER_REWARD_ADDRESS'.try_into().unwrap()
     }
-    pub fn SPENDER_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'SPENDER_ADDRESS'>()
+    pub fn SPENDER_ADDRESS() -> ContractAddress {
+        'SPENDER_ADDRESS'.try_into().unwrap()
     }
-    pub fn NON_TOKEN_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'NON_TOKEN_ADMIN'>()
+    pub fn NON_TOKEN_ADMIN() -> ContractAddress {
+        'NON_TOKEN_ADMIN'.try_into().unwrap()
     }
-    pub fn NON_SECURITY_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'NON_SECURITY_ADMIN'>()
+    pub fn NON_SECURITY_ADMIN() -> ContractAddress {
+        'NON_SECURITY_ADMIN'.try_into().unwrap()
     }
-    pub fn NON_SECURITY_AGENT() -> ContractAddress nopanic {
-        contract_address_const::<'NON_SECURITY_AGENT'>()
+    pub fn NON_SECURITY_AGENT() -> ContractAddress {
+        'NON_SECURITY_AGENT'.try_into().unwrap()
     }
-    pub fn STRK_TOKEN_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<
-            0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d,
-        >()
+    pub fn STRK_TOKEN_ADDRESS() -> ContractAddress {
+        0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d.try_into().unwrap()
     }
-    pub fn TOKEN_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'TOKEN_ADDRESS'>()
+    pub fn TOKEN_ADDRESS() -> ContractAddress {
+        'TOKEN_ADDRESS'.try_into().unwrap()
     }
-    pub fn DUMMY_CLASS_HASH() -> ClassHash nopanic {
-        class_hash_const::<'DUMMY'>()
+    pub fn DUMMY_CLASS_HASH() -> ClassHash {
+        'DUMMY'.try_into().unwrap()
     }
-    pub fn POOL_CONTRACT_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'POOL_CONTRACT_ADMIN'>()
+    pub fn POOL_CONTRACT_ADMIN() -> ContractAddress {
+        'POOL_CONTRACT_ADMIN'.try_into().unwrap()
     }
-    pub fn SECURITY_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'SECURITY_ADMIN'>()
+    pub fn SECURITY_ADMIN() -> ContractAddress {
+        'SECURITY_ADMIN'.try_into().unwrap()
     }
-    pub fn SECURITY_AGENT() -> ContractAddress nopanic {
-        contract_address_const::<'SECURITY_AGENT'>()
+    pub fn SECURITY_AGENT() -> ContractAddress {
+        'SECURITY_AGENT'.try_into().unwrap()
     }
-    pub fn TOKEN_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'TOKEN_ADMIN'>()
+    pub fn TOKEN_ADMIN() -> ContractAddress {
+        'TOKEN_ADMIN'.try_into().unwrap()
     }
-    pub fn APP_ROLE_ADMIN() -> ContractAddress nopanic {
-        contract_address_const::<'APP_ROLE_ADMIN'>()
+    pub fn APP_ROLE_ADMIN() -> ContractAddress {
+        'APP_ROLE_ADMIN'.try_into().unwrap()
     }
-    pub fn UPGRADE_GOVERNOR() -> ContractAddress nopanic {
-        contract_address_const::<'UPGRADE_GOVERNOR'>()
+    pub fn UPGRADE_GOVERNOR() -> ContractAddress {
+        'UPGRADE_GOVERNOR'.try_into().unwrap()
     }
-    pub fn APP_GOVERNOR() -> ContractAddress nopanic {
-        contract_address_const::<'APP_GOVERNOR'>()
+    pub fn APP_GOVERNOR() -> ContractAddress {
+        'APP_GOVERNOR'.try_into().unwrap()
     }
-    pub fn STARKGATE_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'STARKGATE_ADDRESS'>()
+    pub fn STARKGATE_ADDRESS() -> ContractAddress {
+        'STARKGATE_ADDRESS'.try_into().unwrap()
     }
-    pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'NOT_STARKGATE_ADDRESS'>()
+    pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress {
+        'NOT_STARKGATE_ADDRESS'.try_into().unwrap()
     }
-    pub fn ATTESTATION_CONTRACT_ADDRESS() -> ContractAddress nopanic {
-        contract_address_const::<'ATTESTATION_CONTRACT_ADDRESS'>()
+    pub fn ATTESTATION_CONTRACT_ADDRESS() -> ContractAddress {
+        'ATTESTATION_CONTRACT_ADDRESS'.try_into().unwrap()
     }
     pub fn DEFAULT_EPOCH_INFO() -> EpochInfo {
         EpochInfoTrait::new(
@@ -443,7 +440,7 @@ pub(crate) fn deploy_attestation_contract(cfg: StakingInitConfig) -> ContractAdd
     set_account_as_app_governor(
         contract: attestation_contract_address,
         account: cfg.test_info.app_governor,
-        governance_admin: cfg.test_info.app_role_admin,
+        app_role_admin: cfg.test_info.app_role_admin,
     );
     attestation_contract_address
 }
@@ -659,57 +656,6 @@ pub(crate) fn load_option_from_simple_map<
         1 => Option::Some(Serde::<V>::deserialize(ref span).expect('Failed deserialize')),
         _ => panic!("Invalid Option loaded from map"),
     }
-}
-
-pub(crate) fn load_pool_member_info_from_map<K, +Serde<K>, +Copy<K>, +Drop<K>>(
-    key: K, contract: ContractAddress,
-) -> VInternalPoolMemberInfo {
-    let map_selector = selector!("pool_member_info");
-    let mut keys = array![];
-    key.serialize(ref keys);
-    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
-    let mut raw_serialized_value = snforge_std::load(
-        target: contract,
-        :storage_address,
-        size: Store::<Option<InternalPoolMemberInfoLatest>>::size().into(),
-    );
-    let idx = raw_serialized_value.pop_front().expect('Failed pop_front');
-    if idx.is_zero() {
-        return VInternalPoolMemberInfo::None;
-    }
-    assert!(idx == 2, "Invalid Option loaded from map");
-    let mut span = raw_serialized_value.span();
-    let mut pool_member_info = InternalPoolMemberInfoLatest {
-        reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
-        _deprecated_amount: Serde::<Amount>::deserialize(ref span)
-            .expect('Failed _deprecated_amount'),
-        _deprecated_index: Serde::<Index>::deserialize(ref span).expect('Failed _deprecated_index'),
-        _deprecated_unclaimed_rewards: Serde::<Amount>::deserialize(ref span)
-            .expect('Failed _deprecated_unclaimed'),
-        _deprecated_commission: Serde::<Commission>::deserialize(ref span)
-            .expect('Failed _deprecated_commission'),
-        unpool_amount: Serde::<Amount>::deserialize(ref span).expect('Failed unpool_amount'),
-        unpool_time: Option::None,
-        last_claimed_idx_in_member_vec: Zero::zero(),
-    };
-    let idx = *span.pop_front().expect('Failed pop_front');
-    if idx.is_non_zero() {
-        assert!(idx == 1, "Invalid Option loaded from map");
-        pool_member_info
-            .unpool_time =
-                Option::Some(
-                    Serde::<Timestamp>::deserialize(ref span).expect('Failed unpool_time'),
-                );
-    } else {
-        // If idx is zero, the unpool_time is Option::None.
-        // Since Option<Timestamp> takes 2 felts in storage, we need to pop both felts before
-        // deserializing the next field last_claimed_idx_in_member_vec.
-        let _ = span.pop_front();
-    }
-    pool_member_info
-        .last_claimed_idx_in_member_vec = Serde::<VecIndex>::deserialize(ref span)
-        .expect('Failed last_claimed');
-    return VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info);
 }
 
 pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -> felt252 {
@@ -938,7 +884,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             _deprecated_commission: COMMISSION,
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),
-            last_claimed_idx_in_member_vec: Zero::zero(),
+            entry_to_claim_from: Zero::zero(),
         };
         let staking_contract_info = StakingContractInfoCfg {
             min_stake: MIN_STAKE,
@@ -1026,7 +972,7 @@ pub(crate) fn staker_update_rewards(staker_info: StakerInfo, global_index: Index
                     unclaimed_rewards: pool_info.unclaimed_rewards + pool_rewards, ..pool_info,
                 },
             );
-    };
+    }
     StakerInfo {
         index: global_index,
         unclaimed_rewards_own: staker_info.unclaimed_rewards_own + staker_rewards,
@@ -1069,7 +1015,7 @@ pub(crate) fn calculate_staker_total_rewards(
     mul_wide_and_div(
         lhs: epoch_rewards,
         rhs: get_total_amount(:staker_info),
-        div: staking_dispatcher.get_total_stake_at_current_epoch(),
+        div: staking_dispatcher.get_current_total_staking_power(),
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }

@@ -1,16 +1,17 @@
 [package]
 name = "staking"
-version = "1.10.7"
+version = "1.10.9"
 edition = "2023_11"
 
 [dependencies]
 starknet.workspace = true
 openzeppelin.workspace = true
-contracts_commons.workspace = true
+starkware_utils.workspace = true
 
 [dev-dependencies]
 assert_macros.workspace = true
 snforge_std.workspace = true
+snforge_scarb_plugin.workspace = true
 
 [scripts]
 test = "SNFORGE_BACKTRACE=1 snforge test"
@@ -21,7 +22,7 @@ test = "SNFORGE_BACKTRACE=1 snforge test"
 
 [[test]]
 name = "contracts_unittest"
-build-external-contracts = ["contracts_commons::erc20_mocks::DualCaseERC20Mock"]
+build-external-contracts = ["starkware_utils::erc20_mocks::DualCaseERC20Mock"]
 
 [tool.fmt]
 sort-module-level-items = true

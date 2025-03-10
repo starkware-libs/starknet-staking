@@ -1,14 +1,14 @@
 // An External Initializer Contract to upgrade a staking contract.
 #[starknet::contract]
 mod StakingEIC {
-    use contracts_commons::components::replaceability::interface::IEICInitializable;
-    use contracts_commons::trace::trace::{MutableTraceTrait, Trace};
     use core::num::traits::Zero;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
     use starknet::class_hash::ClassHash;
     use starknet::get_block_number;
     use starknet::storage::Map;
+    use starkware_utils::components::replaceability::interface::IEICInitializable;
+    use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 
     #[storage]
     struct Storage {

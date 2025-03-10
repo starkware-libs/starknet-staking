@@ -1,9 +1,11 @@
-use contracts_commons::trace::errors::TraceErrors;
 use core::num::traits::Zero;
 use openzeppelin::utils::math::average;
 use staking::types::{Amount, Epoch, VecIndex};
-use starknet::storage::{Mutable, MutableVecTrait, StorageAsPath, StoragePath, Vec, VecTrait};
-use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+use starknet::storage::{
+    Mutable, MutableVecTrait, StorageAsPath, StoragePath, StoragePointerReadAccess,
+    StoragePointerWriteAccess, Vec, VecTrait,
+};
+use starkware_utils::trace::errors::TraceErrors;
 
 /// `Trace` struct, for checkpointing values as they change at different points in
 /// time, and later looking up past values by block timestamp.
@@ -53,6 +55,32 @@ struct PoolMemberBalanceCheckpoint {
     value: PoolMemberBalance,
 }
 
+#[derive(Copy, Drop, Serde)]
+pub(crate) struct PoolMemberCheckpoint {
+    epoch: Epoch,
+    balance: Amount,
+    rewards_info_idx: VecIndex,
+}
+
+#[generate_trait]
+pub(crate) impl PoolMemberCheckpointImpl of PoolMemberCheckpointTrait {
+    fn new(epoch: Epoch, balance: Amount, rewards_info_idx: VecIndex) -> PoolMemberCheckpoint {
+        PoolMemberCheckpoint { epoch, balance, rewards_info_idx }
+    }
+
+    fn epoch(self: @PoolMemberCheckpoint) -> Epoch {
+        *self.epoch
+    }
+
+    fn balance(self: @PoolMemberCheckpoint) -> Amount {
+        *self.balance
+    }
+
+    fn rewards_info_idx(self: @PoolMemberCheckpoint) -> VecIndex {
+        *self.rewards_info_idx
+    }
+}
+
 #[generate_trait]
 pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
     /// Retrieves the most recent checkpoint from the trace structure.
@@ -99,6 +127,22 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
             checkpoints[pos - 1].read().value
         }
     }
+
+    /// Returns the checkpoint at the given position.
+    ///
+    /// # Panics
+    /// If the position is out of bounds.
+    fn at(self: StoragePath<PoolMemberBalanceTrace>, pos: VecIndex) -> PoolMemberCheckpoint {
+        let checkpoints = self.checkpoints;
+        let len = checkpoints.len();
+        assert!(pos < len, "{}", TraceErrors::INDEX_OUT_OF_BOUNDS);
+        let checkpoint = checkpoints[pos].read();
+        PoolMemberCheckpointTrait::new(
+            epoch: checkpoint.key,
+            balance: checkpoint.value.balance,
+            rewards_info_idx: checkpoint.value.rewards_info_idx,
+        )
+    }
 }
 
 #[generate_trait]
@@ -111,16 +155,30 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
         self.checkpoints.as_path()._insert(key, value)
     }
 
-    /// Returns the value in the most recent checkpoint, or zero if there are no checkpoints.
-    fn latest(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> PoolMemberBalance {
+    /// Retrieves the most recent checkpoint from the trace structure.
+    ///
+    /// # Returns
+    /// A tuple containing:
+    /// - `Epoch`: Timestamp/key of the latest checkpoint
+    /// - `PoolMemberBalance`: Value stored in the latest checkpoint
+    ///
+    /// # Panics
+    /// If the trace structure is empty (no checkpoints exist)
+    ///
+    /// # Note
+    /// This will return the last inserted checkpoint that maintains the structure's
+    /// invariant of non-decreasing keys.
+    fn latest(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> (Epoch, PoolMemberBalance) {
         let checkpoints = self.checkpoints;
         let pos = checkpoints.len();
+        assert!(pos > 0, "{}", TraceErrors::EMPTY_TRACE);
+        let checkpoint = checkpoints[pos - 1].read();
+        (checkpoint.key, checkpoint.value)
+    }
 
-        if pos == 0 {
-            Zero::zero()
-        } else {
-            checkpoints[pos - 1].read().value
-        }
+    /// Returns whether the trace is initialized.
+    fn is_initialized(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> bool {
+        self.checkpoints.len().is_non_zero()
     }
 }
 
@@ -146,11 +204,11 @@ impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpoin
             } else {
                 // Checkpoint keys must be non-decreasing
                 assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
-                self.append().write(PoolMemberBalanceCheckpoint { key, value });
+                self.push(PoolMemberBalanceCheckpoint { key, value });
             }
             (prev, value)
         } else {
-            self.append().write(PoolMemberBalanceCheckpoint { key, value });
+            self.push(PoolMemberBalanceCheckpoint { key, value });
             (Zero::zero(), value)
         }
     }
@@ -173,7 +231,7 @@ impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpoin
             } else {
                 _low = mid + 1;
             };
-        };
+        }
         _high
     }
 }

@@ -1,5 +1,3 @@
-use contracts_commons::errors::OptionAuxTrait;
-use contracts_commons::math::utils::{mul_wide_and_ceil_div, mul_wide_and_div};
 use core::num::traits::zero::Zero;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use staking::constants::{BASE_VALUE, STRK_IN_FRIS};
@@ -9,6 +7,8 @@ use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use staking::types::{Amount, Commission, Index};
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_contract_address};
+use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::math::utils::{mul_wide_and_ceil_div, mul_wide_and_div};
 
 /// Computes the new delegated stake based on changing in the intent amount.
 pub(crate) fn compute_new_delegated_stake(

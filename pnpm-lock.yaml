@@ -31,12 +31,7 @@ importers:
       turbo:
         specifier: 2.0.14
         version: 2.0.14
-  workspace/apps/staking/contracts:
-    dependencies:
-      '@contracts/commons':
-        specifier: workspace:*
-        version: link:../../../packages/contracts
-  workspace/packages/contracts: {}
+  workspace/apps/staking/contracts: {}
   workspace/tools/eslint-config-base:
     devDependencies:
       '@eslint/js':

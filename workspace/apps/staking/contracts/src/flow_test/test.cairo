@@ -1,6 +1,3 @@
-use contracts_commons::math::abs::wide_abs_diff;
-use contracts_commons::test_utils::TokenTrait;
-use contracts_commons::types::time::time::Time;
 use core::num::traits::Zero;
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows;
@@ -9,6 +6,9 @@ use staking::flow_test::utils::{
     SystemTrait, test_flow_local, test_flow_mainnet,
 };
 use staking::test_utils::StakingInitConfig;
+use starkware_utils::math::abs::wide_abs_diff;
+use starkware_utils::test_utils::TokenTrait;
+use starkware_utils::types::time::time::Time;
 
 #[test]
 fn basic_stake_flow_test() {
@@ -279,16 +279,17 @@ fn delegator_claim_rewards_flow_test() {
     assert!(
         system.token.balance_of(account: pool) > 100,
     ); // TODO: Change this after implement calculate_rewards.
-    assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount * 2);
-    assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount * 2);
+    assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
+    assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount * 2);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(
         system.token.balance_of(account: delegator.reward.address).is_zero(),
     ); // TODO: Change this after implement calculate_rewards.
     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-    assert_eq!(
-        initial_reward_supplier_balance,
-        system.token.balance_of(account: system.reward_supplier.address)
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
             + system.token.balance_of(account: pool),
@@ -349,9 +350,9 @@ fn two_delegators_full_intent_flow_test() {
     assert!(
         system.token.balance_of(account: pool) > 100,
     ); // TODO: Change this after implement calculate_rewards.
-    assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
-    assert_eq!(system.token.balance_of(account: delegator_x.delegator.address), delegated_amount);
-    assert_eq!(system.token.balance_of(account: delegator_y.delegator.address), delegated_amount);
+    assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: delegator_x.delegator.address) == delegated_amount);
+    assert!(system.token.balance_of(account: delegator_y.delegator.address) == delegated_amount);
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
     assert!(
         system.token.balance_of(account: delegator_x.reward.address).is_zero(),
@@ -360,9 +361,10 @@ fn two_delegators_full_intent_flow_test() {
         system.token.balance_of(account: delegator_y.reward.address).is_zero(),
     ); // TODO: Change this after implement calculate_rewards.
     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-    assert_eq!(
-        initial_reward_supplier_balance,
-        system.token.balance_of(account: system.reward_supplier.address)
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator_x.reward.address)
             + system.token.balance_of(account: delegator_y.reward.address)
@@ -465,9 +467,9 @@ fn partial_switches_flow_test() {
     assert!(
         system.token.balance_of(account: second_pool) > 100,
     ); // TODO: Change this after implement calculate_rewards.
-    assert_eq!(system.token.balance_of(account: first_staker.staker.address), stake_amount);
-    assert_eq!(system.token.balance_of(account: second_staker.staker.address), stake_amount);
-    assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+    assert!(system.token.balance_of(account: first_staker.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: second_staker.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
 
     assert!(system.token.balance_of(account: first_staker.reward.address).is_non_zero());
     assert!(system.token.balance_of(account: second_staker.reward.address).is_non_zero());
@@ -478,9 +480,10 @@ fn partial_switches_flow_test() {
         system.token.balance_of(account: new_reward_address).is_zero(),
     ); // TODO: Change this after implement calculate_rewards.
     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-    assert_eq!(
-        initial_reward_supplier_balance,
-        system.token.balance_of(account: system.reward_supplier.address)
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: first_staker.reward.address)
             + system.token.balance_of(account: second_staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
@@ -522,7 +525,7 @@ fn flow_4_switch_member_back_and_forth_test() {
 
     let staker_A = system.new_staker(amount: stake_amount);
     system.stake(staker: staker_A, amount: stake_amount, pool_enabled: true, :commission);
-    assert_eq!(system.staking.get_total_stake(), stake_amount);
+    assert!(system.staking.get_total_stake() == stake_amount);
     let pool_A = system.staking.get_pool(staker: staker_A);
     system.advance_time(time: one_week);
 
@@ -531,16 +534,16 @@ fn flow_4_switch_member_back_and_forth_test() {
     system.advance_time(time: one_week);
     let pool_B = system.staking.get_pool(staker: staker_B);
 
-    assert_eq!(system.staking.get_total_stake(), 2 * stake_amount);
+    assert!(system.staking.get_total_stake() == 2 * stake_amount);
 
     let delegator_Y = system.new_delegator(amount: delegated_amount);
     system.delegate(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
 
     system.advance_time(time: one_week);
-    assert_eq!(system.staking.get_total_stake(), 2 * stake_amount + delegated_amount);
-    assert_eq!(
-        system.token.balance_of(account: system.staking.address),
-        2 * stake_amount + delegated_amount,
+    assert!(system.staking.get_total_stake() == 2 * stake_amount + delegated_amount);
+    assert!(
+        system.token.balance_of(account: system.staking.address) == 2 * stake_amount
+            + delegated_amount,
     );
 
     // DY intend to exit PB & switch to PA.
@@ -588,9 +591,9 @@ fn flow_4_switch_member_back_and_forth_test() {
     ); // TODO: Change this after implement calculate_rewards.
 
     // 2. Stakers and delegator balances are the staked amounts.
-    assert_eq!(system.token.balance_of(account: staker_A.staker.address), stake_amount);
-    assert_eq!(system.token.balance_of(account: staker_B.staker.address), stake_amount);
-    assert_eq!(system.token.balance_of(account: delegator_Y.delegator.address), delegated_amount);
+    assert!(system.token.balance_of(account: staker_A.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: staker_B.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: delegator_Y.delegator.address) == delegated_amount);
 
     // 3. Reward addresses have some balance for all stakers & delegators.
     assert!(system.token.balance_of(account: staker_A.reward.address).is_non_zero());
@@ -603,9 +606,10 @@ fn flow_4_switch_member_back_and_forth_test() {
     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 
     // 5. Rewards funds are well accounted for.
-    assert_eq!(
-        initial_reward_supplier_balance,
-        system.token.balance_of(account: system.reward_supplier.address)
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker_A.reward.address)
             + system.token.balance_of(account: staker_B.reward.address)
             + system.token.balance_of(account: delegator_Y.reward.address)
@@ -686,12 +690,12 @@ fn delegators_add_to_delegation_pool_flow_test() {
     ); // TODO: Change this after implement calculate_rewards.
 
     // 2. Stakers and delegator balances are the staked amounts.
-    assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
-    assert_eq!(
-        system.token.balance_of(account: first_delegator.delegator.address), delegator_amount,
+    assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
+    assert!(
+        system.token.balance_of(account: first_delegator.delegator.address) == delegator_amount,
     );
-    assert_eq!(
-        system.token.balance_of(account: second_delegator.delegator.address), delegator_amount,
+    assert!(
+        system.token.balance_of(account: second_delegator.delegator.address) == delegator_amount,
     );
 
     // 3. Reward addresses have some balance for all stakers & delegators.
@@ -707,9 +711,10 @@ fn delegators_add_to_delegation_pool_flow_test() {
     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 
     // 5. Rewards funds are well accounted for.
-    assert_eq!(
-        initial_reward_supplier_balance,
-        system.token.balance_of(account: system.reward_supplier.address)
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: first_delegator.reward.address)
             + system.token.balance_of(account: second_delegator.reward.address)
@@ -839,8 +844,8 @@ fn same_staker_different_pool_flow_test() {
 
     // Assert all staked amounts were transferred back.
     assert!(system.token.balance_of(account: system.staking.address).is_zero());
-    assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
-    assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegated_amount);
+    assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
 
     // Asserts reward addresses are not empty.
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
@@ -850,9 +855,10 @@ fn same_staker_different_pool_flow_test() {
 
     // Assert all funds that moved from rewards supplier, were moved to correct addresses.
     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-    assert_eq!(
-        initial_reward_supplier_balance,
-        system.token.balance_of(account: system.reward_supplier.address)
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
             + system.token.balance_of(account: pool)
@@ -926,8 +932,8 @@ fn add_to_delegation_after_intent_flow_test() {
     ); // TODO: Change this after implement calculate_rewards.
 
     // 2. Stakers and delegator balances are the staked amounts.
-    assert_eq!(system.token.balance_of(account: staker.staker.address), stake_amount);
-    assert_eq!(system.token.balance_of(account: delegator.delegator.address), delegator_amount);
+    assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: delegator.delegator.address) == delegator_amount);
 
     // 3. Reward addresses have some balance for all stakers & delegators.
     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
@@ -939,9 +945,10 @@ fn add_to_delegation_after_intent_flow_test() {
     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 
     // 5. Rewards funds are well accounted for.
-    assert_eq!(
-        initial_reward_supplier_balance,
-        system.token.balance_of(account: system.reward_supplier.address)
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
             + system.token.balance_of(account: pool),

@@ -1,14 +1,6 @@
 #[starknet::contract]
 pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
-    use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::{Describable, OptionAuxTrait};
-    use contracts_commons::interfaces::identity::Identity;
-    use contracts_commons::math::utils::mul_wide_and_div;
-    use contracts_commons::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
-    use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use core::panics::panic_with_byte_array;
@@ -26,14 +18,14 @@ pub mod Staking {
     };
     use staking::staking::errors::Error;
     use staking::staking::interface::{
-        AttestationInfo, AttestationInfoTrait, ConfigEvents, Events, IStaking, IStakingAttestation,
-        IStakingConfig, IStakingMigration, IStakingPause, IStakingPool, PauseEvents, StakerInfo,
-        StakerPoolInfo, StakingContractInfo,
+        ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig, IStakingMigration,
+        IStakingPause, IStakingPool, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
     };
     use staking::staking::objects::{
-        EpochInfo, EpochInfoTrait, InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait,
-        UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
-        UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
+        AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
+        InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait, UndelegateIntentKey,
+        UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
+        VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
@@ -46,9 +38,16 @@ pub mod Staking {
         compute_rewards_rounded_up, deploy_delegation_pool_contract,
     };
     use starknet::class_hash::ClassHash;
-    use starknet::storage::Map;
-    use starknet::storage::StoragePathEntry;
+    use starknet::storage::{Map, StoragePathEntry};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starkware_utils::components::replaceability::ReplaceabilityComponent;
+    use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
+    use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::errors::{Describable, OptionAuxTrait};
+    use starkware_utils::interfaces::identity::Identity;
+    use starkware_utils::math::utils::mul_wide_and_div;
+    use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
+    use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
@@ -143,6 +142,7 @@ pub mod Staking {
         MinimumStakeChanged: ConfigEvents::MinimumStakeChanged,
         ExitWaitWindowChanged: ConfigEvents::ExitWaitWindowChanged,
         RewardSupplierChanged: ConfigEvents::RewardSupplierChanged,
+        EpochInfoChanged: ConfigEvents::EpochInfoChanged,
         OperationalAddressDeclared: Events::OperationalAddressDeclared,
         RemoveFromDelegationPoolIntent: Events::RemoveFromDelegationPoolIntent,
         RemoveFromDelegationPoolAction: Events::RemoveFromDelegationPoolAction,
@@ -560,7 +560,7 @@ pub mod Staking {
             }
         }
 
-        fn get_total_stake_at_current_epoch(self: @ContractState) -> Amount {
+        fn get_current_total_staking_power(self: @ContractState) -> Amount {
             self.total_stake_trace.deref().upper_lookup(key: self.get_current_epoch())
         }
 
@@ -1082,7 +1082,7 @@ pub mod Staking {
             let mut epoch_info = self.epoch_info.read();
             epoch_info.update(:block_duration, :epoch_length);
             self.epoch_info.write(epoch_info);
-            // TODO: emit event
+            self.emit(ConfigEvents::EpochInfoChanged { block_duration, epoch_length });
         }
     }
 
@@ -1120,8 +1120,17 @@ pub mod Staking {
             self: @ContractState, operational_address: ContractAddress,
         ) -> AttestationInfo {
             let staker_address = self.get_staker_address_by_operational(:operational_address);
-            let current_epoch = self.get_current_epoch();
-            AttestationInfoTrait::new(:staker_address, :current_epoch)
+            let epoch_info = self.get_epoch_info();
+            let epoch_len = epoch_info.epoch_len_in_blocks();
+            let epoch_id = epoch_info.current_epoch();
+            let current_epoch_starting_block = 0;
+            AttestationInfoTrait::new(
+                staker_address: staker_address,
+                stake: self.get_staker_balance_curr_epoch(:staker_address).total_amount(),
+                epoch_len: epoch_len,
+                epoch_id: epoch_id,
+                current_epoch_starting_block: current_epoch_starting_block,
+            )
         }
     }
 
@@ -1483,7 +1492,7 @@ pub mod Staking {
             mul_wide_and_div(
                 lhs: epoch_rewards,
                 rhs: staker_info.get_total_amount(),
-                div: self.get_total_stake_at_current_epoch(),
+                div: self.get_current_total_staking_power(),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
@@ -1612,7 +1621,7 @@ pub mod Staking {
         ) -> StakerBalance {
             let trace = self.staker_balance_trace.entry(key: staker_address);
             let (epoch, staker_balance) = trace.latest();
-            if epoch == self.get_current_epoch() {
+            if epoch <= self.get_current_epoch() {
                 staker_balance
             } else {
                 let (_, staker_balance) = trace.penultimate();

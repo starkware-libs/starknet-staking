@@ -3,13 +3,14 @@
 // It sets critical role ownership in both format during the upgrade.
 #[starknet::contract]
 pub(crate) mod AssignRootGovernanceEIC {
-    use RolesInterface::{APP_GOVERNOR, APP_ROLE_ADMIN, GOVERNANCE_ADMIN, OPERATOR, RoleId};
-    use RolesInterface::{SECURITY_ADMIN, SECURITY_AGENT, TOKEN_ADMIN, UPGRADE_GOVERNOR};
-    use contracts_commons::components::replaceability::interface::IEICInitializable;
-    use contracts_commons::components::roles::interface as RolesInterface;
-
+    use RolesInterface::{
+        APP_GOVERNOR, APP_ROLE_ADMIN, GOVERNANCE_ADMIN, OPERATOR, RoleId, SECURITY_ADMIN,
+        SECURITY_AGENT, TOKEN_ADMIN, UPGRADE_GOVERNOR,
+    };
     use starknet::storage::{Map, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_caller_address};
+    use starkware_utils::components::replaceability::interface::IEICInitializable;
+    use starkware_utils::components::roles::interface as RolesInterface;
 
     #[storage]
     pub struct Storage {

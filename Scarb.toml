@@ -1,14 +1,14 @@
 [workspace]
-members = ["workspace/apps/staking/contracts", "workspace/packages/contracts"]
-
+members = ["workspace/apps/staking/contracts"]
 
 [workspace.dependencies]
-starknet = "2.9.2"
-assert_macros = "2.9.2"
-openzeppelin = "0.20.0"
-openzeppelin_testing = "0.20.0"
+starknet = "2.11.0"
+assert_macros = "2.11.0"
+openzeppelin = "1.0.0"
+openzeppelin_testing = "1.0.0"
 snforge_std = "0.34.0"
-contracts_commons = { path = "workspace/packages/contracts" }
+snforge_scarb_plugin = "0.34.0"
+starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "0ab5bfedf7594cc9814d4c605059abfa1d8c93f2" }
 
 [scripts]
 test = "snforge test"

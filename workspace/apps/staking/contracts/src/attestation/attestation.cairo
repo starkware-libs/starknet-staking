@@ -1,24 +1,27 @@
 #[starknet::contract]
 pub mod Attestation {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
-    use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::OptionAuxTrait;
-    use contracts_commons::interfaces::identity::Identity;
+    use core::hash::HashStateTrait;
     use core::num::traits::Zero;
+    use core::poseidon::PoseidonTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
-    use staking::attestation::interface::{AttestInfo, IAttestation};
+    use staking::attestation::interface::{AttestInfo, Events, IAttestation};
     use staking::constants::MIN_ATTESTATION_WINDOW;
     use staking::staking::interface::{
         IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
         IStakingDispatcherTrait,
     };
+    use staking::staking::objects::{AttestationInfo as StakingAttestaionInfo, AttestationInfoTrait};
     use staking::types::Epoch;
     use starknet::storage::Map;
     use starknet::{ContractAddress, get_caller_address};
+    use starkware_utils::components::replaceability::ReplaceabilityComponent;
+    use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
+    use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::errors::OptionAuxTrait;
+    use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Attestation';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
@@ -62,6 +65,7 @@ pub mod Attestation {
         accesscontrolEvent: AccessControlComponent::Event,
         #[flat]
         src5Event: SRC5Component::Event,
+        StakerAttestationSuccessful: Events::StakerAttestationSuccessful,
     }
 
     #[constructor]
@@ -74,9 +78,7 @@ pub mod Attestation {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.staking_contract.write(staking_contract);
-        assert_gt!(
-            attestation_window, MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL,
-        );
+        assert!(attestation_window > MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL);
         self.attestation_window.write(attestation_window);
     }
 
@@ -101,11 +103,11 @@ pub mod Attestation {
             // Note: This function checks for a zero staker address and will panic if so.
             let staking_attestation_info = staking_dispatcher
                 .get_attestation_info_by_operational_address(:operational_address);
-            let (staker_address, current_epoch): (ContractAddress, Epoch) = staking_attestation_info
-                .into();
-            self._validate_attestation(:attest_info, :staker_address, :current_epoch);
-            staking_dispatcher.update_rewards_from_attestation_contract(:staker_address);
-            // TODO: emit event.
+            self._validate_attestation(:attest_info, :staking_attestation_info);
+            staking_dispatcher
+                .update_rewards_from_attestation_contract(
+                    staker_address: staking_attestation_info.staker_address(),
+                );
         }
 
         fn get_last_epoch_attestation_done(
@@ -127,6 +129,24 @@ pub mod Attestation {
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
 
+        fn validate_next_planned_attestation_block(
+            self: @ContractState, block_number: u64,
+        ) -> bool {
+            let operational_address = get_caller_address();
+            let attestation_window = self.attestation_window.read();
+            let staking_dispatcher = IStakingAttestationDispatcher {
+                contract_address: self.staking_contract.read(),
+            };
+            let mut staking_attestation_info = staking_dispatcher
+                .get_attestation_info_by_operational_address(:operational_address);
+            staking_attestation_info.set_epoch_id(staking_attestation_info.epoch_id() + 1);
+            let expected_attestation_block = self
+                ._calculate_expected_attestation_block(
+                    :staking_attestation_info, :attestation_window,
+                );
+            expected_attestation_block == block_number
+        }
+
         fn attestation_window(self: @ContractState) -> u8 {
             self.attestation_window.read()
         }
@@ -146,9 +166,10 @@ pub mod Attestation {
         fn _validate_attestation(
             ref self: ContractState,
             attest_info: AttestInfo,
-            staker_address: ContractAddress,
-            current_epoch: Epoch,
+            staking_attestation_info: StakingAttestaionInfo,
         ) {
+            let staker_address = staking_attestation_info.staker_address();
+            let current_epoch = staking_attestation_info.epoch_id();
             self._assert_attestation_is_not_done(:staker_address, :current_epoch);
             // TODO: Validate the attestaion.
             // Work is one tx per epoch.
@@ -170,6 +191,28 @@ pub mod Attestation {
             ref self: ContractState, staker_address: ContractAddress, current_epoch: Epoch,
         ) {
             self.staker_last_attested_epoch.write(staker_address, Option::Some(current_epoch));
+            self.emit(Events::StakerAttestationSuccessful { staker_address, epoch: current_epoch });
+        }
+
+        fn _calculate_expected_attestation_block(
+            self: @ContractState,
+            staking_attestation_info: StakingAttestaionInfo,
+            attestation_window: u8,
+        ) -> u64 {
+            // Compute staker hash for the attestation.
+            let hash = PoseidonTrait::new()
+                .update(staking_attestation_info.stake().into())
+                .update(staking_attestation_info.epoch_id().into())
+                .update(staking_attestation_info.staker_address().into())
+                .finalize();
+            // Calculate staker's block number in this epoch.
+            let block_offset: u256 = hash
+                .into() % (staking_attestation_info.epoch_len() - attestation_window.into())
+                .into();
+            // Calculate actual block number for attestation.
+            let expected_attestation_block = staking_attestation_info.current_epoch_starting_block()
+                + block_offset.try_into().unwrap();
+            expected_attestation_block
         }
     }
 }

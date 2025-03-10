@@ -1,6 +1,6 @@
 {
   "name": "@staking/contracts",
-  "version": "1.0.1-dev.196",
+  "version": "1.0.1-dev.218",
   "private": true,
   "description": "staking contracts",
   "scripts": {
@@ -11,8 +11,5 @@
     "postinstall": "node ../../../../scripts/install-scarb.js",
     "lint": "scarb fmt --check",
     "test": "scarb test"
-  },
-  "dependencies": {
-    "@contracts/commons": "workspace:*"
   }
 }

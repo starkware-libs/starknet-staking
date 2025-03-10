@@ -1,4 +1,3 @@
-use contracts_commons::test_utils::cheat_caller_address_once;
 use core::num::traits::{Sqrt, WideMul};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::constants::MAX_C_NUM;
@@ -12,6 +11,7 @@ use staking::test_utils::{
     StakingInitConfig, general_contract_system_deployment, stake_for_testing_using_dispatcher,
 };
 use staking::types::Amount;
+use starkware_utils::test_utils::cheat_caller_address_once;
 
 #[test]
 fn test_yearly_mint() {
@@ -36,7 +36,7 @@ fn test_yearly_mint() {
         * unadjusted_mint_amount
         / cfg.minting_curve_contract_info.c_denom.into();
     let minted_tokens = minting_curve_dispatcher.yearly_mint();
-    assert_eq!(minted_tokens, expected_minted_tokens);
+    assert!(minted_tokens == expected_minted_tokens);
 }
 
 #[test]
@@ -51,14 +51,14 @@ fn test_set_c_num() {
         contract_address: minting_curve_contract,
     };
     let old_c = cfg.minting_curve_contract_info.c_num;
-    assert_eq!(old_c, minting_curve_dispatcher.contract_parameters().c_num);
+    assert!(old_c == minting_curve_dispatcher.contract_parameters().c_num);
     let new_c = old_c * 2;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin,
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c);
-    assert_eq!(new_c, minting_curve_dispatcher.contract_parameters().c_num);
+    assert!(new_c == minting_curve_dispatcher.contract_parameters().c_num);
     // Validate the single MintingCapChanged event.
     let events = spy.get_events().emitted_by(contract_address: minting_curve_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_c_num");
@@ -140,5 +140,5 @@ fn test_contract_parameters() {
         c_num: cfg.minting_curve_contract_info.c_num,
         c_denom: cfg.minting_curve_contract_info.c_denom,
     };
-    assert_eq!(expected_contract_parameters, minting_curve_dispatcher.contract_parameters());
+    assert!(expected_contract_parameters == minting_curve_dispatcher.contract_parameters());
 }

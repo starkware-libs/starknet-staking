@@ -2,10 +2,10 @@
 // Migrating ERC20_dipatcher to token_dispatcher & replacing pool contract parameters.
 #[starknet::contract]
 pub(crate) mod AlignUpgVars {
-    use contracts_commons::components::replaceability::interface::IEICInitializable;
     use core::num::traits::Zero;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
+    use starkware_utils::components::replaceability::interface::IEICInitializable;
 
     #[storage]
     struct Storage {

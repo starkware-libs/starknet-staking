@@ -1,12 +1,6 @@
 #[starknet::contract]
 pub mod RewardSupplier {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::OptionAuxTrait;
-    use contracts_commons::interfaces::identity::Identity;
-    use contracts_commons::math::utils::ceil_of_division;
-    use contracts_commons::types::time::time::{Time, Timestamp};
     use core::num::traits::Zero;
     use core::traits::TryInto;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -25,6 +19,12 @@ pub mod RewardSupplier {
     use starknet::{
         ContractAddress, EthAddress, SyscallResultTrait, get_caller_address, get_contract_address,
     };
+    use starkware_utils::components::replaceability::ReplaceabilityComponent;
+    use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::errors::OptionAuxTrait;
+    use starkware_utils::interfaces::identity::Identity;
+    use starkware_utils::math::utils::ceil_of_division;
+    use starkware_utils::types::time::time::{Time, Timestamp};
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
@@ -296,7 +296,7 @@ pub mod RewardSupplier {
                 let total_amount = num_msgs * base_mint_amount;
                 for _ in 0..num_msgs {
                     self.send_mint_request_to_l1_reward_supplier();
-                };
+                }
                 self.emit(Events::MintRequest { total_amount, num_msgs });
                 l1_pending_requested_amount += total_amount;
             }

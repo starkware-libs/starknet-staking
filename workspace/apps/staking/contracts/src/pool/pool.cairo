@@ -1,13 +1,6 @@
 #[starknet::contract]
 pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent;
-    use contracts_commons::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
-    use contracts_commons::components::roles::RolesComponent;
-    use contracts_commons::errors::{Describable, OptionAuxTrait};
-    use contracts_commons::interfaces::identity::Identity;
-    use contracts_commons::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
-    use contracts_commons::types::time::time::{Time, Timestamp};
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use core::panics::panic_with_byte_array;
@@ -15,6 +8,7 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use staking::constants::FIRST_EPOCH;
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
@@ -38,6 +32,13 @@ pub mod Pool {
     use starknet::event::EventEmitter;
     use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starkware_utils::components::replaceability::ReplaceabilityComponent;
+    use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
+    use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::errors::{Describable, OptionAuxTrait};
+    use starkware_utils::interfaces::identity::Identity;
+    use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
+    use starkware_utils::types::time::time::{Time, Timestamp};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 
@@ -128,6 +129,7 @@ pub mod Pool {
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.commission.write(commission);
         self.staker_removed.write(false);
+        self.rewards_info.deref().insert(key: self.get_current_epoch(), value: 0);
     }
 
     #[abi(embed_v0)]
@@ -169,7 +171,7 @@ pub mod Pool {
                         reward_address: reward_address,
                         unpool_amount: Zero::zero(),
                         unpool_time: Option::None,
-                        last_claimed_idx_in_member_vec: Zero::zero(),
+                        entry_to_claim_from: Zero::zero(),
                     ),
                 );
             self.set_next_epoch_balance(:pool_member, :amount);
@@ -439,7 +441,7 @@ pub mod Pool {
                         _deprecated_commission: Zero::zero(),
                         unpool_time: Option::None,
                         unpool_amount: Zero::zero(),
-                        last_claimed_idx_in_member_vec: Zero::zero(),
+                        entry_to_claim_from: Zero::zero(),
                     };
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);
@@ -508,7 +510,7 @@ pub mod Pool {
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
 
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
-            external_pool_member_info.amount = self.get_amount(:pool_member);
+            external_pool_member_info.amount = self.get_amount_view(:pool_member);
             external_pool_member_info.unclaimed_rewards += self.calculate_rewards(:pool_member);
             external_pool_member_info.commission = self.commission.read();
             external_pool_member_info
@@ -732,21 +734,36 @@ pub mod Pool {
             self.get_current_epoch() + 1
         }
 
-        fn get_amount(self: @ContractState, pool_member: ContractAddress) -> Amount {
+        fn get_amount_view(self: @ContractState, pool_member: ContractAddress) -> Amount {
             // After upgrading to V1, `pool_member_epoch_balance` remains uninitialized
             // until the pool member's balance is modified for the first time. If initialized,
             // return the `amount` recorded in the trace, which reflects the latest delegated
             // amount.
             // Otherwise, return `pool_member_info.amount`.
-            //
-            // TODO: Consider initializing `pool_member_epoch_balance` before calling `get_amount`
-            // to avoid this conditional check.
             let trace = self.pool_member_epoch_balance.entry(key: pool_member);
             if trace.is_initialized() {
                 let (_, pool_member_balance) = trace.latest();
                 pool_member_balance.balance()
             } else {
                 self.internal_pool_member_info(:pool_member)._deprecated_amount
+            }
+        }
+
+        fn get_amount(ref self: ContractState, pool_member: ContractAddress) -> Amount {
+            // Return the `amount` recorded in the `pool_member_epoch_balance` trace.
+            // If it is uninitialized, initialize it to `pool_member_info._deprecated_amount`.
+            let trace = self.pool_member_epoch_balance.entry(key: pool_member);
+            if trace.is_initialized() {
+                let (_, pool_member_balance) = trace.latest();
+                pool_member_balance.balance()
+            } else {
+                let balance = self.internal_pool_member_info(:pool_member)._deprecated_amount;
+                trace
+                    .insert(
+                        key: FIRST_EPOCH,
+                        value: PoolMemberBalanceTrait::new(:balance, rewards_info_idx: 0),
+                    );
+                balance
             }
         }
 

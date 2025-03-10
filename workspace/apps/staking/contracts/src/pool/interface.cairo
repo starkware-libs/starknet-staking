@@ -1,8 +1,8 @@
-use contracts_commons::types::time::time::Timestamp;
 use core::num::traits::zero::Zero;
 use staking::pool::objects::InternalPoolMemberInfoV1;
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest};
 use starknet::ContractAddress;
+use starkware_utils::types::time::time::Timestamp;
 
 #[starknet::interface]
 pub trait IPool<TContractState> {
@@ -59,9 +59,9 @@ pub trait IPoolMigration<TContractState> {
 }
 
 pub mod Events {
-    use contracts_commons::types::time::time::Timestamp;
     use staking::types::Amount;
     use starknet::ContractAddress;
+    use starkware_utils::types::time::time::Timestamp;
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct PoolMemberExitIntent {
@@ -161,7 +161,7 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<
             _deprecated_commission: self.commission,
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
-            last_claimed_idx_in_member_vec: Zero::zero(),
+            entry_to_claim_from: Zero::zero(),
         }
     }
 }

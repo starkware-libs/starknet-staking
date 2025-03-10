@@ -32,7 +32,7 @@
     - [fn get\_attestation\_info\_by\_operational\_address](#fn-get_attestation_info_by_operational_address)
     - [contract\_parameters](#contract_parameters)
     - [get\_total\_stake](#get_total_stake)
-    - [get\_total\_stake\_at\_current\_epoch](#get_total_stake_at_current_epoch)
+    - [get\_total\_stake\_at\_current\_epoch](#get_current_total_staking_power)
     - [get\_pool\_exit\_intent](#get_pool_exit_intent)
     - [update\_rewards](#update_rewards)
     - [declare\_operational\_address](#declare_operational_address)
@@ -65,6 +65,7 @@
     - [Minimum Stake Changed](#minimum-stake-changed)
     - [Exit Wait Window Changed](#exit-wait-window-changed)
     - [Reward Supplier Changed](#reward-supplier-changed)
+    - [Epoch Info Changed](#epoch-info-changed)
 - [Delegation pool contract](#delegation-pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -113,7 +114,9 @@
     - [attest](#attest)
     - [is\_attestation\_done\_in\_curr\_epoch](#is_attestation_done_in_curr_epoch)
     - [get\_last\_epoch\_attestation\_done](#get_last_epoch_attestation_done)
+    - [validate\_next\_planned\_attestation\_block](#validate_next_planned_attestation_block)
   - [Events](#events-4)
+    - [Staker Attestation Successful](#staker-attestation-successful)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -218,7 +221,7 @@ classDiagram
     contract_parameters()
     update_rewards()
     get_total_stake()
-    get_total_stake_at_current_epoch()
+    get_current_total_staking_power()
     get_pool_exit_intent()
     set_min_stake()
     set_exit_wait_window()
@@ -301,6 +304,7 @@ classDiagram
     attest()
     is_attestation_done_in_curr_epoch()
     get_last_epoch_attestation_done()
+    validate_next_planned_attestation_block()
   }
   class AttestInfo{
   }
@@ -935,9 +939,9 @@ Return the latest total stake amount (which could be of the next epoch).
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 
-### get_total_stake_at_current_epoch
+### get_current_total_staking_power
 ```rust
-get_total_stake_at_current_epoch(self: @ContractState) -> Amount
+get_current_total_staking_power(self: @ContractState) -> Amount
 ```
 #### description <!-- omit from toc -->
 Return the total stake amount at the current epoch.
@@ -1297,6 +1301,12 @@ Staking contract of latest version.
 | ------------------- | --------------- | ----- |
 | old_reward_supplier | ContractAddress | ❌     |
 | new_reward_supplier | ContractAddress | ❌     |
+
+### Epoch Info Changed
+| data                | type            | keyed |
+| ------------------- | --------------- | ----- |
+| block_duration      | u16             | ❌     |
+| epoch_length        | u16             | ❌     |
 
 # Delegation pool contract
 
@@ -1889,6 +1899,7 @@ fn attest(ref self: ContractState, attest_info: AttestInfo)
 #### description <!-- omit from toc -->
 Validates the attestation of a staker and call staking [update_rewards_from_attestation_contract](#update_rewards_from_attestation_contract).
 #### emits <!-- omit from toc -->
+1. [Staker Attestation Successful](#staker-attestation-successful)
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 1. Validate the attestation.
@@ -1923,7 +1934,29 @@ Returns the last epoch that `staker_address` finished his job.
 #### access control <!-- omit from toc -->
 Any address can execute.
 
+### validate_next_planned_attestation_block
+```rust
+fn validate_next_planned_attestation_block(self: @TContractState, block_number: u64) -> bool;
+```
+
+#### description <!-- omit from toc -->
+Receives a block number and checks if this is the block in the next epoch this caller should attest to.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+1. Assumes the caller is an operational address.
+2. Calculates the expected attestation block for next epoch
+3. Compares the result with the given block number
+#### access control <!-- omit from toc -->
+Any address can execute, only a registered Operational address of an existing staker will result correctly.
+
 ## Events
+
+### Staker Attestation Successful
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| staker_address | address           | ✅    |
+| epoch          | Epoch             | ❌    |
 
 # Errors
 ### STAKER_EXISTS

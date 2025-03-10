@@ -1,12 +1,14 @@
 // An External Initializer Contract to upgrade a pool contract.
 #[starknet::contract]
 mod PoolEIC {
-    use contracts_commons::components::replaceability::interface::IEICInitializable;
     use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
     use staking::types::{Index, Version};
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
     use starknet::storage::Map;
+    use starkware_utils::components::replaceability::interface::IEICInitializable;
+    use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
+
 
     #[storage]
     struct Storage {
@@ -20,6 +22,9 @@ mod PoolEIC {
         staking_pool_dispatcher: IStakingPoolDispatcher,
         // The staker address, used for the final index and the StakerInfo migration.
         staker_address: ContractAddress,
+        // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
+        // calculation.
+        rewards_info: Trace,
     }
 
     #[abi(embed_v0)]
@@ -36,6 +41,9 @@ mod PoolEIC {
                 .read()
                 .pool_migration(staker_address: self.staker_address.read());
             self.final_staker_index.write(Option::Some(final_index));
+
+            // Initialize the rewards info trace.
+            self.rewards_info.deref().insert(key: 0, value: 0);
         }
     }
 }

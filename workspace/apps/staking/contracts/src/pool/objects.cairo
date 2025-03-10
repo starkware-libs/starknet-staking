@@ -1,8 +1,8 @@
-use contracts_commons::types::time::time::Timestamp;
 use core::num::traits::Zero;
 use staking::pool::interface::{IPoolDispatcherTrait, IPoolLibraryDispatcher, PoolMemberInfo};
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest, VecIndex};
 use starknet::{ClassHash, ContractAddress};
+use starkware_utils::types::time::time::Timestamp;
 
 #[derive(Debug, Drop, Serde, Copy)]
 pub struct SwitchPoolData {
@@ -37,7 +37,8 @@ pub(crate) struct InternalPoolMemberInfoV1 {
     pub(crate) _deprecated_commission: Commission,
     pub(crate) unpool_amount: Amount,
     pub(crate) unpool_time: Option<Timestamp>,
-    pub(crate) last_claimed_idx_in_member_vec: VecIndex,
+    // Holds the entry in the member balance trace vector to start claiming rewards from.
+    pub(crate) entry_to_claim_from: VecIndex,
 }
 
 // **Note**: This struct should be updated in the next version of Internal Pool Member Info.
@@ -71,7 +72,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
         reward_address: ContractAddress,
         unpool_amount: Amount,
         unpool_time: Option<Timestamp>,
-        last_claimed_idx_in_member_vec: VecIndex,
+        entry_to_claim_from: VecIndex,
     ) -> VInternalPoolMemberInfo {
         VInternalPoolMemberInfo::V1(
             InternalPoolMemberInfoV1 {
@@ -82,7 +83,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
                 _deprecated_commission: Zero::zero(),
                 unpool_amount,
                 unpool_time,
-                last_claimed_idx_in_member_vec,
+                entry_to_claim_from,
             },
         )
     }
@@ -205,7 +206,7 @@ mod internal_pool_member_info_latest_tests {
             _deprecated_commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
-            last_claimed_idx_in_member_vec: Zero::zero(),
+            entry_to_claim_from: Zero::zero(),
         };
         let pool_member_info: PoolMemberInfo = internal_pool_member_info.into();
         let expected_pool_member_info = PoolMemberInfo {
@@ -217,6 +218,6 @@ mod internal_pool_member_info_latest_tests {
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
         };
-        assert_eq!(pool_member_info, expected_pool_member_info);
+        assert!(pool_member_info == expected_pool_member_info);
     }
 }

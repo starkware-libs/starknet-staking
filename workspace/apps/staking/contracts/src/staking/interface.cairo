@@ -1,11 +1,11 @@
-use contracts_commons::errors::OptionAuxTrait;
-use contracts_commons::types::time::time::{TimeDelta, Timestamp};
 use staking::staking::errors::Error;
 use staking::staking::objects::{
-    EpochInfo, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
+    AttestationInfo, EpochInfo, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
 };
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
+use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::types::time::time::{TimeDelta, Timestamp};
 
 /// Public interface for the staking contract.
 #[starknet::interface]
@@ -34,7 +34,7 @@ pub trait IStaking<TContractState> {
     fn get_epoch_info(self: @TContractState) -> EpochInfo;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
-    fn get_total_stake_at_current_epoch(self: @TContractState) -> Amount;
+    fn get_current_total_staking_power(self: @TContractState) -> Amount;
     fn get_pool_exit_intent(
         self: @TContractState, undelegate_intent_key: UndelegateIntentKey,
     ) -> UndelegateIntentValue;
@@ -190,9 +190,9 @@ pub trait IStakingAttestation<TContractState> {
 }
 
 pub mod Events {
-    use contracts_commons::types::time::time::Timestamp;
     use staking::types::{Amount, Commission};
     use starknet::ContractAddress;
+    use starkware_utils::types::time::time::Timestamp;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakeBalanceChanged {
         #[key]
@@ -335,9 +335,9 @@ pub mod PauseEvents {
 }
 
 pub mod ConfigEvents {
-    use contracts_commons::types::time::time::TimeDelta;
     use staking::types::Amount;
     use starknet::ContractAddress;
+    use starkware_utils::types::time::time::TimeDelta;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct MinimumStakeChanged {
         pub old_min_stake: Amount,
@@ -354,6 +354,12 @@ pub mod ConfigEvents {
     pub struct RewardSupplierChanged {
         pub old_reward_supplier: ContractAddress,
         pub new_reward_supplier: ContractAddress,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct EpochInfoChanged {
+        pub block_duration: u16,
+        pub epoch_length: u16,
     }
 }
 
@@ -406,25 +412,6 @@ pub struct StakerPoolInfo {
 pub impl StakerInfoImpl of StakerInfoTrait {
     fn get_pool_info(self: StakerInfo) -> StakerPoolInfo {
         self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)
-    }
-}
-
-#[derive(Serde, Drop, Copy)]
-pub struct AttestationInfo {
-    staker_address: ContractAddress,
-    current_epoch: Epoch,
-}
-
-pub impl AttestationInfoIntoTupleImpl of Into<AttestationInfo, (ContractAddress, Epoch)> {
-    fn into(self: AttestationInfo) -> (ContractAddress, Epoch) {
-        (self.staker_address, self.current_epoch)
-    }
-}
-
-#[generate_trait]
-pub impl AttestationInfoImpl of AttestationInfoTrait {
-    fn new(staker_address: ContractAddress, current_epoch: Epoch) -> AttestationInfo {
-        AttestationInfo { staker_address, current_epoch }
     }
 }
 

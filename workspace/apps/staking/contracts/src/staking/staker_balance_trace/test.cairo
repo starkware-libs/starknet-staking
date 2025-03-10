@@ -1,5 +1,5 @@
 use staking::staking::staker_balance_trace::mock::{IMockTrace, MockTrace};
-use staking::staking::staker_balance_trace::trace::{StakerBalanceTrait};
+use staking::staking::staker_balance_trace::trace::StakerBalanceTrait;
 
 fn CONTRACT_STATE() -> MockTrace::ContractState {
     MockTrace::contract_state_for_testing()
@@ -11,18 +11,18 @@ fn test_insert() {
 
     let staker_balance = StakerBalanceTrait::new(amount: 1000);
     mock_trace.insert(key: 100, value: staker_balance);
-    assert_eq!(mock_trace.latest(), (100, staker_balance));
-    assert_eq!(mock_trace.length(), 1);
+    assert!(mock_trace.latest() == (100, staker_balance));
+    assert!(mock_trace.length() == 1);
 
     let staker_balance = StakerBalanceTrait::new(amount: 2000);
     mock_trace.insert(key: 200, value: staker_balance);
-    assert_eq!(mock_trace.latest(), (200, staker_balance));
-    assert_eq!(mock_trace.length(), 2);
+    assert!(mock_trace.latest() == (200, staker_balance));
+    assert!(mock_trace.length() == 2);
 
     let staker_balance = StakerBalanceTrait::new(amount: 500);
     mock_trace.insert(key: 200, value: staker_balance);
-    assert_eq!(mock_trace.latest(), (200, staker_balance));
-    assert_eq!(mock_trace.length(), 2);
+    assert!(mock_trace.latest() == (200, staker_balance));
+    assert!(mock_trace.length() == 2);
 }
 
 #[test]
@@ -50,21 +50,21 @@ fn test_latest() {
     mock_trace.insert(200, StakerBalanceTrait::new(amount: 200));
 
     let (key, value) = mock_trace.latest();
-    assert_eq!(key, 200);
-    assert_eq!(value, StakerBalanceTrait::new(amount: 200));
+    assert!(key == 200);
+    assert!(value == StakerBalanceTrait::new(amount: 200));
 }
 
 #[test]
 fn test_length() {
     let mut mock_trace = CONTRACT_STATE();
 
-    assert_eq!(mock_trace.length(), 0);
+    assert!(mock_trace.length() == 0);
 
     mock_trace.insert(100, StakerBalanceTrait::new(amount: 100));
-    assert_eq!(mock_trace.length(), 1);
+    assert!(mock_trace.length() == 1);
 
     mock_trace.insert(200, StakerBalanceTrait::new(amount: 200));
-    assert_eq!(mock_trace.length(), 2);
+    assert!(mock_trace.length() == 2);
 }
 
 #[test]
@@ -74,10 +74,10 @@ fn test_upper_lookup() {
     mock_trace.insert(100, StakerBalanceTrait::new(amount: 100));
     mock_trace.insert(200, StakerBalanceTrait::new(amount: 200));
 
-    assert_eq!(mock_trace.upper_lookup(100), StakerBalanceTrait::new(amount: 100));
-    assert_eq!(mock_trace.upper_lookup(150), StakerBalanceTrait::new(amount: 100));
-    assert_eq!(mock_trace.upper_lookup(200), StakerBalanceTrait::new(amount: 200));
-    assert_eq!(mock_trace.upper_lookup(250), StakerBalanceTrait::new(amount: 200));
+    assert!(mock_trace.upper_lookup(100) == StakerBalanceTrait::new(amount: 100));
+    assert!(mock_trace.upper_lookup(150) == StakerBalanceTrait::new(amount: 100));
+    assert!(mock_trace.upper_lookup(200) == StakerBalanceTrait::new(amount: 200));
+    assert!(mock_trace.upper_lookup(250) == StakerBalanceTrait::new(amount: 200));
 }
 
 #[test]
@@ -88,45 +88,45 @@ fn test_latest_mutable() {
     mock_trace.insert(200, StakerBalanceTrait::new(amount: 200));
 
     let latest = mock_trace.latest_mutable();
-    assert_eq!(latest, StakerBalanceTrait::new(amount: 200));
+    assert!(latest == StakerBalanceTrait::new(amount: 200));
 }
 
 #[test]
 fn test_staker_balance_new() {
     let mut staker_balance = StakerBalanceTrait::new(amount: 100);
-    assert_eq!(staker_balance.amount_own(), 100);
-    assert_eq!(staker_balance.total_amount(), 100);
-    assert_eq!(staker_balance.pool_amount(), 0);
+    assert!(staker_balance.amount_own() == 100);
+    assert!(staker_balance.total_amount() == 100);
+    assert!(staker_balance.pool_amount() == 0);
 }
 
 #[test]
 fn test_staker_balance_increase_own_amount() {
     let mut staker_balance = StakerBalanceTrait::new(amount: 100);
     staker_balance.increase_own_amount(amount: 200);
-    assert_eq!(staker_balance.amount_own(), 300);
-    assert_eq!(staker_balance.total_amount(), 300);
-    assert_eq!(staker_balance.pool_amount(), 0);
+    assert!(staker_balance.amount_own() == 300);
+    assert!(staker_balance.total_amount() == 300);
+    assert!(staker_balance.pool_amount() == 0);
 }
 
 #[test]
 fn test_staker_balance_update_pool_amount() {
     let mut staker_balance = StakerBalanceTrait::new(amount: 100);
     staker_balance.update_pool_amount(amount: 200);
-    assert_eq!(staker_balance.amount_own(), 100);
-    assert_eq!(staker_balance.total_amount(), 300);
-    assert_eq!(staker_balance.pool_amount(), 200);
+    assert!(staker_balance.amount_own() == 100);
+    assert!(staker_balance.total_amount() == 300);
+    assert!(staker_balance.pool_amount() == 200);
 
     staker_balance.update_pool_amount(amount: 50);
-    assert_eq!(staker_balance.amount_own(), 100);
-    assert_eq!(staker_balance.total_amount(), 150);
-    assert_eq!(staker_balance.pool_amount(), 50);
+    assert!(staker_balance.amount_own() == 100);
+    assert!(staker_balance.total_amount() == 150);
+    assert!(staker_balance.pool_amount() == 50);
 }
 
 #[test]
 fn test_is_initialized() {
     let mut mock_trace = CONTRACT_STATE();
-    assert_eq!(mock_trace.is_initialized(), false);
+    assert!(mock_trace.is_initialized() == false);
 
     mock_trace.insert(100, StakerBalanceTrait::new(amount: 100));
-    assert_eq!(mock_trace.is_initialized(), true);
+    assert!(mock_trace.is_initialized() == true);
 }

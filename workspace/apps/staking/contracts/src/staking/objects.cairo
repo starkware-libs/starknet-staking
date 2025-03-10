@@ -1,5 +1,3 @@
-use contracts_commons::errors::OptionAuxTrait;
-use contracts_commons::types::time::time::{Time, TimeDelta, Timestamp};
 use core::cmp::max;
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
@@ -8,6 +6,8 @@ use staking::staking::interface::{
 };
 use staking::types::{Amount, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
+use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
 
@@ -94,6 +94,10 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     fn epochs_in_year(self: @EpochInfo) -> u64 {
         let blocks_in_year = SECONDS_IN_YEAR / (*self.block_duration).into();
         blocks_in_year / (*self.length).into()
+    }
+
+    fn epoch_len_in_blocks(self: @EpochInfo) -> u16 {
+        *self.length
     }
 }
 
@@ -298,5 +302,47 @@ pub mod VersionedStorageContractTest {
         pub staker_info: Map<ContractAddress, Option<InternalStakerInfo>>,
         #[rename("staker_info")]
         pub new_staker_info: Map<ContractAddress, VersionedInternalStakerInfo>,
+    }
+}
+
+#[derive(Serde, Drop, Copy, Debug)]
+pub struct AttestationInfo {
+    staker_address: ContractAddress,
+    stake: Amount,
+    epoch_len: u16,
+    epoch_id: Epoch,
+    current_epoch_starting_block: u64,
+}
+
+#[generate_trait]
+pub impl AttestationInfoImpl of AttestationInfoTrait {
+    fn new(
+        staker_address: ContractAddress,
+        stake: Amount,
+        epoch_len: u16,
+        epoch_id: Epoch,
+        current_epoch_starting_block: u64,
+    ) -> AttestationInfo {
+        AttestationInfo { staker_address, stake, epoch_len, epoch_id, current_epoch_starting_block }
+    }
+
+    fn staker_address(self: AttestationInfo) -> ContractAddress {
+        self.staker_address
+    }
+    fn stake(self: AttestationInfo) -> Amount {
+        self.stake
+    }
+    fn epoch_len(self: AttestationInfo) -> u16 {
+        self.epoch_len
+    }
+    fn epoch_id(self: AttestationInfo) -> Epoch {
+        self.epoch_id
+    }
+    fn current_epoch_starting_block(self: AttestationInfo) -> u64 {
+        self.current_epoch_starting_block
+    }
+    fn set_epoch_id(ref self: AttestationInfo, epoch_id: Epoch) -> AttestationInfo {
+        self.epoch_id = epoch_id;
+        self
     }
 }

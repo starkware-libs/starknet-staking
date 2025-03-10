@@ -1,6 +1,6 @@
-use contracts_commons::constants::{MINUTE, WEEK};
-use contracts_commons::types::time::time::TimeDelta;
-use staking::types::{Amount, Index, Inflation};
+use staking::types::{Amount, Epoch, Index, Inflation};
+use starkware_utils::constants::{MINUTE, WEEK};
+use starkware_utils::types::time::time::TimeDelta;
 
 pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 3 * WEEK };
 pub(crate) const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };
@@ -11,3 +11,4 @@ pub(crate) const DEFAULT_C_NUM: Inflation = 160;
 pub(crate) const MAX_C_NUM: Inflation = 500;
 pub(crate) const C_DENOM: Inflation = 10_000;
 pub(crate) const MIN_ATTESTATION_WINDOW: u8 = 10;
+pub(crate) const FIRST_EPOCH: Epoch = 1; // Bigger than 0.

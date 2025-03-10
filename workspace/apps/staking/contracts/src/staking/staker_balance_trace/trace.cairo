@@ -1,9 +1,12 @@
-use contracts_commons::trace::errors::TraceErrors;
 use core::num::traits::Zero;
 use openzeppelin::utils::math::average;
+use staking::staking::errors::Error;
 use staking::types::{Amount, Epoch};
-use starknet::storage::{Mutable, MutableVecTrait, StorageAsPath, StoragePath, Vec, VecTrait};
-use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+use starknet::storage::{
+    Mutable, MutableVecTrait, StorageAsPath, StoragePath, StoragePointerReadAccess,
+    StoragePointerWriteAccess, Vec, VecTrait,
+};
+use starkware_utils::trace::errors::TraceErrors;
 
 /// `Trace` struct, for checkpointing values as they change at different points in
 /// time, and later looking up past values by block timestamp.
@@ -99,7 +102,8 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
     fn penultimate(self: StoragePath<StakerBalanceTrace>) -> (Epoch, StakerBalance) {
         let checkpoints = self.checkpoints;
         let pos = checkpoints.len();
-        assert!(pos > 1, "{}", TraceErrors::EMPTY_TRACE);
+        // TODO: consider move this error to trace errors.
+        assert!(pos > 1, "{}", Error::PENULTIMATE_NOT_EXIST);
         let checkpoint = checkpoints[pos - 2].read();
         (checkpoint.key, checkpoint.value)
     }
@@ -168,10 +172,10 @@ impl MutableStakerBalanceCheckpointImpl of MutableStakerBalanceCheckpointTrait {
             } else {
                 // Checkpoint keys must be non-decreasing
                 assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
-                self.append().write(StakerBalanceCheckpoint { key, value });
+                self.push(StakerBalanceCheckpoint { key, value });
             }
         } else {
-            self.append().write(StakerBalanceCheckpoint { key, value });
+            self.push(StakerBalanceCheckpoint { key, value });
         };
     }
 
@@ -193,7 +197,7 @@ impl MutableStakerBalanceCheckpointImpl of MutableStakerBalanceCheckpointTrait {
             } else {
                 _low = mid + 1;
             };
-        };
+        }
         _high
     }
 }
