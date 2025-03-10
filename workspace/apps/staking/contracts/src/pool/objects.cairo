@@ -41,6 +41,23 @@ pub(crate) struct InternalPoolMemberInfoV1 {
     pub(crate) entry_to_claim_from: VecIndex,
 }
 
+#[generate_trait]
+pub impl InternalPoolMemberInfoLatestImpl of InternalPoolMemberInfoLatestTrait {
+    fn new(reward_address: ContractAddress) -> InternalPoolMemberInfoV1 {
+        InternalPoolMemberInfoV1 {
+            reward_address,
+            _deprecated_amount: Zero::zero(),
+            _deprecated_index: Zero::zero(),
+            _deprecated_unclaimed_rewards: Zero::zero(),
+            _deprecated_commission: Zero::zero(),
+            unpool_amount: Zero::zero(),
+            unpool_time: Option::None,
+            entry_to_claim_from: Zero::zero(),
+        }
+    }
+}
+
+
 // **Note**: This struct should be updated in the next version of Internal Pool Member Info.
 #[derive(Debug, PartialEq, Serde, Drop, Copy, starknet::Store)]
 pub(crate) enum VInternalPoolMemberInfo {
@@ -194,7 +211,8 @@ pub mod VStorageContractTest {
 mod internal_pool_member_info_latest_tests {
     use core::num::traits::zero::Zero;
     use staking::pool::interface::PoolMemberInfo;
-    use super::InternalPoolMemberInfoLatest;
+    use staking::test_utils::constants::POOL_MEMBER_REWARD_ADDRESS;
+    use super::{InternalPoolMemberInfoLatest, InternalPoolMemberInfoLatestTrait};
 
     #[test]
     fn test_into() {
@@ -220,4 +238,23 @@ mod internal_pool_member_info_latest_tests {
         };
         assert!(pool_member_info == expected_pool_member_info);
     }
+
+    #[test]
+    fn test_new() {
+        let pool_member_info = InternalPoolMemberInfoLatestTrait::new(
+            reward_address: POOL_MEMBER_REWARD_ADDRESS(),
+        );
+        let expected = InternalPoolMemberInfoLatest {
+            reward_address: POOL_MEMBER_REWARD_ADDRESS(),
+            _deprecated_amount: Zero::zero(),
+            _deprecated_index: Zero::zero(),
+            _deprecated_unclaimed_rewards: Zero::zero(),
+            _deprecated_commission: Zero::zero(),
+            unpool_amount: Zero::zero(),
+            unpool_time: Option::None,
+            entry_to_claim_from: Zero::zero(),
+        };
+        assert_eq!(pool_member_info, expected);
+    }
 }
+

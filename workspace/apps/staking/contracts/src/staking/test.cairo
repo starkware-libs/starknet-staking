@@ -1061,8 +1061,7 @@ fn test_add_stake_from_pool() {
         .add_stake_from_pool(:staker_address, amount: pool_amount);
 
     // Validate returned index.
-    let global_index = staking_dispatcher.contract_parameters().global_index;
-    assert!(returned_index == global_index);
+    assert!(returned_index == Zero::zero());
 
     // Validate total stake.
     assert!(staking_dispatcher.get_total_stake() == total_stake_before + pool_amount);
@@ -1072,31 +1071,18 @@ fn test_add_stake_from_pool() {
     assert!(pool_balance_after == pool_balance_before - pool_amount.into());
 
     // Validate staker info.
-    let interest = global_index - cfg.staker_info.index;
-    let staker_rewards = compute_rewards_rounded_down(
-        amount: cfg.staker_info._deprecated_amount_own, :interest,
-    );
-    let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: Zero::zero(), :interest,
-    );
-    let commission_amount = compute_commission_amount_rounded_down(
-        rewards_including_commission: pool_rewards_including_commission,
-        commission: cfg.staker_info.get_pool_info().commission,
-    );
-    let mut staker_unclaimed_rewards = staker_rewards + commission_amount;
-    let mut pool_unclaimed_rewards = pool_rewards_including_commission - commission_amount;
     let expected_staker_info = VersionedInternalStakerInfoTrait::new_latest(
         reward_address: staker_info_before.reward_address,
         operational_address: staker_info_before.operational_address,
         unstake_time: staker_info_before.unstake_time,
         amount_own: staker_info_before.amount_own,
-        index: staking_dispatcher.contract_parameters().global_index,
-        unclaimed_rewards_own: staker_unclaimed_rewards,
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::Some(
             StakerPoolInfo {
                 pool_contract: pool_contract,
                 amount: pool_amount,
-                unclaimed_rewards: pool_unclaimed_rewards,
+                unclaimed_rewards: Zero::zero(),
                 commission: staker_info_before.get_pool_info().commission,
             },
         ),
@@ -1208,31 +1194,13 @@ fn test_remove_from_delegation_pool_intent() {
         );
 
     // Validate that the staker info is updated.
-    let interest = global_index - cfg.staker_info.index;
-    let staker_rewards = compute_rewards_rounded_down(
-        amount: cfg.staker_info._deprecated_amount_own, :interest,
-    );
-    let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: initial_delegated_stake, :interest,
-    );
-    let commission_amount = compute_commission_amount_rounded_down(
-        rewards_including_commission: pool_rewards_including_commission,
-        commission: cfg.staker_info.get_pool_info().commission,
-    );
-    let mut staker_unclaimed_rewards = staker_rewards + commission_amount;
-    let mut pool_unclaimed_rewards = pool_rewards_including_commission - commission_amount;
     let mut cur_delegated_stake = initial_delegated_stake - intent_amount;
     let mut expected_staker_info = cfg.staker_info.clone();
-    expected_staker_info.unclaimed_rewards_own = staker_unclaimed_rewards;
-    expected_staker_info.index = global_index;
     expected_staker_info
         .pool_info =
             Option::Some(
                 StakerPoolInfo {
-                    pool_contract,
-                    amount: cur_delegated_stake,
-                    unclaimed_rewards: pool_unclaimed_rewards,
-                    ..cfg.staker_info.get_pool_info(),
+                    pool_contract, amount: cur_delegated_stake, ..cfg.staker_info.get_pool_info(),
                 },
             );
     assert!(
@@ -1301,32 +1269,16 @@ fn test_remove_from_delegation_pool_intent() {
         );
 
     // Validate that the staker info is updated.
-    let interest = global_index - expected_staker_info.index;
-    let staker_rewards = compute_rewards_rounded_down(
-        amount: expected_staker_info._deprecated_amount_own, :interest,
-    );
-    let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: cur_delegated_stake, :interest,
-    );
-    let commission_amount = compute_commission_amount_rounded_down(
-        rewards_including_commission: pool_rewards_including_commission,
-        commission: expected_staker_info.get_pool_info().commission,
-    );
-    staker_unclaimed_rewards = staker_unclaimed_rewards + staker_rewards + commission_amount;
-    pool_unclaimed_rewards = pool_unclaimed_rewards
-        + pool_rewards_including_commission
-        - commission_amount;
+    // TODO: Ensure there are flow tests that attempt to update validator and delegator rewards
+    // while in intent.
     let prev_delegated_stake = cur_delegated_stake;
     cur_delegated_stake = initial_delegated_stake - new_intent_amount;
-    expected_staker_info.unclaimed_rewards_own = staker_unclaimed_rewards;
-    expected_staker_info.index = global_index;
     expected_staker_info
         .pool_info =
             Option::Some(
                 StakerPoolInfo {
                     pool_contract,
                     amount: cur_delegated_stake,
-                    unclaimed_rewards: pool_unclaimed_rewards,
                     ..expected_staker_info.get_pool_info(),
                 },
             );
@@ -1609,9 +1561,6 @@ fn test_switch_staking_delegation_pool() {
             identifier: pool_member.into(),
         );
     let interest = updated_index - cfg.staker_info.index;
-    let staker_rewards = compute_rewards_rounded_down(
-        amount: cfg.staker_info._deprecated_amount_own, :interest,
-    );
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: cfg.staker_info.get_pool_info().amount, :interest,
     );
@@ -1619,15 +1568,11 @@ fn test_switch_staking_delegation_pool() {
         rewards_including_commission: pool_rewards_including_commission,
         commission: cfg.staker_info.get_pool_info().commission,
     );
-    let unclaimed_rewards_own = staker_rewards + commission_amount;
     let unclaimed_rewards_pool = pool_rewards_including_commission - commission_amount;
     let amount = cfg.staker_info.get_pool_info().amount + switched_amount;
-    let mut expected_staker_info = StakerInfo {
-        index: updated_index, unclaimed_rewards_own, ..to_staker_info,
-    };
+    let mut expected_staker_info = to_staker_info;
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
         pool_info.amount = amount;
-        pool_info.unclaimed_rewards = unclaimed_rewards_pool;
         expected_staker_info.pool_info = Option::Some(pool_info);
     }
     let actual_staker_info = staking_dispatcher.staker_info(staker_address: to_staker);
