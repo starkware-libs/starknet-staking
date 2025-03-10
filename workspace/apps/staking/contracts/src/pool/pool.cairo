@@ -13,8 +13,8 @@ pub mod Pool {
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
     use staking::pool::objects::{
-        InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
-        VInternalPoolMemberInfoTrait,
+        InternalPoolMemberInfoConvertTrait, InternalPoolMemberInfoLatestTrait, SwitchPoolData,
+        VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait,
     };
     use staking::pool::pool_member_balance_trace::trace::{
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
@@ -433,16 +433,10 @@ pub mod Pool {
                 },
                 Option::None => {
                     // Pool member does not exist. Create a new record.
-                    let pool_member_info = InternalPoolMemberInfoLatest {
+                    let pool_member_info = InternalPoolMemberInfoLatestTrait::new(
                         reward_address: switch_pool_data.reward_address,
-                        _deprecated_amount: Zero::zero(),
-                        _deprecated_index: Zero::zero(),
-                        _deprecated_unclaimed_rewards: Zero::zero(),
-                        _deprecated_commission: Zero::zero(),
-                        unpool_time: Option::None,
-                        unpool_amount: Zero::zero(),
-                        entry_to_claim_from: Zero::zero(),
-                    };
+                    );
+
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);
                     pool_member_info
@@ -675,7 +669,7 @@ pub mod Pool {
             token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
             pool_member_info._deprecated_unclaimed_rewards = Zero::zero();
 
-            // TODO: update last_claimed_idx_in_member_vec of pool member info.
+            // TODO: update entry_to_claim_from of pool member info.
 
             self.emit(Events::PoolMemberRewardClaimed { pool_member, reward_address, amount });
         }
