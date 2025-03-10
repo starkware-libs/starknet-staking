@@ -621,12 +621,11 @@ fn add_stake_from_pool(
     ref self: ContractState, 
     staker_address: ContractAddress, 
     amount: Amount
-) -> Index
+)
 ```
 #### description <!-- omit from toc -->
 Delegation pool contract's way to add funds to the staking pool.
 #### return <!-- omit from toc -->
-[Index](#index) - updated index
 #### emits <!-- omit from toc -->
 1. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
@@ -801,11 +800,10 @@ Only staker address.
 fn claim_delegation_pool_rewards(
     ref self: ContractState, 
     staker_address: ContractAddress
-) -> Index
+)
 ```
 #### description <!-- omit from toc -->
 Update rewards and transfer the delegation pool rewards to the delegation pool contract.
-Return the updated staker index.
 #### emits <!-- omit from toc -->
 [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 #### errors <!-- omit from toc -->
@@ -1461,7 +1459,6 @@ Only pool member can execute.
 fn enter_delegation_pool_from_staking_contract(
     ref self: ContractState, 
     amount: Amount, 
-    index: Index, 
     data: Span<felt252>
 )
 ```

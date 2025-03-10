@@ -135,7 +135,9 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) unstake_time: Option<Timestamp>,
     // **Note**: This field was used in V0 and is replaced by `staker_balance_trace` in V1.
     pub(crate) _deprecated_amount_own: Amount,
-    pub(crate) index: Index,
+    // **Note**: This field was used in V0 and no longer in use in the new rewards mechanism
+    // introduced in V1.
+    pub(crate) _deprecated_index: Index,
     pub(crate) unclaimed_rewards_own: Amount,
     pub(crate) pool_info: Option<StakerPoolInfo>,
 }
@@ -172,17 +174,16 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
         operational_address: ContractAddress,
         unstake_time: Option<Timestamp>,
         amount_own: Amount,
-        index: Index,
         unclaimed_rewards_own: Amount,
         pool_info: Option<StakerPoolInfo>,
-    ) -> VersionedInternalStakerInfo nopanic {
+    ) -> VersionedInternalStakerInfo {
         VersionedInternalStakerInfo::V1(
             InternalStakerInfoV1 {
                 reward_address,
                 operational_address,
                 unstake_time,
                 _deprecated_amount_own: amount_own,
-                index,
+                _deprecated_index: Zero::zero(),
                 unclaimed_rewards_own,
                 pool_info,
             },
@@ -221,13 +222,13 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
 }
 
 impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, StakerInfo> {
-    fn into(self: InternalStakerInfoLatest) -> StakerInfo nopanic {
+    fn into(self: InternalStakerInfoLatest) -> StakerInfo {
         StakerInfo {
             reward_address: self.reward_address,
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
             amount_own: self._deprecated_amount_own,
-            index: self.index,
+            index: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,
         }

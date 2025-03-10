@@ -790,16 +790,22 @@ pub(crate) fn load_staker_info_from_map(
     }
     assert!(idx == 2, "Invalid Version loaded from map");
     let mut span = raw_serialized_value.span();
+    let reward_address = Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward');
+    let operational_address = Serde::<ContractAddress>::deserialize(ref span)
+        .expect('Failed operational');
+    let unstake_time: Option<Timestamp> = deserialize_option(ref data: span);
+    let amount_own = Serde::<Amount>::deserialize(ref span).expect('Failed amount_own');
+    Serde::<Index>::deserialize(ref span).expect('Failed index');
+    let unclaimed_rewards_own = Serde::<Amount>::deserialize(ref span)
+        .expect('Failed unclaimed_rewards_own');
+    let pool_info: Option<StakerPoolInfo> = deserialize_option(ref data: span);
     let staker_info = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward'),
-        operational_address: Serde::<ContractAddress>::deserialize(ref span)
-            .expect('Failed operational'),
-        unstake_time: deserialize_option(ref data: span),
-        amount_own: Serde::<Amount>::deserialize(ref span).expect('Failed amount_own'),
-        index: Serde::<Index>::deserialize(ref span).expect('Failed index'),
-        unclaimed_rewards_own: Serde::<Amount>::deserialize(ref span)
-            .expect('Failed unclaimed_rewards_own'),
-        pool_info: deserialize_option(ref data: span),
+        :reward_address,
+        :operational_address,
+        :unstake_time,
+        :amount_own,
+        :unclaimed_rewards_own,
+        :pool_info,
     );
     return staker_info;
 }
@@ -865,7 +871,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
             _deprecated_amount_own: STAKE_AMOUNT,
-            index: Zero::zero(),
+            _deprecated_index: Zero::zero(),
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(
                 StakerPoolInfo {

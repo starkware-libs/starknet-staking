@@ -400,7 +400,7 @@ pub mod Pool {
 
         /// This function is called by the staking contract to enter the pool during a pool switch.
         fn enter_delegation_pool_from_staking_contract(
-            ref self: ContractState, amount: Amount, index: Index, data: Span<felt252>,
+            ref self: ContractState, amount: Amount, data: Span<felt252>,
         ) {
             // Asserts.
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
@@ -617,15 +617,6 @@ pub mod Pool {
             self.emit(Events::DeletePoolMember { pool_member, reward_address });
         }
 
-        fn receive_index_and_funds_from_staker(self: @ContractState) -> Index {
-            if let Option::Some(final_index) = self.final_staker_index.read() {
-                // If the staker is inactive, the staker already pushed index and funds.
-                return final_index;
-            }
-            let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
-            staking_pool_dispatcher.claim_delegation_pool_rewards(self.staker_address.read())
-        }
-
         fn assert_staker_is_active(self: @ContractState) {
             assert!(self.is_staker_active(), "{}", Error::STAKER_INACTIVE);
         }
@@ -704,17 +695,15 @@ pub mod Pool {
             amount: Amount,
             token_dispatcher: IERC20Dispatcher,
             staker_address: ContractAddress,
-        ) -> Index {
+        ) {
             // Approve staking contract to transfer funds from the pool.
             let staking_pool_dispatcher = self.staking_pool_dispatcher.read();
             token_dispatcher
                 .approve(spender: staking_pool_dispatcher.contract_address, amount: amount.into());
 
-            // Notify the staking contract of the new delegated stake, and receive updated index.
+            // Notify the staking contract of the new delegated stake.
             // This will complete the fund transfer to the staking contract.
-            let updated_index = staking_pool_dispatcher
-                .add_stake_from_pool(:staker_address, :amount);
-            updated_index
+            staking_pool_dispatcher.add_stake_from_pool(:staker_address, :amount);
         }
 
         fn get_current_epoch(self: @ContractState) -> Epoch {
