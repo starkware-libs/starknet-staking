@@ -27,6 +27,7 @@ pub(crate) enum Error {
     INTERNAL_STAKER_INFO_OUTDATED_VERSION,
     INVALID_EPOCH_LENGTH,
     INVALID_BLOCK_DURATION,
+    PENULTIMATE_NOT_EXIST,
 }
 
 impl DescribableError of Describable<Error> {
@@ -58,6 +59,7 @@ impl DescribableError of Describable<Error> {
             Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION => "Outdated version of Internal Staker Info",
             Error::INVALID_EPOCH_LENGTH => "Invalid epoch length, must be greater than 0",
             Error::INVALID_BLOCK_DURATION => "Invalid block duration, must be greater than 0",
+            Error::PENULTIMATE_NOT_EXIST => "Penultimate balance does not exist, staker balance at this epoch is 0",
         }
     }
 }

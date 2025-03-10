@@ -1619,12 +1619,9 @@ pub mod Staking {
         fn get_staker_balance_curr_epoch(
             self: @ContractState, staker_address: ContractAddress,
         ) -> StakerBalance {
-            /// This logic breaks when there is an insert to the trace in the first epoch.
-            /// This is becase the trace.latest().epoch is 1, thus the else branch is taken.
-            /// However, the trace length is 1 and the penultimate funciton errors.
             let trace = self.staker_balance_trace.entry(key: staker_address);
             let (epoch, staker_balance) = trace.latest();
-            if epoch == self.get_current_epoch() {
+            if epoch <= self.get_current_epoch() {
                 staker_balance
             } else {
                 let (_, staker_balance) = trace.penultimate();
