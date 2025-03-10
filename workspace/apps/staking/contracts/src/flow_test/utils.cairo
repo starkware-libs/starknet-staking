@@ -223,10 +223,6 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.dispatcher().contract_parameters().exit_wait_window
     }
 
-    fn update_global_index_if_needed(self: StakingState) -> bool {
-        self.dispatcher().update_global_index_if_needed()
-    }
-
     fn get_global_index(self: StakingState) -> Index {
         self.dispatcher().contract_parameters().global_index
     }
@@ -958,7 +954,6 @@ impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
 impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     /// Upgrades the contracts in the system state with local implementations.
     fn upgrade_contracts_implementation(self: SystemState<STRKTokenState>) {
-        self.staking.update_global_index_if_needed();
         self.upgrade_staking_implementation();
         self.upgrade_reward_supplier_implementation();
         self.upgrade_minting_curve_implementation();

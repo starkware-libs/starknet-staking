@@ -553,12 +553,6 @@ pub mod Staking {
             undelegate_intent_value
         }
 
-        // TODO: Remove this function.
-        fn update_global_index_if_needed(ref self: ContractState) -> bool {
-            self.assert_is_unpaused();
-            false
-        }
-
         fn change_operational_address(
             ref self: ContractState, operational_address: ContractAddress,
         ) {
@@ -938,7 +932,6 @@ pub mod Staking {
         fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
             // Prerequisites and asserts.
             self.assert_caller_is_not_zero();
-            self.update_global_index_if_needed();
             let mut staker_info = self.internal_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info().pool_contract;
             assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
@@ -1295,7 +1288,6 @@ pub mod Staking {
         fn general_prerequisites(ref self: ContractState) {
             self.assert_is_unpaused();
             self.assert_caller_is_not_zero();
-            self.update_global_index_if_needed();
         }
 
         fn assert_caller_is_pool_contract(

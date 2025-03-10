@@ -39,7 +39,6 @@ pub trait IStaking<TContractState> {
     fn get_pool_exit_intent(
         self: @TContractState, undelegate_intent_key: UndelegateIntentKey,
     ) -> UndelegateIntentValue;
-    fn update_global_index_if_needed(ref self: TContractState) -> bool;
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
     fn update_commission(ref self: TContractState, commission: Commission);

@@ -206,18 +206,6 @@ fn test_set_open_for_delegation_when_paused() {
 
 #[test]
 #[should_panic(expected: "Contract is paused")]
-fn test_update_global_index_if_needed_when_paused() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    pause_staking_contract(:cfg);
-    let staking_dispatcher = IStakingDispatcher {
-        contract_address: cfg.test_info.staking_contract,
-    };
-    staking_dispatcher.update_global_index_if_needed();
-}
-
-#[test]
-#[should_panic(expected: "Contract is paused")]
 fn test_change_operational_address_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
