@@ -141,15 +141,6 @@ pub trait IStakingPool<TContractState> {
         identifier: felt252,
     );
 
-    // TODO: remove this function and update specs.
-    /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
-    ///
-    /// The flow:
-    /// 1. Update the rewards for `staker_address`.
-    /// 2. Send `pool_info.unclaimed_rewards` FRI to the pool contract.
-    /// 3. Set pool_info.unclaimed_rewards to zero.
-    fn claim_delegation_pool_rewards(ref self: TContractState, staker_address: ContractAddress);
-
     /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
     /// Used only for upgrade purposes.
     ///

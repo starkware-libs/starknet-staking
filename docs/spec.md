@@ -24,7 +24,6 @@
     - [switch\_staking\_delegation\_pool](#switch_staking_delegation_pool)
     - [change\_reward\_address](#change_reward_address)
     - [set\_open\_for\_delegation](#set_open_for_delegation)
-    - [claim\_delegation\_pool\_rewards](#claim_delegation_pool_rewards)
     - [staker\_info](#staker_info)
     - [get\_staker\_info](#get_staker_info)
     - [get\_current\_epoch](#get_current_epoch)
@@ -213,7 +212,6 @@ classDiagram
     change_reward_address()
     change_operational_address()
     set_open_for_delegation()
-    claim_delegation_pool_rewards()
     staker_info()
     get_staker_info()
     contract_parameters()
@@ -394,7 +392,6 @@ sequenceDiagram
   end
   opt Loop
     pool member ->>+ DelegationPoolContract: claim_rewards
-    DelegationPoolContract ->>+ StakingContract: claim_delegation_pool_rewards
     StakingContract ->>+ RewardSupplier: claim_rewards
     RewardSupplier -->> StakingContract: Transfer
     StakingContract -->> DelegationPoolContract: Transfer
@@ -794,34 +791,6 @@ Only staker address.
 #### logic <!-- omit from toc -->
 1. Generate pool contract for staker.
 2. Register pool.
-
-### claim_delegation_pool_rewards
-```rust
-fn claim_delegation_pool_rewards(
-    ref self: ContractState, 
-    staker_address: ContractAddress
-)
-```
-#### description <!-- omit from toc -->
-Update rewards and transfer the delegation pool rewards to the delegation pool contract.
-#### emits <!-- omit from toc -->
-[Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
-#### errors <!-- omit from toc -->
-1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-3. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-4. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
-5. [AMOUNT\_TOO\_HIGH](#amount_too_high)
-6. [UNEXPECTED\_BALANCE](#unexpected_balance)
-#### pre-condition <!-- omit from toc -->
-1. Staking contract is unpaused.
-2. Staker exist in the contract.
-3. Delegation pool exist for the staker.
-#### access control <!-- omit from toc -->
-Delegation pool contract of the given staker.
-#### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards)
-2. Transfer rewards to pool contract.
 
 ### staker_info
 ```rust

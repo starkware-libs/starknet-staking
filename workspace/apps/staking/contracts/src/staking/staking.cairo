@@ -908,27 +908,6 @@ pub mod Staking {
                 );
         }
 
-        // TODO: remove this function and update specs.
-        fn claim_delegation_pool_rewards(ref self: ContractState, staker_address: ContractAddress) {
-            // Prerequisites and asserts.
-            self.general_prerequisites();
-            let mut staker_info = self.internal_staker_info(:staker_address);
-            let pool_address = staker_info.get_pool_info().pool_contract;
-            assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
-
-            // Send rewards to pool contract, and commit to storage.
-            // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
-            // is performed only after that.
-            let token_dispatcher = self.token_dispatcher.read();
-            self
-                .send_rewards_to_delegation_pool(
-                    :staker_address, ref :staker_info, :token_dispatcher,
-                );
-            self
-                .staker_info
-                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
-        }
-
         fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
             // Prerequisites and asserts.
             self.assert_caller_is_not_zero();

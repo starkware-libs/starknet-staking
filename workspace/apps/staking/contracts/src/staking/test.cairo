@@ -347,58 +347,6 @@ fn test_stake_with_commission_out_of_range() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
 }
 
-#[test]
-fn test_claim_delegation_pool_rewards() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let staking_contract = cfg.test_info.staking_contract;
-    let reward_supplier = cfg.staking_contract_info.reward_supplier;
-    // Stake with pool enabled.
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    // Update index in staking contract.
-    let updated_index = cfg.staker_info._deprecated_index + BASE_VALUE;
-    snforge_std::store(
-        target: staking_contract,
-        storage_address: selector!("global_index"),
-        serialized_value: array![updated_index.into()].span(),
-    );
-    // Funds reward supplier and set his unclaimed rewards.
-    let interest = updated_index - cfg.staker_info._deprecated_index;
-    let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: cfg.staker_info.get_pool_info().amount, :interest,
-    );
-    let commission_amount = compute_commission_amount_rounded_down(
-        rewards_including_commission: pool_rewards_including_commission,
-        commission: cfg.staker_info.get_pool_info().commission,
-    );
-    let unclaimed_rewards_pool = pool_rewards_including_commission - commission_amount;
-
-    cheat_reward_for_reward_supplier(
-        :cfg, :reward_supplier, expected_reward: unclaimed_rewards_pool, :token_address,
-    );
-
-    let mut spy = snforge_std::spy_events();
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
-    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    staking_pool_dispatcher
-        .claim_delegation_pool_rewards(staker_address: cfg.test_info.staker_address);
-    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    assert!(token_dispatcher.balance_of(pool_contract) == unclaimed_rewards_pool.into());
-
-    // Validate the single RewardsSuppliedToDelegationPool event.
-    let events = spy.get_events().emitted_by(staking_contract).events;
-    assert_number_of_events(
-        actual: events.len(), expected: 1, message: "claim_delegation_pool_rewards",
-    );
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[0],
-        staker_address: cfg.test_info.staker_address,
-        pool_address: pool_contract,
-        amount: unclaimed_rewards_pool,
-    );
-}
-
 // **Note**: The migration tests will be part of the flow tests.
 // TODO: Test the rewards part here for latest internal staker info, i.e test the rewards are sent
 // to the pool and the right index is returned.
@@ -495,46 +443,6 @@ fn test_increase_stake_from_staker_address() {
         new_self_stake: updated_staker_info.amount_own,
         :new_delegated_stake,
     );
-}
-
-#[test]
-#[should_panic(expected: "Staker does not have a pool contract")]
-fn test_claim_delegation_pool_rewards_pool_address_doesnt_exist() {
-    let mut cfg: StakingInitConfig = Default::default();
-    cfg.test_info.pool_enabled = false;
-    general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let staking_contract = cfg.test_info.staking_contract;
-    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let staker_address = cfg.test_info.staker_address;
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_pool_dispatcher.claim_delegation_pool_rewards(:staker_address);
-}
-
-#[test]
-#[should_panic(expected: "Staker does not exist")]
-fn test_claim_delegation_pool_rewards_staker_does_not_exist() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    staking_pool_dispatcher.claim_delegation_pool_rewards(staker_address: NON_STAKER_ADDRESS());
-}
-
-#[test]
-#[should_panic(expected: "Caller is not pool contract")]
-fn test_claim_delegation_pool_rewards_unauthorized_address() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let staking_contract = cfg.test_info.staking_contract;
-    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let staker_address = cfg.test_info.staker_address;
-    // Update staker info for the test.
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_pool_dispatcher.claim_delegation_pool_rewards(:staker_address);
 }
 
 #[test]
