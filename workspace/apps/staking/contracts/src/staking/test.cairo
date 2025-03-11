@@ -38,7 +38,7 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::errors::Error;
 use staking::staking::interface::{
-    IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
+    CommissionCommitment, IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
     IStakingAttestationSafeDispatcher, IStakingAttestationSafeDispatcherTrait,
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingConfigSafeDispatcher,
     IStakingConfigSafeDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
@@ -1888,6 +1888,10 @@ fn test_update_commission() {
     );
 }
 
+// TODO: test update_commission with commitment before.
+// TODO: should panic test update_commission with commitment before , commission is bigger than
+// max commission.
+
 #[test]
 #[should_panic(expected: "Staker does not exist")]
 fn test_update_commission_caller_not_staker() {
@@ -1972,6 +1976,34 @@ fn test_update_commission_staker_in_exit_window() {
     staking_dispatcher
         .update_commission(commission: cfg.staker_info.get_pool_info().commission - 1);
 }
+
+#[test]
+fn test_set_commission_commitment() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let max_commission = staker_info.get_pool_info().commission * 2;
+    let mut spy = snforge_std::spy_events();
+    let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_commission_commitment(:max_commission, :expiration_epoch);
+    let commission_commitment = staking_dispatcher
+        .get_staker_commission_commitment(:staker_address);
+    let expected_commission_commitment = CommissionCommitment { max_commission, expiration_epoch };
+    assert!(commission_commitment == expected_commission_commitment);
+    // Validate the CommissionCommitmentSet event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 0, message: "set_commission_commitment",
+    );
+}
+
+// TODO: safe dispatcher test for set_commission_commitment assertions.
 
 #[test]
 fn test_set_open_for_delegation() {

@@ -16,9 +16,9 @@ pub mod Staking {
     };
     use staking::staking::errors::Error;
     use staking::staking::interface::{
-        ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig, IStakingMigration,
-        IStakingPause, IStakingPool, PauseEvents, StakerInfo, StakerPoolInfoTrait,
-        StakingContractInfo,
+        CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
+        IStakingMigration, IStakingPause, IStakingPool, PauseEvents, StakerInfo,
+        StakerPoolInfoTrait, StakingContractInfo,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
@@ -112,6 +112,8 @@ pub mod Staking {
         total_stake_trace: Trace,
         // Map staker address to their balance trace.
         staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
+        // Map staker address to their commission commitment.
+        commission_commitment: Map<ContractAddress, CommissionCommitment>,
     }
 
     #[event]
@@ -603,7 +605,16 @@ pub mod Staking {
                 (pool_info.pool_contract, pool_info.commission)
             };
 
-            assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
+            let commission_commitment = self.commission_commitment.read(staker_address);
+            if self.is_commission_commitment_active(:commission_commitment) {
+                assert!(
+                    commission < commission_commitment.max_commission,
+                    "{}",
+                    GenericError::INVALID_COMMISSION_WITH_COMMITMENT,
+                );
+            } else {
+                assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
+            }
 
             // Update commission in this contract, and in the associated pool contract.
             {
@@ -623,6 +634,43 @@ pub mod Staking {
                         staker_address, pool_contract, old_commission, new_commission: commission,
                     },
                 );
+        }
+
+        fn set_commission_commitment(
+            ref self: ContractState, max_commission: Commission, expiration_epoch: Epoch,
+        ) {
+            // Prerequisites and asserts.
+            self.general_prerequisites();
+            let staker_address = get_caller_address();
+            let mut staker_info = self.internal_staker_info(:staker_address);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            let pool_info = staker_info.get_pool_info();
+            let current_epoch = self.get_current_epoch();
+            let mut commission_commitment = self.commission_commitment.read(staker_address);
+            assert!(
+                !self.is_commission_commitment_active(:commission_commitment),
+                "{}",
+                Error::COMMISSION_COMMITMENT_EXISTS,
+            );
+            assert!(pool_info.commission <= max_commission, "{}", Error::MAX_COMMISSION_TOO_LOW);
+            assert!(expiration_epoch > current_epoch, "{}", Error::EXPIRATION_EPOCH_TOO_EARLY);
+            assert!(
+                expiration_epoch - current_epoch <= self.get_epoch_info().epochs_in_year(),
+                "{}",
+                Error::EXPIRATION_EPOCH_TOO_FAR,
+            );
+            commission_commitment = CommissionCommitment { max_commission, expiration_epoch };
+            self.commission_commitment.write(staker_address, commission_commitment);
+            self
+                .staker_info
+                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
+            // TODO: emit event
+        }
+
+        fn get_staker_commission_commitment(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> CommissionCommitment {
+            self.commission_commitment.read(staker_address)
         }
 
         fn is_paused(self: @ContractState) -> bool {
@@ -1470,6 +1518,12 @@ pub mod Staking {
             let mut staker_balance = self.staker_balance_trace.entry(key: staker_address).latest();
             staker_balance.update_pool_amount(:amount);
             self.insert_staker_balance(:staker_address, :staker_balance);
+        }
+
+        fn is_commission_commitment_active(
+            self: @ContractState, commission_commitment: CommissionCommitment,
+        ) -> bool {
+            self.get_current_epoch() < commission_commitment.expiration_epoch
         }
 
         fn get_staker_address_by_operational(
