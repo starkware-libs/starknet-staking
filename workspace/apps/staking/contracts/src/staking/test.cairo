@@ -2412,15 +2412,30 @@ fn test_get_attestation_info_by_operational_address() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     advance_epoch_global();
     let operational_address = cfg.staker_info.operational_address;
-    let attestation_info = staking_dispatcher
+    let mut attestation_info = staking_dispatcher
         .get_attestation_info_by_operational_address(:operational_address);
     assert!(attestation_info.staker_address() == cfg.test_info.staker_address);
     assert!(attestation_info.stake() == cfg.staker_info._deprecated_amount_own);
     assert!(attestation_info.epoch_len() == EPOCH_LENGTH);
     assert!(attestation_info.epoch_id() == 1);
-    assert!(attestation_info.current_epoch_starting_block() == 0);
+    assert!(
+        attestation_info
+            .current_epoch_starting_block() == cfg
+            .staking_contract_info
+            .epoch_info
+            .current_epoch_starting_block(),
+    );
+    // Test setters.
+    attestation_info.set_epoch_id(2);
+    assert!(attestation_info.epoch_id() == 2);
+    let next_epoch_starting_block = cfg
+        .staking_contract_info
+        .epoch_info
+        .current_epoch_starting_block()
+        + cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into();
+    attestation_info.set_current_epoch_starting_block(next_epoch_starting_block);
+    assert!(attestation_info.current_epoch_starting_block() == next_epoch_starting_block);
 }
-
 #[test]
 fn test_get_current_epoch() {
     let mut cfg: StakingInitConfig = Default::default();
@@ -2435,6 +2450,49 @@ fn test_get_current_epoch() {
     advance_block_number_global(blocks: 1);
     let current_epoch = staking_dispatcher.get_current_epoch();
     assert!(current_epoch == 1);
+}
+
+#[test]
+fn test_current_epoch_starting_block() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let epoch_info = staking_dispatcher.get_epoch_info();
+    assert_eq!(epoch_info.current_epoch_starting_block(), EPOCH_STARTING_BLOCK);
+    advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
+    let epoch_info = staking_dispatcher.get_epoch_info();
+    assert_eq!(epoch_info.current_epoch_starting_block(), EPOCH_STARTING_BLOCK);
+    advance_block_number_global(blocks: 1);
+    let next_epoch_starting_block = EPOCH_STARTING_BLOCK + EPOCH_LENGTH.into();
+    let epoch_info = staking_dispatcher.get_epoch_info();
+    assert_eq!(epoch_info.current_epoch_starting_block(), next_epoch_starting_block);
+
+    // Update epoch len and check again.
+    let new_epoch_len = EPOCH_LENGTH.into() * 15;
+    let new_epoch_duration = BLOCK_DURATION / 15;
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
+    );
+    staking_config_dispatcher
+        .set_epoch_info(block_duration: new_epoch_duration, epoch_length: new_epoch_len);
+    let epoch_info = staking_dispatcher.get_epoch_info();
+    // No new epoch started yet, so starting block should be the same.
+    assert_eq!(epoch_info.current_epoch_starting_block(), next_epoch_starting_block);
+    // Advance epoch and check again.
+    advance_epoch_global();
+    let epoch_info = staking_dispatcher.get_epoch_info();
+    assert_eq!(
+        epoch_info.current_epoch_starting_block(), next_epoch_starting_block + EPOCH_LENGTH.into(),
+    );
+    // Advance epoch and check again.
+    advance_block_number_global(blocks: new_epoch_len.into());
+    let epoch_info = staking_dispatcher.get_epoch_info();
+    assert_eq!(
+        epoch_info.current_epoch_starting_block(),
+        next_epoch_starting_block + EPOCH_LENGTH.into() + new_epoch_len.into(),
+    );
 }
 
 #[test]

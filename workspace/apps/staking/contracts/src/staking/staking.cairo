@@ -1039,7 +1039,7 @@ pub mod Staking {
             let epoch_info = self.get_epoch_info();
             let epoch_len = epoch_info.epoch_len_in_blocks();
             let epoch_id = epoch_info.current_epoch();
-            let current_epoch_starting_block = 0;
+            let current_epoch_starting_block = epoch_info.current_epoch_starting_block();
             AttestationInfoTrait::new(
                 staker_address: staker_address,
                 stake: self.get_staker_balance_curr_epoch(:staker_address).total_amount(),

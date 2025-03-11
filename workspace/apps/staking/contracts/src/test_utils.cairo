@@ -22,7 +22,6 @@ use staking::minting_curve::interface::{
 };
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolMemberInfo};
-use staking::pool::objects::{VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait};
 use staking::pool::pool::Pool;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
@@ -35,7 +34,7 @@ use staking::staking::objects::{
 };
 use staking::staking::staking::Staking;
 use staking::types::{
-    Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest, VecIndex,
+    Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
 };
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_commission_amount_rounded_up,

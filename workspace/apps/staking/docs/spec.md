@@ -1224,10 +1224,10 @@ Staking contract of latest version.
 | new_reward_supplier | ContractAddress | ❌     |
 
 ### Epoch Info Changed
-| data                | type            | keyed |
-| ------------------- | --------------- | ----- |
-| block_duration      | u16             | ❌     |
-| epoch_length        | u16             | ❌     |
+| data           | type | keyed |
+| -------------- | ---- | ----- |
+| block_duration | u16  | ❌     |
+| epoch_length   | u16  | ❌     |
 
 # Delegation pool contract
 
@@ -1861,6 +1861,7 @@ fn validate_next_planned_attestation_block(self: @TContractState, block_number: 
 
 #### description <!-- omit from toc -->
 Receives a block number and checks if this is the block in the next epoch this caller should attest to.
+Note: this function does not return the correct result if it is called in the same epoch that an attestation info update is done.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
@@ -1873,10 +1874,10 @@ Any address can execute, only a registered Operational address of an existing st
 ## Events
 
 ### Staker Attestation Successful
-| data           | type              | keyed |
-| -------------- | ----------------- | ----- |
-| staker_address | address           | ✅    |
-| epoch          | Epoch             | ❌    |
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| staker_address | address | ✅     |
+| epoch          | Epoch   | ❌     |
 
 # Errors
 ### STAKER_EXISTS
