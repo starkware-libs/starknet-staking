@@ -261,17 +261,11 @@ pub(crate) fn initialize_pool_state(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
-    commission: Commission,
     governance_admin: ContractAddress,
 ) -> Pool::ContractState {
     let mut state = Pool::contract_state_for_testing();
     Pool::constructor(
-        ref state,
-        :staker_address,
-        :staking_contract,
-        :token_address,
-        :commission,
-        :governance_admin,
+        ref state, :staker_address, :staking_contract, :token_address, :governance_admin,
     );
     state
 }
