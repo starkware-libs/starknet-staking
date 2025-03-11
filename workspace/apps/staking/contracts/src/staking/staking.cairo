@@ -615,8 +615,6 @@ pub mod Staking {
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
-            let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-            pool_dispatcher.update_commission_from_staking_contract(:commission);
 
             // Emit event.
             self
@@ -1204,7 +1202,6 @@ pub mod Staking {
                 :staker_address,
                 :staking_contract,
                 :token_address,
-                :commission,
                 :governance_admin,
             );
             self.emit(Events::NewDelegationPool { staker_address, pool_contract, commission });

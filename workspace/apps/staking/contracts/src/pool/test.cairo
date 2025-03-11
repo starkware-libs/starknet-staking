@@ -88,7 +88,6 @@ fn test_send_rewards_to_member() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: cfg.test_info.staking_contract,
         :token_address,
-        commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     // Setup pool_member_info and expected results before sending rewards.
@@ -377,7 +376,6 @@ fn test_assert_staker_is_active() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: cfg.test_info.staking_contract,
         token_address: cfg.staking_contract_info.token_address,
-        commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     assert!(state.staker_removed.read() == false);
@@ -393,7 +391,6 @@ fn test_assert_staker_is_active_panic() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: cfg.test_info.staking_contract,
         token_address: cfg.staking_contract_info.token_address,
-        commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     state.staker_removed.write(true);
@@ -408,7 +405,6 @@ fn test_set_staker_removed() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: cfg.test_info.staking_contract,
         token_address: cfg.staking_contract_info.token_address,
-        commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     cheat_caller_address_once(
@@ -434,7 +430,6 @@ fn test_set_staker_removed_caller_is_not_staking_contract() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: cfg.test_info.staking_contract,
         token_address: cfg.staking_contract_info.token_address,
-        commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     cheat_caller_address_once(
@@ -452,7 +447,6 @@ fn test_set_staker_removed_already_removed() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: cfg.test_info.staking_contract,
         token_address: cfg.staking_contract_info.token_address,
-        commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     cheat_caller_address(
@@ -516,7 +510,6 @@ fn test_change_reward_address_pool_member_not_exist() {
         staker_address: cfg.test_info.staker_address,
         :staking_contract,
         :token_address,
-        commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     cheat_caller_address_once(
@@ -946,7 +939,6 @@ fn test_claim_rewards_pool_member_not_exist() {
         staker_address: cfg.test_info.staker_address,
         staking_contract: cfg.test_info.staking_contract,
         token_address: cfg.staking_contract_info.token_address,
-        commission: cfg.staker_info.get_pool_info().commission,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     state.claim_rewards(pool_member: NON_POOL_MEMBER_ADDRESS());
@@ -1134,90 +1126,6 @@ fn test_contract_parameters() {
 }
 
 #[test]
-fn test_update_commission_from_staking_contract() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-
-    let parameters_before_update = pool_dispatcher.contract_parameters();
-    let ecpected_parameters_before_update = PoolContractInfo {
-        commission: cfg.staker_info.get_pool_info().commission, ..parameters_before_update,
-    };
-    assert!(parameters_before_update == ecpected_parameters_before_update);
-
-    let commission = cfg.staker_info.get_pool_info().commission - 1;
-    cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
-    pool_dispatcher.update_commission_from_staking_contract(:commission);
-
-    let parameters_after_update = pool_dispatcher.contract_parameters();
-    let expected_parameters_after_update = PoolContractInfo {
-        commission, ..parameters_before_update,
-    };
-    assert!(parameters_after_update == expected_parameters_after_update);
-}
-
-#[test]
-#[should_panic(expected: "Caller is not staking contract")]
-fn test_update_commission_caller_not_staking_contract() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    let commission = cfg.staker_info.get_pool_info().commission - 1;
-    cheat_caller_address_once(
-        contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
-    );
-    pool_dispatcher.update_commission_from_staking_contract(:commission);
-}
-
-#[test]
-#[should_panic(expected: "Commission can only be decreased")]
-fn test_update_commission_with_higher_commission() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
-    pool_dispatcher
-        .update_commission_from_staking_contract(
-            commission: cfg.staker_info.get_pool_info().commission + 1,
-        );
-}
-
-#[test]
-#[should_panic(expected: "Commission can only be decreased")]
-fn test_update_commission_with_same_commission() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    let parameters_before_update = pool_dispatcher.contract_parameters();
-    cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
-    pool_dispatcher
-        .update_commission_from_staking_contract(
-            commission: cfg.staker_info.get_pool_info().commission,
-        );
-    let parameters_after_update = pool_dispatcher.contract_parameters();
-    let expected_parameters_after_update = PoolContractInfo {
-        commission: cfg.staker_info.get_pool_info().commission, ..parameters_before_update,
-    };
-    assert!(parameters_after_update == expected_parameters_after_update);
-}
-
-#[test]
 #[should_panic(expected: "Caller is not staking contract")]
 fn test_update_rewards_from_staking_contract_caller_not_staking_contract() {
     let cfg: StakingInitConfig = Default::default();
@@ -1357,6 +1265,7 @@ fn test_pool_member_info() {
     start_cheat_block_timestamp_global(block_timestamp: unstake_time.into());
     staking_dispatcher.unstake_action(:staker_address);
     let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
+    expected_pool_member_info.commission = Zero::zero();
     assert!(pool_member_info == expected_pool_member_info);
 }
 

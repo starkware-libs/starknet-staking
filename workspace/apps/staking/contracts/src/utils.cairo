@@ -25,14 +25,12 @@ pub(crate) fn deploy_delegation_pool_contract(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     token_address: ContractAddress,
-    commission: Commission,
     governance_admin: ContractAddress,
 ) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     staker_address.serialize(ref calldata);
     staking_contract.serialize(ref calldata);
     token_address.serialize(ref calldata);
-    commission.serialize(ref calldata);
     governance_admin.serialize(ref calldata);
     let (pool_address, _) = deploy_syscall(
         :class_hash, :contract_address_salt, calldata: calldata.span(), deploy_from_zero: false,

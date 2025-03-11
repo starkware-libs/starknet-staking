@@ -22,7 +22,7 @@ pub mod Pool {
     };
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
-        IStakingPoolDispatcherTrait, StakerInfo,
+        IStakingPoolDispatcherTrait, StakerInfo, StakerInfoTrait,
     };
     use staking::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
@@ -74,8 +74,8 @@ pub mod Pool {
         staking_pool_dispatcher: IStakingPoolDispatcher,
         // Dispatcher for the token contract.
         token_dispatcher: IERC20Dispatcher,
-        // The commission rate for the pool, in BPS.
-        commission: Commission,
+        // Deprecated commission field, was used in V0.
+        // commission: Commission,
         // Map pool member to their epoch-balance info.
         pool_member_epoch_balance: Map<ContractAddress, PoolMemberBalanceTrace>,
         // Map version to class hash of the contract.
@@ -117,7 +117,6 @@ pub mod Pool {
         staker_address: ContractAddress,
         staking_contract: ContractAddress,
         token_address: ContractAddress,
-        commission: Commission,
         governance_admin: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
@@ -127,7 +126,6 @@ pub mod Pool {
             .staking_pool_dispatcher
             .write(IStakingPoolDispatcher { contract_address: staking_contract });
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
-        self.commission.write(commission);
         self.staker_removed.write(false);
         self.rewards_info.deref().insert(key: self.get_current_epoch(), value: 0);
     }
@@ -507,7 +505,7 @@ pub mod Pool {
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
             external_pool_member_info.amount = self.get_amount_view(:pool_member);
             external_pool_member_info.unclaimed_rewards += self.calculate_rewards(:pool_member);
-            external_pool_member_info.commission = self.commission.read();
+            external_pool_member_info.commission = self.get_commission_from_staking_contract();
             external_pool_member_info
         }
 
@@ -526,24 +524,9 @@ pub mod Pool {
                 final_staker_index: self.final_staker_index.read(),
                 staking_contract: self.staking_pool_dispatcher.read().contract_address,
                 token_address: self.token_dispatcher.read().contract_address,
-                commission: self.commission.read(),
+                commission: self.get_commission_from_staking_contract(),
                 staker_removed: self.staker_removed.read(),
             }
-        }
-
-        fn update_commission_from_staking_contract(
-            ref self: ContractState, commission: Commission,
-        ) {
-            // Asserts.
-            let old_commission = self.commission.read();
-            assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
-            assert!(
-                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
-                "{}",
-                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
-            );
-
-            self.commission.write(commission);
         }
 
         /// **Note:** This function is not tested yet.
@@ -783,6 +766,19 @@ pub mod Pool {
         /// TODO: Implement.
         fn calculate_rewards(self: @ContractState, pool_member: ContractAddress) -> Amount {
             Zero::zero()
+        }
+
+        fn get_commission_from_staking_contract(self: @ContractState) -> Commission {
+            if self.staker_removed.read() {
+                return Zero::zero();
+            }
+            let staking_dispatcher = IStakingDispatcher {
+                contract_address: self.staking_pool_dispatcher.read().contract_address,
+            };
+            staking_dispatcher
+                .staker_info(staker_address: self.staker_address.read())
+                .get_pool_info()
+                .commission
         }
     }
 }
