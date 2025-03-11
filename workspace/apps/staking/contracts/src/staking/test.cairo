@@ -177,59 +177,6 @@ fn test_stake() {
 }
 
 #[test]
-fn test_send_rewards_to_delegation_pool() {
-    // Initialize staking state.
-    let mut cfg: StakingInitConfig = Default::default();
-    let pool_contract = POOL_CONTRACT_ADDRESS();
-    let mut state = initialize_staking_state_from_cfg(ref :cfg);
-    cfg.test_info.staking_contract = snforge_std::test_address();
-    let token_address = cfg.staking_contract_info.token_address;
-    let token_dispatcher = IERC20Dispatcher {
-        contract_address: cfg.staking_contract_info.token_address,
-    };
-    // Deploy reward supplier contract.
-    let reward_supplier = deploy_reward_supplier_contract(:cfg);
-    cfg.staking_contract_info.reward_supplier = reward_supplier;
-    state
-        .reward_supplier_dispatcher
-        .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
-    // Setup staker_info and expected results before sending rewards.
-    let unclaimed_rewards = POOL_MEMBER_UNCLAIMED_REWARDS;
-    cfg
-        .staker_info
-        .pool_info =
-            Option::Some(
-                StakerPoolInfo {
-                    pool_contract, unclaimed_rewards, ..cfg.staker_info.get_pool_info(),
-                },
-            );
-    cheat_reward_for_reward_supplier(
-        :cfg, :reward_supplier, expected_reward: unclaimed_rewards, :token_address,
-    );
-    let pool_balance_before_rewards = token_dispatcher.balance_of(account: pool_contract);
-    let mut expected_staker_info = cfg.staker_info.clone();
-    expected_staker_info
-        .pool_info =
-            Option::Some(
-                StakerPoolInfo {
-                    unclaimed_rewards: Zero::zero(), ..cfg.staker_info.get_pool_info(),
-                },
-            );
-    // Send rewards to pool contract.
-    state
-        .send_rewards_to_delegation_pool(
-            staker_address: cfg.test_info.staker_address,
-            ref staker_info: cfg.staker_info,
-            :token_dispatcher,
-        );
-    // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
-    assert!(expected_staker_info == cfg.staker_info);
-    let pool_balance_after_rewards = token_dispatcher.balance_of(account: pool_contract);
-    assert!(pool_balance_after_rewards == pool_balance_before_rewards + unclaimed_rewards.into());
-}
-
-
-#[test]
 fn test_send_rewards_to_staker() {
     // Initialize staking state.
     let mut cfg: StakingInitConfig = Default::default();
@@ -802,7 +749,7 @@ fn test_unstake_action() {
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     // StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
     // events.
-    assert_number_of_events(actual: events.len(), expected: 3, message: "unstake_action");
+    assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_action");
     // Validate StakerRewardClaimed event.
     assert_staker_reward_claimed_event(
         spied_event: events[0],
@@ -810,16 +757,9 @@ fn test_unstake_action() {
         reward_address: cfg.staker_info.reward_address,
         amount: unclaimed_rewards_own,
     );
-    // Validate RewardsSuppliedToDelegationPool event.
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[1],
-        staker_address: cfg.test_info.staker_address,
-        pool_address: pool_contract,
-        amount: Zero::zero(),
-    );
     // Validate DeleteStaker event.
     assert_delete_staker_event(
-        spied_event: events[2],
+        spied_event: events[1],
         :staker_address,
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
@@ -1507,17 +1447,11 @@ fn test_switch_staking_delegation_pool() {
     // Validate events.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 6, message: "switch_staking_delegation_pool",
-    );
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[0],
-        staker_address: cfg.test_info.staker_address,
-        pool_address: to_pool_contract,
-        amount: unclaimed_rewards_pool,
+        actual: events.len(), expected: 4, message: "switch_staking_delegation_pool",
     );
     let self_stake = to_staker_info.amount_own;
     assert_stake_balance_changed_event(
-        spied_event: events[1],
+        spied_event: events[0],
         staker_address: to_staker,
         old_self_stake: self_stake,
         old_delegated_stake: Zero::zero(),
@@ -1525,20 +1459,14 @@ fn test_switch_staking_delegation_pool() {
         new_delegated_stake: switched_amount,
     );
     assert_change_delegation_pool_intent_event(
-        spied_event: events[2],
+        spied_event: events[1],
         pool_contract: from_pool_contract,
         identifier: pool_member.into(),
         old_intent_amount: cfg.pool_member_info._deprecated_amount,
         new_intent_amount: cfg.pool_member_info._deprecated_amount - switched_amount,
     );
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[3],
-        staker_address: cfg.test_info.staker_address,
-        pool_address: to_pool_contract,
-        amount: unclaimed_rewards_pool,
-    );
     assert_stake_balance_changed_event(
-        spied_event: events[4],
+        spied_event: events[2],
         staker_address: to_staker,
         old_self_stake: self_stake,
         old_delegated_stake: switched_amount,
@@ -1546,7 +1474,7 @@ fn test_switch_staking_delegation_pool() {
         new_delegated_stake: switched_amount * 2,
     );
     assert_change_delegation_pool_intent_event(
-        spied_event: events[5],
+        spied_event: events[3],
         pool_contract: from_pool_contract,
         identifier: pool_member.into(),
         old_intent_amount: cfg.pool_member_info._deprecated_amount - switched_amount,
