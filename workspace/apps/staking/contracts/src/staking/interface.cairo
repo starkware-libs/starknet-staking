@@ -398,6 +398,15 @@ pub struct StakerPoolInfo {
 }
 
 #[generate_trait]
+pub impl StakerPoolInfoImpl of StakerPoolInfoTrait {
+    fn new(pool_contract: ContractAddress, commission: Commission) -> StakerPoolInfo {
+        StakerPoolInfo {
+            pool_contract, amount: Zero::zero(), unclaimed_rewards: Zero::zero(), commission,
+        }
+    }
+}
+
+#[generate_trait]
 pub impl StakerInfoImpl of StakerInfoTrait {
     fn get_pool_info(self: StakerInfo) -> StakerPoolInfo {
         self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)

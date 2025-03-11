@@ -17,7 +17,8 @@ pub mod Staking {
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig, IStakingMigration,
-        IStakingPause, IStakingPool, PauseEvents, StakerInfo, StakerPoolInfo, StakingContractInfo,
+        IStakingPause, IStakingPool, PauseEvents, StakerInfo, StakerPoolInfoTrait,
+        StakingContractInfo,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
@@ -229,14 +230,7 @@ pub mod Staking {
                         token_address: token_dispatcher.contract_address,
                         :commission,
                     );
-                Option::Some(
-                    StakerPoolInfo {
-                        pool_contract,
-                        amount: Zero::zero(),
-                        unclaimed_rewards: Zero::zero(),
-                        commission,
-                    },
-                )
+                Option::Some(StakerPoolInfoTrait::new(:pool_contract, :commission))
             } else {
                 Option::None
             };
@@ -478,15 +472,7 @@ pub mod Staking {
             // Update staker info and commit to storage.
             // No need to update rewards as there is no change in staked amount (own or delegated).
             staker_info
-                .pool_info =
-                    Option::Some(
-                        StakerPoolInfo {
-                            pool_contract,
-                            amount: Zero::zero(),
-                            unclaimed_rewards: Zero::zero(),
-                            commission,
-                        },
-                    );
+                .pool_info = Option::Some(StakerPoolInfoTrait::new(:pool_contract, :commission));
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
