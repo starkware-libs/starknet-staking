@@ -717,15 +717,6 @@ pub(crate) fn cheat_reward_for_reward_supplier(
     );
 }
 
-fn change_global_index(ref cfg: StakingInitConfig, index: Index) {
-    snforge_std::store(
-        target: cfg.test_info.staking_contract,
-        storage_address: selector!("global_index"),
-        serialized_value: array![index.into()].span(),
-    );
-    cfg.staking_contract_info.global_index = index;
-}
-
 fn compute_unclaimed_rewards_member(
     amount: Amount, interest: Index, commission: Commission,
 ) -> Amount {
