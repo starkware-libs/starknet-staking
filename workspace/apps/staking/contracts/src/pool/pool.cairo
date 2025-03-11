@@ -433,12 +433,18 @@ pub mod Pool {
                 },
                 Option::None => {
                     // Pool member does not exist. Create a new record.
-                    let pool_member_info = InternalPoolMemberInfoLatestTrait::new(
-                        reward_address: switch_pool_data.reward_address,
-                    );
+                    let reward_address = switch_pool_data.reward_address;
+                    let pool_member_info = InternalPoolMemberInfoLatestTrait::new(:reward_address);
 
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);
+                    let staker_address = self.staker_address.read();
+                    self
+                        .emit(
+                            Events::NewPoolMember {
+                                pool_member, staker_address, reward_address, amount,
+                            },
+                        );
                     pool_member_info
                 },
             };

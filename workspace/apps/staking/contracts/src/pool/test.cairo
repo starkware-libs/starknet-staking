@@ -984,6 +984,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let mut spy = snforge_std::spy_events();
+    let staker_address = cfg.test_info.staker_address;
     let pool_member = cfg.test_info.pool_member_address;
     let reward_address = cfg.pool_member_info.reward_address;
 
@@ -1037,16 +1038,19 @@ fn test_enter_delegation_pool_from_staking_contract() {
     // Validate two PoolMemberBalanceChanged events.
     let events = spy.get_events().emitted_by(pool_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 2, message: "enter_delegation_pool_from_staking_contract",
+        actual: events.len(), expected: 3, message: "enter_delegation_pool_from_staking_contract",
+    );
+    assert_new_pool_member_event(
+        spied_event: events[0], :pool_member, :staker_address, :reward_address, :amount,
     );
     assert_delegation_pool_member_balance_changed_event(
-        spied_event: events[0],
+        spied_event: events[1],
         :pool_member,
         old_delegated_stake: Zero::zero(),
         new_delegated_stake: amount,
     );
     assert_delegation_pool_member_balance_changed_event(
-        spied_event: events[1],
+        spied_event: events[2],
         :pool_member,
         old_delegated_stake: amount,
         new_delegated_stake: updated_amount,
