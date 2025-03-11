@@ -303,23 +303,6 @@ pub(crate) fn assert_staker_removed_event(
     );
 }
 
-pub(crate) fn assert_calculated_rewards_event(
-    spied_event: @(ContractAddress, Event),
-    last_timestamp: Timestamp,
-    new_timestamp: Timestamp,
-    rewards_calculated: Amount,
-) {
-    let expected_event = RewardSupplierEvents::CalculatedRewards {
-        last_timestamp, new_timestamp, rewards_calculated,
-    };
-    assert_expected_event_emitted(
-        :spied_event,
-        :expected_event,
-        expected_event_selector: @selector!("CalculatedRewards"),
-        expected_event_name: "CalculatedRewards",
-    );
-}
-
 pub(crate) fn assert_mint_request_event(
     spied_event: @(ContractAddress, Event), total_amount: Amount, num_msgs: u128,
 ) {

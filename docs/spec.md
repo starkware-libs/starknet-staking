@@ -91,7 +91,6 @@
     - [Switch Delegation Pool](#switch-delegation-pool)
 - [L2 Reward supplier contract](#l2-reward-supplier-contract)
   - [Functions](#functions-2)
-    - [calculate\_staking\_rewards](#calculate_staking_rewards)
     - [current\_epoch\_rewards](#current_epoch_rewards)
     - [update\_unclaimed\_rewards\_from\_staking\_contract](#update_unclaimed_rewards_from_staking_contract)
     - [claim\_rewards](#claim_rewards-2)
@@ -280,7 +279,6 @@ classDiagram
     staking_contract,
     erc20_dispatcher,
     l1_reward_supplier,
-    calculate_staking_rewards()
     current_epoch_rewards()
     update_unclaimed_rewards_from_staking_contract()
     claim_rewards()
@@ -445,7 +443,6 @@ sequenceDiagram
   participant MintingCurve
   participant L1
   caller ->>+ Staking: update_global_index
-  Staking ->>+ RewardSupplier: calculate_staking_rewards
   RewardSupplier ->>+ MintingCurve: yearly_mint
   MintingCurve ->> Staking: get_total_stake
   MintingCurve -->>- RewardSupplier: return yearly amount
@@ -1647,26 +1644,6 @@ Only staking contract can execute.
 # L2 Reward supplier contract
 
 ## Functions
-### calculate_staking_rewards
-```rust
-fn calculate_staking_rewards(ref self: TContractState) -> Amount
-```
-#### description <!-- omit from toc -->
-Calculate the total amount of rewards owed to the stakers (based on total stake), since the previous
-time it was calculated.
-#### return <!-- omit from toc -->
-rewards: [Amount](#amount) - the rewards owed to stakers, in FRI.
-#### emits <!-- omit from toc -->
-[Mint Request](#mint-request)
-#### errors <!-- omit from toc -->
-#### logic <!-- omit from toc -->
-1. Invoke the Minting Curve's [yearly_mint](#yearly-mint) to receive the theoretic yearly amount of rewards.
-2. From the theoretic yearly amount, deduce the rewards from the last timestamp.
-3. Request funds from L1 if needed.
-
-#### access control <!-- omit from toc -->
-Only staking contract.
-
 ### current_epoch_rewards
 ```rust
 fn current_epoch_rewards(self: @TContractState) -> Amount

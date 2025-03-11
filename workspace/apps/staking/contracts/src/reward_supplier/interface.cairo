@@ -4,8 +4,6 @@ use starkware_utils::types::time::time::Timestamp;
 
 #[starknet::interface]
 pub trait IRewardSupplier<TContractState> {
-    // Calculates the rewards since the last_timestamp, and return the index diff.
-    fn calculate_staking_rewards(ref self: TContractState) -> Amount;
     // Calculates the rewards for the current epoch.
     fn current_epoch_rewards(self: @TContractState) -> Amount;
     // Updates the unclaimed rewards from the staking contract.
@@ -24,19 +22,11 @@ pub trait IRewardSupplier<TContractState> {
 
 pub mod Events {
     use staking::types::Amount;
-    use starkware_utils::types::time::time::Timestamp;
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct MintRequest {
         pub total_amount: Amount,
         pub num_msgs: u128,
-    }
-
-    #[derive(Debug, Drop, PartialEq, starknet::Event)]
-    pub struct CalculatedRewards {
-        pub last_timestamp: Timestamp,
-        pub new_timestamp: Timestamp,
-        pub rewards_calculated: Amount,
     }
 }
 

@@ -40,8 +40,6 @@ pub mod RewardSupplier {
     #[abi(embed_v0)]
     impl RolesImpl = RolesComponent::RolesImpl<ContractState>;
 
-    pub const SECONDS_IN_YEAR: u128 = 365 * 24 * 60 * 60;
-
     #[storage]
     struct Storage {
         #[substorage(v0)]
@@ -80,7 +78,6 @@ pub mod RewardSupplier {
         accesscontrolEvent: AccessControlComponent::Event,
         #[flat]
         src5Event: SRC5Component::Event,
-        CalculatedRewards: Events::CalculatedRewards,
         MintRequest: Events::MintRequest,
     }
 
@@ -124,39 +121,6 @@ pub mod RewardSupplier {
 
     #[abi(embed_v0)]
     impl RewardSupplierImpl of IRewardSupplier<ContractState> {
-        // This function is called by the staking contract to update the rewards owed to the staking
-        // contract, and returns the calculated rewards.
-        fn calculate_staking_rewards(ref self: ContractState) -> Amount {
-            // Asserts.
-            let staking_contract = self.staking_contract.read();
-            assert!(
-                get_caller_address() == staking_contract,
-                "{}",
-                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
-            );
-
-            // Read the last timestamp before it's updated in update_rewards.
-            let last_timestamp = self.last_timestamp.read();
-
-            // Calculate the rewards and update the unclaimed rewards.
-            let rewards = self.update_timestamp_and_calculate_rewards();
-            let new_timestamp = self.last_timestamp.read();
-            let unclaimed_rewards = self.update_unclaimed_rewards(:rewards);
-
-            // Request funds from L1 if needed.
-            self.request_funds(:unclaimed_rewards);
-
-            // Emit event.
-            self
-                .emit(
-                    Events::CalculatedRewards {
-                        last_timestamp, new_timestamp, rewards_calculated: rewards,
-                    },
-                );
-
-            rewards
-        }
-
         fn current_epoch_rewards(self: @ContractState) -> Amount {
             let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
             let staking_dispatcher = IStakingDispatcher {
@@ -249,29 +213,6 @@ pub mod RewardSupplier {
 
     #[generate_trait]
     impl InternalRewardSupplierFunctions of InternalRewardSupplierFunctionsTrait {
-        // Returns the reward since the last timestamp, and updates the last timestamp.
-        fn update_timestamp_and_calculate_rewards(ref self: ContractState) -> Amount {
-            // Receive yearly rewards from the minting curve contract.
-            let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
-            let yearly_mint = minting_curve_dispatcher.yearly_mint();
-
-            // Update the last timestamp.
-            let last_timestamp = self.last_timestamp.read();
-            let current_time = Time::now();
-            self.last_timestamp.write(current_time);
-
-            // Return the rewards adjusted by the time passed since the last timestamp.
-            let seconds_diff: u64 = current_time.sub(other: last_timestamp).into();
-            yearly_mint * seconds_diff.into() / SECONDS_IN_YEAR
-        }
-
-        fn update_unclaimed_rewards(ref self: ContractState, rewards: Amount) -> Amount {
-            let mut unclaimed_rewards = self.unclaimed_rewards.read();
-            unclaimed_rewards += rewards;
-            self.unclaimed_rewards.write(unclaimed_rewards);
-            unclaimed_rewards
-        }
-
         // Requests funds from L1 to account for new rewards, if the contract's balance is too low.
         fn request_funds(ref self: ContractState, unclaimed_rewards: Amount) {
             // Read current balance.
