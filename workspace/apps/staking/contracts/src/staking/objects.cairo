@@ -62,6 +62,8 @@ pub(crate) struct EpochInfo {
     starting_block: u64,
     // The first epoch, can be changed by fn update.
     starting_epoch: Epoch,
+    // The last starting block of the last epoch with previous length.
+    last_starting_block_before_update: u64,
 }
 
 #[generate_trait]
@@ -69,7 +71,13 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     fn new(block_duration: u16, length: u16, starting_block: u64) -> EpochInfo {
         assert!(length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
         assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
-        EpochInfo { block_duration, length, starting_block, starting_epoch: Zero::zero() }
+        EpochInfo {
+            block_duration,
+            length,
+            starting_block,
+            starting_epoch: Zero::zero(),
+            last_starting_block_before_update: Zero::zero(),
+        }
     }
 
     fn current_epoch(self: @EpochInfo) -> Epoch {
@@ -85,6 +93,7 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     fn update(ref self: EpochInfo, block_duration: u16, epoch_length: u16) {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
         assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
+        self.last_starting_block_before_update = self.current_epoch_starting_block();
         self.starting_epoch = self.next_epoch();
         self.starting_block = self.calculate_next_epoch_starting_block();
         self.length = epoch_length;
@@ -98,6 +107,16 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
 
     fn epoch_len_in_blocks(self: @EpochInfo) -> u16 {
         *self.length
+    }
+
+    fn current_epoch_starting_block(self: @EpochInfo) -> u64 {
+        if *self.starting_block > get_block_number() {
+            // The epoch info updated and the current block is before the starting block of the
+            // next epoch with the new length.
+            *self.last_starting_block_before_update
+        } else {
+            self.calculate_next_epoch_starting_block() - self.epoch_len_in_blocks().into()
+        }
     }
 }
 
@@ -345,5 +364,8 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
     fn set_epoch_id(ref self: AttestationInfo, epoch_id: Epoch) -> AttestationInfo {
         self.epoch_id = epoch_id;
         self
+    }
+    fn set_current_epoch_starting_block(ref self: AttestationInfo, block_number: u64) {
+        self.current_epoch_starting_block = block_number;
     }
 }

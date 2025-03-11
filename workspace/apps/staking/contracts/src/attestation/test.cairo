@@ -237,8 +237,12 @@ fn test_validate_next_planned_attestation_block() {
         .into() % (cfg.staking_contract_info.epoch_info.epoch_len_in_blocks()
             - (MIN_ATTESTATION_WINDOW.into() + 1))
         .into();
-    // TODO: Change starting block once set in the staking contract.
-    let planned_attestation_block_number = 0 + block_offset.try_into().unwrap();
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let epoch_info = staking_dispatcher.get_epoch_info();
+    let next_epoch_starting_block = epoch_info.current_epoch_starting_block()
+        + epoch_info.epoch_len_in_blocks().into();
+    let planned_attestation_block_number = next_epoch_starting_block
+        + block_offset.try_into().unwrap();
 
     cheat_caller_address(
         contract_address: attestation_contract,

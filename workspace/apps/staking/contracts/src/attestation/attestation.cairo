@@ -132,6 +132,8 @@ pub mod Attestation {
         fn validate_next_planned_attestation_block(
             self: @ContractState, block_number: u64,
         ) -> bool {
+            // Note: this function does not return the correct result if it is called in the same
+            // epoch that an attestation info update is done.
             let operational_address = get_caller_address();
             let attestation_window = self.attestation_window.read();
             let staking_dispatcher = IStakingAttestationDispatcher {
@@ -140,6 +142,11 @@ pub mod Attestation {
             let mut staking_attestation_info = staking_dispatcher
                 .get_attestation_info_by_operational_address(:operational_address);
             staking_attestation_info.set_epoch_id(staking_attestation_info.epoch_id() + 1);
+            staking_attestation_info
+                .set_current_epoch_starting_block(
+                    staking_attestation_info.current_epoch_starting_block()
+                        + staking_attestation_info.epoch_len().into(),
+                );
             let expected_attestation_block = self
                 ._calculate_expected_attestation_block(
                     :staking_attestation_info, :attestation_window,
