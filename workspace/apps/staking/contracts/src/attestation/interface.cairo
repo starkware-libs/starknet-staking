@@ -24,5 +24,11 @@ pub mod Events {
         pub staker_address: ContractAddress,
         pub epoch: Epoch,
     }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct AttestationWindowChanged {
+        pub old_attestation_window: u8,
+        pub new_attestation_window: u8,
+    }
 }
 

@@ -527,3 +527,17 @@ pub(crate) fn assert_staker_attestation_successful_event(
         expected_event_name: "StakerAttestationSuccessful",
     );
 }
+
+pub(crate) fn assert_attestation_window_changed_event(
+    spied_event: @(ContractAddress, Event), old_attestation_window: u8, new_attestation_window: u8,
+) {
+    let expected_event = AttestationEvents::AttestationWindowChanged {
+        old_attestation_window, new_attestation_window,
+    };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("AttestationWindowChanged"),
+        expected_event_name: "AttestationWindowChanged",
+    );
+}
