@@ -771,44 +771,6 @@ pub(crate) fn add_reward_for_reward_supplier(
     );
 }
 
-pub(crate) fn load_staker_info_from_map(
-    staker_address: ContractAddress, contract: ContractAddress,
-) -> VersionedInternalStakerInfo {
-    let map_selector = selector!("staker_info");
-    let mut keys = array![];
-    staker_address.serialize(ref keys);
-    let storage_address = snforge_std::map_entry_address(:map_selector, keys: keys.span());
-    let mut raw_serialized_value = snforge_std::load(
-        target: contract,
-        :storage_address,
-        size: Store::<VersionedInternalStakerInfo>::size().into(),
-    );
-    let idx = raw_serialized_value.pop_front().expect('Failed pop_front');
-    if idx.is_zero() {
-        return VersionedInternalStakerInfo::None;
-    }
-    assert!(idx == 2, "Invalid Version loaded from map");
-    let mut span = raw_serialized_value.span();
-    let reward_address = Serde::<ContractAddress>::deserialize(ref span).expect('Failed reward');
-    let operational_address = Serde::<ContractAddress>::deserialize(ref span)
-        .expect('Failed operational');
-    let unstake_time: Option<Timestamp> = deserialize_option(ref data: span);
-    let amount_own = Serde::<Amount>::deserialize(ref span).expect('Failed amount_own');
-    Serde::<Index>::deserialize(ref span).expect('Failed index');
-    let unclaimed_rewards_own = Serde::<Amount>::deserialize(ref span)
-        .expect('Failed unclaimed_rewards_own');
-    let pool_info: Option<StakerPoolInfo> = deserialize_option(ref data: span);
-    let staker_info = VersionedInternalStakerInfoTrait::new_latest(
-        :reward_address,
-        :operational_address,
-        :unstake_time,
-        :amount_own,
-        :unclaimed_rewards_own,
-        :pool_info,
-    );
-    return staker_info;
-}
-
 /// Deserialize an Option<T> from the given data.
 pub(crate) fn deserialize_option<T, +Serde<T>, +Drop<T>>(ref data: Span<felt252>) -> Option<T> {
     let idx = *data.pop_front().expect('Failed pop_front');

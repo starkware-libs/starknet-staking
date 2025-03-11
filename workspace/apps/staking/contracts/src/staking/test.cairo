@@ -78,8 +78,8 @@ use test_utils::{
     declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
     deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
     general_contract_system_deployment, initialize_staking_state_from_cfg, load_from_simple_map,
-    load_staker_info_from_map, stake_for_testing_using_dispatcher, stake_from_zero_address,
-    stake_with_pool_enabled, store_to_simple_map,
+    stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,
+    store_to_simple_map,
 };
 
 #[test]
@@ -796,9 +796,7 @@ fn test_unstake_action() {
     let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
     assert!(staker_amount == cfg.staker_info._deprecated_amount_own);
-    let actual_staker_info: VersionedInternalStakerInfo = load_staker_info_from_map(
-        staker_address: staker_address, contract: staking_contract,
-    );
+    let actual_staker_info = staking_dispatcher.get_staker_info(:staker_address);
     assert!(actual_staker_info.is_none());
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     // StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
@@ -958,6 +956,7 @@ fn test_add_stake_from_pool() {
     let pool_balance_before = token_dispatcher.balance_of(pool_contract);
     let total_stake_before = staking_dispatcher.get_total_stake();
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    let pool_info_before = staker_info_before.get_pool_info();
     let mut spy = snforge_std::spy_events();
     start_cheat_block_timestamp_global(
         block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
@@ -973,25 +972,13 @@ fn test_add_stake_from_pool() {
     assert!(pool_balance_after == pool_balance_before - pool_amount.into());
 
     // Validate staker info.
-    let expected_staker_info = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: staker_info_before.reward_address,
-        operational_address: staker_info_before.operational_address,
-        unstake_time: staker_info_before.unstake_time,
-        amount_own: staker_info_before.amount_own,
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::Some(
-            StakerPoolInfo {
-                pool_contract: pool_contract,
-                amount: pool_amount,
-                unclaimed_rewards: Zero::zero(),
-                commission: staker_info_before.get_pool_info().commission,
-            },
-        ),
+    let expected_pool_info = Option::Some(
+        StakerPoolInfo { amount: pool_amount, ..pool_info_before },
     );
-    let loaded_staker_info_after = load_staker_info_from_map(
-        :staker_address, contract: staking_contract,
-    );
-    assert!(loaded_staker_info_after == expected_staker_info);
+    let expected_staker_info = StakerInfo { pool_info: expected_pool_info, ..staker_info_before };
+    let staker_info_after = staking_dispatcher.staker_info(:staker_address);
+    assert!(staker_info_after == expected_staker_info);
+
     // Validate `StakeBalanceChanged` event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "add_stake_from_pool");
