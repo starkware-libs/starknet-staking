@@ -72,7 +72,7 @@
     - [claim\_rewards](#claim_rewards-1)
     - [switch\_delegation\_pool](#switch_delegation_pool)
     - [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract)
-    - [set\_final\_staker\_index](#set_final_staker_index)
+    - [set\_staker\_removed](#set_staker_removed)
     - [change\_reward\_address](#change_reward_address-1)
     - [pool\_member\_info](#pool_member_info)
     - [get\_pool\_member\_info](#get_pool_member_info)
@@ -83,7 +83,7 @@
     - [Pool Member Balance Changed](#pool-member-balance-changed)
     - [Pool Member Exit Intent](#pool-member-exit-intent)
     - [Pool Member Exit Action](#pool-member-exit-action)
-    - [Final Index Set](#final-index-set)
+    - [Staker Removed](#staker-removed)
     - [New Pool Member](#new-pool-member)
     - [Delete Pool Member](#delete-pool-member)
     - [Pool Member Reward Claimed](#pool-member-reward-claimed)
@@ -127,7 +127,7 @@
     - [MISSING\_UNSTAKE\_INTENT](#missing_unstake_intent)
     - [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
     - [UNEXPECTED\_BALANCE](#unexpected_balance)
-    - [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
+    - [STAKER\_ALREADY\_REMOVED](#staker_already_removed)
     - [CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#claim_rewards_from_unauthorized_address)
     - [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
     - [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
@@ -244,7 +244,7 @@ classDiagram
     contract_parameters()
     switch_delegation_pool()
     enter_delegation_pool_from_staking_contract()
-    set_final_staker_index()
+    set_staker_removed()
     update_rewards()
     update_rewards_from_staking_contract()
   }
@@ -565,7 +565,7 @@ Return the amount of tokens transferred back to the staker.
 #### emits <!-- omit from toc -->
 1. [Staker Reward Claimed](#staker-reward-claimed)
 2. If pool exists: [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
-3. If pool exists: [Final Index Set](#final-index-set)
+3. If pool exists: [Staker Removed](#staker-removed)
 4. [Delete Staker](#delete-staker)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
@@ -573,7 +573,7 @@ Return the amount of tokens transferred back to the staker.
 3. [MISSING\_UNSTAKE\_INTENT](#missing_unstake_intent)
 4. [INTENT\_WINDOW\_NOT\_FINISHED](#intent_window_not_finished)
 5. [UNEXPECTED\_BALANCE](#unexpected_balance)
-6. [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
+6. [STAKER\_ALREADY\_REMOVED](#staker_already_removed)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker exist and requested to unstake.
@@ -584,7 +584,7 @@ Any address can execute.
 1. Claim rewards.
 2. Remove funds and transfer to staker.
 3. Transfer pool unclaimed rewards and stake to delegation pool contract.
-4. Call [set\_final\_staker\_index](#set_final_staker_index) on the delegation_pool_contract.
+4. Call [set\_staker\_removed](#set_staker_removed) on the delegation_pool_contract.
 5. Delete staker record.
 
 ### claim_rewards
@@ -1454,26 +1454,23 @@ Only staking contract can execute.
 3. Else
    1. Create an entry for the pool member.
 
-### set_final_staker_index
+### set_staker_removed
 ```rust
-fn set_final_staker_index(
-  ref self: ContractState, 
-  final_staker_index: Index
-)
+fn set_staker_removed(ref self: ContractState)
 ```
 #### description <!-- omit from toc -->
 Informs the delegation pool contract that the staker has left and the contract is now detached from the staking contract.
 #### emits <!-- omit from toc -->
-1. [Final Index Set](#final-index-set)
+1. [Staker Removed](#staker-removed)
 #### errors <!-- omit from toc -->
 1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
-2. [FINAL\_STAKER\_INDEX\_ALREADY\_SET](#final_staker_index_already_set)
+2. [STAKER\_ALREADY\_REMOVED](#staker_already_removed)
 #### pre-condition <!-- omit from toc -->
-1. Final staker index is not already set.
+1. Staker removed is not already set.
 #### access control <!-- omit from toc -->
 Only staking contract can execute.
 #### logic <!-- omit from toc -->
-1. Set staker final index to the provided index.
+1. Set staker removed to true.
 
 ### change_reward_address
 ```rust
@@ -1604,11 +1601,10 @@ Only staking contract can execute.
 | pool_member   | address           | ✅     |
 | unpool_amount | [Amount](#amount) | ❌     |
 
-### Final Index Set
+### Staker Removed
 | data               | type    | keyed |
 | ------------------ | ------- | ----- |
 | staker_address     | address | ✅     |
-| final_staker_index | Index   | ❌     |
 
 ### New Pool Member
 | data           | type              | keyed |
@@ -1915,8 +1911,8 @@ Only token admin.
 ### UNEXPECTED_BALANCE
 "Unexpected balance."
 
-### FINAL_STAKER_INDEX_ALREADY_SET
-"Final staker index already set."
+### STAKER_ALREADY_REMOVED
+"Staker already removed"
 
 ### CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS
 "Claim rewards must be called from staker address or reward address."

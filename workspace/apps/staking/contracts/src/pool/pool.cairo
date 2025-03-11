@@ -467,9 +467,7 @@ pub mod Pool {
 
         /// This function is called by the staking contract to notify the pool that the staker has
         /// been removed from the staking contract.
-        ///
-        /// TODO: Rename and remove index parameter.
-        fn set_final_staker_index(ref self: ContractState, final_staker_index: Index) {
+        fn set_staker_removed(ref self: ContractState) {
             // Asserts.
             assert!(
                 get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
@@ -477,9 +475,6 @@ pub mod Pool {
                 GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
             assert!(!self.staker_removed.read(), "{}", Error::STAKER_ALREADY_REMOVED);
-            // All future functionality that requires the staker index, will use this final index.
-            self.final_staker_index.write(Option::Some(final_staker_index)); // TODO: Remove
-
             self.staker_removed.write(true);
             // Emit event.
             self.emit(Events::StakerRemoved { staker_address: self.staker_address.read() });

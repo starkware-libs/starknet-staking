@@ -401,7 +401,7 @@ fn test_assert_staker_is_active_panic() {
 }
 
 #[test]
-fn test_set_final_staker_index() {
+fn test_set_staker_removed() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let mut state = initialize_pool_state(
@@ -414,14 +414,12 @@ fn test_set_final_staker_index() {
     cheat_caller_address_once(
         contract_address: test_address(), caller_address: cfg.test_info.staking_contract,
     );
-    assert!(state.final_staker_index.read().is_none()); // TODO: Remove
     let mut spy = snforge_std::spy_events();
-    state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
-    assert!(state.final_staker_index.read().unwrap() == STAKER_FINAL_INDEX); // TODO: Remove
+    state.set_staker_removed();
     assert!(state.staker_removed.read() == true);
     // Validate the single StakerRemoved event.
     let events = spy.get_events().emitted_by(contract_address: test_address()).events;
-    assert_number_of_events(actual: events.len(), expected: 1, message: "set_final_staker_index");
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_staker_removed");
     assert_staker_removed_event(
         spied_event: events[0], staker_address: cfg.test_info.staker_address,
     );
@@ -429,7 +427,7 @@ fn test_set_final_staker_index() {
 
 #[test]
 #[should_panic(expected: "Caller is not staking contract")]
-fn test_set_final_staker_index_caller_is_not_staking_contract() {
+fn test_set_staker_removed_caller_is_not_staking_contract() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let mut state = initialize_pool_state(
@@ -442,12 +440,12 @@ fn test_set_final_staker_index_caller_is_not_staking_contract() {
     cheat_caller_address_once(
         contract_address: test_address(), caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
     );
-    state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
+    state.set_staker_removed();
 }
 
 #[test]
 #[should_panic(expected: "Staker already removed")]
-fn test_set_final_staker_index_already_removed() {
+fn test_set_staker_removed_already_removed() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let mut state = initialize_pool_state(
@@ -462,8 +460,8 @@ fn test_set_final_staker_index_already_removed() {
         caller_address: cfg.test_info.staking_contract,
         span: CheatSpan::TargetCalls(2),
     );
-    state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
-    state.set_final_staker_index(final_staker_index: STAKER_FINAL_INDEX);
+    state.set_staker_removed();
+    state.set_staker_removed();
 }
 
 #[test]

@@ -1161,8 +1161,7 @@ pub mod Staking {
                         recipient: pool_info.pool_contract, amount: pool_info.amount.into(),
                     );
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_info.pool_contract };
-                pool_dispatcher
-                    .set_final_staker_index(final_staker_index: staker_info._deprecated_index);
+                pool_dispatcher.set_staker_removed();
             }
         }
 
