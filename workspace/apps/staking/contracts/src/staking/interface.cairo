@@ -33,6 +33,9 @@ pub trait IStaking<TContractState> {
     ) -> Option<StakerInfo>;
     fn get_current_epoch(self: @TContractState) -> Epoch;
     fn get_epoch_info(self: @TContractState) -> EpochInfo;
+    fn get_staker_commission_commitment(
+        self: @TContractState, staker_address: ContractAddress,
+    ) -> CommissionCommitment;
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn get_current_total_staking_power(self: @TContractState) -> Amount;
@@ -42,6 +45,9 @@ pub trait IStaking<TContractState> {
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
     fn update_commission(ref self: TContractState, commission: Commission);
+    fn set_commission_commitment(
+        ref self: TContractState, max_commission: Commission, expiration_epoch: Epoch,
+    );
     fn is_paused(self: @TContractState) -> bool;
 }
 
@@ -413,3 +419,8 @@ pub impl StakerInfoImpl of StakerInfoTrait {
     }
 }
 
+#[derive(starknet::Store, Drop, Debug, PartialEq, Serde, Copy)]
+pub struct CommissionCommitment {
+    pub max_commission: Commission,
+    pub expiration_epoch: Epoch,
+}

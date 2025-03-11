@@ -26,6 +26,10 @@ pub(crate) enum Error {
     CALLER_IS_NOT_ATTESTATION_CONTRACT,
     INTERNAL_STAKER_INFO_OUTDATED_VERSION,
     INVALID_EPOCH_LENGTH,
+    MAX_COMMISSION_TOO_LOW,
+    EXPIRATION_EPOCH_TOO_FAR,
+    COMMISSION_COMMITMENT_EXISTS,
+    EXPIRATION_EPOCH_TOO_EARLY,
     INVALID_BLOCK_DURATION,
     PENULTIMATE_NOT_EXIST,
 }
@@ -58,6 +62,10 @@ impl DescribableError of Describable<Error> {
             Error::CALLER_IS_NOT_ATTESTATION_CONTRACT => "Caller is not attestation contract",
             Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION => "Outdated version of Internal Staker Info",
             Error::INVALID_EPOCH_LENGTH => "Invalid epoch length, must be greater than 0",
+            Error::MAX_COMMISSION_TOO_LOW => "Max commission is too low, needs to be smaller or equal to current commission",
+            Error::EXPIRATION_EPOCH_TOO_FAR => "Expiration epoch is too far, should be at most 1 year",
+            Error::COMMISSION_COMMITMENT_EXISTS => "Commission commitment exists",
+            Error::EXPIRATION_EPOCH_TOO_EARLY => "Expiration epoch is too early, should be later then current epoch",
             Error::INVALID_BLOCK_DURATION => "Invalid block duration, must be greater than 0",
             Error::PENULTIMATE_NOT_EXIST => "Penultimate balance does not exist, staker balance at this epoch is 0",
         }

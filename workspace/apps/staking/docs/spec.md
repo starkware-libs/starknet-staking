@@ -24,6 +24,8 @@
     - [switch\_staking\_delegation\_pool](#switch_staking_delegation_pool)
     - [change\_reward\_address](#change_reward_address)
     - [set\_open\_for\_delegation](#set_open_for_delegation)
+    - [update\_commission](#update_commission)
+    - [set\_commission\_commitment](#set_commission_commitment)
     - [staker\_info](#staker_info)
     - [get\_staker\_info](#get_staker_info)
     - [get\_current\_epoch](#get_current_epoch)
@@ -49,6 +51,7 @@
     - [New Staker](#new-staker)
     - [Staker Exit intent](#staker-exit-intent)
     - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
+    - [Commission Changed](#commission-changed)
     - [Change Delegation Pool Intent](#change-delegation-pool-intent)
     - [Delete Staker](#delete-staker)
     - [Staker Reward Claimed](#staker-reward-claimed)
@@ -152,6 +155,12 @@
     - [OPERATIONAL\_IN\_USE](#operational_in_use)
     - [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
     - [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
+    - [INVALID\_COMMISSION](#invalid_commission)
+    - [INVALID\_COMMISSION\_WITH\_COMMITMENT](#invalid_commission_with_commitment)
+    - [COMMISSION\_COMMITMENT\_EXISTS](#commission_commitment_exists)
+    - [MAX\_COMMISSION\_TOO\_LOW](#max_commission_too_low)
+    - [EXPIRATION\_EPOCH\_TOO\_EARLY](#expiration_epoch_too_early)
+    - [EXPIRATION\_EPOCH\_TOO\_FAR](#expiration_epoch_too_far)
     - [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
@@ -193,6 +202,7 @@ function info template:
 classDiagram
   class StakingContract{
     map < staker_address, Option < StakerInfo >>
+    map < staker_address, CommissionCommitment >
     map < operational_address, staker_address >
     global_index
     global_index_last_update_timestamp
@@ -214,6 +224,8 @@ classDiagram
     change_reward_address()
     change_operational_address()
     set_open_for_delegation()
+    update_commission()
+    set_commission_commitment()
     staker_info()
     get_staker_info()
     contract_parameters()
@@ -793,6 +805,61 @@ Only staker address.
 1. Generate pool contract for staker.
 2. Register pool.
 
+### update_commission
+```rust
+fn update_commission(
+    ref self: ContractState, 
+    commission: Commission,
+)
+```
+#### description <!-- omit from toc -->
+Update the commission.
+#### emits <!-- omit from toc -->
+[Commission Changed](#commission-changed)
+#### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+5. [INVALID\_COMMISSION](#invalid_commission)
+6. [INVALID\_COMMISSION\_WITH\_COMMITMENT](#invalid_commission_with_commitment)
+#### pre-condition <!-- omit from toc -->
+1. Staking contract is unpaused.
+2. Staker exist in the contract.
+3. Delegation pool exist for the staker.
+#### access control <!-- omit from toc -->
+Only staker address.
+#### logic <!-- omit from toc -->
+1. Update the commission.
+
+### set_commission_commitment
+```rust
+  fn set_commission_commitment(
+      ref self: ContractState, max_commission: Commission, expiration_epoch: Epoch,
+  )
+```
+#### description <!-- omit from toc -->
+Set a commitment that expire in `expiration_epoch`, The commitment allows the staker to update his
+commission to any commission that is lower than `max_commission`.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+5. [COMMISSION\_COMMITMENT\_EXISTS](#commission_commitment_exists)
+6. [MAX\_COMMISSION\_TOO\_LOW](#max_commission_too_low)
+7. [EXPIRATION\_EPOCH\_TOO\_EARLY](#expiration_epoch_too_early)
+8. [EXPIRATION\_EPOCH\_TOO\_FAR](#expiration_epoch_too_far)
+#### pre-condition <!-- omit from toc -->
+1. Staking contract is unpaused.
+2. Staker exist in the contract.
+3. Delegation pool exist for the staker.
+#### access control <!-- omit from toc -->
+Only staker address.
+#### logic <!-- omit from toc -->
+1. Set commission commitment.
+
 ### staker_info
 ```rust
 fn staker_info(
@@ -1136,6 +1203,14 @@ Staking contract of latest version.
 | staker_address | address           | ✅     |
 | pool_address   | address           | ✅     |
 | amount         | [Amount](#amount) | ❌     |
+
+### Commission Changed
+| data           | type                      | keyed |
+| -------------- | ------------------------- | ----- |
+| staker_address | address                   | ✅    |
+| pool_address   | address                   | ✅    |
+| new_commission | [Commission](#commission) | ❌    |
+| old_commission | [Commission](#commission) | ❌    |
 
 ### Change Delegation Pool Intent
 | data              | type              | keyed |
@@ -1986,6 +2061,23 @@ Only token admin.
 ### INVALID_BLOCK_DURATION
 "Invalid block duration, must be greater than 0"
 
+### INVALID_COMMISSION
+"Commission can only be decreased"
+
+### INVALID_COMMISSION_WITH_COMMITMENT
+"Commission can be set below the maximum specified in the commission commitment"
+
+### COMMISSION_COMMITMENT_EXISTS
+"Commission commitment exists"
+
+### MAX_COMMISSION_TOO_LOW
+"Max commission is too low, needs to be smaller or equal to current commission"
+
+### EXPIRATION_EPOCH_TOO_EARLY
+"Expiration epoch is too early, should be later then current epoch"
+
+### EXPIRATION_EPOCH_TOO_FAR
+"Expiration epoch is too far, should be at most 1 year"
 ### ATTEST_WINDOW_TOO_SMALL
 "Attestation window is too small, must be larger then 10 blocks"
 
