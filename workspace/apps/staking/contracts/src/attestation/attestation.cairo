@@ -66,6 +66,7 @@ pub mod Attestation {
         #[flat]
         src5Event: SRC5Component::Event,
         StakerAttestationSuccessful: Events::StakerAttestationSuccessful,
+        AttestationWindowChanged: Events::AttestationWindowChanged,
     }
 
     #[constructor]
@@ -163,8 +164,14 @@ pub mod Attestation {
             assert!(
                 attestation_window > MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL,
             );
+            let old_attestation_window = self.attestation_window.read();
             self.attestation_window.write(attestation_window);
-            // TODO: emit event.
+            self
+                .emit(
+                    Events::AttestationWindowChanged {
+                        old_attestation_window, new_attestation_window: attestation_window,
+                    },
+                );
         }
     }
 

@@ -111,8 +111,10 @@
     - [is\_attestation\_done\_in\_curr\_epoch](#is_attestation_done_in_curr_epoch)
     - [get\_last\_epoch\_attestation\_done](#get_last_epoch_attestation_done)
     - [validate\_next\_planned\_attestation\_block](#validate_next_planned_attestation_block)
+    - [set\_attestation\_window](#set_attestation_window)
   - [Events](#events-4)
     - [Staker Attestation Successful](#staker-attestation-successful)
+    - [Attestation Window Changed](#attestation-window-changed)
 - [Errors](#errors)
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -150,6 +152,7 @@
     - [OPERATIONAL\_IN\_USE](#operational_in_use)
     - [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
     - [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
+    - [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -299,6 +302,7 @@ classDiagram
     is_attestation_done_in_curr_epoch()
     get_last_epoch_attestation_done()
     validate_next_planned_attestation_block()
+    set_attestation_window()
   }
   class AttestInfo{
   }
@@ -1848,6 +1852,21 @@ Note: this function does not return the correct result if it is called in the sa
 #### access control <!-- omit from toc -->
 Any address can execute, only a registered Operational address of an existing staker will result correctly.
 
+### set_attestation_window
+```rust
+    fn set_attestation_window(ref self: TContractState, attestation_window: u8);
+```
+#### description <!-- omit from toc -->
+Set the attestation window.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+2. [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
+#### pre-condition <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only token admin.
+
 ## Events
 
 ### Staker Attestation Successful
@@ -1855,6 +1874,12 @@ Any address can execute, only a registered Operational address of an existing st
 | -------------- | ------- | ----- |
 | staker_address | address | ✅     |
 | epoch          | Epoch   | ❌     |
+
+### Attestation Window Changed
+| data                   | type              | keyed |
+| ---------------------- | ----------------- | ----- |
+| old_attestation_window | u8                | ❌    |
+| new_attestation_window | u8                | ❌    |
 
 # Errors
 ### STAKER_EXISTS
@@ -1964,6 +1989,9 @@ Any address can execute, only a registered Operational address of an existing st
 
 ### INVALID_BLOCK_DURATION
 "Invalid block duration, must be greater than 0"
+
+### ATTEST_WINDOW_TOO_SMALL
+"Attestation window is too small, must be larger then 10 blocks"
 
 # Structs
 ### StakerPoolInfo

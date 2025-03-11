@@ -11,7 +11,8 @@ use staking::attestation::interface::{
 };
 use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::event_test_utils::{
-    assert_number_of_events, assert_staker_attestation_successful_event,
+    assert_attestation_window_changed_event, assert_number_of_events,
+    assert_staker_attestation_successful_event,
 };
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
@@ -271,12 +272,20 @@ fn test_set_attestation_window() {
     general_contract_system_deployment(ref :cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
-    assert!(attestation_dispatcher.attestation_window() == MIN_ATTESTATION_WINDOW + 1);
+    let old_attestation_window = attestation_dispatcher.attestation_window();
+    assert!(old_attestation_window == MIN_ATTESTATION_WINDOW + 1);
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: cfg.test_info.app_governor,
     );
-    attestation_dispatcher.set_attestation_window(attestation_window: MIN_ATTESTATION_WINDOW + 2);
+    let new_attestation_window = MIN_ATTESTATION_WINDOW + 2;
+    attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
     assert!(attestation_dispatcher.attestation_window() == MIN_ATTESTATION_WINDOW + 2);
+    let events = spy.get_events().emitted_by(contract_address: attestation_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_attestation_window");
+    assert_attestation_window_changed_event(
+        spied_event: events[0], :old_attestation_window, :new_attestation_window,
+    );
 }
 
 #[test]
