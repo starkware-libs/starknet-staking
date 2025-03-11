@@ -825,14 +825,7 @@ pub mod Staking {
             let old_intent_amount = undelegate_intent_value.amount;
             assert!(to_pool != from_pool, "{}", Error::SELF_SWITCH_NOT_ALLOWED);
 
-            // Update rewards for `to_staker` before editing the staker_info, and send them to the
-            // pool.
             let mut to_staker_info = self.internal_staker_info(staker_address: to_staker);
-            let token_dispatcher = self.token_dispatcher.read();
-            self
-                .send_rewards_to_delegation_pool(
-                    staker_address: to_staker, ref staker_info: to_staker_info, :token_dispatcher,
-                );
 
             // More asserts.
             assert!(to_staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
@@ -902,12 +895,12 @@ pub mod Staking {
             assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
 
             // Send rewards to pool contract, and commit to storage.
-            // Note: `send_rewards_to_delegation_pool` alters `staker_info` thus commit to storage
-            // is performed only after that.
+            // Note: `_deprecated_send_rewards_to_delegation_pool_V0` alters `staker_info` thus
+            // commit to storage is performed only after that.
             let updated_index = staker_info._deprecated_index;
             let token_dispatcher = self.token_dispatcher.read();
             self
-                .send_rewards_to_delegation_pool(
+                ._deprecated_send_rewards_to_delegation_pool_V0(
                     :staker_address, ref :staker_info, :token_dispatcher,
                 );
             self
@@ -1085,8 +1078,9 @@ pub mod Staking {
         /// Sends the rewards to `staker_address`'s pool contract.
         /// Important note:
         /// After calling this function, one must write the updated staker_info to the storage.
-        // TODO: remove this function once old rewards mechanism is removed.
-        fn send_rewards_to_delegation_pool(
+        /// This function is deprecated and should not be used (only use in migration), use
+        /// `send_rewards_to_delegation_pool` instead.
+        fn _deprecated_send_rewards_to_delegation_pool_V0(
             ref self: ContractState,
             staker_address: ContractAddress,
             ref staker_info: InternalStakerInfoLatest,
@@ -1109,10 +1103,7 @@ pub mod Staking {
         }
 
         /// Sends the rewards to `staker_address`'s pool contract.
-        /// Important note:
-        /// After calling this function, one must write the updated staker_info to the storage.
-        // TODO: Delete V1 from the function name when the old one is removed.
-        fn send_rewards_to_delegation_pool_V1(
+        fn send_rewards_to_delegation_pool(
             ref self: ContractState,
             staker_address: ContractAddress,
             pool_address: ContractAddress,
@@ -1165,10 +1156,6 @@ pub mod Staking {
         ) {
             if let Option::Some(pool_info) = staker_info.pool_info {
                 let token_dispatcher = self.token_dispatcher.read();
-                self
-                    .send_rewards_to_delegation_pool(
-                        :staker_address, ref :staker_info, :token_dispatcher,
-                    );
                 token_dispatcher
                     .checked_transfer(
                         recipient: pool_info.pool_contract, amount: pool_info.amount.into(),
@@ -1369,7 +1356,7 @@ pub mod Staking {
                 pool_dispatcher
                     .update_rewards_from_staking_contract(rewards: pool_rewards, :pool_balance);
                 self
-                    .send_rewards_to_delegation_pool_V1(
+                    .send_rewards_to_delegation_pool(
                         :staker_address,
                         pool_address: pool_contract,
                         amount: pool_rewards,
