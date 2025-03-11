@@ -16,7 +16,8 @@ pub mod Attestation {
     use staking::staking::objects::{AttestationInfo as StakingAttestaionInfo, AttestationInfoTrait};
     use staking::types::Epoch;
     use starknet::storage::Map;
-    use starknet::{ContractAddress, get_caller_address};
+    use starknet::syscalls::get_block_hash_syscall;
+    use starknet::{ContractAddress, get_block_number, get_caller_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use starkware_utils::components::roles::RolesComponent;
@@ -51,6 +52,7 @@ pub mod Attestation {
         // Maps staker address to the last epoch he attested.
         staker_last_attested_epoch: Map<ContractAddress, Option<Epoch>>,
         // Number of blocks where the staker can attest after the expected attestation block.
+        // Note: that it still needs to be after the minimum attestation window.
         attestation_window: u8,
     }
 
@@ -105,6 +107,12 @@ pub mod Attestation {
             let staking_attestation_info = staking_dispatcher
                 .get_attestation_info_by_operational_address(:operational_address);
             self._validate_attestation(:block_hash, :staking_attestation_info);
+            // Work is one tx per epoch.
+            self
+                ._mark_attestation_is_done(
+                    staker_address: staking_attestation_info.staker_address(),
+                    current_epoch: staking_attestation_info.epoch_id(),
+                );
             staking_dispatcher
                 .update_rewards_from_attestation_contract(
                     staker_address: staking_attestation_info.staker_address(),
@@ -185,9 +193,31 @@ pub mod Attestation {
             let staker_address = staking_attestation_info.staker_address();
             let current_epoch = staking_attestation_info.epoch_id();
             self._assert_attestation_is_not_done(:staker_address, :current_epoch);
-            // TODO: Validate the attestaion.
-            // Work is one tx per epoch.
-            self._mark_attestation_is_done(:staker_address, :current_epoch);
+            let attestation_window = self.attestation_window.read();
+            let expected_attestation_block = self
+                ._calculate_expected_attestation_block(
+                    :staking_attestation_info, :attestation_window,
+                );
+            // Check if the attestation is in the attestation window.
+            let current_block_number = get_block_number();
+            assert!(
+                current_block_number <= expected_attestation_block
+                    + attestation_window.into() && current_block_number > expected_attestation_block
+                    + MIN_ATTESTATION_WINDOW.into(),
+                "{}",
+                Error::ATTEST_OUT_OF_WINDOW,
+            );
+            let next_epoch_starting_block = staking_attestation_info.current_epoch_starting_block()
+                + staking_attestation_info.epoch_len().into();
+            assert!(
+                current_block_number < next_epoch_starting_block - MIN_ATTESTATION_WINDOW.into(),
+                "{}",
+                Error::ATTEST_OUT_OF_WINDOW,
+            );
+
+            // Check the attestation data (correct block hash).
+            let expected_block_hash = self.get_expected_block_hash(:expected_attestation_block);
+            assert!(expected_block_hash == block_hash, "{}", Error::ATTEST_WRONG_HASH);
         }
 
         fn _assert_attestation_is_not_done(
@@ -227,6 +257,20 @@ pub mod Attestation {
             let expected_attestation_block = staking_attestation_info.current_epoch_starting_block()
                 + block_offset.try_into().unwrap();
             expected_attestation_block
+        }
+
+        #[cfg(not(target: 'test'))]
+        fn get_expected_block_hash(
+            self: @ContractState, expected_attestation_block: u64,
+        ) -> felt252 {
+            get_block_hash_syscall(expected_attestation_block).unwrap()
+        }
+
+        #[cfg(target: 'test')]
+        fn get_expected_block_hash(
+            self: @ContractState, expected_attestation_block: u64,
+        ) -> felt252 {
+            Zero::zero()
         }
     }
 }

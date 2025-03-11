@@ -1,4 +1,3 @@
-use core::hash::HashStateTrait;
 use core::num::traits::Zero;
 use core::poseidon::PoseidonTrait;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
@@ -17,19 +16,26 @@ use staking::event_test_utils::{
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils;
+use starknet::get_block_number;
 use starkware_utils::components::replaceability::interface::{
     IReplaceableDispatcher, IReplaceableDispatcherTrait,
 };
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::errors::Describable;
-use starkware_utils::test_utils::{assert_panic_with_error, cheat_caller_address_once};
+use starkware_utils::test_utils::{
+    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
+};
 use test_utils::{
-    StakingInitConfig, advance_epoch_global, general_contract_system_deployment,
-    stake_for_testing_using_dispatcher,
+    StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global,
+    calculate_block_offset, general_contract_system_deployment, stake_for_testing_using_dispatcher,
 };
 
 #[test]
 fn test_attest() {
+    /// this test is a lie. it runs through the code but doesn't check the block hash correctly.
+    /// the test runner currently doesn't support get_block_hash_syscall.
+    /// this test should be fixed when the test runner is fixed.
+    /// https://github.com/foundry-rs/starknet-foundry/issues/684
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
@@ -41,7 +47,10 @@ fn test_attest() {
     let operational_address = cfg.staker_info.operational_address;
     let staker_address = cfg.test_info.staker_address;
     let mut spy = snforge_std::spy_events();
+    // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
+    // advance into the attestation window.
+    advance_block_into_attestation_window(:cfg);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -69,11 +78,65 @@ fn test_attest_assertions() {
         contract_address: attestation_contract,
     };
     let operational_address = cfg.staker_info.operational_address;
+    // set attestation window to 20 blocks.
+    let new_attestation_window = 20;
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: cfg.test_info.app_governor,
+    );
+    attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
+
+    // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
+    // advance just before the attestation window.
+    let block_offset = calculate_block_offset(
+        stake: cfg.staker_info._deprecated_amount_own.into(),
+        epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
+        staker_address: cfg.test_info.staker_address.into(),
+        epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
+        attestation_window: new_attestation_window,
+    );
+    advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
+
+    // catch ATTEST_OUT_OF_WINDOW - attest before the attestation window.
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: operational_address,
+    );
+    let result = attestation_safe_dispatcher.attest(block_hash: Zero::zero());
+    assert_panic_with_error(:result, expected_error: Error::ATTEST_OUT_OF_WINDOW.describe());
+
+    // advance past the attestation window.
+    advance_block_number_global(
+        blocks: (new_attestation_window - MIN_ATTESTATION_WINDOW + 1).into(),
+    );
+
+    // catch ATTEST_OUT_OF_WINDOW - attest after the attestation window.
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: operational_address,
+    );
+    let result = attestation_safe_dispatcher.attest(block_hash: Zero::zero());
+    assert_panic_with_error(:result, expected_error: Error::ATTEST_OUT_OF_WINDOW.describe());
+
+    // advance to next epoch.
+    let epoch_info = IStakingDispatcher { contract_address: staking_contract }.get_epoch_info();
+    let next_epoch_starting_block = epoch_info.current_epoch_starting_block()
+        + epoch_info.epoch_len_in_blocks().into();
+    advance_block_number_global(blocks: next_epoch_starting_block - get_block_number());
+    // advance into the attestation window.
+    let block_offset = calculate_block_offset(
+        stake: cfg.staker_info._deprecated_amount_own.into(),
+        epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
+        staker_address: cfg.test_info.staker_address.into(),
+        epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
+        attestation_window: new_attestation_window,
+    );
+    advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() + 1);
+    // successful attest.
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
     attestation_dispatcher.attest(block_hash: Zero::zero());
+
+    // Catch ATTEST_IS_DONE.
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -92,7 +155,10 @@ fn test_is_attestation_done_in_curr_epoch() {
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address;
+    // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
+    // advance into the attestation window.
+    advance_block_into_attestation_window(:cfg);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -131,7 +197,10 @@ fn test_get_last_epoch_attestation_done() {
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address;
+    // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
+    // advance into the attestation window.
+    advance_block_into_attestation_window(:cfg);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -223,24 +292,19 @@ fn test_validate_next_planned_attestation_block() {
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
 
-    // Calculate the next planned attestation block number.
-    let hash = PoseidonTrait::new()
-        .update(cfg.staker_info._deprecated_amount_own.into())
-        .update(cfg.staking_contract_info.epoch_info.current_epoch().into() + 1)
-        .update(cfg.test_info.staker_address.into())
-        .finalize();
-    // TODO: Change the magic number to the const default attestation window.
-    let block_offset: u256 = hash
-        .into() % (cfg.staking_contract_info.epoch_info.epoch_len_in_blocks()
-            - (MIN_ATTESTATION_WINDOW.into() + 1))
-        .into();
+    // calculate the next planned attestation block number.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let epoch_info = staking_dispatcher.get_epoch_info();
     let next_epoch_starting_block = epoch_info.current_epoch_starting_block()
         + epoch_info.epoch_len_in_blocks().into();
     let planned_attestation_block_number = next_epoch_starting_block
-        + block_offset.try_into().unwrap();
-
+        + calculate_block_offset(
+            stake: cfg.staker_info._deprecated_amount_own.into(),
+            epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into() + 1,
+            staker_address: cfg.test_info.staker_address.into(),
+            epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
+            attestation_window: MIN_ATTESTATION_WINDOW + 1,
+        );
     cheat_caller_address(
         contract_address: attestation_contract,
         caller_address: cfg.staker_info.operational_address,

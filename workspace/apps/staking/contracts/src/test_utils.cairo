@@ -9,7 +9,9 @@ use constants::{
     STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
     STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
+use core::hash::HashStateTrait;
 use core::num::traits::zero::Zero;
+use core::poseidon::PoseidonTrait;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
@@ -1023,4 +1025,33 @@ fn get_total_amount(staker_info: StakerInfo) -> Amount {
         return pool_info.amount + staker_info.amount_own;
     }
     (staker_info.amount_own)
+}
+
+pub(crate) fn calculate_block_offset(
+    stake: Amount,
+    epoch_id: u64,
+    staker_address: ContractAddress,
+    epoch_len: u64,
+    attestation_window: u8,
+) -> u64 {
+    let hash = PoseidonTrait::new()
+        .update(stake.into())
+        .update(epoch_id.into())
+        .update(staker_address.into())
+        .finalize();
+
+    let block_offset: u256 = hash.into() % (epoch_len - attestation_window.into()).into();
+    block_offset.try_into().unwrap()
+}
+
+pub(crate) fn advance_block_into_attestation_window(cfg: StakingInitConfig) {
+    // calculate block offset and move the block number forward.
+    let block_offset = calculate_block_offset(
+        stake: cfg.staker_info._deprecated_amount_own.into(),
+        epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
+        staker_address: cfg.test_info.staker_address.into(),
+        epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
+        attestation_window: MIN_ATTESTATION_WINDOW + 1,
+    );
+    advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() + 1);
 }
