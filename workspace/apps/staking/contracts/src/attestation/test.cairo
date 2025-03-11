@@ -1,11 +1,12 @@
 use core::hash::HashStateTrait;
+use core::num::traits::Zero;
 use core::poseidon::PoseidonTrait;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{CheatSpan, cheat_caller_address};
 use staking::attestation::attestation::Attestation;
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{
-    AttestInfo, IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
+    IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
 use staking::constants::MIN_ATTESTATION_WINDOW;
@@ -43,9 +44,8 @@ fn test_attest() {
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    let attest_info = AttestInfo {};
     let epoch = staking_dispatcher.get_current_epoch();
-    attestation_dispatcher.attest(:attest_info);
+    attestation_dispatcher.attest(block_hash: Zero::zero());
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
     assert!(is_attestation_done == true);
@@ -68,17 +68,15 @@ fn test_attest_assertions() {
         contract_address: attestation_contract,
     };
     let operational_address = cfg.staker_info.operational_address;
-    // Catch ATTEST_IS_DONE.
-    let attest_info = AttestInfo {};
     advance_epoch_global();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    attestation_dispatcher.attest(:attest_info);
+    attestation_dispatcher.attest(block_hash: Zero::zero());
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    let result = attestation_safe_dispatcher.attest(:attest_info);
+    let result = attestation_safe_dispatcher.attest(block_hash: Zero::zero());
     assert_panic_with_error(:result, expected_error: Error::ATTEST_IS_DONE.describe());
 }
 
@@ -97,8 +95,7 @@ fn test_is_attestation_done_in_curr_epoch() {
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    let attest_info = AttestInfo {};
-    attestation_dispatcher.attest(:attest_info);
+    attestation_dispatcher.attest(block_hash: Zero::zero());
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
     assert!(is_attestation_done == true);
@@ -137,8 +134,7 @@ fn test_get_last_epoch_attestation_done() {
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    let attest_info = AttestInfo {};
-    attestation_dispatcher.attest(:attest_info);
+    attestation_dispatcher.attest(block_hash: Zero::zero());
     let last_epoch_attesation_done = attestation_dispatcher
         .get_last_epoch_attestation_done(:staker_address);
     assert!(last_epoch_attesation_done == 1);

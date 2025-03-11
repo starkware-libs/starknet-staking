@@ -3,7 +3,7 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IAttestation<TContractState> {
-    fn attest(ref self: TContractState, attest_info: AttestInfo);
+    fn attest(ref self: TContractState, block_hash: felt252);
     fn is_attestation_done_in_curr_epoch(
         self: @TContractState, staker_address: ContractAddress,
     ) -> bool;
@@ -26,6 +26,3 @@ pub mod Events {
     }
 }
 
-// TODO: implement
-#[derive(Debug, Copy, Drop, Serde, PartialEq)]
-pub struct AttestInfo {}

@@ -25,9 +25,7 @@ use snforge_std::{
     CheatSpan, cheat_account_contract_address, cheat_caller_address,
     start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
-use staking::attestation::interface::{
-    AttestInfo, IAttestationDispatcher, IAttestationDispatcherTrait,
-};
+use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
 use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0;
@@ -646,7 +644,7 @@ fn test_claim_rewards() {
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: cfg.staker_info.operational_address,
     );
-    attestation_dispatcher.attest(attest_info: AttestInfo {});
+    attestation_dispatcher.attest(block_hash: Zero::zero());
 
     // Claim rewards and validate the results.
     let mut spy = snforge_std::spy_events();

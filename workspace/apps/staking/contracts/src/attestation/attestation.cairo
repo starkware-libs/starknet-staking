@@ -7,7 +7,7 @@ pub mod Attestation {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
-    use staking::attestation::interface::{AttestInfo, Events, IAttestation};
+    use staking::attestation::interface::{Events, IAttestation};
     use staking::constants::MIN_ATTESTATION_WINDOW;
     use staking::staking::interface::{
         IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
@@ -95,7 +95,7 @@ pub mod Attestation {
 
     #[abi(embed_v0)]
     impl AttestationImpl of IAttestation<ContractState> {
-        fn attest(ref self: ContractState, attest_info: AttestInfo) {
+        fn attest(ref self: ContractState, block_hash: felt252) {
             let operational_address = get_caller_address();
             let staking_dispatcher = IStakingAttestationDispatcher {
                 contract_address: self.staking_contract.read(),
@@ -103,7 +103,7 @@ pub mod Attestation {
             // Note: This function checks for a zero staker address and will panic if so.
             let staking_attestation_info = staking_dispatcher
                 .get_attestation_info_by_operational_address(:operational_address);
-            self._validate_attestation(:attest_info, :staking_attestation_info);
+            self._validate_attestation(:block_hash, :staking_attestation_info);
             staking_dispatcher
                 .update_rewards_from_attestation_contract(
                     staker_address: staking_attestation_info.staker_address(),
@@ -172,7 +172,7 @@ pub mod Attestation {
     impl InternalAttestationFunctions of InternalAttestationFunctionsTrait {
         fn _validate_attestation(
             ref self: ContractState,
-            attest_info: AttestInfo,
+            block_hash: felt252,
             staking_attestation_info: StakingAttestaionInfo,
         ) {
             let staker_address = staking_attestation_info.staker_address();
