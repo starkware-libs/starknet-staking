@@ -1,5 +1,5 @@
 use staking::pool::pool_member_balance_trace::trace::{PoolMemberBalance, PoolMemberCheckpoint};
-use staking::types::Epoch;
+use staking::types::{Epoch, VecIndex};
 
 #[starknet::interface]
 pub trait IMockTrace<TContractState> {
@@ -13,6 +13,7 @@ pub trait IMockTrace<TContractState> {
     fn is_initialized(self: @TContractState) -> bool;
     fn is_initialized_mutable(ref self: TContractState) -> bool;
     fn at(self: @TContractState, pos: u64) -> PoolMemberCheckpoint;
+    fn insert_before_latest(ref self: TContractState, key: Epoch, rewards_info_idx: VecIndex);
 }
 
 #[starknet::contract]
@@ -20,7 +21,7 @@ pub mod MockTrace {
     use staking::pool::pool_member_balance_trace::trace::{
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
     };
-    use super::{Epoch, PoolMemberBalance, PoolMemberCheckpoint};
+    use super::{Epoch, PoolMemberBalance, PoolMemberCheckpoint, VecIndex};
 
     #[storage]
     struct Storage {
@@ -61,6 +62,10 @@ pub mod MockTrace {
 
         fn at(self: @ContractState, pos: u64) -> PoolMemberCheckpoint {
             self.trace.deref().at(:pos)
+        }
+
+        fn insert_before_latest(ref self: ContractState, key: Epoch, rewards_info_idx: VecIndex) {
+            self.trace.deref().insert_before_latest(:key, :rewards_info_idx)
         }
     }
 }
