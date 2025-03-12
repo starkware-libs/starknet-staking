@@ -67,19 +67,18 @@ fn basic_stake_flow_regression_test() {
 //     test_flow_mainnet(ref :flow);
 // }
 
-// #[test]
-// fn delegator_didnt_update_after_staker_update_commission_flow_test() {
-//     let flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
-//     test_flow_local(:flow);
-// }
+#[test]
+fn delegator_didnt_update_after_staker_update_commission_flow_test() {
+    let flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
+    test_flow_local(:flow);
+}
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn delegator_didnt_update_after_staker_update_commission_regression_test() {
-//     let mut flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
-//     test_flow_mainnet(ref :flow);
-// }
-
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_didnt_update_after_staker_update_commission_regression_test() {
+    let mut flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
+    test_flow_mainnet(ref :flow);
+}
 // #[test]
 // fn delegator_updated_after_staker_update_commission_flow_test() {
 //     let flow = flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
