@@ -18,7 +18,7 @@ pub mod Pool {
     };
     use staking::pool::pool_member_balance_trace::trace::{
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
-        PoolMemberBalanceTrait,
+        PoolMemberBalanceTrait, PoolMemberCheckpoint, PoolMemberCheckpointTrait,
     };
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
@@ -766,6 +766,46 @@ pub mod Pool {
         /// TODO: Implement.
         fn calculate_rewards(self: @ContractState, pool_member: ContractAddress) -> Amount {
             Zero::zero()
+        }
+
+        /// Find the latest rewards aggregated sum (a.k.a sigma) before the change in staking
+        /// power listed in the provided pool member checkpoint.
+        fn find_sigma(
+            self: @ContractState, pool_member_checkpoint: PoolMemberCheckpoint,
+        ) -> Amount {
+            let rewards_info_vec = self.rewards_info.deref();
+            let rewards_info_idx = pool_member_checkpoint.rewards_info_idx();
+
+            // Pool member enter delegation before any rewards given to the pool.
+            if rewards_info_idx == 0 {
+                return Zero::zero();
+            }
+
+            // Next rewards idx was written, and no rewards given to pool from that moment.
+            if rewards_info_vec.length() == rewards_info_idx {
+                let (_, sigma) = rewards_info_vec.at(rewards_info_idx - 1);
+                return sigma;
+            }
+
+            // Pool member changed balance in epoch j, so j+1 written to pool member checkpoint.
+            let (epoch_at_index, sigma_at_index) = rewards_info_vec.at(rewards_info_idx);
+            if pool_member_checkpoint.epoch() > epoch_at_index {
+                // If pool rewards for epoch j given after pool member balance changed, then pool
+                // member is not eligible in this `reward_info_idx` and it is infact the latest one
+                // before the staking power change.
+                assert!(
+                    epoch_at_index == pool_member_checkpoint.epoch() - 1,
+                    "{}",
+                    Error::UNEXPECTED_EPOCH,
+                );
+                sigma_at_index
+            } else {
+                // Else, the pool rewards index given is for an epoch bigger than j, meaning pool
+                // member is eligible for sigma at `rewards_info_idx` and we should take the
+                // previous entry.
+                let (_, sigma_at_index_minus_one) = rewards_info_vec.at(rewards_info_idx - 1);
+                sigma_at_index_minus_one
+            }
         }
 
         fn get_commission_from_staking_contract(self: @ContractState) -> Commission {
