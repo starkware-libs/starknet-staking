@@ -1175,26 +1175,6 @@ pub mod Staking {
             assert!(!self.is_paused(), "{}", Error::CONTRACT_IS_PAUSED);
         }
 
-        fn calculate_and_update_pool_rewards(
-            self: @ContractState, interest: Index, ref staker_info: InternalStakerInfoLatest,
-        ) {
-            if let Option::Some(mut pool_info) = staker_info.pool_info {
-                if (pool_info.amount.is_non_zero()) {
-                    let rewards_including_commission = compute_rewards_rounded_up(
-                        amount: pool_info.amount, :interest,
-                    );
-                    let commission_amount = compute_commission_amount_rounded_down(
-                        :rewards_including_commission, commission: pool_info.commission,
-                    );
-                    staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own
-                        + commission_amount;
-                    let rewards = rewards_including_commission - commission_amount;
-                    pool_info.unclaimed_rewards += rewards;
-                    staker_info.pool_info = Option::Some(pool_info);
-                }
-            }
-        }
-
         fn transfer_to_pool_when_unstake(
             ref self: ContractState,
             staker_address: ContractAddress,
