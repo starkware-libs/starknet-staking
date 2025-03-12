@@ -34,30 +34,29 @@ pub(crate) impl BasicStakeFlowImpl<
     fn test(self: BasicStakeFlow, ref system: SystemState<TTokenState>, system_type: SystemType) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
-        let one_week = Time::weeks(count: 1);
         let initial_reward_supplier_balance = system
             .token
             .balance_of(account: system.reward_supplier.address);
         let staker = system.new_staker(amount: stake_amount * 2);
         system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         system.increase_stake(:staker, amount: stake_amount / 2);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
         let delegator = system.new_delegator(amount: stake_amount);
         system.delegate(:delegator, :pool, amount: stake_amount / 2);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         system.increase_stake(:staker, amount: stake_amount / 4);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         system.increase_delegate(:delegator, :pool, amount: stake_amount / 4);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         system.delegator_exit_intent(:delegator, :pool, amount: stake_amount * 3 / 4);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         system.staker_exit_intent(:staker);
         system.advance_time(time: system.staking.get_exit_wait_window());

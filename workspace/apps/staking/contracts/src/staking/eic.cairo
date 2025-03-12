@@ -5,8 +5,8 @@ mod StakingEIC {
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
     use starknet::class_hash::ClassHash;
-    use starknet::get_block_number;
     use starknet::storage::Map;
+    use starknet::{ContractAddress, get_block_number};
     use starkware_utils::components::replaceability::interface::IEICInitializable;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 
@@ -21,12 +21,14 @@ mod StakingEIC {
         total_stake_trace: Trace,
         // The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
+        // The contract staker sends attestation trasaction to.
+        attestation_contract: ContractAddress,
     }
 
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
-            assert(eic_init_data.len() == 5, 'EXPECTED_DATA_LENGTH_5');
+            assert(eic_init_data.len() == 6, 'EXPECTED_DATA_LENGTH_6');
             let class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             self.prev_class_hash.write(0, class_hash);
 
@@ -42,6 +44,9 @@ mod StakingEIC {
 
             let pool_contract_class_hash: ClassHash = (*eic_init_data[4]).try_into().unwrap();
             self.pool_contract_class_hash.write(pool_contract_class_hash);
+
+            let attestation_contract: ContractAddress = (*eic_init_data[5]).try_into().unwrap();
+            self.attestation_contract.write(attestation_contract);
         }
     }
 }

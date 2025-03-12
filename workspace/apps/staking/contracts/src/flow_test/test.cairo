@@ -1,30 +1,20 @@
 // TODO: Update and uncomment the following tests to align with the new rewards mechanism.
 
-// use core::num::traits::Zero;
-// use staking::constants::STRK_IN_FRIS;
-// use staking::flow_test::flows;
-// use staking::flow_test::utils::{
-//     RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait,
-//     SystemStakerTrait, SystemTrait, test_flow_local, test_flow_mainnet,
-// };
-// use staking::test_utils::StakingInitConfig;
-// use starkware_utils::math::abs::wide_abs_diff;
-// use starkware_utils::test_utils::TokenTrait;
-// use starkware_utils::types::time::time::Time;
+use staking::flow_test::flows;
+use staking::flow_test::utils::{test_flow_local, test_flow_mainnet};
 
-// #[test]
-// fn basic_stake_flow_test() {
-//     let flow = flows::BasicStakeFlow {};
-//     test_flow_local(:flow);
-// }
+#[test]
+fn basic_stake_flow_test() {
+    let flow = flows::BasicStakeFlow {};
+    test_flow_local(:flow);
+}
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn basic_stake_flow_regression_test() {
-//     let mut flow = flows::BasicStakeFlow {};
-//     test_flow_mainnet(ref :flow);
-// }
-
+#[test]
+#[fork("MAINNET_LATEST")]
+fn basic_stake_flow_regression_test() {
+    let mut flow = flows::BasicStakeFlow {};
+    test_flow_mainnet(ref :flow);
+}
 // #[test]
 // fn set_open_for_delegation_flow_test() {
 //     let flow = flows::SetOpenForDelegationFlow {};
@@ -958,3 +948,5 @@
 //             + system.token.balance_of(account: pool),
 //     );
 // }
+
+

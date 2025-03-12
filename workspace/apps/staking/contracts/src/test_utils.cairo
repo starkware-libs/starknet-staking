@@ -1021,6 +1021,8 @@ fn get_total_amount(staker_info: StakerInfo) -> Amount {
     (staker_info.amount_own)
 }
 
+/// Calculates the block offset required to advance from the starting block into the attestation
+/// window.
 pub(crate) fn calculate_block_offset(
     stake: Amount,
     epoch_id: u64,
