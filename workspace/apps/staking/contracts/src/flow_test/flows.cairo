@@ -195,30 +195,28 @@ pub(crate) impl SetOpenForDelegationFlowImpl<
             .token
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
-        let one_week = Time::weeks(count: 1);
 
         system.stake(:staker, amount: initial_stake_amount, pool_enabled: false, :commission);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         system.increase_stake(:staker, amount: initial_stake_amount / 2);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         assert!(system.token.balance_of(account: staker.reward.address).is_zero());
         system.staker_claim_rewards(:staker);
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
 
         let pool = system.set_open_for_delegation(:staker, :commission);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         let delegator = system.new_delegator(amount: initial_stake_amount);
         system.delegate(:delegator, :pool, amount: initial_stake_amount / 2);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         system.staker_exit_intent(:staker);
         system.advance_time(time: system.staking.get_exit_wait_window());
 
         system.delegator_exit_intent(:delegator, :pool, amount: initial_stake_amount / 2);
-        system.advance_time(time: one_week);
 
         system.delegator_exit_action(:delegator, :pool);
         system.staker_exit_action(:staker);
@@ -497,7 +495,7 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
 // Delegator delegate
 // Staker update_commission to 0%
 // Delegator exit_intent
-// Delegator exit_action, should get 0 rewards
+// Delegator exit_action, should get rewards
 // Staker exit_intent
 // Staker exit_action
 #[derive(Drop, Copy)]
@@ -530,21 +528,21 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
         let staker = system.new_staker(amount: stake_amount);
         let delegator = system.new_delegator(amount: delegated_amount);
         let commission = 10000;
-        let one_week = Time::weeks(count: 1);
 
         // Stake with commission 100%
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
         system.delegate(:delegator, :pool, amount: delegated_amount);
 
         // Update commission to 0%
         system.update_commission(:staker, commission: Zero::zero());
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
         system.advance_time(time: system.staking.get_exit_wait_window());
+        system.advance_epoch_and_attest(:staker);
         system.delegator_exit_action(:delegator, :pool);
 
         // Clean up and make all parties exit.
@@ -565,8 +563,9 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
         // Assert staker reward address is not empty.
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
 
-        // Assert delegator reward address is empty.
-        assert!(system.token.balance_of(account: delegator.reward.address).is_zero());
+        assert!(
+            system.token.balance_of(account: delegator.reward.address).is_zero(),
+        ); // TODO: Change this after implement calculate_rewards.
 
         // Assert all funds that moved from rewards supplier, were moved to correct addresses.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);

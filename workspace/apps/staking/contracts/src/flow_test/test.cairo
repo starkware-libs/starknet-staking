@@ -15,19 +15,19 @@ fn basic_stake_flow_regression_test() {
     let mut flow = flows::BasicStakeFlow {};
     test_flow_mainnet(ref :flow);
 }
-// #[test]
-// fn set_open_for_delegation_flow_test() {
-//     let flow = flows::SetOpenForDelegationFlow {};
-//     test_flow_local(:flow);
-// }
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn set_open_for_delegation_regression_test() {
-//     let mut flow = flows::SetOpenForDelegationFlow {};
-//     test_flow_mainnet(ref :flow);
-// }
+#[test]
+fn set_open_for_delegation_flow_test() {
+    let flow = flows::SetOpenForDelegationFlow {};
+    test_flow_local(:flow);
+}
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn set_open_for_delegation_regression_test() {
+    let mut flow = flows::SetOpenForDelegationFlow {};
+    test_flow_mainnet(ref :flow);
+}
 // #[test]
 // fn delegator_intent_after_staker_action_flow_test() {
 //     let flow = flows::DelegatorIntentAfterStakerActionFlow {};
@@ -67,19 +67,18 @@ fn basic_stake_flow_regression_test() {
 //     test_flow_mainnet(ref :flow);
 // }
 
-// #[test]
-// fn delegator_didnt_update_after_staker_update_commission_flow_test() {
-//     let flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
-//     test_flow_local(:flow);
-// }
+#[test]
+fn delegator_didnt_update_after_staker_update_commission_flow_test() {
+    let flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
+    test_flow_local(:flow);
+}
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn delegator_didnt_update_after_staker_update_commission_regression_test() {
-//     let mut flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
-//     test_flow_mainnet(ref :flow);
-// }
-
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_didnt_update_after_staker_update_commission_regression_test() {
+    let mut flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
+    test_flow_mainnet(ref :flow);
+}
 // #[test]
 // fn delegator_updated_after_staker_update_commission_flow_test() {
 //     let flow = flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow {};

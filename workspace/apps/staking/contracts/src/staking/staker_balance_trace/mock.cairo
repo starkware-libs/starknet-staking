@@ -7,7 +7,7 @@ pub trait IMockTrace<TContractState> {
     fn latest(self: @TContractState) -> (Epoch, StakerBalance);
     fn length(self: @TContractState) -> u64;
     fn upper_lookup(self: @TContractState, key: Epoch) -> StakerBalance;
-    fn latest_mutable(ref self: TContractState) -> StakerBalance;
+    fn latest_mutable(ref self: TContractState) -> (Epoch, StakerBalance);
     fn is_initialized(self: @TContractState) -> bool;
 }
 
@@ -41,7 +41,7 @@ pub mod MockTrace {
             self.trace.deref().upper_lookup(:key)
         }
 
-        fn latest_mutable(ref self: ContractState) -> StakerBalance {
+        fn latest_mutable(ref self: ContractState) -> (Epoch, StakerBalance) {
             self.trace.deref().latest()
         }
 

@@ -7,7 +7,7 @@ pub mod Staking {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::{DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
+    use staking::constants::{DEFAULT_EXIT_WAIT_WINDOW, FIRST_VALID_EPOCH, MAX_EXIT_WAIT_WINDOW};
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -297,7 +297,7 @@ pub mod Staking {
 
             // Update the staker info to account for accumulated rewards, before updating their
             // staked amount.
-            let old_self_stake = self.get_amount_own(:staker_address);
+            let old_self_stake = self.get_or_create_amount_own(:staker_address);
 
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
@@ -311,7 +311,7 @@ pub mod Staking {
 
             // Update staker's staked amount, and total stake.
             self.increase_staker_own_amount(:staker_address, :amount);
-            let staker_balance = self.staker_balance_trace.entry(key: staker_address).latest();
+            let (_, staker_balance) = self.staker_balance_trace.entry(key: staker_address).latest();
             let new_self_stake = staker_balance.amount_own();
             self
                 .staker_info
@@ -382,7 +382,7 @@ pub mod Staking {
             } else {
                 Zero::zero()
             };
-            let old_self_stake = self.get_amount_own(:staker_address);
+            let old_self_stake = self.get_or_create_amount_own(:staker_address);
             let amount = old_self_stake + amount_pool;
             self.remove_from_total_stake(:amount);
 
@@ -421,7 +421,7 @@ pub mod Staking {
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
 
             // Return stake to staker, return delegated stake to pool, and remove staker.
-            let staker_amount = self.get_amount_own(:staker_address);
+            let staker_amount = self.get_or_create_amount_own(:staker_address);
             token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
             self.transfer_to_pool_when_unstake(:staker_address, ref :staker_info);
@@ -721,12 +721,8 @@ pub mod Staking {
             // Update the staker's staked amount, and add to total_stake.
             self.update_staker_pool_amount(:staker_address, amount: pool_info.amount + amount);
             let old_delegated_stake = pool_info.amount;
-            pool_info
-                .amount = self
-                .staker_balance_trace
-                .entry(key: staker_address)
-                .latest()
-                .pool_amount();
+            let (_, staker_balance) = self.staker_balance_trace.entry(key: staker_address).latest();
+            pool_info.amount = staker_balance.pool_amount();
             staker_info.pool_info = Option::Some(pool_info);
             self
                 .staker_info
@@ -885,12 +881,8 @@ pub mod Staking {
                 .update_staker_pool_amount(
                     staker_address: to_staker, amount: to_staker_pool_info.amount + switched_amount,
                 );
-            to_staker_pool_info
-                .amount = self
-                .staker_balance_trace
-                .entry(key: to_staker)
-                .latest()
-                .pool_amount();
+            let (_, to_staker_balance) = self.staker_balance_trace.entry(key: to_staker).latest();
+            to_staker_pool_info.amount = to_staker_balance.pool_amount();
             to_staker_info.pool_info = Option::Some(to_staker_pool_info);
             self
                 .staker_info
@@ -939,6 +931,9 @@ pub mod Staking {
             let mut staker_info = self.internal_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info().pool_contract;
             assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
+
+            // Call this function to create the staker balance trace for the staker.
+            self.get_or_create_total_amount(:staker_address);
 
             // Send rewards to pool contract, and commit to storage.
             // Note: `_deprecated_send_rewards_to_delegation_pool_V0` alters `staker_info` thus
@@ -1313,12 +1308,8 @@ pub mod Staking {
                     )
             }
             self.update_staker_pool_amount(:staker_address, amount: new_delegated_stake);
-            pool_info
-                .amount = self
-                .staker_balance_trace
-                .entry(key: staker_address)
-                .latest()
-                .pool_amount();
+            let (_, staker_balance) = self.staker_balance_trace.entry(key: staker_address).latest();
+            pool_info.amount = staker_balance.pool_amount();
             staker_info.pool_info = Option::Some(pool_info);
         }
 
@@ -1353,12 +1344,12 @@ pub mod Staking {
         }
 
         fn calculate_staker_own_rewards_include_commission(
-            self: @ContractState,
+            ref self: ContractState,
             staker_info: InternalStakerInfoLatest,
             total_rewards: Amount,
             staker_address: ContractAddress,
         ) -> Amount {
-            let own_rewards = self.get_staker_own_rewards(:staker_address, :total_rewards);
+            let own_rewards = self.staker_own_rewards(:staker_address, :total_rewards);
             let commission_rewards = self
                 .get_staker_commission_rewards(
                     :staker_info, pool_rewards: total_rewards - own_rewards,
@@ -1394,13 +1385,13 @@ pub mod Staking {
             reward_supplier_dispatcher.update_unclaimed_rewards_from_staking_contract(:rewards);
         }
 
-        fn get_staker_own_rewards(
-            self: @ContractState, staker_address: ContractAddress, total_rewards: Amount,
+        fn staker_own_rewards(
+            ref self: ContractState, staker_address: ContractAddress, total_rewards: Amount,
         ) -> Amount {
             let own_rewards = mul_wide_and_div(
                 lhs: total_rewards,
-                rhs: self.get_amount_own(:staker_address),
-                div: self.get_total_amount(:staker_address),
+                rhs: self.get_or_create_amount_own(:staker_address),
+                div: self.get_or_create_total_amount(:staker_address),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
             own_rewards
@@ -1431,13 +1422,9 @@ pub mod Staking {
         }
 
         fn get_amount_own(self: @ContractState, staker_address: ContractAddress) -> Amount {
-            // After upgrading to V1, `staker_balance_trace` remains uninitialized
-            // until the staker's balance is modified for the first time. If initialized, return
-            // the `amount_own` recorded in the trace, which reflects the latest staked amount.
-            // Otherwise, return `staker_info.amount_own`.
-            //
-            // TODO: Consider initializing `staker_balance_trace` before calling `get_amount_own` to
-            // avoid this conditional check.
+            // After upgrading to V1, `staker_balance_trace` can be uninitialized.
+            // If initialized, return the `amount_own` recorded in the trace, which reflects the
+            // latest staked amount. Otherwise, return `staker_info.amount_own`.
             let trace = self.staker_balance_trace.entry(key: staker_address);
             if trace.is_initialized() {
                 let (_, staker_balance) = trace.latest();
@@ -1447,15 +1434,25 @@ pub mod Staking {
             }
         }
 
+        fn get_or_create_amount_own(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) -> Amount {
+            // Return the `amount` recorded in the `staker_balance_trace`.
+            // If it is uninitialized, initialize it to `staker_info._deprecated_amount_own`.
+            let trace = self.staker_balance_trace.entry(key: staker_address);
+            if trace.is_initialized() {
+                let (_, staker_balance) = trace.latest();
+                staker_balance.amount_own()
+            } else {
+                self.initialize_staker_balance_trace(:staker_address).amount_own()
+            }
+        }
+
+
         fn get_total_amount(self: @ContractState, staker_address: ContractAddress) -> Amount {
-            // After upgrading to V1, `staker_balance_trace` remains uninitialized
-            // until the staker's balance is modified for the first time. If initialized, return
-            // the `total_amount` recorded in the trace, which reflects the latest total amount
-            // (staked + delegated amount).
-            // Otherwise, return `staker_info.total_amount`.
-            //
-            // TODO: Consider initializing `staker_balance_trace` before calling this function to
-            // avoid this conditional check.
+            // After upgrading to V1, `staker_balance_trace` can be uninitialized.
+            // If initialized, return the `amount_own` recorded in the trace, which reflects the
+            // latest staked amount. Otherwise, return `staker_info.amount_own`.
             let trace = self.staker_balance_trace.entry(key: staker_address);
             if trace.is_initialized() {
                 let (_, staker_balance) = trace.latest();
@@ -1463,6 +1460,37 @@ pub mod Staking {
             } else {
                 self.internal_staker_info(:staker_address).get_total_amount()
             }
+        }
+
+        fn get_or_create_total_amount(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) -> Amount {
+            // Return the `amount` recorded in the `staker_balance_trace`.
+            // If it is uninitialized, initialize it to `staker_info._deprecated_amount_own`.
+            let trace = self.staker_balance_trace.entry(key: staker_address);
+            if trace.is_initialized() {
+                let (_, staker_balance) = trace.latest();
+                staker_balance.total_amount()
+            } else {
+                self.initialize_staker_balance_trace(:staker_address).total_amount()
+            }
+        }
+
+        fn initialize_staker_balance_trace(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) -> StakerBalance {
+            let staker_info = self.internal_staker_info(:staker_address);
+            let amount_own = staker_info._deprecated_amount_own;
+            let mut staker_balance = StakerBalanceTrait::new(amount: amount_own);
+            if let Option::Some(pool_info) = staker_info.pool_info {
+                let pool_amount = pool_info.amount;
+                staker_balance.update_pool_amount(amount: pool_amount);
+            }
+            self
+                .staker_balance_trace
+                .entry(key: staker_address)
+                .insert(key: FIRST_VALID_EPOCH, value: staker_balance);
+            staker_balance
         }
 
         fn get_pool_balance_curr_epoch(
@@ -1487,7 +1515,10 @@ pub mod Staking {
         fn increase_staker_own_amount(
             ref self: ContractState, staker_address: ContractAddress, amount: Amount,
         ) {
-            let mut staker_balance = self.staker_balance_trace.entry(key: staker_address).latest();
+            let (_, mut staker_balance) = self
+                .staker_balance_trace
+                .entry(key: staker_address)
+                .latest();
             staker_balance.increase_own_amount(:amount);
             self.insert_staker_balance(:staker_address, :staker_balance);
         }
@@ -1495,7 +1526,10 @@ pub mod Staking {
         fn update_staker_pool_amount(
             ref self: ContractState, staker_address: ContractAddress, amount: Amount,
         ) {
-            let mut staker_balance = self.staker_balance_trace.entry(key: staker_address).latest();
+            let (_, mut staker_balance) = self
+                .staker_balance_trace
+                .entry(key: staker_address)
+                .latest();
             staker_balance.update_pool_amount(:amount);
             self.insert_staker_balance(:staker_address, :staker_balance);
         }

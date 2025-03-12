@@ -87,8 +87,9 @@ fn test_latest_mutable() {
     mock_trace.insert(100, StakerBalanceTrait::new(amount: 100));
     mock_trace.insert(200, StakerBalanceTrait::new(amount: 200));
 
-    let latest = mock_trace.latest_mutable();
-    assert!(latest == StakerBalanceTrait::new(amount: 200));
+    let (key, value) = mock_trace.latest_mutable();
+    assert!(key == 200);
+    assert!(value == StakerBalanceTrait::new(amount: 200));
 }
 
 #[test]

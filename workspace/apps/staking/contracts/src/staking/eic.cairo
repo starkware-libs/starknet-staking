@@ -2,6 +2,7 @@
 #[starknet::contract]
 mod StakingEIC {
     use core::num::traits::Zero;
+    use staking::constants::FIRST_VALID_EPOCH;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
     use starknet::class_hash::ClassHash;
@@ -40,7 +41,7 @@ mod StakingEIC {
             self.epoch_info.write(epoch_info);
 
             let total_stake: Amount = (*eic_init_data[3]).try_into().unwrap();
-            self.total_stake_trace.deref().insert(key: Zero::zero(), value: total_stake);
+            self.total_stake_trace.deref().insert(key: FIRST_VALID_EPOCH, value: total_stake);
 
             let pool_contract_class_hash: ClassHash = (*eic_init_data[4]).try_into().unwrap();
             self.pool_contract_class_hash.write(pool_contract_class_hash);
