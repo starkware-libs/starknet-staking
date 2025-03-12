@@ -92,19 +92,18 @@ fn delegator_didnt_update_after_staker_update_commission_regression_test() {
 //     test_flow_mainnet(ref :flow);
 // }
 
-// #[test]
-// fn staker_intent_last_action_first_flow_test() {
-//     let flow = flows::StakerIntentLastActionFirstFlow {};
-//     test_flow_local(:flow);
-// }
+#[test]
+fn staker_intent_last_action_first_flow_test() {
+    let flow = flows::StakerIntentLastActionFirstFlow {};
+    test_flow_local(:flow);
+}
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn staker_intent_last_action_first_regression_test() {
-//     let mut flow = flows::StakerIntentLastActionFirstFlow {};
-//     test_flow_mainnet(ref :flow);
-// }
-
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_intent_last_action_first_regression_test() {
+    let mut flow = flows::StakerIntentLastActionFirstFlow {};
+    test_flow_mainnet(ref :flow);
+}
 // #[test]
 // #[fork("MAINNET_LATEST")]
 // fn staker_info_after_upgrade_regression_test() {
