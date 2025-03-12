@@ -13,6 +13,7 @@ pub(crate) enum Error {
     CALLER_CANNOT_ADD_TO_POOL,
     REWARD_ADDRESS_MISMATCH,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
+    UNEXPECTED_EPOCH,
 }
 
 impl DescribableError of Describable<Error> {
@@ -29,6 +30,7 @@ impl DescribableError of Describable<Error> {
             Error::REWARD_ADDRESS_MISMATCH => "Reward address mismatch",
             Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED => "Switch pool data deserialization failed",
             Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS => "Claim rewards must be called from pool member address or reward address",
+            Error::UNEXPECTED_EPOCH => "Unexpected epoch",
         }
     }
 }
