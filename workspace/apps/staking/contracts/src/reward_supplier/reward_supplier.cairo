@@ -50,8 +50,8 @@ pub mod RewardSupplier {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        // The last time rewards were calculated.
-        last_timestamp: Timestamp,
+        // Deprecated last_timestamp field, used in V0.
+        // last_timestamp: Timestamp,
         // The amount of unclaimed rewards owed to the staking contract.
         unclaimed_rewards: Amount,
         // The amount of tokens requested from L1.
@@ -95,7 +95,6 @@ pub mod RewardSupplier {
         self.roles.initialize(:governance_admin);
         self.staking_contract.write(staking_contract);
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
-        self.last_timestamp.write(Time::now());
         // Initialize unclaimed_rewards with 1 STRK to make up for round ups of pool rewards.
         // calculation in the staking contract.
         self.unclaimed_rewards.write(STRK_IN_FRIS);
@@ -204,7 +203,8 @@ pub mod RewardSupplier {
 
         fn contract_parameters(self: @ContractState) -> RewardSupplierInfo {
             RewardSupplierInfo {
-                last_timestamp: self.last_timestamp.read(),
+                // TODO: last_timestamp is deprecated, should be removed.
+                last_timestamp: Zero::zero(),
                 unclaimed_rewards: self.unclaimed_rewards.read(),
                 l1_pending_requested_amount: self.l1_pending_requested_amount.read(),
             }

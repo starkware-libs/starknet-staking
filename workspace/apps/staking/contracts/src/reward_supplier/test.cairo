@@ -93,7 +93,6 @@ fn test_reward_supplier_constructor() {
             .minting_curve_contract,
     );
     assert!(state.l1_reward_supplier.read() == cfg.reward_supplier.l1_reward_supplier);
-    assert!(state.last_timestamp.read() == Time::now());
     assert!(state.unclaimed_rewards.read() == STRK_IN_FRIS);
 }
 
@@ -144,7 +143,7 @@ fn test_contract_parameters() {
     start_cheat_block_timestamp_global(block_timestamp: block_timestamp.into());
     let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     let expected_info = RewardSupplierInfo {
-        last_timestamp: block_timestamp,
+        last_timestamp: Zero::zero(),
         unclaimed_rewards: STRK_IN_FRIS,
         l1_pending_requested_amount: Zero::zero(),
     };

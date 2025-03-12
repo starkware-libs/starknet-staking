@@ -285,7 +285,6 @@ classDiagram
     option < unpool_time >
   }
   class RewardSupplier {
-    last_timestamp,
     unclaimed_rewards,
     l1_pending_requested_amount,
     base_mint_amount,
