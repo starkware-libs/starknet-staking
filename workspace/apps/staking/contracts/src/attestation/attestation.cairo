@@ -192,6 +192,7 @@ pub mod Attestation {
         ) {
             let staker_address = staking_attestation_info.staker_address();
             let current_epoch = staking_attestation_info.epoch_id();
+            assert!(current_epoch.is_non_zero(), "{}", Error::ATTEST_EPOCH_ZERO);
             self._assert_attestation_is_not_done(:staker_address, :current_epoch);
             let attestation_window = self.attestation_window.read();
             let expected_attestation_block = self

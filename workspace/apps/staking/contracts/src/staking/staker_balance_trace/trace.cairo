@@ -140,16 +140,30 @@ pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
         self.checkpoints.as_path()._insert(key, value);
     }
 
-    /// Returns the value in the most recent checkpoint, or zero if there are no checkpoints.
-    fn latest(self: StoragePath<Mutable<StakerBalanceTrace>>) -> StakerBalance {
+    /// Retrieves the most recent checkpoint from the trace structure.
+    ///
+    /// # Returns
+    /// A tuple containing:
+    /// - `Epoch`: Timestamp/key of the latest checkpoint
+    /// - `StakerBalance`: Value stored in the latest checkpoint
+    ///
+    /// # Panics
+    /// If the trace structure is empty (no checkpoints exist)
+    ///
+    /// # Note
+    /// This will return the last inserted checkpoint that maintains the structure's
+    /// invariant of non-decreasing keys.
+    fn latest(self: StoragePath<Mutable<StakerBalanceTrace>>) -> (Epoch, StakerBalance) {
         let checkpoints = self.checkpoints;
         let pos = checkpoints.len();
+        assert!(pos > 0, "{}", TraceErrors::EMPTY_TRACE);
+        let checkpoint = checkpoints[pos - 1].read();
+        (checkpoint.key, checkpoint.value)
+    }
 
-        if pos == 0 {
-            Zero::zero()
-        } else {
-            checkpoints[pos - 1].read().value
-        }
+    /// Returns whether the trace is initialized.
+    fn is_initialized(self: StoragePath<Mutable<StakerBalanceTrace>>) -> bool {
+        self.checkpoints.len().is_non_zero()
     }
 }
 

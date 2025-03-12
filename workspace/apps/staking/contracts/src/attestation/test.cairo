@@ -85,6 +85,7 @@ fn test_attest_assertions() {
     );
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
 
+    // TODO: Catch ATTEST_EPOCH_ZERO - attest in epoch 0.
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
     // advance just before the attestation window.
@@ -135,7 +136,7 @@ fn test_attest_assertions() {
         contract_address: attestation_contract, caller_address: operational_address,
     );
     attestation_dispatcher.attest(block_hash: Zero::zero());
-
+    // TODO: Catch ATTEST_WRONG_HASH.
     // Catch ATTEST_IS_DONE.
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
