@@ -3070,6 +3070,7 @@ fn test_staking_eic() {
         eic_init_data: [
             MAINNET_STAKING_CLASS_HASH_V0().into(), BLOCK_DURATION.into(), EPOCH_LENGTH.into(),
             expected_total_stake.into(), declare_pool_contract().into(),
+            cfg.test_info.attestation_contract.into(),
         ]
             .span(),
     };
@@ -3113,10 +3114,18 @@ fn test_staking_eic() {
     )
         .at(0);
     assert!(pool_contract_class_hash.try_into().unwrap() == declare_pool_contract());
+
+    let attestation_contract = *snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("attestation_contract"),
+        size: Store::<ContractAddress>::size().into(),
+    )
+        .at(0);
+    assert_eq!(attestation_contract, cfg.test_info.attestation_contract.into());
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_5')]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_6')]
 fn test_staking_eic_with_wrong_number_of_data_elemnts() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

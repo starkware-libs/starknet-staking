@@ -7,6 +7,8 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
+use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
+use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
@@ -20,19 +22,19 @@ use staking::staking::interface::{
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     StakerInfo, StakerInfoTrait,
 };
-use staking::staking::objects::EpochInfo;
+use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
     BLOCK_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
-    StakingInitConfig, declare_pool_contract, declare_pool_eic_contract,
+    StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
     declare_staking_eic_contract,
 };
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
 };
 use starknet::syscalls::deploy_syscall;
-use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait};
+use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait, get_block_number};
 use starkware_utils::components::replaceability::interface::{
     EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
 };
@@ -235,6 +237,10 @@ pub(crate) impl StakingImpl of StakingTrait {
         )
             .at(0);
         pool_contract_admin.try_into().unwrap()
+    }
+
+    fn get_epoch_info(self: StakingState) -> EpochInfo {
+        self.dispatcher().get_epoch_info()
     }
 }
 
@@ -472,6 +478,34 @@ pub(crate) struct PoolState {
     pub roles: PoolRoles,
 }
 
+#[derive(Drop, Copy)]
+struct AttestationConfig {
+    pub governance_admin: ContractAddress,
+    pub attestation_window: u8,
+}
+
+#[derive(Drop, Copy)]
+struct AttestationState {
+    address: ContractAddress,
+}
+
+#[generate_trait]
+impl AttestationImpl of AttestationTrait {
+    fn deploy(self: AttestationConfig, staking: StakingState) -> AttestationState {
+        let mut calldata = ArrayTrait::new();
+        staking.address.serialize(ref calldata);
+        self.governance_admin.serialize(ref calldata);
+        self.attestation_window.serialize(ref calldata);
+        let attestation_contract = snforge_std::declare("Attestation").unwrap().contract_class();
+        let (attestation_contract_address, _) = attestation_contract.deploy(@calldata).unwrap();
+        AttestationState { address: attestation_contract_address }
+    }
+
+    fn dispatcher(self: AttestationState) -> IAttestationDispatcher nopanic {
+        IAttestationDispatcher { contract_address: self.address }
+    }
+}
+
 /// The `SystemConfig` struct represents the configuration settings for the entire system.
 /// It includes configurations for the token, staking, minting curve, and reward supplier contracts.
 #[derive(Drop)]
@@ -480,6 +514,7 @@ struct SystemConfig {
     staking: StakingConfig,
     minting_curve: MintingCurveConfig,
     reward_supplier: RewardSupplierConfig,
+    attestation: AttestationConfig,
 }
 
 /// The `SystemState` struct represents the state of the entire system.
@@ -492,6 +527,7 @@ pub(crate) struct SystemState<TTokenState> {
     pub minting_curve: MintingCurveState,
     pub reward_supplier: RewardSupplierState,
     pub pool: Option<PoolState>,
+    attestation: Option<AttestationState>,
     pub base_account: felt252,
 }
 
@@ -543,7 +579,11 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             governance_admin: cfg.test_info.governance_admin,
             roles: RewardSupplierRoles { upgrade_governor: cfg.test_info.upgrade_governor },
         };
-        SystemConfig { token, staking, minting_curve, reward_supplier }
+        let attestation = AttestationConfig {
+            governance_admin: cfg.test_info.governance_admin,
+            attestation_window: cfg.test_info.attestation_window,
+        };
+        SystemConfig { token, staking, minting_curve, reward_supplier, attestation }
     }
 
     /// Deploys the system configuration and returns the system state.
@@ -552,6 +592,12 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         let staking = self.staking.deploy(:token);
         let minting_curve = self.minting_curve.deploy(:staking);
         let reward_supplier = self.reward_supplier.deploy(:minting_curve, :staking, :token);
+        let attestation = self.attestation.deploy(:staking);
+        snforge_std::store(
+            target: staking.address,
+            storage_address: selector!("attestation_contract"),
+            serialized_value: array![attestation.address.into()].span(),
+        );
         // Fund reward supplier
         token
             .fund(
@@ -562,15 +608,17 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         let staking_config_dispatcher = IStakingConfigDispatcher { contract_address };
         cheat_caller_address_once(:contract_address, caller_address: staking.roles.token_admin);
         staking_config_dispatcher.set_reward_supplier(reward_supplier: reward_supplier.address);
-        advance_block_number_global(blocks: EPOCH_STARTING_BLOCK);
-        SystemState {
+        let system_state = SystemState {
             token,
             staking,
             minting_curve,
             reward_supplier,
             pool: Option::None,
+            attestation: Option::Some(attestation),
             base_account: 0x100000,
-        }
+        };
+        system_state.advance_epoch();
+        system_state
     }
 
     /// Deploys the system configuration with the implementation of the deployed contracts
@@ -603,6 +651,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             minting_curve,
             reward_supplier,
             pool: Option::None,
+            attestation: Option::None,
             base_account: 0x100000,
         }
     }
@@ -640,6 +689,21 @@ pub(crate) impl SystemImpl<
         start_cheat_block_timestamp_global(block_timestamp: Time::now().add(delta: time).into())
     }
 
+    /// Advances the block number to the next epoch starting block.
+    fn advance_epoch(self: SystemState<TTokenState>) {
+        let current_block = get_block_number();
+        if current_block < EPOCH_STARTING_BLOCK {
+            advance_block_number_global(blocks: EPOCH_STARTING_BLOCK - current_block);
+        } else {
+            let epoch_info = self.staking.get_epoch_info();
+            /// Note: This calculation of the next epoch's starting block may be incorrect
+            /// if executed within the same epoch in which the epoch length is updated.
+            let next_epoch_starting_block = epoch_info.current_epoch_starting_block()
+                + epoch_info.epoch_len_in_blocks().into();
+            advance_block_number_global(blocks: next_epoch_starting_block - current_block);
+        }
+    }
+
     fn set_pool_for_upgrade(ref self: SystemState<TTokenState>, pool_address: ContractAddress) {
         let pool_contract_admin = self.staking.get_pool_contract_admin();
         let upgrade_governor = UPGRADE_GOVERNOR();
@@ -657,6 +721,20 @@ pub(crate) impl SystemImpl<
                         roles: PoolRoles { upgrade_governor },
                     },
                 );
+    }
+
+    /// Advances the required block number into the attestation window.
+    /// **Note**: This function assumes that the current block is the starting block of the
+    /// current epoch.
+    fn advance_block_into_attestation_window(self: SystemState<TTokenState>, staker: Staker) {
+        let block_offset = calculate_block_offset(
+            stake: self.staker_total_amount(:staker).into(),
+            epoch_id: self.staking.get_epoch_info().current_epoch().into(),
+            staker_address: staker.staker.address.into(),
+            epoch_len: self.staking.get_epoch_info().epoch_len_in_blocks().into(),
+            attestation_window: MIN_ATTESTATION_WINDOW + 1,
+        );
+        advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() + 1);
     }
 }
 
@@ -774,6 +852,28 @@ pub(crate) impl SystemStakerImpl<
             .staking
             .migration_dispatcher()
             .internal_staker_info(staker_address: staker.staker.address)
+    }
+
+    fn attest(self: SystemState<TTokenState>, staker: Staker) {
+        cheat_caller_address_once(
+            contract_address: self.attestation.unwrap().address,
+            caller_address: staker.operational.address,
+        );
+        self.attestation.unwrap().dispatcher().attest(block_hash: Zero::zero());
+    }
+
+    fn advance_epoch_and_attest(self: SystemState<TTokenState>, staker: Staker) {
+        self.advance_epoch();
+        self.advance_block_into_attestation_window(:staker);
+        self.attest(:staker);
+    }
+
+    fn staker_total_amount(self: SystemState<TTokenState>, staker: Staker) -> Amount {
+        let mut total = self.staker_info(:staker).amount_own;
+        if let Option::Some(pool_info) = self.staker_info(:staker).pool_info {
+            total += pool_info.amount;
+        }
+        total
     }
 }
 
@@ -952,6 +1052,22 @@ impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
 /// Replaceability utils for internal use of the system. Meant to be used before running a
 /// regression test.
 impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
+    /// Deploy attestation contract and upgrades the contracts in the system state with local
+    /// implementations.
+    fn deploy_attestation_and_upgrade_contracts_implementation(
+        ref self: SystemState<STRKTokenState>,
+    ) {
+        let cfg: StakingInitConfig = Default::default();
+        let attestation_config = AttestationConfig {
+            governance_admin: cfg.test_info.governance_admin,
+            attestation_window: cfg.test_info.attestation_window,
+        };
+        let attestation_state = attestation_config.deploy(staking: self.staking);
+        self.attestation = Option::Some(attestation_state);
+
+        self.upgrade_contracts_implementation();
+    }
+
     /// Upgrades the contracts in the system state with local implementations.
     fn upgrade_contracts_implementation(self: SystemState<STRKTokenState>) {
         self.upgrade_staking_implementation();
@@ -973,6 +1089,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
                 EPOCH_LENGTH.into(),
                 total_stake.into(),
                 declare_pool_contract().into(),
+                self.attestation.unwrap().address.into(),
             ]
                 .span(),
         };
@@ -1100,6 +1217,6 @@ pub(crate) fn test_flow_mainnet<
     if let Option::Some(pool_address) = flow.get_pool_address() {
         system.set_pool_for_upgrade(pool_address);
     }
-    system.upgrade_contracts_implementation();
+    system.deploy_attestation_and_upgrade_contracts_implementation();
     flow.test(ref :system, system_type: SystemType::Mainnet);
 }
