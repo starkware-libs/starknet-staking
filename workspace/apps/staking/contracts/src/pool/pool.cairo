@@ -760,6 +760,33 @@ pub mod Pool {
             // TODO: Emit event?
         }
 
+        /// Inserts the current epoch into the trace if it is missing.
+        /// The current epoch's entry will be the entry_to_claim_from for the next claim.
+        ///
+        /// This function is called when claiming rewards.
+        fn insert_curr_epoch_balance(ref self: ContractState, pool_member: ContractAddress) {
+            let current_balance = self.get_or_create_amount(:pool_member);
+            let trace = self.pool_member_epoch_balance.entry(pool_member);
+            let (latest_epoch, _) = trace.latest();
+            let current_epoch = self.get_current_epoch();
+            if latest_epoch <= current_epoch {
+                trace
+                    .insert(
+                        key: current_epoch,
+                        value: PoolMemberBalanceTrait::new(
+                            balance: current_balance,
+                            rewards_info_idx: self.rewards_info_length() - 1,
+                        ),
+                    );
+            } else {
+                trace
+                    .insert_before_latest(
+                        key: current_epoch, rewards_info_idx: self.rewards_info_length() - 1,
+                    );
+            }
+            // TODO: Emit event?
+        }
+
         fn rewards_info_length(self: @ContractState) -> VecIndex {
             self.rewards_info.deref().length()
         }
