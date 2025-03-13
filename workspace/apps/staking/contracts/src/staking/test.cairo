@@ -1850,7 +1850,46 @@ fn test_update_commission() {
     );
 }
 
-// TODO: test update_commission with commitment before.
+#[test]
+fn test_update_commission_with_commitment() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+
+    // Set commitment.
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let max_commission = staker_info.get_pool_info().commission + 2;
+    let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_commission_commitment(:max_commission, :expiration_epoch);
+
+    // Update commission.
+    let mut commission = max_commission;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.update_commission(:commission);
+
+    // Assert commission is updated.
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    assert!(staker_info.get_pool_info().commission == commission);
+
+    // Advance to the expiration epoch.
+    advance_epoch_global();
+
+    // Lower commission.
+    commission = commission - 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.update_commission(:commission);
+
+    // Assert commission is updated.
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    assert!(staker_info.get_pool_info().commission == commission);
+}
+
 
 #[test]
 #[feature("safe_dispatcher")]
