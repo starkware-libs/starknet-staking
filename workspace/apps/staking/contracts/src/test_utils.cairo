@@ -904,6 +904,7 @@ pub struct StakingContractInfoCfg {
 }
 
 /// Update rewards for staker and pool.
+/// **Note**: The index of the returned staker info is set to zero.
 pub(crate) fn staker_update_rewards(staker_info: StakerInfo, global_index: Index) -> StakerInfo {
     let interest: Index = global_index - staker_info.index;
     let mut staker_rewards = compute_rewards_rounded_down(
@@ -928,7 +929,7 @@ pub(crate) fn staker_update_rewards(staker_info: StakerInfo, global_index: Index
             );
     }
     StakerInfo {
-        index: global_index,
+        index: Zero::zero(),
         unclaimed_rewards_own: staker_info.unclaimed_rewards_own + staker_rewards,
         pool_info: staker_pool_info,
         ..staker_info,
