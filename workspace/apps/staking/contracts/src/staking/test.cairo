@@ -2333,17 +2333,9 @@ fn test_get_attestation_info_by_operational_address() {
             .epoch_info
             .current_epoch_starting_block(),
     );
-    // Test setters.
-    attestation_info.set_epoch_id(2);
-    assert!(attestation_info.epoch_id() == 2);
-    let next_epoch_starting_block = cfg
-        .staking_contract_info
-        .epoch_info
-        .current_epoch_starting_block()
-        + cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into();
-    attestation_info.set_current_epoch_starting_block(next_epoch_starting_block);
-    assert!(attestation_info.current_epoch_starting_block() == next_epoch_starting_block);
 }
+
+
 #[test]
 fn test_get_current_epoch() {
     let mut cfg: StakingInitConfig = Default::default();

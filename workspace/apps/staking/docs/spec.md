@@ -113,7 +113,7 @@
     - [attest](#attest)
     - [is\_attestation\_done\_in\_curr\_epoch](#is_attestation_done_in_curr_epoch)
     - [get\_last\_epoch\_attestation\_done](#get_last_epoch_attestation_done)
-    - [validate\_next\_planned\_attestation\_block](#validate_next_planned_attestation_block)
+    - [validate\_next\_epoch\_attestation\_block](#validate_next_epoch_attestation_block)
     - [set\_attestation\_window](#set_attestation_window)
   - [Events](#events-4)
     - [Staker Attestation Successful](#staker-attestation-successful)
@@ -312,7 +312,7 @@ classDiagram
     attest()
     is_attestation_done_in_curr_epoch()
     get_last_epoch_attestation_done()
-    validate_next_planned_attestation_block()
+    validate_next_epoch_attestation_block()
     set_attestation_window()
   }
   class AttestInfo{
@@ -1905,9 +1905,9 @@ Returns the last epoch that `staker_address` finished his job.
 #### access control <!-- omit from toc -->
 Any address can execute.
 
-### validate_next_planned_attestation_block
+### validate_next_epoch_attestation_block
 ```rust
-fn validate_next_planned_attestation_block(self: @TContractState, block_number: u64) -> bool;
+fn validate_next_epoch_attestation_block(self: @TContractState, block_number: u64) -> bool;
 ```
 
 #### description <!-- omit from toc -->

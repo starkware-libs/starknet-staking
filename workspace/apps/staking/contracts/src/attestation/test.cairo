@@ -283,7 +283,7 @@ fn test_contract_upgrade_delay() {
 }
 
 #[test]
-fn test_validate_next_planned_attestation_block() {
+fn test_validate_next_epoch_attestation_block() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
@@ -313,19 +313,17 @@ fn test_validate_next_planned_attestation_block() {
     );
     assert!(
         attestation_dispatcher
-            .validate_next_planned_attestation_block(
-                block_number: planned_attestation_block_number,
-            ),
+            .validate_next_epoch_attestation_block(block_number: planned_attestation_block_number),
     );
     assert!(
         !attestation_dispatcher
-            .validate_next_planned_attestation_block(
+            .validate_next_epoch_attestation_block(
                 block_number: planned_attestation_block_number - 1,
             ),
     );
     assert!(
         !attestation_dispatcher
-            .validate_next_planned_attestation_block(
+            .validate_next_epoch_attestation_block(
                 block_number: planned_attestation_block_number + 1,
             ),
     );
