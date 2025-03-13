@@ -1,8 +1,16 @@
 // TODO: Update and uncomment the following tests to align with the new rewards mechanism.
 
 use core::num::traits::Zero;
+use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows;
-use staking::flow_test::utils::{test_flow_local, test_flow_mainnet};
+use staking::flow_test::utils::{
+    RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemStakerTrait,
+    SystemTrait, test_flow_local, test_flow_mainnet,
+};
+use staking::test_utils::StakingInitConfig;
+use starkware_utils::math::abs::wide_abs_diff;
+use starkware_utils::test_utils::TokenTrait;
+use starkware_utils::types::time::time::Time;
 
 #[test]
 fn basic_stake_flow_test() {
@@ -221,70 +229,67 @@ fn pool_upgrade_flow_regression_test() {
 //         );
 // }
 
-// /// Flow:
-// /// Staker Stake.
-// /// Staker exit_intent.
-// /// Advance time less than exit_wait_window.
-// /// Delegator delegate.
-// /// Delegator claim rewards - cover `claim_rewards` when staker in intent.
-// /// Delegator intent - cover pool in intent when staker still alive but in intent. Ignores if
-// /// `unstake_time` is none in `remove_from_delegation_pool_intent`.
-// /// Delegator action - cover action when A in intent.
-// /// Staker action.
-// #[test]
-// fn delegator_claim_rewards_flow_test() {
-//     let cfg: StakingInitConfig = Default::default();
-//     let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
-//     let min_stake = system.staking.get_min_stake();
-//     let stake_amount = min_stake * 2;
-//     let staker = system.new_staker(amount: stake_amount * 2);
-//     let initial_reward_supplier_balance = system
-//         .token
-//         .balance_of(account: system.reward_supplier.address);
-//     let commission = 200;
-//     let one_week = Time::weeks(count: 1);
+/// Flow:
+/// Staker Stake.
+/// Delegator delegate.
+/// Staker exit_intent.
+/// Advance time less than exit_wait_window.
+/// Delegator claim rewards - cover `claim_rewards` when staker in intent.
+/// Delegator intent - cover delegator in intent when staker still alive but in intent. Ignores if
+/// `unstake_time` is none in `remove_from_delegation_pool_intent`.
+/// Delegator action - cover action when A in intent.
+/// Staker action.
+#[test]
+fn delegator_claim_rewards_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount * 2);
+    let initial_reward_supplier_balance = system
+        .token
+        .balance_of(account: system.reward_supplier.address);
+    let commission = 200;
 
-//     system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-//     system.advance_time(time: one_week);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_epoch_and_attest(:staker);
 
-//     let pool = system.staking.get_pool(:staker);
-//     let delegated_amount = stake_amount;
-//     let delegator = system.new_delegator(amount: delegated_amount * 2);
-//     system.delegate(:delegator, :pool, amount: delegated_amount);
-//     system.advance_time(time: one_week);
+    let pool = system.staking.get_pool(:staker);
+    let delegated_amount = stake_amount;
+    let delegator = system.new_delegator(amount: delegated_amount * 2);
+    system.delegate(:delegator, :pool, amount: delegated_amount);
+    system.advance_epoch_and_attest(:staker);
 
-//     system.staker_exit_intent(:staker);
-//     system.advance_time(time: system.staking.get_exit_wait_window().div(divider: 2));
+    system.staker_exit_intent(:staker);
+    system.advance_time(time: system.staking.get_exit_wait_window().div(divider: 2));
 
-//     system.delegator_claim_rewards(:delegator, :pool);
-//     system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
-//     system.advance_time(time: system.staking.get_exit_wait_window());
+    system.delegator_claim_rewards(:delegator, :pool);
+    system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+    system.advance_time(time: system.staking.get_exit_wait_window());
 
-//     system.delegator_exit_action(:delegator, :pool);
-//     system.staker_exit_action(:staker);
+    system.delegator_exit_action(:delegator, :pool);
+    system.staker_exit_action(:staker);
 
-//     assert!(system.token.balance_of(account: system.staking.address).is_zero());
-//     assert!(
-//         system.token.balance_of(account: pool) > 100,
-//     ); // TODO: Change this after implement calculate_rewards.
-//     assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
-//     assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount *
-//     2);
-//     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
-//     assert!(
-//         system.token.balance_of(account: delegator.reward.address).is_zero(),
-//     ); // TODO: Change this after implement calculate_rewards.
-//     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-//     assert!(
-//         initial_reward_supplier_balance == system
-//             .token
-//             .balance_of(account: system.reward_supplier.address)
-//             + system.token.balance_of(account: staker.reward.address)
-//             + system.token.balance_of(account: delegator.reward.address)
-//             + system.token.balance_of(account: pool),
-//     );
-// }
-
+    assert!(system.token.balance_of(account: system.staking.address).is_zero());
+    assert!(
+        system.token.balance_of(account: pool) > 100,
+    ); // TODO: Change this after implement calculate_rewards.
+    assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
+    assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount * 2);
+    assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+    assert!(
+        system.token.balance_of(account: delegator.reward.address).is_zero(),
+    ); // TODO: Change this after implement calculate_rewards.
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
+            + system.token.balance_of(account: staker.reward.address)
+            + system.token.balance_of(account: delegator.reward.address)
+            + system.token.balance_of(account: pool),
+    );
+}
 // /// Flow:
 // /// Staker Stake
 // /// Delegator X delegate
