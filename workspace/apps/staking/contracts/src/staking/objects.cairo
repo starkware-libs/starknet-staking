@@ -361,11 +361,13 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
     fn current_epoch_starting_block(self: AttestationInfo) -> u64 {
         self.current_epoch_starting_block
     }
-    fn set_epoch_id(ref self: AttestationInfo, epoch_id: Epoch) -> AttestationInfo {
-        self.epoch_id = epoch_id;
-        self
-    }
-    fn set_current_epoch_starting_block(ref self: AttestationInfo, block_number: u64) {
-        self.current_epoch_starting_block = block_number;
+    fn get_next_epoch_attestation_info(self: AttestationInfo) -> AttestationInfo {
+        Self::new(
+            staker_address: self.staker_address,
+            stake: self.stake,
+            epoch_len: self.epoch_len,
+            epoch_id: self.epoch_id + 1,
+            current_epoch_starting_block: self.current_epoch_starting_block + self.epoch_len.into(),
+        )
     }
 }

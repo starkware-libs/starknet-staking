@@ -608,7 +608,7 @@ pub mod Staking {
             let commission_commitment = self.commission_commitment.read(staker_address);
             if self.is_commission_commitment_active(:commission_commitment) {
                 assert!(
-                    commission < commission_commitment.max_commission,
+                    commission <= commission_commitment.max_commission,
                     "{}",
                     GenericError::INVALID_COMMISSION_WITH_COMMITMENT,
                 );
