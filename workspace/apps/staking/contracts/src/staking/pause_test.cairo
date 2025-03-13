@@ -1,3 +1,4 @@
+use core::num::traits::Zero;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::event_test_utils::{
     assert_number_of_events, assert_paused_event, assert_unpaused_event,
@@ -309,3 +310,17 @@ fn test_update_rewards_from_attestation_contract_when_paused() {
     };
     staking_dispatcher.update_rewards_from_attestation_contract(staker_address: DUMMY_ADDRESS());
 }
+
+#[test]
+#[should_panic(expected: "Contract is paused")]
+fn test_set_commission_commitment_when_paused() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    pause_staking_contract(:cfg);
+    let staking_dispatcher = IStakingDispatcher {
+        contract_address: cfg.test_info.staking_contract,
+    };
+    staking_dispatcher
+        .set_commission_commitment(max_commission: Zero::zero(), expiration_epoch: Zero::zero());
+}
+

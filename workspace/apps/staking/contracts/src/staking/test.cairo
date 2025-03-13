@@ -1850,7 +1850,46 @@ fn test_update_commission() {
     );
 }
 
-// TODO: test update_commission with commitment before.
+#[test]
+fn test_update_commission_with_commitment() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+
+    // Set commitment.
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let max_commission = staker_info.get_pool_info().commission + 2;
+    let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_commission_commitment(:max_commission, :expiration_epoch);
+
+    // Update commission.
+    let mut commission = max_commission;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.update_commission(:commission);
+
+    // Assert commission is updated.
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    assert!(staker_info.get_pool_info().commission == commission);
+
+    // Advance to the expiration epoch.
+    advance_epoch_global();
+
+    // Lower commission.
+    commission = commission - 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.update_commission(:commission);
+
+    // Assert commission is updated.
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    assert!(staker_info.get_pool_info().commission == commission);
+}
+
 
 #[test]
 #[feature("safe_dispatcher")]
@@ -2001,7 +2040,77 @@ fn test_set_commission_commitment() {
     );
 }
 
-// TODO: safe dispatcher test for set_commission_commitment assertions.
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_commission_commitment_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staker_address = cfg.test_info.staker_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+
+    // Should catch STAKER_NOT_EXISTS.
+    let result = staking_safe_dispatcher
+        .set_commission_commitment(max_commission: Zero::zero(), expiration_epoch: Zero::zero());
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+
+    // Should catch MISSING_POOL_CONTRACT.
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher
+        .set_commission_commitment(max_commission: Zero::zero(), expiration_epoch: Zero::zero());
+    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.describe());
+
+    // Should catch MAX_COMMISSION_TOO_LOW.
+    let commission = cfg.staker_info.get_pool_info().commission;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_open_for_delegation(:commission);
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let max_commission = staker_info.get_pool_info().commission - 1;
+    let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher
+        .set_commission_commitment(:max_commission, :expiration_epoch);
+    assert_panic_with_error(:result, expected_error: Error::MAX_COMMISSION_TOO_LOW.describe());
+
+    // Should catch EXPIRATION_EPOCH_TOO_EARLY.
+    let max_commission = staker_info.get_pool_info().commission;
+    let expiration_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher
+        .set_commission_commitment(:max_commission, :expiration_epoch);
+    assert_panic_with_error(:result, expected_error: Error::EXPIRATION_EPOCH_TOO_EARLY.describe());
+
+    // Should catch EXPIRATION_EPOCH_TOO_FAR.
+    let expiration_epoch = staking_dispatcher.get_current_epoch()
+        + staking_dispatcher.get_epoch_info().epochs_in_year()
+        + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher
+        .set_commission_commitment(:max_commission, :expiration_epoch);
+    assert_panic_with_error(:result, expected_error: Error::EXPIRATION_EPOCH_TOO_FAR.describe());
+
+    // Should catch COMMISSION_COMMITMENT_EXISTS.
+    let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_commission_commitment(:max_commission, :expiration_epoch);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher
+        .set_commission_commitment(:max_commission, :expiration_epoch);
+    assert_panic_with_error(
+        :result, expected_error: Error::COMMISSION_COMMITMENT_EXISTS.describe(),
+    );
+
+    // Should catch UNSTAKE_IN_PROGRESS.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.unstake_intent();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher
+        .set_commission_commitment(:max_commission, :expiration_epoch);
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
+}
 
 #[test]
 fn test_set_open_for_delegation() {
