@@ -1775,44 +1775,6 @@ fn test_change_operational_address_is_not_eligible() {
     staking_dispatcher.change_operational_address(:operational_address);
 }
 
-// The following test is failing due to a bug in update_commission.
-// This test should pass upon correct implementation of update_commission.
-// #[test]
-// fn test_update_commission_with_claiming_rewards() {
-//     let mut cfg: StakingInitConfig = Default::default();
-//     let mut pool_info = cfg.staker_info.get_pool_info();
-//     pool_info.commission = max(1, pool_info.commission);
-//     cfg.staker_info.pool_info = Option::Some(pool_info);
-//     let mut commission = pool_info.commission;
-
-//     general_contract_system_deployment(ref :cfg);
-//     let token_address = cfg.staking_contract_info.token_address;
-//     let staking_contract = cfg.test_info.staking_contract;
-//     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-//     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-//     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-//     let staker_address = cfg.test_info.staker_address;
-//     let pool_member = cfg.test_info.pool_member_address;
-//     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
-
-//     let mut expected_unclaimed_rewards = create_rewards_for_pool_member(ref :cfg);
-
-//     // Update commission.
-//     commission -= 1;
-//     cheat_caller_address_once(contract_address: staking_contract, caller_address:
-//     staker_address);
-//     staking_dispatcher.update_commission(:commission);
-//     let mut pool_info = cfg.staker_info.get_pool_info();
-//     pool_info.commission = commission;
-//     cfg.staker_info.pool_info = Option::Some(pool_info);
-
-//     expected_unclaimed_rewards += create_rewards_for_pool_member(ref :cfg);
-
-//     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
-//     let claimed_rewards = pool_dispatcher.claim_rewards(:pool_member);
-//     assert!(claimed_rewards ==  expected_unclaimed_rewards);
-// }
-
 #[test]
 fn test_update_commission() {
     let cfg: StakingInitConfig = Default::default();
