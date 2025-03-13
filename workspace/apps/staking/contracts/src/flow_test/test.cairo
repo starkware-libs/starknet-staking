@@ -28,19 +28,18 @@ fn set_open_for_delegation_regression_test() {
     let mut flow = flows::SetOpenForDelegationFlow {};
     test_flow_mainnet(ref :flow);
 }
-// #[test]
-// fn delegator_intent_after_staker_action_flow_test() {
-//     let flow = flows::DelegatorIntentAfterStakerActionFlow {};
-//     test_flow_local(:flow);
-// }
+#[test]
+fn delegator_intent_after_staker_action_flow_test() {
+    let flow = flows::DelegatorIntentAfterStakerActionFlow {};
+    test_flow_local(:flow);
+}
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn delegator_intent_after_staker_action_regression_test() {
-//     let mut flow = flows::DelegatorIntentAfterStakerActionFlow {};
-//     test_flow_mainnet(ref :flow);
-// }
-
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_intent_after_staker_action_regression_test() {
+    let mut flow = flows::DelegatorIntentAfterStakerActionFlow {};
+    test_flow_mainnet(ref :flow);
+}
 #[test]
 fn delegator_intent_flow_test() {
     let flow = flows::DelegatorIntentFlow {};

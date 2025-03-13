@@ -91,7 +91,7 @@ pub(crate) impl BasicStakeFlowImpl<
 /// Delegator delegate
 /// Staker exit_intent
 /// Staker exit_action
-/// Delegator partially exit_intent - cover calculating rewards using `final_staker_index`
+/// Delegator partially exit_intent
 /// Delegator exit_action
 /// Delegator exit_intent
 /// Delegator exit_action
@@ -120,24 +120,21 @@ pub(crate) impl DelegatorIntentAfterStakerActionFlowImpl<
             .token
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
-        let one_week = Time::weeks(count: 1);
 
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
         let delegator = system.new_delegator(amount: stake_amount);
         system.delegate(:delegator, :pool, amount: stake_amount);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         system.staker_exit_intent(:staker);
         system.advance_time(time: system.staking.get_exit_wait_window());
 
         system.staker_exit_action(:staker);
-        system.advance_time(time: one_week);
 
         system.delegator_exit_intent(:delegator, :pool, amount: stake_amount / 2);
-        system.advance_time(time: one_week);
         system.delegator_exit_action(:delegator, :pool);
 
         system.delegator_exit_intent(:delegator, :pool, amount: stake_amount / 2);
