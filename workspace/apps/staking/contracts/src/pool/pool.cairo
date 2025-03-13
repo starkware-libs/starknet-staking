@@ -325,10 +325,21 @@ pub mod Pool {
                 Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
             );
 
-            pool_member_info._deprecated_unclaimed_rewards += self.calculate_rewards(:pool_member);
+            self.insert_curr_epoch_balance(:pool_member);
+
+            // Calculate rewards and update entry_to_claim_from.
+            let (rewards, entry_to_claim_from) = self.calculate_rewards(:pool_member);
+            // TODO: Change back to `unclaimed_rewards` or impl new
+            // `send_rewards_to_member` function without `unclaimed_rewards` field.
+            pool_member_info._deprecated_unclaimed_rewards += rewards;
+            pool_member_info.entry_to_claim_from = entry_to_claim_from;
+
+            // Transfer rewards to the pool member.
             let rewards = pool_member_info._deprecated_unclaimed_rewards;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
+
+            // Write the updated pool member info to storage.
             self
                 .pool_member_info
                 .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
@@ -505,7 +516,8 @@ pub mod Pool {
 
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
             external_pool_member_info.amount = self.get_amount(:pool_member);
-            external_pool_member_info.unclaimed_rewards += self.calculate_rewards(:pool_member);
+            let (rewards, _) = self.calculate_rewards(:pool_member);
+            external_pool_member_info.unclaimed_rewards += rewards;
             external_pool_member_info.commission = self.get_commission_from_staking_contract();
             external_pool_member_info
         }
@@ -792,8 +804,10 @@ pub mod Pool {
         }
 
         /// TODO: Implement.
-        fn calculate_rewards(self: @ContractState, pool_member: ContractAddress) -> Amount {
-            Zero::zero()
+        fn calculate_rewards(
+            self: @ContractState, pool_member: ContractAddress,
+        ) -> (Amount, VecIndex) {
+            (Zero::zero(), Zero::zero())
         }
 
         /// Find the latest rewards aggregated sum (a.k.a sigma) before the change in staking
