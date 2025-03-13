@@ -1,5 +1,6 @@
 // TODO: Update and uncomment the following tests to align with the new rewards mechanism.
 
+use core::num::traits::Zero;
 use staking::flow_test::flows;
 use staking::flow_test::utils::{test_flow_local, test_flow_mainnet};
 
@@ -156,15 +157,14 @@ fn staker_intent_last_action_first_regression_test() {
 //     test_flow_mainnet(ref :flow);
 // }
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn pool_upgrade_flow_regression_test() {
-//     let mut flow = flows::PoolUpgradeFlow {
-//         pool_address: Option::None, delegator: Option::None, delegated_amount: Zero::zero(),
-//     };
-//     test_flow_mainnet(ref :flow);
-// }
-
+#[test]
+#[fork("MAINNET_LATEST")]
+fn pool_upgrade_flow_regression_test() {
+    let mut flow = flows::PoolUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None, delegated_amount: Zero::zero(),
+    };
+    test_flow_mainnet(ref :flow);
+}
 // #[test]
 // #[fork("MAINNET_LATEST")]
 // fn internal_pool_member_info_after_upgrade_regression_test() {
