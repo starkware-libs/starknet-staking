@@ -269,25 +269,23 @@ fn test_validate_next_epoch_attestation_block() {
             epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
             attestation_window: MIN_ATTESTATION_WINDOW + 1,
         );
-    cheat_caller_address(
-        contract_address: attestation_contract,
-        caller_address: cfg.staker_info.operational_address,
-        span: CheatSpan::TargetCalls(3),
-    );
+    let operational_address = cfg.staker_info.operational_address;
     assert!(
         attestation_dispatcher
-            .validate_next_epoch_attestation_block(block_number: planned_attestation_block_number),
-    );
-    assert!(
-        !attestation_dispatcher
             .validate_next_epoch_attestation_block(
-                block_number: planned_attestation_block_number - 1,
+                :operational_address, block_number: planned_attestation_block_number,
             ),
     );
     assert!(
         !attestation_dispatcher
             .validate_next_epoch_attestation_block(
-                block_number: planned_attestation_block_number + 1,
+                :operational_address, block_number: planned_attestation_block_number - 1,
+            ),
+    );
+    assert!(
+        !attestation_dispatcher
+            .validate_next_epoch_attestation_block(
+                :operational_address, block_number: planned_attestation_block_number + 1,
             ),
     );
 }

@@ -90,8 +90,6 @@ fn test_constructor() {
     assert!(
         state.token_dispatcher.read().contract_address == cfg.staking_contract_info.token_address,
     );
-    let contract_global_index = state.global_index.read();
-    assert!(Zero::zero() == contract_global_index);
     let staker_address = state
         .operational_address_to_staker_address
         .read(cfg.staker_info.operational_address);

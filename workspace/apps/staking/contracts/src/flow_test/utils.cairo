@@ -226,7 +226,13 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_global_index(self: StakingState) -> Index {
-        self.dispatcher().contract_parameters().global_index
+        let global_index = *snforge_std::load(
+            target: self.address,
+            storage_address: selector!("global_index"),
+            size: Store::<Index>::size().into(),
+        )
+            .at(0);
+        global_index.try_into().unwrap()
     }
 
     fn get_pool_contract_admin(self: StakingState) -> ContractAddress {
