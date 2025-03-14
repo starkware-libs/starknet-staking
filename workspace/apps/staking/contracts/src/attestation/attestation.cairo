@@ -189,22 +189,8 @@ pub mod Attestation {
                 ._calculate_expected_attestation_block(
                     :staking_attestation_info, :attestation_window,
                 );
-            // Check if the attestation is in the attestation window.
-            let current_block_number = get_block_number();
-            assert!(
-                current_block_number <= expected_attestation_block
-                    + attestation_window.into() && current_block_number > expected_attestation_block
-                    + MIN_ATTESTATION_WINDOW.into(),
-                "{}",
-                Error::ATTEST_OUT_OF_WINDOW,
-            );
-            let next_epoch_starting_block = staking_attestation_info.current_epoch_starting_block()
-                + staking_attestation_info.epoch_len().into();
-            assert!(
-                current_block_number < next_epoch_starting_block - MIN_ATTESTATION_WINDOW.into(),
-                "{}",
-                Error::ATTEST_OUT_OF_WINDOW,
-            );
+            self._assert_attest_in_window(:expected_attestation_block, :attestation_window);
+            self._assert_attest_in_epoch(:staking_attestation_info);
 
             // Check the attestation data (correct block hash).
             let expected_block_hash = self.get_expected_block_hash(:expected_attestation_block);
@@ -244,6 +230,30 @@ pub mod Attestation {
             let expected_attestation_block = staking_attestation_info.current_epoch_starting_block()
                 + block_offset.try_into().unwrap();
             expected_attestation_block
+        }
+
+        fn _assert_attest_in_window(
+            self: @ContractState, expected_attestation_block: u64, attestation_window: u8,
+        ) {
+            let current_block_number = get_block_number();
+            assert!(
+                current_block_number <= expected_attestation_block
+                    + attestation_window.into() && current_block_number > expected_attestation_block
+                    + MIN_ATTESTATION_WINDOW.into(),
+                "{}",
+                Error::ATTEST_OUT_OF_WINDOW,
+            );
+        }
+
+        fn _assert_attest_in_epoch(
+            self: @ContractState, staking_attestation_info: StakingAttestaionInfo,
+        ) {
+            let current_block_number = get_block_number();
+            let next_epoch_starting_block = staking_attestation_info.current_epoch_starting_block()
+                + staking_attestation_info.epoch_len().into();
+            assert!(
+                current_block_number < next_epoch_starting_block, "{}", Error::ATTEST_OUT_OF_WINDOW,
+            );
         }
 
         #[cfg(not(target: 'test'))]
