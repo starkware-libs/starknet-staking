@@ -50,7 +50,7 @@ pub mod Attestation {
         src5: SRC5Component::Storage,
         staking_contract: ContractAddress,
         // Maps staker address to the last epoch he attested.
-        staker_last_attested_epoch: Map<ContractAddress, Option<Epoch>>,
+        staker_last_attested_epoch: Map<ContractAddress, Epoch>,
         // Number of blocks where the staker can attest after the expected attestation block.
         // Note: that it still needs to be after the minimum attestation window.
         attestation_window: u8,
@@ -122,10 +122,7 @@ pub mod Attestation {
         fn get_last_epoch_attestation_done(
             self: @ContractState, staker_address: ContractAddress,
         ) -> Epoch {
-            self
-                .staker_last_attested_epoch
-                .read(staker_address)
-                .expect_with_err(Error::NO_ATTEST_DONE)
+            self.staker_last_attested_epoch.read(staker_address)
         }
 
         fn is_attestation_done_in_curr_epoch(
@@ -217,18 +214,14 @@ pub mod Attestation {
         fn _assert_attestation_is_not_done(
             ref self: ContractState, staker_address: ContractAddress, current_epoch: Epoch,
         ) {
-            // None means no work done for this staker_address.
-            if let Option::Some(last_epoch_done) = self
-                .staker_last_attested_epoch
-                .read(staker_address) {
-                assert!(last_epoch_done != current_epoch, "{}", Error::ATTEST_IS_DONE);
-            }
+            let last_epoch_done = self.staker_last_attested_epoch.read(staker_address);
+            assert!(last_epoch_done != current_epoch, "{}", Error::ATTEST_IS_DONE);
         }
 
         fn _mark_attestation_is_done(
             ref self: ContractState, staker_address: ContractAddress, current_epoch: Epoch,
         ) {
-            self.staker_last_attested_epoch.write(staker_address, Option::Some(current_epoch));
+            self.staker_last_attested_epoch.write(staker_address, current_epoch);
             self.emit(Events::StakerAttestationSuccessful { staker_address, epoch: current_epoch });
         }
 
