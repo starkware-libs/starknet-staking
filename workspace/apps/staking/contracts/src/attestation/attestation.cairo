@@ -135,10 +135,11 @@ pub mod Attestation {
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
 
-        fn validate_next_epoch_attestation_block(self: @ContractState, block_number: u64) -> bool {
+        fn validate_next_epoch_attestation_block(
+            self: @ContractState, operational_address: ContractAddress, block_number: u64,
+        ) -> bool {
             // Note: this function does not return the correct result if it is called in the same
             // epoch that an attestation info update is done.
-            let operational_address = get_caller_address();
             let attestation_window = self.attestation_window.read();
             let staking_dispatcher = IStakingAttestationDispatcher {
                 contract_address: self.staking_contract.read(),

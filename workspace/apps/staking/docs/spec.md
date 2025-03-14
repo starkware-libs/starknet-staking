@@ -1907,20 +1907,22 @@ Any address can execute.
 
 ### validate_next_epoch_attestation_block
 ```rust
-fn validate_next_epoch_attestation_block(self: @TContractState, block_number: u64) -> bool;
+fn validate_next_epoch_attestation_block(
+    self: @TContractState,
+    operational_address: ContractAddress,
+    block_number: u64) -> bool;
 ```
 
 #### description <!-- omit from toc -->
-Receives a block number and checks if this is the block in the next epoch this caller should attest to.
+Checks if this is the block in the next epoch this `operational_address` should attest to.
 Note: this function does not return the correct result if it is called in the same epoch that an attestation info update is done.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
-1. Assumes the caller is an operational address.
-2. Calculates the expected attestation block for next epoch
-3. Compares the result with the given block number
+1. Calculates the expected attestation block for next epoch
+2. Compares the result with the given block number
 #### access control <!-- omit from toc -->
-Any address can execute, only a registered Operational address of an existing staker will result correctly.
+Any address can execute.
 
 ### set_attestation_window
 ```rust
