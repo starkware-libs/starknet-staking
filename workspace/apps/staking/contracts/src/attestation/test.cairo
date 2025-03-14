@@ -170,24 +170,6 @@ fn test_is_attestation_done_in_curr_epoch() {
 }
 
 #[test]
-#[feature("safe_dispatcher")]
-fn test_is_attestation_done_in_curr_epoch_assertions() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let attestation_contract = cfg.test_info.attestation_contract;
-    let attestation_safe_dispatcher = IAttestationSafeDispatcher {
-        contract_address: attestation_contract,
-    };
-    let staker_address = cfg.test_info.staker_address;
-    // Catch NO_ATTEST_DONE.
-    let result = attestation_safe_dispatcher.is_attestation_done_in_curr_epoch(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::NO_ATTEST_DONE.describe());
-}
-
-#[test]
 fn test_get_last_epoch_attestation_done() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -210,25 +192,6 @@ fn test_get_last_epoch_attestation_done() {
         .get_last_epoch_attestation_done(:staker_address);
     assert!(last_epoch_attesation_done == 1);
 }
-
-#[test]
-#[feature("safe_dispatcher")]
-fn test_get_last_epoch_attestation_done_assertions() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let attestation_contract = cfg.test_info.attestation_contract;
-    let attestation_safe_dispatcher = IAttestationSafeDispatcher {
-        contract_address: attestation_contract,
-    };
-    let staker_address = cfg.test_info.staker_address;
-    // Catch NO_ATTEST_DONE.
-    let result = attestation_safe_dispatcher.get_last_epoch_attestation_done(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::NO_ATTEST_DONE.describe());
-}
-
 
 #[test]
 fn test_constructor() {
