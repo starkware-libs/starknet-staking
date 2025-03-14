@@ -414,11 +414,7 @@ pub mod Pool {
         ) {
             // Asserts.
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
-            assert!(
-                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
-                "{}",
-                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
-            );
+            self.assert_caller_is_staking_contract();
 
             // Deserialize the switch pool data.
             let mut serialized = data;
@@ -479,11 +475,7 @@ pub mod Pool {
         /// been removed from the staking contract.
         fn set_staker_removed(ref self: ContractState) {
             // Asserts.
-            assert!(
-                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
-                "{}",
-                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
-            );
+            self.assert_caller_is_staking_contract();
             assert!(!self.staker_removed.read(), "{}", Error::STAKER_ALREADY_REMOVED);
             self.staker_removed.write(true);
             // Emit event.
@@ -546,11 +538,7 @@ pub mod Pool {
         fn update_rewards_from_staking_contract(
             ref self: ContractState, rewards: Amount, pool_balance: Amount,
         ) {
-            assert!(
-                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
-                "{}",
-                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
-            );
+            self.assert_caller_is_staking_contract();
             let latest = match self.rewards_info.deref().latest() {
                 Result::Ok((_, latest)) => latest,
                 Result::Err(_) => 0,
@@ -701,6 +689,14 @@ pub mod Pool {
             // Notify the staking contract of the new delegated stake.
             // This will complete the fund transfer to the staking contract.
             staking_pool_dispatcher.add_stake_from_pool(:staker_address, :amount);
+        }
+
+        fn assert_caller_is_staking_contract(self: @ContractState) {
+            assert!(
+                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
+                "{}",
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
+            );
         }
 
         fn get_current_epoch(self: @ContractState) -> Epoch {
