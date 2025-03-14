@@ -1251,8 +1251,10 @@ pub mod Staking {
         }
 
         fn update_total_stake(ref self: ContractState, new_total_stake: Amount) {
-            let next_epoch = self.get_current_epoch() + 1;
-            self.total_stake_trace.deref().insert(key: next_epoch, value: new_total_stake);
+            self
+                .total_stake_trace
+                .deref()
+                .insert(key: self.get_next_epoch(), value: new_total_stake);
         }
 
         /// Wrap initial operations required in any public staking function.
