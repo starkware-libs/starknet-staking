@@ -204,7 +204,6 @@ classDiagram
     map < staker_address, Option < StakerInfo >>
     map < staker_address, CommissionCommitment >
     map < operational_address, staker_address >
-    global_index
     global_index_last_update_timestamp
     min_stake
     total_stake

@@ -73,8 +73,9 @@ pub mod Staking {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        // The global index of the staking system. This is used to calculate the accrued interest.
-        global_index: Index,
+        // Deprecated global index of the staking system.
+        // Was used in V0, to calculate the accrued interest.
+        // global_index: Index,
         // The timestamp of the last global index update.
         global_index_last_update_timestamp: Timestamp,
         // Minimum amount of initial stake.
@@ -171,7 +172,6 @@ pub mod Staking {
             .reward_supplier_dispatcher
             .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
         self.pool_contract_admin.write(pool_contract_admin);
-        self.global_index.write(Zero::zero());
         self.global_index_last_update_timestamp.write(Time::now());
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
@@ -513,7 +513,8 @@ pub mod Staking {
             StakingContractInfo {
                 min_stake: self.min_stake.read(),
                 token_address: self.token_dispatcher.read().contract_address,
-                global_index: self.global_index.read(),
+                // TODO: remove the deprecated global index field.
+                global_index: Zero::zero(),
                 pool_contract_class_hash: self.pool_contract_class_hash.read(),
                 reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
                 exit_wait_window: self.exit_wait_window.read(),
