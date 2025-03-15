@@ -86,19 +86,19 @@ fn delegator_didnt_update_after_staker_update_commission_regression_test() {
     let mut flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
     test_flow_mainnet(ref :flow);
 }
-// #[test]
-// fn delegator_updated_after_staker_update_commission_flow_test() {
-//     let flow = flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
-//     test_flow_local(:flow);
-// }
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn delegator_updated_after_staker_update_commission_regression_test() {
-//     let mut flow = flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
-//     test_flow_mainnet(ref :flow);
-// }
+#[test]
+fn delegator_updated_after_staker_update_commission_flow_test() {
+    let flow = flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
+    test_flow_local(:flow);
+}
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_updated_after_staker_update_commission_regression_test() {
+    let mut flow = flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
+    test_flow_mainnet(ref :flow);
+}
 #[test]
 fn staker_intent_last_action_first_flow_test() {
     let flow = flows::StakerIntentLastActionFirstFlow {};
