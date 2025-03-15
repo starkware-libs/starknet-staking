@@ -581,7 +581,7 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
 // Staker stake with commission 100%
 // Delegator delegate
 // Staker update_commission to 0%
-// Delegator update commission to 0% by calling claim_rewards
+// Delegator claim rewards
 // Delegator exit_intent
 // Delegator exit_action, should get rewards
 // Staker exit_intent
@@ -616,23 +616,27 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl<
         let staker = system.new_staker(amount: stake_amount);
         let delegator = system.new_delegator(amount: delegated_amount);
         let commission = 10000;
-        let one_week = Time::weeks(count: 1);
 
-        // Stake with commission 100%
+        // Stake with commission 100%.
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
         system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.advance_epoch_and_attest(:staker);
+        assert!(system.token.balance_of(account: pool).is_zero());
 
-        // Update commission to 0%
+        // Update commission to 0%.
         system.update_commission(:staker, commission: Zero::zero());
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(:staker);
+        assert!(system.token.balance_of(account: pool).is_non_zero());
 
-        // Delegator claim_rewards to update commission to 0%
+        // Delegator claim_rewards.
         system.delegator_claim_rewards(:delegator, :pool);
-        assert!(system.token.balance_of(account: delegator.reward.address) == Zero::zero());
-        system.advance_time(time: one_week);
+        assert!(
+            system.token.balance_of(account: delegator.reward.address) == Zero::zero(),
+        ); // TODO: Change this after implement calculate_rewards.
+        system.advance_epoch_and_attest(:staker);
 
         system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
         system.advance_time(time: system.staking.get_exit_wait_window());
