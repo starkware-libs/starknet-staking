@@ -1275,14 +1275,6 @@ pub mod Staking {
             );
         }
 
-        fn assert_caller_is_staking_contract(self: @ContractState) {
-            assert!(
-                get_caller_address() == get_contract_address(),
-                "{}",
-                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
-            );
-        }
-
         fn assert_caller_is_not_zero(self: @ContractState) {
             assert!(get_caller_address().is_non_zero(), "{}", Error::CALLER_IS_ZERO_ADDRESS);
         }
