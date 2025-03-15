@@ -290,82 +290,86 @@ fn delegator_claim_rewards_flow_test() {
             + system.token.balance_of(account: pool),
     );
 }
-// /// Flow:
-// /// Staker Stake
-// /// Delegator X delegate
-// /// Delegator Y delegate
-// /// Delegator X exit_intent full amount
-// /// Delegator X action
-// /// Delegator Y exit_intent full amount
-// /// Delegator Y action
-// /// Staker exit_intent
-// /// Staker exit_action
-// #[test]
-// fn two_delegators_full_intent_flow_test() {
-//     let cfg: StakingInitConfig = Default::default();
-//     let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
-//     let min_stake = system.staking.get_min_stake();
-//     let stake_amount = min_stake * 2;
-//     let staker = system.new_staker(amount: stake_amount);
-//     let initial_reward_supplier_balance = system
-//         .token
-//         .balance_of(account: system.reward_supplier.address);
-//     let commission = 200;
-//     let one_week = Time::weeks(count: 1);
+/// Flow:
+/// Staker Stake
+/// Delegator X delegate
+/// Delegator Y delegate
+/// Delegator X exit_intent full amount
+/// Delegator X action
+/// Delegator Y exit_intent full amount
+/// Delegator Y action
+/// Staker exit_intent
+/// Staker exit_action
+#[test]
+fn two_delegators_full_intent_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let initial_reward_supplier_balance = system
+        .token
+        .balance_of(account: system.reward_supplier.address);
+    let commission = 200;
 
-//     system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-//     system.advance_time(time: one_week);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_epoch_and_attest(:staker);
 
-//     let pool = system.staking.get_pool(:staker);
-//     let delegated_amount = stake_amount;
+    let pool = system.staking.get_pool(:staker);
+    let delegated_amount = stake_amount;
 
-//     let delegator_x = system.new_delegator(amount: delegated_amount);
-//     system.delegate(delegator: delegator_x, :pool, amount: delegated_amount);
-//     system.advance_time(time: one_week);
+    let delegator_x = system.new_delegator(amount: delegated_amount);
+    system.delegate(delegator: delegator_x, :pool, amount: delegated_amount);
+    system.advance_epoch_and_attest(:staker);
 
-//     let delegator_y = system.new_delegator(amount: delegated_amount);
-//     system.delegate(delegator: delegator_y, :pool, amount: delegated_amount);
-//     system.advance_time(time: one_week);
+    let delegator_y = system.new_delegator(amount: delegated_amount);
+    system.delegate(delegator: delegator_y, :pool, amount: delegated_amount);
+    system.advance_epoch_and_attest(:staker);
 
-//     system.delegator_exit_intent(delegator: delegator_x, :pool, amount: delegated_amount);
-//     system.advance_time(time: system.staking.get_exit_wait_window());
+    system.delegator_exit_intent(delegator: delegator_x, :pool, amount: delegated_amount);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    system.advance_epoch_and_attest(:staker);
 
-//     system.delegator_exit_action(delegator: delegator_x, :pool);
-//     system.delegator_exit_intent(delegator: delegator_y, :pool, amount: delegated_amount);
-//     system.advance_time(time: system.staking.get_exit_wait_window());
+    system.delegator_exit_action(delegator: delegator_x, :pool);
+    system.advance_epoch_and_attest(:staker);
 
-//     system.delegator_exit_action(delegator: delegator_y, :pool);
-//     system.staker_exit_intent(:staker);
-//     system.advance_time(time: system.staking.get_exit_wait_window());
+    system.delegator_exit_intent(delegator: delegator_y, :pool, amount: delegated_amount);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    system.advance_epoch_and_attest(:staker);
 
-//     system.staker_exit_action(:staker);
+    system.delegator_exit_action(delegator: delegator_y, :pool);
+    system.advance_epoch_and_attest(:staker);
 
-//     assert!(system.token.balance_of(account: system.staking.address).is_zero());
-//     assert!(
-//         system.token.balance_of(account: pool) > 100,
-//     ); // TODO: Change this after implement calculate_rewards.
-//     assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
-//     assert!(system.token.balance_of(account: delegator_x.delegator.address) == delegated_amount);
-//     assert!(system.token.balance_of(account: delegator_y.delegator.address) == delegated_amount);
-//     assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
-//     assert!(
-//         system.token.balance_of(account: delegator_x.reward.address).is_zero(),
-//     ); // TODO: Change this after implement calculate_rewards.
-//     assert!(
-//         system.token.balance_of(account: delegator_y.reward.address).is_zero(),
-//     ); // TODO: Change this after implement calculate_rewards.
-//     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
-//     assert!(
-//         initial_reward_supplier_balance == system
-//             .token
-//             .balance_of(account: system.reward_supplier.address)
-//             + system.token.balance_of(account: staker.reward.address)
-//             + system.token.balance_of(account: delegator_x.reward.address)
-//             + system.token.balance_of(account: delegator_y.reward.address)
-//             + system.token.balance_of(account: pool),
-//     );
-// }
+    system.staker_exit_intent(:staker);
+    system.advance_time(time: system.staking.get_exit_wait_window());
 
+    system.staker_exit_action(:staker);
+
+    assert!(system.token.balance_of(account: system.staking.address).is_zero());
+    assert!(
+        system.token.balance_of(account: pool) > 100,
+    ); // TODO: Change this after implement calculate_rewards.
+    assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: delegator_x.delegator.address) == delegated_amount);
+    assert!(system.token.balance_of(account: delegator_y.delegator.address) == delegated_amount);
+    assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+    assert!(
+        system.token.balance_of(account: delegator_x.reward.address).is_zero(),
+    ); // TODO: Change this after implement calculate_rewards.
+    assert!(
+        system.token.balance_of(account: delegator_y.reward.address).is_zero(),
+    ); // TODO: Change this after implement calculate_rewards.
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
+            + system.token.balance_of(account: staker.reward.address)
+            + system.token.balance_of(account: delegator_x.reward.address)
+            + system.token.balance_of(account: delegator_y.reward.address)
+            + system.token.balance_of(account: pool),
+    );
+}
 // /// Flow:
 // /// First staker Stake.
 // /// Delegator delegate.
