@@ -120,14 +120,15 @@ fn staker_info_after_upgrade_regression_test() {
     };
     test_flow_mainnet(ref :flow);
 }
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn staker_info_with_pool_after_upgrade_regression_test() {
-//     let mut flow = flows::StakerInfoWithPoolAfterUpgradeFlow {
-//         staker: Option::None, staker_info: Option::None,
-//     };
-//     test_flow_mainnet(ref :flow);
-// }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_info_with_pool_after_upgrade_regression_test() {
+    let mut flow = flows::StakerInfoWithPoolAfterUpgradeFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
 
 // #[test]
 // #[fork("MAINNET_LATEST")]

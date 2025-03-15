@@ -76,8 +76,8 @@ pub mod Staking {
         // Deprecated global index of the staking system.
         // Was used in V0, to calculate the accrued interest.
         // global_index: Index,
-        // The timestamp of the last global index update.
-        global_index_last_update_timestamp: Timestamp,
+        // Deprecated timestamp of the last global index update, used in V0.
+        // global_index_last_update_timestamp: Timestamp,
         // Minimum amount of initial stake.
         min_stake: Amount,
         // Map staker address to their staker info.
@@ -172,7 +172,6 @@ pub mod Staking {
             .reward_supplier_dispatcher
             .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
         self.pool_contract_admin.write(pool_contract_admin);
-        self.global_index_last_update_timestamp.write(Time::now());
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
         self.prev_class_hash.write(0, prev_class_hash);
