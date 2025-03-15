@@ -837,6 +837,7 @@ pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
         self.staker_info = Option::Some(staker_info);
 
         system.advance_time(time: one_week);
+        system.update_global_index_via_change_reward_address(:staker);
     }
 
     fn test(
