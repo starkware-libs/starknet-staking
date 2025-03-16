@@ -162,6 +162,7 @@
     - [EXPIRATION\_EPOCH\_TOO\_EARLY](#expiration_epoch_too_early)
     - [EXPIRATION\_EPOCH\_TOO\_FAR](#expiration_epoch_too_far)
     - [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
+    - [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -2077,8 +2078,12 @@ Only token admin.
 
 ### EXPIRATION_EPOCH_TOO_FAR
 "Expiration epoch is too far, should be at most 1 year"
+
 ### ATTEST_WINDOW_TOO_SMALL
 "Attestation window is too small, must be larger then 10 blocks"
+
+### ATTEST_WRONG_BLOCK_HASH
+"Attestation with wrong block hash"
 
 # Structs
 ### StakerPoolInfo

@@ -136,7 +136,7 @@ fn test_attest_assertions() {
         contract_address: attestation_contract, caller_address: operational_address,
     );
     attestation_dispatcher.attest(block_hash: Zero::zero());
-    // TODO: Catch ATTEST_WRONG_HASH.
+    // TODO: Catch ATTEST_WRONG_BLOCK_HASH.
     // Catch ATTEST_IS_DONE.
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
