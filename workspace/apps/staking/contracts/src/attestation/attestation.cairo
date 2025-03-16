@@ -195,7 +195,7 @@ pub mod Attestation {
 
             // Check the attestation data (correct block hash).
             let expected_block_hash = self.get_expected_block_hash(:expected_attestation_block);
-            assert!(expected_block_hash == block_hash, "{}", Error::ATTEST_WRONG_HASH);
+            assert!(expected_block_hash == block_hash, "{}", Error::ATTEST_WRONG_BLOCK_HASH);
         }
 
         fn _assert_attestation_is_not_done(
