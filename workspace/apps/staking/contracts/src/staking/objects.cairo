@@ -68,12 +68,12 @@ pub(crate) struct EpochInfo {
 
 #[generate_trait]
 pub(crate) impl EpochInfoImpl of EpochInfoTrait {
-    fn new(block_duration: u16, length: u16, starting_block: u64) -> EpochInfo {
-        assert!(length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
+    fn new(block_duration: u16, epoch_length: u16, starting_block: u64) -> EpochInfo {
+        assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
         assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
         EpochInfo {
             block_duration,
-            length,
+            length: epoch_length,
             starting_block,
             starting_epoch: Zero::zero(),
             last_starting_block_before_update: Zero::zero(),

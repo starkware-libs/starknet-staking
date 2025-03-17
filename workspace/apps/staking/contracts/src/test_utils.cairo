@@ -204,7 +204,7 @@ pub(crate) mod constants {
     pub fn DEFAULT_EPOCH_INFO() -> EpochInfo {
         EpochInfoTrait::new(
             block_duration: BLOCK_DURATION,
-            length: EPOCH_LENGTH,
+            epoch_length: EPOCH_LENGTH,
             starting_block: EPOCH_STARTING_BLOCK,
         )
     }
