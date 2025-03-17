@@ -300,6 +300,8 @@ pub mod Pool {
             // Write the updated pool member info to storage (remove if needed).
             if self.get_or_create_amount(:pool_member).is_zero() {
                 // Transfer rewards to delegator's reward address.
+                let (rewards, _) = self.calculate_rewards(:pool_member);
+                pool_member_info._deprecated_unclaimed_rewards += rewards;
                 self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
                 self.remove_pool_member(:pool_member);
             } else {
