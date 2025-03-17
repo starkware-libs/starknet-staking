@@ -1205,10 +1205,10 @@ Staking contract of latest version.
 ### Commission Changed
 | data           | type                      | keyed |
 | -------------- | ------------------------- | ----- |
-| staker_address | address                   | ✅    |
-| pool_address   | address                   | ✅    |
-| new_commission | [Commission](#commission) | ❌    |
-| old_commission | [Commission](#commission) | ❌    |
+| staker_address | address                   | ✅     |
+| pool_address   | address                   | ✅     |
+| new_commission | [Commission](#commission) | ❌     |
+| old_commission | [Commission](#commission) | ❌     |
 
 ### Change Delegation Pool Intent
 | data              | type              | keyed |
@@ -1675,9 +1675,9 @@ Only staking contract can execute.
 | unpool_amount | [Amount](#amount) | ❌     |
 
 ### Staker Removed
-| data               | type    | keyed |
-| ------------------ | ------- | ----- |
-| staker_address     | address | ✅     |
+| data           | type    | keyed |
+| -------------- | ------- | ----- |
+| staker_address | address | ✅     |
 
 ### New Pool Member
 | data           | type              | keyed |
@@ -1914,7 +1914,7 @@ fn validate_next_epoch_attestation_block(
 
 #### description <!-- omit from toc -->
 Checks if this is the block in the next epoch this `operational_address` should attest to.
-Note: this function does not return the correct result if it is called in the same epoch that an attestation info update is done.
+Note: this function is not intended to be used in production, and is not guaranteed to return the correct result under all state conditions, please read the docs.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
@@ -1947,10 +1947,10 @@ Only token admin.
 | epoch          | Epoch   | ❌     |
 
 ### Attestation Window Changed
-| data                   | type              | keyed |
-| ---------------------- | ----------------- | ----- |
-| old_attestation_window | u8                | ❌    |
-| new_attestation_window | u8                | ❌    |
+| data                   | type | keyed |
+| ---------------------- | ---- | ----- |
+| old_attestation_window | u8   | ❌     |
+| new_attestation_window | u8   | ❌     |
 
 # Errors
 ### STAKER_EXISTS

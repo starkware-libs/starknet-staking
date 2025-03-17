@@ -140,8 +140,15 @@ pub mod Attestation {
         fn validate_next_epoch_attestation_block(
             self: @ContractState, operational_address: ContractAddress, block_number: u64,
         ) -> bool {
-            // Note: this function does not return the correct result if it is called in the same
-            // epoch that an attestation info update is done.
+            /// This function is used to help integration partners test the correct
+            /// computation of the expected attestation block.
+            /// It is not intended to be used in production, due to it's limitations as stated
+            /// bellow.
+            ///
+            /// **Note**: This function does not return the correct result if it is called in
+            ///  the same epoch that an attestation info update is performed in.
+            /// In addition, it assumes no changes to the staking power or any other parameters
+            /// that affect the attestation block calculation.
             let attestation_window = self.attestation_window.read();
             let staking_dispatcher = IStakingAttestationDispatcher {
                 contract_address: self.staking_contract.read(),
