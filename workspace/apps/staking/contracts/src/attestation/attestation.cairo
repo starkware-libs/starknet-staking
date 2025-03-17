@@ -13,7 +13,9 @@ pub mod Attestation {
         IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
         IStakingDispatcherTrait,
     };
-    use staking::staking::objects::{AttestationInfo as StakingAttestaionInfo, AttestationInfoTrait};
+    use staking::staking::objects::{
+        AttestationInfo as StakingAttestationInfo, AttestationInfoTrait,
+    };
     use staking::types::Epoch;
     use starknet::storage::Map;
     use starknet::syscalls::get_block_hash_syscall;
@@ -179,7 +181,7 @@ pub mod Attestation {
         fn _validate_attestation(
             ref self: ContractState,
             block_hash: felt252,
-            staking_attestation_info: StakingAttestaionInfo,
+            staking_attestation_info: StakingAttestationInfo,
         ) {
             let staker_address = staking_attestation_info.staker_address();
             let current_epoch = staking_attestation_info.epoch_id();
@@ -214,7 +216,7 @@ pub mod Attestation {
 
         fn _calculate_expected_attestation_block(
             self: @ContractState,
-            staking_attestation_info: StakingAttestaionInfo,
+            staking_attestation_info: StakingAttestationInfo,
             attestation_window: u8,
         ) -> u64 {
             // Compute staker hash for the attestation.
@@ -247,7 +249,7 @@ pub mod Attestation {
         }
 
         fn _assert_attest_in_epoch(
-            self: @ContractState, staking_attestation_info: StakingAttestaionInfo,
+            self: @ContractState, staking_attestation_info: StakingAttestationInfo,
         ) {
             let current_block_number = get_block_number();
             let next_epoch_starting_block = staking_attestation_info.current_epoch_starting_block()
@@ -257,6 +259,10 @@ pub mod Attestation {
             );
         }
 
+        /// **Note**: This function has two implementations.
+        /// In test environments, the syscall is not supported, returns zero or errors unexpectedly.
+        /// This allows the function to be tested without relying on the actual block hash
+        /// retrieval syscall.
         #[cfg(not(target: 'test'))]
         fn get_expected_block_hash(
             self: @ContractState, expected_attestation_block: u64,
