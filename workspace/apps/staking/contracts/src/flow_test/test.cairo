@@ -139,14 +139,14 @@ fn staker_info_unstake_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn internal_staker_info_after_upgrade_regression_test() {
-//     let mut flow = flows::InternalStakerInfoAfterUpgradeFlow {
-//         staker: Option::None, staker_info: Option::None,
-//     };
-//     test_flow_mainnet(ref :flow);
-// }
+#[test]
+#[fork("MAINNET_LATEST")]
+fn internal_staker_info_after_upgrade_regression_test() {
+    let mut flow = flows::InternalStakerInfoAfterUpgradeFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
 
 // #[test]
 // #[fork("MAINNET_LATEST")]
