@@ -898,7 +898,8 @@ pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
         system_type: SystemType,
     ) {
         let staker_info_after_upgrade = system.staker_info(staker: self.staker.unwrap());
-        let expected_staker_info = self.staker_info.unwrap();
+        let mut expected_staker_info = self.staker_info.unwrap();
+        expected_staker_info.index = Zero::zero();
         assert!(staker_info_after_upgrade == expected_staker_info);
     }
 }
