@@ -399,6 +399,9 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalS
             _deprecated_index: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,
+            // This assumes that the function is called only during migration. in a different
+            // context, the commission commitment will be lost.
+            commission_commitment: Option::None,
         }
     }
 }

@@ -113,8 +113,6 @@ pub mod Staking {
         total_stake_trace: Trace,
         // Map staker address to their balance trace.
         staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
-        // Map staker address to their commission commitment.
-        commission_commitment: Map<ContractAddress, CommissionCommitment>,
     }
 
     #[event]
@@ -604,13 +602,23 @@ pub mod Staking {
                 (pool_info.pool_contract, pool_info.commission)
             };
 
-            let commission_commitment = self.commission_commitment.read(staker_address);
-            if self.is_commission_commitment_active(:commission_commitment) {
-                assert!(
-                    commission <= commission_commitment.max_commission,
-                    "{}",
-                    GenericError::INVALID_COMMISSION_WITH_COMMITMENT,
-                );
+            if let Option::Some(commission_commitment) = staker_info.commission_commitment {
+                if self.is_commission_commitment_active(:commission_commitment) {
+                    assert!(
+                        commission <= commission_commitment.max_commission,
+                        "{}",
+                        GenericError::INVALID_COMMISSION_WITH_COMMITMENT,
+                    );
+                    assert!(
+                        commission != old_commission, "{}", GenericError::INVALID_SAME_COMMISSION,
+                    );
+                } else {
+                    assert!(
+                        commission < old_commission,
+                        "{}",
+                        GenericError::COMMISSION_COMMITMENT_EXPIRED,
+                    );
+                }
             } else {
                 assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
             }
@@ -644,12 +652,13 @@ pub mod Staking {
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             let pool_info = staker_info.get_pool_info();
             let current_epoch = self.get_current_epoch();
-            let mut commission_commitment = self.commission_commitment.read(staker_address);
-            assert!(
-                !self.is_commission_commitment_active(:commission_commitment),
-                "{}",
-                Error::COMMISSION_COMMITMENT_EXISTS,
-            );
+            if let Option::Some(commission_commitment) = staker_info.commission_commitment {
+                assert!(
+                    !self.is_commission_commitment_active(:commission_commitment),
+                    "{}",
+                    Error::COMMISSION_COMMITMENT_EXISTS,
+                );
+            }
             assert!(pool_info.commission <= max_commission, "{}", Error::MAX_COMMISSION_TOO_LOW);
             assert!(expiration_epoch > current_epoch, "{}", Error::EXPIRATION_EPOCH_TOO_EARLY);
             assert!(
@@ -657,8 +666,8 @@ pub mod Staking {
                 "{}",
                 Error::EXPIRATION_EPOCH_TOO_FAR,
             );
-            commission_commitment = CommissionCommitment { max_commission, expiration_epoch };
-            self.commission_commitment.write(staker_address, commission_commitment);
+            let commission_commitment = CommissionCommitment { max_commission, expiration_epoch };
+            staker_info.commission_commitment = Option::Some(commission_commitment);
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
@@ -673,7 +682,11 @@ pub mod Staking {
         fn get_staker_commission_commitment(
             self: @ContractState, staker_address: ContractAddress,
         ) -> CommissionCommitment {
-            self.commission_commitment.read(staker_address)
+            let staker_info = self.internal_staker_info(:staker_address);
+            if staker_info.commission_commitment.is_none() {
+                panic_with_byte_array(err: @Error::COMMISSION_COMMITMENT_NOT_SET.describe());
+            }
+            staker_info.commission_commitment.unwrap()
         }
 
         fn is_paused(self: @ContractState) -> bool {
@@ -1222,7 +1235,6 @@ pub mod Staking {
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
             let operational_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(operational_address, Zero::zero());
-            self.commission_commitment.write(staker_address, Zero::zero());
             self
                 .emit(
                     Events::DeleteStaker {

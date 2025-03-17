@@ -750,9 +750,6 @@ fn test_unstake_action() {
     assert!(staker_amount == cfg.staker_info._deprecated_amount_own);
     let actual_staker_info = staking_dispatcher.get_staker_info(:staker_address);
     assert!(actual_staker_info.is_none());
-    let commission_commitment = staking_dispatcher
-        .get_staker_commission_commitment(:staker_address);
-    assert!(commission_commitment.is_zero());
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     // StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
     // events.
@@ -1916,14 +1913,26 @@ fn test_update_commission_assertions_with_commitment() {
         :result, expected_error: GenericError::INVALID_COMMISSION_WITH_COMMITMENT.describe(),
     );
 
+    // Should catch INVALID_SAME_COMMISSION.
+    let commission = max_commission;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.update_commission(:commission);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher.update_commission(:commission);
+    assert_panic_with_error(
+        :result, expected_error: GenericError::INVALID_SAME_COMMISSION.describe(),
+    );
+
     // Advance to the expiration epoch.
     advance_epoch_global();
 
-    // Should catch INVALID_COMMISSION.
+    // Should catch COMMISSION_COMMITMENT_EXPIRED.
     let commission = max_commission;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_safe_dispatcher.update_commission(:commission);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_COMMISSION.describe());
+    assert_panic_with_error(
+        :result, expected_error: GenericError::COMMISSION_COMMITMENT_EXPIRED.describe(),
+    );
 }
 
 #[test]
@@ -2746,6 +2755,7 @@ fn test_versioned_internal_staker_info_wrap_latest() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     let versioned_internal_staker_info = VersionedInternalStakerInfoTrait::wrap_latest(
         internal_staker_info,
@@ -2834,6 +2844,7 @@ fn test_compute_unpool_time() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     assert!(
         internal_staker_info
@@ -2851,6 +2862,7 @@ fn test_compute_unpool_time() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
 
     // Unstake time > current time.
@@ -2877,6 +2889,7 @@ fn test_get_pool_info() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::Some(staker_pool_info),
+        commission_commitment: Option::None,
     };
     assert!(internal_staker_info.get_pool_info() == staker_pool_info);
 }
@@ -2892,6 +2905,7 @@ fn test_get_pool_info_panic() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     internal_staker_info.get_pool_info();
 }
@@ -2906,6 +2920,7 @@ fn test_internal_staker_info_latest_into_staker_info() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     let staker_info: StakerInfo = internal_staker_info.into();
     let expected_staker_info = StakerInfo {
@@ -3008,6 +3023,7 @@ fn test_staker_info_into_internal_staker_info_v1() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     assert!(internal_staker_info == expected_internal_staker_info);
 }

@@ -823,6 +823,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
                     pool_contract: POOL_CONTRACT_ADDRESS(), commission: COMMISSION,
                 ),
             ),
+            commission_commitment: Option::None,
         };
         let pool_member_info = InternalPoolMemberInfoLatest {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),

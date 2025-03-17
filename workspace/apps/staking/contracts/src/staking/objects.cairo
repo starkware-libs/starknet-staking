@@ -2,8 +2,8 @@ use core::cmp::max;
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::interface::{
-    IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo, StakerPoolInfo,
-    StakerPoolInfoTrait,
+    CommissionCommitment, IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo,
+    StakerPoolInfo, StakerPoolInfoTrait,
 };
 use staking::types::{Amount, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
@@ -166,6 +166,7 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) _deprecated_index: Index,
     pub(crate) unclaimed_rewards_own: Amount,
     pub(crate) pool_info: Option<StakerPoolInfo>,
+    pub(crate) commission_commitment: Option<CommissionCommitment>,
 }
 
 // **Note**: This struct should be updated in the next version of Internal Staker Info.
@@ -212,6 +213,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 _deprecated_index: Zero::zero(),
                 unclaimed_rewards_own,
                 pool_info,
+                commission_commitment: Option::None,
             },
         )
     }
