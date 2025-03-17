@@ -112,12 +112,12 @@ fn test_staker_balance_increase_own_amount() {
 #[test]
 fn test_staker_balance_update_pool_amount() {
     let mut staker_balance = StakerBalanceTrait::new(amount: 100);
-    staker_balance.update_pool_amount(amount: 200);
+    staker_balance.update_pool_amount(new_amount: 200);
     assert!(staker_balance.amount_own() == 100);
     assert!(staker_balance.total_amount() == 300);
     assert!(staker_balance.pool_amount() == 200);
 
-    staker_balance.update_pool_amount(amount: 50);
+    staker_balance.update_pool_amount(new_amount: 50);
     assert!(staker_balance.amount_own() == 100);
     assert!(staker_balance.total_amount() == 150);
     assert!(staker_balance.pool_amount() == 50);

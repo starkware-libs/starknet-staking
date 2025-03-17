@@ -1507,7 +1507,7 @@ pub mod Staking {
             let mut staker_balance = StakerBalanceTrait::new(amount: amount_own);
             if let Option::Some(pool_info) = staker_info.pool_info {
                 let pool_amount = pool_info._deprecated_amount();
-                staker_balance.update_pool_amount(amount: pool_amount);
+                staker_balance.update_pool_amount(new_amount: pool_amount);
             }
             self
                 .staker_balance_trace
@@ -1552,7 +1552,7 @@ pub mod Staking {
             mut staker_balance: StakerBalance,
             amount: Amount,
         ) {
-            staker_balance.update_pool_amount(:amount);
+            staker_balance.update_pool_amount(new_amount: amount);
             self.insert_staker_balance(:staker_address, :staker_balance);
         }
 
