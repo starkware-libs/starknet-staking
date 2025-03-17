@@ -2454,16 +2454,29 @@ fn test_get_pool_exit_intent() {
 fn test_get_attestation_info_by_operational_address_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_safe_dispatcher = IStakingAttestationSafeDispatcher {
         contract_address: staking_contract,
     };
-    let operational_address = DUMMY_ADDRESS();
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
 
     // Catch STAKER_NOT_EXISTS.
+    let operational_address = DUMMY_ADDRESS();
     let result = staking_safe_dispatcher
         .get_attestation_info_by_operational_address(:operational_address);
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+
+    // Catch UNSTAKE_IN_PROGRESS.
+    let operational_address = cfg.staker_info.operational_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.unstake_intent();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher
+        .get_attestation_info_by_operational_address(:operational_address);
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
 }
 
 #[test]
@@ -2647,24 +2660,38 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
 fn test_update_rewards_from_attestation_contract_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_safe_dispatcher = IStakingAttestationSafeDispatcher {
         contract_address: staking_contract,
     };
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
 
     // Catch CALLER_IS_NOT_ATTESTATION_CONTRACT.
     let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
     assert_panic_with_error(
         :result, expected_error: Error::CALLER_IS_NOT_ATTESTATION_CONTRACT.describe(),
     );
+
     // Catch STAKER_NOT_EXISTS.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: attestation_contract,
     );
-    let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
+    let result = staking_safe_dispatcher
+        .update_rewards_from_attestation_contract(staker_address: DUMMY_ADDRESS());
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+
+    // Catch UNSTAKE_IN_PROGRESS.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.unstake_intent();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: attestation_contract,
+    );
+    let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
 }
 
 const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };

@@ -146,6 +146,7 @@
     - [CALLER\_CANNOT\_ADD\_TO\_POOL](#caller_cannot_add_to_pool)
     - [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
     - [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+    - [CALLER\_IS\_NOT\_ATTESTAION\_CONTRACT](#caller_is_not_attestation_contract)
     - [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
     - [ONLY\_SECURITY\_AGENT](#only_security_agent)
     - [ONLY\_SECURITY\_ADMIN](#only_security_admin)
@@ -920,6 +921,10 @@ Calculate and update rewards for the staker for the current epoch.
 Send pool rewards to the pool.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [CALLER\_IS\_NOT\_ATTESTAION\_CONTRACT](#caller_is_not_attestation_contract)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only attestation contract.
@@ -941,6 +946,9 @@ fn get_attestation_info_by_operational_address(
 Returns the attestation info for the staker based on it's operational address.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
@@ -2035,6 +2043,9 @@ Only token admin.
 
 ### CALLER_IS_NOT_STAKING_CONTRACT
 "Caller is not staking contract."
+
+### CALLER_IS_NOT_ATTESTATION_CONTRACT
+"Caller is not attestation contract."
 
 ### SWITCH_POOL_DATA_DESERIALIZATION_FAILED
 "Switch pool data deserialization failed."

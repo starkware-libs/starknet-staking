@@ -1028,26 +1028,28 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingAttestationImpl of IStakingAttestation<ContractState> {
-        // TODO: implement
         // TODO: rounding issues in the rewards calculation
         fn update_rewards_from_attestation_contract(
             ref self: ContractState, staker_address: ContractAddress,
         ) {
+            // Prerequisites and asserts.
             self.general_prerequisites();
-            // Assert caller is attesation contract
             assert!(
                 get_caller_address() == self.attestation_contract.read(),
                 "{}",
                 Error::CALLER_IS_NOT_ATTESTATION_CONTRACT,
             );
             let mut staker_info = self.internal_staker_info(:staker_address);
-            let total_rewards = self.calculate_staker_total_rewards(:staker_info);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+
+            // Calculate and update rewards.
+            let total_rewards = self.calculate_staker_total_rewards(:staker_address);
             self.update_reward_supplier(rewards: total_rewards);
             let staker_rewards = self
                 .calculate_staker_own_rewards_include_commission(
                     :staker_info, :total_rewards, :staker_address,
                 );
-            staker_info.unclaimed_rewards_own = staker_info.unclaimed_rewards_own + staker_rewards;
+            staker_info.unclaimed_rewards_own += staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
             self.update_pool_rewards(:staker_address, :staker_info, :pool_rewards);
             self
@@ -1059,7 +1061,12 @@ pub mod Staking {
         fn get_attestation_info_by_operational_address(
             self: @ContractState, operational_address: ContractAddress,
         ) -> AttestationInfo {
+            // Asserts.
             let staker_address = self.get_staker_address_by_operational(:operational_address);
+            let staker_info = self.internal_staker_info(:staker_address);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+
+            // Return the attestation info.
             let epoch_info = self.get_epoch_info();
             let epoch_len = epoch_info.epoch_len_in_blocks();
             let epoch_id = epoch_info.current_epoch();
@@ -1331,12 +1338,12 @@ pub mod Staking {
         }
 
         fn calculate_staker_total_rewards(
-            self: @ContractState, staker_info: InternalStakerInfoLatest,
+            ref self: ContractState, staker_address: ContractAddress,
         ) -> Amount {
             let epoch_rewards = self.reward_supplier_dispatcher.read().current_epoch_rewards();
             mul_wide_and_div(
                 lhs: epoch_rewards,
-                rhs: staker_info.get_total_amount(),
+                rhs: self.get_or_create_total_amount(:staker_address),
                 div: self.get_current_total_staking_power(),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
