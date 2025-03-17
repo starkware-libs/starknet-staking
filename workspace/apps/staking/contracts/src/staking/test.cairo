@@ -726,8 +726,15 @@ fn test_unstake_action() {
     // Stake.
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
 
+    // Set commission commitment.
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let max_commission = staker_info.get_pool_info().commission;
+    let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_commission_commitment(:max_commission, :expiration_epoch);
+
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let unstake_time = staking_dispatcher.unstake_intent();
     // Advance time to enable unstake_action.
@@ -744,6 +751,9 @@ fn test_unstake_action() {
     assert!(staker_amount == cfg.staker_info._deprecated_amount_own);
     let actual_staker_info = staking_dispatcher.get_staker_info(:staker_address);
     assert!(actual_staker_info.is_none());
+    let commission_commitment = staking_dispatcher
+        .get_staker_commission_commitment(:staker_address);
+    assert!(commission_commitment.is_zero());
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     // StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
     // events.

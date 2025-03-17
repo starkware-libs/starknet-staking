@@ -432,3 +432,17 @@ pub struct CommissionCommitment {
     pub max_commission: Commission,
     pub expiration_epoch: Epoch,
 }
+
+pub impl CommissionCommitmentZero of Zero<CommissionCommitment> {
+    fn zero() -> CommissionCommitment {
+        CommissionCommitment { max_commission: Zero::zero(), expiration_epoch: Zero::zero() }
+    }
+
+    fn is_zero(self: @CommissionCommitment) -> bool {
+        *self == Self::zero()
+    }
+
+    fn is_non_zero(self: @CommissionCommitment) -> bool {
+        !self.is_zero()
+    }
+}

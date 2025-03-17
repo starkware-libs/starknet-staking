@@ -1199,6 +1199,7 @@ pub mod Staking {
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
             let operational_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(operational_address, Zero::zero());
+            self.commission_commitment.write(staker_address, Zero::zero());
             self
                 .emit(
                     Events::DeleteStaker {
