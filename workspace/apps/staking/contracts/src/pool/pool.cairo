@@ -27,10 +27,14 @@ pub mod Pool {
     use staking::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
     };
-    use staking::utils::{CheckedIERC20DispatcherTrait, compute_global_index_diff};
+    use staking::utils::{
+        CheckedIERC20DispatcherTrait, compute_global_index_diff, compute_rewards_rounded_down,
+    };
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
-    use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
+    use starknet::storage::{
+        Map, StorageMapReadAccess, StoragePath, StoragePathEntry, StoragePointerReadAccess,
+    };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
@@ -798,11 +802,97 @@ pub mod Pool {
             self.rewards_info.deref().length()
         }
 
-        /// TODO: Implement.
         fn calculate_rewards(
             self: @ContractState, pool_member: ContractAddress,
         ) -> (Amount, VecIndex) {
-            (Zero::zero(), Zero::zero())
+            let pool_member_trace = self.pool_member_epoch_balance.entry(pool_member);
+            let curr_epoch = self.get_current_epoch();
+
+            let mut rewards = 0;
+            let mut entry_to_claim_from = self
+                .internal_pool_member_info(:pool_member)
+                .entry_to_claim_from;
+
+            if !pool_member_trace.is_initialized() {
+                // This is the first action of the pool member since contract upgrade.
+                let balance = self.get_amount(:pool_member);
+                let pool_member_checkpoint = PoolMemberCheckpointTrait::new(
+                    epoch: curr_epoch, :balance, rewards_info_idx: self.rewards_info_length() - 1,
+                );
+                let sigma = self.find_sigma(pool_member_checkpoint);
+                return (sigma * balance, entry_to_claim_from);
+            }
+
+            let pool_member_trace_length = pool_member_trace.length();
+
+            // Invariant: pool_member_info.entry_to_claim_from < pool_member_trace.length().
+            assert!(
+                entry_to_claim_from < pool_member_trace_length,
+                "{}",
+                Error::INVALID_ENTRY_TO_CLAIM_FROM,
+            );
+
+            let pool_member_checkpoint = pool_member_trace.at(entry_to_claim_from);
+
+            // Calculate rewards only up to the current epoch.
+            if pool_member_checkpoint.epoch() >= curr_epoch {
+                return (0, entry_to_claim_from);
+            }
+
+            let mut from_sigma = self.find_sigma(pool_member_checkpoint);
+            while entry_to_claim_from < pool_member_trace_length {
+                let pool_member_checkpoint = pool_member_trace.at(entry_to_claim_from);
+                // Calculate rewards only up to the current epoch.
+                if pool_member_checkpoint.epoch() >= curr_epoch {
+                    break;
+                }
+                let member_balance = pool_member_checkpoint.balance();
+                // Calculate rewards up to the current epoch, create current epoch checkpoint if
+                // missing.
+                let pool_member_next_checkpoint = self
+                    .find_next_checkpoint(
+                        :pool_member_trace, :entry_to_claim_from, :member_balance, :curr_epoch,
+                    );
+                let to_sigma = self.find_sigma(pool_member_next_checkpoint);
+                rewards +=
+                    compute_rewards_rounded_down(
+                        amount: member_balance, interest: to_sigma - from_sigma,
+                    );
+                from_sigma = to_sigma;
+                entry_to_claim_from += 1;
+            }
+
+            (rewards, entry_to_claim_from)
+        }
+
+        /// Finds the next checkpoint for reward calculation.
+        ///
+        /// Rewards are calculated only up to the current epoch.
+        /// - When calculating for claiming rewards, the current epoch checkpoint must exists.
+        /// - When calculating for view function, this checkpoint may be missing. In that case, it
+        /// will be created and returned if needed.
+        fn find_next_checkpoint(
+            self: @ContractState,
+            pool_member_trace: StoragePath<PoolMemberBalanceTrace>,
+            entry_to_claim_from: VecIndex,
+            member_balance: Amount,
+            curr_epoch: Epoch,
+        ) -> PoolMemberCheckpoint {
+            let curr_epoch_checkpoint = PoolMemberCheckpointTrait::new(
+                epoch: curr_epoch,
+                balance: member_balance,
+                rewards_info_idx: self.rewards_info_length() - 1,
+            );
+            if entry_to_claim_from + 1 >= pool_member_trace.length() {
+                // Missing checkpoint for the current epoch.
+                return curr_epoch_checkpoint;
+            }
+            let next_checkpoint = pool_member_trace.at(entry_to_claim_from + 1);
+            if next_checkpoint.epoch() > curr_epoch {
+                // Missing checkpoint for the current epoch.
+                return curr_epoch_checkpoint;
+            }
+            next_checkpoint
         }
 
         /// Find the latest rewards aggregated sum (a.k.a sigma) before the change in staking
@@ -830,11 +920,6 @@ pub mod Pool {
                 // If pool rewards for epoch j given after pool member balance changed, then pool
                 // member is not eligible in this `reward_info_idx` and it is infact the latest one
                 // before the staking power change.
-                assert!(
-                    epoch_at_index == pool_member_checkpoint.epoch() - 1,
-                    "{}",
-                    Error::UNEXPECTED_EPOCH,
-                );
                 sigma_at_index
             } else {
                 // Else, the pool rewards index given is for an epoch bigger than j, meaning pool
