@@ -259,6 +259,10 @@ pub mod Attestation {
             );
         }
 
+        /// **Note**: This function has two implementations.
+        /// In test environments, the syscall is not supported, returns zero or errors unexpectedly.
+        /// This allows the function to be tested without relying on the actual block hash
+        /// retrieval syscall.
         #[cfg(not(target: 'test'))]
         fn get_expected_block_hash(
             self: @ContractState, expected_attestation_block: u64,
