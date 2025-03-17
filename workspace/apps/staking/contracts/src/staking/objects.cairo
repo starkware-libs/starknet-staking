@@ -60,7 +60,7 @@ pub(crate) struct EpochInfo {
     length: u16,
     // The first block of the first epoch with this length.
     starting_block: u64,
-    // The first epoch, can be changed by fn update.
+    // The first epoch id with this length, changes by a call to update.
     starting_epoch: Epoch,
     // The last starting block of the last epoch with previous length.
     last_starting_block_before_update: u64,
