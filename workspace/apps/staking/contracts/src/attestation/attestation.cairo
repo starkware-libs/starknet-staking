@@ -134,6 +134,7 @@ pub mod Attestation {
                 contract_address: self.staking_contract.read(),
             };
             let current_epoch = staking_dispatcher.get_current_epoch();
+            assert!(current_epoch.is_non_zero(), "{}", Error::ATTEST_EPOCH_ZERO);
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
 

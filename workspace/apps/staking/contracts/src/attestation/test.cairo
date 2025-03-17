@@ -1,7 +1,5 @@
 use core::num::traits::Zero;
-use core::poseidon::PoseidonTrait;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use snforge_std::{CheatSpan, cheat_caller_address};
 use staking::attestation::attestation::Attestation;
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{
@@ -25,6 +23,7 @@ use starkware_utils::errors::Describable;
 use starkware_utils::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };
+use test_utils::constants::DUMMY_ADDRESS;
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global,
     calculate_block_offset, general_contract_system_deployment, stake_for_testing_using_dispatcher,
@@ -167,6 +166,16 @@ fn test_is_attestation_done_in_curr_epoch() {
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
     assert!(is_attestation_done == true);
+}
+
+#[test]
+#[should_panic(expected: "Attestation for epoch 0 is not allowed")]
+fn test_is_attestation_done_in_curr_epoch_zero_epoch() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
+    attestation_dispatcher.is_attestation_done_in_curr_epoch(staker_address: DUMMY_ADDRESS());
 }
 
 #[test]
