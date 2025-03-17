@@ -13,6 +13,11 @@ assert_macros.workspace = true
 snforge_std.workspace = true
 snforge_scarb_plugin.workspace = true
 
+[profile.dev.cairo]
+unstable-add-statements-code-locations-debug-info = true
+unstable-add-statements-functions-debug-info = true
+inlining-strategy = "avoid"
+
 [scripts]
 test = "SNFORGE_BACKTRACE=1 snforge test"
 
