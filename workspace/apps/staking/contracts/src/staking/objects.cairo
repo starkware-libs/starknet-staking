@@ -60,7 +60,7 @@ pub(crate) struct EpochInfo {
     length: u16,
     // The first block of the first epoch with this length.
     starting_block: u64,
-    // The first epoch, can be changed by fn update.
+    // The first epoch id with this length, changes by a call to update.
     starting_epoch: Epoch,
     // The last starting block of the last epoch with previous length.
     last_starting_block_before_update: u64,
@@ -87,7 +87,8 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
         if current_block < *self.starting_block {
             return *self.starting_epoch - 1;
         }
-        ((current_block - *self.starting_block) / (*self.length).into()) + *self.starting_epoch
+        ((current_block - *self.starting_block) / self.epoch_len_in_blocks().into())
+            + *self.starting_epoch
     }
 
     fn update(ref self: EpochInfo, block_duration: u16, epoch_length: u16) {
@@ -102,21 +103,26 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
 
     fn epochs_in_year(self: @EpochInfo) -> u64 {
         let blocks_in_year = SECONDS_IN_YEAR / (*self.block_duration).into();
-        blocks_in_year / (*self.length).into()
+        blocks_in_year / self.epoch_len_in_blocks().into()
     }
 
     fn epoch_len_in_blocks(self: @EpochInfo) -> u16 {
-        *self.length
+        if *self.starting_block > get_block_number() {
+            // There was an update in this epoch, so we need to compute the previous length.
+            (*self.starting_block - *self.last_starting_block_before_update).try_into().unwrap()
+        } else {
+            // No update in this epoch, so we can return the length.
+            *self.length
+        }
     }
 
     fn current_epoch_starting_block(self: @EpochInfo) -> u64 {
         if *self.starting_block > get_block_number() {
             // The epoch info updated and the current block is before the starting block of the
             // next epoch with the new length.
-            *self.last_starting_block_before_update
-        } else {
-            self.calculate_next_epoch_starting_block() - self.epoch_len_in_blocks().into()
+            return *self.last_starting_block_before_update;
         }
+        self.calculate_next_epoch_starting_block() - self.epoch_len_in_blocks().into()
     }
 }
 
@@ -125,7 +131,7 @@ impl PrivateEpochInfoImpl of PrivateEpochInfoTrait {
     fn calculate_next_epoch_starting_block(self: @EpochInfo) -> u64 {
         let current_block = get_block_number();
         let blocks_passed = current_block - *self.starting_block;
-        let length: u64 = (*self.length).into();
+        let length: u64 = self.epoch_len_in_blocks().into();
         let blocks_to_next_epoch = length - (blocks_passed % length);
         current_block + blocks_to_next_epoch
     }

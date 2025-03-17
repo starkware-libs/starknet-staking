@@ -3081,6 +3081,24 @@ fn test_epoch_info_update_only_block_duration() {
 }
 
 #[test]
+fn test_epoch_info_len_kept_after_update() {
+    let block_number = EPOCH_STARTING_BLOCK;
+    let length = EPOCH_LENGTH;
+    let block_duration = BLOCK_DURATION;
+    start_cheat_block_number_global(:block_number);
+    let mut epoch_info = EpochInfoTrait::new(
+        :block_duration, :length, starting_block: get_block_number(),
+    );
+    let current_epoch = epoch_info.current_epoch();
+    epoch_info.update(:block_duration, epoch_length: length + 1);
+    assert!(epoch_info.current_epoch() == current_epoch);
+    assert!(epoch_info.epoch_len_in_blocks() == length);
+    advance_epoch_global();
+    assert!(epoch_info.current_epoch() == current_epoch + 1);
+    assert!(epoch_info.epoch_len_in_blocks() == length + 1);
+}
+
+#[test]
 fn test_set_epoch_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

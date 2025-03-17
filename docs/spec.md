@@ -162,6 +162,7 @@
     - [EXPIRATION\_EPOCH\_TOO\_EARLY](#expiration_epoch_too_early)
     - [EXPIRATION\_EPOCH\_TOO\_FAR](#expiration_epoch_too_far)
     - [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
+    - [ATTEST\_EPOCH\_ZERO](#attest_epoch_zero)
     - [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
@@ -1887,6 +1888,7 @@ fn is_attestation_done_in_curr_epoch(self: @TContractState, staker_address: Cont
 Returns true if attestation is done for this `staker_address` in current epoch, else returns false.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [ATTEST\_EPOCH\_ZERO](#attest_epoch_zero)
 #### logic <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Any address can execute.
@@ -2081,6 +2083,9 @@ Only token admin.
 
 ### ATTEST_WINDOW_TOO_SMALL
 "Attestation window is too small, must be larger then 10 blocks"
+
+### ATTEST_EPOCH_ZERO
+"Attestation for epoch 0 is not allowed"
 
 ### ATTEST_WRONG_BLOCK_HASH
 "Attestation with wrong block hash"

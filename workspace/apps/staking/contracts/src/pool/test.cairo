@@ -845,36 +845,55 @@ fn test_switch_delegation_pool() {
             to_pool: to_staker_pool_contract,
             amount: switch_amount,
         );
-    let actual_pool_member_info = pool_dispatcher
-        .get_pool_member_info(pool_member: cfg.test_info.pool_member_address);
     assert!(amount_left == 0);
-    assert!(actual_pool_member_info.is_none());
+    // Rewards still unclaimed so pool member is not removed yet.
+    let actual_pool_member_info = pool_dispatcher
+        .pool_member_info(pool_member: cfg.test_info.pool_member_address);
+    let expected_pool_member_info: PoolMemberInfo = PoolMemberInfo {
+        unpool_amount: Zero::zero(), unpool_time: Option::None, ..pool_member_info_before_switch,
+    };
+    assert!(actual_pool_member_info == expected_pool_member_info);
+    // Validate SwitchDelegationPool event.
+    let events = spy.get_events().emitted_by(contract_address: pool_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "switch_delegation_pool");
+    assert_switch_delegation_pool_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        new_delegation_pool: to_staker_pool_contract,
+        amount: switch_amount,
+    );
+    // Claim rewards.
+    cheat_caller_address_once(
+        contract_address: pool_contract, caller_address: cfg.pool_member_info.reward_address,
+    );
+    let rewards = pool_dispatcher.claim_rewards(pool_member: cfg.test_info.pool_member_address);
+    assert!(rewards == unclaimed_rewards_member);
     let reward_account_balance_after = token_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
     assert!(
         reward_account_balance_after == reward_account_balance_before
             + unclaimed_rewards_member.into(),
     );
-    // Validate DeletePoolMember,PoolMemberRewardClaimed and SwitchDelegationPool events emitted by
+    // Pool member is removed.
+    let actual_pool_member_info = pool_dispatcher
+        .get_pool_member_info(pool_member: cfg.test_info.pool_member_address);
+    assert!(actual_pool_member_info.is_none());
+    // Validate PoolMemberRewardClaimed and DeletePoolMember events emitted by
     // the from_pool.
     let events = spy.get_events().emitted_by(contract_address: pool_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 3, message: "switch_delegation_pool");
+    assert_number_of_events(
+        actual: events.len(), expected: 3, message: "claim_rewards after switch_delegation_pool",
+    );
     assert_pool_member_reward_claimed_event(
-        spied_event: events[0],
+        spied_event: events[1],
         pool_member: cfg.test_info.pool_member_address,
         reward_address: cfg.pool_member_info.reward_address,
         amount: unclaimed_rewards_member,
     );
     assert_delete_pool_member_event(
-        spied_event: events[1],
-        pool_member: cfg.test_info.pool_member_address,
-        reward_address: cfg.pool_member_info.reward_address,
-    );
-    assert_switch_delegation_pool_event(
         spied_event: events[2],
         pool_member: cfg.test_info.pool_member_address,
-        new_delegation_pool: to_staker_pool_contract,
-        amount: switch_amount,
+        reward_address: cfg.pool_member_info.reward_address,
     );
 }
 
