@@ -339,10 +339,18 @@ pub mod Pool {
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
 
-            // Write the updated pool member info to storage.
-            self
-                .pool_member_info
-                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
+            if pool_member_info.unpool_amount.is_zero()
+                && self.get_or_create_amount(:pool_member).is_zero() {
+                // Both unpool_amount and amount are zero, remove pool member.
+                self.remove_pool_member(:pool_member);
+            } else {
+                // Write the updated pool member info to storage.
+                self
+                    .pool_member_info
+                    .write(
+                        pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info),
+                    );
+            }
 
             rewards
         }
@@ -363,24 +371,13 @@ pub mod Pool {
 
             // Update pool_member_info and write to storage.
             pool_member_info.unpool_amount -= amount;
-            if pool_member_info.unpool_amount.is_zero()
-                && self.get_or_create_amount(:pool_member).is_zero() {
-                // Both unpool_amount and amount are zero, send rewards and remove pool member.
-                let token_dispatcher = self.token_dispatcher.read();
-                self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
-                self.remove_pool_member(:pool_member);
-            } else {
-                // One of pool member unpool_amount or amount is non-zero.
-                if pool_member_info.unpool_amount.is_zero() {
-                    // unpool_amount is zero, clear unpool_time.
-                    pool_member_info.unpool_time = Option::None;
-                }
-                self
-                    .pool_member_info
-                    .write(
-                        pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info),
-                    );
+            if pool_member_info.unpool_amount.is_zero() {
+                // unpool_amount is zero, clear unpool_time.
+                pool_member_info.unpool_time = Option::None;
             }
+            self
+                .pool_member_info
+                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
 
             // Serialize the switch pool data and invoke the staking contract to switch pool.
             let switch_pool_data = SwitchPoolData { pool_member, reward_address };
