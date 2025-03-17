@@ -120,10 +120,9 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
         if *self.starting_block > get_block_number() {
             // The epoch info updated and the current block is before the starting block of the
             // next epoch with the new length.
-            *self.last_starting_block_before_update
-        } else {
-            self.calculate_next_epoch_starting_block() - self.epoch_len_in_blocks().into()
+            return *self.last_starting_block_before_update;
         }
+        self.calculate_next_epoch_starting_block() - self.epoch_len_in_blocks().into()
     }
 }
 
