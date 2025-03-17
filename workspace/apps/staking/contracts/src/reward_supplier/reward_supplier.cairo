@@ -24,7 +24,6 @@ pub mod RewardSupplier {
     use starkware_utils::errors::OptionAuxTrait;
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::ceil_of_division;
-    use starkware_utils::types::time::time::{Time, Timestamp};
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
 

@@ -18,12 +18,10 @@ pub mod Attestation {
     };
     use staking::types::Epoch;
     use starknet::storage::Map;
-    use starknet::syscalls::get_block_hash_syscall;
     use starknet::{ContractAddress, get_block_number, get_caller_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use starkware_utils::components::roles::RolesComponent;
-    use starkware_utils::errors::OptionAuxTrait;
     use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Attestation';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';

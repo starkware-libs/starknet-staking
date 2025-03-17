@@ -3,6 +3,7 @@ use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::interface::{
     IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo, StakerPoolInfo,
+    StakerPoolInfoTrait,
 };
 use staking::types::{Amount, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
@@ -238,9 +239,11 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
         (*self.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 
-    fn get_total_amount(self: @InternalStakerInfoLatest) -> Amount {
+    fn _deprecated_get_total_amount(self: @InternalStakerInfoLatest) -> Amount {
+        /// This is used in V0 to get the total amount of the staker.
+        /// In V1, we use `get_total_amount` instead.
         if let Option::Some(pool_info) = *self.pool_info {
-            return pool_info.amount + *self._deprecated_amount_own;
+            return pool_info._deprecated_amount() + *self._deprecated_amount_own;
         }
         (*self._deprecated_amount_own)
     }

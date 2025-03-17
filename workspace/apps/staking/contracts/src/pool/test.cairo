@@ -5,7 +5,6 @@ use Pool::{
 use constants::{
     DUMMY_ADDRESS, NON_POOL_MEMBER_ADDRESS, NOT_STAKING_CONTRACT_ADDRESS, OTHER_OPERATIONAL_ADDRESS,
     OTHER_REWARD_ADDRESS, OTHER_STAKER_ADDRESS, POOL_MEMBER_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS,
-    STAKER_FINAL_INDEX,
 };
 use core::num::traits::zero::Zero;
 use core::option::OptionTrait;
@@ -40,6 +39,7 @@ use staking::pool::objects::{
 use staking::pool::pool::Pool;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
+    StakerPoolInfoTrait,
 };
 use staking::staking::objects::{
     InternalStakerInfoLatestTrait, UndelegateIntentKey, UndelegateIntentValue,
@@ -160,6 +160,10 @@ fn test_enter_delegation_pool() {
     assert!(balance == 0);
     // Check that the staker info was updated correctly.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let mut expected_pool_info = StakerPoolInfoTrait::new(
+        :pool_contract, commission: cfg.staker_info.get_pool_info().commission,
+    );
+    expected_pool_info._set_deprecated_amount(amount: cfg.pool_member_info._deprecated_amount);
     let expected_staker_info = StakerInfo {
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
@@ -167,14 +171,7 @@ fn test_enter_delegation_pool() {
         amount_own: cfg.staker_info._deprecated_amount_own,
         index: cfg.staker_info._deprecated_index,
         unclaimed_rewards_own: 0,
-        pool_info: Option::Some(
-            StakerPoolInfo {
-                pool_contract,
-                amount: cfg.pool_member_info._deprecated_amount,
-                unclaimed_rewards: Zero::zero(),
-                commission: cfg.staker_info.get_pool_info().commission,
-            },
-        ),
+        pool_info: Option::Some(expected_pool_info),
     };
     assert!(staking_dispatcher.staker_info(cfg.test_info.staker_address) == expected_staker_info);
 
@@ -276,7 +273,8 @@ fn test_add_to_delegation_pool() {
     let staker_info_after = staking_dispatcher
         .staker_info(staker_address: cfg.test_info.staker_address);
     let mut expected_pool_info = staker_info_before.get_pool_info();
-    expected_pool_info.amount += delegate_amount;
+    expected_pool_info
+        ._set_deprecated_amount(amount: expected_pool_info._deprecated_amount() + delegate_amount);
     expected_pool_info.unclaimed_rewards = Zero::zero();
     assert!(expected_pool_info == staker_info_after.get_pool_info());
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
@@ -600,7 +598,7 @@ fn test_exit_delegation_pool_intent() {
     );
     let mut expected_staker_info: StakerInfo = cfg.staker_info.into();
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
-        pool_info.amount = Zero::zero();
+        pool_info._set_deprecated_amount(Zero::zero());
         pool_info.pool_contract = pool_contract;
         expected_staker_info.pool_info = Option::Some(pool_info);
     }
@@ -1215,7 +1213,9 @@ fn test_partial_undelegate() {
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 
     let staker_info = staking_dispatcher.staker_info(cfg.test_info.staker_address);
-    assert!(staker_info.get_pool_info().amount == cfg.pool_member_info._deprecated_amount);
+    assert!(
+        staker_info.get_pool_info()._deprecated_amount() == cfg.pool_member_info._deprecated_amount,
+    );
 
     // Intent 0 and see that the unpool_time is now optional.
     let intent_amount = Zero::zero();
@@ -1240,7 +1240,9 @@ fn test_partial_undelegate() {
     let expected_undelegate_intent_value: UndelegateIntentValue = Zero::zero();
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
     let staker_info = staking_dispatcher.staker_info(cfg.test_info.staker_address);
-    assert!(staker_info.get_pool_info().amount == cfg.pool_member_info._deprecated_amount);
+    assert!(
+        staker_info.get_pool_info()._deprecated_amount() == cfg.pool_member_info._deprecated_amount,
+    );
 }
 
 #[test]

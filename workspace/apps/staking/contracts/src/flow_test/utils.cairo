@@ -20,7 +20,7 @@ use staking::reward_supplier::interface::{
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
-    StakerInfo, StakerInfoTrait,
+    StakerInfo, StakerInfoTrait, StakerPoolInfoTrait,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
@@ -710,6 +710,14 @@ pub(crate) impl SystemImpl<
         }
     }
 
+    /// Advances the block timestamp by the exit wait window and advance epoch.
+    ///
+    /// Note: This function is built on the assumption that exit window > k epochs
+    fn advance_exit_wait_window(ref self: SystemState<TTokenState>) {
+        self.advance_time(time: self.staking.get_exit_wait_window());
+        self.advance_epoch();
+    }
+
     fn set_pool_for_upgrade(ref self: SystemState<TTokenState>, pool_address: ContractAddress) {
         let pool_contract_admin = self.staking.get_pool_contract_admin();
         let upgrade_governor = UPGRADE_GOVERNOR();
@@ -875,9 +883,10 @@ pub(crate) impl SystemStakerImpl<
     }
 
     fn staker_total_amount(self: SystemState<TTokenState>, staker: Staker) -> Amount {
-        let mut total = self.staker_info(:staker).amount_own;
-        if let Option::Some(pool_info) = self.staker_info(:staker).pool_info {
-            total += pool_info.amount;
+        let staker_info = self.staker_info(:staker);
+        let mut total = staker_info.amount_own;
+        if let Option::Some(pool_info) = staker_info.pool_info {
+            total += pool_info._deprecated_amount();
         }
         total
     }

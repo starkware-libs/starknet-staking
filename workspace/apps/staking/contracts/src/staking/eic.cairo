@@ -1,7 +1,6 @@
 // An External Initializer Contract to upgrade a staking contract.
 #[starknet::contract]
 mod StakingEIC {
-    use core::num::traits::Zero;
     use staking::constants::FIRST_VALID_EPOCH;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
