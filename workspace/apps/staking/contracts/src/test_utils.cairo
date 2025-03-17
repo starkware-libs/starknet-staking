@@ -28,12 +28,9 @@ use staking::pool::pool::Pool;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
-    IStakingPauseDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
+    IStakingPauseDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo, StakerPoolInfoTrait,
 };
-use staking::staking::objects::{
-    EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait, VersionedInternalStakerInfo,
-    VersionedInternalStakerInfoTrait,
-};
+use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait};
 use staking::staking::staking::Staking;
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
@@ -51,7 +48,7 @@ use starkware_utils::test_utils::{
     set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
     set_account_as_token_admin, set_account_as_upgrade_governor,
 };
-use starkware_utils::types::time::time::{TimeDelta, Timestamp};
+use starkware_utils::types::time::time::TimeDelta;
 
 pub(crate) mod constants {
     use staking::constants::STRK_IN_FRIS;
@@ -822,12 +819,9 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             _deprecated_index: Zero::zero(),
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(
-                StakerPoolInfo {
-                    pool_contract: POOL_CONTRACT_ADDRESS(),
-                    amount: Zero::zero(),
-                    unclaimed_rewards: Zero::zero(),
-                    commission: COMMISSION,
-                },
+                StakerPoolInfoTrait::new(
+                    pool_contract: POOL_CONTRACT_ADDRESS(), commission: COMMISSION,
+                ),
             ),
         };
         let pool_member_info = InternalPoolMemberInfoLatest {
@@ -913,7 +907,7 @@ pub(crate) fn staker_update_rewards(staker_info: StakerInfo, global_index: Index
     let mut staker_pool_info: Option<StakerPoolInfo> = Option::None;
     if let Option::Some(pool_info) = staker_info.pool_info {
         let pool_rewards_including_commission = compute_rewards_rounded_up(
-            amount: pool_info.amount, :interest,
+            amount: pool_info._deprecated_amount(), :interest,
         );
         let commission_amount = compute_commission_amount_rounded_down(
             rewards_including_commission: pool_rewards_including_commission,
@@ -921,12 +915,12 @@ pub(crate) fn staker_update_rewards(staker_info: StakerInfo, global_index: Index
         );
         staker_rewards += commission_amount;
         let pool_rewards = pool_rewards_including_commission - commission_amount;
-        staker_pool_info =
-            Option::Some(
-                StakerPoolInfo {
-                    unclaimed_rewards: pool_info.unclaimed_rewards + pool_rewards, ..pool_info,
-                },
-            );
+        let mut staker_pool_info_internal = StakerPoolInfoTrait::new(
+            pool_contract: pool_info.pool_contract, commission: pool_info.commission,
+        );
+        staker_pool_info_internal.unclaimed_rewards = pool_rewards;
+        staker_pool_info_internal._set_deprecated_amount(pool_info._deprecated_amount());
+        staker_pool_info = Option::Some(staker_pool_info_internal);
     }
     StakerInfo {
         index: Zero::zero(),
@@ -1017,7 +1011,7 @@ fn get_staker_commission_rewards(staker_info: StakerInfo, pool_rewards: Amount) 
 
 fn get_total_amount(staker_info: StakerInfo) -> Amount {
     if let Option::Some(pool_info) = staker_info.pool_info {
-        return pool_info.amount + staker_info.amount_own;
+        return pool_info._deprecated_amount() + staker_info.amount_own;
     }
     (staker_info.amount_own)
 }

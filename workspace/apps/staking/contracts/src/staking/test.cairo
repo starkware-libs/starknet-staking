@@ -3,7 +3,7 @@ use constants::{
     BLOCK_DURATION, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_LENGTH,
     EPOCH_STARTING_BLOCK, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
     OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
-    POOL_CONTRACT_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS, STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
+    STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -15,9 +15,8 @@ use event_test_utils::{
     assert_minimum_stake_changed_event, assert_new_delegation_pool_event, assert_new_staker_event,
     assert_number_of_events, assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
-    assert_rewards_supplied_to_delegation_pool_event, assert_stake_balance_changed_event,
-    assert_staker_exit_intent_event, assert_staker_reward_address_change_event,
-    assert_staker_reward_claimed_event,
+    assert_stake_balance_changed_event, assert_staker_exit_intent_event,
+    assert_staker_reward_address_change_event, assert_staker_reward_claimed_event,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
@@ -45,7 +44,7 @@ use staking::staking::interface::{
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
     IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait,
-    StakerPoolInfo, StakingContractInfo,
+    StakerPoolInfoTrait, StakingContractInfo,
 };
 use staking::staking::objects::{
     AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait,
@@ -376,7 +375,7 @@ fn test_increase_stake_from_staker_address() {
     assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
     let mut new_delegated_stake = Zero::zero();
     if let Option::Some(pool_info) = expected_staker_info.pool_info {
-        new_delegated_stake = pool_info.amount;
+        new_delegated_stake = pool_info._deprecated_amount();
     }
     assert_stake_balance_changed_event(
         spied_event: events[0],
@@ -921,10 +920,14 @@ fn test_add_stake_from_pool() {
     assert!(pool_balance_after == pool_balance_before - pool_amount.into());
 
     // Validate staker info.
-    let expected_pool_info = Option::Some(
-        StakerPoolInfo { amount: pool_amount, ..pool_info_before },
+    let mut expected_pool_info = StakerPoolInfoTrait::new(
+        pool_contract: pool_info_before.pool_contract, commission: pool_info_before.commission,
     );
-    let expected_staker_info = StakerInfo { pool_info: expected_pool_info, ..staker_info_before };
+    expected_pool_info.unclaimed_rewards = pool_info_before.unclaimed_rewards;
+    expected_pool_info._set_deprecated_amount(pool_amount);
+    let expected_staker_info = StakerInfo {
+        pool_info: Option::Some(expected_pool_info), ..staker_info_before,
+    };
     let staker_info_after = staking_dispatcher.staker_info(:staker_address);
     assert!(staker_info_after == expected_staker_info);
 
@@ -1007,7 +1010,7 @@ fn test_remove_from_delegation_pool_intent() {
     let initial_delegated_stake = staking_dispatcher
         .staker_info(cfg.test_info.staker_address)
         .get_pool_info()
-        .amount;
+        ._deprecated_amount();
     let old_total_stake = staking_dispatcher.get_total_stake();
     let mut spy = snforge_std::spy_events();
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
@@ -1032,16 +1035,12 @@ fn test_remove_from_delegation_pool_intent() {
     // Validate that the staker info is updated.
     let mut cur_delegated_stake = initial_delegated_stake - intent_amount;
     let mut expected_staker_info = cfg.staker_info.clone();
-    expected_staker_info
-        .pool_info =
-            Option::Some(
-                StakerPoolInfo {
-                    pool_contract, amount: cur_delegated_stake, ..cfg.staker_info.get_pool_info(),
-                },
-            );
-    assert!(
-        staking_dispatcher.staker_info(cfg.test_info.staker_address) == expected_staker_info.into(),
-    );
+    let mut expected_pool_info = cfg.staker_info.get_pool_info();
+    expected_pool_info.pool_contract = pool_contract;
+    expected_pool_info._set_deprecated_amount(cur_delegated_stake);
+    expected_staker_info.pool_info = Option::Some(expected_pool_info);
+    let expected_staker = expected_staker_info.into();
+    assert!(staking_dispatcher.staker_info(cfg.test_info.staker_address) == expected_staker);
 
     // Validate that the total stake is updated.
     let expected_total_stake = old_total_stake - intent_amount;
@@ -1109,15 +1108,10 @@ fn test_remove_from_delegation_pool_intent() {
     // while in intent.
     let prev_delegated_stake = cur_delegated_stake;
     cur_delegated_stake = initial_delegated_stake - new_intent_amount;
-    expected_staker_info
-        .pool_info =
-            Option::Some(
-                StakerPoolInfo {
-                    pool_contract,
-                    amount: cur_delegated_stake,
-                    ..expected_staker_info.get_pool_info(),
-                },
-            );
+    let mut expected_pool_info = expected_staker_info.get_pool_info();
+    expected_pool_info._set_deprecated_amount(cur_delegated_stake);
+    expected_pool_info.pool_contract = pool_contract;
+    expected_staker_info.pool_info = Option::Some(expected_pool_info);
     assert!(
         staking_dispatcher.staker_info(cfg.test_info.staker_address) == expected_staker_info.into(),
     );
@@ -1398,17 +1392,17 @@ fn test_switch_staking_delegation_pool() {
         );
     let interest = updated_index - cfg.staker_info._deprecated_index;
     let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: cfg.staker_info.get_pool_info().amount, :interest,
+        amount: cfg.staker_info.get_pool_info()._deprecated_amount(), :interest,
     );
     let commission_amount = compute_commission_amount_rounded_down(
         rewards_including_commission: pool_rewards_including_commission,
         commission: cfg.staker_info.get_pool_info().commission,
     );
     let unclaimed_rewards_pool = pool_rewards_including_commission - commission_amount;
-    let amount = cfg.staker_info.get_pool_info().amount + switched_amount;
+    let amount = cfg.staker_info.get_pool_info()._deprecated_amount() + switched_amount;
     let mut expected_staker_info = to_staker_info;
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
-        pool_info.amount = amount;
+        pool_info._set_deprecated_amount(amount);
         expected_staker_info.pool_info = Option::Some(pool_info);
     }
     let actual_staker_info = staking_dispatcher.staker_info(staker_address: to_staker);
@@ -1816,7 +1810,7 @@ fn test_update_commission() {
     let staker_rewards = compute_rewards_rounded_down(amount: staker_info.amount_own, :interest);
     let pool_info = staker_info.get_pool_info();
     let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: pool_info.amount, :interest,
+        amount: pool_info._deprecated_amount(), :interest,
     );
     let commission_amount = compute_commission_amount_rounded_down(
         rewards_including_commission: pool_rewards_including_commission,
@@ -1826,16 +1820,11 @@ fn test_update_commission() {
     let unclaimed_rewards_pool = pool_rewards_including_commission - commission_amount;
 
     // Assert rewards and commission are updated in the staker info.
+    let mut expected_pool_info = staker_info.get_pool_info();
+    expected_pool_info.unclaimed_rewards = unclaimed_rewards_pool;
+    expected_pool_info.commission = commission;
     let expected_staker_info = StakerInfo {
-        unclaimed_rewards_own,
-        pool_info: Option::Some(
-            StakerPoolInfo {
-                unclaimed_rewards: unclaimed_rewards_pool,
-                commission,
-                ..staker_info.get_pool_info(),
-            },
-        ),
-        ..staker_info,
+        unclaimed_rewards_own, pool_info: Option::Some(expected_pool_info), ..staker_info,
     };
     assert!(staker_info == expected_staker_info);
 
@@ -2138,9 +2127,9 @@ fn test_set_open_for_delegation() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let pool_contract = staking_dispatcher.set_open_for_delegation(:commission);
     let pool_info = staking_dispatcher.staker_info(:staker_address).get_pool_info();
-    let expected_pool_info = StakerPoolInfo {
-        commission, pool_contract, ..cfg.staker_info.get_pool_info(),
-    };
+    let mut expected_pool_info = cfg.staker_info.get_pool_info();
+    expected_pool_info.commission = commission;
+    expected_pool_info.pool_contract = pool_contract;
     assert!(pool_info == expected_pool_info);
 
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
@@ -2877,12 +2866,9 @@ fn test_compute_unpool_time() {
 
 #[test]
 fn test_get_pool_info() {
-    let staker_pool_info = StakerPoolInfo {
-        pool_contract: Zero::zero(),
-        amount: Zero::zero(),
-        unclaimed_rewards: Zero::zero(),
-        commission: Zero::zero(),
-    };
+    let staker_pool_info = StakerPoolInfoTrait::new(
+        pool_contract: Zero::zero(), commission: Zero::zero(),
+    );
     let internal_staker_info = InternalStakerInfoLatest {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),

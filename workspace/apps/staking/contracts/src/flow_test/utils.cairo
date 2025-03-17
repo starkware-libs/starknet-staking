@@ -20,7 +20,7 @@ use staking::reward_supplier::interface::{
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
-    StakerInfo, StakerInfoTrait,
+    StakerInfo, StakerInfoTrait, StakerPoolInfoTrait,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
@@ -883,9 +883,10 @@ pub(crate) impl SystemStakerImpl<
     }
 
     fn staker_total_amount(self: SystemState<TTokenState>, staker: Staker) -> Amount {
-        let mut total = self.staker_info(:staker).amount_own;
-        if let Option::Some(pool_info) = self.staker_info(:staker).pool_info {
-            total += pool_info.amount;
+        let staker_info = self.staker_info(:staker);
+        let mut total = staker_info.amount_own;
+        if let Option::Some(pool_info) = staker_info.pool_info {
+            total += pool_info._deprecated_amount();
         }
         total
     }

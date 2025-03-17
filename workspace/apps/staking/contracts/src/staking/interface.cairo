@@ -406,7 +406,8 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalS
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerPoolInfo {
     pub pool_contract: ContractAddress,
-    pub amount: Amount,
+    // TODO: create a public version of this struct and make amount public?
+    amount: Amount,
     pub unclaimed_rewards: Amount,
     pub commission: Commission,
 }
@@ -417,6 +418,14 @@ pub impl StakerPoolInfoImpl of StakerPoolInfoTrait {
         StakerPoolInfo {
             pool_contract, amount: Zero::zero(), unclaimed_rewards: Zero::zero(), commission,
         }
+    }
+
+    fn _deprecated_amount(self: StakerPoolInfo) -> Amount {
+        self.amount
+    }
+
+    fn _set_deprecated_amount(ref self: StakerPoolInfo, amount: Amount) {
+        self.amount = amount;
     }
 }
 
