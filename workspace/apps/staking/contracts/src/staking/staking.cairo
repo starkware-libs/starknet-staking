@@ -640,7 +640,6 @@ pub mod Staking {
         fn set_commission_commitment(
             ref self: ContractState, max_commission: Commission, expiration_epoch: Epoch,
         ) {
-            // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
