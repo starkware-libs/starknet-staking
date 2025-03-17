@@ -34,9 +34,9 @@ mod StakingEIC {
             self.prev_class_hash.write(0, class_hash);
 
             let block_duration: u16 = (*eic_init_data[1]).try_into().unwrap();
-            let length: u16 = (*eic_init_data[2]).try_into().unwrap();
+            let epoch_length: u16 = (*eic_init_data[2]).try_into().unwrap();
             let epoch_info = EpochInfoTrait::new(
-                :block_duration, :length, starting_block: get_block_number(),
+                :block_duration, :epoch_length, starting_block: get_block_number(),
             );
             self.epoch_info.write(epoch_info);
 
