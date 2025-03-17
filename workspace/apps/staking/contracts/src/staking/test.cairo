@@ -3076,32 +3076,35 @@ fn test_epoch_info_update_only_length() {
     let first_epoch = 10;
     advance_block_number_global(blocks: first_epoch * epoch_length.into());
     assert!(epoch_info.current_epoch() == first_epoch);
+    advance_epoch_global();
+    assert!(epoch_info.current_epoch() == first_epoch + 1);
 
     // Update epoch_length in the first block of the epoch.
     let new_epoch_length = epoch_length + 1;
     epoch_info.update(:block_duration, epoch_length: new_epoch_length);
-    assert!(epoch_info.current_epoch() == first_epoch);
+    assert!(epoch_info.current_epoch() == first_epoch + 1);
     // Still the same epoch_length.
     advance_block_number_global(blocks: epoch_length.into() - 1);
-    assert!(epoch_info.current_epoch() == first_epoch);
-    advance_block_number_global(blocks: 1);
-    assert!(epoch_info.current_epoch() == first_epoch + 1);
-    // Different epoch_length.
-    advance_block_number_global(blocks: epoch_length.into());
     assert!(epoch_info.current_epoch() == first_epoch + 1);
     advance_block_number_global(blocks: 1);
     assert!(epoch_info.current_epoch() == first_epoch + 2);
+    // Different epoch_length.
+    advance_block_number_global(blocks: epoch_length.into());
+    assert!(epoch_info.current_epoch() == first_epoch + 2);
+    advance_block_number_global(blocks: 1);
+    assert!(epoch_info.current_epoch() == first_epoch + 3);
+    advance_epoch_global();
 
     // Update epoch_length in the last block of the epoch.
     advance_block_number_global(blocks: epoch_length.into());
     epoch_info.update(:block_duration, epoch_length: EPOCH_LENGTH - 1);
-    assert!(epoch_info.current_epoch() == first_epoch + 2);
-    advance_block_number_global(blocks: 1);
-    assert!(epoch_info.current_epoch() == first_epoch + 3);
-    advance_block_number_global(blocks: epoch_length.into() - 2);
-    assert!(epoch_info.current_epoch() == first_epoch + 3);
+    assert!(epoch_info.current_epoch() == first_epoch + 4);
     advance_block_number_global(blocks: 1);
     assert!(epoch_info.current_epoch() == first_epoch + 4);
+    advance_block_number_global(blocks: epoch_length.into() - 2);
+    assert!(epoch_info.current_epoch() == first_epoch + 5);
+    advance_block_number_global(blocks: 1);
+    assert!(epoch_info.current_epoch() == first_epoch + 5);
 }
 
 #[test]
@@ -3124,6 +3127,35 @@ fn test_epoch_info_update_only_block_duration() {
 }
 
 #[test]
+#[should_panic(expected: "Epoch info can not be updated in the first epoch")]
+fn test_epoch_info_update_in_first_epoch() {
+    let block_number = EPOCH_STARTING_BLOCK;
+    let epoch_length = EPOCH_LENGTH;
+    let block_duration = BLOCK_DURATION;
+    start_cheat_block_number_global(:block_number);
+    let mut epoch_info = EpochInfoTrait::new(
+        :block_duration, :epoch_length, starting_block: get_block_number(),
+    );
+    epoch_info.update(:block_duration, epoch_length: epoch_length);
+}
+
+#[test]
+#[should_panic(expected: "Epoch info already updated in this epoch")]
+fn test_epoch_info_update_already_updated() {
+    let block_number = EPOCH_STARTING_BLOCK;
+    let epoch_length = EPOCH_LENGTH;
+    let block_duration = BLOCK_DURATION;
+    start_cheat_block_number_global(:block_number);
+    let mut epoch_info = EpochInfoTrait::new(
+        :block_duration, :epoch_length, starting_block: get_block_number(),
+    );
+    advance_epoch_global();
+    epoch_info.update(:block_duration, epoch_length: epoch_length);
+    epoch_info.update(:block_duration, epoch_length: epoch_length);
+}
+
+
+#[test]
 fn test_epoch_info_len_kept_after_update() {
     let block_number = EPOCH_STARTING_BLOCK;
     let epoch_length = EPOCH_LENGTH;
@@ -3132,6 +3164,7 @@ fn test_epoch_info_len_kept_after_update() {
     let mut epoch_info = EpochInfoTrait::new(
         :block_duration, :epoch_length, starting_block: get_block_number(),
     );
+    advance_epoch_global();
     let current_epoch = epoch_info.current_epoch();
     epoch_info.update(:block_duration, epoch_length: epoch_length + 1);
     assert!(epoch_info.current_epoch() == current_epoch);
@@ -3154,18 +3187,19 @@ fn test_set_epoch_info() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
+    advance_epoch_global();
     staking_config_dispatcher
         .set_epoch_info(block_duration: new_block_duration, epoch_length: new_length);
-    advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
-    assert!(staking_dispatcher.get_current_epoch() == 0);
-    advance_block_number_global(blocks: 1);
-    assert!(staking_dispatcher.get_current_epoch() == 1);
-    advance_block_number_global(blocks: EPOCH_LENGTH.into());
-    assert!(staking_dispatcher.get_current_epoch() == 1);
     advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
     assert!(staking_dispatcher.get_current_epoch() == 1);
     advance_block_number_global(blocks: 1);
     assert!(staking_dispatcher.get_current_epoch() == 2);
+    advance_block_number_global(blocks: EPOCH_LENGTH.into());
+    assert!(staking_dispatcher.get_current_epoch() == 2);
+    advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
+    assert!(staking_dispatcher.get_current_epoch() == 2);
+    advance_block_number_global(blocks: 1);
+    assert!(staking_dispatcher.get_current_epoch() == 3);
     // Validate the single EpochInfoChanged event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_epoch_info");

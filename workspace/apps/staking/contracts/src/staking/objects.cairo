@@ -95,6 +95,8 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     fn update(ref self: EpochInfo, block_duration: u16, epoch_length: u16) {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
         assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
+        assert!(get_block_number() >= self.starting_block, "{}", Error::EPOCH_INFO_ALREADY_UPDATED);
+        assert!(self.current_epoch().is_non_zero(), "{}", Error::EPOCH_INFO_UPDATED_IN_FIRST_EPOCH);
         self.last_starting_block_before_update = self.current_epoch_starting_block();
         self.starting_epoch = self.next_epoch();
         self.starting_block = self.calculate_next_epoch_starting_block();
