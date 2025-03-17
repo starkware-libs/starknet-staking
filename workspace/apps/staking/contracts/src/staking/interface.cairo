@@ -185,7 +185,7 @@ pub trait IStakingAttestation<TContractState> {
 }
 
 pub mod Events {
-    use staking::types::{Amount, Commission};
+    use staking::types::{Amount, Commission, Epoch};
     use starknet::ContractAddress;
     use starkware_utils::types::time::time::Timestamp;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
@@ -313,6 +313,14 @@ pub mod Events {
         pub identifier: felt252,
         pub old_intent_amount: Amount,
         pub new_intent_amount: Amount,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct CommissionCommitmentSet {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub max_commission: Commission,
+        pub expiration_epoch: Epoch,
     }
 }
 

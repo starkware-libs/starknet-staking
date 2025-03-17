@@ -148,6 +148,7 @@ pub mod Staking {
         RemoveFromDelegationPoolIntent: Events::RemoveFromDelegationPoolIntent,
         RemoveFromDelegationPoolAction: Events::RemoveFromDelegationPoolAction,
         ChangeDelegationPoolIntent: Events::ChangeDelegationPoolIntent,
+        CommissionCommitmentSet: Events::CommissionCommitmentSet,
     }
 
     #[constructor]
@@ -664,7 +665,12 @@ pub mod Staking {
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
-            // TODO: emit event
+            self
+                .emit(
+                    Events::CommissionCommitmentSet {
+                        staker_address, max_commission, expiration_epoch,
+                    },
+                );
         }
 
         fn get_staker_commission_commitment(

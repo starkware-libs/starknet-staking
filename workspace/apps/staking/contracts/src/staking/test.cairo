@@ -9,11 +9,11 @@ use core::num::traits::Zero;
 use core::option::OptionTrait;
 use event_test_utils::{
     assert_change_delegation_pool_intent_event, assert_change_operational_address_event,
-    assert_commission_changed_event, assert_declare_operational_address_event,
-    assert_delete_staker_event, assert_epoch_info_changed_event,
-    assert_exit_wait_window_changed_event, assert_minimum_stake_changed_event,
-    assert_new_delegation_pool_event, assert_new_staker_event, assert_number_of_events,
-    assert_remove_from_delegation_pool_action_event,
+    assert_commission_changed_event, assert_commission_commitment_set_event,
+    assert_declare_operational_address_event, assert_delete_staker_event,
+    assert_epoch_info_changed_event, assert_exit_wait_window_changed_event,
+    assert_minimum_stake_changed_event, assert_new_delegation_pool_event, assert_new_staker_event,
+    assert_number_of_events, assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
     assert_rewards_supplied_to_delegation_pool_event, assert_stake_balance_changed_event,
     assert_staker_exit_intent_event, assert_staker_reward_address_change_event,
@@ -2034,7 +2034,10 @@ fn test_set_commission_commitment() {
     // Validate the CommissionCommitmentSet event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 0, message: "set_commission_commitment",
+        actual: events.len(), expected: 1, message: "set_commission_commitment",
+    );
+    assert_commission_commitment_set_event(
+        spied_event: events[0], :staker_address, :max_commission, :expiration_epoch,
     );
 }
 

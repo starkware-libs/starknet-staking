@@ -541,3 +541,21 @@ pub(crate) fn assert_attestation_window_changed_event(
         expected_event_name: "AttestationWindowChanged",
     );
 }
+
+pub(crate) fn assert_commission_commitment_set_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    max_commission: Commission,
+    expiration_epoch: Epoch,
+) {
+    let expected_event = StakingEvents::CommissionCommitmentSet {
+        staker_address, max_commission, expiration_epoch,
+    };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("CommissionCommitmentSet"),
+        expected_event_name: "CommissionCommitmentSet",
+    );
+}
+
