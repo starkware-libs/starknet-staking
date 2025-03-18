@@ -2770,9 +2770,7 @@ fn test_versioned_internal_staker_info_new_latest() {
     let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
-        unstake_time: Option::None,
         amount_own: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
     );
     if let VersionedInternalStakerInfo::V1(_) = internal_staker_info {
@@ -2797,9 +2795,7 @@ fn test_versioned_internal_staker_info_is_none() {
     let versioned_latest = VersionedInternalStakerInfoTrait::new_latest(
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
-        unstake_time: Option::None,
         amount_own: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
     );
     assert!(versioned_none.is_none());

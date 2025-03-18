@@ -244,12 +244,10 @@ pub mod Staking {
                 .write(
                     staker_address,
                     VersionedInternalStakerInfoTrait::new_latest(
-                        reward_address,
-                        operational_address,
-                        unstake_time: Option::None,
+                        :reward_address,
+                        :operational_address,
                         amount_own: self.get_amount_own(:staker_address),
-                        unclaimed_rewards_own: Zero::zero(),
-                        pool_info: pool_info,
+                        :pool_info,
                     ),
                 );
 
