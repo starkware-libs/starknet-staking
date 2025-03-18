@@ -21,7 +21,7 @@ mod StakingEIC {
         total_stake_trace: Trace,
         // The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
-        // The contract staker sends attestation trasaction to.
+        // The contract that staker sends attestation transaction to.
         attestation_contract: ContractAddress,
     }
 
