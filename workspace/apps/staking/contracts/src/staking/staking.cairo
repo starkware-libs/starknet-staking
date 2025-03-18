@@ -104,7 +104,7 @@ pub mod Staking {
         exit_wait_window: TimeDelta,
         // Epoch info.
         epoch_info: EpochInfo,
-        // The contract staker sends attestation trasaction to.
+        // The contract that staker sends attestation transaction to.
         attestation_contract: ContractAddress,
         // Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
