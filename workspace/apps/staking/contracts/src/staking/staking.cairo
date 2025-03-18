@@ -147,6 +147,7 @@ pub mod Staking {
         RemoveFromDelegationPoolAction: Events::RemoveFromDelegationPoolAction,
         ChangeDelegationPoolIntent: Events::ChangeDelegationPoolIntent,
         CommissionCommitmentSet: Events::CommissionCommitmentSet,
+        StakerRewardsUpdated: Events::StakerRewardsUpdated,
     }
 
     #[constructor]
@@ -1062,11 +1063,14 @@ pub mod Staking {
                 );
             staker_info.unclaimed_rewards_own += staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
+            self
+                .emit(
+                    Events::StakerRewardsUpdated { staker_address, staker_rewards, pool_rewards },
+                );
             self.update_pool_rewards(:staker_address, :staker_info, :pool_rewards);
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
-            // TODO: emit events
         }
 
         fn get_attestation_info_by_operational_address(

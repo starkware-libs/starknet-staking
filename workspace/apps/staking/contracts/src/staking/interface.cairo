@@ -267,6 +267,14 @@ pub mod Events {
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct StakerRewardsUpdated {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub staker_rewards: Amount,
+        pub pool_rewards: Amount,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct DeleteStaker {
         #[key]
         pub staker_address: ContractAddress,
