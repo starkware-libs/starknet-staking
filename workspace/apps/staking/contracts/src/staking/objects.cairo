@@ -2,8 +2,8 @@ use core::cmp::max;
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::interface::{
-    IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo, StakerPoolInfo,
-    StakerPoolInfoTrait,
+    CommissionCommitment, IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo,
+    StakerPoolInfo, StakerPoolInfoTrait,
 };
 use staking::types::{Amount, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
@@ -95,6 +95,8 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     fn update(ref self: EpochInfo, block_duration: u16, epoch_length: u16) {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
         assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
+        assert!(get_block_number() >= self.starting_block, "{}", Error::EPOCH_INFO_ALREADY_UPDATED);
+        assert!(self.current_epoch().is_non_zero(), "{}", Error::EPOCH_INFO_UPDATED_IN_FIRST_EPOCH);
         self.last_starting_block_before_update = self.current_epoch_starting_block();
         self.starting_epoch = self.next_epoch();
         self.starting_block = self.calculate_next_epoch_starting_block();
@@ -166,6 +168,7 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) _deprecated_index: Index,
     pub(crate) unclaimed_rewards_own: Amount,
     pub(crate) pool_info: Option<StakerPoolInfo>,
+    pub(crate) commission_commitment: Option<CommissionCommitment>,
 }
 
 // **Note**: This struct should be updated in the next version of Internal Staker Info.
@@ -198,20 +201,19 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
     fn new_latest(
         reward_address: ContractAddress,
         operational_address: ContractAddress,
-        unstake_time: Option<Timestamp>,
         amount_own: Amount,
-        unclaimed_rewards_own: Amount,
         pool_info: Option<StakerPoolInfo>,
     ) -> VersionedInternalStakerInfo {
         VersionedInternalStakerInfo::V1(
             InternalStakerInfoV1 {
                 reward_address,
                 operational_address,
-                unstake_time,
+                unstake_time: Option::None,
                 _deprecated_amount_own: amount_own,
                 _deprecated_index: Zero::zero(),
-                unclaimed_rewards_own,
+                unclaimed_rewards_own: Zero::zero(),
                 pool_info,
+                commission_commitment: Option::None,
             },
         )
     }

@@ -750,9 +750,6 @@ fn test_unstake_action() {
     assert!(staker_amount == cfg.staker_info._deprecated_amount_own);
     let actual_staker_info = staking_dispatcher.get_staker_info(:staker_address);
     assert!(actual_staker_info.is_none());
-    let commission_commitment = staking_dispatcher
-        .get_staker_commission_commitment(:staker_address);
-    assert!(commission_commitment.is_zero());
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     // StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
     // events.
@@ -1916,14 +1913,26 @@ fn test_update_commission_assertions_with_commitment() {
         :result, expected_error: GenericError::INVALID_COMMISSION_WITH_COMMITMENT.describe(),
     );
 
+    // Should catch INVALID_SAME_COMMISSION.
+    let commission = max_commission;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.update_commission(:commission);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher.update_commission(:commission);
+    assert_panic_with_error(
+        :result, expected_error: GenericError::INVALID_SAME_COMMISSION.describe(),
+    );
+
     // Advance to the expiration epoch.
     advance_epoch_global();
 
-    // Should catch INVALID_COMMISSION.
+    // Should catch COMMISSION_COMMITMENT_EXPIRED.
     let commission = max_commission;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_safe_dispatcher.update_commission(:commission);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_COMMISSION.describe());
+    assert_panic_with_error(
+        :result, expected_error: GenericError::COMMISSION_COMMITMENT_EXPIRED.describe(),
+    );
 }
 
 #[test]
@@ -2746,6 +2755,7 @@ fn test_versioned_internal_staker_info_wrap_latest() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     let versioned_internal_staker_info = VersionedInternalStakerInfoTrait::wrap_latest(
         internal_staker_info,
@@ -2760,9 +2770,7 @@ fn test_versioned_internal_staker_info_new_latest() {
     let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
-        unstake_time: Option::None,
         amount_own: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
     );
     if let VersionedInternalStakerInfo::V1(_) = internal_staker_info {
@@ -2787,9 +2795,7 @@ fn test_versioned_internal_staker_info_is_none() {
     let versioned_latest = VersionedInternalStakerInfoTrait::new_latest(
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
-        unstake_time: Option::None,
         amount_own: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
     );
     assert!(versioned_none.is_none());
@@ -2834,6 +2840,7 @@ fn test_compute_unpool_time() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     assert!(
         internal_staker_info
@@ -2851,6 +2858,7 @@ fn test_compute_unpool_time() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
 
     // Unstake time > current time.
@@ -2877,6 +2885,7 @@ fn test_get_pool_info() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::Some(staker_pool_info),
+        commission_commitment: Option::None,
     };
     assert!(internal_staker_info.get_pool_info() == staker_pool_info);
 }
@@ -2892,6 +2901,7 @@ fn test_get_pool_info_panic() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     internal_staker_info.get_pool_info();
 }
@@ -2906,6 +2916,7 @@ fn test_internal_staker_info_latest_into_staker_info() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     let staker_info: StakerInfo = internal_staker_info.into();
     let expected_staker_info = StakerInfo {
@@ -3008,6 +3019,7 @@ fn test_staker_info_into_internal_staker_info_v1() {
         _deprecated_index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
+        commission_commitment: Option::None,
     };
     assert!(internal_staker_info == expected_internal_staker_info);
 }
@@ -3060,32 +3072,35 @@ fn test_epoch_info_update_only_length() {
     let first_epoch = 10;
     advance_block_number_global(blocks: first_epoch * epoch_length.into());
     assert!(epoch_info.current_epoch() == first_epoch);
+    advance_epoch_global();
+    assert!(epoch_info.current_epoch() == first_epoch + 1);
 
     // Update epoch_length in the first block of the epoch.
     let new_epoch_length = epoch_length + 1;
     epoch_info.update(:block_duration, epoch_length: new_epoch_length);
-    assert!(epoch_info.current_epoch() == first_epoch);
+    assert!(epoch_info.current_epoch() == first_epoch + 1);
     // Still the same epoch_length.
     advance_block_number_global(blocks: epoch_length.into() - 1);
-    assert!(epoch_info.current_epoch() == first_epoch);
-    advance_block_number_global(blocks: 1);
-    assert!(epoch_info.current_epoch() == first_epoch + 1);
-    // Different epoch_length.
-    advance_block_number_global(blocks: epoch_length.into());
     assert!(epoch_info.current_epoch() == first_epoch + 1);
     advance_block_number_global(blocks: 1);
     assert!(epoch_info.current_epoch() == first_epoch + 2);
+    // Different epoch_length.
+    advance_block_number_global(blocks: epoch_length.into());
+    assert!(epoch_info.current_epoch() == first_epoch + 2);
+    advance_block_number_global(blocks: 1);
+    assert!(epoch_info.current_epoch() == first_epoch + 3);
+    advance_epoch_global();
 
     // Update epoch_length in the last block of the epoch.
     advance_block_number_global(blocks: epoch_length.into());
     epoch_info.update(:block_duration, epoch_length: EPOCH_LENGTH - 1);
-    assert!(epoch_info.current_epoch() == first_epoch + 2);
-    advance_block_number_global(blocks: 1);
-    assert!(epoch_info.current_epoch() == first_epoch + 3);
-    advance_block_number_global(blocks: epoch_length.into() - 2);
-    assert!(epoch_info.current_epoch() == first_epoch + 3);
+    assert!(epoch_info.current_epoch() == first_epoch + 4);
     advance_block_number_global(blocks: 1);
     assert!(epoch_info.current_epoch() == first_epoch + 4);
+    advance_block_number_global(blocks: epoch_length.into() - 2);
+    assert!(epoch_info.current_epoch() == first_epoch + 5);
+    advance_block_number_global(blocks: 1);
+    assert!(epoch_info.current_epoch() == first_epoch + 5);
 }
 
 #[test]
@@ -3108,6 +3123,35 @@ fn test_epoch_info_update_only_block_duration() {
 }
 
 #[test]
+#[should_panic(expected: "Epoch info can not be updated in the first epoch")]
+fn test_epoch_info_update_in_first_epoch() {
+    let block_number = EPOCH_STARTING_BLOCK;
+    let epoch_length = EPOCH_LENGTH;
+    let block_duration = BLOCK_DURATION;
+    start_cheat_block_number_global(:block_number);
+    let mut epoch_info = EpochInfoTrait::new(
+        :block_duration, :epoch_length, starting_block: get_block_number(),
+    );
+    epoch_info.update(:block_duration, epoch_length: epoch_length);
+}
+
+#[test]
+#[should_panic(expected: "Epoch info already updated in this epoch")]
+fn test_epoch_info_update_already_updated() {
+    let block_number = EPOCH_STARTING_BLOCK;
+    let epoch_length = EPOCH_LENGTH;
+    let block_duration = BLOCK_DURATION;
+    start_cheat_block_number_global(:block_number);
+    let mut epoch_info = EpochInfoTrait::new(
+        :block_duration, :epoch_length, starting_block: get_block_number(),
+    );
+    advance_epoch_global();
+    epoch_info.update(:block_duration, epoch_length: epoch_length);
+    epoch_info.update(:block_duration, epoch_length: epoch_length);
+}
+
+
+#[test]
 fn test_epoch_info_len_kept_after_update() {
     let block_number = EPOCH_STARTING_BLOCK;
     let epoch_length = EPOCH_LENGTH;
@@ -3116,6 +3160,7 @@ fn test_epoch_info_len_kept_after_update() {
     let mut epoch_info = EpochInfoTrait::new(
         :block_duration, :epoch_length, starting_block: get_block_number(),
     );
+    advance_epoch_global();
     let current_epoch = epoch_info.current_epoch();
     epoch_info.update(:block_duration, epoch_length: epoch_length + 1);
     assert!(epoch_info.current_epoch() == current_epoch);
@@ -3138,18 +3183,19 @@ fn test_set_epoch_info() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
+    advance_epoch_global();
     staking_config_dispatcher
         .set_epoch_info(block_duration: new_block_duration, epoch_length: new_length);
-    advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
-    assert!(staking_dispatcher.get_current_epoch() == 0);
-    advance_block_number_global(blocks: 1);
-    assert!(staking_dispatcher.get_current_epoch() == 1);
-    advance_block_number_global(blocks: EPOCH_LENGTH.into());
-    assert!(staking_dispatcher.get_current_epoch() == 1);
     advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
     assert!(staking_dispatcher.get_current_epoch() == 1);
     advance_block_number_global(blocks: 1);
     assert!(staking_dispatcher.get_current_epoch() == 2);
+    advance_block_number_global(blocks: EPOCH_LENGTH.into());
+    assert!(staking_dispatcher.get_current_epoch() == 2);
+    advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
+    assert!(staking_dispatcher.get_current_epoch() == 2);
+    advance_block_number_global(blocks: 1);
+    assert!(staking_dispatcher.get_current_epoch() == 3);
     // Validate the single EpochInfoChanged event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_epoch_info");

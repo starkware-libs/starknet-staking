@@ -167,15 +167,7 @@ pub mod Pool {
             // Create the pool member record.
             self
                 .pool_member_info
-                .write(
-                    pool_member,
-                    VInternalPoolMemberInfoTrait::new_latest(
-                        reward_address: reward_address,
-                        unpool_amount: Zero::zero(),
-                        unpool_time: Option::None,
-                        entry_to_claim_from: Zero::zero(),
-                    ),
-                );
+                .write(pool_member, VInternalPoolMemberInfoTrait::new_latest(:reward_address));
             self.set_next_epoch_balance(:pool_member, :amount);
 
             // Emit events.

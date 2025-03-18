@@ -58,15 +58,10 @@ pub(crate) impl StakerBalanceImpl of StakerBalanceTrait {
         self.total_amount += amount;
     }
 
-    fn update_pool_amount(ref self: StakerBalance, amount: Amount) {
-        let pool_amount = self.pool_amount();
-        if amount > pool_amount {
-            let diff = amount - pool_amount;
-            self.total_amount += diff;
-        } else {
-            let diff = pool_amount - amount;
-            self.total_amount -= diff;
-        }
+    fn update_pool_amount(ref self: StakerBalance, new_amount: Amount) {
+        let old_pool_amount = self.pool_amount();
+        self.total_amount += new_amount;
+        self.total_amount -= old_pool_amount;
     }
 }
 
