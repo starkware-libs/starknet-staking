@@ -88,8 +88,8 @@ pub mod Staking {
         eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
         // A dispatcher of the token contract.
         token_dispatcher: IERC20Dispatcher,
-        // Deprecated field of the total stake.
-        _deprecated_total_stake: Amount,
+        // Deprecated field of the total stake, used in V0.
+        // total_stake: Amount,
         // The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
         // Undelegate intents from pool contracts.
