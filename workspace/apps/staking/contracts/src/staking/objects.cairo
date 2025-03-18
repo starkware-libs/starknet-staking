@@ -73,6 +73,7 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     fn new(block_duration: u16, epoch_length: u16, starting_block: u64) -> EpochInfo {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
         assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
+        assert!(starting_block >= get_block_number(), "{}", Error::INVALID_STARTING_BLOCK);
         EpochInfo {
             block_duration,
             length: epoch_length,
@@ -144,6 +145,52 @@ impl PrivateEpochInfoImpl of PrivateEpochInfoTrait {
 
     fn next_epoch(self: @EpochInfo) -> Epoch {
         self.current_epoch() + 1
+    }
+}
+
+#[cfg(test)]
+mod epoch_info_tests {
+    use core::num::traits::Zero;
+    use snforge_std::start_cheat_block_number_global;
+    use staking::staking::objects::{EpochInfo, EpochInfoTrait};
+    use starknet::get_block_number;
+
+    #[test]
+    fn test_new() {
+        let block_duration = 1;
+        let epoch_length = 1;
+        let starting_block = get_block_number();
+
+        let epoch_info = EpochInfoTrait::new(:block_duration, :epoch_length, :starting_block);
+        let expected_epoch_info = EpochInfo {
+            block_duration,
+            length: epoch_length,
+            starting_block,
+            starting_epoch: Zero::zero(),
+            last_starting_block_before_update: Zero::zero(),
+        };
+        assert_eq!(epoch_info, expected_epoch_info);
+    }
+
+    #[test]
+    #[should_panic(expected: "Invalid epoch length, must be greater than 0")]
+    fn test_new_with_invalid_epoch_length() {
+        EpochInfoTrait::new(block_duration: 1, epoch_length: Zero::zero(), starting_block: 1);
+    }
+
+    #[test]
+    #[should_panic(expected: "Invalid block duration, must be greater than 0")]
+    fn test_new_with_invalid_block_duration() {
+        EpochInfoTrait::new(block_duration: Zero::zero(), epoch_length: 1, starting_block: 1);
+    }
+
+    #[test]
+    #[should_panic(
+        expected: "Invalid starting block, must be greater than or equal to current block number",
+    )]
+    fn test_new_with_invalid_starting_block() {
+        start_cheat_block_number_global(block_number: 1);
+        EpochInfoTrait::new(block_duration: 1, epoch_length: 1, starting_block: Zero::zero());
     }
 }
 
