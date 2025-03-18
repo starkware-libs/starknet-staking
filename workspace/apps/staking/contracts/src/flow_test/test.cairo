@@ -488,130 +488,135 @@ fn partial_switches_flow_test() {
             + system.token.balance_of(account: second_pool),
     );
 }
-// /// Flow - 4:
-// /// Staker A (SA) adds stake w/pool
-// /// Staker B (SB) adds stake w/pool
-// /// Delegtor Y (DY) add (100) to SB's pool
-// /// - check 1
-// ///
-// /// DY intent to exit all (100) tokens from SB
-// /// DY switches all (100) to SA
-// /// - check 2
-// ///
-// /// DY intent to exit all (100) tokens from SA
-// /// DY switches all (100) to SB
-// /// - check 3
-// ///
-// /// clearance
-// /// - check4 (clearance)
-// #[test]
-// fn flow_4_switch_member_back_and_forth_test() {
-//     let cfg: StakingInitConfig = Default::default();
-//     let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
-//     let min_stake = system.staking.get_min_stake();
-//     let stake_amount = min_stake * 2;
-//     let delegated_amount = stake_amount;
+/// Flow - 4:
+/// Staker A (SA) adds stake w/pool
+/// Staker B (SB) adds stake w/pool
+/// Delegtor Y (DY) add (100) to SB's pool
+/// - check 1
+///
+/// DY intent to exit all (100) tokens from SB
+/// DY switches all (100) to SA
+/// - check 2
+///
+/// DY intent to exit all (100) tokens from SA
+/// DY switches all (100) to SB
+/// - check 3
+///
+/// clearance
+/// - check4 (clearance)
+#[test]
+fn flow_4_switch_member_back_and_forth_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let delegated_amount = stake_amount;
 
-//     let initial_reward_supplier_balance = system
-//         .token
-//         .balance_of(account: system.reward_supplier.address);
-//     let commission = 200;
-//     let one_week = Time::weeks(count: 1);
+    let initial_reward_supplier_balance = system
+        .token
+        .balance_of(account: system.reward_supplier.address);
+    let commission = 200;
 
-//     let staker_A = system.new_staker(amount: stake_amount);
-//     system.stake(staker: staker_A, amount: stake_amount, pool_enabled: true, :commission);
-//     assert!(system.staking.get_total_stake() == stake_amount);
-//     let pool_A = system.staking.get_pool(staker: staker_A);
-//     system.advance_time(time: one_week);
+    let staker_A = system.new_staker(amount: stake_amount);
+    system.stake(staker: staker_A, amount: stake_amount, pool_enabled: true, :commission);
+    assert!(system.staking.get_total_stake() == stake_amount);
+    let pool_A = system.staking.get_pool(staker: staker_A);
+    system.advance_epoch_and_attest(staker: staker_A);
 
-//     let staker_B = system.new_staker(amount: stake_amount);
-//     system.stake(staker: staker_B, amount: stake_amount, pool_enabled: true, :commission);
-//     system.advance_time(time: one_week);
-//     let pool_B = system.staking.get_pool(staker: staker_B);
+    let staker_B = system.new_staker(amount: stake_amount);
+    system.stake(staker: staker_B, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_epoch_and_attest(staker: staker_B);
+    system.advance_epoch_and_attest(staker: staker_A);
+    let pool_B = system.staking.get_pool(staker: staker_B);
 
-//     assert!(system.staking.get_total_stake() == 2 * stake_amount);
+    assert!(system.staking.get_total_stake() == 2 * stake_amount);
 
-//     let delegator_Y = system.new_delegator(amount: delegated_amount);
-//     system.delegate(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
+    let delegator_Y = system.new_delegator(amount: delegated_amount);
+    system.delegate(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
 
-//     system.advance_time(time: one_week);
-//     assert!(system.staking.get_total_stake() == 2 * stake_amount + delegated_amount);
-//     assert!(
-//         system.token.balance_of(account: system.staking.address) == 2 * stake_amount
-//             + delegated_amount,
-//     );
+    system.advance_epoch_and_attest(staker: staker_A);
+    assert!(system.token.balance_of(account: pool_B).is_zero());
+    system.advance_epoch_and_attest(staker: staker_B);
+    assert!(system.token.balance_of(account: pool_B).is_non_zero());
+    assert!(system.staking.get_total_stake() == 2 * stake_amount + delegated_amount);
+    assert!(
+        system.token.balance_of(account: system.staking.address) == 2 * stake_amount
+            + delegated_amount,
+    );
 
-//     // DY intend to exit PB & switch to PA.
-//     system.delegator_exit_intent(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
-//     system.advance_time(time: one_week);
-//     system
-//         .switch_delegation_pool(
-//             delegator: delegator_Y,
-//             from_pool: pool_B,
-//             to_staker: staker_A.staker.address,
-//             to_pool: pool_A,
-//             amount: delegated_amount,
-//         );
+    // DY intend to exit PB & switch to PA.
+    system.delegator_exit_intent(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
+    system.advance_epoch_and_attest(staker: staker_A);
+    system.advance_epoch_and_attest(staker: staker_B);
+    system
+        .switch_delegation_pool(
+            delegator: delegator_Y,
+            from_pool: pool_B,
+            to_staker: staker_A.staker.address,
+            to_pool: pool_A,
+            amount: delegated_amount,
+        );
+    assert!(system.token.balance_of(account: pool_A).is_zero());
+    system.advance_epoch_and_attest(staker: staker_A);
+    assert!(system.token.balance_of(account: pool_A).is_non_zero());
+    system.advance_epoch_and_attest(staker: staker_B);
 
-//     // DY intend to exit PA & switch to PB.
-//     system.delegator_exit_intent(delegator: delegator_Y, pool: pool_A, amount: delegated_amount);
-//     system.advance_time(time: one_week);
-//     system
-//         .switch_delegation_pool(
-//             delegator: delegator_Y,
-//             from_pool: pool_A,
-//             to_staker: staker_B.staker.address,
-//             to_pool: pool_B,
-//             amount: delegated_amount,
-//         );
+    // DY intend to exit PA & switch to PB.
+    system.delegator_exit_intent(delegator: delegator_Y, pool: pool_A, amount: delegated_amount);
+    system.advance_epoch_and_attest(staker: staker_A);
+    system.advance_epoch_and_attest(staker: staker_B);
+    system
+        .switch_delegation_pool(
+            delegator: delegator_Y,
+            from_pool: pool_A,
+            to_staker: staker_B.staker.address,
+            to_pool: pool_B,
+            amount: delegated_amount,
+        );
+    system.advance_epoch_and_attest(staker: staker_A);
+    system.advance_epoch_and_attest(staker: staker_B);
 
-//     // Perform test end clearance - All stakers and delegators exit staking.
-//     system.delegator_exit_intent(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
-//     system.advance_time(time: system.staking.get_exit_wait_window());
-//     system.delegator_exit_action(delegator: delegator_Y, pool: pool_B);
+    // Perform test end clearance - All stakers and delegators exit staking.
+    system.delegator_exit_intent(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    system.delegator_exit_action(delegator: delegator_Y, pool: pool_B);
 
-//     system.staker_exit_intent(staker: staker_B);
-//     system.staker_exit_intent(staker: staker_A);
-//     system.advance_time(time: system.staking.get_exit_wait_window());
-//     system.staker_exit_action(staker: staker_A);
-//     system.staker_exit_action(staker: staker_B);
+    system.staker_exit_intent(staker: staker_B);
+    system.staker_exit_intent(staker: staker_A);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    system.staker_exit_action(staker: staker_A);
+    system.staker_exit_action(staker: staker_B);
 
-//     /// Post clearance checks: ///
+    /// Post clearance checks: ///
 
-//     // 1. Token balance virtually zero on stakers. Zero on staking contract.
-//     assert!(system.token.balance_of(account: system.staking.address).is_zero());
-//     assert!(system.token.balance_of(account: pool_A) == 0);
-//     assert!(
-//         system.token.balance_of(account: pool_B) > 100,
-//     ); // TODO: Change this after implement calculate_rewards.
+    // 1. Staking contract balance is zero.
+    assert!(system.token.balance_of(account: system.staking.address).is_zero());
 
-//     // 2. Stakers and delegator balances are the staked amounts.
-//     assert!(system.token.balance_of(account: staker_A.staker.address) == stake_amount);
-//     assert!(system.token.balance_of(account: staker_B.staker.address) == stake_amount);
-//     assert!(system.token.balance_of(account: delegator_Y.delegator.address) == delegated_amount);
+    // 2. Stakers and delegator balances are the staked amounts.
+    assert!(system.token.balance_of(account: staker_A.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: staker_B.staker.address) == stake_amount);
+    assert!(system.token.balance_of(account: delegator_Y.delegator.address) == delegated_amount);
 
-//     // 3. Reward addresses have some balance for all stakers & delegators.
-//     assert!(system.token.balance_of(account: staker_A.reward.address).is_non_zero());
-//     assert!(system.token.balance_of(account: staker_B.reward.address).is_non_zero());
-//     assert!(
-//         system.token.balance_of(account: delegator_Y.reward.address).is_zero(),
-//     ); // TODO: Change this after implement calculate_rewards.
+    // 3. Reward addresses have some balance for all stakers & delegators.
+    assert!(system.token.balance_of(account: staker_A.reward.address).is_non_zero());
+    assert!(system.token.balance_of(account: staker_B.reward.address).is_non_zero());
+    assert!(system.token.balance_of(account: delegator_Y.reward.address).is_non_zero());
 
-//     // 4. Virtually all rewards awarded were claimed.
-//     assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+    // 4. Virtually all rewards awarded were claimed.
+    assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
 
-//     // 5. Rewards funds are well accounted for.
-//     assert!(
-//         initial_reward_supplier_balance == system
-//             .token
-//             .balance_of(account: system.reward_supplier.address)
-//             + system.token.balance_of(account: staker_A.reward.address)
-//             + system.token.balance_of(account: staker_B.reward.address)
-//             + system.token.balance_of(account: delegator_Y.reward.address)
-//             + system.token.balance_of(account: pool_A)
-//             + system.token.balance_of(account: pool_B),
-//     );
-// }
+    // 5. Rewards funds are well accounted for.
+    assert!(
+        initial_reward_supplier_balance == system
+            .token
+            .balance_of(account: system.reward_supplier.address)
+            + system.token.balance_of(account: staker_A.reward.address)
+            + system.token.balance_of(account: staker_B.reward.address)
+            + system.token.balance_of(account: delegator_Y.reward.address)
+            + system.token.balance_of(account: pool_A)
+            + system.token.balance_of(account: pool_B),
+    );
+}
 
 /// flow:
 /// Staker stake
