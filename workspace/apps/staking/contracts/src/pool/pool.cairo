@@ -812,7 +812,10 @@ pub mod Pool {
                     epoch: curr_epoch, :balance, rewards_info_idx: self.rewards_info_length() - 1,
                 );
                 let sigma = self.find_sigma(pool_member_checkpoint);
-                return (sigma * balance, entry_to_claim_from);
+                return (
+                    compute_rewards_rounded_down(amount: balance, interest: sigma),
+                    entry_to_claim_from,
+                );
             }
 
             let pool_member_trace_length = pool_member_trace.length();

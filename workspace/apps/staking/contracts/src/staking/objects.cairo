@@ -11,6 +11,7 @@ use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
+const STARTING_EPOCH: Epoch = 0;
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct UndelegateIntentKey {
@@ -76,7 +77,7 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
             block_duration,
             length: epoch_length,
             starting_block,
-            starting_epoch: Zero::zero(),
+            starting_epoch: STARTING_EPOCH,
             last_starting_block_before_update: Zero::zero(),
         }
     }
@@ -96,7 +97,9 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
         assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
         assert!(get_block_number() >= self.starting_block, "{}", Error::EPOCH_INFO_ALREADY_UPDATED);
-        assert!(self.current_epoch().is_non_zero(), "{}", Error::EPOCH_INFO_UPDATED_IN_FIRST_EPOCH);
+        assert!(
+            self.current_epoch() != STARTING_EPOCH, "{}", Error::EPOCH_INFO_UPDATED_IN_FIRST_EPOCH,
+        );
         self.last_starting_block_before_update = self.current_epoch_starting_block();
         self.starting_epoch = self.next_epoch();
         self.starting_block = self.calculate_next_epoch_starting_block();

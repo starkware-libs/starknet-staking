@@ -559,3 +559,20 @@ pub(crate) fn assert_commission_commitment_set_event(
     );
 }
 
+
+pub(crate) fn assert_staker_rewards_updated_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    staker_rewards: Amount,
+    pool_rewards: Amount,
+) {
+    let expected_event = StakingEvents::StakerRewardsUpdated {
+        staker_address, staker_rewards, pool_rewards,
+    };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("StakerRewardsUpdated"),
+        expected_event_name: "StakerRewardsUpdated",
+    );
+}

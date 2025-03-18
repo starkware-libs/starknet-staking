@@ -66,7 +66,7 @@
     - [Exit Wait Window Changed](#exit-wait-window-changed)
     - [Reward Supplier Changed](#reward-supplier-changed)
     - [Epoch Info Changed](#epoch-info-changed)
-- [Delegation pool contract](#delegation-pool-contract)
+    - [Staker Rewards Updated](#staker-rewards-updated)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
     - [add\_to\_delegation\_pool](#add_to_delegation_pool)
@@ -146,7 +146,7 @@
     - [CALLER\_CANNOT\_ADD\_TO\_POOL](#caller_cannot_add_to_pool)
     - [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
     - [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
-    - [CALLER\_IS\_NOT\_ATTESTAION\_CONTRACT](#caller_is_not_attestation_contract)
+    - [CALLER\_IS\_NOT\_ATTESTATION\_CONTRACT](#caller_is_not_attestation_contract)
     - [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
     - [ONLY\_SECURITY\_AGENT](#only_security_agent)
     - [ONLY\_SECURITY\_ADMIN](#only_security_admin)
@@ -920,6 +920,8 @@ fn update_rewards_from_attestation_contract(ref self: ContractState,
 Calculate and update rewards for the staker for the current epoch.
 Send pool rewards to the pool.
 #### emits <!-- omit from toc -->
+1. [Staker Rewards Updated](#staker-rewards-updated)
+2. [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [CALLER\_IS\_NOT\_ATTESTAION\_CONTRACT](#caller_is_not_attestation_contract)
@@ -1312,7 +1314,12 @@ Staking contract of latest version.
 | block_duration | u16  | ❌     |
 | epoch_length   | u16  | ❌     |
 
-# Delegation pool contract
+### Staker Rewards Updated
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| staker_address | address           | ✅    |
+| staker_rewards | [Amount](#amount) | ❌    |
+| pool_rewards   | [Amount](#amount) | ❌    |
 
 ## Functions
 ### enter_delegation_pool

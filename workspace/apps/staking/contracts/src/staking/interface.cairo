@@ -267,6 +267,14 @@ pub mod Events {
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct StakerRewardsUpdated {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub staker_rewards: Amount,
+        pub pool_rewards: Amount,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct DeleteStaker {
         #[key]
         pub staker_address: ContractAddress,
@@ -409,9 +417,10 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalS
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerPoolInfo {
     pub pool_contract: ContractAddress,
-    // TODO: create a public version of this struct and make amount public?
+    // TODO: Create a public version of this struct and make amount public?
     amount: Amount,
-    pub unclaimed_rewards: Amount,
+    // TODO: Create a public version of this struct and make unclaimed_rewards public?
+    unclaimed_rewards: Amount,
     pub commission: Commission,
 }
 
@@ -423,12 +432,20 @@ pub impl StakerPoolInfoImpl of StakerPoolInfoTrait {
         }
     }
 
-    fn _deprecated_amount(self: StakerPoolInfo) -> Amount {
-        self.amount
+    fn _deprecated_amount(self: @StakerPoolInfo) -> Amount {
+        *self.amount
     }
 
     fn _set_deprecated_amount(ref self: StakerPoolInfo, amount: Amount) {
         self.amount = amount;
+    }
+
+    fn _deprecated_unclaimed_rewards(self: @StakerPoolInfo) -> Amount {
+        *self.unclaimed_rewards
+    }
+
+    fn _set_deprecated_unclaimed_rewards(ref self: StakerPoolInfo, unclaimed_rewards: Amount) {
+        self.unclaimed_rewards = unclaimed_rewards;
     }
 }
 

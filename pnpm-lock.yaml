@@ -1512,9 +1512,9 @@ packages:
       integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==
     engines:
       node: '>=8'
-  picocolors@1.0.1:
+  picocolors@1.1.1:
     resolution:
-      integrity: sha512-anP1Z8qwhkbmu7MFP5iTt+wQKXgwzf7zTyGlcdzabySa9vd0Xt392U0rVmz9poOaBj0uHJKyyo9/upk0HrEQew==
+      integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==
   picomatch@2.3.1:
     resolution:
       integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==
@@ -2066,7 +2066,7 @@ snapshots:
   '@babel/code-frame@7.24.2':
     dependencies:
       '@babel/highlight': 7.24.2
-      picocolors: 1.0.1
+      picocolors: 1.1.1
   '@babel/generator@7.17.7':
     dependencies:
       '@babel/types': 7.21.5
@@ -2074,7 +2074,7 @@ snapshots:
       source-map: 0.5.7
   '@babel/generator@7.21.9':
     dependencies:
-      '@babel/types': 7.21.5
+      '@babel/types': 7.24.0
       '@jridgewell/gen-mapping': 0.3.2
       '@jridgewell/trace-mapping': 0.3.25
       jsesc: 2.5.2
@@ -2103,13 +2103,13 @@ snapshots:
       '@babel/helper-validator-identifier': 7.22.20
       chalk: 2.4.2
       js-tokens: 4.0.0
-      picocolors: 1.0.1
+      picocolors: 1.1.1
   '@babel/parser@7.20.15':
     dependencies:
       '@babel/types': 7.21.5
   '@babel/parser@7.21.9':
     dependencies:
-      '@babel/types': 7.21.5
+      '@babel/types': 7.24.0
   '@babel/parser@7.24.1':
     dependencies:
       '@babel/types': 7.24.0
@@ -3162,7 +3162,7 @@ snapshots:
   path-key@3.1.1: {}
   path-parse@1.0.7: {}
   path-type@4.0.0: {}
-  picocolors@1.0.1: {}
+  picocolors@1.1.1: {}
   picomatch@2.3.1: {}
   pify@4.0.1: {}
   pkg-dir@4.2.0:

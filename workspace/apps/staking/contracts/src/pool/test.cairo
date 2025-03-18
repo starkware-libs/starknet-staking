@@ -275,7 +275,7 @@ fn test_add_to_delegation_pool() {
     let mut expected_pool_info = staker_info_before.get_pool_info();
     expected_pool_info
         ._set_deprecated_amount(amount: expected_pool_info._deprecated_amount() + delegate_amount);
-    expected_pool_info.unclaimed_rewards = Zero::zero();
+    expected_pool_info._set_deprecated_unclaimed_rewards(unclaimed_rewards: Zero::zero());
     assert!(expected_pool_info == staker_info_after.get_pool_info());
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let pool_balance = token_dispatcher.balance_of(pool_contract);

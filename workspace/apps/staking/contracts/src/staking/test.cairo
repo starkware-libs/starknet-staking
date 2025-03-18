@@ -15,8 +15,9 @@ use event_test_utils::{
     assert_minimum_stake_changed_event, assert_new_delegation_pool_event, assert_new_staker_event,
     assert_number_of_events, assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
-    assert_stake_balance_changed_event, assert_staker_exit_intent_event,
-    assert_staker_reward_address_change_event, assert_staker_reward_claimed_event,
+    assert_rewards_supplied_to_delegation_pool_event, assert_stake_balance_changed_event,
+    assert_staker_exit_intent_event, assert_staker_reward_address_change_event,
+    assert_staker_reward_claimed_event, assert_staker_rewards_updated_event,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
@@ -920,7 +921,10 @@ fn test_add_stake_from_pool() {
     let mut expected_pool_info = StakerPoolInfoTrait::new(
         pool_contract: pool_info_before.pool_contract, commission: pool_info_before.commission,
     );
-    expected_pool_info.unclaimed_rewards = pool_info_before.unclaimed_rewards;
+    expected_pool_info
+        ._set_deprecated_unclaimed_rewards(
+            unclaimed_rewards: pool_info_before._deprecated_unclaimed_rewards(),
+        );
     expected_pool_info._set_deprecated_amount(pool_amount);
     let expected_staker_info = StakerInfo {
         pool_info: Option::Some(expected_pool_info), ..staker_info_before,
@@ -1818,7 +1822,7 @@ fn test_update_commission() {
 
     // Assert rewards and commission are updated in the staker info.
     let mut expected_pool_info = staker_info.get_pool_info();
-    expected_pool_info.unclaimed_rewards = unclaimed_rewards_pool;
+    expected_pool_info._set_deprecated_unclaimed_rewards(unclaimed_rewards: unclaimed_rewards_pool);
     expected_pool_info.commission = commission;
     let expected_staker_info = StakerInfo {
         unclaimed_rewards_own, pool_info: Option::Some(expected_pool_info), ..staker_info,
@@ -2640,6 +2644,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let staker_info_expected = StakerInfo {
         unclaimed_rewards_own: expected_staker_rewards, ..staker_info_before,
     };
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: attestation_contract,
     );
@@ -2651,6 +2656,24 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
 
     // Assert pool rewards transfer.
     assert!(token_dispatcher.balance_of(pool_contract) == expected_pool_rewards.into());
+
+    // Validate RewardsSuppliedToDelegationPool and StakerRewardsUpdated event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 2, message: "update_rewards_from_attestation_contract",
+    );
+    assert_staker_rewards_updated_event(
+        spied_event: events[0],
+        :staker_address,
+        staker_rewards: expected_staker_rewards,
+        pool_rewards: expected_pool_rewards,
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[1],
+        :staker_address,
+        pool_address: pool_contract,
+        amount: expected_pool_rewards,
+    );
 }
 
 #[test]
