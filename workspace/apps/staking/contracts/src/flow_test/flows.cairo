@@ -930,9 +930,11 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
     ) {
         let internal_staker_info_after_upgrade = system
             .internal_staker_info(staker: self.staker.unwrap());
-        let expected_staker_info = staker_update_rewards(
-            staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
+        let global_index = system.staking.get_global_index();
+        let mut expected_staker_info = staker_update_rewards(
+            staker_info: self.staker_info.unwrap(), :global_index,
         );
+        expected_staker_info.index = global_index;
         assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }
@@ -989,9 +991,11 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
     ) {
         let internal_staker_info_after_upgrade = system
             .internal_staker_info(staker: self.staker.unwrap());
-        let expected_staker_info = staker_update_rewards(
-            staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
+        let global_index = system.staking.get_global_index();
+        let mut expected_staker_info = staker_update_rewards(
+            staker_info: self.staker_info.unwrap(), :global_index,
         );
+        expected_staker_info.index = global_index;
         assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }
@@ -1144,6 +1148,7 @@ pub(crate) impl InternalPoolMemberInfoAfterUpgradeFlowImpl<
         self.delegator_info = Option::Some(delegator_info);
 
         system.advance_time(time: one_week);
+        system.update_global_index_via_change_reward_address(:staker);
     }
 
     fn test(
