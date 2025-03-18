@@ -37,6 +37,9 @@ use staking::pool::objects::{
     VStorageContractTest,
 };
 use staking::pool::pool::Pool;
+use staking::reward_supplier::interface::{
+    IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
+};
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
     StakerPoolInfoTrait,
@@ -57,11 +60,12 @@ use starkware_utils::test_utils::{
 };
 use starkware_utils::types::time::time::Time;
 use test_utils::{
-    StakingInitConfig, approve, cheat_reward_for_reward_supplier, constants, declare_pool_contract,
-    declare_pool_eic_contract, deploy_mock_erc20_contract, deploy_staking_contract,
-    deserialize_option, enter_delegation_pool_for_testing_using_dispatcher, fund,
-    general_contract_system_deployment, initialize_pool_state, load_from_simple_map,
-    stake_with_pool_enabled,
+    StakingInitConfig, advance_epoch_global, approve,
+    calculate_staker_own_rewards_include_commission, calculate_staker_total_rewards,
+    cheat_reward_for_reward_supplier, constants, declare_pool_contract, declare_pool_eic_contract,
+    deploy_mock_erc20_contract, deploy_staking_contract, deserialize_option,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    initialize_pool_state, load_from_simple_map, stake_with_pool_enabled,
 };
 
 #[test]
@@ -523,7 +527,12 @@ fn test_claim_rewards() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
 
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
@@ -534,14 +543,36 @@ fn test_claim_rewards() {
         pool_dispatcher
             .pool_member_info(cfg.test_info.pool_member_address) == expected_pool_member_info,
     );
-    // Update index for testing.
-    let updated_index: Index = cfg.staker_info._deprecated_index + BASE_VALUE;
-    snforge_std::store(
-        staking_contract, selector!("global_index"), array![updated_index.into()].span(),
-    );
+
+    advance_epoch_global();
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+
     // Compute expected rewards.
-    let expected_reward = Zero::zero(); // TODO: Change this after implement calculate_rewards.
-    cheat_reward_for_reward_supplier(:cfg, :reward_supplier, :expected_reward, :token_address);
+    let total_rewards = calculate_staker_total_rewards(
+        staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
+    );
+    let staker_rewards = calculate_staker_own_rewards_include_commission(
+        staker_info: staker_info_before, :total_rewards,
+    );
+    let epoch_rewards = reward_supplier_dispatcher
+        .current_epoch_rewards(); // epoch_rewards are the total staker rewards in that case since there is only one staker.
+    let expected_pool_rewards = epoch_rewards
+        - staker_rewards; // pool_rewards = total staker rewards - staker own rewards include commission.
+
+    // Fund pool_contract.
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: pool_contract,
+        amount: expected_pool_rewards,
+        :token_address,
+    );
+    let pool_balance = cfg.pool_member_info._deprecated_amount;
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
+    pool_dispatcher
+        .update_rewards_from_staking_contract(rewards: expected_pool_rewards, :pool_balance);
+    advance_epoch_global();
+
     // Claim rewards, and validate the results.
     cheat_caller_address_once(
         contract_address: pool_contract, caller_address: cfg.test_info.pool_member_address,
@@ -549,7 +580,7 @@ fn test_claim_rewards() {
     let mut spy = snforge_std::spy_events();
     let actual_reward = pool_dispatcher
         .claim_rewards(pool_member: cfg.test_info.pool_member_address);
-    assert!(actual_reward == expected_reward);
+    assert!(actual_reward == expected_pool_rewards);
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = token_dispatcher.balance_of(cfg.pool_member_info.reward_address);
     assert!(balance == actual_reward.into());
