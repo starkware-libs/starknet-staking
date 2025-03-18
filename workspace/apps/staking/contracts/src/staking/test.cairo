@@ -920,7 +920,10 @@ fn test_add_stake_from_pool() {
     let mut expected_pool_info = StakerPoolInfoTrait::new(
         pool_contract: pool_info_before.pool_contract, commission: pool_info_before.commission,
     );
-    expected_pool_info.unclaimed_rewards = pool_info_before.unclaimed_rewards;
+    expected_pool_info
+        ._set_deprecated_unclaimed_rewards(
+            unclaimed_rewards: pool_info_before._deprecated_unclaimed_rewards(),
+        );
     expected_pool_info._set_deprecated_amount(pool_amount);
     let expected_staker_info = StakerInfo {
         pool_info: Option::Some(expected_pool_info), ..staker_info_before,
@@ -1818,7 +1821,7 @@ fn test_update_commission() {
 
     // Assert rewards and commission are updated in the staker info.
     let mut expected_pool_info = staker_info.get_pool_info();
-    expected_pool_info.unclaimed_rewards = unclaimed_rewards_pool;
+    expected_pool_info._set_deprecated_unclaimed_rewards(unclaimed_rewards: unclaimed_rewards_pool);
     expected_pool_info.commission = commission;
     let expected_staker_info = StakerInfo {
         unclaimed_rewards_own, pool_info: Option::Some(expected_pool_info), ..staker_info,

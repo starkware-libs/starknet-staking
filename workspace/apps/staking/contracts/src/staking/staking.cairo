@@ -1151,10 +1151,10 @@ pub mod Staking {
         ) {
             let mut pool_info = staker_info.get_pool_info();
             let pool_address = pool_info.pool_contract;
-            let amount = pool_info.unclaimed_rewards;
+            let amount = pool_info._deprecated_unclaimed_rewards();
 
             self.send_rewards(reward_address: pool_address, :amount, :token_dispatcher);
-            pool_info.unclaimed_rewards = Zero::zero();
+            pool_info._set_deprecated_unclaimed_rewards(unclaimed_rewards: Zero::zero());
             staker_info.pool_info = Option::Some(pool_info);
 
             self

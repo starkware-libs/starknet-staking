@@ -919,7 +919,8 @@ pub(crate) fn staker_update_rewards(staker_info: StakerInfo, global_index: Index
         let mut staker_pool_info_internal = StakerPoolInfoTrait::new(
             pool_contract: pool_info.pool_contract, commission: pool_info.commission,
         );
-        staker_pool_info_internal.unclaimed_rewards = pool_rewards;
+        staker_pool_info_internal
+            ._set_deprecated_unclaimed_rewards(unclaimed_rewards: pool_rewards);
         staker_pool_info_internal._set_deprecated_amount(pool_info._deprecated_amount());
         staker_pool_info = Option::Some(staker_pool_info_internal);
     }
