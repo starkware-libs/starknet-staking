@@ -51,11 +51,12 @@ use starkware_utils::test_utils::{
 use starkware_utils::types::time::time::TimeDelta;
 
 pub(crate) mod constants {
+    use core::cmp::max;
     use staking::constants::STRK_IN_FRIS;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Commission, Index};
-    use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
+    use starknet::{ContractAddress, get_block_number};
 
     pub const STAKER_INITIAL_BALANCE: Amount = 1000000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000 * STRK_IN_FRIS;
@@ -202,7 +203,7 @@ pub(crate) mod constants {
         EpochInfoTrait::new(
             block_duration: BLOCK_DURATION,
             epoch_length: EPOCH_LENGTH,
-            starting_block: EPOCH_STARTING_BLOCK,
+            starting_block: max(EPOCH_STARTING_BLOCK, get_block_number()),
         )
     }
 }

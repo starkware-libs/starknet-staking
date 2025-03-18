@@ -35,6 +35,7 @@ pub(crate) enum Error {
     EXPIRATION_EPOCH_TOO_EARLY,
     INVALID_BLOCK_DURATION,
     PENULTIMATE_NOT_EXIST,
+    INVALID_STARTING_BLOCK,
 }
 
 impl DescribableError of Describable<Error> {
@@ -74,6 +75,7 @@ impl DescribableError of Describable<Error> {
             Error::EXPIRATION_EPOCH_TOO_EARLY => "Expiration epoch is too early, should be later then current epoch",
             Error::INVALID_BLOCK_DURATION => "Invalid block duration, must be greater than 0",
             Error::PENULTIMATE_NOT_EXIST => "Penultimate balance does not exist, staker balance at this epoch is 0",
+            Error::INVALID_STARTING_BLOCK => "Invalid starting block, must be greater than or equal to current block number",
         }
     }
 }
