@@ -282,7 +282,7 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let caller_address = get_caller_address();
-            let mut staker_info = self.internal_staker_info(:staker_address);
+            let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             assert!(
                 caller_address == staker_address || caller_address == staker_info.reward_address,
@@ -309,9 +309,6 @@ pub mod Staking {
             // Update staker's staked amount, and total stake.
             self.increase_staker_own_amount(:staker_address, :amount, ref :staker_balance);
             let new_self_stake = staker_balance.amount_own();
-            self
-                .staker_info
-                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
             self.add_to_total_stake(:amount);
 
             // Emit events.
@@ -722,9 +719,9 @@ pub mod Staking {
         ) {
             // Prerequisites and asserts.
             self.general_prerequisites();
-            let mut staker_info = self.internal_staker_info(:staker_address);
+            let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-            let mut pool_info = staker_info.get_pool_info();
+            let pool_info = staker_info.get_pool_info();
             let pool_contract = pool_info.pool_contract;
             assert!(
                 get_caller_address() == pool_contract, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT,
@@ -770,7 +767,7 @@ pub mod Staking {
         ) -> Timestamp {
             // Prerequisites and asserts.
             self.general_prerequisites();
-            let mut staker_info = self.internal_staker_info(:staker_address);
+            let staker_info = self.internal_staker_info(:staker_address);
             self.assert_caller_is_pool_contract(staker_info: @staker_info);
             let mut staker_balance = self.get_or_create_staker_balance(:staker_address);
 
@@ -787,7 +784,7 @@ pub mod Staking {
             self
                 .update_delegated_stake(
                     :staker_address,
-                    ref :staker_info,
+                    :staker_info,
                     :old_intent_amount,
                     :new_intent_amount,
                     ref :staker_balance,
@@ -823,11 +820,6 @@ pub mod Staking {
                         },
                     );
             }
-
-            self
-                .staker_info
-                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
-
             self.get_pool_exit_intent(:undelegate_intent_key).unpool_time
         }
 
@@ -1312,12 +1304,12 @@ pub mod Staking {
             assert!(get_caller_address().is_non_zero(), "{}", Error::CALLER_IS_ZERO_ADDRESS);
         }
 
-        /// Updates the delegated stake amount in the given `staker_info` according to changes in
-        /// the intent amount. Also updates the total stake accordingly.
+        /// Updates the delegated stake amount in the given `staker_balance` according to changes
+        /// in the intent amount. Also updates the total stake accordingly.
         fn update_delegated_stake(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: InternalStakerInfoLatest,
+            staker_info: InternalStakerInfoLatest,
             old_intent_amount: Amount,
             new_intent_amount: Amount,
             ref staker_balance: StakerBalance,
