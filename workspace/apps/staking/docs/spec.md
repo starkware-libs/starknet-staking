@@ -165,6 +165,7 @@
     - [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
     - [ATTEST\_EPOCH\_ZERO](#attest_epoch_zero)
     - [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
+    - [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -823,10 +824,13 @@ Update the commission.
 4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
 5. [INVALID\_COMMISSION](#invalid_commission)
 6. [INVALID\_COMMISSION\_WITH\_COMMITMENT](#invalid_commission_with_commitment)
+7. [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker exist in the contract.
 3. Delegation pool exist for the staker.
+4. If there is no active commission commitment, `commission` must be lower than the current 
+commission.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
@@ -2105,6 +2109,9 @@ Only token admin.
 
 ### ATTEST_WRONG_BLOCK_HASH
 "Attestation with wrong block hash"
+
+### COMMISSION_COMMITMENT_EXPIRED
+"Commission commitment has expired, can only decrease or set a new commitment"
 
 # Structs
 ### StakerPoolInfo
