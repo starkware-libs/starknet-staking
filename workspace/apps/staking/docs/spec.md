@@ -1027,7 +1027,9 @@ Return the latest total stake amount (which could be of the next epoch).
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
+Any address can execute.
 #### logic <!-- omit from toc -->
+1. Return the total stake amount.
 
 ### get_current_total_staking_power
 ```rust
