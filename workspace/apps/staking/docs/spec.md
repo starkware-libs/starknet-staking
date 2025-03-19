@@ -533,15 +533,16 @@ Return the updated total amount.
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 4. [CALLER\_CANNOT\_INCREASE\_STAKE](#caller_cannot_increase_stake)
+5. [AMOUNT\_IS\_ZERO](#amount_is_zero)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker is listed in the contract.
 3. Staker is not in an exit window.
+4. `amount` is not zero.
 #### access control <!-- omit from toc -->
 Only the staker address or rewards address for which the change is requested for.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Increase staked amount.
+1. Increase staked amount.
 
 ### unstake_intent
 ```rust
