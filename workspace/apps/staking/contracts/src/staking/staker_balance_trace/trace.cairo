@@ -1,5 +1,4 @@
 use core::num::traits::Zero;
-use openzeppelin::utils::math::average;
 use staking::staking::errors::Error;
 use staking::types::{Amount, Epoch};
 use starknet::storage::{
@@ -112,20 +111,6 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
     fn is_initialized(self: StoragePath<StakerBalanceTrace>) -> bool {
         self.checkpoints.len().is_non_zero()
     }
-
-    /// Returns the value in the last (most recent) checkpoint with the key lower than or equal to
-    /// the search key, or zero if there is none.
-    fn upper_lookup(self: StoragePath<StakerBalanceTrace>, key: Epoch) -> StakerBalance {
-        let checkpoints = self.checkpoints.as_path();
-        let len = checkpoints.len();
-        let pos = checkpoints._upper_binary_lookup(key, 0, len).into();
-
-        if pos == 0 {
-            Zero::zero()
-        } else {
-            checkpoints[pos - 1].read().value
-        }
-    }
 }
 
 #[generate_trait]
@@ -186,27 +171,5 @@ impl MutableStakerBalanceCheckpointImpl of MutableStakerBalanceCheckpointTrait {
         } else {
             self.push(StakerBalanceCheckpoint { key, value });
         };
-    }
-
-    /// Returns the index of the last (most recent) checkpoint with the key lower than or equal to
-    /// the search key, or `high` if there is none. `low` and `high` define a section where to do
-    /// the search, with inclusive `low` and exclusive `high`.
-    fn _upper_binary_lookup(
-        self: StoragePath<Vec<StakerBalanceCheckpoint>>, key: Epoch, low: u64, high: u64,
-    ) -> u64 {
-        let mut _low = low;
-        let mut _high = high;
-        loop {
-            if _low >= _high {
-                break;
-            }
-            let mid = average(_low, _high);
-            if (self[mid].read().key > key) {
-                _high = mid;
-            } else {
-                _low = mid + 1;
-            };
-        }
-        _high
     }
 }

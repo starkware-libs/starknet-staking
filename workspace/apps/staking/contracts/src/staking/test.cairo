@@ -809,6 +809,7 @@ fn test_get_total_stake() {
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    assert!(staking_dispatcher.get_current_epoch() == Zero::zero());
     assert!(staking_dispatcher.get_total_stake() == Zero::zero());
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     assert!(staking_dispatcher.get_total_stake() == cfg.staker_info._deprecated_amount_own);

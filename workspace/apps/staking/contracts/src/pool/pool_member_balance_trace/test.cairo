@@ -76,31 +76,6 @@ fn test_length() {
 }
 
 #[test]
-fn test_upper_lookup() {
-    let mut mock_trace = CONTRACT_STATE();
-
-    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
-    mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
-
-    assert!(
-        mock_trace
-            .upper_lookup(100) == PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1),
-    );
-    assert!(
-        mock_trace
-            .upper_lookup(150) == PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1),
-    );
-    assert!(
-        mock_trace
-            .upper_lookup(200) == PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2),
-    );
-    assert!(
-        mock_trace
-            .upper_lookup(250) == PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2),
-    );
-}
-
-#[test]
 fn test_latest_mutable() {
     let mut mock_trace = CONTRACT_STATE();
 

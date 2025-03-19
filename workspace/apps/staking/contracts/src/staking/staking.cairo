@@ -177,6 +177,7 @@ pub mod Staking {
         self.prev_class_hash.write(0, prev_class_hash);
         self.epoch_info.write(epoch_info);
         self.attestation_contract.write(attestation_contract);
+        self.total_stake_trace.deref().insert(key: FIRST_VALID_EPOCH, value: Zero::zero());
     }
 
     #[abi(embed_v0)]
@@ -521,10 +522,10 @@ pub mod Staking {
 
         fn get_total_stake(self: @ContractState) -> Amount {
             let total_stake_trace = self.total_stake_trace.deref();
-            match total_stake_trace.latest() {
-                Result::Ok((_, total_stake)) => total_stake,
-                Result::Err(_) => 0,
-            }
+            // Trace is initialized with a zero stake at the first valid epoch, so it is safe to
+            // unwrap.
+            let (_, total_stake) = total_stake_trace.latest().unwrap().into();
+            total_stake
         }
 
         fn get_current_total_staking_power(self: @ContractState) -> Amount {
