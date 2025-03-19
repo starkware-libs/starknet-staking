@@ -26,6 +26,7 @@
     - [set\_open\_for\_delegation](#set_open_for_delegation)
     - [update\_commission](#update_commission)
     - [set\_commission\_commitment](#set_commission_commitment)
+    - [get\_staker\_commission\_commitment](#get_staker_commission_commitment)
     - [staker\_info](#staker_info)
     - [get\_staker\_info](#get_staker_info)
     - [get\_current\_epoch](#get_current_epoch)
@@ -166,6 +167,7 @@
     - [ATTEST\_EPOCH\_ZERO](#attest_epoch_zero)
     - [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
     - [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
+    - [COMMISSION\_COMMITMENT\_NOT\_SET](#commission_commitment_not_set)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -863,6 +865,26 @@ commission to any commission that is lower than `max_commission`.
 Only staker address.
 #### logic <!-- omit from toc -->
 1. Set commission commitment.
+
+### get_staker_commission_commitment
+```rust
+fn get_staker_commission_commitment(
+  self: @ContractState, 
+  staker_address: ContractAddress
+) -> CommissionCommitment
+```
+#### description <!-- omit from toc -->
+Return the commission commitment for the given staker.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [COMMISSION\_COMMITMENT\_NOT\_SET](#commission_commitment_not_set)
+#### pre-condition <!-- omit from toc -->
+1. Staker exist in the contract.
+2. Commission commitment is set for the staker.
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
 
 ### staker_info
 ```rust
@@ -2112,6 +2134,9 @@ Only token admin.
 
 ### COMMISSION_COMMITMENT_EXPIRED
 "Commission commitment has expired, can only decrease or set a new commitment"
+
+### COMMISSION_COMMITMENT_NOT_SET
+"Commission commitment is not set"
 
 # Structs
 ### StakerPoolInfo
