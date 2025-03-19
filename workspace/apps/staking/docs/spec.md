@@ -176,6 +176,8 @@
     - [UNAUTHORIZED\_MESSAGE\_SENDER](#unauthorized_message_sender)
     - [TOTAL\_SUPPLY\_NOT\_AMOUNT\_TYPE](#total_supply_not_amount_type)
     - [C\_NUM\_OUT\_OF\_RANGE](#c_num_out_of_range)
+    - [EPOCH\_INFO\_ALREADY\_UPDATED](#epoch_info_already_updated)
+    - [EPOCH\_INFO\_UPDATED\_IN\_FIRST\_EPOCH](#epoch_info_updated_in_first_epoch)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -1237,10 +1239,13 @@ fn set_epoch_info(ref self: ContractState, block_duration: u16, epoch_length: u1
 #### description <!-- omit from toc -->
 Set the epoch info.
 #### emits <!-- omit from toc -->
+1. [Epoch Info Changed](#epoch-info-changed)
 #### errors <!-- omit from toc -->
 1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 2. [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
 3. [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
+4. [EPOCH\_INFO\_ALREADY\_UPDATED](#epoch_info_already_updated)
+5. [EPOCH\_INFO\_UPDATED\_IN\_FIRST\_EPOCH](#epoch_info_updated_in_first_epoch)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only token admin.
@@ -2235,6 +2240,12 @@ Only token admin.
 
 ### C_NUM_OUT_OF_RANGE
 "C Numerator out of range (0-500)"
+
+### EPOCH_INFO_ALREADY_UPDATED
+"Epoch info already updated in this epoch"
+
+### EPOCH_INFO_UPDATED_IN_FIRST_EPOCH
+"Epoch info can not be updated in the first epoch"
 
 # Structs
 ### StakerPoolInfo
