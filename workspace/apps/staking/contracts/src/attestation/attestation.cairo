@@ -199,7 +199,6 @@ pub mod Attestation {
                     :staking_attestation_info, :attestation_window,
                 );
             self._assert_attest_in_window(:expected_attestation_block, :attestation_window);
-            self._assert_attest_in_epoch(:staking_attestation_info);
 
             // Check the attestation data (correct block hash).
             let expected_block_hash = self.get_expected_block_hash(:expected_attestation_block);
@@ -251,17 +250,6 @@ pub mod Attestation {
                     + MIN_ATTESTATION_WINDOW.into(),
                 "{}",
                 Error::ATTEST_OUT_OF_WINDOW,
-            );
-        }
-
-        fn _assert_attest_in_epoch(
-            self: @ContractState, staking_attestation_info: StakingAttestationInfo,
-        ) {
-            let current_block_number = get_block_number();
-            let next_epoch_starting_block = staking_attestation_info.current_epoch_starting_block()
-                + staking_attestation_info.epoch_len().into();
-            assert!(
-                current_block_number < next_epoch_starting_block, "{}", Error::ATTEST_OUT_OF_WINDOW,
             );
         }
 
