@@ -187,25 +187,23 @@ impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpoin
         value: PoolMemberBalance,
     ) -> (PoolMemberBalance, PoolMemberBalance) {
         let pos = self.len();
-
-        if pos > 0 {
-            let mut last = self[pos - 1].read();
-
-            // Update or append new checkpoint
-            let prev = last.value;
-            if last.key == key {
-                last.value = value;
-                self[pos - 1].write(last);
-            } else {
-                // Checkpoint keys must be non-decreasing
-                assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
-                self.push(PoolMemberBalanceCheckpoint { key, value });
-            }
-            (prev, value)
-        } else {
+        if pos == Zero::zero() {
             self.push(PoolMemberBalanceCheckpoint { key, value });
-            (Zero::zero(), value)
+            return (Zero::zero(), value);
         }
+
+        // Update or append new checkpoint
+        let mut last = self[pos - 1].read();
+        let prev = last.value;
+        if last.key == key {
+            last.value = value;
+            self[pos - 1].write(last);
+        } else {
+            // Checkpoint keys must be non-decreasing
+            assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
+            self.push(PoolMemberBalanceCheckpoint { key, value });
+        }
+        (prev, value)
     }
 
     /// Inserts a (`key`, `value`) pair into the trace one position before the latest checkpoint.

@@ -155,21 +155,20 @@ impl MutableStakerBalanceCheckpointImpl of MutableStakerBalanceCheckpointTrait {
         self: StoragePath<Mutable<Vec<StakerBalanceCheckpoint>>>, key: Epoch, value: StakerBalance,
     ) {
         let pos = self.len();
-
-        if pos > 0 {
-            let mut last = self[pos - 1].read();
-
-            // Update or append new checkpoint
-            if last.key == key {
-                last.value = value;
-                self[pos - 1].write(last);
-            } else {
-                // Checkpoint keys must be non-decreasing
-                assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
-                self.push(StakerBalanceCheckpoint { key, value });
-            }
-        } else {
+        if pos == Zero::zero() {
             self.push(StakerBalanceCheckpoint { key, value });
-        };
+            return;
+        }
+
+        // Update or append new checkpoint
+        let mut last = self[pos - 1].read();
+        if last.key == key {
+            last.value = value;
+            self[pos - 1].write(last);
+        } else {
+            // Checkpoint keys must be non-decreasing
+            assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
+            self.push(StakerBalanceCheckpoint { key, value });
+        }
     }
 }
