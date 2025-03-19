@@ -173,6 +173,9 @@
     - [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
     - [COMMISSION\_COMMITMENT\_NOT\_SET](#commission_commitment_not_set)
     - [CALLER\_IS\_ZERO\_ADDRESS](#caller_is_zero_address)
+    - [UNAUTHORIZED\_MESSAGE\_SENDER](#unauthorized_message_sender)
+    - [TOTAL\_SUPPLY\_NOT\_AMOUNT\_TYPE](#total_supply_not_amount_type)
+    - [C\_NUM\_OUT\_OF\_RANGE](#c_num_out_of_range)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -186,6 +189,7 @@
     - [TimeDelta](#timedelta)
     - [AttestationInfo](#attestationinfo)
     - [EpochInfo](#epochinfo)
+    - [MintingCurveContractInfo](#mintingcurvecontractinfo)
 - [Type aliases](#type-aliases)
     - [Amount](#amount)
     - [Commission](#commission)
@@ -2223,6 +2227,15 @@ Only token admin.
 ### CALLER_IS_ZERO_ADDRESS
 "Zero address caller is not allowed"
 
+### UNAUTHORIZED_MESSAGE_SENDER
+"Unauthorized message sender"
+
+### TOTAL_SUPPLY_NOT_AMOUNT_TYPE
+"Total supply does not fit in u128"
+
+### C_NUM_OUT_OF_RANGE
+"C Numerator out of range (0-500)"
+
 # Structs
 ### StakerPoolInfo
 | name              | type                      |
@@ -2316,6 +2329,12 @@ Only token admin.
 | starting_block                    | u64     |
 | starting_epoch                    | Epoch   |
 | last_starting_block_before_update | u64     |
+
+### MintingCurveContractInfo
+| name    | type      |
+| ------- | --------- |
+| c_num   | Inflation |
+| c_denom | Inflation |
 
 # Type aliases
 ### Amount
