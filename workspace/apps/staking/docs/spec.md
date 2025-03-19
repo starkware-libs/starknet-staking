@@ -39,6 +39,7 @@
     - [get\_pool\_exit\_intent](#get_pool_exit_intent)
     - [declare\_operational\_address](#declare_operational_address)
     - [change\_operational\_address](#change_operational_address)
+    - [pool\_migration](#pool_migration)
     - [is\_paused](#is_paused)
     - [pause](#pause)
     - [unpause](#unpause)
@@ -170,6 +171,7 @@
     - [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
     - [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
     - [COMMISSION\_COMMITMENT\_NOT\_SET](#commission_commitment_not_set)
+    - [CALLER\_IS\_ZERO\_ADDRESS](#caller_is_zero_address)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -1110,6 +1112,30 @@ Change the operational address for a staker.
 Only staker address.
 #### logic <!-- omit from toc -->
 1. Change registered `operational_address` for the staker.
+
+### pool_migration
+```rust
+fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index
+```
+#### description <!-- omit from toc -->
+Handles the pool migration of the given staker during the V0 to V1 upgrade.
+#### emits <!-- omit from toc -->
+1. [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
+#### errors <!-- omit from toc -->
+1. [CALLER\_IS\_ZERO\_ADDRESS](#caller_is_zero_address)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+4. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+#### pre-condition <!-- omit from toc -->
+1. Staking contract is unpaused.
+2. Staker exist in the contract.
+3. Delegation pool exist for the staker.
+4. Caller is the pool contract of the staker.
+#### access control <!-- omit from toc -->
+Only pool contract of the given staker.
+#### logic <!-- omit from toc -->
+1. Send rewards to the pool.
+2. Update staker info.
 
 ### is_paused
 ```rust
@@ -2181,6 +2207,9 @@ Only token admin.
 
 ### COMMISSION_COMMITMENT_NOT_SET
 "Commission commitment is not set"
+
+### CALLER_IS_ZERO_ADDRESS
+"Zero address caller is not allowed"
 
 # Structs
 ### StakerPoolInfo
