@@ -2271,6 +2271,7 @@ Only token admin.
 | staking_contract   | address                   |
 | token_address      | address                   |
 | commission         | [Commission](#commission) |
+| staker_removed     | bool                      |
 
 ### RewardSupplierInfo
 | name                        | type                    |
