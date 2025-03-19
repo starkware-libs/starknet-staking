@@ -53,7 +53,6 @@ pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
     }
 }
 
-// TODO: pack
 #[derive(Debug, Hash, Drop, Serde, Copy, PartialEq, starknet::Store)]
 pub(crate) struct EpochInfo {
     // The duration of a block in seconds.
@@ -64,7 +63,7 @@ pub(crate) struct EpochInfo {
     starting_block: u64,
     // The first epoch id with this length, changes by a call to update.
     starting_epoch: Epoch,
-    // The last starting block of the last epoch with previous length.
+    // The starting block of the epoch prior to the update.
     last_starting_block_before_update: u64,
 }
 
@@ -83,10 +82,11 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
         }
     }
 
+    /// The current epoch number.
+    /// **Note:** This function fails before the first epoch.
     fn current_epoch(self: @EpochInfo) -> Epoch {
         let current_block = get_block_number();
-        // If the epoch info updated and the current block is before the starting block of the
-        // next epoch with the new length.
+        // If the epoch info updated and the current block is still in the previous epoch.
         if current_block < *self.starting_block {
             return *self.starting_epoch - 1;
         }
@@ -114,7 +114,7 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     }
 
     fn epoch_len_in_blocks(self: @EpochInfo) -> u16 {
-        if *self.starting_block > get_block_number() {
+        if get_block_number() < *self.starting_block {
             // There was an update in this epoch, so we need to compute the previous length.
             (*self.starting_block - *self.last_starting_block_before_update).try_into().unwrap()
         } else {
@@ -124,7 +124,7 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     }
 
     fn current_epoch_starting_block(self: @EpochInfo) -> u64 {
-        if *self.starting_block > get_block_number() {
+        if get_block_number() < *self.starting_block {
             // The epoch info updated and the current block is before the starting block of the
             // next epoch with the new length.
             return *self.last_starting_block_before_update;
@@ -388,10 +388,15 @@ pub mod VersionedStorageContractTest {
 
 #[derive(Serde, Drop, Copy, Debug)]
 pub struct AttestationInfo {
+    // The address of the staker mapped to the operational address provided.
     staker_address: ContractAddress,
+    // The amount of stake the staker has in current epoch.
     stake: Amount,
+    // The length of the epoch in blocks.
     epoch_len: u16,
+    // The id of the current epoch.
     epoch_id: Epoch,
+    // The first block of the current epoch.
     current_epoch_starting_block: u64,
 }
 
