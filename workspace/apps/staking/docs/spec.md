@@ -2052,6 +2052,7 @@ Any address can execute.
 #### description <!-- omit from toc -->
 Set the attestation window.
 #### emits <!-- omit from toc -->
+1. [Attestation Window Changed](#attestation-window-changed)
 #### errors <!-- omit from toc -->
 1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 2. [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
