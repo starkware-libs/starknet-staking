@@ -557,7 +557,7 @@ fn unstake_intent(ref self: ContractState) -> TimeStamp
 ```
 #### description <!-- omit from toc -->
 Inform of the intent to exit the stake. 
-This will remove the funds from the stake, pausing rewards collection for the staker and it's pool members (if exist).
+This will remove the funds from the stake, and block the staker's ability to attest starting from the current epoch.
 This will also start the exit window timeout.
 Return the time in which the staker will be able to unstake.
 #### emits <!-- omit from toc -->
@@ -574,8 +574,7 @@ Return the time in which the staker will be able to unstake.
 #### access control <!-- omit from toc -->
 Only the staker address for which the operation is requested for.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Set unstake time.
+1. Set unstake time.
 
 ### unstake_action
 ```rust
