@@ -107,6 +107,7 @@
 - [Minting Curve Contract](#minting-curve-contract)
   - [Functions](#functions-3)
     - [yearly\_mint](#yearly_mint)
+    - [contract\_parameters](#contract_parameters-3)
     - [set\_c\_num](#set_c_num)
   - [Events](#events-3)
     - [Total Supply Changed](#total-supply-changed)
@@ -1922,6 +1923,19 @@ Return the amount to be minted in a year given the current total stake in the st
 
 #### access control <!-- omit from toc -->
 Any address can execute.
+
+### contract_parameters
+```rust
+fn contract_parameters(self: @ContractState) -> MintingCurveContractInfo
+```
+#### description <!-- omit from toc -->
+Return the `MintingCurveContractInfo` struct describing the current contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Return `MintingCurveContractInfo` for the current contract.
 
 ### set_c_num
 ```rust
