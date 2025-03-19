@@ -41,6 +41,7 @@
     - [change\_operational\_address](#change_operational_address)
     - [pool\_migration](#pool_migration)
     - [is\_paused](#is_paused)
+    - [internal\_staker\_info](#internal_staker_info)
     - [pause](#pause)
     - [unpause](#unpause)
     - [set\_min\_stake](#set_min_stake)
@@ -180,6 +181,7 @@
     - [EPOCH\_INFO\_UPDATED\_IN\_FIRST\_EPOCH](#epoch_info_updated_in_first_epoch)
     - [ON\_RECEIVE\_NOT\_FROM\_STARKGATE](#on_receive_not_from_starkgate)
     - [UNEXPECTED\_TOKEN](#unexpected_token)
+    - [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -751,23 +753,24 @@ Execute a pool member request to move from one staker's delegation pool to anoth
 2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
 3. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
 4. [AMOUNT\_TOO\_HIGH](#amount_too_high)
-5. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-7. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-8. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
+5. [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
+6. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+7. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+8. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+9. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. `switched_amount` is not zero.
 3. Enough funds is in intent for switching.
-4. `to_staker` exist in the contract and is not in exit window.
-5. `to_pool` is the delegation pool contract for `to_staker`.
+4. `to_pool` is not the caller pool.
+5. `to_staker` exist in the contract and is not in exit window.
+6. `to_pool` is the delegation pool contract for `to_staker`.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Remove requested amount from the caller pool intent amount.
-3. Add requested amount to `to_staker`'s pool with pool contract address `to_pool`.
-4. Call `to_pool`'s [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract) function.
+1. Remove requested amount from the caller pool intent amount.
+2. Add requested amount to `to_staker`'s pool with pool contract address `to_pool`.
+3. Call `to_pool`'s [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract) function.
 
 ### change_reward_address
 ```rust
@@ -1158,6 +1161,25 @@ Return `true` if the staking contract is paused.
 Any address can execute.
 #### logic <!-- omit from toc -->
 
+### internal_staker_info
+```rust
+fn internal_staker_info(
+    self: @ContractState, 
+    staker_address: ContractAddress
+) -> InternalStakerInfoLatest
+```
+#### description <!-- omit from toc -->
+Return the latest version of the internal staker info for the given staker.
+This function is used for migration purposes. It converts legacy staker info types to the latest version.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+#### pre-condition <!-- omit from toc -->
+1. Staker exist in the contract.
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+
 ### pause
 ```rust
 fn pause(ref self: TContractState)
@@ -1517,10 +1539,10 @@ Inform of the intent to exit the stake. This will remove the funds from the stak
 #### access control <!-- omit from toc -->
 Only the pool member address for which the operation is requested for.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards-1)
-2. If staker is active, call [remove from delegation pool intent](#remove_from_delegation_pool_intent)
-3. If `amount` is zero, remove request for intent (if exist).
-4. If `amount` is not zero, set exit window timeout.
+1. If staker is active, call [remove from delegation pool intent](#remove_from_delegation_pool_intent)
+2. If `amount` is zero, remove request for intent (if exists).
+3. If `amount` is not zero, set exit window timeout.
+4. Update delegator's next epoch balance.
 
 ### exit_delegation_pool_action
 ```rust
@@ -1547,8 +1569,10 @@ Return the amount of tokens transferred back to the pool member.
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. [Remove from delegation pool action](#remove_from_delegation_pool_action).
-2. Transfer rewards to pool member.
-3. Transfer funds to pool member.
+2. If the pool member's new balance is zero:
+  1. Transfer rewards to pool member.
+  2. Transfer funds to pool member.
+  3. Remove the member from the pool.
 
 
 ### claim_rewards
@@ -2256,6 +2280,9 @@ Only token admin.
 
 ### UNEXPECTED_TOKEN
 "UNEXPECTED_TOKEN"
+
+### SELF_SWITCH_NOT_ALLOWED
+"SELF_SWITCH_NOT_ALLOWED"
 
 # Structs
 ### StakerPoolInfo
