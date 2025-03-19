@@ -178,6 +178,8 @@
     - [C\_NUM\_OUT\_OF\_RANGE](#c_num_out_of_range)
     - [EPOCH\_INFO\_ALREADY\_UPDATED](#epoch_info_already_updated)
     - [EPOCH\_INFO\_UPDATED\_IN\_FIRST\_EPOCH](#epoch_info_updated_in_first_epoch)
+    - [ON\_RECEIVE\_NOT\_FROM\_STARKGATE](#on_receive_not_from_starkgate)
+    - [UNEXPECTED\_TOKEN](#unexpected_token)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -1899,7 +1901,9 @@ Return true upon success.
 The function will fail only in the unlikely scenario where `amount` is over 2**128 FRI.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
-- [AMOUNT\_TOO\_HIGH](#amount_too_high)
+1. [ON\_RECEIVE\_NOT\_FROM\_STARKGATE](#on_receive_not_from_starkgate)
+2. [UNEXPECTED\_TOKEN](#unexpected_token)
+3. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
 
 #### logic <!-- omit from toc -->
@@ -1907,6 +1911,7 @@ The function will fail only in the unlikely scenario where `amount` is over 2**1
 variable is set to 0.
 
 #### access control <!-- omit from toc -->
+Only StarkGate can call on_receive.
 
 ## Events
 ### Mint Request
@@ -2245,6 +2250,12 @@ Only token admin.
 
 ### EPOCH_INFO_UPDATED_IN_FIRST_EPOCH
 "Epoch info can not be updated in the first epoch"
+
+### ON_RECEIVE_NOT_FROM_STARKGATE
+"Only StarkGate can call on_receive"
+
+### UNEXPECTED_TOKEN
+"UNEXPECTED_TOKEN"
 
 # Structs
 ### StakerPoolInfo
