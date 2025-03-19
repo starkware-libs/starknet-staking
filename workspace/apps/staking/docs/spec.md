@@ -1524,18 +1524,19 @@ Return the amount left in exit window for the pool member in this pool.
 5. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 7. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
+8. [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
 #### pre-condition <!-- omit from toc -->
 1. `amount` is not zero.
 2. Pool member (caller) is in exit window.
 3. Pool member's amount is greater or equal to the amount requested.
-4. `to_staker` exist in the staking contract and is not in an exit window.
+4. `to_staker` exists in the staking contract and is not in an exit window.
 5. `to_pool` is the delegation pool contract for `to_staker`.
+6. `to_pool` is not the current pool.
 #### access control <!-- omit from toc -->
 Only pool member can execute.
 #### logic <!-- omit from toc -->
 1. Compose and serialize data: pool member address and reward address.
-2. If pool member amount and intent amount are zero, transfer rewards to pool member and remove him from the pool. 
-3. Call staking contract's [switch delegation pool](#switch_staking_delegation_pool).
+2. Call staking contract's [switch delegation pool](#switch_staking_delegation_pool).
 
 ### enter_delegation_pool_from_staking_contract
 ```rust
@@ -1550,20 +1551,22 @@ Entry point for staking contract to inform pool of a pool member being moved fro
 No funds need to be transferred since staking contract holds the pool funds.
 #### emits <!-- omit from toc -->
 1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
+2. [New Pool Member](#new-pool-member) - if the delegator was not a member
+    of the destination pool.
 #### errors <!-- omit from toc -->
 1. [AMOUNT\_IS\_ZERO](#amount_is_zero)
 2. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
 3. [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
+4. [REWARD\_ADDRESS\_MISMATCH](#reward_address_mismatch)
 #### pre-condition <!-- omit from toc -->
 1. `amount` is not zero.
 2. `pool_member` is not in an exit window.
 #### access control <!-- omit from toc -->
 Only staking contract can execute.
 #### logic <!-- omit from toc -->
-1. Deserialize data, get `pool_member` and `rewrad_address`.
+1. Deserialize data, get `pool_member` and `reward_address`.
 2. If pool member is listed in the contract:
-   1. [Update rewards](#update_rewards-1)
-   2. Update pool member entry
+   1. Update pool member entry.
 3. Else
    1. Create an entry for the pool member.
 
