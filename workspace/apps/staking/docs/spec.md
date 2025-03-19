@@ -30,6 +30,7 @@
     - [staker\_info](#staker_info)
     - [get\_staker\_info](#get_staker_info)
     - [get\_current\_epoch](#get_current_epoch)
+    - [get\_epoch\_info](#get_epoch_info)
     - [update\_rewards\_from\_attestation\_contract](#update_rewards_from_attestation_contract)
     - [fn get\_attestation\_info\_by\_operational\_address](#fn-get_attestation_info_by_operational_address)
     - [contract\_parameters](#contract_parameters)
@@ -181,6 +182,7 @@
     - [TimeStamp](#timestamp)
     - [TimeDelta](#timedelta)
     - [AttestationInfo](#attestationinfo)
+    - [EpochInfo](#epochinfo)
 - [Type aliases](#type-aliases)
     - [Amount](#amount)
     - [Commission](#commission)
@@ -942,6 +944,20 @@ Any address can execute.
 #### logic <!-- omit from toc -->
 1. Calculate the current epoch
 2. Returns the current epoch.
+
+### get_epoch_info
+```rust
+fn get_epoch_info(self: @ContractState) -> EpochInfo
+```
+#### description <!-- omit from toc -->
+Return the [EpochInfo](#epochinfo) configured in the staking contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Return [EpochInfo](#epochinfo).
 
 ### update_rewards_from_attestation_contract
 ```rust
@@ -2245,6 +2261,15 @@ Only token admin.
 | -------------- | --------------- |
 | staker_address | ContractAddress |
 | current_epoch  | Epoch           |
+
+### EpochInfo
+| name                              | type    |
+| --------------------------------- | ------- |
+| block_duration                    | u16     |
+| length                            | u16     |
+| starting_block                    | u64     |
+| starting_epoch                    | Epoch   |
+| last_starting_block_before_update | u64     |
 
 # Type aliases
 ### Amount
