@@ -684,13 +684,13 @@ Return the time in which the pool member will be able to exit.
 1. Staking contract is unpaused.
 2. Staker is listed in the contract.
 3. Staker has pool contract.
-4. Pooled amount is greater or equal then amount requested to remove.
+4. Caller is pool contract.
+5. Pooled amount is greater or equal then amount requested to remove.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Remove amount from staker's pooled amount.
-3. Register intent with given identifier, amount and unstake_time.
+1. Remove amount from staker's pooled amount.
+2. Register intent with given identifier, amount and unstake_time.
 
 ### remove_from_delegation_pool_action
 ```rust
