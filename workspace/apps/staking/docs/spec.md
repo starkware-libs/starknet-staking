@@ -2024,6 +2024,8 @@ Checks if this is the block in the next epoch this `operational_address` should 
 Note: this function is not intended to be used in production, and is not guaranteed to return the correct result under all state conditions, please read the docs.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### logic <!-- omit from toc -->
 1. Calculates the expected attestation block for next epoch
 2. Compares the result with the given block number
