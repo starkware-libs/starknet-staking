@@ -1851,6 +1851,7 @@ fn update_unclaimed_rewards_from_staking_contract(ref self: TContractState, rewa
 #### description <!-- omit from toc -->
 Updates the unclaimed rewards from the staking contract.
 #### emits <!-- omit from toc -->
+1. [Mint Request](#mint-request) - if funds are needed.
 #### errors <!-- omit from toc -->
 1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
 #### logic <!-- omit from toc -->
