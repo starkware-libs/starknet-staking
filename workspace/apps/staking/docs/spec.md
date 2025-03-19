@@ -84,7 +84,6 @@
     - [pool\_member\_info](#pool_member_info)
     - [get\_pool\_member\_info](#get_pool_member_info)
     - [contract\_parameters](#contract_parameters-1)
-    - [update\_rewards](#update_rewards)
     - [update\_rewards\_from\_staking\_contract](#update_rewards_from_staking_contract)
   - [Events](#events-1)
     - [Pool Member Balance Changed](#pool-member-balance-changed)
@@ -238,7 +237,6 @@ classDiagram
     staker_info()
     get_staker_info()
     contract_parameters()
-    update_rewards()
     get_total_stake()
     get_current_total_staking_power()
     get_pool_exit_intent()
@@ -266,7 +264,6 @@ classDiagram
     switch_delegation_pool()
     enter_delegation_pool_from_staking_contract()
     set_staker_removed()
-    update_rewards()
     update_rewards_from_staking_contract()
   }
   class StakerInfo{
@@ -1724,27 +1721,7 @@ Return [PoolContractInfo](#poolcontractinfo) of the contract.
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
-
-### update_rewards
-```rust
-fn update_rewards(
-    ref self: ContractState, 
-    ref pool_member_info: PoolMemberInfo, 
-    updated_index: Index
-)
-```
->**note:** internal logic
-#### description <!-- omit from toc -->
-Update rewards, add amount to unclaimed_rewards, update index.
-#### emits <!-- omit from toc -->
-#### errors <!-- omit from toc -->
-#### pre-condition <!-- omit from toc -->
-#### access control <!-- omit from toc -->
-internal function.
-#### logic <!-- omit from toc -->
-1. Update index.
-2. Update rewards for `pool_member_info`.
-3. Update `unclaimed_rewards`.
+1. Return Pool contract info.
 
 ### update_rewards_from_staking_contract
 ```rust
