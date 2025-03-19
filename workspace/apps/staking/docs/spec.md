@@ -1342,6 +1342,7 @@ Add a new pool member to the delegation pool.
 3. [AMOUNT\_IS\_ZERO](#amount_is_zero)
 4. [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
 5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+6. [INSUFFICIENT\_BALANCE](#insufficient_balance)
 #### pre-condition <!-- omit from toc -->
 1. Staker is active and not in an exit window.
 2. `caller_address` is not listed in the contract as a pool member.
@@ -1353,8 +1354,7 @@ Only a non-listed pool member address.
 1. Transfer funds from pool member to pool contract.
 2. Approve transferal from pool contract to staking contract.
 3. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
-4. Get current index from staking contract.
-5. Create entry for pool member.
+4. Create entry for pool member.
 
 ### add_to_delegation_pool
 ```rust
@@ -1375,6 +1375,7 @@ Return the updated total amount.
 2. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 3. [CALLER\_CANNOT\_ADD\_TO\_POOL](#caller_cannot_add_to_pool)
 4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+5. [AMOUNT\_IS\_ZERO](#amount_is_zero)
 #### pre-condition <!-- omit from toc -->
 1. Staker is active and not in an exit window.
 2. `pool_member` listed in the contract.
@@ -1384,12 +1385,7 @@ Only the pool member address or rewards address for which the change is requeste
 #### logic <!-- omit from toc -->
 1. Transfer funds from caller to the contract.
 2. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
-3. Get current index from staking contract.
-4. [Update rewards](#update_rewards-1)
-5. Update pool member entry with
-   1. index
-   2. amount
-   3. unclaimed rewards
+3. Update pool member balance for the next epoch.
 
 ### exit_delegation_pool_intent
 ```rust
