@@ -610,7 +610,7 @@ fn claim_rewards(
 ) -> Amount
 ```
 #### description <!-- omit from toc -->
-Update rewards and transfer them to the reward address.
+Transfer unclaimed rewards of the given staker to its reward address.
 Return the amount of tokens transferred to the reward address.
 #### emits <!-- omit from toc -->
 1. [Staker Reward Claimed](#staker-reward-claimed)
@@ -624,9 +624,8 @@ Return the amount of tokens transferred to the reward address.
 #### access control <!-- omit from toc -->
 Only staker address or reward address can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Transfer unclaimed_rewards.
-3. Set unclaimed_rewards = 0.
+1. Transfer unclaimed_rewards.
+2. Set unclaimed_rewards = 0.
 
 ### add_stake_from_pool
 ```rust
