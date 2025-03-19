@@ -49,7 +49,7 @@ pub mod Attestation {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staking_contract: ContractAddress,
-        // Maps staker address to the last epoch he attested.
+        // Maps staker address to the last epoch it attested.
         staker_last_attested_epoch: Map<ContractAddress, Epoch>,
         // Number of blocks where the staker can attest after the expected attestation block.
         // Note: that it still needs to be after the minimum attestation window.
@@ -136,18 +136,18 @@ pub mod Attestation {
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
 
+        /// This function is used to help integration partners test the correct
+        /// computation of the expected attestation block.
+        /// It is not intended to be used in production, due to it's limitations as stated
+        /// below.
+        ///
+        /// **Note**: This function does not return the correct result if it is called in
+        ///  the same epoch that an attestation info update is performed in.
+        /// In addition, it assumes no changes to the staking power or any other parameters
+        /// that affect the attestation block calculation.
         fn validate_next_epoch_attestation_block(
             self: @ContractState, operational_address: ContractAddress, block_number: u64,
         ) -> bool {
-            /// This function is used to help integration partners test the correct
-            /// computation of the expected attestation block.
-            /// It is not intended to be used in production, due to it's limitations as stated
-            /// bellow.
-            ///
-            /// **Note**: This function does not return the correct result if it is called in
-            ///  the same epoch that an attestation info update is performed in.
-            /// In addition, it assumes no changes to the staking power or any other parameters
-            /// that affect the attestation block calculation.
             let attestation_window = self.attestation_window.read();
             let staking_dispatcher = IStakingAttestationDispatcher {
                 contract_address: self.staking_contract.read(),
@@ -209,7 +209,7 @@ pub mod Attestation {
             ref self: ContractState, staker_address: ContractAddress, current_epoch: Epoch,
         ) {
             let last_epoch_done = self.staker_last_attested_epoch.read(staker_address);
-            assert!(last_epoch_done != current_epoch, "{}", Error::ATTEST_IS_DONE);
+            assert!(current_epoch > last_epoch_done, "{}", Error::ATTEST_IS_DONE);
         }
 
         fn _mark_attestation_is_done(

@@ -26,9 +26,11 @@
     - [set\_open\_for\_delegation](#set_open_for_delegation)
     - [update\_commission](#update_commission)
     - [set\_commission\_commitment](#set_commission_commitment)
+    - [get\_staker\_commission\_commitment](#get_staker_commission_commitment)
     - [staker\_info](#staker_info)
     - [get\_staker\_info](#get_staker_info)
     - [get\_current\_epoch](#get_current_epoch)
+    - [get\_epoch\_info](#get_epoch_info)
     - [update\_rewards\_from\_attestation\_contract](#update_rewards_from_attestation_contract)
     - [fn get\_attestation\_info\_by\_operational\_address](#fn-get_attestation_info_by_operational_address)
     - [contract\_parameters](#contract_parameters)
@@ -37,6 +39,7 @@
     - [get\_pool\_exit\_intent](#get_pool_exit_intent)
     - [declare\_operational\_address](#declare_operational_address)
     - [change\_operational\_address](#change_operational_address)
+    - [pool\_migration](#pool_migration)
     - [is\_paused](#is_paused)
     - [pause](#pause)
     - [unpause](#unpause)
@@ -67,6 +70,7 @@
     - [Reward Supplier Changed](#reward-supplier-changed)
     - [Epoch Info Changed](#epoch-info-changed)
     - [Staker Rewards Updated](#staker-rewards-updated)
+    - [Commission Commitment Set](#commission-commitment-set)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
     - [add\_to\_delegation\_pool](#add_to_delegation_pool)
@@ -80,7 +84,6 @@
     - [pool\_member\_info](#pool_member_info)
     - [get\_pool\_member\_info](#get_pool_member_info)
     - [contract\_parameters](#contract_parameters-1)
-    - [update\_rewards](#update_rewards)
     - [update\_rewards\_from\_staking\_contract](#update_rewards_from_staking_contract)
   - [Events](#events-1)
     - [Pool Member Balance Changed](#pool-member-balance-changed)
@@ -104,6 +107,7 @@
 - [Minting Curve Contract](#minting-curve-contract)
   - [Functions](#functions-3)
     - [yearly\_mint](#yearly_mint)
+    - [contract\_parameters](#contract_parameters-3)
     - [set\_c\_num](#set_c_num)
   - [Events](#events-3)
     - [Total Supply Changed](#total-supply-changed)
@@ -114,6 +118,7 @@
     - [is\_attestation\_done\_in\_curr\_epoch](#is_attestation_done_in_curr_epoch)
     - [get\_last\_epoch\_attestation\_done](#get_last_epoch_attestation_done)
     - [validate\_next\_epoch\_attestation\_block](#validate_next_epoch_attestation_block)
+    - [attestation\_window](#attestation_window)
     - [set\_attestation\_window](#set_attestation_window)
   - [Events](#events-4)
     - [Staker Attestation Successful](#staker-attestation-successful)
@@ -165,6 +170,16 @@
     - [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
     - [ATTEST\_EPOCH\_ZERO](#attest_epoch_zero)
     - [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
+    - [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
+    - [COMMISSION\_COMMITMENT\_NOT\_SET](#commission_commitment_not_set)
+    - [CALLER\_IS\_ZERO\_ADDRESS](#caller_is_zero_address)
+    - [UNAUTHORIZED\_MESSAGE\_SENDER](#unauthorized_message_sender)
+    - [TOTAL\_SUPPLY\_NOT\_AMOUNT\_TYPE](#total_supply_not_amount_type)
+    - [C\_NUM\_OUT\_OF\_RANGE](#c_num_out_of_range)
+    - [EPOCH\_INFO\_ALREADY\_UPDATED](#epoch_info_already_updated)
+    - [EPOCH\_INFO\_UPDATED\_IN\_FIRST\_EPOCH](#epoch_info_updated_in_first_epoch)
+    - [ON\_RECEIVE\_NOT\_FROM\_STARKGATE](#on_receive_not_from_starkgate)
+    - [UNEXPECTED\_TOKEN](#unexpected_token)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -177,6 +192,8 @@
     - [TimeStamp](#timestamp)
     - [TimeDelta](#timedelta)
     - [AttestationInfo](#attestationinfo)
+    - [EpochInfo](#epochinfo)
+    - [MintingCurveContractInfo](#mintingcurvecontractinfo)
 - [Type aliases](#type-aliases)
     - [Amount](#amount)
     - [Commission](#commission)
@@ -230,7 +247,6 @@ classDiagram
     staker_info()
     get_staker_info()
     contract_parameters()
-    update_rewards()
     get_total_stake()
     get_current_total_staking_power()
     get_pool_exit_intent()
@@ -258,7 +274,6 @@ classDiagram
     switch_delegation_pool()
     enter_delegation_pool_from_staking_contract()
     set_staker_removed()
-    update_rewards()
     update_rewards_from_staking_contract()
   }
   class StakerInfo{
@@ -527,15 +542,16 @@ Return the updated total amount.
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 4. [CALLER\_CANNOT\_INCREASE\_STAKE](#caller_cannot_increase_stake)
+5. [AMOUNT\_IS\_ZERO](#amount_is_zero)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker is listed in the contract.
 3. Staker is not in an exit window.
+4. `amount` is not zero.
 #### access control <!-- omit from toc -->
 Only the staker address or rewards address for which the change is requested for.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Increase staked amount.
+1. Increase staked amount.
 
 ### unstake_intent
 ```rust
@@ -543,7 +559,7 @@ fn unstake_intent(ref self: ContractState) -> TimeStamp
 ```
 #### description <!-- omit from toc -->
 Inform of the intent to exit the stake. 
-This will remove the funds from the stake, pausing rewards collection for the staker and it's pool members (if exist).
+This will remove the funds from the stake, and block the staker's ability to attest starting from the current epoch.
 This will also start the exit window timeout.
 Return the time in which the staker will be able to unstake.
 #### emits <!-- omit from toc -->
@@ -560,8 +576,7 @@ Return the time in which the staker will be able to unstake.
 #### access control <!-- omit from toc -->
 Only the staker address for which the operation is requested for.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Set unstake time.
+1. Set unstake time.
 
 ### unstake_action
 ```rust
@@ -607,7 +622,7 @@ fn claim_rewards(
 ) -> Amount
 ```
 #### description <!-- omit from toc -->
-Update rewards and transfer them to the reward address.
+Transfer unclaimed rewards of the given staker to its reward address.
 Return the amount of tokens transferred to the reward address.
 #### emits <!-- omit from toc -->
 1. [Staker Reward Claimed](#staker-reward-claimed)
@@ -621,9 +636,8 @@ Return the amount of tokens transferred to the reward address.
 #### access control <!-- omit from toc -->
 Only staker address or reward address can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Transfer unclaimed_rewards.
-3. Set unclaimed_rewards = 0.
+1. Transfer unclaimed_rewards.
+2. Set unclaimed_rewards = 0.
 
 ### add_stake_from_pool
 ```rust
@@ -649,12 +663,12 @@ Delegation pool contract's way to add funds to the staking pool.
 2. Staker is listed in the contract.
 3. Staker is not in an exit window.
 4. Staker has pool contract.
+5. Caller is pool contract.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards)
-2. transfer funds from pool contract to staking contract.
-3. Add amount to staker's pooled amount
+1. transfer funds from pool contract to staking contract.
+2. Add amount to staker's pooled amount
 
 ### remove_from_delegation_pool_intent
 ```rust
@@ -682,13 +696,13 @@ Return the time in which the pool member will be able to exit.
 1. Staking contract is unpaused.
 2. Staker is listed in the contract.
 3. Staker has pool contract.
-4. Pooled amount is greater or equal then amount requested to remove.
+4. Caller is pool contract.
+5. Pooled amount is greater or equal then amount requested to remove.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Remove amount from staker's pooled amount.
-3. Register intent with given identifier, amount and unstake_time.
+1. Remove amount from staker's pooled amount.
+2. Register intent with given identifier, amount and unstake_time.
 
 ### remove_from_delegation_pool_action
 ```rust
@@ -792,13 +806,15 @@ Return the pool address.
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-3. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
-4. [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
+3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+4. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
+5. [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) exist in the contract.
-3. `commission` is in valid range.
-4. Staker has no pool.
+3. Staker is not in an exit window.
+4. `commission` is in valid range.
+5. Staker has no pool.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
@@ -823,10 +839,13 @@ Update the commission.
 4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
 5. [INVALID\_COMMISSION](#invalid_commission)
 6. [INVALID\_COMMISSION\_WITH\_COMMITMENT](#invalid_commission_with_commitment)
+7. [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker exist in the contract.
 3. Delegation pool exist for the staker.
+4. If there is no active commission commitment, `commission` must be lower than the current 
+commission.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
@@ -842,6 +861,7 @@ Only staker address.
 Set a commitment that expire in `expiration_epoch`, The commitment allows the staker to update his
 commission to any commission that is lower than `max_commission`.
 #### emits <!-- omit from toc -->
+1. [Commission Commitment Set](#commission-commitment-set)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -854,11 +874,36 @@ commission to any commission that is lower than `max_commission`.
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker exist in the contract.
-3. Delegation pool exist for the staker.
+3. Caller (staker) is not in exit window.
+4. Delegation pool exist for the staker.
+5. Commission commitment already exists.
+6. `max_commission` should be greater than or equal to the current commission.
+7. `expiration_epoch` should be greater than the current epoch.
+8. `expiration_epoch` should be no further than 1 year from the current epoch.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
 1. Set commission commitment.
+
+### get_staker_commission_commitment
+```rust
+fn get_staker_commission_commitment(
+  self: @ContractState, 
+  staker_address: ContractAddress
+) -> CommissionCommitment
+```
+#### description <!-- omit from toc -->
+Return the commission commitment for the given staker.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [COMMISSION\_COMMITMENT\_NOT\_SET](#commission_commitment_not_set)
+#### pre-condition <!-- omit from toc -->
+1. Staker exist in the contract.
+2. Commission commitment is set for the staker.
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
 
 ### staker_info
 ```rust
@@ -910,6 +955,20 @@ Any address can execute.
 #### logic <!-- omit from toc -->
 1. Calculate the current epoch
 2. Returns the current epoch.
+
+### get_epoch_info
+```rust
+fn get_epoch_info(self: @ContractState) -> EpochInfo
+```
+#### description <!-- omit from toc -->
+Return the [EpochInfo](#epochinfo) configured in the staking contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Return [EpochInfo](#epochinfo).
 
 ### update_rewards_from_attestation_contract
 ```rust
@@ -979,7 +1038,9 @@ Return the latest total stake amount (which could be of the next epoch).
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
+Any address can execute.
 #### logic <!-- omit from toc -->
+1. Return the total stake amount.
 
 ### get_current_total_staking_power
 ```rust
@@ -991,6 +1052,7 @@ Return the total stake amount at the current epoch.
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
+Any address can execute.
 #### logic <!-- omit from toc -->
 
 ### get_pool_exit_intent
@@ -1004,8 +1066,10 @@ fn get_pool_exit_intent(
 Return the [UndelegateIntentValue](#undelegateintentvalue).
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
+Any address can execute.
 #### logic <!-- omit from toc -->
 
 ### declare_operational_address
@@ -1043,13 +1107,43 @@ Change the operational address for a staker.
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [OPERATIONAL\_EXISTS](#operational_exists)
+4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+5. [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) exist in the contract.
+3. `operational_address` is not already used by another staker.
+4. Staker is not in exit window.
+5. `operational_address` is eligible for the staker.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
 1. Change registered `operational_address` for the staker.
+
+### pool_migration
+```rust
+fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index
+```
+#### description <!-- omit from toc -->
+Handles the pool migration of the given staker during the V0 to V1 upgrade.
+#### emits <!-- omit from toc -->
+1. [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
+#### errors <!-- omit from toc -->
+1. [CALLER\_IS\_ZERO\_ADDRESS](#caller_is_zero_address)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+4. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+#### pre-condition <!-- omit from toc -->
+1. Staking contract is unpaused.
+2. Staker exist in the contract.
+3. Delegation pool exist for the staker.
+4. Caller is the pool contract of the staker.
+#### access control <!-- omit from toc -->
+Only pool contract of the given staker.
+#### logic <!-- omit from toc -->
+1. Send rewards to the pool.
+2. Update staker info.
 
 ### is_paused
 ```rust
@@ -1146,10 +1240,13 @@ fn set_epoch_info(ref self: ContractState, block_duration: u16, epoch_length: u1
 #### description <!-- omit from toc -->
 Set the epoch info.
 #### emits <!-- omit from toc -->
+1. [Epoch Info Changed](#epoch-info-changed)
 #### errors <!-- omit from toc -->
 1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 2. [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
 3. [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
+4. [EPOCH\_INFO\_ALREADY\_UPDATED](#epoch_info_already_updated)
+5. [EPOCH\_INFO\_UPDATED\_IN\_FIRST\_EPOCH](#epoch_info_updated_in_first_epoch)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only token admin.
@@ -1321,6 +1418,13 @@ Staking contract of latest version.
 | staker_rewards | [Amount](#amount) | ❌    |
 | pool_rewards   | [Amount](#amount) | ❌    |
 
+### Commission Commitment Set
+| data           | type                      | keyed |
+| -------------- | ------------------------- | ----- |
+| staker_address | address                   | ✅    |
+| max_commission | [Commission](#commission) | ❌    |
+| expiration_epoch | [Epoch](#epoch)         | ❌    |
+
 ## Functions
 ### enter_delegation_pool
 ```rust
@@ -1342,6 +1446,7 @@ Add a new pool member to the delegation pool.
 3. [AMOUNT\_IS\_ZERO](#amount_is_zero)
 4. [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
 5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+6. [INSUFFICIENT\_BALANCE](#insufficient_balance)
 #### pre-condition <!-- omit from toc -->
 1. Staker is active and not in an exit window.
 2. `caller_address` is not listed in the contract as a pool member.
@@ -1353,8 +1458,7 @@ Only a non-listed pool member address.
 1. Transfer funds from pool member to pool contract.
 2. Approve transferal from pool contract to staking contract.
 3. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
-4. Get current index from staking contract.
-5. Create entry for pool member.
+4. Create entry for pool member.
 
 ### add_to_delegation_pool
 ```rust
@@ -1375,6 +1479,7 @@ Return the updated total amount.
 2. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 3. [CALLER\_CANNOT\_ADD\_TO\_POOL](#caller_cannot_add_to_pool)
 4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+5. [AMOUNT\_IS\_ZERO](#amount_is_zero)
 #### pre-condition <!-- omit from toc -->
 1. Staker is active and not in an exit window.
 2. `pool_member` listed in the contract.
@@ -1384,12 +1489,7 @@ Only the pool member address or rewards address for which the change is requeste
 #### logic <!-- omit from toc -->
 1. Transfer funds from caller to the contract.
 2. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
-3. Get current index from staking contract.
-4. [Update rewards](#update_rewards-1)
-5. Update pool member entry with
-   1. index
-   2. amount
-   3. unclaimed rewards
+3. Update pool member balance for the next epoch.
 
 ### exit_delegation_pool_intent
 ```rust
@@ -1473,9 +1573,11 @@ Return the amount transferred to the reward address.
 #### access control <!-- omit from toc -->
 Only pool member address or reward address can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards-1).
-2. Transfer unclaimed_rewards
-3. Set unclaimed_rewards = 0.
+1. Calculate rewards and update entry_to_claim_from.
+2. Transfer rewards to pool member.
+3. If the member has a balance of zero (and no pending unpool),
+   remove them from the pool.
+4. Else, write updated pool member info.
 
 ### switch_delegation_pool
 ```rust
@@ -1500,18 +1602,19 @@ Return the amount left in exit window for the pool member in this pool.
 5. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 7. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
+8. [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
 #### pre-condition <!-- omit from toc -->
 1. `amount` is not zero.
 2. Pool member (caller) is in exit window.
 3. Pool member's amount is greater or equal to the amount requested.
-4. `to_staker` exist in the staking contract and is not in an exit window.
+4. `to_staker` exists in the staking contract and is not in an exit window.
 5. `to_pool` is the delegation pool contract for `to_staker`.
+6. `to_pool` is not the current pool.
 #### access control <!-- omit from toc -->
 Only pool member can execute.
 #### logic <!-- omit from toc -->
 1. Compose and serialize data: pool member address and reward address.
-2. If pool member amount and intent amount are zero, transfer rewards to pool member and remove him from the pool. 
-3. Call staking contract's [switch delegation pool](#switch_staking_delegation_pool).
+2. Call staking contract's [switch delegation pool](#switch_staking_delegation_pool).
 
 ### enter_delegation_pool_from_staking_contract
 ```rust
@@ -1526,20 +1629,22 @@ Entry point for staking contract to inform pool of a pool member being moved fro
 No funds need to be transferred since staking contract holds the pool funds.
 #### emits <!-- omit from toc -->
 1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
+2. [New Pool Member](#new-pool-member) - if the delegator was not a member
+    of the destination pool.
 #### errors <!-- omit from toc -->
 1. [AMOUNT\_IS\_ZERO](#amount_is_zero)
 2. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
 3. [SWITCH\_POOL\_DATA\_DESERIALIZATION\_FAILED](#switch_pool_data_deserialization_failed)
+4. [REWARD\_ADDRESS\_MISMATCH](#reward_address_mismatch)
 #### pre-condition <!-- omit from toc -->
 1. `amount` is not zero.
 2. `pool_member` is not in an exit window.
 #### access control <!-- omit from toc -->
 Only staking contract can execute.
 #### logic <!-- omit from toc -->
-1. Deserialize data, get `pool_member` and `rewrad_address`.
+1. Deserialize data, get `pool_member` and `reward_address`.
 2. If pool member is listed in the contract:
-   1. [Update rewards](#update_rewards-1)
-   2. Update pool member entry
+   1. Update pool member entry.
 3. Else
    1. Create an entry for the pool member.
 
@@ -1628,27 +1733,7 @@ Return [PoolContractInfo](#poolcontractinfo) of the contract.
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 #### logic <!-- omit from toc -->
-
-### update_rewards
-```rust
-fn update_rewards(
-    ref self: ContractState, 
-    ref pool_member_info: PoolMemberInfo, 
-    updated_index: Index
-)
-```
->**note:** internal logic
-#### description <!-- omit from toc -->
-Update rewards, add amount to unclaimed_rewards, update index.
-#### emits <!-- omit from toc -->
-#### errors <!-- omit from toc -->
-#### pre-condition <!-- omit from toc -->
-#### access control <!-- omit from toc -->
-internal function.
-#### logic <!-- omit from toc -->
-1. Update index.
-2. Update rewards for `pool_member_info`.
-3. Update `unclaimed_rewards`.
+1. Return Pool contract info.
 
 ### update_rewards_from_staking_contract
 ```rust
@@ -1757,6 +1842,7 @@ fn update_unclaimed_rewards_from_staking_contract(ref self: TContractState, rewa
 #### description <!-- omit from toc -->
 Updates the unclaimed rewards from the staking contract.
 #### emits <!-- omit from toc -->
+1. [Mint Request](#mint-request) - if funds are needed.
 #### errors <!-- omit from toc -->
 1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
 #### logic <!-- omit from toc -->
@@ -1775,6 +1861,8 @@ Transfers `amount` FRI to staking contract
 #### return <!-- omit from toc -->
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+2. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
 `unclaimed_rewards >= amount`
 
@@ -1813,7 +1901,9 @@ Return true upon success.
 The function will fail only in the unlikely scenario where `amount` is over 2**128 FRI.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
-- [AMOUNT\_TOO\_HIGH](#amount_too_high)
+1. [ON\_RECEIVE\_NOT\_FROM\_STARKGATE](#on_receive_not_from_starkgate)
+2. [UNEXPECTED\_TOKEN](#unexpected_token)
+3. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
 
 #### logic <!-- omit from toc -->
@@ -1821,6 +1911,7 @@ The function will fail only in the unlikely scenario where `amount` is over 2**1
 variable is set to 0.
 
 #### access control <!-- omit from toc -->
+Only StarkGate can call on_receive.
 
 ## Events
 ### Mint Request
@@ -1846,6 +1937,19 @@ Return the amount to be minted in a year given the current total stake in the st
 
 #### access control <!-- omit from toc -->
 Any address can execute.
+
+### contract_parameters
+```rust
+fn contract_parameters(self: @ContractState) -> MintingCurveContractInfo
+```
+#### description <!-- omit from toc -->
+Return the `MintingCurveContractInfo` struct describing the current contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Return `MintingCurveContractInfo` for the current contract.
 
 ### set_c_num
 ```rust
@@ -1934,9 +2038,23 @@ Checks if this is the block in the next epoch this `operational_address` should 
 Note: this function is not intended to be used in production, and is not guaranteed to return the correct result under all state conditions, please read the docs.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### logic <!-- omit from toc -->
 1. Calculates the expected attestation block for next epoch
 2. Compares the result with the given block number
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### attestation_window
+```rust
+fn attestation_window(self: @ContractState) -> u8;
+```
+#### description <!-- omit from toc -->
+Return the attestation window, which is the window in which stakers can attest.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Any address can execute.
 
@@ -1947,6 +2065,7 @@ Any address can execute.
 #### description <!-- omit from toc -->
 Set the attestation window.
 #### emits <!-- omit from toc -->
+1. [Attestation Window Changed](#attestation-window-changed)
 #### errors <!-- omit from toc -->
 1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 2. [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
@@ -2108,6 +2227,36 @@ Only token admin.
 ### ATTEST_WRONG_BLOCK_HASH
 "Attestation with wrong block hash"
 
+### COMMISSION_COMMITMENT_EXPIRED
+"Commission commitment has expired, can only decrease or set a new commitment"
+
+### COMMISSION_COMMITMENT_NOT_SET
+"Commission commitment is not set"
+
+### CALLER_IS_ZERO_ADDRESS
+"Zero address caller is not allowed"
+
+### UNAUTHORIZED_MESSAGE_SENDER
+"Unauthorized message sender"
+
+### TOTAL_SUPPLY_NOT_AMOUNT_TYPE
+"Total supply does not fit in u128"
+
+### C_NUM_OUT_OF_RANGE
+"C Numerator out of range (0-500)"
+
+### EPOCH_INFO_ALREADY_UPDATED
+"Epoch info already updated in this epoch"
+
+### EPOCH_INFO_UPDATED_IN_FIRST_EPOCH
+"Epoch info can not be updated in the first epoch"
+
+### ON_RECEIVE_NOT_FROM_STARKGATE
+"Only StarkGate can call on_receive"
+
+### UNEXPECTED_TOKEN
+"UNEXPECTED_TOKEN"
+
 # Structs
 ### StakerPoolInfo
 | name              | type                      |
@@ -2156,6 +2305,7 @@ Only token admin.
 | staking_contract   | address                   |
 | token_address      | address                   |
 | commission         | [Commission](#commission) |
+| staker_removed     | bool                      |
 
 ### RewardSupplierInfo
 | name                        | type                    |
@@ -2191,6 +2341,21 @@ Only token admin.
 | -------------- | --------------- |
 | staker_address | ContractAddress |
 | current_epoch  | Epoch           |
+
+### EpochInfo
+| name                              | type    |
+| --------------------------------- | ------- |
+| block_duration                    | u16     |
+| length                            | u16     |
+| starting_block                    | u64     |
+| starting_epoch                    | Epoch   |
+| last_starting_block_before_update | u64     |
+
+### MintingCurveContractInfo
+| name    | type      |
+| ------- | --------- |
+| c_num   | Inflation |
+| c_denom | Inflation |
 
 # Type aliases
 ### Amount

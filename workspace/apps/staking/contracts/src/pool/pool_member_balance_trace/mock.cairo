@@ -9,6 +9,7 @@ pub trait IMockTrace<TContractState> {
     fn latest(self: @TContractState) -> (Epoch, PoolMemberBalance);
     fn length(self: @TContractState) -> u64;
     fn latest_mutable(ref self: TContractState) -> (Epoch, PoolMemberBalance);
+    fn length_mutable(ref self: TContractState) -> u64;
     fn is_initialized(self: @TContractState) -> bool;
     fn is_initialized_mutable(ref self: TContractState) -> bool;
     fn at(self: @TContractState, pos: u64) -> PoolMemberCheckpoint;
@@ -45,6 +46,10 @@ pub mod MockTrace {
 
         fn latest_mutable(ref self: ContractState) -> (Epoch, PoolMemberBalance) {
             self.trace.deref().latest()
+        }
+
+        fn length_mutable(ref self: ContractState) -> u64 {
+            self.trace.deref().length()
         }
 
         fn is_initialized(self: @ContractState) -> bool {

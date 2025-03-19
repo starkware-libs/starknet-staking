@@ -88,6 +88,19 @@ fn test_latest_mutable() {
 }
 
 #[test]
+fn test_length_mutable() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    assert!(mock_trace.length_mutable() == 0);
+
+    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+    assert!(mock_trace.length_mutable() == 1);
+
+    mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+    assert!(mock_trace.length_mutable() == 2);
+}
+
+#[test]
 fn test_balance() {
     let trace = PoolMemberBalanceTrait::new(balance: 5, rewards_info_idx: 10);
     assert!(trace.balance() == 5);

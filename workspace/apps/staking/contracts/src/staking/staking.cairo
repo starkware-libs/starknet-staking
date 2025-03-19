@@ -1041,7 +1041,6 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingAttestationImpl of IStakingAttestation<ContractState> {
-        // TODO: rounding issues in the rewards calculation
         fn update_rewards_from_attestation_contract(
             ref self: ContractState, staker_address: ContractAddress,
         ) {
@@ -1522,6 +1521,7 @@ pub mod Staking {
                 staker_balance
             }
         }
+
 
         fn increase_staker_own_amount(
             ref self: ContractState,
