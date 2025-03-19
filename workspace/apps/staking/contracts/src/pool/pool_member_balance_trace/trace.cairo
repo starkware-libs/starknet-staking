@@ -175,6 +175,11 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     fn is_initialized(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> bool {
         self.checkpoints.len().is_non_zero()
     }
+
+    /// Returns the total number of checkpoints.
+    fn length(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> u64 {
+        self.checkpoints.len()
+    }
 }
 
 #[generate_trait]
