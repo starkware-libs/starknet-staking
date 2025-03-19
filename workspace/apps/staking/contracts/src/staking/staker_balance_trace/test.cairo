@@ -68,19 +68,6 @@ fn test_length() {
 }
 
 #[test]
-fn test_upper_lookup() {
-    let mut mock_trace = CONTRACT_STATE();
-
-    mock_trace.insert(100, StakerBalanceTrait::new(amount: 100));
-    mock_trace.insert(200, StakerBalanceTrait::new(amount: 200));
-
-    assert!(mock_trace.upper_lookup(100) == StakerBalanceTrait::new(amount: 100));
-    assert!(mock_trace.upper_lookup(150) == StakerBalanceTrait::new(amount: 100));
-    assert!(mock_trace.upper_lookup(200) == StakerBalanceTrait::new(amount: 200));
-    assert!(mock_trace.upper_lookup(250) == StakerBalanceTrait::new(amount: 200));
-}
-
-#[test]
 fn test_latest_mutable() {
     let mut mock_trace = CONTRACT_STATE();
 

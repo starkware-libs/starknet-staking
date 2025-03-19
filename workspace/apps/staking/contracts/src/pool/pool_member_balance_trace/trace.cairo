@@ -1,5 +1,4 @@
 use core::num::traits::Zero;
-use openzeppelin::utils::math::average;
 use staking::types::{Amount, Epoch, VecIndex};
 use starknet::storage::{
     Mutable, MutableVecTrait, StorageAsPath, StoragePath, StoragePointerReadAccess,
@@ -112,20 +111,6 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
     /// Returns whether the trace is initialized.
     fn is_initialized(self: StoragePath<PoolMemberBalanceTrace>) -> bool {
         self.checkpoints.len().is_non_zero()
-    }
-
-    /// Returns the value in the last (most recent) checkpoint with the key lower than or equal to
-    /// the search key, or zero if there is none.
-    fn upper_lookup(self: StoragePath<PoolMemberBalanceTrace>, key: Epoch) -> PoolMemberBalance {
-        let checkpoints = self.checkpoints.as_path();
-        let len = checkpoints.len();
-        let pos = checkpoints._upper_binary_lookup(key, 0, len).into();
-
-        if pos == 0 {
-            Zero::zero()
-        } else {
-            checkpoints[pos - 1].read().value
-        }
     }
 
     /// Returns the checkpoint at the given position.
@@ -261,27 +246,5 @@ impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpoin
                 self.push(latest);
             }
         }
-    }
-
-    /// Returns the index of the last (most recent) checkpoint with the key lower than or equal to
-    /// the search key, or `high` if there is none. `low` and `high` define a section where to do
-    /// the search, with inclusive `low` and exclusive `high`.
-    fn _upper_binary_lookup(
-        self: StoragePath<Vec<PoolMemberBalanceCheckpoint>>, key: Epoch, low: u64, high: u64,
-    ) -> u64 {
-        let mut _low = low;
-        let mut _high = high;
-        loop {
-            if _low >= _high {
-                break;
-            }
-            let mid = average(_low, _high);
-            if (self[mid].read().key > key) {
-                _high = mid;
-            } else {
-                _low = mid + 1;
-            };
-        }
-        _high
     }
 }
