@@ -1469,9 +1469,11 @@ Return the amount transferred to the reward address.
 #### access control <!-- omit from toc -->
 Only pool member address or reward address can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards-1).
-2. Transfer unclaimed_rewards
-3. Set unclaimed_rewards = 0.
+1. Calculate rewards and update entry_to_claim_from.
+2. Transfer rewards to pool member.
+3. If the member has a balance of zero (and no pending unpool),
+   remove them from the pool.
+4. Else, write updated pool member info.
 
 ### switch_delegation_pool
 ```rust
