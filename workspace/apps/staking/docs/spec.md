@@ -650,12 +650,12 @@ Delegation pool contract's way to add funds to the staking pool.
 2. Staker is listed in the contract.
 3. Staker is not in an exit window.
 4. Staker has pool contract.
+5. Caller is pool contract.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards)
-2. transfer funds from pool contract to staking contract.
-3. Add amount to staker's pooled amount
+1. transfer funds from pool contract to staking contract.
+2. Add amount to staker's pooled amount
 
 ### remove_from_delegation_pool_intent
 ```rust
