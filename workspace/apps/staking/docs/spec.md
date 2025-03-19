@@ -68,6 +68,7 @@
     - [Reward Supplier Changed](#reward-supplier-changed)
     - [Epoch Info Changed](#epoch-info-changed)
     - [Staker Rewards Updated](#staker-rewards-updated)
+    - [Commission Commitment Set](#commission-commitment-set)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
     - [add\_to\_delegation\_pool](#add_to_delegation_pool)
@@ -847,6 +848,7 @@ Only staker address.
 Set a commitment that expire in `expiration_epoch`, The commitment allows the staker to update his
 commission to any commission that is lower than `max_commission`.
 #### emits <!-- omit from toc -->
+1. [Commission Commitment Set](#commission-commitment-set)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -859,7 +861,12 @@ commission to any commission that is lower than `max_commission`.
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker exist in the contract.
-3. Delegation pool exist for the staker.
+3. Caller (staker) is not in exit window.
+4. Delegation pool exist for the staker.
+5. Commission commitment already exists.
+6. `max_commission` should be greater than or equal to the current commission.
+7. `expiration_epoch` should be greater than the current epoch.
+8. `expiration_epoch` should be no further than 1 year from the current epoch.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
@@ -1345,6 +1352,13 @@ Staking contract of latest version.
 | staker_address | address           | ✅    |
 | staker_rewards | [Amount](#amount) | ❌    |
 | pool_rewards   | [Amount](#amount) | ❌    |
+
+### Commission Commitment Set
+| data           | type                      | keyed |
+| -------------- | ------------------------- | ----- |
+| staker_address | address                   | ✅    |
+| max_commission | [Commission](#commission) | ❌    |
+| expiration_epoch | [Epoch](#epoch)         | ❌    |
 
 ## Functions
 ### enter_delegation_pool
