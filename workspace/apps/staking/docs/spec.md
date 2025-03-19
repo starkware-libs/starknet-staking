@@ -1041,6 +1041,7 @@ Return the total stake amount at the current epoch.
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
+Any address can execute.
 #### logic <!-- omit from toc -->
 
 ### get_pool_exit_intent
