@@ -61,18 +61,19 @@ fn delegator_intent_regression_test() {
     let mut flow = flows::DelegatorIntentFlow {};
     test_flow_mainnet(ref :flow);
 }
-// #[test]
-// fn operations_after_dead_staker_flow_test() {
-//     let flow = flows::OperationsAfterDeadStakerFlow {};
-//     test_flow_local(:flow);
-// }
 
-// #[test]
-// #[fork("MAINNET_LATEST")]
-// fn operations_after_dead_staker_regression_test() {
-//     let mut flow = flows::OperationsAfterDeadStakerFlow {};
-//     test_flow_mainnet(ref :flow);
-// }
+#[test]
+fn operations_after_dead_staker_flow_test() {
+    let flow = flows::OperationsAfterDeadStakerFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn operations_after_dead_staker_regression_test() {
+    let mut flow = flows::OperationsAfterDeadStakerFlow {};
+    test_flow_mainnet(ref :flow);
+}
 
 #[test]
 fn delegator_didnt_update_after_staker_update_commission_flow_test() {

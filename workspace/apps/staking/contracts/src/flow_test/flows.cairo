@@ -365,31 +365,32 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         let staker2 = system.new_staker(amount: stake_amount);
         let delegator = system.new_delegator(amount: delegated_amount);
         let commission = 200;
-        let one_week = Time::weeks(count: 1);
 
         system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(staker: staker1);
 
         system.stake(staker: staker2, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(staker: staker1);
+        system.advance_epoch_and_attest(staker: staker2);
 
         let staker1_pool = system.staking.get_pool(staker: staker1);
         system.delegate(:delegator, pool: staker1_pool, amount: delegated_amount);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(staker: staker1);
 
         system.staker_exit_intent(staker: staker1);
         system.advance_time(time: system.staking.get_exit_wait_window());
+        system.advance_epoch_and_attest(staker: staker2);
 
         // After the following, delegator has 1/2 in staker1, and 1/2 in intent.
         system.delegator_exit_intent(:delegator, pool: staker1_pool, amount: delegated_amount / 2);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(staker: staker2);
 
         system.staker_exit_action(staker: staker1);
 
         // Re-stake after exiting. Pool should be different.
         system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch_and_attest(staker: staker1);
         let staker1_second_pool = system.staking.get_pool(staker: staker1);
-        system.advance_time(time: one_week);
         assert!(staker1_pool != staker1_second_pool);
 
         // After the following, delegator has delegated_amount / 2 in staker1, delegated_amount
@@ -403,25 +404,35 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
                 to_pool: staker2_pool,
                 amount: delegated_amount / 4,
             );
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(staker: staker1);
+        system.advance_epoch_and_attest(staker: staker2);
 
         // After the following, delegator has delegated_amount / 2 in staker1, and
         // delegated_amount / 4 in staker2.
         system.delegator_exit_action(:delegator, pool: staker1_pool);
-        system.advance_time(time: one_week);
+        system.advance_epoch_and_attest(staker: staker1);
+        system.advance_epoch_and_attest(staker: staker2);
 
         // Claim rewards from second pool and see that the rewards are increasing.
-        let delegator_reward_balance_before_claim = system
-            .token
-            .balance_of(account: delegator.reward.address);
+        assert!(system.token.balance_of(account: delegator.reward.address).is_zero());
         system.delegator_claim_rewards(:delegator, pool: staker2_pool);
-        system.advance_time(time: one_week);
-        let delegator_reward_balance_after_claim = system
+        let delegator_reward_before_advance_epoch = system
             .token
             .balance_of(account: delegator.reward.address);
-        assert!(
-            delegator_reward_balance_after_claim == delegator_reward_balance_before_claim,
-        ); // TODO: Change this after implement calculate_rewards.
+        assert!(delegator_reward_before_advance_epoch.is_non_zero());
+
+        // Advance epoch and claim rewards again, and see that the rewards are increasing.
+        system.advance_epoch();
+        system.delegator_claim_rewards(:delegator, pool: staker2_pool);
+        let delegator_reward_after_advance_epoch = system
+            .token
+            .balance_of(account: delegator.reward.address);
+        assert!(delegator_reward_after_advance_epoch > delegator_reward_before_advance_epoch);
+
+        // Advance epoch and attest.
+        system.advance_epoch_and_attest(staker: staker1);
+        system.advance_epoch_and_attest(staker: staker2);
+        system.advance_epoch();
 
         // After the following, delegator has delegated_amount / 4 in staker2.
         system.delegator_exit_intent(:delegator, pool: staker1_pool, amount: delegated_amount / 2);
@@ -443,13 +454,9 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         // ------------- Flow complete, now asserts -------------
 
         // Assert pools' balances are low.
-        assert!(
-            system.token.balance_of(account: staker1_pool) > 100,
-        ); // TODO: Change this after implement calculate_rewards.
+        assert!(system.token.balance_of(account: staker1_pool) < 100);
         assert!(system.token.balance_of(account: staker1_second_pool) == 0);
-        assert!(
-            system.token.balance_of(account: staker2_pool) > 100,
-        ); // TODO: Change this after implement calculate_rewards.
+        assert!(system.token.balance_of(account: staker2_pool) < 100);
 
         // Assert all staked amounts were transferred back.
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
@@ -460,9 +467,7 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         // Asserts reward addresses are not empty.
         assert!(system.token.balance_of(account: staker1.reward.address).is_non_zero());
         assert!(system.token.balance_of(account: staker2.reward.address).is_non_zero());
-        assert!(
-            system.token.balance_of(account: delegator.reward.address).is_zero(),
-        ); // TODO: Change this after implement calculate_rewards.
+        assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
 
         // Assert all funds that moved from rewards supplier, were moved to correct addresses.
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
