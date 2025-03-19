@@ -1036,8 +1036,10 @@ fn get_pool_exit_intent(
 Return the [UndelegateIntentValue](#undelegateintentvalue).
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
+Any address can execute.
 #### logic <!-- omit from toc -->
 
 ### declare_operational_address
@@ -1075,9 +1077,15 @@ Change the operational address for a staker.
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [OPERATIONAL\_EXISTS](#operational_exists)
+4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+5. [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) exist in the contract.
+3. `operational_address` is not already used by another staker.
+4. Staker is not in exit window.
+5. `operational_address` is eligible for the staker.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
