@@ -118,6 +118,7 @@
     - [is\_attestation\_done\_in\_curr\_epoch](#is_attestation_done_in_curr_epoch)
     - [get\_last\_epoch\_attestation\_done](#get_last_epoch_attestation_done)
     - [validate\_next\_epoch\_attestation\_block](#validate_next_epoch_attestation_block)
+    - [attestation\_window](#attestation_window)
     - [set\_attestation\_window](#set_attestation_window)
   - [Events](#events-4)
     - [Staker Attestation Successful](#staker-attestation-successful)
@@ -2029,6 +2030,18 @@ Note: this function is not intended to be used in production, and is not guarant
 #### logic <!-- omit from toc -->
 1. Calculates the expected attestation block for next epoch
 2. Compares the result with the given block number
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### attestation_window
+```rust
+fn attestation_window(self: @ContractState) -> u8;
+```
+#### description <!-- omit from toc -->
+Return the attestation window, which is the window in which stakers can attest.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### logic <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Any address can execute.
 
