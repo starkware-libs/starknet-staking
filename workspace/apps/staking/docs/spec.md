@@ -1519,10 +1519,10 @@ Inform of the intent to exit the stake. This will remove the funds from the stak
 #### access control <!-- omit from toc -->
 Only the pool member address for which the operation is requested for.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards-1)
-2. If staker is active, call [remove from delegation pool intent](#remove_from_delegation_pool_intent)
-3. If `amount` is zero, remove request for intent (if exist).
-4. If `amount` is not zero, set exit window timeout.
+1. If staker is active, call [remove from delegation pool intent](#remove_from_delegation_pool_intent)
+2. If `amount` is zero, remove request for intent (if exists).
+3. If `amount` is not zero, set exit window timeout.
+4. Update delegator's next epoch balance.
 
 ### exit_delegation_pool_action
 ```rust
@@ -1549,8 +1549,10 @@ Return the amount of tokens transferred back to the pool member.
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. [Remove from delegation pool action](#remove_from_delegation_pool_action).
-2. Transfer rewards to pool member.
-3. Transfer funds to pool member.
+2. If the pool member's new balance is zero:
+  1. Transfer rewards to pool member.
+  2. Transfer funds to pool member.
+  3. Remove the member from the pool.
 
 
 ### claim_rewards
