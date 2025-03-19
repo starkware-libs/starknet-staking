@@ -41,6 +41,7 @@
     - [change\_operational\_address](#change_operational_address)
     - [pool\_migration](#pool_migration)
     - [is\_paused](#is_paused)
+    - [internal\_staker\_info](#internal_staker_info)
     - [pause](#pause)
     - [unpause](#unpause)
     - [set\_min\_stake](#set_min_stake)
@@ -1156,6 +1157,25 @@ Return `true` if the staking contract is paused.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+
+### internal_staker_info
+```rust
+fn internal_staker_info(
+    self: @ContractState, 
+    staker_address: ContractAddress
+) -> InternalStakerInfoLatest
+```
+#### description <!-- omit from toc -->
+Return the latest version of the internal staker info for the given staker.
+This function is used for migration purposes. It converts legacy staker info types to the latest version.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+#### pre-condition <!-- omit from toc -->
+1. Staker exist in the contract.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
