@@ -1870,6 +1870,8 @@ Transfers `amount` FRI to staking contract
 #### return <!-- omit from toc -->
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+2. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
 `unclaimed_rewards >= amount`
 
