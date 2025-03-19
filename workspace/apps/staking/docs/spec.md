@@ -800,13 +800,15 @@ Return the pool address.
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-3. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
-4. [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
+3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+4. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
+5. [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) exist in the contract.
-3. `commission` is in valid range.
-4. Staker has no pool.
+3. Staker is not in an exit window.
+4. `commission` is in valid range.
+5. Staker has no pool.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
