@@ -180,6 +180,7 @@
     - [EPOCH\_INFO\_UPDATED\_IN\_FIRST\_EPOCH](#epoch_info_updated_in_first_epoch)
     - [ON\_RECEIVE\_NOT\_FROM\_STARKGATE](#on_receive_not_from_starkgate)
     - [UNEXPECTED\_TOKEN](#unexpected_token)
+    - [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -751,23 +752,24 @@ Execute a pool member request to move from one staker's delegation pool to anoth
 2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
 3. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
 4. [AMOUNT\_TOO\_HIGH](#amount_too_high)
-5. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-7. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-8. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
+5. [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
+6. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+7. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+8. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
+9. [MISSMATCHED\_DELEGATION\_POOL](#missmatched_delegation_pool)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. `switched_amount` is not zero.
 3. Enough funds is in intent for switching.
-4. `to_staker` exist in the contract and is not in exit window.
-5. `to_pool` is the delegation pool contract for `to_staker`.
+4. `to_pool` is not the caller pool.
+5. `to_staker` exist in the contract and is not in exit window.
+6. `to_pool` is the delegation pool contract for `to_staker`.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
-1. [Update rewards](#update_rewards).
-2. Remove requested amount from the caller pool intent amount.
-3. Add requested amount to `to_staker`'s pool with pool contract address `to_pool`.
-4. Call `to_pool`'s [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract) function.
+1. Remove requested amount from the caller pool intent amount.
+2. Add requested amount to `to_staker`'s pool with pool contract address `to_pool`.
+3. Call `to_pool`'s [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract) function.
 
 ### change_reward_address
 ```rust
@@ -2256,6 +2258,9 @@ Only token admin.
 
 ### UNEXPECTED_TOKEN
 "UNEXPECTED_TOKEN"
+
+### SELF_SWITCH_NOT_ALLOWED
+"SELF_SWITCH_NOT_ALLOWED"
 
 # Structs
 ### StakerPoolInfo
