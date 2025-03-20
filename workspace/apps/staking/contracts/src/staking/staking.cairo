@@ -1021,6 +1021,10 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingAttestationImpl of IStakingAttestation<ContractState> {
+        /// Calculate and update rewards for the `staker_address` for the current epoch.
+        /// Send pool rewards to the pool.
+        /// This is called after the attestation contract validate that the staker has attested
+        /// correctly.
         fn update_rewards_from_attestation_contract(
             ref self: ContractState, staker_address: ContractAddress,
         ) {
@@ -1038,7 +1042,7 @@ pub mod Staking {
             let total_rewards = self.calculate_staker_total_rewards(:staker_address);
             self.update_reward_supplier(rewards: total_rewards);
             let staker_rewards = self
-                .calculate_staker_own_rewards_include_commission(
+                .calculate_staker_own_rewards_including_commission(
                     :staker_info, :total_rewards, :staker_address,
                 );
             staker_info.unclaimed_rewards_own += staker_rewards;
@@ -1346,7 +1350,7 @@ pub mod Staking {
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
 
-        fn calculate_staker_own_rewards_include_commission(
+        fn calculate_staker_own_rewards_including_commission(
             ref self: ContractState,
             staker_info: InternalStakerInfoLatest,
             total_rewards: Amount,
@@ -1360,14 +1364,13 @@ pub mod Staking {
             own_rewards + commission_rewards
         }
 
-        // TODO: emit events
         fn update_pool_rewards(
             ref self: ContractState,
             staker_address: ContractAddress,
             staker_info: InternalStakerInfoLatest,
             pool_rewards: Amount,
         ) {
-            if let Option::Some(mut pool_info) = staker_info.pool_info {
+            if let Option::Some(pool_info) = staker_info.pool_info {
                 let pool_contract = pool_info.pool_contract;
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
                 let pool_balance = self.get_pool_balance_curr_epoch(:staker_address);
@@ -1495,7 +1498,9 @@ pub mod Staking {
             if epoch <= self.get_current_epoch() {
                 staker_balance
             } else {
-                let (_, staker_balance) = trace.penultimate();
+                let (epoch, staker_balance) = trace.penultimate();
+                // TODO: Catch this assert in tests.
+                assert!(epoch <= self.get_current_epoch(), "{}", Error::INVALID_PENULTIMATE);
                 staker_balance
             }
         }
@@ -1515,7 +1520,6 @@ pub mod Staking {
         fn update_staker_pool_amount(
             ref self: ContractState,
             staker_address: ContractAddress,
-            // TODO: what is the diff between mut and ref?
             ref staker_balance: StakerBalance,
             amount: Amount,
         ) {

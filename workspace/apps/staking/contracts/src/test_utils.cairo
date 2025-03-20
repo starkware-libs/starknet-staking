@@ -985,7 +985,7 @@ fn current_epoch_rewards(
     yearly_mint / epochs_in_year.into()
 }
 
-pub(crate) fn calculate_staker_own_rewards_include_commission(
+pub(crate) fn calculate_staker_own_rewards_including_commission(
     staker_info: StakerInfo, total_rewards: Amount,
 ) -> Amount {
     let own_rewards = get_staker_own_rewards(:staker_info, :total_rewards);

@@ -73,7 +73,7 @@ use starkware_utils::test_utils::{
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, approve,
-    calculate_staker_own_rewards_include_commission, calculate_staker_total_rewards,
+    calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards,
     cheat_reward_for_reward_supplier, constants, declare_pool_contract,
     declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
     deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
@@ -575,7 +575,7 @@ fn test_claim_rewards() {
     let total_rewards = calculate_staker_total_rewards(
         :staker_info, :staking_contract, :minting_curve_contract,
     );
-    let expected_staker_rewards = calculate_staker_own_rewards_include_commission(
+    let expected_staker_rewards = calculate_staker_own_rewards_including_commission(
         :staker_info, :total_rewards,
     );
 
@@ -2625,7 +2625,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let total_rewards = calculate_staker_total_rewards(
         staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
     );
-    let expected_staker_rewards = calculate_staker_own_rewards_include_commission(
+    let expected_staker_rewards = calculate_staker_own_rewards_including_commission(
         staker_info: staker_info_before, :total_rewards,
     );
     let epoch_rewards = reward_supplier_dispatcher.current_epoch_rewards();

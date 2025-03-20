@@ -61,7 +61,7 @@ use starkware_utils::test_utils::{
 use starkware_utils::types::time::time::Time;
 use test_utils::{
     StakingInitConfig, advance_epoch_global, approve,
-    calculate_staker_own_rewards_include_commission, calculate_staker_total_rewards,
+    calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards,
     cheat_reward_for_reward_supplier, constants, declare_pool_contract, declare_pool_eic_contract,
     deploy_mock_erc20_contract, deploy_staking_contract, deserialize_option,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
@@ -552,7 +552,7 @@ fn test_claim_rewards() {
     let total_rewards = calculate_staker_total_rewards(
         staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
     );
-    let staker_rewards = calculate_staker_own_rewards_include_commission(
+    let staker_rewards = calculate_staker_own_rewards_including_commission(
         staker_info: staker_info_before, :total_rewards,
     );
     let epoch_rewards = reward_supplier_dispatcher
