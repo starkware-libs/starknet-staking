@@ -187,6 +187,7 @@
     - [REWARD\_ADDRESS\_MISMATCH](#reward_address_mismatch)
     - [INVALID\_ENTRY\_TO\_CLAIM\_FROM](#invalid_entry_to_claim_from)
     - [INSUFFICIENT\_POOL\_BALANCE](#insufficient_pool_balance)
+    - [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -1258,6 +1259,7 @@ Set the exit wait window.
 1. [Exit Wait Window Changed](#exit-wait-window-changed)
 #### errors <!-- omit from toc -->
 1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+2. [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only token admin.
@@ -2321,6 +2323,9 @@ Only token admin.
 
 ### INSUFFICIENT_POOL_BALANCE
 "Insufficient pool balance"
+
+### ILLEGAL_EXIT_DURATION
+"ILLEGAL_EXIT_DURATION"
 
 # Structs
 ### StakerPoolInfo
