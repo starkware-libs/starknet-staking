@@ -2792,10 +2792,7 @@ fn test_versioned_internal_staker_info_wrap_latest() {
 #[test]
 fn test_versioned_internal_staker_info_new_latest() {
     let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        amount_own: Zero::zero(),
-        pool_info: Option::None,
+        reward_address: Zero::zero(), operational_address: Zero::zero(), pool_info: Option::None,
     );
     if let VersionedInternalStakerInfo::V1(_) = internal_staker_info {
         return;
@@ -2817,10 +2814,7 @@ fn test_versioned_internal_staker_info_is_none() {
         pool_info: Option::None,
     );
     let versioned_latest = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        amount_own: Zero::zero(),
-        pool_info: Option::None,
+        reward_address: Zero::zero(), operational_address: Zero::zero(), pool_info: Option::None,
     );
     assert!(versioned_none.is_none());
     assert!(!versioned_v0.is_none());
@@ -2837,6 +2831,7 @@ fn test_internal_staker_info() {
     let staker_address = cfg.test_info.staker_address;
     let mut expected_internal_staker_info = cfg.staker_info;
     expected_internal_staker_info.pool_info = Option::None;
+    expected_internal_staker_info._deprecated_amount_own = Zero::zero();
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let internal_staker_info = staking_dispatcher.internal_staker_info(:staker_address);
     assert!(internal_staker_info == expected_internal_staker_info);

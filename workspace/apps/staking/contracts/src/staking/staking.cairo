@@ -109,7 +109,7 @@ pub mod Staking {
         // Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
         // Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
-        // an epoch to the updated stake.
+        // an epoch to the updated stake. Stakers that performed unstake_intent are not included.
         total_stake_trace: Trace,
         // Map staker address to their balance trace.
         staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
@@ -246,10 +246,7 @@ pub mod Staking {
                 .write(
                     staker_address,
                     VersionedInternalStakerInfoTrait::new_latest(
-                        :reward_address,
-                        :operational_address,
-                        amount_own: staker_balance.amount_own(),
-                        :pool_info,
+                        :reward_address, :operational_address, :pool_info,
                     ),
                 );
 
