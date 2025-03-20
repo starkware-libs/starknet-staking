@@ -2102,7 +2102,7 @@ Any address can execute.
 
 ### set_attestation_window
 ```rust
-    fn set_attestation_window(ref self: TContractState, attestation_window: u8);
+    fn set_attestation_window(ref self: TContractState, attestation_window: u16);
 ```
 #### description <!-- omit from toc -->
 Set the attestation window.
@@ -2127,8 +2127,8 @@ Only token admin.
 ### Attestation Window Changed
 | data                   | type | keyed |
 | ---------------------- | ---- | ----- |
-| old_attestation_window | u8   | ❌     |
-| new_attestation_window | u8   | ❌     |
+| old_attestation_window | u16   | ❌     |
+| new_attestation_window | u16   | ❌     |
 
 # Errors
 ### STAKER_EXISTS

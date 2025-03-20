@@ -487,7 +487,7 @@ pub(crate) struct PoolState {
 #[derive(Drop, Copy)]
 struct AttestationConfig {
     pub governance_admin: ContractAddress,
-    pub attestation_window: u8,
+    pub attestation_window: u16,
 }
 
 #[derive(Drop, Copy)]

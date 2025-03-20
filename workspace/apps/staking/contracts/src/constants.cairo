@@ -9,5 +9,5 @@ pub(crate) const STRK_IN_FRIS: Amount = 1_000_000_000_000_000_000; // 10**18
 pub(crate) const DEFAULT_C_NUM: Inflation = 160;
 pub(crate) const MAX_C_NUM: Inflation = 500;
 pub(crate) const C_DENOM: Inflation = 10_000;
-pub(crate) const MIN_ATTESTATION_WINDOW: u8 = 10;
+pub(crate) const MIN_ATTESTATION_WINDOW: u16 = 10;
 pub(crate) const FIRST_VALID_EPOCH: Epoch = 1; // Rewards start from epoch 1.
