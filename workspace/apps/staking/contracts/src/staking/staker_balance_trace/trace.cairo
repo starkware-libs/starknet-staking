@@ -16,7 +16,9 @@ pub struct StakerBalanceTrace {
 
 #[derive(Copy, Drop, Serde, starknet::Store, Debug, PartialEq)]
 pub(crate) struct StakerBalance {
+    // The amount staked by the staker.
     amount_own: Amount,
+    // Amount own + delegated amount.
     total_amount: Amount,
 }
 
