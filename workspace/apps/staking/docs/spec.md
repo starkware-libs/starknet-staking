@@ -182,6 +182,11 @@
     - [ON\_RECEIVE\_NOT\_FROM\_STARKGATE](#on_receive_not_from_starkgate)
     - [UNEXPECTED\_TOKEN](#unexpected_token)
     - [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
+    - [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
+    - [INSUFFICIENT\_BALANCE](#insufficient_balance)
+    - [REWARD\_ADDRESS\_MISMATCH](#reward_address_mismatch)
+    - [INVALID\_ENTRY\_TO\_CLAIM\_FROM](#invalid_entry_to_claim_from)
+    - [INSUFFICIENT\_POOL\_BALANCE](#insufficient_pool_balance)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -2301,6 +2306,21 @@ Only token admin.
 
 ### SELF_SWITCH_NOT_ALLOWED
 "SELF_SWITCH_NOT_ALLOWED"
+
+### INSUFFICIENT_ALLOWANCE
+"Insufficient ERC20 allowance"
+
+### INSUFFICIENT_BALANCE
+"Insufficient ERC20 balance"
+
+### REWARD_ADDRESS_MISMATCH
+"Reward address mismatch"
+
+### INVALID_ENTRY_TO_CLAIM_FROM
+"Invalid entry to claim from"
+
+### INSUFFICIENT_POOL_BALANCE
+"Insufficient pool balance"
 
 # Structs
 ### StakerPoolInfo
