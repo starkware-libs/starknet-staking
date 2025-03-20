@@ -224,14 +224,20 @@ function info template:
 classDiagram
   class StakingContract{
     map < staker_address, Option < StakerInfo >>
-    map < staker_address, CommissionCommitment >
     map < operational_address, staker_address >
     min_stake
-    total_stake
     pool_contract_class_hash
     map < UndelegateIntentKey, UndelegateIntentValue >
     pool_contract_admin
     is_paused
+    token_dispatcher
+    reward_supplier_dispatcher
+    exit_wait_window
+    epoch_info
+    attestation_contract
+    prev_class_hash
+    total_stake_trace
+    map < staker_address, StakerBalanceTrace>
     stake()
     increase_stake()
     unstake_intent()
@@ -257,6 +263,18 @@ classDiagram
     set_reward_supplier()
     set_epoch_info()
     convert_from_upgraded_contract()
+    pool_migration()
+    declare_operational_address()
+    change_operational_address()
+    get_attestation_info_by_operational_address()
+    set_commission_commitment()
+    get_staker_commission_commitment()
+    update_rewards_from_attestation_contract()
+    is_paused()
+    pause()
+    unpause()
+    get_current_epoch()
+    internal_staker_info()
   }
   class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
@@ -2084,7 +2102,7 @@ Any address can execute.
 
 ### set_attestation_window
 ```rust
-    fn set_attestation_window(ref self: TContractState, attestation_window: u8);
+    fn set_attestation_window(ref self: TContractState, attestation_window: u16);
 ```
 #### description <!-- omit from toc -->
 Set the attestation window.
@@ -2109,8 +2127,8 @@ Only token admin.
 ### Attestation Window Changed
 | data                   | type | keyed |
 | ---------------------- | ---- | ----- |
-| old_attestation_window | u8   | ❌     |
-| new_attestation_window | u8   | ❌     |
+| old_attestation_window | u16   | ❌     |
+| new_attestation_window | u16   | ❌     |
 
 # Errors
 ### STAKER_EXISTS

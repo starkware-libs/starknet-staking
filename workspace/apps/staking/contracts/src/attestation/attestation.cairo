@@ -53,7 +53,7 @@ pub mod Attestation {
         staker_last_attested_epoch: Map<ContractAddress, Epoch>,
         // Number of blocks where the staker can attest after the expected attestation block.
         // Note: that it still needs to be after the minimum attestation window.
-        attestation_window: u8,
+        attestation_window: u16,
     }
 
     #[event]
@@ -76,7 +76,7 @@ pub mod Attestation {
         ref self: ContractState,
         staking_contract: ContractAddress,
         governance_admin: ContractAddress,
-        attestation_window: u8,
+        attestation_window: u16,
     ) {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
@@ -162,11 +162,11 @@ pub mod Attestation {
             expected_attestation_block == block_number
         }
 
-        fn attestation_window(self: @ContractState) -> u8 {
+        fn attestation_window(self: @ContractState) -> u16 {
             self.attestation_window.read()
         }
 
-        fn set_attestation_window(ref self: ContractState, attestation_window: u8) {
+        fn set_attestation_window(ref self: ContractState, attestation_window: u16) {
             self.roles.only_app_governor();
             assert!(
                 attestation_window > MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL,
@@ -222,7 +222,7 @@ pub mod Attestation {
         fn _calculate_expected_attestation_block(
             self: @ContractState,
             staking_attestation_info: StakingAttestationInfo,
-            attestation_window: u8,
+            attestation_window: u16,
         ) -> u64 {
             // Compute staker hash for the attestation.
             let hash = PoseidonTrait::new()
@@ -241,7 +241,7 @@ pub mod Attestation {
         }
 
         fn _assert_attest_in_window(
-            self: @ContractState, expected_attestation_block: u64, attestation_window: u8,
+            self: @ContractState, expected_attestation_block: u64, attestation_window: u16,
         ) {
             let current_block_number = get_block_number();
             assert!(

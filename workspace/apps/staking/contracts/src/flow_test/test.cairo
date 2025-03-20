@@ -1,5 +1,3 @@
-// TODO: Update and uncomment the following tests to align with the new rewards mechanism.
-
 use core::num::traits::Zero;
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows;
@@ -193,43 +191,44 @@ fn internal_pool_member_info_undelegate_after_upgrade_regression_test() {
     };
     test_flow_mainnet(ref :flow);
 }
-// /// Flow:
-// /// Staker Stake
-// /// Delegator delegate
-// /// Delegator exit_intent full amount
-// /// Delegator switch full amount to the same delegation pool
-// #[test]
-// #[should_panic(expected: "SELF_SWITCH_NOT_ALLOWED")]
-// fn switch_to_same_delegation_pool_flow_test() {
-//     let cfg: StakingInitConfig = Default::default();
-//     let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
-//     let min_stake = system.staking.get_min_stake();
-//     let stake_amount = min_stake * 2;
-//     let staker = system.new_staker(amount: stake_amount);
-//     let commission = 200;
-//     let one_week = Time::weeks(count: 1);
 
-//     system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-//     system.advance_time(time: one_week);
+/// Flow:
+/// Staker Stake
+/// Delegator delegate
+/// Delegator exit_intent full amount
+/// Delegator switch full amount to the same delegation pool
+#[test]
+#[should_panic(expected: "SELF_SWITCH_NOT_ALLOWED")]
+fn switch_to_same_delegation_pool_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    let one_week = Time::weeks(count: 1);
 
-//     let pool = system.staking.get_pool(:staker);
-//     let delegated_amount = stake_amount;
-//     let delegator = system.new_delegator(amount: delegated_amount);
-//     system.delegate(:delegator, :pool, amount: delegated_amount);
-//     system.advance_time(time: one_week);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_time(time: one_week);
 
-//     system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
-//     system.advance_time(time: one_week);
+    let pool = system.staking.get_pool(:staker);
+    let delegated_amount = stake_amount;
+    let delegator = system.new_delegator(amount: delegated_amount);
+    system.delegate(:delegator, :pool, amount: delegated_amount);
+    system.advance_time(time: one_week);
 
-//     system
-//         .switch_delegation_pool(
-//             :delegator,
-//             from_pool: pool,
-//             to_staker: staker.staker.address,
-//             to_pool: pool,
-//             amount: delegated_amount,
-//         );
-// }
+    system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+    system.advance_time(time: one_week);
+
+    system
+        .switch_delegation_pool(
+            :delegator,
+            from_pool: pool,
+            to_staker: staker.staker.address,
+            to_pool: pool,
+            amount: delegated_amount,
+        );
+}
 
 /// Flow:
 /// Staker Stake.

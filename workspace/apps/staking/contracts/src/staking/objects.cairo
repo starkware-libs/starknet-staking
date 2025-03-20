@@ -195,6 +195,7 @@ mod epoch_info_tests {
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+// This struct is used in V0 and should not be in used except for migration purpose.
 struct InternalStakerInfo {
     reward_address: ContractAddress,
     operational_address: ContractAddress,

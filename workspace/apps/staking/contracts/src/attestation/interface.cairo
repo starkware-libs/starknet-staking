@@ -13,8 +13,8 @@ pub trait IAttestation<TContractState> {
     fn validate_next_epoch_attestation_block(
         self: @TContractState, operational_address: ContractAddress, block_number: u64,
     ) -> bool;
-    fn attestation_window(self: @TContractState) -> u8;
-    fn set_attestation_window(ref self: TContractState, attestation_window: u8);
+    fn attestation_window(self: @TContractState) -> u16;
+    fn set_attestation_window(ref self: TContractState, attestation_window: u16);
 }
 
 pub mod Events {
@@ -29,8 +29,8 @@ pub mod Events {
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct AttestationWindowChanged {
-        pub old_attestation_window: u8,
-        pub new_attestation_window: u8,
+        pub old_attestation_window: u16,
+        pub new_attestation_window: u16,
     }
 }
 

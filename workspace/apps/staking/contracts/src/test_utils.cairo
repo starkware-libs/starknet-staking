@@ -787,7 +787,7 @@ pub(crate) struct TestInfo {
     pub app_role_admin: ContractAddress,
     pub upgrade_governor: ContractAddress,
     pub attestation_contract: ContractAddress,
-    pub attestation_window: u8,
+    pub attestation_window: u16,
     pub app_governor: ContractAddress,
 }
 
@@ -1026,7 +1026,7 @@ pub(crate) fn calculate_block_offset(
     epoch_id: u64,
     staker_address: ContractAddress,
     epoch_len: u64,
-    attestation_window: u8,
+    attestation_window: u16,
 ) -> u64 {
     let hash = PoseidonTrait::new()
         .update(stake.into())

@@ -529,7 +529,9 @@ pub(crate) fn assert_staker_attestation_successful_event(
 }
 
 pub(crate) fn assert_attestation_window_changed_event(
-    spied_event: @(ContractAddress, Event), old_attestation_window: u8, new_attestation_window: u8,
+    spied_event: @(ContractAddress, Event),
+    old_attestation_window: u16,
+    new_attestation_window: u16,
 ) {
     let expected_event = AttestationEvents::AttestationWindowChanged {
         old_attestation_window, new_attestation_window,
