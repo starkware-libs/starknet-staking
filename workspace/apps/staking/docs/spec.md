@@ -188,6 +188,8 @@
     - [INVALID\_ENTRY\_TO\_CLAIM\_FROM](#invalid_entry_to_claim_from)
     - [INSUFFICIENT\_POOL\_BALANCE](#insufficient_pool_balance)
     - [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
+    - [ATTEST\_IS\_DONE](#attest_is_done)
+    - [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -2040,6 +2042,12 @@ Validates the attestation of a staker and call staking [update_rewards_from_atte
 #### emits <!-- omit from toc -->
 1. [Staker Attestation Successful](#staker-attestation-successful)
 #### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+3. [ATTEST\_EPOCH\_ZERO](#attest_epoch_zero)
+4. [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
+5. [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
+6. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 #### logic <!-- omit from toc -->
 1. Validate the attestation.
 2. [update_rewards_from_attestation_contract](#update_rewards_from_attestation_contract).
@@ -2326,6 +2334,12 @@ Only token admin.
 
 ### ILLEGAL_EXIT_DURATION
 "ILLEGAL_EXIT_DURATION"
+
+### ATTEST_IS_DONE
+"Attestation is done for this epoch"
+
+### ATTEST_OUT_OF_WINDOW
+"Attestation is out of window"
 
 # Structs
 ### StakerPoolInfo
