@@ -18,6 +18,7 @@ pub mod Attestation {
     };
     use staking::types::Epoch;
     use starknet::storage::Map;
+    use starknet::syscalls::get_block_hash_syscall;
     use starknet::{ContractAddress, get_block_number, get_caller_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;

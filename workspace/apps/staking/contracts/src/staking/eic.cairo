@@ -17,7 +17,7 @@ mod StakingEIC {
         // Epoch info.
         epoch_info: EpochInfo,
         // Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
-        // an epoch to the updated stake.
+        // an epoch to the updated stake. Stakers that performed unstake_intent are not included.
         total_stake_trace: Trace,
         // The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,

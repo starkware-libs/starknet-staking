@@ -182,6 +182,14 @@
     - [ON\_RECEIVE\_NOT\_FROM\_STARKGATE](#on_receive_not_from_starkgate)
     - [UNEXPECTED\_TOKEN](#unexpected_token)
     - [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
+    - [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
+    - [INSUFFICIENT\_BALANCE](#insufficient_balance)
+    - [REWARD\_ADDRESS\_MISMATCH](#reward_address_mismatch)
+    - [INVALID\_ENTRY\_TO\_CLAIM\_FROM](#invalid_entry_to_claim_from)
+    - [INSUFFICIENT\_POOL\_BALANCE](#insufficient_pool_balance)
+    - [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
+    - [ATTEST\_IS\_DONE](#attest_is_done)
+    - [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
@@ -1253,6 +1261,7 @@ Set the exit wait window.
 1. [Exit Wait Window Changed](#exit-wait-window-changed)
 #### errors <!-- omit from toc -->
 1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+2. [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only token admin.
@@ -2033,6 +2042,12 @@ Validates the attestation of a staker and call staking [update_rewards_from_atte
 #### emits <!-- omit from toc -->
 1. [Staker Attestation Successful](#staker-attestation-successful)
 #### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+3. [ATTEST\_EPOCH\_ZERO](#attest_epoch_zero)
+4. [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
+5. [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
+6. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 #### logic <!-- omit from toc -->
 1. Validate the attestation.
 2. [update_rewards_from_attestation_contract](#update_rewards_from_attestation_contract).
@@ -2301,6 +2316,30 @@ Only token admin.
 
 ### SELF_SWITCH_NOT_ALLOWED
 "SELF_SWITCH_NOT_ALLOWED"
+
+### INSUFFICIENT_ALLOWANCE
+"Insufficient ERC20 allowance"
+
+### INSUFFICIENT_BALANCE
+"Insufficient ERC20 balance"
+
+### REWARD_ADDRESS_MISMATCH
+"Reward address mismatch"
+
+### INVALID_ENTRY_TO_CLAIM_FROM
+"Invalid entry to claim from"
+
+### INSUFFICIENT_POOL_BALANCE
+"Insufficient pool balance"
+
+### ILLEGAL_EXIT_DURATION
+"ILLEGAL_EXIT_DURATION"
+
+### ATTEST_IS_DONE
+"Attestation is done for this epoch"
+
+### ATTEST_OUT_OF_WINDOW
+"Attestation is out of window"
 
 # Structs
 ### StakerPoolInfo

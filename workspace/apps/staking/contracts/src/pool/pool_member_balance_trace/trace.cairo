@@ -108,8 +108,8 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
         self.checkpoints.len()
     }
 
-    /// Returns whether the trace is initialized.
-    fn is_initialized(self: StoragePath<PoolMemberBalanceTrace>) -> bool {
+    /// Returns whether the trace is non empty.
+    fn is_non_empty(self: StoragePath<PoolMemberBalanceTrace>) -> bool {
         self.checkpoints.len().is_non_zero()
     }
 
@@ -171,8 +171,8 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
         self.checkpoints.as_path()._insert_before_latest(:key, :rewards_info_idx)
     }
 
-    /// Returns whether the trace is initialized.
-    fn is_initialized(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> bool {
+    /// Returns whether the trace is non empty.
+    fn is_non_empty(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> bool {
         self.checkpoints.len().is_non_zero()
     }
 

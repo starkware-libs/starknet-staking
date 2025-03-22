@@ -73,7 +73,7 @@ use starkware_utils::test_utils::{
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, approve,
-    calculate_staker_own_rewards_include_commission, calculate_staker_total_rewards,
+    calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards,
     cheat_reward_for_reward_supplier, constants, declare_pool_contract,
     declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
     deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
@@ -575,7 +575,7 @@ fn test_claim_rewards() {
     let total_rewards = calculate_staker_total_rewards(
         :staker_info, :staking_contract, :minting_curve_contract,
     );
-    let expected_staker_rewards = calculate_staker_own_rewards_include_commission(
+    let expected_staker_rewards = calculate_staker_own_rewards_including_commission(
         :staker_info, :total_rewards,
     );
 
@@ -2625,7 +2625,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let total_rewards = calculate_staker_total_rewards(
         staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
     );
-    let expected_staker_rewards = calculate_staker_own_rewards_include_commission(
+    let expected_staker_rewards = calculate_staker_own_rewards_including_commission(
         staker_info: staker_info_before, :total_rewards,
     );
     let epoch_rewards = reward_supplier_dispatcher.current_epoch_rewards();
@@ -2792,10 +2792,7 @@ fn test_versioned_internal_staker_info_wrap_latest() {
 #[test]
 fn test_versioned_internal_staker_info_new_latest() {
     let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        amount_own: Zero::zero(),
-        pool_info: Option::None,
+        reward_address: Zero::zero(), operational_address: Zero::zero(), pool_info: Option::None,
     );
     if let VersionedInternalStakerInfo::V1(_) = internal_staker_info {
         return;
@@ -2817,10 +2814,7 @@ fn test_versioned_internal_staker_info_is_none() {
         pool_info: Option::None,
     );
     let versioned_latest = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        amount_own: Zero::zero(),
-        pool_info: Option::None,
+        reward_address: Zero::zero(), operational_address: Zero::zero(), pool_info: Option::None,
     );
     assert!(versioned_none.is_none());
     assert!(!versioned_v0.is_none());
@@ -2837,6 +2831,7 @@ fn test_internal_staker_info() {
     let staker_address = cfg.test_info.staker_address;
     let mut expected_internal_staker_info = cfg.staker_info;
     expected_internal_staker_info.pool_info = Option::None;
+    expected_internal_staker_info._deprecated_amount_own = Zero::zero();
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let internal_staker_info = staking_dispatcher.internal_staker_info(:staker_address);
     assert!(internal_staker_info == expected_internal_staker_info);

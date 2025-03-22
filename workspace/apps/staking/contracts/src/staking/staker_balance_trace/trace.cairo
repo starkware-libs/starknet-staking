@@ -14,9 +14,17 @@ pub struct StakerBalanceTrace {
     checkpoints: Vec<StakerBalanceCheckpoint>,
 }
 
+#[derive(Copy, Drop, Serde, starknet::Store)]
+struct StakerBalanceCheckpoint {
+    key: Epoch,
+    value: StakerBalance,
+}
+
 #[derive(Copy, Drop, Serde, starknet::Store, Debug, PartialEq)]
 pub(crate) struct StakerBalance {
+    // The amount staked by the staker.
     amount_own: Amount,
+    // Amount own + delegated amount.
     total_amount: Amount,
 }
 
@@ -36,8 +44,8 @@ pub(crate) impl StakerBalanceZero of core::num::traits::Zero<StakerBalance> {
 
 #[generate_trait]
 pub(crate) impl StakerBalanceImpl of StakerBalanceTrait {
-    fn new(amount: Amount) -> StakerBalance {
-        StakerBalance { amount_own: amount, total_amount: amount }
+    fn new(amount_own: Amount) -> StakerBalance {
+        StakerBalance { amount_own, total_amount: amount_own }
     }
 
     fn amount_own(self: @StakerBalance) -> Amount {
@@ -58,16 +66,8 @@ pub(crate) impl StakerBalanceImpl of StakerBalanceTrait {
     }
 
     fn update_pool_amount(ref self: StakerBalance, new_amount: Amount) {
-        let old_pool_amount = self.pool_amount();
-        self.total_amount += new_amount;
-        self.total_amount -= old_pool_amount;
+        self.total_amount = self.amount_own + new_amount;
     }
-}
-
-#[derive(Copy, Drop, Serde, starknet::Store)]
-struct StakerBalanceCheckpoint {
-    key: Epoch,
-    value: StakerBalance,
 }
 
 #[generate_trait]
@@ -87,18 +87,20 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
     /// invariant of non-decreasing keys.
     fn latest(self: StoragePath<StakerBalanceTrace>) -> (Epoch, StakerBalance) {
         let checkpoints = self.checkpoints;
-        let pos = checkpoints.len();
-        assert!(pos > 0, "{}", TraceErrors::EMPTY_TRACE);
-        let checkpoint = checkpoints[pos - 1].read();
+        let len = checkpoints.len();
+        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
+        let checkpoint = checkpoints[len - 1].read();
         (checkpoint.key, checkpoint.value)
     }
 
+    /// Retrieves the penultimate checkpoint from the trace structure.
+    /// Penultimate checkpoint is the second last checkpoint in the trace.
     fn penultimate(self: StoragePath<StakerBalanceTrace>) -> (Epoch, StakerBalance) {
         let checkpoints = self.checkpoints;
-        let pos = checkpoints.len();
+        let len = checkpoints.len();
         // TODO: consider move this error to trace errors.
-        assert!(pos > 1, "{}", Error::PENULTIMATE_NOT_EXIST);
-        let checkpoint = checkpoints[pos - 2].read();
+        assert!(len > 1, "{}", Error::PENULTIMATE_NOT_EXIST);
+        let checkpoint = checkpoints[len - 2].read();
         (checkpoint.key, checkpoint.value)
     }
 
@@ -107,8 +109,8 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
         self.checkpoints.len()
     }
 
-    /// Returns whether the trace is initialized.
-    fn is_initialized(self: StoragePath<StakerBalanceTrace>) -> bool {
+    /// Returns whether the trace is non empty.
+    fn is_non_empty(self: StoragePath<StakerBalanceTrace>) -> bool {
         self.checkpoints.len().is_non_zero()
     }
 }
@@ -135,14 +137,14 @@ pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
     /// invariant of non-decreasing keys.
     fn latest(self: StoragePath<Mutable<StakerBalanceTrace>>) -> (Epoch, StakerBalance) {
         let checkpoints = self.checkpoints;
-        let pos = checkpoints.len();
-        assert!(pos > 0, "{}", TraceErrors::EMPTY_TRACE);
-        let checkpoint = checkpoints[pos - 1].read();
+        let len = checkpoints.len();
+        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
+        let checkpoint = checkpoints[len - 1].read();
         (checkpoint.key, checkpoint.value)
     }
 
-    /// Returns whether the trace is initialized.
-    fn is_initialized(self: StoragePath<Mutable<StakerBalanceTrace>>) -> bool {
+    /// Returns whether the trace is non empty.
+    fn is_non_empty(self: StoragePath<Mutable<StakerBalanceTrace>>) -> bool {
         self.checkpoints.len().is_non_zero()
     }
 }
@@ -154,17 +156,17 @@ impl MutableStakerBalanceCheckpointImpl of MutableStakerBalanceCheckpointTrait {
     fn _insert(
         self: StoragePath<Mutable<Vec<StakerBalanceCheckpoint>>>, key: Epoch, value: StakerBalance,
     ) {
-        let pos = self.len();
-        if pos == Zero::zero() {
+        let len = self.len();
+        if len == Zero::zero() {
             self.push(StakerBalanceCheckpoint { key, value });
             return;
         }
 
         // Update or append new checkpoint
-        let mut last = self[pos - 1].read();
+        let mut last = self[len - 1].read();
         if last.key == key {
             last.value = value;
-            self[pos - 1].write(last);
+            self[len - 1].write(last);
         } else {
             // Checkpoint keys must be non-decreasing
             assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);

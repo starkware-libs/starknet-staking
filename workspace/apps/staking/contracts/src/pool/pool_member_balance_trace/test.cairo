@@ -113,20 +113,20 @@ fn test_rewards_info_idx() {
 }
 
 #[test]
-fn test_is_initialized() {
+fn test_is_non_empty() {
     let mut mock_trace = CONTRACT_STATE();
-    assert!(mock_trace.is_initialized() == false);
+    assert!(mock_trace.is_non_empty() == false);
 
     mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
-    assert!(mock_trace.is_initialized() == true);
+    assert!(mock_trace.is_non_empty() == true);
 }
 
-fn test_is_initialized_mutable() {
+fn test_is_non_empty_mutable() {
     let mut mock_trace = CONTRACT_STATE();
-    assert_eq!(mock_trace.is_initialized(), false);
+    assert_eq!(mock_trace.is_non_empty(), false);
 
     mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
-    assert_eq!(mock_trace.is_initialized(), true);
+    assert_eq!(mock_trace.is_non_empty(), true);
 }
 
 #[test]

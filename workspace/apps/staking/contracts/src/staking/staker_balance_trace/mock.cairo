@@ -7,7 +7,7 @@ pub trait IMockTrace<TContractState> {
     fn latest(self: @TContractState) -> (Epoch, StakerBalance);
     fn length(self: @TContractState) -> u64;
     fn latest_mutable(ref self: TContractState) -> (Epoch, StakerBalance);
-    fn is_initialized(self: @TContractState) -> bool;
+    fn is_non_empty(self: @TContractState) -> bool;
 }
 
 #[starknet::contract]
@@ -40,8 +40,8 @@ pub mod MockTrace {
             self.trace.deref().latest()
         }
 
-        fn is_initialized(self: @ContractState) -> bool {
-            self.trace.deref().is_initialized()
+        fn is_non_empty(self: @ContractState) -> bool {
+            self.trace.deref().is_non_empty()
         }
     }
 }
