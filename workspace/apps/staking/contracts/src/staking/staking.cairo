@@ -237,7 +237,7 @@ pub mod Staking {
                 Option::None
             };
 
-            let staker_balance = StakerBalanceTrait::new(:amount);
+            let staker_balance = StakerBalanceTrait::new(amount_own: amount);
             self.insert_staker_balance(:staker_address, :staker_balance);
 
             // Create the record for the staker.
@@ -1435,7 +1435,7 @@ pub mod Staking {
             // Return the latest `staker_balance` recorded in the `staker_balance_trace`.
             // If it is uninitialized, initialize with `staker_info` values.
             let trace = self.staker_balance_trace.entry(key: staker_address);
-            if trace.is_initialized() {
+            if trace.is_non_empty() {
                 let (_, staker_balance) = trace.latest();
                 return staker_balance;
             }
@@ -1447,7 +1447,7 @@ pub mod Staking {
             // If initialized, return the `amount_own` recorded in the trace, which reflects the
             // latest staked amount. Otherwise, return `staker_info.amount_own`.
             let trace = self.staker_balance_trace.entry(key: staker_address);
-            if trace.is_initialized() {
+            if trace.is_non_empty() {
                 let (_, staker_balance) = trace.latest();
                 return staker_balance.amount_own();
             }
@@ -1459,7 +1459,7 @@ pub mod Staking {
             // If initialized, return the `amount_own` recorded in the trace, which reflects the
             // latest staked amount. Otherwise, return `staker_info.amount_own`.
             let trace = self.staker_balance_trace.entry(key: staker_address);
-            if trace.is_initialized() {
+            if trace.is_non_empty() {
                 let (_, staker_balance) = trace.latest();
                 return staker_balance.total_amount();
             }
@@ -1472,7 +1472,7 @@ pub mod Staking {
         ) -> StakerBalance {
             let staker_info = self.internal_staker_info(:staker_address);
             let amount_own = staker_info._deprecated_amount_own;
-            let mut staker_balance = StakerBalanceTrait::new(amount: amount_own);
+            let mut staker_balance = StakerBalanceTrait::new(amount_own: amount_own);
             if let Option::Some(pool_info) = staker_info.pool_info {
                 let pool_amount = pool_info._deprecated_amount();
                 staker_balance.update_pool_amount(new_amount: pool_amount);

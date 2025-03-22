@@ -712,7 +712,7 @@ pub mod Pool {
             // amount.
             // Otherwise, return `pool_member_info.amount`.
             let trace = self.pool_member_epoch_balance.entry(key: pool_member);
-            if trace.is_initialized() {
+            if trace.is_non_empty() {
                 let (_, pool_member_balance) = trace.latest();
                 pool_member_balance.balance()
             } else {
@@ -724,7 +724,7 @@ pub mod Pool {
             // Return the `amount` recorded in the `pool_member_epoch_balance` trace.
             // If it is uninitialized, initialize it to `pool_member_info._deprecated_amount`.
             let trace = self.pool_member_epoch_balance.entry(key: pool_member);
-            if trace.is_initialized() {
+            if trace.is_non_empty() {
                 let (_, pool_member_balance) = trace.latest();
                 pool_member_balance.balance()
             } else {
@@ -805,7 +805,7 @@ pub mod Pool {
                 .internal_pool_member_info(:pool_member)
                 .entry_to_claim_from;
 
-            if !pool_member_trace.is_initialized() {
+            if !pool_member_trace.is_non_empty() {
                 // This is the first action of the pool member since contract upgrade.
                 let balance = self.get_amount(:pool_member);
                 let pool_member_checkpoint = PoolMemberCheckpointTrait::new(

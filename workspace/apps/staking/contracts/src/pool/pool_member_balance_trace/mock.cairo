@@ -9,9 +9,9 @@ pub trait IMockTrace<TContractState> {
     fn latest(self: @TContractState) -> (Epoch, PoolMemberBalance);
     fn length(self: @TContractState) -> u64;
     fn latest_mutable(ref self: TContractState) -> (Epoch, PoolMemberBalance);
+    fn is_non_empty(self: @TContractState) -> bool;
+    fn is_non_empty_mutable(ref self: TContractState) -> bool;
     fn length_mutable(ref self: TContractState) -> u64;
-    fn is_initialized(self: @TContractState) -> bool;
-    fn is_initialized_mutable(ref self: TContractState) -> bool;
     fn at(self: @TContractState, pos: u64) -> PoolMemberCheckpoint;
     fn insert_before_latest(ref self: TContractState, key: Epoch, rewards_info_idx: VecIndex);
 }
@@ -52,12 +52,12 @@ pub mod MockTrace {
             self.trace.deref().length()
         }
 
-        fn is_initialized(self: @ContractState) -> bool {
-            self.trace.deref().is_initialized()
+        fn is_non_empty(self: @ContractState) -> bool {
+            self.trace.deref().is_non_empty()
         }
 
-        fn is_initialized_mutable(ref self: ContractState) -> bool {
-            self.trace.deref().is_initialized()
+        fn is_non_empty_mutable(ref self: ContractState) -> bool {
+            self.trace.deref().is_non_empty()
         }
 
         fn at(self: @ContractState, pos: u64) -> PoolMemberCheckpoint {
