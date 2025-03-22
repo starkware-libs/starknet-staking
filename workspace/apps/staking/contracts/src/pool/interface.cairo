@@ -146,7 +146,7 @@ pub struct PoolMemberInfo {
     pub unpool_time: Option<Timestamp>,
 }
 
-pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<
+pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1 of Into<
     PoolMemberInfo, InternalPoolMemberInfoV1,
 > {
     /// This function is used during convertion from `InternalPoolMemberInfo` to
