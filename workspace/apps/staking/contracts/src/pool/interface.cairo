@@ -146,11 +146,10 @@ pub struct PoolMemberInfo {
     pub unpool_time: Option<Timestamp>,
 }
 
+#[cfg(test)]
 pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1 of Into<
     PoolMemberInfo, InternalPoolMemberInfoV1,
 > {
-    /// This function is used during convertion from `InternalPoolMemberInfo` to
-    /// `InternalPoolMemberInfoV1`.
     fn into(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address: self.reward_address,

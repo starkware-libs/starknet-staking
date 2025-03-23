@@ -74,7 +74,17 @@ pub(crate) impl InternalPoolMemberInfoConvert of InternalPoolMemberInfoConvertTr
         self: InternalPoolMemberInfo, prev_class_hash: ClassHash, pool_member: ContractAddress,
     ) -> InternalPoolMemberInfoV1 {
         let library_dispatcher = IPoolLibraryDispatcher { class_hash: prev_class_hash };
-        library_dispatcher.pool_member_info(pool_member).into()
+        let pool_member_info = library_dispatcher.pool_member_info(pool_member);
+        InternalPoolMemberInfoV1 {
+            reward_address: pool_member_info.reward_address,
+            _deprecated_amount: pool_member_info.amount,
+            _deprecated_index: pool_member_info.index,
+            _deprecated_unclaimed_rewards: pool_member_info.unclaimed_rewards,
+            _deprecated_commission: pool_member_info.commission,
+            unpool_amount: pool_member_info.unpool_amount,
+            unpool_time: pool_member_info.unpool_time,
+            entry_to_claim_from: Zero::zero(),
+        }
     }
 }
 
