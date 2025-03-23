@@ -132,12 +132,31 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
 
 #[generate_trait]
 pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait {
-    /// Inserts a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint
-    /// and returns both the previous and the new value.
+    /// Inserts a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint.
+    /// This is done by either inserting a new checkpoint, or updating the last one.
     fn insert(
         self: StoragePath<Mutable<PoolMemberBalanceTrace>>, key: Epoch, value: PoolMemberBalance,
     ) -> (PoolMemberBalance, PoolMemberBalance) {
-        self.checkpoints.as_path()._insert(key, value)
+        let checkpoints = self.checkpoints.as_path();
+
+        let pos = checkpoints.len();
+        if pos == Zero::zero() {
+            checkpoints.push(PoolMemberBalanceCheckpoint { key, value });
+            return (Zero::zero(), value);
+        }
+
+        // Update or append new checkpoint.
+        let mut last = checkpoints[pos - 1].read();
+        let prev = last.value;
+        if last.key == key {
+            last.value = value;
+            checkpoints[pos - 1].write(last);
+        } else {
+            // Checkpoint keys must be non-decreasing.
+            assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
+            checkpoints.push(PoolMemberBalanceCheckpoint { key, value });
+        }
+        (prev, value)
     }
 
     /// Retrieves the most recent checkpoint from the trace structure.
@@ -184,33 +203,6 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
 
 #[generate_trait]
 impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpointTrait {
-    /// Pushes a (`key`, `value`) pair into an ordered list of checkpoints, either by inserting a
-    /// new checkpoint, or by updating the last one.
-    fn _insert(
-        self: StoragePath<Mutable<Vec<PoolMemberBalanceCheckpoint>>>,
-        key: Epoch,
-        value: PoolMemberBalance,
-    ) -> (PoolMemberBalance, PoolMemberBalance) {
-        let pos = self.len();
-        if pos == Zero::zero() {
-            self.push(PoolMemberBalanceCheckpoint { key, value });
-            return (Zero::zero(), value);
-        }
-
-        // Update or append new checkpoint
-        let mut last = self[pos - 1].read();
-        let prev = last.value;
-        if last.key == key {
-            last.value = value;
-            self[pos - 1].write(last);
-        } else {
-            // Checkpoint keys must be non-decreasing
-            assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
-            self.push(PoolMemberBalanceCheckpoint { key, value });
-        }
-        (prev, value)
-    }
-
     /// Inserts a (`key`, `value`) pair into the trace one position before the latest checkpoint.
     /// Precondition: trace is not empty and `key` must be exactly one less than the latest.
     /// Insert the same balance as the checkpoint before the latest.
