@@ -1254,6 +1254,56 @@ pub(crate) impl InternalPoolMemberInfoUndelegateAfterUpgradeFlowImpl<
         );
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Upgrade
+/// Delegator increase delegate
+#[derive(Drop, Copy)]
+pub(crate) struct IncreaseDelegationAfterUpgradeFlow {
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) delegated_amount: Option<Amount>,
+}
+pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<IncreaseDelegationAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: IncreaseDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: IncreaseDelegationAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let delegated_amount = stake_amount;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let delegator = system.new_delegator(amount: delegated_amount * 2);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+
+        self.pool_address = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.delegated_amount = Option::Some(delegated_amount);
+    }
+
+    fn test(
+        self: IncreaseDelegationAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool_address.unwrap();
+        let delegated_amount = self.delegated_amount.unwrap();
+        system.increase_delegate(:delegator, :pool, amount: delegated_amount);
+
+        let delegator_info = system.pool_member_info(:delegator, :pool);
+        assert!(delegator_info.amount == delegated_amount * 2);
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.

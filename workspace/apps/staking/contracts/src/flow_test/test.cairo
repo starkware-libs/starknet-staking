@@ -192,6 +192,15 @@ fn internal_pool_member_info_undelegate_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn increase_delegation_after_upgrade_regression_test() {
+    let mut flow = flows::IncreaseDelegationAfterUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None, delegated_amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
