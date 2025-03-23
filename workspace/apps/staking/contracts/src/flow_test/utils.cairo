@@ -12,7 +12,7 @@ use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
-    PoolMemberInfo,
+    IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolMemberInfo,
 };
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
@@ -972,6 +972,14 @@ pub(crate) impl SystemDelegatorImpl<
         pool_dispatcher.exit_delegation_pool_action(pool_member: delegator.delegator.address)
     }
 
+    #[feature("safe_dispatcher")]
+    fn safe_delegator_exit_action(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+    ) -> Result<Amount, Array<felt252>> {
+        let safe_pool_dispatcher = IPoolSafeDispatcher { contract_address: pool };
+        safe_pool_dispatcher.exit_delegation_pool_action(pool_member: delegator.delegator.address)
+    }
+
     fn switch_delegation_pool(
         self: SystemState<TTokenState>,
         delegator: Delegator,
@@ -1026,6 +1034,13 @@ pub(crate) impl SystemDelegatorImpl<
     ) -> PoolMemberInfo {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.pool_member_info(pool_member: delegator.delegator.address)
+    }
+
+    fn get_pool_member_info(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+    ) -> Option<PoolMemberInfo> {
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.get_pool_member_info(pool_member: delegator.delegator.address)
     }
 
     fn internal_pool_member_info(

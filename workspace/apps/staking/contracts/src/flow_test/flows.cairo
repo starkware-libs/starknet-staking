@@ -1,5 +1,6 @@
 use core::num::traits::Zero;
 use staking::constants::STRK_IN_FRIS;
+use staking::errors::GenericError;
 use staking::flow_test::utils::{
     Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait, SystemDelegatorTrait,
     SystemStakerTrait, SystemState, SystemTrait, SystemType,
@@ -9,8 +10,9 @@ use staking::staking::interface::StakerInfo;
 use staking::test_utils::{pool_update_rewards, staker_update_rewards};
 use staking::types::Amount;
 use starknet::ContractAddress;
+use starkware_utils::errors::Describable;
 use starkware_utils::math::abs::wide_abs_diff;
-use starkware_utils::test_utils::TokenTrait;
+use starkware_utils::test_utils::{TokenTrait, assert_panic_with_error};
 use starkware_utils::types::time::time::Time;
 
 /// Flow - Basic Stake:
@@ -1347,6 +1349,62 @@ pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl<
 
         let staker_info = system.staker_info(:staker);
         assert!(staker_info.amount_own == stake_amount * 2);
+    }
+}
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Delegator full exit_intent
+/// Upgrade
+/// Delegator exit_action
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorActionAfterUpgradeFlow {
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<DelegatorActionAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: DelegatorActionAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: DelegatorActionAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let delegated_amount = stake_amount / 2;
+        let delegator = system.new_delegator(amount: delegated_amount);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+
+        self.pool_address = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+    }
+
+    fn test(
+        self: DelegatorActionAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let pool = self.pool_address.unwrap();
+        let delegator = self.delegator.unwrap();
+
+        let result = system.safe_delegator_exit_action(:delegator, :pool);
+        assert_panic_with_error(
+            :result, expected_error: GenericError::INTENT_WINDOW_NOT_FINISHED.describe(),
+        );
+
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.delegator_exit_action(:delegator, :pool);
+
+        assert!(system.get_pool_member_info(:delegator, :pool).is_none());
     }
 }
 // TODO: Implement this flow test.

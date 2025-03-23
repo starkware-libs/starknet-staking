@@ -210,6 +210,15 @@ fn increase_stake_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_action_after_upgrade_regression_test() {
+    let mut flow = flows::DelegatorActionAfterUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
