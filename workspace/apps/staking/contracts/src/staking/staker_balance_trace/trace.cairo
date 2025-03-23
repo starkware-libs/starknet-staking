@@ -117,9 +117,26 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
 
 #[generate_trait]
 pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
-    /// Inserts a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint
+    /// Inserts a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint.
+    /// This is done by either inserting a new checkpoint, or updating the last one.
     fn insert(self: StoragePath<Mutable<StakerBalanceTrace>>, key: Epoch, value: StakerBalance) {
-        self.checkpoints.as_path()._insert(key, value);
+        let checkpoints = self.checkpoints.as_path();
+        let len = checkpoints.len();
+        if len == Zero::zero() {
+            checkpoints.push(StakerBalanceCheckpoint { key, value });
+            return;
+        }
+
+        // Update or append new checkpoint.
+        let mut last = checkpoints[len - 1].read();
+        if last.key == key {
+            last.value = value;
+            checkpoints[len - 1].write(last);
+        } else {
+            // Checkpoint keys must be non-decreasing.
+            assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
+            checkpoints.push(StakerBalanceCheckpoint { key, value });
+        }
     }
 
     /// Retrieves the most recent checkpoint from the trace structure.
@@ -146,31 +163,5 @@ pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
     /// Returns whether the trace is non empty.
     fn is_non_empty(self: StoragePath<Mutable<StakerBalanceTrace>>) -> bool {
         self.checkpoints.len().is_non_zero()
-    }
-}
-
-#[generate_trait]
-impl MutableStakerBalanceCheckpointImpl of MutableStakerBalanceCheckpointTrait {
-    /// Pushes a (`key`, `value`) pair into an ordered list of checkpoints, either by inserting a
-    /// new checkpoint, or by updating the last one.
-    fn _insert(
-        self: StoragePath<Mutable<Vec<StakerBalanceCheckpoint>>>, key: Epoch, value: StakerBalance,
-    ) {
-        let len = self.len();
-        if len == Zero::zero() {
-            self.push(StakerBalanceCheckpoint { key, value });
-            return;
-        }
-
-        // Update or append new checkpoint
-        let mut last = self[len - 1].read();
-        if last.key == key {
-            last.value = value;
-            self[len - 1].write(last);
-        } else {
-            // Checkpoint keys must be non-decreasing
-            assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
-            self.push(StakerBalanceCheckpoint { key, value });
-        }
     }
 }
