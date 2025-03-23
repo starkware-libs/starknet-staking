@@ -1459,6 +1459,48 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl<
         assert!(delegator_info.unpool_time.is_some());
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Upgrade
+/// Staker exit_intent
+#[derive(Drop, Copy)]
+pub(crate) struct StakerIntentAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool_address: Option<ContractAddress>,
+}
+pub(crate) impl StakerIntentAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<StakerIntentAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: StakerIntentAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: StakerIntentAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        self.staker = Option::Some(staker);
+        let pool = system.staking.get_pool(:staker);
+        self.pool_address = Option::Some(pool);
+    }
+
+    fn test(
+        self: StakerIntentAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+        system.staker_exit_intent(:staker);
+
+        let staker_info = system.staker_info(:staker);
+        assert!(staker_info.unstake_time.is_some());
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
