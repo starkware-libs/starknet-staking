@@ -1058,10 +1058,7 @@ pub mod Staking {
         fn get_attestation_info_by_operational_address(
             self: @ContractState, operational_address: ContractAddress,
         ) -> AttestationInfo {
-            // Asserts.
             let staker_address = self.get_staker_address_by_operational(:operational_address);
-            let staker_info = self.internal_staker_info(:staker_address);
-            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
             // Return the attestation info.
             let epoch_info = self.get_epoch_info();

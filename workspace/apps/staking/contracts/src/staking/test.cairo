@@ -2462,24 +2462,13 @@ fn test_get_attestation_info_by_operational_address_assertions() {
     let staking_safe_dispatcher = IStakingAttestationSafeDispatcher {
         contract_address: staking_contract,
     };
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let staker_address = cfg.test_info.staker_address;
 
     // Catch STAKER_NOT_EXISTS.
     let operational_address = DUMMY_ADDRESS();
     let result = staking_safe_dispatcher
         .get_attestation_info_by_operational_address(:operational_address);
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
-
-    // Catch UNSTAKE_IN_PROGRESS.
-    let operational_address = cfg.staker_info.operational_address;
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.unstake_intent();
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let result = staking_safe_dispatcher
-        .get_attestation_info_by_operational_address(:operational_address);
-    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
 }
 
 #[test]

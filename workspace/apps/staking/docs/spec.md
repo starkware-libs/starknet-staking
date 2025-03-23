@@ -1037,7 +1037,6 @@ Returns the attestation info for the staker based on it's operational address.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-2. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
