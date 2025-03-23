@@ -1304,6 +1304,51 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
         assert!(delegator_info.amount == delegated_amount * 2);
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Upgrade
+/// Staker increase_stake
+#[derive(Drop, Copy)]
+pub(crate) struct IncreaseStakeAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) stake_amount: Option<Amount>,
+    pub(crate) pool_address: Option<ContractAddress>,
+}
+pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<IncreaseStakeAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: IncreaseStakeAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: IncreaseStakeAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        self.staker = Option::Some(staker);
+        self.stake_amount = Option::Some(stake_amount);
+        let pool = system.staking.get_pool(:staker);
+        self.pool_address = Option::Some(pool);
+    }
+
+    fn test(
+        self: IncreaseStakeAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+        let stake_amount = self.stake_amount.unwrap();
+        system.increase_stake(:staker, amount: stake_amount);
+
+        let staker_info = system.staker_info(:staker);
+        assert!(staker_info.amount_own == stake_amount * 2);
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
