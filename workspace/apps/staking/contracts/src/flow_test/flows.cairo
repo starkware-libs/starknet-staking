@@ -3,12 +3,12 @@ use staking::constants::STRK_IN_FRIS;
 use staking::errors::GenericError;
 use staking::flow_test::utils::{
     Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait, SystemDelegatorTrait,
-    SystemStakerTrait, SystemState, SystemTrait, SystemType,
+    SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
 };
 use staking::pool::interface::PoolMemberInfo;
 use staking::staking::interface::StakerInfo;
 use staking::test_utils::{calculate_pool_rewards, pool_update_rewards, staker_update_rewards};
-use staking::types::Amount;
+use staking::types::{Amount, Commission};
 use starknet::ContractAddress;
 use starkware_utils::errors::Describable;
 use starkware_utils::math::abs::wide_abs_diff;
@@ -1893,6 +1893,56 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
         assert!(delegator_info_first_pool.amount == delegated_amount / 2);
         let delegator_info_second_pool = system.pool_member_info(:delegator, pool: second_pool);
         assert!(delegator_info_second_pool.amount == delegated_amount / 2);
+    }
+}
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Upgrade
+/// Change commission
+#[derive(Drop, Copy)]
+pub(crate) struct ChangeCommissionAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) commission: Option<Commission>,
+}
+pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<ChangeCommissionAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: ChangeCommissionAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: ChangeCommissionAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let delegated_amount = stake_amount / 2;
+        let delegator = system.new_delegator(amount: delegated_amount);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+
+        self.staker = Option::Some(staker);
+        self.pool_address = Option::Some(pool);
+        self.commission = Option::Some(commission);
+    }
+
+    fn test(
+        self: ChangeCommissionAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+        let pool = self.pool_address.unwrap();
+        let new_commission = self.commission.unwrap() - 1;
+        system.update_commission(:staker, commission: new_commission);
+
+        assert!(new_commission == system.contract_parameters(:pool).commission);
     }
 }
 // TODO: Implement this flow test.

@@ -12,7 +12,7 @@ use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
-    IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolMemberInfo,
+    IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo, PoolMemberInfo,
 };
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
@@ -1076,6 +1076,18 @@ pub(crate) impl SystemDelegatorImpl<
         let pool_migration_dispatcher = IPoolMigrationDispatcher { contract_address: pool };
         pool_migration_dispatcher
             .get_internal_pool_member_info(pool_member: delegator.delegator.address)
+    }
+}
+
+#[generate_trait]
+pub(crate) impl SystemPoolImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of SystemPoolTrait<TTokenState> {
+    fn contract_parameters(
+        self: SystemState<TTokenState>, pool: ContractAddress,
+    ) -> PoolContractInfo {
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.contract_parameters()
     }
 }
 

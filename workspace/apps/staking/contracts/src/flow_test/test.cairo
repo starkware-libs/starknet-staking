@@ -203,6 +203,15 @@ fn increase_delegation_after_upgrade_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn change_commission_after_upgrade_regression_test() {
+    let mut flow = flows::ChangeCommissionAfterUpgradeFlow {
+        staker: Option::None, pool_address: Option::None, commission: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn delegator_partial_intent_after_upgrade_regression_test() {
     let mut flow = flows::DelegatorPartialIntentAfterUpgradeFlow {
         pool_address: Option::None, delegator: Option::None, delegated_amount: Option::None,
