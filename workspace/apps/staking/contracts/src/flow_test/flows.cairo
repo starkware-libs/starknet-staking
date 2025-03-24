@@ -1770,6 +1770,59 @@ pub(crate) impl StakerIntentAfterUpgradeFlowImpl<
         assert!(staker_info.unstake_time.is_some());
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Staker exit_intent
+/// Upgrade
+/// Staker exit_action
+#[derive(Drop, Copy)]
+pub(crate) struct StakerActionAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool_address: Option<ContractAddress>,
+}
+
+pub(crate) impl StakerActionAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<StakerActionAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: StakerActionAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: StakerActionAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.staker_exit_intent(:staker);
+
+        self.staker = Option::Some(staker);
+        let pool = system.staking.get_pool(:staker);
+        self.pool_address = Option::Some(pool);
+    }
+
+    fn test(
+        self: StakerActionAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+        let staker_info = system.staker_info(:staker);
+        assert!(staker_info.unstake_time.is_some());
+
+        let result = system.safe_staker_exit_action(:staker);
+        assert_panic_with_error(
+            :result, expected_error: GenericError::INTENT_WINDOW_NOT_FINISHED.describe(),
+        );
+
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.staker_exit_action(:staker);
+
+        assert!(system.get_staker_info(:staker).is_none());
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
