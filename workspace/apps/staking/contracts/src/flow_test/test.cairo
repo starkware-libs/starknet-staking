@@ -192,6 +192,70 @@ fn internal_pool_member_info_undelegate_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn increase_delegation_after_upgrade_regression_test() {
+    let mut flow = flows::IncreaseDelegationAfterUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None, delegated_amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn increase_stake_after_upgrade_regression_test() {
+    let mut flow = flows::IncreaseStakeAfterUpgradeFlow {
+        staker: Option::None, stake_amount: Option::None, pool_address: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+fn delegator_exit_and_enter_again_flow_test() {
+    let flow = flows::DelegatorExitAndEnterAgainFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn delegator_exit_and_enter_again_with_switch_flow_test() {
+    let flow = flows::DelegatorExitAndEnterAgainWithSwitchFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_action_after_upgrade_regression_test() {
+    let mut flow = flows::DelegatorActionAfterUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None,
+    };
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_intent_after_upgrade_regression_test() {
+    let mut flow = flows::DelegatorIntentAfterUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None, delegated_amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_intent_after_upgrade_regression_test() {
+    let mut flow = flows::StakerIntentAfterUpgradeFlow {
+        staker: Option::None, pool_address: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_action_after_upgrade_regression_test() {
+    let mut flow = flows::StakerActionAfterUpgradeFlow {
+        staker: Option::None, pool_address: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

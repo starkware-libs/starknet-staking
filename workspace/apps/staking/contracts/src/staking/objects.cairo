@@ -238,7 +238,19 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
         self: InternalStakerInfo, prev_class_hash: ClassHash, staker_address: ContractAddress,
     ) -> InternalStakerInfoV1 {
         let library_dispatcher = IStakingLibraryDispatcher { class_hash: prev_class_hash };
-        library_dispatcher.staker_info(staker_address).into()
+        let staker_info = library_dispatcher.staker_info(staker_address);
+        InternalStakerInfoV1 {
+            reward_address: staker_info.reward_address,
+            operational_address: staker_info.operational_address,
+            unstake_time: staker_info.unstake_time,
+            _deprecated_amount_own: staker_info.amount_own,
+            _deprecated_index: staker_info.index,
+            unclaimed_rewards_own: staker_info.unclaimed_rewards_own,
+            pool_info: staker_info.pool_info,
+            // This assumes that the function is called only during migration. in a different
+            // context, the commission commitment will be lost.
+            commission_commitment: Option::None,
+        }
     }
 }
 

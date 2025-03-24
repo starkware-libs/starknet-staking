@@ -43,7 +43,9 @@ pub(crate) struct InternalPoolMemberInfoV1 {
 
 #[generate_trait]
 pub impl InternalPoolMemberInfoLatestImpl of InternalPoolMemberInfoLatestTrait {
-    fn new(reward_address: ContractAddress) -> InternalPoolMemberInfoV1 {
+    fn new(
+        reward_address: ContractAddress, entry_to_claim_from: VecIndex,
+    ) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address,
             _deprecated_amount: Zero::zero(),
@@ -52,7 +54,7 @@ pub impl InternalPoolMemberInfoLatestImpl of InternalPoolMemberInfoLatestTrait {
             _deprecated_commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
-            entry_to_claim_from: Zero::zero(),
+            entry_to_claim_from,
         }
     }
 }
@@ -74,7 +76,17 @@ pub(crate) impl InternalPoolMemberInfoConvert of InternalPoolMemberInfoConvertTr
         self: InternalPoolMemberInfo, prev_class_hash: ClassHash, pool_member: ContractAddress,
     ) -> InternalPoolMemberInfoV1 {
         let library_dispatcher = IPoolLibraryDispatcher { class_hash: prev_class_hash };
-        library_dispatcher.pool_member_info(pool_member).into()
+        let pool_member_info = library_dispatcher.pool_member_info(pool_member);
+        InternalPoolMemberInfoV1 {
+            reward_address: pool_member_info.reward_address,
+            _deprecated_amount: pool_member_info.amount,
+            _deprecated_index: pool_member_info.index,
+            _deprecated_unclaimed_rewards: pool_member_info.unclaimed_rewards,
+            _deprecated_commission: pool_member_info.commission,
+            unpool_amount: pool_member_info.unpool_amount,
+            unpool_time: pool_member_info.unpool_time,
+            entry_to_claim_from: Zero::zero(),
+        }
     }
 }
 
@@ -85,7 +97,9 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
         VInternalPoolMemberInfo::V1(value)
     }
 
-    fn new_latest(reward_address: ContractAddress) -> VInternalPoolMemberInfo {
+    fn new_latest(
+        reward_address: ContractAddress, entry_to_claim_from: VecIndex,
+    ) -> VInternalPoolMemberInfo {
         VInternalPoolMemberInfo::V1(
             InternalPoolMemberInfoV1 {
                 reward_address,
@@ -95,7 +109,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
                 _deprecated_commission: Zero::zero(),
                 unpool_amount: Zero::zero(),
                 unpool_time: Option::None,
-                entry_to_claim_from: Zero::zero(),
+                entry_to_claim_from,
             },
         )
     }
@@ -237,7 +251,7 @@ mod internal_pool_member_info_latest_tests {
     #[test]
     fn test_new() {
         let pool_member_info = InternalPoolMemberInfoLatestTrait::new(
-            reward_address: POOL_MEMBER_REWARD_ADDRESS(),
+            reward_address: POOL_MEMBER_REWARD_ADDRESS(), entry_to_claim_from: Zero::zero(),
         );
         let expected = InternalPoolMemberInfoLatest {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),

@@ -1612,6 +1612,7 @@ fn claim_rewards(
 Update rewards and transfer them to the reward address.
 Return the amount transferred to the reward address.
 #### emits <!-- omit from toc -->
+1. If pool member amount and intent amount are zero: [Delete Pool Member](#delete-pool-member)
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 2. [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
@@ -1643,7 +1644,6 @@ Request the staking contract to move a pool member to another pool contract.
 Return the amount left in exit window for the pool member in this pool.
 #### emits <!-- omit from toc -->
 1. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
-2. If pool member amount and intent amount are zero: [Delete Pool Member](#delete-pool-member)
 #### errors <!-- omit from toc -->
 1. [AMOUNT\_IS\_ZERO](#amount_is_zero)
 2. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)

@@ -395,9 +395,8 @@ pub struct StakerInfo {
     pub pool_info: Option<StakerPoolInfo>,
 }
 
+#[cfg(test)]
 pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalStakerInfoV1> {
-    /// This function is used during convertion from `InternalStakerInfo` to `InternalStakerInfoV1`.
-
     fn into(self: StakerInfo) -> InternalStakerInfoV1 {
         InternalStakerInfoV1 {
             reward_address: self.reward_address,
