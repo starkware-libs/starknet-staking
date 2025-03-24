@@ -1945,6 +1945,65 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
         assert!(new_commission == system.contract_parameters(:pool).commission);
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Upgrade
+/// Delegator claim rewards
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorClaimRewardsAfterUpgradeFlow {
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<DelegatorClaimRewardsAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: DelegatorClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(
+        ref self: DelegatorClaimRewardsAfterUpgradeFlow, ref system: SystemState<TTokenState>,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+        let one_week = Time::weeks(count: 1);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let delegated_amount = stake_amount / 2;
+        let delegator = system.new_delegator(amount: delegated_amount);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+
+        self.pool_address = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+
+        system.advance_time(time: one_week);
+        system.update_global_index_via_change_reward_address(:staker);
+    }
+
+    fn test(
+        self: DelegatorClaimRewardsAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let pool = self.pool_address.unwrap();
+        let delegator = self.delegator.unwrap();
+
+        let unclaimed_rewards = system.pool_member_info(:delegator, :pool).unclaimed_rewards;
+        assert!(unclaimed_rewards == system.delegator_claim_rewards(:delegator, :pool));
+        assert!(unclaimed_rewards == system.token.balance_of(account: delegator.reward.address));
+
+        let unclaimed_rewards_after_claim = system
+            .pool_member_info(:delegator, :pool)
+            .unclaimed_rewards;
+        assert!(unclaimed_rewards_after_claim == Zero::zero());
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
