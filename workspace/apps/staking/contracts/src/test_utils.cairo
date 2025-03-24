@@ -1019,6 +1019,24 @@ fn get_total_amount(staker_info: StakerInfo) -> Amount {
     (staker_info.amount_own)
 }
 
+/// Calculate pool rewards for one epoch
+pub(crate) fn calculate_pool_rewards(
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+) -> Amount {
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let total_rewards = calculate_staker_total_rewards(
+        :staker_info, :staking_contract, :minting_curve_contract,
+    );
+    let staker_rewards = calculate_staker_own_rewards_including_commission(
+        :staker_info, :total_rewards,
+    );
+    let pool_rewards = total_rewards - staker_rewards;
+    pool_rewards
+}
+
 /// Calculates the block offset required to advance from the starting block into the attestation
 /// window.
 pub(crate) fn calculate_block_offset(

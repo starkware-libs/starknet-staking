@@ -211,12 +211,23 @@ fn increase_stake_after_upgrade_regression_test() {
 }
 
 #[test]
+fn delegator_exit_and_enter_again_flow_test() {
+    let flow = flows::DelegatorExitAndEnterAgainFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn delegator_exit_and_enter_again_with_switch_flow_test() {
+    let flow = flows::DelegatorExitAndEnterAgainWithSwitchFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 #[fork("MAINNET_LATEST")]
 fn delegator_action_after_upgrade_regression_test() {
     let mut flow = flows::DelegatorActionAfterUpgradeFlow {
         pool_address: Option::None, delegator: Option::None,
     };
-    test_flow_mainnet(ref :flow);
 }
 
 #[test]
@@ -236,6 +247,7 @@ fn staker_intent_after_upgrade_regression_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
