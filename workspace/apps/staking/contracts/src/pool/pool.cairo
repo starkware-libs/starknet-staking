@@ -131,7 +131,7 @@ pub mod Pool {
             .write(IStakingPoolDispatcher { contract_address: staking_contract });
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.staker_removed.write(false);
-        self.cumulative_rewards_trace.deref().insert(key: self.get_current_epoch(), value: 0);
+        self.cumulative_rewards_trace.deref().insert(key: Zero::zero(), value: Zero::zero());
     }
 
     #[abi(embed_v0)]
@@ -539,10 +539,10 @@ pub mod Pool {
             ref self: ContractState, rewards: Amount, pool_balance: Amount,
         ) {
             self.assert_caller_is_staking_contract();
-            let latest = match self.cumulative_rewards_trace.deref().latest() {
-                Result::Ok((_, latest)) => latest,
-                Result::Err(_) => 0,
-            };
+
+            // `rewards_info` is initialized in the constructor or in the upgrade proccess,
+            // so unwrapping should be safe.
+            let (_, latest) = self.cumulative_rewards_trace.deref().latest().unwrap();
             self
                 .cumulative_rewards_trace
                 .deref()

@@ -1,6 +1,7 @@
 // An External Initializer Contract to upgrade a pool contract.
 #[starknet::contract]
 mod PoolEIC {
+    use core::num::traits::Zero;
     use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
     use staking::types::{Index, Version};
     use starknet::ContractAddress;
@@ -8,7 +9,6 @@ mod PoolEIC {
     use starknet::storage::Map;
     use starkware_utils::components::replaceability::interface::IEICInitializable;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
-
 
     #[storage]
     struct Storage {
@@ -43,7 +43,7 @@ mod PoolEIC {
             self.final_staker_index.write(Option::Some(final_index));
 
             // Initialize the cumulative rewards trace.
-            self.cumulative_rewards_trace.deref().insert(key: 0, value: 0);
+            self.cumulative_rewards_trace.deref().insert(key: Zero::zero(), value: Zero::zero());
         }
     }
 }
