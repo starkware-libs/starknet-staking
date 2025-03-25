@@ -99,9 +99,9 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
     /// invariant of non-decreasing keys.
     fn latest(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
         let checkpoints = self.checkpoints;
-        let pos = checkpoints.len();
-        assert!(pos > 0, "{}", TraceErrors::EMPTY_TRACE);
-        let checkpoint = checkpoints[pos - 1].read();
+        let len = checkpoints.len();
+        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
+        let checkpoint = checkpoints[len - 1].read();
         (checkpoint.key, checkpoint.value)
     }
 
@@ -141,18 +141,18 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     ) -> (PoolMemberBalance, PoolMemberBalance) {
         let checkpoints = self.checkpoints.as_path();
 
-        let pos = checkpoints.len();
-        if pos == Zero::zero() {
+        let len = checkpoints.len();
+        if len == Zero::zero() {
             checkpoints.push(PoolMemberBalanceCheckpoint { key, value });
             return (Zero::zero(), value);
         }
 
         // Update or append new checkpoint.
-        let mut last = checkpoints[pos - 1].read();
+        let mut last = checkpoints[len - 1].read();
         let prev = last.value;
         if last.key == key {
             last.value = value;
-            checkpoints[pos - 1].write(last);
+            checkpoints[len - 1].write(last);
         } else {
             // Checkpoint keys must be non-decreasing.
             assert!(last.key < key, "{}", TraceErrors::UNORDERED_INSERTION);
@@ -176,9 +176,9 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     /// invariant of non-decreasing keys.
     fn latest(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> (Epoch, PoolMemberBalance) {
         let checkpoints = self.checkpoints;
-        let pos = checkpoints.len();
-        assert!(pos > 0, "{}", TraceErrors::EMPTY_TRACE);
-        let checkpoint = checkpoints[pos - 1].read();
+        let len = checkpoints.len();
+        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
+        let checkpoint = checkpoints[len - 1].read();
         (checkpoint.key, checkpoint.value)
     }
 
