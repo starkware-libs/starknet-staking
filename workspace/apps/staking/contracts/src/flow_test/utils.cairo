@@ -25,7 +25,8 @@ use staking::staking::interface::{
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
-    BLOCK_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS, UPGRADE_GOVERNOR,
+    BLOCK_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS,
+    UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
@@ -1170,14 +1171,13 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
 
     /// Upgrades the staking contract in the system state with a local implementation.
     fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
-        let total_stake = self.staking.get_total_stake();
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
             eic_init_data: array![
                 MAINNET_STAKING_CLASS_HASH_V0().into(),
                 BLOCK_DURATION.into(),
                 EPOCH_LENGTH.into(),
-                total_stake.into(),
+                STARTING_BLOCK_OFFSET.into(),
                 declare_pool_contract().into(),
                 self.attestation.unwrap().address.into(),
             ]

@@ -3,7 +3,7 @@ use constants::{
     BLOCK_DURATION, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_LENGTH,
     EPOCH_STARTING_BLOCK, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
     OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
-    STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
+    STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -3243,13 +3243,18 @@ fn test_staking_eic() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let upgrade_governor = cfg.test_info.upgrade_governor;
     let expected_total_stake: Amount = 123;
+    snforge_std::store(
+        target: staking_contract,
+        storage_address: selector!("total_stake"),
+        serialized_value: array![expected_total_stake.into()].span(),
+    );
 
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
         eic_init_data: [
             MAINNET_STAKING_CLASS_HASH_V0().into(), BLOCK_DURATION.into(), EPOCH_LENGTH.into(),
-            expected_total_stake.into(), declare_pool_contract().into(),
+            STARTING_BLOCK_OFFSET.into(), declare_pool_contract().into(),
             cfg.test_info.attestation_contract.into(),
         ]
             .span(),
@@ -3282,7 +3287,7 @@ fn test_staking_eic() {
     let expected_epoch_info = EpochInfoTrait::new(
         block_duration: BLOCK_DURATION,
         epoch_length: EPOCH_LENGTH,
-        starting_block: get_block_number(),
+        starting_block: get_block_number() + STARTING_BLOCK_OFFSET,
     );
     assert!(expected_epoch_info == loaded_epoch_info);
 

@@ -75,6 +75,7 @@ pub(crate) mod constants {
     pub const EPOCH_LENGTH: u16 = 300;
     pub const EPOCH_STARTING_BLOCK: u64 = 463476;
     pub const BLOCK_DURATION: u16 = 30;
+    pub const STARTING_BLOCK_OFFSET: u64 = 0;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         'CALLER_ADDRESS'.try_into().unwrap()
