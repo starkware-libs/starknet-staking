@@ -424,28 +424,29 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
         AttestationInfo { staker_address, stake, epoch_len, epoch_id, current_epoch_starting_block }
     }
 
-    fn staker_address(self: AttestationInfo) -> ContractAddress {
-        self.staker_address
+    fn staker_address(self: @AttestationInfo) -> ContractAddress {
+        *self.staker_address
     }
-    fn stake(self: AttestationInfo) -> Amount {
-        self.stake
+    fn stake(self: @AttestationInfo) -> Amount {
+        *self.stake
     }
-    fn epoch_len(self: AttestationInfo) -> u16 {
-        self.epoch_len
+    fn epoch_len(self: @AttestationInfo) -> u16 {
+        *self.epoch_len
     }
-    fn epoch_id(self: AttestationInfo) -> Epoch {
-        self.epoch_id
+    fn epoch_id(self: @AttestationInfo) -> Epoch {
+        *self.epoch_id
     }
-    fn current_epoch_starting_block(self: AttestationInfo) -> u64 {
-        self.current_epoch_starting_block
+    fn current_epoch_starting_block(self: @AttestationInfo) -> u64 {
+        *self.current_epoch_starting_block
     }
-    fn get_next_epoch_attestation_info(self: AttestationInfo) -> AttestationInfo {
+    fn get_next_epoch_attestation_info(self: @AttestationInfo) -> AttestationInfo {
         Self::new(
-            staker_address: self.staker_address,
-            stake: self.stake,
-            epoch_len: self.epoch_len,
-            epoch_id: self.epoch_id + 1,
-            current_epoch_starting_block: self.current_epoch_starting_block + self.epoch_len.into(),
+            staker_address: *self.staker_address,
+            stake: *self.stake,
+            epoch_len: *self.epoch_len,
+            epoch_id: *self.epoch_id + 1,
+            current_epoch_starting_block: *self.current_epoch_starting_block
+                + (*self.epoch_len).into(),
         )
     }
 }
