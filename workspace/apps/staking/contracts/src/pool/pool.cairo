@@ -196,7 +196,7 @@ pub mod Pool {
         ) -> Amount {
             // Asserts.
             self.assert_staker_is_active();
-            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
+            let pool_member_info = self.internal_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
             assert!(
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
@@ -428,7 +428,7 @@ pub mod Pool {
             // Create or update the pool member info, depending on whether the pool member exists,
             // and then commit to storage.
             let pool_member_info = match self.get_internal_pool_member_info(:pool_member) {
-                Option::Some(mut pool_member_info) => {
+                Option::Some(pool_member_info) => {
                     // Pool member already exists. Need to update pool_member_info to account for
                     // the accrued rewards and then update the delegated amount.
                     assert!(
@@ -520,7 +520,7 @@ pub mod Pool {
 
         // This function provides the pool member info (with projected rewards).
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
-            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
+            let pool_member_info = self.internal_pool_member_info(:pool_member);
 
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
             external_pool_member_info.amount = self.get_amount(:pool_member);
