@@ -1,18 +1,28 @@
 use core::num::traits::Zero;
 use staking::constants::STRK_IN_FRIS;
 use staking::errors::GenericError;
+use staking::flow_test::utils::MainnetClassHashes::MAINNET_POOL_CLASS_HASH_V0;
 use staking::flow_test::utils::{
     Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait, SystemDelegatorTrait,
     SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
+    upgrade_implementation,
 };
 use staking::pool::interface::PoolMemberInfo;
+use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::StakerInfo;
-use staking::test_utils::{calculate_pool_rewards, pool_update_rewards, staker_update_rewards};
-use staking::types::{Amount, Commission};
-use starknet::ContractAddress;
-use starkware_utils::errors::Describable;
+use staking::test_utils::constants::UPGRADE_GOVERNOR;
+use staking::test_utils::{
+    calculate_pool_rewards, declare_pool_contract, declare_pool_eic_contract, deserialize_option,
+    pool_update_rewards, staker_update_rewards,
+};
+use staking::types::{Amount, Commission, Index};
+use starknet::{ClassHash, ContractAddress, Store};
+use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
+use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
-use starkware_utils::test_utils::{TokenTrait, assert_panic_with_error};
+use starkware_utils::test_utils::{
+    TokenTrait, assert_panic_with_error, set_account_as_upgrade_governor,
+};
 use starkware_utils::types::time::time::Time;
 
 /// Flow - Basic Stake:
@@ -2002,6 +2012,121 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
             .pool_member_info(:delegator, :pool)
             .unclaimed_rewards;
         assert!(unclaimed_rewards_after_claim == Zero::zero());
+    }
+}
+
+#[derive(Drop, Copy)]
+pub(crate) struct PoolMigrationAssertionsFlow {
+    pub(crate) staker_no_pool: Option<Staker>,
+    pub(crate) staker_with_pool: Option<Staker>,
+}
+pub(crate) impl PoolMigrationAssertionsFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<PoolMigrationAssertionsFlow, TTokenState> {
+    fn get_pool_address(self: PoolMigrationAssertionsFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: PoolMigrationAssertionsFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker_no_pool = system.new_staker(amount: stake_amount * 2);
+        system
+            .stake(
+                staker: staker_no_pool, amount: stake_amount, pool_enabled: false, commission: 200,
+            );
+        let staker_with_pool = system.new_staker(amount: stake_amount * 2);
+        system
+            .stake(
+                staker: staker_with_pool, amount: stake_amount, pool_enabled: true, commission: 200,
+            );
+        self.staker_no_pool = Option::Some(staker_no_pool);
+        self.staker_with_pool = Option::Some(staker_with_pool);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(
+        self: PoolMigrationAssertionsFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        // Should catch MISSING_POOL_CONTRACT.
+        let staker_no_pool = self.staker_no_pool.unwrap();
+        let result = system.safe_dispatcher_pool_migration(staker: staker_no_pool);
+        assert_panic_with_error(
+            :result, expected_error: StakingError::MISSING_POOL_CONTRACT.describe(),
+        );
+
+        // Should catch CALLER_IS_NOT_POOL_CONTRACT.
+        let staker_with_pool = self.staker_with_pool.unwrap();
+        let result = system.safe_dispatcher_pool_migration(staker: staker_with_pool);
+        assert_panic_with_error(
+            :result, expected_error: StakingError::CALLER_IS_NOT_POOL_CONTRACT.describe(),
+        );
+    }
+}
+
+#[derive(Drop, Copy)]
+pub(crate) struct PoolEICFlow {
+    pub(crate) pool_address: Option<ContractAddress>,
+}
+pub(crate) impl PoolEICFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<PoolEICFlow, TTokenState> {
+    fn get_pool_address(self: PoolEICFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: PoolEICFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        system.stake(staker: staker, amount: stake_amount, pool_enabled: true, commission: 200);
+        let pool = system.staking.get_pool(:staker);
+        self.pool_address = Option::Some(pool);
+    }
+
+    fn test(self: PoolEICFlow, ref system: SystemState<TTokenState>, system_type: SystemType) {
+        let pool_contract = self.pool_address.unwrap();
+        let upgrade_governor = UPGRADE_GOVERNOR();
+        let pool_contract_admin = system.staking.get_pool_contract_admin();
+        set_account_as_upgrade_governor(
+            contract: pool_contract,
+            account: upgrade_governor,
+            governance_admin: pool_contract_admin,
+        );
+
+        let final_index = system.staking.get_global_index();
+
+        // Upgrade.
+        let eic_data = EICData {
+            eic_hash: declare_pool_eic_contract(),
+            eic_init_data: [MAINNET_POOL_CLASS_HASH_V0().into()].span(),
+        };
+        let implementation_data = ImplementationData {
+            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+        };
+        upgrade_implementation(
+            contract_address: pool_contract, :implementation_data, :upgrade_governor,
+        );
+        // Test.
+        let map_selector = selector!("prev_class_hash");
+        let storage_address = snforge_std::map_entry_address(:map_selector, keys: [0].span());
+        let prev_class_hash = *snforge_std::load(
+            target: pool_contract, :storage_address, size: Store::<ClassHash>::size().into(),
+        )
+            .at(0);
+        assert!(prev_class_hash.try_into().unwrap() == MAINNET_POOL_CLASS_HASH_V0());
+
+        let mut span_final_staker_index = snforge_std::load(
+            target: pool_contract,
+            storage_address: selector!("final_staker_index"),
+            size: Store::<Option<Index>>::size().into(),
+        )
+            .span();
+        let final_staker_index: Option<Index> = deserialize_option(ref span_final_staker_index);
+        assert!(final_staker_index == Option::Some(final_index));
+        // TODO: Test rewards_info.
     }
 }
 // TODO: Implement this flow test.

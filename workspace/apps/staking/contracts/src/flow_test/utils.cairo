@@ -20,8 +20,8 @@ use staking::reward_supplier::interface::{
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
-    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait,
-    StakerPoolInfoTrait,
+    IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher,
+    IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfoTrait,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
@@ -927,6 +927,16 @@ pub(crate) impl SystemStakerImpl<
         self: SystemState<TTokenState>, staker: Staker,
     ) {
         self.change_reward_address(:staker, reward_address: staker.reward.address)
+    }
+
+    #[feature("safe_dispatcher")]
+    fn safe_dispatcher_pool_migration(
+        self: SystemState<TTokenState>, staker: Staker,
+    ) -> Result<Index, Array<felt252>> {
+        let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
+            contract_address: self.staking.address,
+        };
+        staking_pool_safe_dispatcher.pool_migration(staker_address: staker.staker.address)
     }
 }
 

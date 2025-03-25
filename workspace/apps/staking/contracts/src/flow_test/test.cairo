@@ -284,6 +284,23 @@ fn staker_action_after_upgrade_regression_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn pool_migration_assertions_regression_test() {
+    let mut flow = flows::PoolMigrationAssertionsFlow {
+        staker_no_pool: Option::None, staker_with_pool: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn pool_eic_regression_test() {
+    let mut flow = flows::PoolEICFlow { pool_address: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
