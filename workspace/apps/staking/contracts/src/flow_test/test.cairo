@@ -301,6 +301,15 @@ fn pool_eic_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_switch_after_upgrade_regression_test() {
+    let mut flow = flows::DelegatorSwitchAfterUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None, delegated_amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

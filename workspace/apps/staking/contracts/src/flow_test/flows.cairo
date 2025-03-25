@@ -2129,6 +2129,80 @@ pub(crate) impl PoolEICFlowImpl<
         // TODO: Test rewards_info.
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Delegator full intent
+/// Upgrade
+/// Delegator full switch
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorSwitchAfterUpgradeFlow {
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) delegated_amount: Option<Amount>,
+}
+pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<DelegatorSwitchAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: DelegatorSwitchAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: DelegatorSwitchAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let delegated_amount = stake_amount;
+        let delegator = system.new_delegator(amount: delegated_amount);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+
+        self.pool_address = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.delegated_amount = Option::Some(delegated_amount);
+    }
+
+    fn test(
+        self: DelegatorSwitchAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool_address.unwrap();
+        let delegated_amount = self.delegated_amount.unwrap();
+
+        let commission = 200;
+        let second_staker = system.new_staker(amount: delegated_amount);
+        system
+            .stake(
+                staker: second_staker, amount: delegated_amount, pool_enabled: true, :commission,
+            );
+        let second_pool = system.staking.get_pool(staker: second_staker);
+        system
+            .switch_delegation_pool(
+                :delegator,
+                from_pool: pool,
+                to_staker: second_staker.staker.address,
+                to_pool: second_pool,
+                amount: delegated_amount,
+            );
+
+        // Although the delegator has switched their entire delegated amount to the second pool,
+        // they remain a member of the original pool. Keeping the delegator in the pool ensures they
+        // can still receive any additional rewards that they may get for the current epoch.
+        let delegator_info_first_pool = system.pool_member_info(:delegator, :pool);
+        assert!(delegator_info_first_pool.amount.is_zero());
+
+        let delegator_info_second_pool = system.pool_member_info(:delegator, pool: second_pool);
+        assert!(delegator_info_second_pool.amount == delegated_amount);
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
