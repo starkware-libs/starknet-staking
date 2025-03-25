@@ -3344,3 +3344,23 @@ fn test_staking_eic_with_wrong_number_of_data_elemnts() {
         contract_address: staking_contract, :implementation_data, :upgrade_governor,
     );
 }
+
+#[test]
+fn test_get_current_total_staking_power() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+
+    assert!(staking_dispatcher.get_current_total_staking_power().is_zero());
+    advance_epoch_global();
+    assert!(
+        staking_dispatcher
+            .get_current_total_staking_power() == staking_dispatcher
+            .staker_info(:staker_address)
+            .amount_own,
+    );
+}
