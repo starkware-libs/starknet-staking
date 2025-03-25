@@ -13,7 +13,9 @@ pub trait IMockTrace<TContractState> {
     fn is_non_empty_mutable(ref self: TContractState) -> bool;
     fn length_mutable(ref self: TContractState) -> u64;
     fn at(self: @TContractState, pos: u64) -> PoolMemberCheckpoint;
-    fn insert_before_latest(ref self: TContractState, key: Epoch, rewards_info_idx: VecIndex);
+    fn insert_before_latest(
+        ref self: TContractState, key: Epoch, cumulative_rewards_trace_idx: VecIndex,
+    );
 }
 
 #[starknet::contract]
@@ -64,8 +66,10 @@ pub mod MockTrace {
             self.trace.deref().at(:pos)
         }
 
-        fn insert_before_latest(ref self: ContractState, key: Epoch, rewards_info_idx: VecIndex) {
-            self.trace.deref().insert_before_latest(:key, :rewards_info_idx)
+        fn insert_before_latest(
+            ref self: ContractState, key: Epoch, cumulative_rewards_trace_idx: VecIndex,
+        ) {
+            self.trace.deref().insert_before_latest(:key, :cumulative_rewards_trace_idx)
         }
     }
 }

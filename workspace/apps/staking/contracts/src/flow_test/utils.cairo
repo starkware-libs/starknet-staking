@@ -12,7 +12,7 @@ use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
-    IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolMemberInfo,
+    IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo, PoolMemberInfo,
 };
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
@@ -20,12 +20,13 @@ use staking::reward_supplier::interface::{
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
-    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait,
-    StakerPoolInfoTrait,
+    IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher,
+    IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfoTrait,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
-    BLOCK_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STRK_TOKEN_ADDRESS, UPGRADE_GOVERNOR,
+    BLOCK_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS,
+    UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
@@ -751,9 +752,9 @@ pub(crate) impl SystemImpl<
             epoch_id: self.staking.get_epoch_info().current_epoch().into(),
             staker_address: staker.staker.address.into(),
             epoch_len: self.staking.get_epoch_info().epoch_len_in_blocks().into(),
-            attestation_window: MIN_ATTESTATION_WINDOW + 1,
+            attestation_window: MIN_ATTESTATION_WINDOW,
         );
-        advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() + 1);
+        advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
     }
 }
 
@@ -928,6 +929,16 @@ pub(crate) impl SystemStakerImpl<
     ) {
         self.change_reward_address(:staker, reward_address: staker.reward.address)
     }
+
+    #[feature("safe_dispatcher")]
+    fn safe_dispatcher_pool_migration(
+        self: SystemState<TTokenState>, staker: Staker,
+    ) -> Result<Index, Array<felt252>> {
+        let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
+            contract_address: self.staking.address,
+        };
+        staking_pool_safe_dispatcher.pool_migration(staker_address: staker.staker.address)
+    }
 }
 
 /// The `Delegator` struct represents a delegator in the staking system.
@@ -1079,6 +1090,18 @@ pub(crate) impl SystemDelegatorImpl<
     }
 }
 
+#[generate_trait]
+pub(crate) impl SystemPoolImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of SystemPoolTrait<TTokenState> {
+    fn contract_parameters(
+        self: SystemState<TTokenState>, pool: ContractAddress,
+    ) -> PoolContractInfo {
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.contract_parameters()
+    }
+}
+
 // This interface is implemented by the `STRK` token contract.
 #[starknet::interface]
 trait IMintableToken<TContractState> {
@@ -1148,14 +1171,13 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
 
     /// Upgrades the staking contract in the system state with a local implementation.
     fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
-        let total_stake = self.staking.get_total_stake();
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
             eic_init_data: array![
                 MAINNET_STAKING_CLASS_HASH_V0().into(),
                 BLOCK_DURATION.into(),
                 EPOCH_LENGTH.into(),
-                total_stake.into(),
+                STARTING_BLOCK_OFFSET.into(),
                 declare_pool_contract().into(),
                 self.attestation.unwrap().address.into(),
             ]

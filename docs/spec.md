@@ -1794,7 +1794,7 @@ fn update_rewards_from_staking_contract(
 )
 ```
 #### description <!-- omit from toc -->
-Update rewards info in pool trace.
+Update the cumulative rewards trace in pool trace.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)

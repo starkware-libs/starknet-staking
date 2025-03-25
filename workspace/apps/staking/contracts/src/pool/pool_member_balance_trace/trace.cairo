@@ -16,12 +16,12 @@ pub struct PoolMemberBalanceTrace {
 #[derive(Copy, Drop, Serde, starknet::Store, Debug, PartialEq)]
 pub(crate) struct PoolMemberBalance {
     balance: Amount,
-    rewards_info_idx: VecIndex,
+    cumulative_rewards_trace_idx: VecIndex,
 }
 
 pub(crate) impl PoolMemberBalanceZero of core::num::traits::Zero<PoolMemberBalance> {
     fn zero() -> PoolMemberBalance {
-        PoolMemberBalance { balance: Zero::zero(), rewards_info_idx: Zero::zero() }
+        PoolMemberBalance { balance: Zero::zero(), cumulative_rewards_trace_idx: Zero::zero() }
     }
 
     fn is_zero(self: @PoolMemberBalance) -> bool {
@@ -35,16 +35,16 @@ pub(crate) impl PoolMemberBalanceZero of core::num::traits::Zero<PoolMemberBalan
 
 #[generate_trait]
 pub(crate) impl PoolMemberBalanceImpl of PoolMemberBalanceTrait {
-    fn new(balance: Amount, rewards_info_idx: VecIndex) -> PoolMemberBalance {
-        PoolMemberBalance { balance, rewards_info_idx }
+    fn new(balance: Amount, cumulative_rewards_trace_idx: VecIndex) -> PoolMemberBalance {
+        PoolMemberBalance { balance, cumulative_rewards_trace_idx }
     }
 
     fn balance(self: @PoolMemberBalance) -> Amount {
         *self.balance
     }
 
-    fn rewards_info_idx(self: @PoolMemberBalance) -> VecIndex {
-        *self.rewards_info_idx
+    fn cumulative_rewards_trace_idx(self: @PoolMemberBalance) -> VecIndex {
+        *self.cumulative_rewards_trace_idx
     }
 }
 
@@ -58,13 +58,15 @@ struct PoolMemberBalanceCheckpoint {
 pub(crate) struct PoolMemberCheckpoint {
     epoch: Epoch,
     balance: Amount,
-    rewards_info_idx: VecIndex,
+    cumulative_rewards_trace_idx: VecIndex,
 }
 
 #[generate_trait]
 pub(crate) impl PoolMemberCheckpointImpl of PoolMemberCheckpointTrait {
-    fn new(epoch: Epoch, balance: Amount, rewards_info_idx: VecIndex) -> PoolMemberCheckpoint {
-        PoolMemberCheckpoint { epoch, balance, rewards_info_idx }
+    fn new(
+        epoch: Epoch, balance: Amount, cumulative_rewards_trace_idx: VecIndex,
+    ) -> PoolMemberCheckpoint {
+        PoolMemberCheckpoint { epoch, balance, cumulative_rewards_trace_idx }
     }
 
     fn epoch(self: @PoolMemberCheckpoint) -> Epoch {
@@ -75,8 +77,8 @@ pub(crate) impl PoolMemberCheckpointImpl of PoolMemberCheckpointTrait {
         *self.balance
     }
 
-    fn rewards_info_idx(self: @PoolMemberCheckpoint) -> VecIndex {
-        *self.rewards_info_idx
+    fn cumulative_rewards_trace_idx(self: @PoolMemberCheckpoint) -> VecIndex {
+        *self.cumulative_rewards_trace_idx
     }
 }
 
@@ -125,7 +127,7 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
         PoolMemberCheckpointTrait::new(
             epoch: checkpoint.key,
             balance: checkpoint.value.balance,
-            rewards_info_idx: checkpoint.value.rewards_info_idx,
+            cumulative_rewards_trace_idx: checkpoint.value.cumulative_rewards_trace_idx,
         )
     }
 }
@@ -185,9 +187,11 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     /// Precondition: trace is not empty and `key` must be exactly one less than the latest
     /// checkpoint key.
     fn insert_before_latest(
-        self: StoragePath<Mutable<PoolMemberBalanceTrace>>, key: Epoch, rewards_info_idx: VecIndex,
+        self: StoragePath<Mutable<PoolMemberBalanceTrace>>,
+        key: Epoch,
+        cumulative_rewards_trace_idx: VecIndex,
     ) {
-        self.checkpoints.as_path()._insert_before_latest(:key, :rewards_info_idx)
+        self.checkpoints.as_path()._insert_before_latest(:key, :cumulative_rewards_trace_idx)
     }
 
     /// Returns whether the trace is non empty.
@@ -209,7 +213,7 @@ impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpoin
     fn _insert_before_latest(
         self: StoragePath<Mutable<Vec<PoolMemberBalanceCheckpoint>>>,
         key: Epoch,
-        rewards_info_idx: VecIndex,
+        cumulative_rewards_trace_idx: VecIndex,
     ) {
         // Empty trace.
         let len = self.len();
@@ -223,7 +227,7 @@ impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpoin
         // TODO: this happend only when enter and in the same epoch claim rewards - i.e should get
         // 0 rewards. do we need this case? or return something else?
         if len == 1 {
-            let value = PoolMemberBalance { balance: 0, rewards_info_idx };
+            let value = PoolMemberBalance { balance: 0, cumulative_rewards_trace_idx };
             self[len - 1].write(PoolMemberBalanceCheckpoint { key, value });
             self.push(latest);
             // Trace with two or more checkpoints.
@@ -231,7 +235,9 @@ impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpoin
             let before_latest = self[len - 2].read();
             let pool_member_balance_checkpoint = PoolMemberBalanceCheckpoint {
                 key,
-                value: PoolMemberBalance { balance: before_latest.value.balance, rewards_info_idx },
+                value: PoolMemberBalance {
+                    balance: before_latest.value.balance, cumulative_rewards_trace_idx,
+                },
             };
             // TODO: do we need to edit self[len-2] if we have the same key there.
             if before_latest.key == key {

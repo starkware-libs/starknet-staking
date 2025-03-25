@@ -89,7 +89,7 @@ pub mod Pool {
         // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
         // calculation.
         // Updated whenever rewards are received from the staking contract.
-        rewards_info: Trace,
+        cumulative_rewards_trace: Trace,
     }
 
     #[event]
@@ -131,7 +131,7 @@ pub mod Pool {
             .write(IStakingPoolDispatcher { contract_address: staking_contract });
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.staker_removed.write(false);
-        self.rewards_info.deref().insert(key: self.get_current_epoch(), value: 0);
+        self.cumulative_rewards_trace.deref().insert(key: self.get_current_epoch(), value: 0);
     }
 
     #[abi(embed_v0)]
@@ -196,7 +196,7 @@ pub mod Pool {
         ) -> Amount {
             // Asserts.
             self.assert_staker_is_active();
-            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
+            let pool_member_info = self.internal_pool_member_info(:pool_member);
             let caller_address = get_caller_address();
             assert!(
                 caller_address == pool_member || caller_address == pool_member_info.reward_address,
@@ -428,7 +428,7 @@ pub mod Pool {
             // Create or update the pool member info, depending on whether the pool member exists,
             // and then commit to storage.
             let pool_member_info = match self.get_internal_pool_member_info(:pool_member) {
-                Option::Some(mut pool_member_info) => {
+                Option::Some(pool_member_info) => {
                     // Pool member already exists. Need to update pool_member_info to account for
                     // the accrued rewards and then update the delegated amount.
                     assert!(
@@ -520,7 +520,7 @@ pub mod Pool {
 
         // This function provides the pool member info (with projected rewards).
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
-            let mut pool_member_info = self.internal_pool_member_info(:pool_member);
+            let pool_member_info = self.internal_pool_member_info(:pool_member);
 
             let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
             external_pool_member_info.amount = self.get_amount(:pool_member);
@@ -555,12 +555,12 @@ pub mod Pool {
             ref self: ContractState, rewards: Amount, pool_balance: Amount,
         ) {
             self.assert_caller_is_staking_contract();
-            let latest = match self.rewards_info.deref().latest() {
+            let latest = match self.cumulative_rewards_trace.deref().latest() {
                 Result::Ok((_, latest)) => latest,
                 Result::Err(_) => 0,
             };
             self
-                .rewards_info
+                .cumulative_rewards_trace
                 .deref()
                 .insert(
                     key: self.get_current_epoch(),
@@ -753,7 +753,9 @@ pub mod Pool {
                 trace
                     .insert(
                         key: FIRST_VALID_EPOCH,
-                        value: PoolMemberBalanceTrait::new(:balance, rewards_info_idx: 0),
+                        value: PoolMemberBalanceTrait::new(
+                            :balance, cumulative_rewards_trace_idx: 0,
+                        ),
                     );
                 balance
             }
@@ -764,7 +766,8 @@ pub mod Pool {
         ) {
             let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
             let pool_member_balance = PoolMemberBalanceTrait::new(
-                balance: amount, rewards_info_idx: self.rewards_info_length(),
+                balance: amount,
+                cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length(),
             );
             member_checkpoint.insert(key: self.get_next_epoch(), value: pool_member_balance);
             // TODO: Emit event?
@@ -775,7 +778,8 @@ pub mod Pool {
         ) {
             let current_balance = self.get_or_create_amount(:pool_member);
             let pool_member_balance = PoolMemberBalanceTrait::new(
-                balance: current_balance + amount, rewards_info_idx: self.rewards_info_length(),
+                balance: current_balance + amount,
+                cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length(),
             );
             self
                 .pool_member_epoch_balance
@@ -799,20 +803,22 @@ pub mod Pool {
                         key: current_epoch,
                         value: PoolMemberBalanceTrait::new(
                             balance: current_balance,
-                            rewards_info_idx: self.rewards_info_length() - 1,
+                            cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length()
+                                - 1,
                         ),
                     );
             } else {
                 trace
                     .insert_before_latest(
-                        key: current_epoch, rewards_info_idx: self.rewards_info_length() - 1,
+                        key: current_epoch,
+                        cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length() - 1,
                     );
             }
             // TODO: Emit event?
         }
 
-        fn rewards_info_length(self: @ContractState) -> VecIndex {
-            self.rewards_info.deref().length()
+        fn cumulative_rewards_trace_length(self: @ContractState) -> VecIndex {
+            self.cumulative_rewards_trace.deref().length()
         }
 
         fn calculate_rewards(
@@ -830,7 +836,9 @@ pub mod Pool {
                 // This is the first action of the pool member since contract upgrade.
                 let balance = self.get_amount(:pool_member);
                 let pool_member_checkpoint = PoolMemberCheckpointTrait::new(
-                    epoch: curr_epoch, :balance, rewards_info_idx: self.rewards_info_length() - 1,
+                    epoch: curr_epoch,
+                    :balance,
+                    cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length() - 1,
                 );
                 let sigma = self.find_sigma(pool_member_checkpoint);
                 return (
@@ -897,7 +905,7 @@ pub mod Pool {
             let curr_epoch_checkpoint = PoolMemberCheckpointTrait::new(
                 epoch: curr_epoch,
                 balance: member_balance,
-                rewards_info_idx: self.rewards_info_length() - 1,
+                cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length() - 1,
             );
             if entry_to_claim_from + 1 >= pool_member_trace.length() {
                 // Missing checkpoint for the current epoch.
@@ -916,22 +924,24 @@ pub mod Pool {
         fn find_sigma(
             self: @ContractState, pool_member_checkpoint: PoolMemberCheckpoint,
         ) -> Amount {
-            let rewards_info_vec = self.rewards_info.deref();
-            let rewards_info_idx = pool_member_checkpoint.rewards_info_idx();
+            let cumulative_rewards_trace_vec = self.cumulative_rewards_trace.deref();
+            let cumulative_rewards_trace_idx = pool_member_checkpoint
+                .cumulative_rewards_trace_idx();
 
             // Pool member enter delegation before any rewards given to the pool.
-            if rewards_info_idx == 0 {
+            if cumulative_rewards_trace_idx == 0 {
                 return Zero::zero();
             }
 
             // Next rewards idx was written, and no rewards given to pool from that moment.
-            if rewards_info_vec.length() == rewards_info_idx {
-                let (_, sigma) = rewards_info_vec.at(rewards_info_idx - 1);
+            if cumulative_rewards_trace_vec.length() == cumulative_rewards_trace_idx {
+                let (_, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
                 return sigma;
             }
 
             // Pool member changed balance in epoch j, so j+1 written to pool member checkpoint.
-            let (epoch_at_index, sigma_at_index) = rewards_info_vec.at(rewards_info_idx);
+            let (epoch_at_index, sigma_at_index) = cumulative_rewards_trace_vec
+                .at(cumulative_rewards_trace_idx);
             if pool_member_checkpoint.epoch() > epoch_at_index {
                 // If pool rewards for epoch j given after pool member balance changed, then pool
                 // member is not eligible in this `reward_info_idx` and it is infact the latest one
@@ -939,9 +949,10 @@ pub mod Pool {
                 sigma_at_index
             } else {
                 // Else, the pool rewards index given is for an epoch bigger than j, meaning pool
-                // member is eligible for sigma at `rewards_info_idx` and we should take the
-                // previous entry.
-                let (_, sigma_at_index_minus_one) = rewards_info_vec.at(rewards_info_idx - 1);
+                // member is eligible for sigma at `cumulative_rewards_trace_idx` and we should take
+                // the previous entry.
+                let (_, sigma_at_index_minus_one) = cumulative_rewards_trace_vec
+                    .at(cumulative_rewards_trace_idx - 1);
                 sigma_at_index_minus_one
             }
         }

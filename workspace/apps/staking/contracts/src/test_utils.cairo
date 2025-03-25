@@ -75,6 +75,7 @@ pub(crate) mod constants {
     pub const EPOCH_LENGTH: u16 = 300;
     pub const EPOCH_STARTING_BLOCK: u64 = 463476;
     pub const BLOCK_DURATION: u16 = 30;
+    pub const STARTING_BLOCK_OFFSET: u64 = 0;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         'CALLER_ADDRESS'.try_into().unwrap()
@@ -866,7 +867,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             app_role_admin: APP_ROLE_ADMIN(),
             upgrade_governor: UPGRADE_GOVERNOR(),
             attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
-            attestation_window: MIN_ATTESTATION_WINDOW + 1,
+            attestation_window: MIN_ATTESTATION_WINDOW,
             app_governor: APP_GOVERNOR(),
         };
         let reward_supplier = RewardSupplierInfo {
@@ -1063,7 +1064,7 @@ pub(crate) fn advance_block_into_attestation_window(cfg: StakingInitConfig) {
         epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
         staker_address: cfg.test_info.staker_address.into(),
         epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
-        attestation_window: MIN_ATTESTATION_WINDOW + 1,
+        attestation_window: MIN_ATTESTATION_WINDOW,
     );
-    advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() + 1);
+    advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
 }

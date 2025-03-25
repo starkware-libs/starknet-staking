@@ -3,7 +3,7 @@ use constants::{
     BLOCK_DURATION, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_LENGTH,
     EPOCH_STARTING_BLOCK, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
     OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
-    STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
+    STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -298,33 +298,14 @@ fn test_stake_with_commission_out_of_range() {
 fn test_pool_migration() {}
 
 #[test]
-#[feature("safe_dispatcher")]
-fn test_pool_migration_assertions() {
+#[should_panic(expected: "Staker does not exist")]
+fn test_pool_migration_staker_not_exists() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
-    let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
-        contract_address: staking_contract,
-    };
+    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-
-    // Should catch STAKER_NOT_EXISTS.
-    let result = staking_pool_safe_dispatcher.pool_migration(:staker_address);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
-
-    // Should catch MISSING_POOL_CONTRACT.
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let result = staking_pool_safe_dispatcher.pool_migration(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.describe());
-
-    // Should catch CALLER_IS_NOT_POOL_CONTRACT.
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let commission = cfg.staker_info.get_pool_info().commission;
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.set_open_for_delegation(:commission);
-    let result = staking_pool_safe_dispatcher.pool_migration(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
+    staking_pool_dispatcher.pool_migration(:staker_address);
 }
 
 #[test]
@@ -3262,13 +3243,18 @@ fn test_staking_eic() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let upgrade_governor = cfg.test_info.upgrade_governor;
     let expected_total_stake: Amount = 123;
+    snforge_std::store(
+        target: staking_contract,
+        storage_address: selector!("total_stake"),
+        serialized_value: array![expected_total_stake.into()].span(),
+    );
 
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
         eic_init_data: [
             MAINNET_STAKING_CLASS_HASH_V0().into(), BLOCK_DURATION.into(), EPOCH_LENGTH.into(),
-            expected_total_stake.into(), declare_pool_contract().into(),
+            STARTING_BLOCK_OFFSET.into(), declare_pool_contract().into(),
             cfg.test_info.attestation_contract.into(),
         ]
             .span(),
@@ -3301,7 +3287,7 @@ fn test_staking_eic() {
     let expected_epoch_info = EpochInfoTrait::new(
         block_duration: BLOCK_DURATION,
         epoch_length: EPOCH_LENGTH,
-        starting_block: get_block_number(),
+        starting_block: get_block_number() + STARTING_BLOCK_OFFSET,
     );
     assert!(expected_epoch_info == loaded_epoch_info);
 

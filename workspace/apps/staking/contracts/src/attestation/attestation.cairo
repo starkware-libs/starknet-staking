@@ -82,7 +82,7 @@ pub mod Attestation {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.staking_contract.write(staking_contract);
-        assert!(attestation_window > MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL);
+        assert!(attestation_window >= MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL);
         self.attestation_window.write(attestation_window);
     }
 
@@ -170,7 +170,7 @@ pub mod Attestation {
         fn set_attestation_window(ref self: ContractState, attestation_window: u16) {
             self.roles.only_app_governor();
             assert!(
-                attestation_window > MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL,
+                attestation_window >= MIN_ATTESTATION_WINDOW, "{}", Error::ATTEST_WINDOW_TOO_SMALL,
             );
             let old_attestation_window = self.attestation_window.read();
             self.attestation_window.write(attestation_window);
@@ -245,10 +245,10 @@ pub mod Attestation {
             self: @ContractState, expected_attestation_block: u64, attestation_window: u16,
         ) {
             let current_block_number = get_block_number();
+            let min_block = expected_attestation_block + MIN_ATTESTATION_WINDOW.into();
+            let max_block = expected_attestation_block + attestation_window.into();
             assert!(
-                current_block_number <= expected_attestation_block
-                    + attestation_window.into() && current_block_number > expected_attestation_block
-                    + MIN_ATTESTATION_WINDOW.into(),
+                min_block <= current_block_number && current_block_number <= max_block,
                 "{}",
                 Error::ATTEST_OUT_OF_WINDOW,
             );

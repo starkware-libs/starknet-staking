@@ -203,6 +203,24 @@ fn increase_delegation_after_upgrade_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn change_commission_after_upgrade_regression_test() {
+    let mut flow = flows::ChangeCommissionAfterUpgradeFlow {
+        staker: Option::None, pool_address: Option::None, commission: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_claim_rewards_after_upgrade_regression_test() {
+    let mut flow = flows::DelegatorClaimRewardsAfterUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn delegator_partial_intent_after_upgrade_regression_test() {
     let mut flow = flows::DelegatorPartialIntentAfterUpgradeFlow {
         pool_address: Option::None, delegator: Option::None, delegated_amount: Option::None,
@@ -266,6 +284,23 @@ fn staker_action_after_upgrade_regression_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn pool_migration_assertions_regression_test() {
+    let mut flow = flows::PoolMigrationAssertionsFlow {
+        staker_no_pool: Option::None, staker_with_pool: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn pool_eic_regression_test() {
+    let mut flow = flows::PoolEICFlow { pool_address: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

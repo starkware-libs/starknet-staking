@@ -24,7 +24,7 @@ mod PoolEIC {
         staker_address: ContractAddress,
         // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
         // calculation.
-        rewards_info: Trace,
+        cumulative_rewards_trace: Trace,
     }
 
     #[abi(embed_v0)]
@@ -42,8 +42,8 @@ mod PoolEIC {
                 .pool_migration(staker_address: self.staker_address.read());
             self.final_staker_index.write(Option::Some(final_index));
 
-            // Initialize the rewards info trace.
-            self.rewards_info.deref().insert(key: 0, value: 0);
+            // Initialize the cumulative rewards trace.
+            self.cumulative_rewards_trace.deref().insert(key: 0, value: 0);
         }
     }
 }

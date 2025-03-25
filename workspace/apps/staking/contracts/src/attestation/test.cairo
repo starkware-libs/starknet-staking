@@ -95,7 +95,7 @@ fn test_attest_assertions() {
         epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
         attestation_window: new_attestation_window,
     );
-    advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
+    advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() - 1);
 
     // catch ATTEST_OUT_OF_WINDOW - attest before the attestation window.
     cheat_caller_address_once(
@@ -106,7 +106,7 @@ fn test_attest_assertions() {
 
     // advance past the attestation window.
     advance_block_number_global(
-        blocks: (new_attestation_window - MIN_ATTESTATION_WINDOW + 1).into(),
+        blocks: (new_attestation_window - MIN_ATTESTATION_WINDOW + 2).into(),
     );
 
     // catch ATTEST_OUT_OF_WINDOW - attest after the attestation window.
@@ -129,7 +129,7 @@ fn test_attest_assertions() {
         epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
         attestation_window: new_attestation_window,
     );
-    advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() + 1);
+    advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
     // successful attest.
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
@@ -210,7 +210,7 @@ fn test_constructor() {
         ref state,
         staking_contract: cfg.test_info.staking_contract,
         governance_admin: cfg.test_info.governance_admin,
-        attestation_window: MIN_ATTESTATION_WINDOW + 1,
+        attestation_window: MIN_ATTESTATION_WINDOW,
     );
     assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
 }
@@ -224,7 +224,7 @@ fn test_constructor_assertions() {
         ref state,
         staking_contract: cfg.test_info.staking_contract,
         governance_admin: cfg.test_info.governance_admin,
-        attestation_window: MIN_ATTESTATION_WINDOW,
+        attestation_window: MIN_ATTESTATION_WINDOW - 1,
     );
 }
 
@@ -276,7 +276,7 @@ fn test_validate_next_epoch_attestation_block() {
             epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into() + 1,
             staker_address: cfg.test_info.staker_address.into(),
             epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
-            attestation_window: MIN_ATTESTATION_WINDOW + 1,
+            attestation_window: MIN_ATTESTATION_WINDOW,
         );
     let operational_address = cfg.staker_info.operational_address;
     assert!(
@@ -306,14 +306,14 @@ fn test_set_attestation_window() {
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let old_attestation_window = attestation_dispatcher.attestation_window();
-    assert!(old_attestation_window == MIN_ATTESTATION_WINDOW + 1);
+    assert!(old_attestation_window == MIN_ATTESTATION_WINDOW);
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: cfg.test_info.app_governor,
     );
-    let new_attestation_window = MIN_ATTESTATION_WINDOW + 2;
+    let new_attestation_window = MIN_ATTESTATION_WINDOW + 1;
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
-    assert!(attestation_dispatcher.attestation_window() == MIN_ATTESTATION_WINDOW + 2);
+    assert!(attestation_dispatcher.attestation_window() == MIN_ATTESTATION_WINDOW + 1);
     let events = spy.get_events().emitted_by(contract_address: attestation_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_attestation_window");
     assert_attestation_window_changed_event(
@@ -335,7 +335,7 @@ fn test_set_attestation_window_assertions() {
     );
     // Catch ATTEST_WINDOW_TOO_SMALL.
     let result = attestation_safe_dispatcher
-        .set_attestation_window(attestation_window: MIN_ATTESTATION_WINDOW);
+        .set_attestation_window(attestation_window: MIN_ATTESTATION_WINDOW - 1);
     assert_panic_with_error(:result, expected_error: Error::ATTEST_WINDOW_TOO_SMALL.describe());
 }
 
