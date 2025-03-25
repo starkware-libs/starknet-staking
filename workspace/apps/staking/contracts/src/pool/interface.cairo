@@ -137,12 +137,21 @@ pub mod Events {
 
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub struct PoolMemberInfo {
+    /// Address to send the member's rewards to.
     pub reward_address: ContractAddress,
+    /// The pool member's balance.
     pub amount: Amount,
+    /// Deprecated field previously used in rewards calculation.
     pub index: Index,
+    /// The amount of unclaimed rewards for the pool member.
     pub unclaimed_rewards: Amount,
+    /// The commission the staker takes from the pool rewards.
     pub commission: Commission,
+    /// Amount of funds pending to be removed from the pool.
     pub unpool_amount: Amount,
+    /// If the pool member has shown intent to unpool,
+    /// this is the timestamp of when they could do that.
+    /// Else, it is None.
     pub unpool_time: Option<Timestamp>,
 }
 
@@ -166,10 +175,16 @@ pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1 of Into<
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct PoolContractInfo {
+    /// Address of the staker that owns the pool.
     pub staker_address: ContractAddress,
+    /// Deprecated field previously used in rewards calculation.
     pub final_staker_index: Option<Index>, // TODO: remove?
+    /// Address of the staking contract.
     pub staking_contract: ContractAddress,
+    /// Address of the token contract.
     pub token_address: ContractAddress,
+    /// The commission the staker takes from the pool rewards.
     pub commission: Commission,
+    /// Indicates whether the staker has been removed from the staking contract.
     pub staker_removed: bool,
 }
