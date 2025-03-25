@@ -247,9 +247,7 @@ pub mod Pool {
             }
             pool_member_info.unpool_amount = amount;
             let new_delegated_stake = total_amount - amount;
-            self
-                .pool_member_info
-                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
+            self.write_pool_member_info(:pool_member, :pool_member_info);
 
             // Update the pool member's balance checkpoint.
             self.set_next_epoch_balance(:pool_member, amount: new_delegated_stake);
@@ -310,11 +308,7 @@ pub mod Pool {
                 self.remove_pool_member(:pool_member);
             } else {
                 pool_member_info.unpool_time = Option::None;
-                self
-                    .pool_member_info
-                    .write(
-                        pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info),
-                    );
+                self.write_pool_member_info(:pool_member, :pool_member_info);
             }
 
             unpool_amount
@@ -351,11 +345,7 @@ pub mod Pool {
                 self.remove_pool_member(:pool_member);
             } else {
                 // Write the updated pool member info to storage.
-                self
-                    .pool_member_info
-                    .write(
-                        pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info),
-                    );
+                self.write_pool_member_info(:pool_member, :pool_member_info);
             }
 
             rewards
@@ -381,9 +371,7 @@ pub mod Pool {
                 // unpool_amount is zero, clear unpool_time.
                 pool_member_info.unpool_time = Option::None;
             }
-            self
-                .pool_member_info
-                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
+            self.write_pool_member_info(:pool_member, :pool_member_info);
 
             // Serialize the switch pool data and invoke the staking contract to switch pool.
             let switch_pool_data = SwitchPoolData { pool_member, reward_address };
@@ -470,9 +458,7 @@ pub mod Pool {
                     pool_member_info
                 },
             };
-            self
-                .pool_member_info
-                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
+            self.write_pool_member_info(:pool_member, :pool_member_info);
 
             let new_delegated_stake = self.get_or_create_amount(:pool_member);
 
@@ -505,9 +491,7 @@ pub mod Pool {
 
             // Update reward_address and commit to storage.
             pool_member_info.reward_address = reward_address;
-            self
-                .pool_member_info
-                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
+            self.write_pool_member_info(:pool_member, :pool_member_info);
 
             // Emit event.
             self
@@ -968,6 +952,16 @@ pub mod Pool {
                 .staker_info(staker_address: self.staker_address.read())
                 .get_pool_info()
                 .commission
+        }
+
+        fn write_pool_member_info(
+            ref self: ContractState,
+            pool_member: ContractAddress,
+            pool_member_info: InternalPoolMemberInfoLatest,
+        ) {
+            self
+                .pool_member_info
+                .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
         }
     }
 }
