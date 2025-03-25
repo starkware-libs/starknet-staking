@@ -752,9 +752,9 @@ pub(crate) impl SystemImpl<
             epoch_id: self.staking.get_epoch_info().current_epoch().into(),
             staker_address: staker.staker.address.into(),
             epoch_len: self.staking.get_epoch_info().epoch_len_in_blocks().into(),
-            attestation_window: MIN_ATTESTATION_WINDOW + 1,
+            attestation_window: MIN_ATTESTATION_WINDOW,
         );
-        advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() + 1);
+        advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
     }
 }
 
