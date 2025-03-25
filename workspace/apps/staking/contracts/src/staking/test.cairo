@@ -2036,6 +2036,19 @@ fn test_set_commission_commitment() {
 }
 
 #[test]
+#[should_panic(expected: "Commission commitment not set")]
+fn test_get_staker_commission_commitment_no_commitment() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+    staking_dispatcher.get_staker_commission_commitment(:staker_address);
+}
+
+#[test]
 #[feature("safe_dispatcher")]
 fn test_set_commission_commitment_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
