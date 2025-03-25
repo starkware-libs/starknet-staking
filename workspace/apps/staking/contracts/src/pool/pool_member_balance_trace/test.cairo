@@ -13,20 +13,29 @@ fn test_insert() {
     let mut mock_trace = CONTRACT_STATE();
 
     let (prev, new) = mock_trace
-        .insert(key: 100, value: PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+        .insert(
+            key: 100,
+            value: PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1),
+        );
     assert!(prev == Zero::zero());
-    assert!(new == PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+    assert!(new == PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
 
     let (prev, new) = mock_trace
-        .insert(key: 200, value: PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
-    assert!(prev == PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
-    assert!(new == PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+        .insert(
+            key: 200,
+            value: PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2),
+        );
+    assert!(prev == PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
+    assert!(new == PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
     assert!(mock_trace.length() == 2);
 
     let (prev, new) = mock_trace
-        .insert(key: 200, value: PoolMemberBalanceTrait::new(balance: 500, rewards_info_idx: 5));
-    assert!(prev == PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
-    assert!(new == PoolMemberBalanceTrait::new(balance: 500, rewards_info_idx: 5));
+        .insert(
+            key: 200,
+            value: PoolMemberBalanceTrait::new(balance: 500, cumulative_rewards_trace_idx: 5),
+        );
+    assert!(prev == PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
+    assert!(new == PoolMemberBalanceTrait::new(balance: 500, cumulative_rewards_trace_idx: 5));
     assert!(mock_trace.length() == 2);
 }
 
@@ -35,10 +44,11 @@ fn test_insert() {
 fn test_insert_unordered_insertion() {
     let mut mock_trace = CONTRACT_STATE();
 
-    mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+    mock_trace
+        .insert(200, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
     mock_trace
         .insert(
-            100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1),
+            100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1),
         ); // This should panic
 }
 
@@ -54,12 +64,14 @@ fn test_latest_empty_trace() {
 fn test_latest() {
     let mut mock_trace = CONTRACT_STATE();
 
-    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
-    mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+    mock_trace
+        .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
+    mock_trace
+        .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 
     let (key, value) = mock_trace.latest();
     assert!(key == 200);
-    assert!(value == PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+    assert!(value == PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 }
 
 #[test]
@@ -68,10 +80,12 @@ fn test_length() {
 
     assert!(mock_trace.length() == 0);
 
-    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+    mock_trace
+        .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
     assert!(mock_trace.length() == 1);
 
-    mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+    mock_trace
+        .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
     assert!(mock_trace.length() == 2);
 }
 
@@ -79,12 +93,14 @@ fn test_length() {
 fn test_latest_mutable() {
     let mut mock_trace = CONTRACT_STATE();
 
-    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
-    mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+    mock_trace
+        .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
+    mock_trace
+        .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 
     let (key, value) = mock_trace.latest();
     assert!(key == 200);
-    assert!(value == PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+    assert!(value == PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 }
 
 #[test]
@@ -93,23 +109,25 @@ fn test_length_mutable() {
 
     assert!(mock_trace.length_mutable() == 0);
 
-    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+    mock_trace
+        .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
     assert!(mock_trace.length_mutable() == 1);
 
-    mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+    mock_trace
+        .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
     assert!(mock_trace.length_mutable() == 2);
 }
 
 #[test]
 fn test_balance() {
-    let trace = PoolMemberBalanceTrait::new(balance: 5, rewards_info_idx: 10);
+    let trace = PoolMemberBalanceTrait::new(balance: 5, cumulative_rewards_trace_idx: 10);
     assert!(trace.balance() == 5);
 }
 
 #[test]
-fn test_rewards_info_idx() {
-    let trace = PoolMemberBalanceTrait::new(balance: 5, rewards_info_idx: 10);
-    assert!(trace.rewards_info_idx() == 10);
+fn test_cumulative_rewards_trace_idx() {
+    let trace = PoolMemberBalanceTrait::new(balance: 5, cumulative_rewards_trace_idx: 10);
+    assert!(trace.cumulative_rewards_trace_idx() == 10);
 }
 
 #[test]
@@ -117,7 +135,8 @@ fn test_is_non_empty() {
     let mut mock_trace = CONTRACT_STATE();
     assert!(mock_trace.is_non_empty() == false);
 
-    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+    mock_trace
+        .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
     assert!(mock_trace.is_non_empty() == true);
 }
 
@@ -125,25 +144,28 @@ fn test_is_non_empty_mutable() {
     let mut mock_trace = CONTRACT_STATE();
     assert_eq!(mock_trace.is_non_empty(), false);
 
-    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
+    mock_trace
+        .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
     assert_eq!(mock_trace.is_non_empty(), true);
 }
 
 #[test]
 fn test_at() {
     let mut mock_trace = CONTRACT_STATE();
-    mock_trace.insert(100, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 1));
-    mock_trace.insert(200, PoolMemberBalanceTrait::new(balance: 2000, rewards_info_idx: 2));
+    mock_trace
+        .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
+    mock_trace
+        .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 
     let pool_member_checkpoint = mock_trace.at(0);
     assert!(pool_member_checkpoint.epoch() == 100);
     assert!(pool_member_checkpoint.balance() == 1000);
-    assert!(pool_member_checkpoint.rewards_info_idx() == 1);
+    assert!(pool_member_checkpoint.cumulative_rewards_trace_idx() == 1);
 
     let pool_member_checkpoint = mock_trace.at(1);
     assert!(pool_member_checkpoint.epoch() == 200);
     assert!(pool_member_checkpoint.balance() == 2000);
-    assert!(pool_member_checkpoint.rewards_info_idx() == 2);
+    assert!(pool_member_checkpoint.cumulative_rewards_trace_idx() == 2);
 }
 
 #[test]
@@ -156,10 +178,12 @@ fn test_at_out_of_bounds() {
 
 #[test]
 fn test_pool_member_checkpoint_getters() {
-    let trace = PoolMemberCheckpointTrait::new(epoch: 100, balance: 5, rewards_info_idx: 10);
+    let trace = PoolMemberCheckpointTrait::new(
+        epoch: 100, balance: 5, cumulative_rewards_trace_idx: 10,
+    );
     assert!(trace.epoch() == 100);
     assert!(trace.balance() == 5);
-    assert!(trace.rewards_info_idx() == 10);
+    assert!(trace.cumulative_rewards_trace_idx() == 10);
 }
 
 #[test]
@@ -167,59 +191,59 @@ fn test_insert_before_latest() {
     let mut mock_trace = CONTRACT_STATE();
 
     // Test when length is 1.
-    mock_trace.insert(1, PoolMemberBalanceTrait::new(balance: 1, rewards_info_idx: 1));
-    mock_trace.insert_before_latest(key: 0, rewards_info_idx: 0);
+    mock_trace.insert(1, PoolMemberBalanceTrait::new(balance: 1, cumulative_rewards_trace_idx: 1));
+    mock_trace.insert_before_latest(key: 0, cumulative_rewards_trace_idx: 0);
 
     assert!(mock_trace.length() == 2);
 
     let (key, value) = mock_trace.latest();
     assert!(key == 1);
-    assert!(value == PoolMemberBalanceTrait::new(balance: 1, rewards_info_idx: 1));
+    assert!(value == PoolMemberBalanceTrait::new(balance: 1, cumulative_rewards_trace_idx: 1));
 
     let pool_member_checkpoint = mock_trace.at(0);
     assert!(pool_member_checkpoint.epoch() == 0);
     assert!(pool_member_checkpoint.balance() == 0);
-    assert!(pool_member_checkpoint.rewards_info_idx() == 0);
+    assert!(pool_member_checkpoint.cumulative_rewards_trace_idx() == 0);
 
     // Test when key already exists.
-    mock_trace.insert(2, PoolMemberBalanceTrait::new(balance: 2, rewards_info_idx: 2));
-    mock_trace.insert_before_latest(key: 1, rewards_info_idx: 3);
+    mock_trace.insert(2, PoolMemberBalanceTrait::new(balance: 2, cumulative_rewards_trace_idx: 2));
+    mock_trace.insert_before_latest(key: 1, cumulative_rewards_trace_idx: 3);
 
     assert!(mock_trace.length() == 3);
 
     let (key, value) = mock_trace.latest();
     assert!(key == 2);
-    assert!(value == PoolMemberBalanceTrait::new(balance: 2, rewards_info_idx: 2));
+    assert!(value == PoolMemberBalanceTrait::new(balance: 2, cumulative_rewards_trace_idx: 2));
 
     let pool_member_checkpoint = mock_trace.at(1);
     assert!(pool_member_checkpoint.epoch() == 1);
     assert!(pool_member_checkpoint.balance() == 1);
-    assert!(pool_member_checkpoint.rewards_info_idx() == 3);
+    assert!(pool_member_checkpoint.cumulative_rewards_trace_idx() == 3);
 
     let pool_member_checkpoint = mock_trace.at(0);
     assert!(pool_member_checkpoint.epoch() == 0);
     assert!(pool_member_checkpoint.balance() == 0);
-    assert!(pool_member_checkpoint.rewards_info_idx() == 0);
+    assert!(pool_member_checkpoint.cumulative_rewards_trace_idx() == 0);
 
     // Test when key does not exist.
-    mock_trace.insert(4, PoolMemberBalanceTrait::new(balance: 4, rewards_info_idx: 4));
-    mock_trace.insert_before_latest(3, rewards_info_idx: 3);
+    mock_trace.insert(4, PoolMemberBalanceTrait::new(balance: 4, cumulative_rewards_trace_idx: 4));
+    mock_trace.insert_before_latest(3, cumulative_rewards_trace_idx: 3);
 
     assert!(mock_trace.length() == 5);
 
     let (key, value) = mock_trace.latest();
     assert!(key == 4);
-    assert!(value == PoolMemberBalanceTrait::new(balance: 4, rewards_info_idx: 4));
+    assert!(value == PoolMemberBalanceTrait::new(balance: 4, cumulative_rewards_trace_idx: 4));
 
     let pool_member_checkpoint = mock_trace.at(3);
     assert!(pool_member_checkpoint.epoch() == 3);
     assert!(pool_member_checkpoint.balance() == 2);
-    assert!(pool_member_checkpoint.rewards_info_idx() == 3);
+    assert!(pool_member_checkpoint.cumulative_rewards_trace_idx() == 3);
 
     let pool_member_checkpoint = mock_trace.at(2);
     assert!(pool_member_checkpoint.epoch() == 2);
     assert!(pool_member_checkpoint.balance() == 2);
-    assert!(pool_member_checkpoint.rewards_info_idx() == 2);
+    assert!(pool_member_checkpoint.cumulative_rewards_trace_idx() == 2);
 }
 
 #[test]
@@ -227,7 +251,7 @@ fn test_insert_before_latest() {
 fn test_insert_before_latest_empty_trace() {
     let mut mock_trace = CONTRACT_STATE();
 
-    mock_trace.insert_before_latest(key: 0, rewards_info_idx: 1);
+    mock_trace.insert_before_latest(key: 0, cumulative_rewards_trace_idx: 1);
 }
 
 #[test]
@@ -235,6 +259,7 @@ fn test_insert_before_latest_empty_trace() {
 fn test_insert_before_latest_wrong_key() {
     let mut mock_trace = CONTRACT_STATE();
 
-    mock_trace.insert(1, PoolMemberBalanceTrait::new(balance: 1000, rewards_info_idx: 2));
-    mock_trace.insert_before_latest(key: 1, rewards_info_idx: 3);
+    mock_trace
+        .insert(1, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 2));
+    mock_trace.insert_before_latest(key: 1, cumulative_rewards_trace_idx: 3);
 }

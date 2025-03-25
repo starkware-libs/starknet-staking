@@ -1537,7 +1537,7 @@ fn test_pool_eic() {
         .span();
     let final_staker_index: Option<Index> = deserialize_option(ref span_final_staker_index);
     assert!(final_staker_index == Option::Some(final_index));
-    // TODO: Test rewards_info.
+    // TODO: Test cumulative_rewards_trace.
 }
 
 #[test]
