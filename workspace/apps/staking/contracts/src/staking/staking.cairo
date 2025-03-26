@@ -517,7 +517,16 @@ pub mod Staking {
         }
 
         fn get_current_total_staking_power(self: @ContractState) -> Amount {
-            self.total_stake_trace.deref().upper_lookup(key: self.get_current_epoch())
+            let total_stake_trace = self.total_stake_trace.deref();
+            let current_epoch = self.get_current_epoch();
+            let (epoch, total_stake) = total_stake_trace.latest().unwrap();
+            if epoch <= current_epoch {
+                return total_stake;
+            }
+
+            let (epoch, total_stake) = total_stake_trace.penultimate().unwrap();
+            assert!(epoch <= current_epoch, "{}", Error::INVALID_PENULTIMATE);
+            total_stake
         }
 
         fn get_pool_exit_intent(

@@ -20,10 +20,10 @@ use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
-use starkware_utils::test_utils::{
+use starkware_utils::types::time::time::Time;
+use starkware_utils_testing::test_utils::{
     TokenTrait, assert_panic_with_error, set_account_as_upgrade_governor,
 };
-use starkware_utils::types::time::time::Time;
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true

@@ -98,8 +98,7 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
     fn penultimate(self: StoragePath<StakerBalanceTrace>) -> (Epoch, StakerBalance) {
         let checkpoints = self.checkpoints;
         let len = checkpoints.len();
-        // TODO: consider move this error to trace errors.
-        assert!(len > 1, "{}", Error::PENULTIMATE_NOT_EXIST);
+        assert!(len > 1, "{}", TraceErrors::PENULTIMATE_NOT_EXIST);
         let checkpoint = checkpoints[len - 2].read();
         (checkpoint.key, checkpoint.value)
     }

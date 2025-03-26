@@ -7,8 +7,8 @@ use staking::flow_test::utils::{
 };
 use staking::test_utils::StakingInitConfig;
 use starkware_utils::math::abs::wide_abs_diff;
-use starkware_utils::test_utils::TokenTrait;
 use starkware_utils::types::time::time::Time;
+use starkware_utils_testing::test_utils::TokenTrait;
 
 #[test]
 fn basic_stake_flow_test() {

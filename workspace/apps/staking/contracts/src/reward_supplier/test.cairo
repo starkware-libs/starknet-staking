@@ -32,10 +32,10 @@ use staking::utils::compute_threshold;
 use starknet::Store;
 use starkware_utils::errors::Describable;
 use starkware_utils::math::utils::ceil_of_division;
-use starkware_utils::test_utils::{
+use starkware_utils::types::time::time::Time;
+use starkware_utils_testing::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
-use starkware_utils::types::time::time::Time;
 use test_utils::{
     StakingInitConfig, advance_epoch_global, deploy_minting_curve_contract,
     deploy_mock_erc20_contract, deploy_staking_contract, fund, general_contract_system_deployment,

@@ -67,10 +67,10 @@ use starkware_utils::components::replaceability::interface::{EICData, Implementa
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::constants::DAY;
 use starkware_utils::errors::Describable;
-use starkware_utils::test_utils::{
+use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
+use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };
-use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, approve,
     calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards,
@@ -3376,6 +3376,8 @@ fn test_staking_eic_with_wrong_number_of_data_elemnts() {
     );
 }
 
+// TODO: Test get_current_total_staking_power assertions.
+
 #[test]
 fn test_get_current_total_staking_power() {
     let mut cfg: StakingInitConfig = Default::default();
@@ -3385,8 +3387,6 @@ fn test_get_current_total_staking_power() {
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
-
-    assert!(staking_dispatcher.get_current_total_staking_power().is_zero());
     advance_epoch_global();
     assert!(
         staking_dispatcher

@@ -43,12 +43,12 @@ use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::constants::{NAME, SYMBOL};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::mul_wide_and_div;
-use starkware_utils::test_utils::{
+use starkware_utils::types::time::time::{TimeDelta, Timestamp};
+use starkware_utils_testing::test_utils::{
     advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
     set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
     set_account_as_token_admin, set_account_as_upgrade_governor,
 };
-use starkware_utils::types::time::time::{TimeDelta, Timestamp};
 
 pub(crate) mod constants {
     use core::cmp::max;
