@@ -6,33 +6,70 @@ use starkware_utils::types::time::time::Timestamp;
 
 #[starknet::interface]
 pub trait IPool<TContractState> {
+    /// Add a new pool member to the delegation pool with `amount` starting funds.
     fn enter_delegation_pool(
         ref self: TContractState, reward_address: ContractAddress, amount: Amount,
     );
+
+    /// Increase the funds for `pool_member` by `amount`.
+    /// Return the updated total amount.
     fn add_to_delegation_pool(
         ref self: TContractState, pool_member: ContractAddress, amount: Amount,
     ) -> Amount;
+
+    /// Inform of the intent to exit the stake. This will deduct `amount` funds from the stake.
+    /// Rewards collection for the `amount` deducted will be paused.
+    /// This will also start the exit window timeout.
     fn exit_delegation_pool_intent(ref self: TContractState, amount: Amount);
+
+    /// Executes the intent to exit the stake if enough time have passed.
+    /// Transfers the funds back to `pool_member`.
+    /// Return the amount of tokens transferred back to `pool_member`.
     fn exit_delegation_pool_action(
         ref self: TContractState, pool_member: ContractAddress,
     ) -> Amount;
+
+    /// Calculate and update `pool_member`'s rewards,
+    /// then transfer them to the reward address.
+    /// Return the amount transferred to the reward address.
     fn claim_rewards(ref self: TContractState, pool_member: ContractAddress) -> Amount;
+
+    /// Move `amount` funds of a pool member to `to_staker`'s pool `to_pool`.
+    /// Return the amount left in exit window for the pool member in this pool.
     fn switch_delegation_pool(
         ref self: TContractState,
         to_staker: ContractAddress,
         to_pool: ContractAddress,
         amount: Amount,
     ) -> Amount;
+
+    /// Entry point for staking contract to inform pool of a pool member
+    /// moving `amount` funds from another pool to this one.
+    /// No funds need to be transferred since staking contract holds the pool funds.
     fn enter_delegation_pool_from_staking_contract(
         ref self: TContractState, amount: Amount, data: Span<felt252>,
     );
+
+    /// Informs the delegation pool contract that the staker has left.
     fn set_staker_removed(ref self: TContractState);
+
+    /// Change the `reward_address` for a pool member.
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
+
+    /// Return `PoolMemberInfo` of `pool_member`.
     fn pool_member_info(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
+
+    /// Return `Option<PoolMemberInfo>` of `pool_member``
+    /// without throwing an error or panicking.
     fn get_pool_member_info(
         self: @TContractState, pool_member: ContractAddress,
     ) -> Option<PoolMemberInfo>;
+
+    /// Return `PoolContractInfo` of the contract.
     fn contract_parameters(self: @TContractState) -> PoolContractInfo;
+
+    /// Update the cumulative sum in the pool trace with
+    /// `rewards` divided by `pool_balance` for the current epoch.
     fn update_rewards_from_staking_contract(
         ref self: TContractState, rewards: Amount, pool_balance: Amount,
     );
