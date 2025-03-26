@@ -959,7 +959,7 @@ pub mod Staking {
             // Send rewards to pool contract, and commit to storage.
             // Note: `_deprecated_send_rewards_to_delegation_pool_V0` alters `staker_info` thus
             // commit to storage is performed only after that.
-            let updated_index = staker_info._deprecated_index;
+            let updated_index = staker_info._deprecated_index_V0;
             let token_dispatcher = self.token_dispatcher.read();
             self
                 ._deprecated_send_rewards_to_delegation_pool_V0(

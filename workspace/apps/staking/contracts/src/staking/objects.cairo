@@ -215,8 +215,8 @@ pub(crate) struct InternalStakerInfoV1 {
     // **Note**: This field was used in V0 and is replaced by `staker_balance_trace` in V1.
     pub(crate) _deprecated_amount_own: Amount,
     // **Note**: This field was used in V0 and no longer in use in the new rewards mechanism
-    // introduced in V1.
-    pub(crate) _deprecated_index: Index,
+    // introduced in V1. Still in use in `pool_migration`.
+    pub(crate) _deprecated_index_V0: Index,
     pub(crate) unclaimed_rewards_own: Amount,
     pub(crate) pool_info: Option<StakerPoolInfo>,
     pub(crate) commission_commitment: Option<CommissionCommitment>,
@@ -244,7 +244,7 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
             operational_address: staker_info.operational_address,
             unstake_time: staker_info.unstake_time,
             _deprecated_amount_own: staker_info.amount_own,
-            _deprecated_index: staker_info.index,
+            _deprecated_index_V0: staker_info.index,
             unclaimed_rewards_own: staker_info.unclaimed_rewards_own,
             pool_info: staker_info.pool_info,
             // This assumes that the function is called only during migration. in a different
@@ -272,7 +272,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 operational_address,
                 unstake_time: Option::None,
                 _deprecated_amount_own: Zero::zero(),
-                _deprecated_index: Zero::zero(),
+                _deprecated_index_V0: Zero::zero(),
                 unclaimed_rewards_own: Zero::zero(),
                 pool_info,
                 commission_commitment: Option::None,

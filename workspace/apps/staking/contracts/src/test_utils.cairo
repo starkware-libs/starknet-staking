@@ -864,7 +864,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
             _deprecated_amount_own: STAKE_AMOUNT,
-            _deprecated_index: Zero::zero(),
+            _deprecated_index_V0: Zero::zero(),
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(
                 StakerPoolInfoTrait::new(
