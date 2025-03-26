@@ -467,7 +467,7 @@ pub mod Staking {
             let mut staker_info = self.internal_staker_info(:staker_address);
             staker_info._deprecated_amount_own = self.get_balance(:staker_address).amount_own();
             if let Option::Some(mut pool_info) = staker_info.pool_info {
-                let pool_amount = self.get_total_amount(:staker_address)
+                let pool_amount = self.get_balance(:staker_address).total_amount()
                     - self.get_balance(:staker_address).amount_own();
                 pool_info._set_deprecated_amount(pool_amount);
                 staker_info.pool_info = Option::Some(pool_info);
@@ -1451,18 +1451,6 @@ pub mod Staking {
             assert!(trace.is_non_empty(), "{}", Error::STAKER_BALANCE_NOT_INITIALIZED);
             let (_, staker_balance) = trace.latest();
             staker_balance
-        }
-
-        fn get_total_amount(self: @ContractState, staker_address: ContractAddress) -> Amount {
-            // After upgrading to V1, `staker_balance_trace` can be uninitialized.
-            // If initialized, return the `amount_own` recorded in the trace, which reflects the
-            // latest staked amount. Otherwise, return `staker_info.amount_own`.
-            let trace = self.staker_balance_trace.entry(key: staker_address);
-            if trace.is_non_empty() {
-                let (_, staker_balance) = trace.latest();
-                return staker_balance.total_amount();
-            }
-            self.internal_staker_info(:staker_address)._deprecated_get_total_amount()
         }
 
         /// **Note**: This function should be called only once during migration.

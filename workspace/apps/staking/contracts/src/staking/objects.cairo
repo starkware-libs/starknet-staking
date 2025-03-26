@@ -302,15 +302,6 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
     fn get_pool_info(self: @InternalStakerInfoLatest) -> StakerPoolInfo {
         (*self.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
-
-    fn _deprecated_get_total_amount(self: @InternalStakerInfoLatest) -> Amount {
-        /// This is used in V0 to get the total amount of the staker.
-        /// In V1, we use `get_total_amount` instead.
-        if let Option::Some(pool_info) = *self.pool_info {
-            return pool_info._deprecated_amount() + *self._deprecated_amount_own;
-        }
-        (*self._deprecated_amount_own)
-    }
 }
 
 impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, StakerInfo> {
