@@ -236,10 +236,10 @@ pub(crate) enum VersionedInternalStakerInfo {
 pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
     fn convert(
         self: InternalStakerInfo, prev_class_hash: ClassHash, staker_address: ContractAddress,
-    ) -> InternalStakerInfoV1 {
+    ) -> (InternalStakerInfoV1, Amount) {
         let library_dispatcher = IStakingLibraryDispatcher { class_hash: prev_class_hash };
         let staker_info = library_dispatcher.staker_info(staker_address);
-        InternalStakerInfoV1 {
+        let internal_staker_info_v1 = InternalStakerInfoV1 {
             reward_address: staker_info.reward_address,
             operational_address: staker_info.operational_address,
             unstake_time: staker_info.unstake_time,
@@ -250,7 +250,8 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
             // This assumes that the function is called only during migration. in a different
             // context, the commission commitment will be lost.
             commission_commitment: Option::None,
-        }
+        };
+        (internal_staker_info_v1, staker_info.amount_own)
     }
 }
 

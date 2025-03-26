@@ -464,15 +464,16 @@ pub mod Staking {
         // This function provides the staker info (with projected rewards).
         // If the staker does not exist, it panics.
         fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
-            let mut staker_info = self.internal_staker_info(:staker_address);
-            staker_info._deprecated_amount_own = self.get_balance(:staker_address).amount_own();
-            if let Option::Some(mut pool_info) = staker_info.pool_info {
+            let mut internal_staker_info = self.internal_staker_info(:staker_address);
+            if let Option::Some(mut pool_info) = internal_staker_info.pool_info {
                 let pool_amount = self.get_balance(:staker_address).total_amount()
                     - self.get_balance(:staker_address).amount_own();
                 pool_info._set_deprecated_amount(pool_amount);
-                staker_info.pool_info = Option::Some(pool_info);
+                internal_staker_info.pool_info = Option::Some(pool_info);
             }
-            staker_info.into()
+            let mut staker_info: StakerInfo = internal_staker_info.into();
+            staker_info.amount_own = self.get_balance(:staker_address).amount_own();
+            staker_info
         }
 
         // This function provides the staker info (with projected rewards) wrapped in an Option.
@@ -703,7 +704,7 @@ pub mod Staking {
                     err: @GenericError::STAKER_NOT_EXISTS.describe(),
                 ),
                 VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
-                    let internal_staker_info_v1 = internal_staker_info_v0
+                    let (internal_staker_info_v1, amount_own) = internal_staker_info_v0
                         .convert(self.get_prev_class_hash(), staker_address);
                     self
                         .staker_info
@@ -711,7 +712,7 @@ pub mod Staking {
                             staker_address,
                             VersionedInternalStakerInfo::V1(internal_staker_info_v1),
                         );
-                    self.initialize_staker_balance_trace(:staker_address);
+                    self.initialize_staker_balance_trace(:staker_address, :amount_own);
                     internal_staker_info_v1
                 },
                 VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
@@ -1455,11 +1456,10 @@ pub mod Staking {
 
         /// **Note**: This function should be called only once during migration.
         fn initialize_staker_balance_trace(
-            ref self: ContractState, staker_address: ContractAddress,
+            ref self: ContractState, staker_address: ContractAddress, amount_own: Amount,
         ) -> StakerBalance {
             let staker_info = self.internal_staker_info(:staker_address);
-            let amount_own = staker_info._deprecated_amount_own;
-            let mut staker_balance = StakerBalanceTrait::new(amount_own: amount_own);
+            let mut staker_balance = StakerBalanceTrait::new(:amount_own);
             if let Option::Some(pool_info) = staker_info.pool_info {
                 let pool_amount = pool_info._deprecated_amount();
                 staker_balance.update_pool_amount(new_amount: pool_amount);
