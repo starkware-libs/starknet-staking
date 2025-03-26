@@ -130,7 +130,6 @@ pub mod RewardSupplier {
             yearly_mint / epochs_in_year.into()
         }
 
-        // TODO: emit events
         fn update_unclaimed_rewards_from_staking_contract(
             ref self: ContractState, rewards: Amount,
         ) {
@@ -202,8 +201,6 @@ pub mod RewardSupplier {
 
         fn contract_parameters(self: @ContractState) -> RewardSupplierInfo {
             RewardSupplierInfo {
-                // TODO: last_timestamp is deprecated, should be removed.
-                last_timestamp: Zero::zero(),
                 unclaimed_rewards: self.unclaimed_rewards.read(),
                 l1_pending_requested_amount: self.l1_pending_requested_amount.read(),
             }

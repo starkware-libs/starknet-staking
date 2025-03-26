@@ -143,9 +143,7 @@ fn test_contract_parameters() {
     start_cheat_block_timestamp_global(block_timestamp: block_timestamp.into());
     let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     let expected_info = RewardSupplierInfo {
-        last_timestamp: Zero::zero(),
-        unclaimed_rewards: STRK_IN_FRIS,
-        l1_pending_requested_amount: Zero::zero(),
+        unclaimed_rewards: STRK_IN_FRIS, l1_pending_requested_amount: Zero::zero(),
     };
     assert!(state.contract_parameters() == expected_info);
 }

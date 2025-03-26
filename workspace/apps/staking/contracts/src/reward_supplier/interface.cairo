@@ -32,7 +32,6 @@ pub mod Events {
 
 #[derive(Debug, Copy, Drop, Serde, PartialEq)]
 pub struct RewardSupplierInfo {
-    pub last_timestamp: Timestamp,
     pub unclaimed_rewards: Amount,
     pub l1_pending_requested_amount: Amount,
 }
