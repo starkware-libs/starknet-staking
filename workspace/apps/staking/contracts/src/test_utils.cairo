@@ -503,7 +503,7 @@ pub(crate) fn stake_for_testing(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info._deprecated_amount_own,
+            cfg.test_info.stake_amount,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -521,7 +521,7 @@ pub(crate) fn stake_for_testing_using_dispatcher(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info._deprecated_amount_own,
+            cfg.test_info.stake_amount,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -538,7 +538,7 @@ pub(crate) fn stake_from_zero_address(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info._deprecated_amount_own,
+            cfg.test_info.stake_amount,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -826,6 +826,7 @@ pub(crate) struct TestInfo {
     pub staker_initial_balance: Amount,
     pub pool_member_initial_balance: Amount,
     pub pool_enabled: bool,
+    pub stake_amount: Amount,
     pub staking_contract: ContractAddress,
     pub pool_contract_admin: ContractAddress,
     pub security_admin: ContractAddress,
@@ -863,7 +864,6 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
-            _deprecated_amount_own: STAKE_AMOUNT,
             _deprecated_index_V0: Zero::zero(),
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(
@@ -905,6 +905,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pool_enabled: false,
+            stake_amount: STAKE_AMOUNT,
             staking_contract: STAKING_CONTRACT_ADDRESS(),
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
             security_admin: SECURITY_ADMIN(),
@@ -1106,7 +1107,7 @@ pub(crate) fn calculate_block_offset(
 pub(crate) fn advance_block_into_attestation_window(cfg: StakingInitConfig) {
     // calculate block offset and move the block number forward.
     let block_offset = calculate_block_offset(
-        stake: cfg.staker_info._deprecated_amount_own.into(),
+        stake: cfg.test_info.stake_amount.into(),
         epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
         staker_address: cfg.test_info.staker_address.into(),
         epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),

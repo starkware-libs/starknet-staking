@@ -212,8 +212,6 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) reward_address: ContractAddress,
     pub(crate) operational_address: ContractAddress,
     pub(crate) unstake_time: Option<Timestamp>,
-    // **Note**: This field was used in V0 and is replaced by `staker_balance_trace` in V1.
-    pub(crate) _deprecated_amount_own: Amount,
     // **Note**: This field was used in V0 and no longer in use in the new rewards mechanism
     // introduced in V1. Still in use in `pool_migration`.
     pub(crate) _deprecated_index_V0: Index,
@@ -243,7 +241,6 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
             reward_address: staker_info.reward_address,
             operational_address: staker_info.operational_address,
             unstake_time: staker_info.unstake_time,
-            _deprecated_amount_own: staker_info.amount_own,
             _deprecated_index_V0: staker_info.index,
             unclaimed_rewards_own: staker_info.unclaimed_rewards_own,
             pool_info: staker_info.pool_info,
@@ -272,7 +269,6 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 reward_address,
                 operational_address,
                 unstake_time: Option::None,
-                _deprecated_amount_own: Zero::zero(),
                 _deprecated_index_V0: Zero::zero(),
                 unclaimed_rewards_own: Zero::zero(),
                 pool_info,
@@ -311,7 +307,7 @@ impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, St
             reward_address: self.reward_address,
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
-            amount_own: self._deprecated_amount_own,
+            amount_own: Zero::zero(),
             index: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,

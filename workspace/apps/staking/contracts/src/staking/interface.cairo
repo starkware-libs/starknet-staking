@@ -411,7 +411,6 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalS
             reward_address: self.reward_address,
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
-            _deprecated_amount_own: self.amount_own,
             _deprecated_index_V0: self.index,
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,

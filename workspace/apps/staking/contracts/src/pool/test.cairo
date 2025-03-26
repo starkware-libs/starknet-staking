@@ -154,7 +154,7 @@ fn test_enter_delegation_pool() {
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let balance = token_dispatcher.balance_of(staking_contract);
     assert!(
-        balance == cfg.staker_info._deprecated_amount_own.into()
+        balance == cfg.test_info.stake_amount.into()
             + cfg.pool_member_info._deprecated_amount.into(),
     );
     let balance = token_dispatcher.balance_of(pool_contract);
@@ -169,7 +169,7 @@ fn test_enter_delegation_pool() {
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
         unstake_time: Option::None,
-        amount_own: cfg.staker_info._deprecated_amount_own,
+        amount_own: cfg.test_info.stake_amount,
         index: cfg.staker_info._deprecated_index_V0,
         unclaimed_rewards_own: 0,
         pool_info: Option::Some(expected_pool_info),
@@ -630,6 +630,7 @@ fn test_exit_delegation_pool_intent() {
         pool_info.pool_contract = pool_contract;
         expected_staker_info.pool_info = Option::Some(pool_info);
     }
+    expected_staker_info.amount_own = cfg.test_info.stake_amount;
     assert!(staking_dispatcher.staker_info(cfg.test_info.staker_address) == expected_staker_info);
     // Validate that the data is written in the exit intents map in staking contract.
     let undelegate_intent_key = UndelegateIntentKey {

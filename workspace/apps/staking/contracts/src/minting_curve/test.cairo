@@ -24,7 +24,7 @@ fn test_yearly_mint() {
         contract_address: minting_curve_contract,
     };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let total_stake = cfg.staker_info._deprecated_amount_own;
+    let total_stake = cfg.test_info.stake_amount;
     let total_supply: Amount = cfg
         .test_info
         .initial_supply
