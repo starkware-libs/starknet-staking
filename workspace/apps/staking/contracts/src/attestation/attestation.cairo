@@ -54,6 +54,12 @@ pub mod Attestation {
         staker_last_attested_epoch: Map<ContractAddress, Epoch>,
         // Number of blocks where the staker can attest after the target attestation block.
         // Note: that it still needs to be after the minimum attestation window.
+        //
+        // Example:
+        // - target attestation block = x,
+        // - minimum attestation window = 11,
+        // - attestation window = 20,
+        // - staker can attest in blocks [x+11, x+20].
         attestation_window: u16,
     }
 
