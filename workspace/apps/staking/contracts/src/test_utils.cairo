@@ -1085,6 +1085,47 @@ pub(crate) fn calculate_pool_rewards(
     pool_rewards
 }
 
+/// Calculate pool rewards for one epoch for the given pool balance and staker balance.
+pub(crate) fn calculate_pool_rewards_with_pool_balance(
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+    pool_balance: Amount,
+    staker_balance: Amount,
+) -> Amount {
+    // Get epoch rewards.
+    let epoch_rewards = current_epoch_rewards(:staking_contract, :minting_curve_contract);
+    // Calculate staker total rewards.
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let total_amount = staker_balance + pool_balance;
+    let total_rewards = mul_wide_and_div(
+        lhs: epoch_rewards,
+        rhs: total_amount,
+        div: staking_dispatcher.get_current_total_staking_power(),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    // Calculate staker own rewards.
+    let own_rewards = mul_wide_and_div(lhs: total_rewards, rhs: staker_balance, div: total_amount)
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    let pool_rewards_including_commission = total_rewards - own_rewards;
+    let commission_rewards = get_staker_commission_rewards(
+        :staker_info, pool_rewards: pool_rewards_including_commission,
+    );
+    let staker_rewards = own_rewards + commission_rewards;
+    // Calculate pool rewards.
+    let pool_rewards = total_rewards - staker_rewards;
+    pool_rewards
+}
+
+/// Calculate pool member rewards given the pool rewards, pool member balance and pool balance.
+pub(crate) fn calculate_pool_member_rewards(
+    pool_rewards: Amount, pool_member_balance: Amount, pool_balance: Amount,
+) -> Amount {
+    mul_wide_and_div(lhs: pool_member_balance, rhs: pool_rewards, div: pool_balance)
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+}
+
 /// Calculates the block offset required to advance from the starting block into the attestation
 /// window.
 pub(crate) fn calculate_block_offset(

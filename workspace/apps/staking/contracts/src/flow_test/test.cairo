@@ -319,6 +319,12 @@ fn convert_internal_staker_info_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+fn change_balance_claim_rewards_flow_test() {
+    let mut flow = flows::ChangeBalanceClaimRewardsFlow {};
+    test_flow_local(:flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

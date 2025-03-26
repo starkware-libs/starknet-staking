@@ -12,10 +12,12 @@ use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::StakerInfo;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
 use staking::test_utils::{
-    calculate_pool_rewards, declare_pool_contract, declare_pool_eic_contract, deserialize_option,
-    pool_update_rewards, staker_update_rewards,
+    calculate_pool_member_rewards, calculate_pool_rewards, calculate_pool_rewards_with_pool_balance,
+    declare_pool_contract, declare_pool_eic_contract, deserialize_option, pool_update_rewards,
+    staker_update_rewards,
 };
 use staking::types::{Amount, Commission, Index};
+use staking::utils::{compute_global_index_diff, compute_rewards_rounded_down};
 use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::{Describable, ErrorDisplay};
@@ -2399,6 +2401,229 @@ pub(crate) impl ConvertInternalStakerInfoFlowImpl<
         let actual_internal_staker_info = system.internal_staker_info(:staker);
         assert!(actual_internal_staker_info == converted_internal_staker_info);
         // TODO: Test initialization of staker balance trace.
+    }
+}
+
+/// Test pool member change balance calculate rewards flow.
+/// Flow:
+/// Staker stake with pool
+/// advance epoch and attest
+/// Delegator1 delegate
+/// advance epoch and attest
+/// Delegator2 delegate
+/// advance epoch and attest
+/// Delegator1 increase delegate - Cover already got rewards for current epoch
+/// advance epoch
+/// Delegator1 increase delegate - Cover still didnt get rewards for current epoch
+/// attest
+/// advance epoch
+/// Delegator1 increase delegate - Cover no rewards at all for current epoch
+/// advance epoch
+/// advance epoch and attest
+/// Delegator1 exit intent full amount - Cover balance change to zero
+/// advance epoch and attest
+/// Delegator1 exit intent partial amount - Cover balance change to non-zero
+/// advance epoch and attest
+/// advance epoch and attest
+/// Delegator1 exit action
+/// Delegator1 increase delegate - Cover more than one reward between balance changes
+/// advance epoch and attest
+/// advance epoch
+/// Delegator1 pool_member_info (calculate_rewards)
+/// Delegator2 pool_member_info (calculate_rewards)
+/// Delegator1 claim_rewards
+/// Delegator2 claim_rewards
+#[derive(Drop, Copy)]
+pub(crate) struct ChangeBalanceClaimRewardsFlow {}
+pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<ChangeBalanceClaimRewardsFlow, TTokenState> {
+    fn get_pool_address(self: ChangeBalanceClaimRewardsFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: ChangeBalanceClaimRewardsFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: ChangeBalanceClaimRewardsFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: ChangeBalanceClaimRewardsFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount);
+        let staker_address = staker.staker.address;
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        system.advance_epoch_and_attest(:staker);
+
+        let mut delegator_1_rewards: Amount = 0;
+        let mut delegator_2_rewards: Amount = 0;
+        let mut pool_balance: Amount = 0;
+        let mut sigma: Amount = 0;
+
+        let delegator_1 = system.new_delegator(amount: stake_amount);
+        let mut delegated_amount_1 = stake_amount / 4;
+        system.delegate(delegator: delegator_1, :pool, amount: delegated_amount_1);
+
+        system.advance_epoch_and_attest(:staker);
+        // Delelgator 1 is the only delegator in the pool.
+        pool_balance += delegated_amount_1;
+        delegator_1_rewards +=
+            calculate_pool_rewards(:staker_address, :staking_contract, :minting_curve_contract);
+
+        let delegated_amount_2 = delegated_amount_1;
+        let delegator_2 = system.new_delegator(amount: delegated_amount_2);
+        system.delegate(delegator: delegator_2, :pool, amount: delegated_amount_2);
+
+        system.advance_epoch_and_attest(:staker);
+        pool_balance += delegated_amount_2;
+        let pool_rewards = calculate_pool_rewards(
+            :staker_address, :staking_contract, :minting_curve_contract,
+        );
+        delegator_1_rewards +=
+            calculate_pool_member_rewards(
+                :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
+            );
+        sigma +=
+            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+
+        system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
+
+        system.advance_epoch();
+
+        delegated_amount_1 += stake_amount / 4;
+        pool_balance += stake_amount / 4;
+        system.advance_block_into_attestation_window(:staker);
+
+        system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
+
+        system.attest(:staker);
+        let pool_rewards = calculate_pool_rewards_with_pool_balance(
+            :staker_address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+            staker_balance: stake_amount,
+        );
+        delegator_1_rewards +=
+            calculate_pool_member_rewards(
+                :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
+            );
+        sigma +=
+            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+
+        system.advance_epoch();
+        delegated_amount_1 += stake_amount / 4;
+        pool_balance += stake_amount / 4;
+
+        system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
+
+        system.advance_epoch();
+        delegated_amount_1 += stake_amount / 4;
+        pool_balance += stake_amount / 4;
+
+        system.advance_epoch_and_attest(:staker);
+        let pool_rewards = calculate_pool_rewards(
+            :staker_address, :staking_contract, :minting_curve_contract,
+        );
+        delegator_1_rewards +=
+            calculate_pool_member_rewards(
+                :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
+            );
+        sigma +=
+            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+
+        system
+            .delegator_exit_intent(
+                delegator: delegator_1, :pool, amount: stake_amount,
+            ); // Full exit intent.
+
+        system.advance_epoch_and_attest(:staker);
+        delegated_amount_1 = 0;
+        pool_balance -= stake_amount;
+
+        let pool_rewards = calculate_pool_rewards(
+            :staker_address, :staking_contract, :minting_curve_contract,
+        );
+        sigma +=
+            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+
+        system
+            .delegator_exit_intent(
+                delegator: delegator_1, :pool, amount: stake_amount / 4,
+            ); // Partial exit intent.
+
+        // More than one reward between balance changes.
+        system.advance_epoch_and_attest(:staker);
+        delegated_amount_1 += 3 * stake_amount / 4;
+        pool_balance += 3 * stake_amount / 4;
+
+        let pool_rewards = calculate_pool_rewards(
+            :staker_address, :staking_contract, :minting_curve_contract,
+        );
+        let from_sigma = sigma;
+        sigma +=
+            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+
+        system.advance_epoch_and_attest(:staker);
+        sigma +=
+            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+        delegator_1_rewards +=
+            compute_rewards_rounded_down(amount: delegated_amount_1, interest: sigma - from_sigma);
+
+        system.advance_exit_wait_window();
+        system.delegator_exit_action(delegator: delegator_1, :pool);
+        system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
+
+        system.advance_epoch_and_attest(:staker);
+        delegated_amount_1 += stake_amount / 4;
+        pool_balance += stake_amount / 4;
+
+        let pool_rewards = calculate_pool_rewards(
+            :staker_address, :staking_contract, :minting_curve_contract,
+        );
+        delegator_1_rewards +=
+            calculate_pool_member_rewards(
+                :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
+            );
+        sigma +=
+            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+
+        system.advance_epoch();
+
+        delegator_2_rewards =
+            compute_rewards_rounded_down(amount: delegated_amount_2, interest: sigma);
+
+        let calculated_rewards_1 = system
+            .pool_member_info(delegator: delegator_1, :pool)
+            .unclaimed_rewards;
+        let calculated_rewards_2 = system
+            .pool_member_info(delegator: delegator_2, :pool)
+            .unclaimed_rewards;
+
+        let actual_rewards_1 = system.delegator_claim_rewards(delegator: delegator_1, :pool);
+        let actual_rewards_2 = system.delegator_claim_rewards(delegator: delegator_2, :pool);
+
+        assert!(system.token.balance_of(account: pool) < 100);
+        assert!(calculated_rewards_1 == delegator_1_rewards);
+        assert!(calculated_rewards_2 == delegator_2_rewards);
+        assert!(actual_rewards_1 == delegator_1_rewards);
+        assert!(actual_rewards_2 == delegator_2_rewards);
+        assert!(
+            system.token.balance_of(account: delegator_1.reward.address) == delegator_1_rewards,
+        );
+        assert!(
+            system.token.balance_of(account: delegator_2.reward.address) == delegator_2_rewards,
+        );
     }
 }
 // TODO: Implement this flow test.
