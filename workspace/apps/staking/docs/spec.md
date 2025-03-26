@@ -1547,7 +1547,7 @@ fn exit_delegation_pool_intent(
 )
 ```
 #### description <!-- omit from toc -->
-Inform of the intent to exit the stake. This will remove the funds from the stake, pausing rewards collection for the pool member. This will also start the exit window timeout.
+Inform of the intent to exit the stake. This will deduct the specified amount of funds from the stake. Rewards collection for the specified amount will be paused. This will also start the exit window timeout.
 #### emits <!-- omit from toc -->
 1. If staker is active: [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 2. If staker is active: [Stake Balance Changed](#stake-balance-changed)
