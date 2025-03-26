@@ -55,13 +55,22 @@ pub trait IStaking<TContractState> {
 #[starknet::interface]
 pub trait IStakingMigration<TContractState> {
     /// Reads the internal staker information for the given `staker_address` from storage and
-    /// returns the latest version of this struct.
+    /// returns it.
     ///
-    /// Use this function instead of directly accessing storage to ensure you retrieve the
-    /// latest version of the struct. Direct storage access may return an outdated version,
-    /// which could be misaligned with the code and probably cause panics.
+    /// Precondition: The staker exists and its version is V1.
     fn internal_staker_info(
         self: @TContractState, staker_address: ContractAddress,
+    ) -> InternalStakerInfoLatest;
+
+    /// Reads the internal staker information for the given `staker_address` from storage
+    /// and converts it to V1. Writes the updated version to storage and initializes the staker's
+    /// balance trace.
+    ///
+    /// Precondition: The staker exists and its version is V0.
+    ///
+    /// This function is used only during migration.
+    fn convert_internal_staker_info(
+        ref self: TContractState, staker_address: ContractAddress,
     ) -> InternalStakerInfoLatest;
 }
 

@@ -79,7 +79,7 @@ use test_utils::{
     deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
     general_contract_system_deployment, initialize_staking_state_from_cfg, load_from_simple_map,
     stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,
-    store_to_simple_map,
+    store_internal_staker_info_v0_to_map, store_to_simple_map,
 };
 
 #[test]
@@ -2828,6 +2828,53 @@ fn test_internal_staker_info_staker_not_exist() {
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
     staking_dispatcher.internal_staker_info(staker_address: DUMMY_ADDRESS());
+}
+
+#[test]
+#[should_panic(expected: "Outdated version of Internal Staker Info")]
+fn test_internal_staker_info_outdated_version() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    store_internal_staker_info_v0_to_map(
+        :staker_address,
+        :staking_contract,
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        unstake_time: cfg.staker_info.unstake_time,
+        amount_own: cfg.staker_info._deprecated_amount_own,
+        index: cfg.staker_info._deprecated_index,
+        unclaimed_rewards_own: cfg.staker_info.unclaimed_rewards_own,
+        pool_info: Option::None,
+    );
+    staking_dispatcher.internal_staker_info(:staker_address);
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_convert_internal_staker_info_staker_not_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
+    staking_dispatcher.convert_internal_staker_info(staker_address: DUMMY_ADDRESS());
+}
+
+#[test]
+#[should_panic(expected: "Internal Staker Info is already up-to-date")]
+fn test_convert_internal_staker_info_already_up_to_date() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    staking_dispatcher.convert_internal_staker_info(:staker_address);
 }
 
 #[test]

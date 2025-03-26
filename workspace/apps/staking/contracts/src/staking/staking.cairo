@@ -689,9 +689,35 @@ pub mod Staking {
                 VersionedInternalStakerInfo::None => panic_with_byte_array(
                     err: @GenericError::STAKER_NOT_EXISTS.describe(),
                 ),
-                VersionedInternalStakerInfo::V0(internal_staker_info_v0) => internal_staker_info_v0
-                    .convert(self.get_prev_class_hash(), staker_address),
+                VersionedInternalStakerInfo::V0(_) => panic_with_byte_array(
+                    err: @Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION.describe(),
+                ),
                 VersionedInternalStakerInfo::V1(internal_staker_info_v1) => internal_staker_info_v1,
+            }
+        }
+        fn convert_internal_staker_info(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) -> InternalStakerInfoLatest {
+            let versioned_internal_staker_info = self.staker_info.read(staker_address);
+            match versioned_internal_staker_info {
+                VersionedInternalStakerInfo::None => panic_with_byte_array(
+                    err: @GenericError::STAKER_NOT_EXISTS.describe(),
+                ),
+                VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
+                    let internal_staker_info_v1 = internal_staker_info_v0
+                        .convert(self.get_prev_class_hash(), staker_address);
+                    self
+                        .staker_info
+                        .write(
+                            staker_address,
+                            VersionedInternalStakerInfo::V1(internal_staker_info_v1),
+                        );
+                    self.initialize_staker_balance_trace(:staker_address);
+                    internal_staker_info_v1
+                },
+                VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
+                    err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
+                ),
             }
         }
     }
@@ -928,7 +954,7 @@ pub mod Staking {
         fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
             // Prerequisites and asserts.
             self.assert_caller_is_not_zero();
-            let mut staker_info = self.internal_staker_info(:staker_address);
+            let mut staker_info = self.convert_internal_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info().pool_contract;
             assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
 
@@ -1463,7 +1489,7 @@ pub mod Staking {
             self.internal_staker_info(:staker_address)._deprecated_get_total_amount()
         }
 
-        /// **Note**: This function should be called only once and only for V0 staker.
+        /// **Note**: This function should be called only once during migration.
         fn initialize_staker_balance_trace(
             ref self: ContractState, staker_address: ContractAddress,
         ) -> StakerBalance {

@@ -310,6 +310,15 @@ fn delegator_switch_after_upgrade_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn convert_internal_staker_info_regression_test() {
+    let mut flow = flows::ConvertInternalStakerInfoFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

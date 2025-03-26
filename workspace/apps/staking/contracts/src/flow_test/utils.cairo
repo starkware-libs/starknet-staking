@@ -541,6 +541,7 @@ pub(crate) struct SystemState<TTokenState> {
     pub pool: Option<PoolState>,
     attestation: Option<AttestationState>,
     pub base_account: felt252,
+    staker_address: Option<ContractAddress>,
 }
 
 #[generate_trait]
@@ -628,6 +629,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             pool: Option::None,
             attestation: Option::Some(attestation),
             base_account: 0x100000,
+            staker_address: Option::None,
         };
         system_state.advance_epoch();
         system_state
@@ -665,6 +667,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             pool: Option::None,
             attestation: Option::None,
             base_account: 0x100000,
+            staker_address: Option::None,
         }
     }
 }
@@ -741,6 +744,12 @@ pub(crate) impl SystemImpl<
                         roles: PoolRoles { upgrade_governor },
                     },
                 );
+    }
+
+    fn set_staker_for_conversion(
+        ref self: SystemState<TTokenState>, staker_address: ContractAddress,
+    ) {
+        self.staker_address = Option::Some(staker_address);
     }
 
     /// Advances the required block number into the attestation window.
@@ -886,6 +895,12 @@ pub(crate) impl SystemStakerImpl<
             .staking
             .migration_dispatcher()
             .internal_staker_info(staker_address: staker.staker.address)
+    }
+
+    fn convert_internal_staker_info(
+        self: SystemState<TTokenState>, staker_address: ContractAddress,
+    ) -> InternalStakerInfoLatest {
+        self.staking.migration_dispatcher().convert_internal_staker_info(:staker_address)
     }
 
     fn attest(self: SystemState<TTokenState>, staker: Staker) {
@@ -1167,6 +1182,9 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
         if let Option::Some(pool) = self.pool {
             self.upgrade_pool_implementation(:pool);
         }
+        if let Option::Some(staker_address) = self.staker_address {
+            self.convert_internal_staker_info(staker_address);
+        }
     }
 
     /// Upgrades the staking contract in the system state with a local implementation.
@@ -1286,6 +1304,7 @@ pub(crate) trait FlowTrait<
     TFlow, TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > {
     fn get_pool_address(self: TFlow) -> Option<ContractAddress>;
+    fn get_staker_address(self: TFlow) -> Option<ContractAddress>;
     fn setup(ref self: TFlow, ref system: SystemState<TTokenState>);
     fn test(self: TFlow, ref system: SystemState<TTokenState>, system_type: SystemType);
 }
@@ -1305,7 +1324,11 @@ pub(crate) fn test_flow_mainnet<
     let mut system = SystemFactoryTrait::mainnet_system();
     flow.setup(ref :system);
     if let Option::Some(pool_address) = flow.get_pool_address() {
+        // Pool upgrade handles the conversion of internal staker info.
         system.set_pool_for_upgrade(pool_address);
+    } else if let Option::Some(staker_address) = flow.get_staker_address() {
+        // Need to convert internal staker info only if there is no pool to upgrade.
+        system.set_staker_for_conversion(staker_address);
     }
     system.deploy_attestation_and_upgrade_contracts_implementation();
     flow.test(ref :system, system_type: SystemType::Mainnet);
