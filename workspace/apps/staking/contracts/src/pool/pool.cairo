@@ -539,7 +539,6 @@ pub mod Pool {
             }
         }
 
-        /// **Note:** This function is not tested yet.
         fn update_rewards_from_staking_contract(
             ref self: ContractState, rewards: Amount, pool_balance: Amount,
         ) {

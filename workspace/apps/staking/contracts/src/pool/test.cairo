@@ -1574,3 +1574,29 @@ fn test_get_internal_pool_member_info() {
     let option_pool_member_info = pool_dispatcher.get_internal_pool_member_info(:pool_member);
     assert!(option_pool_member_info == Option::Some(expected_pool_member_info));
 }
+
+#[test]
+fn test_update_rewards_from_staking_contract() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    let pool_member = cfg.test_info.pool_member_address;
+
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    advance_epoch_global();
+
+    let rewards = 12345;
+    let pool_balance = pool_dispatcher.pool_member_info(:pool_member).amount;
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
+    pool_dispatcher.update_rewards_from_staking_contract(:rewards, :pool_balance);
+    advance_epoch_global();
+    assert!(rewards == pool_dispatcher.pool_member_info(:pool_member).unclaimed_rewards);
+
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
+    pool_dispatcher.update_rewards_from_staking_contract(:rewards, :pool_balance);
+    advance_epoch_global();
+    assert!(rewards * 2 == pool_dispatcher.pool_member_info(:pool_member).unclaimed_rewards);
+}
