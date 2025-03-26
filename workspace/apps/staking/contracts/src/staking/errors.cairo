@@ -38,6 +38,7 @@ pub(crate) enum Error {
     PENULTIMATE_NOT_EXIST,
     INVALID_STARTING_BLOCK,
     INVALID_PENULTIMATE,
+    STAKER_BALANCE_NOT_INITIALIZED,
 }
 
 impl DescribableError of Describable<Error> {
@@ -80,6 +81,7 @@ impl DescribableError of Describable<Error> {
             Error::PENULTIMATE_NOT_EXIST => "Penultimate balance does not exist, staker balance at this epoch is 0",
             Error::INVALID_STARTING_BLOCK => "Invalid starting block, must be greater than or equal to current block number",
             Error::INVALID_PENULTIMATE => "Invalid penultimate epoch, must be lower than or equal to current epoch",
+            Error::STAKER_BALANCE_NOT_INITIALIZED => "Staker balance is not initialized",
         }
     }
 }
