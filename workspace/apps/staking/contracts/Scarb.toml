@@ -19,6 +19,8 @@ unstable-add-statements-code-locations-debug-info = true
 unstable-add-statements-functions-debug-info = true
 inlining-strategy = "avoid"
 
+[lib]
+
 [scripts]
 test = "SNFORGE_BACKTRACE=1 snforge test"
 
