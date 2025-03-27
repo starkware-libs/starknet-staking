@@ -177,7 +177,7 @@ pub mod Staking {
         self.prev_class_hash.write(0, prev_class_hash);
         self.epoch_info.write(epoch_info);
         self.attestation_contract.write(attestation_contract);
-        self.total_stake_trace.deref().insert(key: FIRST_VALID_EPOCH, value: Zero::zero());
+        self.total_stake_trace.insert(key: FIRST_VALID_EPOCH, value: Zero::zero());
     }
 
     #[abi(embed_v0)]
@@ -509,7 +509,7 @@ pub mod Staking {
         }
 
         fn get_total_stake(self: @ContractState) -> Amount {
-            let total_stake_trace = self.total_stake_trace.deref();
+            let total_stake_trace = self.total_stake_trace;
             // Trace is initialized with a zero stake at the first valid epoch, so it is safe to
             // unwrap.
             let (_, total_stake) = total_stake_trace.latest().unwrap().into();
@@ -517,7 +517,7 @@ pub mod Staking {
         }
 
         fn get_current_total_staking_power(self: @ContractState) -> Amount {
-            let total_stake_trace = self.total_stake_trace.deref();
+            let total_stake_trace = self.total_stake_trace;
             let current_epoch = self.get_current_epoch();
             let (epoch, total_stake) = total_stake_trace.latest().unwrap();
             if epoch <= current_epoch {
@@ -1291,10 +1291,7 @@ pub mod Staking {
         }
 
         fn update_total_stake(ref self: ContractState, new_total_stake: Amount) {
-            self
-                .total_stake_trace
-                .deref()
-                .insert(key: self.get_next_epoch(), value: new_total_stake);
+            self.total_stake_trace.insert(key: self.get_next_epoch(), value: new_total_stake);
         }
 
         /// Wrap initial operations required in any public staking function.

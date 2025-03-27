@@ -64,7 +64,7 @@ mod StakingEIC {
             // in this case, we must not replace it.
             // TODO: Check that trace is empty, we can't check it now, because eic test deploy
             // the new contract and trace is initialized in new constructor.
-            self.total_stake_trace.deref().insert(key: FIRST_VALID_EPOCH, value: total_stake);
+            self.total_stake_trace.insert(key: FIRST_VALID_EPOCH, value: total_stake);
 
             // 4. Replace pool contract class hash (if supplied).
             if pool_contract_class_hash.is_non_zero() {

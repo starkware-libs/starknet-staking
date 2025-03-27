@@ -119,7 +119,7 @@ pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
     /// Inserts a (`key`, `value`) pair into a Trace so that it is stored as the checkpoint.
     /// This is done by either inserting a new checkpoint, or updating the last one.
     fn insert(self: StoragePath<Mutable<StakerBalanceTrace>>, key: Epoch, value: StakerBalance) {
-        let checkpoints = self.checkpoints.as_path();
+        let checkpoints = self.checkpoints;
         let len = checkpoints.len();
         if len == Zero::zero() {
             checkpoints.push(StakerBalanceCheckpoint { key, value });

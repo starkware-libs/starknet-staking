@@ -139,7 +139,7 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     fn insert(
         self: StoragePath<Mutable<PoolMemberBalanceTrace>>, key: Epoch, value: PoolMemberBalance,
     ) -> (PoolMemberBalance, PoolMemberBalance) {
-        let checkpoints = self.checkpoints.as_path();
+        let checkpoints = self.checkpoints;
 
         let len = checkpoints.len();
         if len == Zero::zero() {
@@ -191,7 +191,7 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
         key: Epoch,
         cumulative_rewards_trace_idx: VecIndex,
     ) {
-        self.checkpoints.as_path()._insert_before_latest(:key, :cumulative_rewards_trace_idx)
+        self.checkpoints._insert_before_latest(:key, :cumulative_rewards_trace_idx)
     }
 
     /// Returns whether the trace is non empty.

@@ -43,7 +43,7 @@ mod PoolEIC {
             self.final_staker_index.write(Option::Some(final_index));
 
             // Initialize the cumulative rewards trace.
-            self.cumulative_rewards_trace.deref().insert(key: Zero::zero(), value: Zero::zero());
+            self.cumulative_rewards_trace.insert(key: Zero::zero(), value: Zero::zero());
         }
     }
 }

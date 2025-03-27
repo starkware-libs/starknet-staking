@@ -132,7 +132,7 @@ pub mod Pool {
             .write(IStakingPoolDispatcher { contract_address: staking_contract });
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.staker_removed.write(false);
-        self.cumulative_rewards_trace.deref().insert(key: Zero::zero(), value: Zero::zero());
+        self.cumulative_rewards_trace.insert(key: Zero::zero(), value: Zero::zero());
     }
 
     #[abi(embed_v0)]
@@ -546,10 +546,9 @@ pub mod Pool {
 
             // `rewards_info` is initialized in the constructor or in the upgrade proccess,
             // so unwrapping should be safe.
-            let (_, latest) = self.cumulative_rewards_trace.deref().latest().unwrap();
+            let (_, latest) = self.cumulative_rewards_trace.latest().unwrap();
             self
                 .cumulative_rewards_trace
-                .deref()
                 .insert(
                     key: self.get_current_epoch(),
                     value: latest
@@ -817,7 +816,7 @@ pub mod Pool {
         }
 
         fn cumulative_rewards_trace_length(self: @ContractState) -> VecIndex {
-            self.cumulative_rewards_trace.deref().length()
+            self.cumulative_rewards_trace.length()
         }
 
         fn calculate_rewards(
@@ -923,7 +922,7 @@ pub mod Pool {
         fn find_sigma(
             self: @ContractState, pool_member_checkpoint: PoolMemberCheckpoint,
         ) -> Amount {
-            let cumulative_rewards_trace_vec = self.cumulative_rewards_trace.deref();
+            let cumulative_rewards_trace_vec = self.cumulative_rewards_trace;
             let cumulative_rewards_trace_idx = pool_member_checkpoint
                 .cumulative_rewards_trace_idx();
 
