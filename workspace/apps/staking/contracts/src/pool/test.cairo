@@ -553,7 +553,7 @@ fn test_claim_rewards() {
         staker_info: staker_info_before, :total_rewards,
     );
     let epoch_rewards = reward_supplier_dispatcher
-        .current_epoch_rewards(); // epoch_rewards are the total staker rewards in that case since there is only one staker.
+        .calculate_current_epoch_rewards(); // epoch_rewards are the total staker rewards in that case since there is only one staker.
     let expected_pool_rewards = epoch_rewards
         - staker_rewards; // pool_rewards = total staker rewards - staker own rewards include commission.
 

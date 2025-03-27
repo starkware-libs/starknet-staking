@@ -119,7 +119,7 @@ pub mod RewardSupplier {
 
     #[abi(embed_v0)]
     impl RewardSupplierImpl of IRewardSupplier<ContractState> {
-        fn current_epoch_rewards(self: @ContractState) -> Amount {
+        fn calculate_current_epoch_rewards(self: @ContractState) -> Amount {
             let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
             let staking_dispatcher = IStakingDispatcher {
                 contract_address: self.staking_contract.read(),

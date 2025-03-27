@@ -168,7 +168,8 @@ fn test_on_receive() {
     cheat_caller_address_once(
         contract_address: reward_supplier_contract, caller_address: staking_contract,
     );
-    let rewards = reward_supplier_dispatcher.current_epoch_rewards() * epochs_in_year.into();
+    let rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards()
+        * epochs_in_year.into();
     cheat_caller_address_once(
         contract_address: reward_supplier_contract, caller_address: staking_contract,
     );
@@ -312,7 +313,7 @@ fn test_claim_rewards_assertions() {
 }
 
 #[test]
-fn test_current_epoch_rewards() {
+fn test_calculate_current_epoch_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
@@ -323,7 +324,7 @@ fn test_current_epoch_rewards() {
         contract_address: cfg.reward_supplier.minting_curve_contract,
     };
     let yearly_mint = minting_curve_dispatcher.yearly_mint();
-    let rewards = reward_supplier_dispatcher.current_epoch_rewards();
+    let rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards();
 
     // Expected rewards are computed by dividing the yearly mint by the number of epochs in a year.
     let epochs_in_year = cfg.staking_contract_info.epoch_info.epochs_in_year();

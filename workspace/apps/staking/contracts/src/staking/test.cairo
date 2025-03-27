@@ -2561,7 +2561,7 @@ fn test_update_rewards_from_attestation_contract_only_staker() {
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
-    let epoch_rewards = reward_supplier_dispatcher.current_epoch_rewards();
+    let epoch_rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards();
     let staker_info_expected = StakerInfo {
         unclaimed_rewards_own: epoch_rewards, ..staker_info_before,
     };
@@ -2603,7 +2603,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let expected_staker_rewards = calculate_staker_own_rewards_including_commission(
         staker_info: staker_info_before, :total_rewards,
     );
-    let epoch_rewards = reward_supplier_dispatcher.current_epoch_rewards();
+    let epoch_rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards();
     let expected_pool_rewards = epoch_rewards - expected_staker_rewards;
 
     // Assert staker rewards and pool balance before update.

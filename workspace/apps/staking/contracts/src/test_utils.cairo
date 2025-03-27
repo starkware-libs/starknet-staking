@@ -1010,7 +1010,7 @@ pub(crate) fn calculate_staker_total_rewards(
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> Amount {
-    let epoch_rewards = current_epoch_rewards(:staking_contract, :minting_curve_contract);
+    let epoch_rewards = calculate_current_epoch_rewards(:staking_contract, :minting_curve_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     mul_wide_and_div(
         lhs: epoch_rewards,
@@ -1020,7 +1020,7 @@ pub(crate) fn calculate_staker_total_rewards(
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
-fn current_epoch_rewards(
+fn calculate_current_epoch_rewards(
     staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
 ) -> Amount {
     let minting_curve_dispatcher = IMintingCurveDispatcher {
@@ -1094,7 +1094,7 @@ pub(crate) fn calculate_pool_rewards_with_pool_balance(
     staker_balance: Amount,
 ) -> Amount {
     // Get epoch rewards.
-    let epoch_rewards = current_epoch_rewards(:staking_contract, :minting_curve_contract);
+    let epoch_rewards = calculate_current_epoch_rewards(:staking_contract, :minting_curve_contract);
     // Calculate staker total rewards.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_info = staking_dispatcher.staker_info(:staker_address);
