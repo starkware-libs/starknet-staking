@@ -1,7 +1,7 @@
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::objects::{
-    AttestationInfo, EpochInfo, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
+    AttestationInfo, EpochInfo, UndelegateIntentKey, UndelegateIntentValue,
 };
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
@@ -402,23 +402,6 @@ pub struct StakerInfo {
     pub index: Index,
     pub unclaimed_rewards_own: Amount,
     pub pool_info: Option<StakerPoolInfo>,
-}
-
-#[cfg(test)]
-pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalStakerInfoV1> {
-    fn into(self: StakerInfo) -> InternalStakerInfoV1 {
-        InternalStakerInfoV1 {
-            reward_address: self.reward_address,
-            operational_address: self.operational_address,
-            unstake_time: self.unstake_time,
-            _deprecated_index_V0: self.index,
-            unclaimed_rewards_own: self.unclaimed_rewards_own,
-            pool_info: self.pool_info,
-            // This assumes that the function is called only during migration. in a different
-            // context, the commission commitment will be lost.
-            commission_commitment: Option::None,
-        }
-    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
