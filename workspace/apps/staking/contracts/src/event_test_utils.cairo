@@ -475,9 +475,9 @@ pub(crate) fn assert_minimum_stake_changed_event(
 }
 
 pub(crate) fn assert_epoch_info_changed_event(
-    spied_event: @(ContractAddress, Event), block_duration: u16, epoch_length: u16,
+    spied_event: @(ContractAddress, Event), epoch_duration: u32, epoch_length: u32,
 ) {
-    let expected_event = StakingConfigEvents::EpochInfoChanged { block_duration, epoch_length };
+    let expected_event = StakingConfigEvents::EpochInfoChanged { epoch_duration, epoch_length };
     assert_expected_event_emitted(
         :spied_event,
         :expected_event,

@@ -55,96 +55,106 @@ pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
 
 #[derive(Debug, Hash, Drop, Serde, Copy, PartialEq, starknet::Store)]
 pub(crate) struct EpochInfo {
-    // The duration of a block in seconds.
-    block_duration: u16,
+    // The duration of the epoch in seconds.
+    epoch_duration: u32,
     // The length of the epoch in blocks.
-    length: u16,
+    length: u32,
     // The first block of the first epoch with this length.
     starting_block: u64,
     // The first epoch id with this length, changes by a call to update.
     starting_epoch: Epoch,
-    // The starting block of the epoch prior to the update.
-    last_starting_block_before_update: u64,
+    // The length of the epoch prior to the update.
+    previous_length: u32,
+    // The duration of the epoch prior to the update.
+    previous_epoch_duration: u32,
 }
 
 #[generate_trait]
 pub(crate) impl EpochInfoImpl of EpochInfoTrait {
-    fn new(block_duration: u16, epoch_length: u16, starting_block: u64) -> EpochInfo {
+    /// Create a new epoch info object. this should happen once, and is initializing the epoch info
+    /// to the starting epoch.
+    fn new(epoch_duration: u32, epoch_length: u32, starting_block: u64) -> EpochInfo {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
-        assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
+        assert!(epoch_duration.is_non_zero(), "{}", Error::INVALID_EPOCH_DURATION);
         assert!(starting_block >= get_block_number(), "{}", Error::INVALID_STARTING_BLOCK);
         EpochInfo {
-            block_duration,
+            epoch_duration,
             length: epoch_length,
             starting_block,
             starting_epoch: STARTING_EPOCH,
-            last_starting_block_before_update: Zero::zero(),
+            previous_length: Zero::zero(),
+            previous_epoch_duration: Zero::zero(),
         }
     }
 
-    /// The current epoch number.
+    /// Get the current epoch number.
     /// **Note:** This function fails before the first epoch.
     fn current_epoch(self: @EpochInfo) -> Epoch {
-        let current_block = get_block_number();
-        // If the epoch info updated and the current block is still in the previous epoch.
-        if current_block < *self.starting_block {
+        if self.update_done_in_this_epoch() {
             return *self.starting_epoch - 1;
         }
-        ((current_block - *self.starting_block) / self.epoch_len_in_blocks().into())
+        ((get_block_number() - *self.starting_block) / self.epoch_len_in_blocks().into())
             + *self.starting_epoch
     }
 
-    fn update(ref self: EpochInfo, block_duration: u16, epoch_length: u16) {
+    /// Update the epoch info.
+    fn update(ref self: EpochInfo, epoch_duration: u32, epoch_length: u32) {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
-        assert!(block_duration.is_non_zero(), "{}", Error::INVALID_BLOCK_DURATION);
+        assert!(epoch_duration.is_non_zero(), "{}", Error::INVALID_EPOCH_DURATION);
         assert!(get_block_number() >= self.starting_block, "{}", Error::EPOCH_INFO_ALREADY_UPDATED);
         assert!(
             self.current_epoch() != STARTING_EPOCH, "{}", Error::EPOCH_INFO_UPDATED_IN_FIRST_EPOCH,
         );
-        self.last_starting_block_before_update = self.current_epoch_starting_block();
-        self.starting_epoch = self.next_epoch();
-        self.starting_block = self.calculate_next_epoch_starting_block();
-        self.length = epoch_length;
-        self.block_duration = block_duration;
+        self =
+            EpochInfo {
+                epoch_duration,
+                length: epoch_length,
+                starting_block: self.current_epoch_starting_block() + self.length.into(),
+                starting_epoch: self.next_epoch(),
+                previous_length: self.length,
+                previous_epoch_duration: self.epoch_duration,
+            }
     }
 
+    /// Get the number of expected epochs in a year base on the current epoch duration.
     fn epochs_in_year(self: @EpochInfo) -> u64 {
-        let blocks_in_year = SECONDS_IN_YEAR / (*self.block_duration).into();
-        blocks_in_year / self.epoch_len_in_blocks().into()
-    }
-
-    fn epoch_len_in_blocks(self: @EpochInfo) -> u16 {
-        if get_block_number() < *self.starting_block {
-            // There was an update in this epoch, so we need to compute the previous length.
-            (*self.starting_block - *self.last_starting_block_before_update).try_into().unwrap()
+        let epoch_duration = if self.update_done_in_this_epoch() {
+            self.previous_epoch_duration
         } else {
-            // No update in this epoch, so we can return the length.
-            *self.length
-        }
+            self.epoch_duration
+        };
+        SECONDS_IN_YEAR / (*epoch_duration).into()
     }
 
+    /// Get the number of blocks in the current epoch.
+    fn epoch_len_in_blocks(self: @EpochInfo) -> u32 {
+        if self.update_done_in_this_epoch() {
+            return *self.previous_length;
+        }
+        (*self.length)
+    }
+
+    /// Get the starting block of the current epoch.
     fn current_epoch_starting_block(self: @EpochInfo) -> u64 {
-        if get_block_number() < *self.starting_block {
+        if self.update_done_in_this_epoch() {
             // The epoch info updated and the current block is before the starting block of the
             // next epoch with the new length.
-            return *self.last_starting_block_before_update;
+            return *self.starting_block - (*self.previous_length).into();
         }
-        self.calculate_next_epoch_starting_block() - self.epoch_len_in_blocks().into()
+        let num_epochs_from_starting = (get_block_number() - *self.starting_block)
+            / (*self.length).into();
+        *self.starting_block + num_epochs_from_starting * (*self.length).into()
     }
 }
 
 #[generate_trait]
 impl PrivateEpochInfoImpl of PrivateEpochInfoTrait {
-    fn calculate_next_epoch_starting_block(self: @EpochInfo) -> u64 {
-        let current_block = get_block_number();
-        let blocks_passed = current_block - *self.starting_block;
-        let length: u64 = self.epoch_len_in_blocks().into();
-        let blocks_to_next_epoch = length - (blocks_passed % length);
-        current_block + blocks_to_next_epoch
-    }
-
     fn next_epoch(self: @EpochInfo) -> Epoch {
         self.current_epoch() + 1
+    }
+
+    fn update_done_in_this_epoch(self: @EpochInfo) -> bool {
+        get_block_number() < *self.starting_block
     }
 }
 
@@ -157,17 +167,18 @@ mod epoch_info_tests {
 
     #[test]
     fn test_new() {
-        let block_duration = 1;
+        let epoch_duration = 1;
         let epoch_length = 1;
         let starting_block = get_block_number();
 
-        let epoch_info = EpochInfoTrait::new(:block_duration, :epoch_length, :starting_block);
+        let epoch_info = EpochInfoTrait::new(:epoch_duration, :epoch_length, :starting_block);
         let expected_epoch_info = EpochInfo {
-            block_duration,
+            epoch_duration,
             length: epoch_length,
             starting_block,
             starting_epoch: Zero::zero(),
-            last_starting_block_before_update: Zero::zero(),
+            previous_length: Zero::zero(),
+            previous_epoch_duration: Zero::zero(),
         };
         assert_eq!(epoch_info, expected_epoch_info);
     }
@@ -175,13 +186,13 @@ mod epoch_info_tests {
     #[test]
     #[should_panic(expected: "Invalid epoch length, must be greater than 0")]
     fn test_new_with_invalid_epoch_length() {
-        EpochInfoTrait::new(block_duration: 1, epoch_length: Zero::zero(), starting_block: 1);
+        EpochInfoTrait::new(epoch_duration: 1, epoch_length: Zero::zero(), starting_block: 1);
     }
 
     #[test]
-    #[should_panic(expected: "Invalid block duration, must be greater than 0")]
-    fn test_new_with_invalid_block_duration() {
-        EpochInfoTrait::new(block_duration: Zero::zero(), epoch_length: 1, starting_block: 1);
+    #[should_panic(expected: "Invalid epoch duration, must be greater than 0")]
+    fn test_new_with_invalid_epoch_duration() {
+        EpochInfoTrait::new(epoch_duration: Zero::zero(), epoch_length: 1, starting_block: 1);
     }
 
     #[test]
@@ -190,7 +201,7 @@ mod epoch_info_tests {
     )]
     fn test_new_with_invalid_starting_block() {
         start_cheat_block_number_global(block_number: 1);
-        EpochInfoTrait::new(block_duration: 1, epoch_length: 1, starting_block: Zero::zero());
+        EpochInfoTrait::new(epoch_duration: 1, epoch_length: 1, starting_block: Zero::zero());
     }
 }
 
@@ -410,7 +421,7 @@ pub struct AttestationInfo {
     // The amount of stake the staker has in current epoch.
     stake: Amount,
     // The length of the epoch in blocks.
-    epoch_len: u16,
+    epoch_len: u32,
     // The id of the current epoch.
     epoch_id: Epoch,
     // The first block of the current epoch.
@@ -422,7 +433,7 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
     fn new(
         staker_address: ContractAddress,
         stake: Amount,
-        epoch_len: u16,
+        epoch_len: u32,
         epoch_id: Epoch,
         current_epoch_starting_block: u64,
     ) -> AttestationInfo {
@@ -435,7 +446,7 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
     fn stake(self: @AttestationInfo) -> Amount {
         *self.stake
     }
-    fn epoch_len(self: @AttestationInfo) -> u16 {
+    fn epoch_len(self: @AttestationInfo) -> u32 {
         *self.epoch_len
     }
     fn epoch_id(self: @AttestationInfo) -> Epoch {

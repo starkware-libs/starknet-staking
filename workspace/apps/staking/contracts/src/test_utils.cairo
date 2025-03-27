@@ -72,9 +72,11 @@ pub(crate) mod constants {
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
     pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
     pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
-    pub const EPOCH_LENGTH: u16 = 300;
+    // number of blocks in one epoch
+    pub const EPOCH_LENGTH: u32 = 300;
     pub const EPOCH_STARTING_BLOCK: u64 = 463476;
-    pub const BLOCK_DURATION: u16 = 30;
+    // duration of  one epoch in seconds
+    pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
@@ -202,7 +204,7 @@ pub(crate) mod constants {
     }
     pub fn DEFAULT_EPOCH_INFO() -> EpochInfo {
         EpochInfoTrait::new(
-            block_duration: BLOCK_DURATION,
+            epoch_duration: EPOCH_DURATION,
             epoch_length: EPOCH_LENGTH,
             starting_block: max(EPOCH_STARTING_BLOCK, get_block_number()),
         )

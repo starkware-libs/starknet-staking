@@ -1,6 +1,6 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
-    BLOCK_DURATION, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_LENGTH,
+    CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH,
     EPOCH_STARTING_BLOCK, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
     OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
     STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET,
@@ -2517,13 +2517,13 @@ fn test_current_epoch_starting_block() {
 
     // Update epoch len and check again.
     let new_epoch_len = EPOCH_LENGTH.into() * 15;
-    let new_epoch_duration = BLOCK_DURATION / 15;
+    let new_epoch_duration = EPOCH_DURATION / 15;
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     staking_config_dispatcher
-        .set_epoch_info(block_duration: new_epoch_duration, epoch_length: new_epoch_len);
+        .set_epoch_info(epoch_duration: new_epoch_duration, epoch_length: new_epoch_len);
     let epoch_info = staking_dispatcher.get_epoch_info();
     // No new epoch started yet, so starting block should be the same.
     assert_eq!(epoch_info.current_epoch_starting_block(), next_epoch_starting_block);
@@ -3061,17 +3061,17 @@ fn test_staker_info_into_internal_staker_info_v1() {
 #[should_panic(expected: "Invalid epoch length, must be greater than 0")]
 fn test_epoch_info_new_invalid_length() {
     EpochInfoTrait::new(
-        block_duration: BLOCK_DURATION,
+        epoch_duration: EPOCH_DURATION,
         epoch_length: Zero::zero(),
         starting_block: get_block_number(),
     );
 }
 
 #[test]
-#[should_panic(expected: "Invalid block duration, must be greater than 0")]
-fn test_epoch_info_new_invalid_block_duration() {
+#[should_panic(expected: "Invalid epoch duration, must be greater than 0")]
+fn test_epoch_info_new_invalid_epoch_duration() {
     EpochInfoTrait::new(
-        block_duration: Zero::zero(),
+        epoch_duration: Zero::zero(),
         epoch_length: EPOCH_LENGTH,
         starting_block: get_block_number(),
     );
@@ -3081,10 +3081,10 @@ fn test_epoch_info_new_invalid_block_duration() {
 fn test_epoch_info_current_epoch() {
     let block_number = EPOCH_STARTING_BLOCK;
     let epoch_length = EPOCH_LENGTH;
-    let block_duration = BLOCK_DURATION;
+    let epoch_duration = EPOCH_DURATION;
     start_cheat_block_number_global(:block_number);
     let epoch_info = EpochInfoTrait::new(
-        :block_duration, :epoch_length, starting_block: get_block_number(),
+        :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
     assert!(epoch_info.current_epoch() == Zero::zero());
     advance_block_number_global(blocks: epoch_length.into() - 1);
@@ -3097,10 +3097,10 @@ fn test_epoch_info_current_epoch() {
 fn test_epoch_info_update_only_length() {
     let block_number = EPOCH_STARTING_BLOCK;
     let epoch_length = EPOCH_LENGTH;
-    let block_duration = BLOCK_DURATION;
+    let epoch_duration = EPOCH_DURATION;
     start_cheat_block_number_global(:block_number);
     let mut epoch_info = EpochInfoTrait::new(
-        :block_duration, :epoch_length, starting_block: get_block_number(),
+        :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
     let first_epoch = 10;
     advance_block_number_global(blocks: first_epoch * epoch_length.into());
@@ -3110,7 +3110,7 @@ fn test_epoch_info_update_only_length() {
 
     // Update epoch_length in the first block of the epoch.
     let new_epoch_length = epoch_length + 1;
-    epoch_info.update(:block_duration, epoch_length: new_epoch_length);
+    epoch_info.update(:epoch_duration, epoch_length: new_epoch_length);
     assert!(epoch_info.current_epoch() == first_epoch + 1);
     // Still the same epoch_length.
     advance_block_number_global(blocks: epoch_length.into() - 1);
@@ -3126,7 +3126,7 @@ fn test_epoch_info_update_only_length() {
 
     // Update epoch_length in the last block of the epoch.
     advance_block_number_global(blocks: epoch_length.into());
-    epoch_info.update(:block_duration, epoch_length: EPOCH_LENGTH - 1);
+    epoch_info.update(:epoch_duration, epoch_length: EPOCH_LENGTH - 1);
     assert!(epoch_info.current_epoch() == first_epoch + 4);
     advance_block_number_global(blocks: 1);
     assert!(epoch_info.current_epoch() == first_epoch + 4);
@@ -3137,21 +3137,24 @@ fn test_epoch_info_update_only_length() {
 }
 
 #[test]
-fn test_epoch_info_update_only_block_duration() {
+fn test_epoch_info_update_only_epoch_duration() {
     let block_number = EPOCH_STARTING_BLOCK;
     let epoch_length = EPOCH_LENGTH;
-    let block_duration = BLOCK_DURATION;
+    let epoch_duration = EPOCH_DURATION;
     start_cheat_block_number_global(:block_number);
     let mut epoch_info = EpochInfoTrait::new(
-        :block_duration, :epoch_length, starting_block: get_block_number(),
+        :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
     let first_epoch = 10;
     advance_block_number_global(blocks: first_epoch * epoch_length.into());
     assert!(epoch_info.current_epoch() == first_epoch);
 
-    let block_duration = BLOCK_DURATION / 10;
-    let expected_epochs_in_year = epoch_info.epochs_in_year() * 10;
-    epoch_info.update(:block_duration, epoch_length: epoch_length);
+    let epoch_duration = EPOCH_DURATION / 10;
+    let epochs_in_year_before = epoch_info.epochs_in_year();
+    let expected_epochs_in_year = epochs_in_year_before * 10;
+    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
+    assert!(epochs_in_year_before == epoch_info.epochs_in_year());
+    advance_epoch_global();
     assert!(expected_epochs_in_year == epoch_info.epochs_in_year());
 }
 
@@ -3160,12 +3163,12 @@ fn test_epoch_info_update_only_block_duration() {
 fn test_epoch_info_update_in_first_epoch() {
     let block_number = EPOCH_STARTING_BLOCK;
     let epoch_length = EPOCH_LENGTH;
-    let block_duration = BLOCK_DURATION;
+    let epoch_duration = EPOCH_DURATION;
     start_cheat_block_number_global(:block_number);
     let mut epoch_info = EpochInfoTrait::new(
-        :block_duration, :epoch_length, starting_block: get_block_number(),
+        :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
-    epoch_info.update(:block_duration, epoch_length: epoch_length);
+    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
 }
 
 #[test]
@@ -3173,14 +3176,14 @@ fn test_epoch_info_update_in_first_epoch() {
 fn test_epoch_info_update_already_updated() {
     let block_number = EPOCH_STARTING_BLOCK;
     let epoch_length = EPOCH_LENGTH;
-    let block_duration = BLOCK_DURATION;
+    let epoch_duration = EPOCH_DURATION;
     start_cheat_block_number_global(:block_number);
     let mut epoch_info = EpochInfoTrait::new(
-        :block_duration, :epoch_length, starting_block: get_block_number(),
+        :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
     advance_epoch_global();
-    epoch_info.update(:block_duration, epoch_length: epoch_length);
-    epoch_info.update(:block_duration, epoch_length: epoch_length);
+    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
+    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
 }
 
 
@@ -3188,14 +3191,14 @@ fn test_epoch_info_update_already_updated() {
 fn test_epoch_info_len_kept_after_update() {
     let block_number = EPOCH_STARTING_BLOCK;
     let epoch_length = EPOCH_LENGTH;
-    let block_duration = BLOCK_DURATION;
+    let epoch_duration = EPOCH_DURATION;
     start_cheat_block_number_global(:block_number);
     let mut epoch_info = EpochInfoTrait::new(
-        :block_duration, :epoch_length, starting_block: get_block_number(),
+        :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
     advance_epoch_global();
     let current_epoch = epoch_info.current_epoch();
-    epoch_info.update(:block_duration, epoch_length: epoch_length + 1);
+    epoch_info.update(:epoch_duration, epoch_length: epoch_length + 1);
     assert!(epoch_info.current_epoch() == current_epoch);
     assert!(epoch_info.epoch_len_in_blocks() == epoch_length);
     advance_epoch_global();
@@ -3210,7 +3213,7 @@ fn test_set_epoch_info() {
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
-    let new_block_duration = BLOCK_DURATION / 2;
+    let new_epoch_duration = EPOCH_DURATION / 2;
     let new_length = 2 * EPOCH_LENGTH;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
@@ -3218,7 +3221,7 @@ fn test_set_epoch_info() {
     );
     advance_epoch_global();
     staking_config_dispatcher
-        .set_epoch_info(block_duration: new_block_duration, epoch_length: new_length);
+        .set_epoch_info(epoch_duration: new_epoch_duration, epoch_length: new_length);
     advance_block_number_global(blocks: EPOCH_LENGTH.into() - 1);
     assert!(staking_dispatcher.get_current_epoch() == 1);
     advance_block_number_global(blocks: 1);
@@ -3233,7 +3236,7 @@ fn test_set_epoch_info() {
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_epoch_info");
     assert_epoch_info_changed_event(
-        spied_event: events[0], block_duration: new_block_duration, epoch_length: new_length,
+        spied_event: events[0], epoch_duration: new_epoch_duration, epoch_length: new_length,
     );
 }
 
@@ -3247,7 +3250,7 @@ fn test_set_epoch_info_not_token_admin() {
     let non_token_admin = NON_TOKEN_ADMIN();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: non_token_admin);
     staking_config_dispatcher
-        .set_epoch_info(block_duration: BLOCK_DURATION, epoch_length: EPOCH_LENGTH);
+        .set_epoch_info(epoch_duration: EPOCH_DURATION, epoch_length: EPOCH_LENGTH);
 }
 
 #[test]
@@ -3259,7 +3262,7 @@ fn test_set_epoch_info_assertions() {
     let staking_safe_dispatcher = IStakingConfigSafeDispatcher {
         contract_address: staking_contract,
     };
-    let block_duration = BLOCK_DURATION;
+    let epoch_duration = EPOCH_DURATION;
     let epoch_length = EPOCH_LENGTH;
 
     // Catch INVALID_EPOCH_LENGTH.
@@ -3267,16 +3270,16 @@ fn test_set_epoch_info_assertions() {
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let result = staking_safe_dispatcher
-        .set_epoch_info(:block_duration, epoch_length: Zero::zero());
+        .set_epoch_info(:epoch_duration, epoch_length: Zero::zero());
     assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH_LENGTH.describe());
 
-    // Catch INVALID_BLOCK_DURATION.
+    // Catch INVALID_EPOCH_DURATION.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let result = staking_safe_dispatcher
-        .set_epoch_info(block_duration: Zero::zero(), :epoch_length);
-    assert_panic_with_error(:result, expected_error: Error::INVALID_BLOCK_DURATION.describe());
+        .set_epoch_info(epoch_duration: Zero::zero(), :epoch_length);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH_DURATION.describe());
 }
 
 #[test]
@@ -3297,7 +3300,7 @@ fn test_staking_eic() {
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
         eic_init_data: [
-            MAINNET_STAKING_CLASS_HASH_V0().into(), BLOCK_DURATION.into(), EPOCH_LENGTH.into(),
+            MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_DURATION.into(), EPOCH_LENGTH.into(),
             STARTING_BLOCK_OFFSET.into(), declare_pool_contract().into(),
             cfg.test_info.attestation_contract.into(),
         ]
@@ -3329,7 +3332,7 @@ fn test_staking_eic() {
         .span();
     let loaded_epoch_info = Serde::<EpochInfo>::deserialize(ref loaded_value).unwrap();
     let expected_epoch_info = EpochInfoTrait::new(
-        block_duration: BLOCK_DURATION,
+        epoch_duration: EPOCH_DURATION,
         epoch_length: EPOCH_LENGTH,
         starting_block: get_block_number() + STARTING_BLOCK_OFFSET,
     );

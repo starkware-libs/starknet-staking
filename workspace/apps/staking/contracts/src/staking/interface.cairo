@@ -179,7 +179,7 @@ pub trait IStakingConfig<TContractState> {
     fn set_min_stake(ref self: TContractState, min_stake: Amount);
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
-    fn set_epoch_info(ref self: TContractState, block_duration: u16, epoch_length: u16);
+    fn set_epoch_info(ref self: TContractState, epoch_duration: u32, epoch_length: u32);
 }
 
 #[starknet::interface]
@@ -378,8 +378,8 @@ pub mod ConfigEvents {
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct EpochInfoChanged {
-        pub block_duration: u16,
-        pub epoch_length: u16,
+        pub epoch_duration: u32,
+        pub epoch_length: u32,
     }
 }
 

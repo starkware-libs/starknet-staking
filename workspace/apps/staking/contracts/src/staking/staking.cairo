@@ -1041,12 +1041,12 @@ pub mod Staking {
                 );
         }
 
-        fn set_epoch_info(ref self: ContractState, block_duration: u16, epoch_length: u16) {
+        fn set_epoch_info(ref self: ContractState, epoch_duration: u32, epoch_length: u32) {
             self.roles.only_token_admin();
             let mut epoch_info = self.epoch_info.read();
-            epoch_info.update(:block_duration, :epoch_length);
+            epoch_info.update(:epoch_duration, :epoch_length);
             self.epoch_info.write(epoch_info);
-            self.emit(ConfigEvents::EpochInfoChanged { block_duration, epoch_length });
+            self.emit(ConfigEvents::EpochInfoChanged { epoch_duration, epoch_length });
         }
     }
 

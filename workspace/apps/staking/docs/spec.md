@@ -161,7 +161,7 @@
     - [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
     - [OPERATIONAL\_IN\_USE](#operational_in_use)
     - [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
-    - [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
+    - [INVALID\_EPOCH\_DURATION](#invalid_epoch_duration)
     - [INVALID\_COMMISSION](#invalid_commission)
     - [INVALID\_COMMISSION\_WITH\_COMMITMENT](#invalid_commission_with_commitment)
     - [COMMISSION\_COMMITMENT\_EXISTS](#commission_commitment_exists)
@@ -1283,7 +1283,7 @@ Only token admin.
 
 ### set_epoch_info
 ```rust
-fn set_epoch_info(ref self: ContractState, block_duration: u16, epoch_length: u16)
+fn set_epoch_info(ref self: ContractState, epoch_duration: u32, epoch_length: u32)
 ```
 #### description <!-- omit from toc -->
 Set the epoch info.
@@ -1456,15 +1456,15 @@ Staking contract of latest version.
 ### Epoch Info Changed
 | data           | type | keyed |
 | -------------- | ---- | ----- |
-| block_duration | u16  | ❌     |
-| epoch_length   | u16  | ❌     |
+| epoch_duration | u32  | ❌     |
+| epoch_length   | u32  | ❌     |
 
 ### Staker Rewards Updated
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
-| staker_address | address           | ✅    |
-| staker_rewards | [Amount](#amount) | ❌    |
-| pool_rewards   | [Amount](#amount) | ❌    |
+| staker_address | address           | ✅     |
+| staker_rewards | [Amount](#amount) | ❌     |
+| pool_rewards   | [Amount](#amount) | ❌     |
 
 ### Commission Commitment Set
 | data           | type                      | keyed |
@@ -2253,8 +2253,8 @@ Only token admin.
 ### INVALID_EPOCH_LENGTH
 "Invalid epoch length, must be greater than 0"
 
-### INVALID_BLOCK_DURATION
-"Invalid block duration, must be greater than 0"
+### INVALID_EPOCH_DURATION
+"Invalid epoch duration, must be greater than 0"
 
 ### INVALID_COMMISSION
 "Commission can only be decreased"
