@@ -335,8 +335,6 @@ fn test_add_to_delegation_pool_from_reward_address() {
     let pool_member_info = cfg.pool_member_info;
 
     let pool_member_info_before_add = pool_dispatcher.pool_member_info(:pool_member);
-    let unclaimed_rewards_member =
-        Zero::zero(); // TODO: Change this after implement calculate_rewards.
 
     let delegate_amount = pool_member_info._deprecated_amount;
     fund(
@@ -360,7 +358,6 @@ fn test_add_to_delegation_pool_from_reward_address() {
     let pool_member_info_expected = PoolMemberInfo {
         amount: pool_member_info_before_add.amount + delegate_amount,
         index: Zero::zero(),
-        unclaimed_rewards: unclaimed_rewards_member,
         ..pool_member_info_before_add,
     };
     assert!(pool_member_info_after_add == pool_member_info_expected);
