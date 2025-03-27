@@ -98,7 +98,7 @@
     - [Switch Delegation Pool](#switch-delegation-pool)
 - [L2 Reward supplier contract](#l2-reward-supplier-contract)
   - [Functions](#functions-2)
-    - [current\_epoch\_rewards](#current_epoch_rewards)
+    - [calculate\_current\_epoch\_rewards](#calculate_current_epoch_rewards)
     - [update\_unclaimed\_rewards\_from\_staking\_contract](#update_unclaimed_rewards_from_staking_contract)
     - [claim\_rewards](#claim_rewards-2)
     - [contract\_parameters](#contract_parameters-2)
@@ -337,7 +337,7 @@ classDiagram
     staking_contract,
     erc20_dispatcher,
     l1_reward_supplier,
-    current_epoch_rewards()
+    calculate_current_epoch_rewards()
     update_unclaimed_rewards_from_staking_contract()
     claim_rewards()
     on_receive()
@@ -1547,7 +1547,7 @@ fn exit_delegation_pool_intent(
 )
 ```
 #### description <!-- omit from toc -->
-Inform of the intent to exit the stake. This will remove the funds from the stake, pausing rewards collection for the pool member. This will also start the exit window timeout.
+Inform of the intent to exit the stake. This will deduct the specified amount of funds from the stake. Rewards collection for the specified amount will be paused. This will also start the exit window timeout.
 #### emits <!-- omit from toc -->
 1. If staker is active: [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 2. If staker is active: [Stake Balance Changed](#stake-balance-changed)
@@ -1868,9 +1868,9 @@ Only staking contract can execute.
 # L2 Reward supplier contract
 
 ## Functions
-### current_epoch_rewards
+### calculate_current_epoch_rewards
 ```rust
-fn current_epoch_rewards(self: @TContractState) -> Amount
+fn calculate_current_epoch_rewards(self: @TContractState) -> Amount
 ```
 #### description <!-- omit from toc -->
 Return the amount of rewards for the current epoch.
@@ -2384,7 +2384,6 @@ Only token admin.
 | name               | type                      |
 | ------------------ | ------------------------- |
 | staker_address     | address                   |
-| final_staker_index | Option<[Index](#index)>   |
 | staking_contract   | address                   |
 | token_address      | address                   |
 | commission         | [Commission](#commission) |

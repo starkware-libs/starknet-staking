@@ -5,7 +5,7 @@ use starkware_utils::types::time::time::Timestamp;
 #[starknet::interface]
 pub trait IRewardSupplier<TContractState> {
     // Calculates the rewards for the current epoch.
-    fn current_epoch_rewards(self: @TContractState) -> Amount;
+    fn calculate_current_epoch_rewards(self: @TContractState) -> Amount;
     // Updates the unclaimed rewards from the staking contract.
     fn update_unclaimed_rewards_from_staking_contract(ref self: TContractState, rewards: Amount);
     // Transfers rewards to the staking contract.
@@ -32,7 +32,6 @@ pub mod Events {
 
 #[derive(Debug, Copy, Drop, Serde, PartialEq)]
 pub struct RewardSupplierInfo {
-    pub last_timestamp: Timestamp,
     pub unclaimed_rewards: Amount,
     pub l1_pending_requested_amount: Amount,
 }

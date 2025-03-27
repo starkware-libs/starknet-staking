@@ -7,8 +7,8 @@ use staking::flow_test::utils::{
 };
 use staking::test_utils::StakingInitConfig;
 use starkware_utils::math::abs::wide_abs_diff;
-use starkware_utils::test_utils::TokenTrait;
 use starkware_utils::types::time::time::Time;
+use starkware_utils_testing::test_utils::TokenTrait;
 
 #[test]
 fn basic_stake_flow_test() {
@@ -299,6 +299,30 @@ fn pool_migration_assertions_regression_test() {
 fn pool_eic_regression_test() {
     let mut flow = flows::PoolEICFlow { pool_address: Option::None };
     test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_switch_after_upgrade_regression_test() {
+    let mut flow = flows::DelegatorSwitchAfterUpgradeFlow {
+        pool_address: Option::None, delegator: Option::None, delegated_amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn convert_internal_staker_info_regression_test() {
+    let mut flow = flows::ConvertInternalStakerInfoFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+fn change_balance_claim_rewards_flow_test() {
+    let mut flow = flows::ChangeBalanceClaimRewardsFlow {};
+    test_flow_local(:flow);
 }
 
 /// Flow:

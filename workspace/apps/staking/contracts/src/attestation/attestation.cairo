@@ -52,8 +52,14 @@ pub mod Attestation {
         staking_contract: ContractAddress,
         // Maps staker address to the last epoch it attested.
         staker_last_attested_epoch: Map<ContractAddress, Epoch>,
-        // Number of blocks where the staker can attest after the expected attestation block.
+        // Number of blocks where the staker can attest after the target attestation block.
         // Note: that it still needs to be after the minimum attestation window.
+        //
+        // Example:
+        // - target attestation block = x,
+        // - minimum attestation window = 11,
+        // - attestation window = 20,
+        // - staker can attest in blocks [x+11, x+20].
         attestation_window: u16,
     }
 
@@ -138,7 +144,7 @@ pub mod Attestation {
         }
 
         /// This function is used to help integration partners test the correct
-        /// computation of the expected attestation block.
+        /// computation of the target attestation block.
         /// It is not intended to be used in production, due to it's limitations as stated
         /// below.
         ///
@@ -156,17 +162,18 @@ pub mod Attestation {
             let attestation_info = staking_dispatcher
                 .get_attestation_info_by_operational_address(:operational_address);
             let next_attestation_info = attestation_info.get_next_epoch_attestation_info();
-            let expected_attestation_block = self
-                ._calculate_expected_attestation_block(
+            let target_attestation_block = self
+                ._calculate_target_attestation_block(
                     staking_attestation_info: next_attestation_info, :attestation_window,
                 );
-            expected_attestation_block == block_number
+            target_attestation_block == block_number
         }
 
         fn attestation_window(self: @ContractState) -> u16 {
             self.attestation_window.read()
         }
 
+        /// **Note**: New `attestation_window` takes effect immediately in current epoch.
         fn set_attestation_window(ref self: ContractState, attestation_window: u16) {
             self.roles.only_app_governor();
             assert!(
@@ -195,15 +202,15 @@ pub mod Attestation {
             assert!(current_epoch.is_non_zero(), "{}", Error::ATTEST_EPOCH_ZERO);
             self._assert_attestation_is_not_done(:staker_address, :current_epoch);
             let attestation_window = self.attestation_window.read();
-            let expected_attestation_block = self
-                ._calculate_expected_attestation_block(
+            let target_attestation_block = self
+                ._calculate_target_attestation_block(
                     :staking_attestation_info, :attestation_window,
                 );
-            self._assert_attest_in_window(:expected_attestation_block, :attestation_window);
+            self._assert_attest_in_window(:target_attestation_block, :attestation_window);
 
             // Check the attestation data (correct block hash).
-            let expected_block_hash = self.get_expected_block_hash(:expected_attestation_block);
-            assert!(expected_block_hash == block_hash, "{}", Error::ATTEST_WRONG_BLOCK_HASH);
+            let target_block_hash = self.get_target_block_hash(:target_attestation_block);
+            assert!(target_block_hash == block_hash, "{}", Error::ATTEST_WRONG_BLOCK_HASH);
         }
 
         fn _assert_attestation_is_not_done(
@@ -220,7 +227,7 @@ pub mod Attestation {
             self.emit(Events::StakerAttestationSuccessful { staker_address, epoch: current_epoch });
         }
 
-        fn _calculate_expected_attestation_block(
+        fn _calculate_target_attestation_block(
             self: @ContractState,
             staking_attestation_info: StakingAttestationInfo,
             attestation_window: u16,
@@ -236,17 +243,17 @@ pub mod Attestation {
                 .into() % (staking_attestation_info.epoch_len() - attestation_window.into())
                 .into();
             // Calculate actual block number for attestation.
-            let expected_attestation_block = staking_attestation_info.current_epoch_starting_block()
+            let target_attestation_block = staking_attestation_info.current_epoch_starting_block()
                 + block_offset.try_into().unwrap();
-            expected_attestation_block
+            target_attestation_block
         }
 
         fn _assert_attest_in_window(
-            self: @ContractState, expected_attestation_block: u64, attestation_window: u16,
+            self: @ContractState, target_attestation_block: u64, attestation_window: u16,
         ) {
             let current_block_number = get_block_number();
-            let min_block = expected_attestation_block + MIN_ATTESTATION_WINDOW.into();
-            let max_block = expected_attestation_block + attestation_window.into();
+            let min_block = target_attestation_block + MIN_ATTESTATION_WINDOW.into();
+            let max_block = target_attestation_block + attestation_window.into();
             assert!(
                 min_block <= current_block_number && current_block_number <= max_block,
                 "{}",
@@ -259,16 +266,12 @@ pub mod Attestation {
         /// This allows the function to be tested without relying on the actual block hash
         /// retrieval syscall.
         #[cfg(not(target: 'test'))]
-        fn get_expected_block_hash(
-            self: @ContractState, expected_attestation_block: u64,
-        ) -> felt252 {
-            get_block_hash_syscall(expected_attestation_block).unwrap()
+        fn get_target_block_hash(self: @ContractState, target_attestation_block: u64) -> felt252 {
+            get_block_hash_syscall(target_attestation_block).unwrap()
         }
 
         #[cfg(target: 'test')]
-        fn get_expected_block_hash(
-            self: @ContractState, expected_attestation_block: u64,
-        ) -> felt252 {
+        fn get_target_block_hash(self: @ContractState, target_attestation_block: u64) -> felt252 {
             Zero::zero()
         }
     }

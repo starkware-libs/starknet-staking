@@ -25,23 +25,23 @@ pub mod MockTrace {
     #[abi(embed_v0)]
     impl MockTraceImpl of super::IMockTrace<ContractState> {
         fn insert(ref self: ContractState, key: Epoch, value: StakerBalance) {
-            self.trace.deref().insert(:key, :value);
+            self.trace.insert(:key, :value);
         }
 
         fn latest(self: @ContractState) -> (Epoch, StakerBalance) {
-            self.trace.deref().latest()
+            self.trace.latest()
         }
 
         fn length(self: @ContractState) -> u64 {
-            self.trace.deref().length()
+            self.trace.length()
         }
 
         fn latest_mutable(ref self: ContractState) -> (Epoch, StakerBalance) {
-            self.trace.deref().latest()
+            self.trace.latest()
         }
 
         fn is_non_empty(self: @ContractState) -> bool {
-            self.trace.deref().is_non_empty()
+            self.trace.is_non_empty()
         }
     }
 }

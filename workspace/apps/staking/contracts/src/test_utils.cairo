@@ -43,12 +43,12 @@ use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::constants::{NAME, SYMBOL};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::mul_wide_and_div;
-use starkware_utils::test_utils::{
+use starkware_utils::types::time::time::{TimeDelta, Timestamp};
+use starkware_utils_testing::test_utils::{
     advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
     set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
     set_account_as_token_admin, set_account_as_upgrade_governor,
 };
-use starkware_utils::types::time::time::TimeDelta;
 
 pub(crate) mod constants {
     use core::cmp::max;
@@ -503,7 +503,7 @@ pub(crate) fn stake_for_testing(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info._deprecated_amount_own,
+            cfg.test_info.stake_amount,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -521,7 +521,7 @@ pub(crate) fn stake_for_testing_using_dispatcher(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info._deprecated_amount_own,
+            cfg.test_info.stake_amount,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -538,7 +538,7 @@ pub(crate) fn stake_from_zero_address(
         .stake(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
-            cfg.staker_info._deprecated_amount_own,
+            cfg.test_info.stake_amount,
             cfg.test_info.pool_enabled,
             cfg.staker_info.get_pool_info().commission,
         );
@@ -650,6 +650,52 @@ pub(crate) fn load_option_from_simple_map<
         1 => Option::Some(Serde::<V>::deserialize(ref span).expect('Failed deserialize')),
         _ => panic!("Invalid Option loaded from map"),
     }
+}
+
+pub(crate) fn store_internal_staker_info_v0_to_map(
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    reward_address: ContractAddress,
+    operational_address: ContractAddress,
+    unstake_time: Option<Timestamp>,
+    amount_own: Amount,
+    index: Index,
+    unclaimed_rewards_own: Amount,
+    pool_info: Option<StakerPoolInfo>,
+) {
+    // Serialize the versioned internal staker info.
+    let mut serialized_enum: Array<felt252> = array![];
+    let version = 1; // V0
+    version.serialize(ref serialized_enum);
+    reward_address.serialize(ref serialized_enum);
+    operational_address.serialize(ref serialized_enum);
+    if let Option::Some(time) = unstake_time {
+        let idx = 1;
+        idx.serialize(ref serialized_enum);
+        time.serialize(ref serialized_enum);
+    } else {
+        let idx = 0;
+        idx.serialize(ref serialized_enum);
+    }
+    unstake_time.serialize(ref serialized_enum);
+    amount_own.serialize(ref serialized_enum);
+    index.serialize(ref serialized_enum);
+    unclaimed_rewards_own.serialize(ref serialized_enum);
+    if let Option::Some(info) = pool_info {
+        let idx = 1;
+        idx.serialize(ref serialized_enum);
+        info.serialize(ref serialized_enum);
+    } else {
+        let idx = 0;
+        idx.serialize(ref serialized_enum);
+    }
+    let mut keys = array![];
+    staker_address.serialize(ref keys);
+    let storage_address = snforge_std::map_entry_address(
+        map_selector: selector!("staker_info"), keys: keys.span(),
+    );
+    let serialized_value = serialized_enum.span();
+    snforge_std::store(target: staking_contract, :storage_address, :serialized_value);
 }
 
 pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -> felt252 {
@@ -780,6 +826,7 @@ pub(crate) struct TestInfo {
     pub staker_initial_balance: Amount,
     pub pool_member_initial_balance: Amount,
     pub pool_enabled: bool,
+    pub stake_amount: Amount,
     pub staking_contract: ContractAddress,
     pub pool_contract_admin: ContractAddress,
     pub security_admin: ContractAddress,
@@ -817,8 +864,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
-            _deprecated_amount_own: STAKE_AMOUNT,
-            _deprecated_index: Zero::zero(),
+            _deprecated_index_V0: Zero::zero(),
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(
                 StakerPoolInfoTrait::new(
@@ -859,6 +905,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pool_enabled: false,
+            stake_amount: STAKE_AMOUNT,
             staking_contract: STAKING_CONTRACT_ADDRESS(),
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
             security_admin: SECURITY_ADMIN(),
@@ -963,7 +1010,7 @@ pub(crate) fn calculate_staker_total_rewards(
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> Amount {
-    let epoch_rewards = current_epoch_rewards(:staking_contract, :minting_curve_contract);
+    let epoch_rewards = calculate_current_epoch_rewards(:staking_contract, :minting_curve_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     mul_wide_and_div(
         lhs: epoch_rewards,
@@ -973,7 +1020,7 @@ pub(crate) fn calculate_staker_total_rewards(
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
-fn current_epoch_rewards(
+fn calculate_current_epoch_rewards(
     staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
 ) -> Amount {
     let minting_curve_dispatcher = IMintingCurveDispatcher {
@@ -1038,6 +1085,47 @@ pub(crate) fn calculate_pool_rewards(
     pool_rewards
 }
 
+/// Calculate pool rewards for one epoch for the given pool balance and staker balance.
+pub(crate) fn calculate_pool_rewards_with_pool_balance(
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+    pool_balance: Amount,
+    staker_balance: Amount,
+) -> Amount {
+    // Get epoch rewards.
+    let epoch_rewards = calculate_current_epoch_rewards(:staking_contract, :minting_curve_contract);
+    // Calculate staker total rewards.
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let total_amount = staker_balance + pool_balance;
+    let total_rewards = mul_wide_and_div(
+        lhs: epoch_rewards,
+        rhs: total_amount,
+        div: staking_dispatcher.get_current_total_staking_power(),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    // Calculate staker own rewards.
+    let own_rewards = mul_wide_and_div(lhs: total_rewards, rhs: staker_balance, div: total_amount)
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    let pool_rewards_including_commission = total_rewards - own_rewards;
+    let commission_rewards = get_staker_commission_rewards(
+        :staker_info, pool_rewards: pool_rewards_including_commission,
+    );
+    let staker_rewards = own_rewards + commission_rewards;
+    // Calculate pool rewards.
+    let pool_rewards = total_rewards - staker_rewards;
+    pool_rewards
+}
+
+/// Calculate pool member rewards given the pool rewards, pool member balance and pool balance.
+pub(crate) fn calculate_pool_member_rewards(
+    pool_rewards: Amount, pool_member_balance: Amount, pool_balance: Amount,
+) -> Amount {
+    mul_wide_and_div(lhs: pool_member_balance, rhs: pool_rewards, div: pool_balance)
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+}
+
 /// Calculates the block offset required to advance from the starting block into the attestation
 /// window.
 pub(crate) fn calculate_block_offset(
@@ -1060,7 +1148,7 @@ pub(crate) fn calculate_block_offset(
 pub(crate) fn advance_block_into_attestation_window(cfg: StakingInitConfig) {
     // calculate block offset and move the block number forward.
     let block_offset = calculate_block_offset(
-        stake: cfg.staker_info._deprecated_amount_own.into(),
+        stake: cfg.test_info.stake_amount.into(),
         epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
         staker_address: cfg.test_info.staker_address.into(),
         epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),

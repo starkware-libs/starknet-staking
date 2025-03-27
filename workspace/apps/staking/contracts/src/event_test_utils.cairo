@@ -8,8 +8,8 @@ use staking::staking::interface::{
 };
 use staking::types::{Amount, Commission, Epoch, Inflation};
 use starknet::ContractAddress;
-use starkware_utils::test_utils::assert_expected_event_emitted;
 use starkware_utils::types::time::time::{TimeDelta, Timestamp};
+use starkware_utils_testing::test_utils::assert_expected_event_emitted;
 
 pub(crate) fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
     assert!(

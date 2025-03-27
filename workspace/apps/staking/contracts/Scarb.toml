@@ -1,6 +1,6 @@
 [package]
 name = "staking"
-version = "1.13.2"
+version = "1.14.4"
 edition = "2023_11"
 
 [dependencies]
@@ -12,6 +12,7 @@ starkware_utils.workspace = true
 assert_macros.workspace = true
 snforge_std.workspace = true
 snforge_scarb_plugin.workspace = true
+starkware_utils_testing.workspace = true
 
 [profile.dev.cairo]
 unstable-add-statements-code-locations-debug-info = true

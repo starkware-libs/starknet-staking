@@ -20,7 +20,7 @@ use starkware_utils::components::replaceability::interface::{
 };
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::errors::Describable;
-use starkware_utils::test_utils::{
+use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };
 use test_utils::constants::DUMMY_ADDRESS;
@@ -89,7 +89,7 @@ fn test_attest_assertions() {
     advance_epoch_global();
     // advance just before the attestation window.
     let block_offset = calculate_block_offset(
-        stake: cfg.staker_info._deprecated_amount_own.into(),
+        stake: cfg.test_info.stake_amount.into(),
         epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
         staker_address: cfg.test_info.staker_address.into(),
         epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
@@ -123,7 +123,7 @@ fn test_attest_assertions() {
     advance_block_number_global(blocks: next_epoch_starting_block - get_block_number());
     // advance into the attestation window.
     let block_offset = calculate_block_offset(
-        stake: cfg.staker_info._deprecated_amount_own.into(),
+        stake: cfg.test_info.stake_amount.into(),
         epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
         staker_address: cfg.test_info.staker_address.into(),
         epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
@@ -272,7 +272,7 @@ fn test_validate_next_epoch_attestation_block() {
         + epoch_info.epoch_len_in_blocks().into();
     let planned_attestation_block_number = next_epoch_starting_block
         + calculate_block_offset(
-            stake: cfg.staker_info._deprecated_amount_own.into(),
+            stake: cfg.test_info.stake_amount.into(),
             epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into() + 1,
             staker_address: cfg.test_info.staker_address.into(),
             epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),

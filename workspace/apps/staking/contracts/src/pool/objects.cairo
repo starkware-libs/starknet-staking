@@ -12,32 +12,46 @@ pub struct SwitchPoolData {
 
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 struct InternalPoolMemberInfo {
+    /// Address to send the member's rewards to.
     reward_address: ContractAddress,
+    /// Deprecated field used in V0 to hold the member's balance.
     amount: Amount,
+    /// Deprecated field used in V0 for rewards calculation.
     index: Index,
+    /// Deprecated field used in V0 for rewards calculation.
     unclaimed_rewards: Amount,
+    /// Deprecated field used in V0 for rewards calculation.
     commission: Commission,
+    /// Amount of funds pending to be removed from the pool.
     unpool_amount: Amount,
+    /// If the member has declared an intent to unpool,
+    /// this field holds the timestamp when he's allowed to do so.
+    /// Else, it's None.
     unpool_time: Option<Timestamp>,
 }
 
 // **Note**: This struct should be made private in the next version of Internal Pool Member Info.
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub(crate) struct InternalPoolMemberInfoV1 {
+    /// Address to send the member's rewards to.
     pub(crate) reward_address: ContractAddress,
-    // **Note**: This field was used in V0 and is replaced by `pool_member_epoch_balance` in V1.
+    /// **Note**: This field was used in V0 and is replaced by `pool_member_epoch_balance` in V1.
     pub(crate) _deprecated_amount: Amount,
-    // **Note**: This field was used in V0, in V1, rewards are calculated based on epochs.
+    /// **Note**: This field was used in V0, in V1, rewards are calculated based on epochs.
     pub(crate) _deprecated_index: Index,
-    // **Note**: This field was used in V0, in V1 it only holds unclaimed rewards from before the
-    // upgrade.
+    /// **Note**: This field was used in V0,
+    /// in V1 it only holds unclaimed rewards from before the upgrade.
     pub(crate) _deprecated_unclaimed_rewards: Amount,
-    // **Note**: This field was used in V0 for rewards calculation. In V1, rewards are transferred
-    // to the pool after commission deduction.
+    /// **Note**: This field was used in V0 for rewards calculation.
+    /// In V1, rewards are transferred to the pool after commission deduction.
     pub(crate) _deprecated_commission: Commission,
+    /// Amount of funds pending to be removed from the pool.
     pub(crate) unpool_amount: Amount,
+    /// If the member has declared an intent to unpool,
+    /// this field holds the timestamp when he's allowed to do so.
+    /// Else, it's None.
     pub(crate) unpool_time: Option<Timestamp>,
-    // Holds the entry in the member balance trace vector to start claiming rewards from.
+    /// Holds the entry in the member balance trace vector to start claiming rewards from.
     pub(crate) entry_to_claim_from: VecIndex,
 }
 

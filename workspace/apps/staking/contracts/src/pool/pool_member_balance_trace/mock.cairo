@@ -35,41 +35,41 @@ pub mod MockTrace {
         fn insert(
             ref self: ContractState, key: Epoch, value: PoolMemberBalance,
         ) -> (PoolMemberBalance, PoolMemberBalance) {
-            self.trace.deref().insert(:key, :value)
+            self.trace.insert(:key, :value)
         }
 
         fn latest(self: @ContractState) -> (Epoch, PoolMemberBalance) {
-            self.trace.deref().latest()
+            self.trace.latest()
         }
 
         fn length(self: @ContractState) -> u64 {
-            self.trace.deref().length()
+            self.trace.length()
         }
 
         fn latest_mutable(ref self: ContractState) -> (Epoch, PoolMemberBalance) {
-            self.trace.deref().latest()
+            self.trace.latest()
         }
 
         fn length_mutable(ref self: ContractState) -> u64 {
-            self.trace.deref().length()
+            self.trace.length()
         }
 
         fn is_non_empty(self: @ContractState) -> bool {
-            self.trace.deref().is_non_empty()
+            self.trace.is_non_empty()
         }
 
         fn is_non_empty_mutable(ref self: ContractState) -> bool {
-            self.trace.deref().is_non_empty()
+            self.trace.is_non_empty()
         }
 
         fn at(self: @ContractState, pos: u64) -> PoolMemberCheckpoint {
-            self.trace.deref().at(:pos)
+            self.trace.at(:pos)
         }
 
         fn insert_before_latest(
             ref self: ContractState, key: Epoch, cumulative_rewards_trace_idx: VecIndex,
         ) {
-            self.trace.deref().insert_before_latest(:key, :cumulative_rewards_trace_idx)
+            self.trace.insert_before_latest(:key, :cumulative_rewards_trace_idx)
         }
     }
 }

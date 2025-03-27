@@ -212,11 +212,9 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) reward_address: ContractAddress,
     pub(crate) operational_address: ContractAddress,
     pub(crate) unstake_time: Option<Timestamp>,
-    // **Note**: This field was used in V0 and is replaced by `staker_balance_trace` in V1.
-    pub(crate) _deprecated_amount_own: Amount,
     // **Note**: This field was used in V0 and no longer in use in the new rewards mechanism
-    // introduced in V1.
-    pub(crate) _deprecated_index: Index,
+    // introduced in V1. Still in use in `pool_migration`.
+    pub(crate) _deprecated_index_V0: Index,
     pub(crate) unclaimed_rewards_own: Amount,
     pub(crate) pool_info: Option<StakerPoolInfo>,
     pub(crate) commission_commitment: Option<CommissionCommitment>,
@@ -236,21 +234,21 @@ pub(crate) enum VersionedInternalStakerInfo {
 pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
     fn convert(
         self: InternalStakerInfo, prev_class_hash: ClassHash, staker_address: ContractAddress,
-    ) -> InternalStakerInfoV1 {
+    ) -> (InternalStakerInfoV1, Amount) {
         let library_dispatcher = IStakingLibraryDispatcher { class_hash: prev_class_hash };
         let staker_info = library_dispatcher.staker_info(staker_address);
-        InternalStakerInfoV1 {
+        let internal_staker_info_v1 = InternalStakerInfoV1 {
             reward_address: staker_info.reward_address,
             operational_address: staker_info.operational_address,
             unstake_time: staker_info.unstake_time,
-            _deprecated_amount_own: staker_info.amount_own,
-            _deprecated_index: staker_info.index,
+            _deprecated_index_V0: staker_info.index,
             unclaimed_rewards_own: staker_info.unclaimed_rewards_own,
             pool_info: staker_info.pool_info,
             // This assumes that the function is called only during migration. in a different
             // context, the commission commitment will be lost.
             commission_commitment: Option::None,
-        }
+        };
+        (internal_staker_info_v1, staker_info.amount_own)
     }
 }
 
@@ -271,8 +269,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 reward_address,
                 operational_address,
                 unstake_time: Option::None,
-                _deprecated_amount_own: Zero::zero(),
-                _deprecated_index: Zero::zero(),
+                _deprecated_index_V0: Zero::zero(),
                 unclaimed_rewards_own: Zero::zero(),
                 pool_info,
                 commission_commitment: Option::None,
@@ -302,15 +299,6 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
     fn get_pool_info(self: @InternalStakerInfoLatest) -> StakerPoolInfo {
         (*self.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
-
-    fn _deprecated_get_total_amount(self: @InternalStakerInfoLatest) -> Amount {
-        /// This is used in V0 to get the total amount of the staker.
-        /// In V1, we use `get_total_amount` instead.
-        if let Option::Some(pool_info) = *self.pool_info {
-            return pool_info._deprecated_amount() + *self._deprecated_amount_own;
-        }
-        (*self._deprecated_amount_own)
-    }
 }
 
 impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, StakerInfo> {
@@ -319,10 +307,27 @@ impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, St
             reward_address: self.reward_address,
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
-            amount_own: self._deprecated_amount_own,
+            amount_own: Zero::zero(),
             index: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalStakerInfoV1> {
+    fn into(self: StakerInfo) -> InternalStakerInfoV1 {
+        InternalStakerInfoV1 {
+            reward_address: self.reward_address,
+            operational_address: self.operational_address,
+            unstake_time: self.unstake_time,
+            _deprecated_index_V0: self.index,
+            unclaimed_rewards_own: self.unclaimed_rewards_own,
+            pool_info: self.pool_info,
+            // This assumes that the function is called only during migration. in a different
+            // context, the commission commitment will be lost.
+            commission_commitment: Option::None,
         }
     }
 }
@@ -424,28 +429,29 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
         AttestationInfo { staker_address, stake, epoch_len, epoch_id, current_epoch_starting_block }
     }
 
-    fn staker_address(self: AttestationInfo) -> ContractAddress {
-        self.staker_address
+    fn staker_address(self: @AttestationInfo) -> ContractAddress {
+        *self.staker_address
     }
-    fn stake(self: AttestationInfo) -> Amount {
-        self.stake
+    fn stake(self: @AttestationInfo) -> Amount {
+        *self.stake
     }
-    fn epoch_len(self: AttestationInfo) -> u16 {
-        self.epoch_len
+    fn epoch_len(self: @AttestationInfo) -> u16 {
+        *self.epoch_len
     }
-    fn epoch_id(self: AttestationInfo) -> Epoch {
-        self.epoch_id
+    fn epoch_id(self: @AttestationInfo) -> Epoch {
+        *self.epoch_id
     }
-    fn current_epoch_starting_block(self: AttestationInfo) -> u64 {
-        self.current_epoch_starting_block
+    fn current_epoch_starting_block(self: @AttestationInfo) -> u64 {
+        *self.current_epoch_starting_block
     }
-    fn get_next_epoch_attestation_info(self: AttestationInfo) -> AttestationInfo {
+    fn get_next_epoch_attestation_info(self: @AttestationInfo) -> AttestationInfo {
         Self::new(
-            staker_address: self.staker_address,
-            stake: self.stake,
-            epoch_len: self.epoch_len,
-            epoch_id: self.epoch_id + 1,
-            current_epoch_starting_block: self.current_epoch_starting_block + self.epoch_len.into(),
+            staker_address: *self.staker_address,
+            stake: *self.stake,
+            epoch_len: *self.epoch_len,
+            epoch_id: *self.epoch_id + 1,
+            current_epoch_starting_block: *self.current_epoch_starting_block
+                + (*self.epoch_len).into(),
         )
     }
 }

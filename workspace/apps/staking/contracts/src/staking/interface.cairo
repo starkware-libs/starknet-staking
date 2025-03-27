@@ -1,7 +1,7 @@
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::objects::{
-    AttestationInfo, EpochInfo, InternalStakerInfoV1, UndelegateIntentKey, UndelegateIntentValue,
+    AttestationInfo, EpochInfo, UndelegateIntentKey, UndelegateIntentValue,
 };
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
@@ -55,13 +55,22 @@ pub trait IStaking<TContractState> {
 #[starknet::interface]
 pub trait IStakingMigration<TContractState> {
     /// Reads the internal staker information for the given `staker_address` from storage and
-    /// returns the latest version of this struct.
+    /// returns it.
     ///
-    /// Use this function instead of directly accessing storage to ensure you retrieve the
-    /// latest version of the struct. Direct storage access may return an outdated version,
-    /// which could be misaligned with the code and probably cause panics.
+    /// Precondition: The staker exists and its version is V1.
     fn internal_staker_info(
         self: @TContractState, staker_address: ContractAddress,
+    ) -> InternalStakerInfoLatest;
+
+    /// Reads the internal staker information for the given `staker_address` from storage
+    /// and converts it to V1. Writes the updated version to storage and initializes the staker's
+    /// balance trace.
+    ///
+    /// Precondition: The staker exists and its version is V0.
+    ///
+    /// This function is used only during migration.
+    fn convert_internal_staker_info(
+        ref self: TContractState, staker_address: ContractAddress,
     ) -> InternalStakerInfoLatest;
 }
 
@@ -393,24 +402,6 @@ pub struct StakerInfo {
     pub index: Index,
     pub unclaimed_rewards_own: Amount,
     pub pool_info: Option<StakerPoolInfo>,
-}
-
-#[cfg(test)]
-pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalStakerInfoV1> {
-    fn into(self: StakerInfo) -> InternalStakerInfoV1 {
-        InternalStakerInfoV1 {
-            reward_address: self.reward_address,
-            operational_address: self.operational_address,
-            unstake_time: self.unstake_time,
-            _deprecated_amount_own: self.amount_own,
-            _deprecated_index: self.index,
-            unclaimed_rewards_own: self.unclaimed_rewards_own,
-            pool_info: self.pool_info,
-            // This assumes that the function is called only during migration. in a different
-            // context, the commission commitment will be lost.
-            commission_commitment: Option::None,
-        }
-    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
