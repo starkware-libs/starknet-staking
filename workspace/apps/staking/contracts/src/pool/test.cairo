@@ -1190,9 +1190,6 @@ fn test_partial_undelegate() {
     // Create a variable that will be constant throughout the test, and will be the sum of the pool
     // member's amount and unpool amount.
     let total_pool_member_amount = cfg.pool_member_info._deprecated_amount;
-    // Make sure the pool member has unclaimed rewards to see it's updated.
-    let unclaimed_rewards_member =
-        Zero::zero(); // TODO: Change this after implement calculate_rewards.
     cheat_caller_address(
         contract_address: pool_contract,
         caller_address: cfg.test_info.pool_member_address,
@@ -1211,9 +1208,7 @@ fn test_partial_undelegate() {
     let expected_time = Time::now()
         .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
     let expected_pool_member_info: PoolMemberInfo = InternalPoolMemberInfoLatest {
-        _deprecated_unclaimed_rewards: unclaimed_rewards_member,
-        unpool_time: Option::Some(expected_time),
-        ..cfg.pool_member_info,
+        unpool_time: Option::Some(expected_time), ..cfg.pool_member_info,
     }
         .into();
     assert!(actual_pool_member_info == expected_pool_member_info);
@@ -1245,9 +1240,7 @@ fn test_partial_undelegate() {
     let actual_pool_member_info: PoolMemberInfo = pool_dispatcher
         .pool_member_info(pool_member: cfg.test_info.pool_member_address);
     let expected_pool_member_info: PoolMemberInfo = InternalPoolMemberInfoLatest {
-        _deprecated_unclaimed_rewards: unclaimed_rewards_member,
-        unpool_time: Option::None,
-        ..cfg.pool_member_info,
+        unpool_time: Option::None, ..cfg.pool_member_info,
     }
         .into();
     assert!(actual_pool_member_info == expected_pool_member_info);
