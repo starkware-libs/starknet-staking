@@ -246,15 +246,12 @@ fn test_add_to_delegation_pool() {
     let delegate_amount = pool_member_info._deprecated_amount;
     approve(owner: pool_member, spender: pool_contract, amount: delegate_amount, :token_address);
     let mut spy = snforge_std::spy_events();
-    let unclaimed_rewards_member =
-        Zero::zero(); // TODO: Change this after implement calculate_rewards.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     pool_dispatcher.add_to_delegation_pool(:pool_member, amount: delegate_amount);
     let pool_member_info_after_add = pool_dispatcher.pool_member_info(:pool_member);
     let pool_member_info_expected = PoolMemberInfo {
         amount: pool_member_info_before_add.amount + delegate_amount,
         index: cfg.staking_contract_info.global_index,
-        unclaimed_rewards: unclaimed_rewards_member,
         ..pool_member_info_before_add,
     };
     assert!(pool_member_info_after_add == pool_member_info_expected);
@@ -277,9 +274,6 @@ fn test_add_to_delegation_pool() {
         ._set_deprecated_amount(amount: expected_pool_info._deprecated_amount() + delegate_amount);
     expected_pool_info._set_deprecated_unclaimed_rewards(unclaimed_rewards: Zero::zero());
     assert!(expected_pool_info == staker_info_after.get_pool_info());
-    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let pool_balance = token_dispatcher.balance_of(pool_contract);
-    assert!(pool_balance >= unclaimed_rewards_member.into());
 }
 
 #[test]
