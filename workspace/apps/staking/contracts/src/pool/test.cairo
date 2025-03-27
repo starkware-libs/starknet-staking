@@ -1048,23 +1048,15 @@ fn test_enter_delegation_pool_from_staking_contract() {
     };
     assert!(pool_member_info == expected_pool_member_info);
 
-    // Enter with an existing pool member.
-    let updated_index = index + BASE_VALUE;
-    snforge_std::store(
-        target: staking_contract,
-        storage_address: selector!("global_index"),
-        serialized_value: array![updated_index.into()].span(),
-    );
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :data);
     let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     let updated_amount = amount * 2;
-    let expected_reward = Zero::zero(); // TODO: Change this after implement calculate_rewards.
     let expected_pool_member_info = PoolMemberInfo {
         reward_address,
         amount: updated_amount,
         index,
-        unclaimed_rewards: expected_reward,
+        unclaimed_rewards: Zero::zero(),
         commission: cfg.pool_member_info._deprecated_commission,
         unpool_time: Option::None,
         unpool_amount: Zero::zero(),
