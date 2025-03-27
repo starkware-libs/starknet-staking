@@ -2384,7 +2384,6 @@ Only token admin.
 | name               | type                      |
 | ------------------ | ------------------------- |
 | staker_address     | address                   |
-| final_staker_index | Option<[Index](#index)>   |
 | staking_contract   | address                   |
 | token_address      | address                   |
 | commission         | [Commission](#commission) |

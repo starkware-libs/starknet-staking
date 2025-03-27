@@ -1162,7 +1162,6 @@ fn test_contract_parameters() {
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let expected_pool_contract_info = PoolContractInfo {
         staker_address: cfg.test_info.staker_address,
-        final_staker_index: Option::None,
         staking_contract,
         token_address,
         commission: cfg.staker_info.get_pool_info().commission,

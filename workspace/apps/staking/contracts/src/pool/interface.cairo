@@ -214,8 +214,6 @@ pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1 of Into<
 pub struct PoolContractInfo {
     /// Address of the staker that owns the pool.
     pub staker_address: ContractAddress,
-    /// Deprecated field previously used in rewards calculation.
-    pub final_staker_index: Option<Index>, // TODO: remove?
     /// Address of the staking contract.
     pub staking_contract: ContractAddress,
     /// Address of the token contract.

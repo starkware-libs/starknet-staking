@@ -531,7 +531,6 @@ pub mod Pool {
         fn contract_parameters(self: @ContractState) -> PoolContractInfo {
             PoolContractInfo {
                 staker_address: self.staker_address.read(),
-                final_staker_index: self.final_staker_index.read(),
                 staking_contract: self.staking_pool_dispatcher.read().contract_address,
                 token_address: self.token_dispatcher.read().contract_address,
                 commission: self.get_commission_from_staking_contract(),
