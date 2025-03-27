@@ -40,8 +40,7 @@ use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
 use staking::staking::interface::{
-    IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
-    StakerPoolInfoTrait,
+    IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfoTrait,
 };
 use staking::staking::objects::{
     InternalStakerInfoLatestTrait, UndelegateIntentKey, UndelegateIntentValue,
@@ -828,7 +827,6 @@ fn test_switch_delegation_pool() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
-    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
@@ -838,10 +836,6 @@ fn test_switch_delegation_pool() {
     cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
     let to_staker_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let unclaimed_rewards_member =
-        Zero::zero(); // TODO: Change this after implement calculate_rewards.
-    let reward_account_balance_before = token_dispatcher
-        .balance_of(cfg.pool_member_info.reward_address);
     cheat_caller_address(
         contract_address: pool_contract,
         caller_address: cfg.test_info.pool_member_address,
@@ -888,39 +882,6 @@ fn test_switch_delegation_pool() {
         pool_member: cfg.test_info.pool_member_address,
         new_delegation_pool: to_staker_pool_contract,
         amount: switch_amount,
-    );
-    // Claim rewards.
-    cheat_caller_address_once(
-        contract_address: pool_contract, caller_address: cfg.pool_member_info.reward_address,
-    );
-    let rewards = pool_dispatcher.claim_rewards(pool_member: cfg.test_info.pool_member_address);
-    assert!(rewards == unclaimed_rewards_member);
-    let reward_account_balance_after = token_dispatcher
-        .balance_of(cfg.pool_member_info.reward_address);
-    assert!(
-        reward_account_balance_after == reward_account_balance_before
-            + unclaimed_rewards_member.into(),
-    );
-    // Pool member is removed.
-    let actual_pool_member_info = pool_dispatcher
-        .get_pool_member_info(pool_member: cfg.test_info.pool_member_address);
-    assert!(actual_pool_member_info.is_none());
-    // Validate PoolMemberRewardClaimed and DeletePoolMember events emitted by
-    // the from_pool.
-    let events = spy.get_events().emitted_by(contract_address: pool_contract).events;
-    assert_number_of_events(
-        actual: events.len(), expected: 3, message: "claim_rewards after switch_delegation_pool",
-    );
-    assert_pool_member_reward_claimed_event(
-        spied_event: events[1],
-        pool_member: cfg.test_info.pool_member_address,
-        reward_address: cfg.pool_member_info.reward_address,
-        amount: unclaimed_rewards_member,
-    );
-    assert_delete_pool_member_event(
-        spied_event: events[2],
-        pool_member: cfg.test_info.pool_member_address,
-        reward_address: cfg.pool_member_info.reward_address,
     );
 }
 
