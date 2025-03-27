@@ -186,12 +186,46 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     ///
     /// Precondition: trace is not empty and `key` must be exactly one less than the latest
     /// checkpoint key.
+    /// Insert the same balance as the checkpoint before the latest.
     fn insert_before_latest(
         self: StoragePath<Mutable<PoolMemberBalanceTrace>>,
         key: Epoch,
         cumulative_rewards_trace_idx: VecIndex,
     ) {
-        self.checkpoints._insert_before_latest(:key, :cumulative_rewards_trace_idx)
+        let checkpoints = self.checkpoints;
+
+        // Empty trace.
+        let len = checkpoints.len();
+        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
+
+        // The key must be exactly one less than the latest key.
+        let latest = checkpoints[len - 1].read();
+        assert!(latest.key - 1 == key, "Given key must be exactly one less than the latest key.");
+
+        // Trace with only one checkpoint.
+        // TODO: this happend only when enter and in the same epoch claim rewards - i.e should get
+        // 0 rewards. do we need this case? or return something else?
+        if len == 1 {
+            let value = PoolMemberBalance { balance: 0, cumulative_rewards_trace_idx };
+            checkpoints[len - 1].write(PoolMemberBalanceCheckpoint { key, value });
+            checkpoints.push(latest);
+            // Trace with two or more checkpoints.
+        } else {
+            let before_latest = checkpoints[len - 2].read();
+            let pool_member_balance_checkpoint = PoolMemberBalanceCheckpoint {
+                key,
+                value: PoolMemberBalance {
+                    balance: before_latest.value.balance, cumulative_rewards_trace_idx,
+                },
+            };
+            // TODO: do we need to edit checkpoints[len-2] if we have the same key there.
+            if before_latest.key == key {
+                checkpoints[len - 2].write(pool_member_balance_checkpoint);
+            } else {
+                checkpoints[len - 1].write(pool_member_balance_checkpoint);
+                checkpoints.push(latest);
+            }
+        }
     }
 
     /// Returns whether the trace is non empty.
@@ -202,50 +236,5 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     /// Returns the total number of checkpoints.
     fn length(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> u64 {
         self.checkpoints.len()
-    }
-}
-
-#[generate_trait]
-impl MutablePoolMemberBalanceCheckpointImpl of MutablePoolMemberBalanceCheckpointTrait {
-    /// Inserts a (`key`, `value`) pair into the trace one position before the latest checkpoint.
-    /// Precondition: trace is not empty and `key` must be exactly one less than the latest.
-    /// Insert the same balance as the checkpoint before the latest.
-    fn _insert_before_latest(
-        self: StoragePath<Mutable<Vec<PoolMemberBalanceCheckpoint>>>,
-        key: Epoch,
-        cumulative_rewards_trace_idx: VecIndex,
-    ) {
-        // Empty trace.
-        let len = self.len();
-        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
-
-        // The key must be exactly one less than the latest key.
-        let latest = self[len - 1].read();
-        assert!(latest.key - 1 == key, "Given key must be exactly one less than the latest key.");
-
-        // Trace with only one checkpoint.
-        // TODO: this happend only when enter and in the same epoch claim rewards - i.e should get
-        // 0 rewards. do we need this case? or return something else?
-        if len == 1 {
-            let value = PoolMemberBalance { balance: 0, cumulative_rewards_trace_idx };
-            self[len - 1].write(PoolMemberBalanceCheckpoint { key, value });
-            self.push(latest);
-            // Trace with two or more checkpoints.
-        } else {
-            let before_latest = self[len - 2].read();
-            let pool_member_balance_checkpoint = PoolMemberBalanceCheckpoint {
-                key,
-                value: PoolMemberBalance {
-                    balance: before_latest.value.balance, cumulative_rewards_trace_idx,
-                },
-            };
-            // TODO: do we need to edit self[len-2] if we have the same key there.
-            if before_latest.key == key {
-                self[len - 2].write(pool_member_balance_checkpoint);
-            } else {
-                self[len - 1].write(pool_member_balance_checkpoint);
-                self.push(latest);
-            }
-        }
     }
 }
