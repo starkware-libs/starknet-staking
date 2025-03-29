@@ -299,6 +299,14 @@ fn staker_action_after_upgrade_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+#[should_panic(expected: "Unstake is in progress, staker is in an exit window")]
+fn staker_attest_after_intent_regression_test() {
+    let mut flow = flows::StakerAttestAfterIntentFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn pool_migration_assertions_regression_test() {
     let mut flow = flows::PoolMigrationAssertionsFlow {
         staker_no_pool: Option::None, staker_with_pool: Option::None,

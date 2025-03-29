@@ -1950,6 +1950,50 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl<
 
 /// Flow:
 /// Staker stake with pool
+/// Staker exit_intent
+/// Upgrade
+/// Staker attest
+#[derive(Drop, Copy)]
+pub(crate) struct StakerAttestAfterIntentFlow {
+    pub(crate) staker: Option<Staker>,
+}
+
+pub(crate) impl StakerAttestAfterIntentFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<StakerAttestAfterIntentFlow, TTokenState> {
+    fn get_pool_address(self: StakerAttestAfterIntentFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: StakerAttestAfterIntentFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
+    fn setup(ref self: StakerAttestAfterIntentFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.staker_exit_intent(:staker);
+
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(
+        self: StakerAttestAfterIntentFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+
+        system.advance_epoch_and_attest(:staker);
+    }
+}
+
+/// Flow:
+/// Staker stake with pool
 /// Delegator delegate
 /// Upgrade
 /// Delegator partial undelegate
