@@ -176,6 +176,18 @@ fn pool_upgrade_flow_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn pool_claim_rewards_after_upgrade_regression_test() {
+    let mut flow = flows::PoolClaimRewardsAfterUpgradeFlow {
+        pool_address: Option::None,
+        staker: Option::None,
+        delegator: Option::None,
+        delegator_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn internal_pool_member_info_after_upgrade_regression_test() {
     let mut flow = flows::InternalPoolMemberInfoAfterUpgradeFlow {
         pool_address: Option::None, delegator: Option::None, delegator_info: Option::None,
