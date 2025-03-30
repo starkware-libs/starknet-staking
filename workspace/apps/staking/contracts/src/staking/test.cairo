@@ -3002,38 +3002,6 @@ fn test_sanity_storage_versioned_internal_staker_info() {
 }
 
 #[test]
-fn test_sanity_serde_versioned_internal_staker_info() {
-    let option_internal_staker_info = Option::Some(
-        InternalStakerInfoTestTrait::new(
-            reward_address: Zero::zero(),
-            operational_address: Zero::zero(),
-            unstake_time: Option::None,
-            amount_own: Zero::zero(),
-            index: Zero::zero(),
-            unclaimed_rewards_own: Zero::zero(),
-            pool_info: Option::None,
-        ),
-    );
-    let mut arr = array![];
-    option_internal_staker_info.serialize(ref arr);
-    let mut span = arr.span();
-    let versioned_staker_info: VersionedInternalStakerInfo = Serde::<
-        VersionedInternalStakerInfo,
-    >::deserialize(ref span)
-        .unwrap();
-    let expected_versioned_staker_info = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    assert!(versioned_staker_info == expected_versioned_staker_info);
-}
-
-#[test]
 fn test_staker_info_into_internal_staker_info_v1() {
     let staker_info = StakerInfo {
         reward_address: Zero::zero(),

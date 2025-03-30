@@ -232,11 +232,11 @@ pub(crate) struct InternalStakerInfoV1 {
 }
 
 // **Note**: This struct should be updated in the next version of Internal Staker Info.
-#[derive(Debug, PartialEq, Serde, Drop, Copy, starknet::Store)]
+#[derive(Debug, PartialEq, Drop, Copy, starknet::Store)]
 pub(crate) enum VersionedInternalStakerInfo {
-    V0: InternalStakerInfo,
     #[default]
     None,
+    V0: InternalStakerInfo,
     V1: InternalStakerInfoV1,
 }
 
