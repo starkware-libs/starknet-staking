@@ -1,6 +1,5 @@
 use staking::types::Amount;
 use starknet::{ContractAddress, EthAddress};
-use starkware_utils::types::time::time::Timestamp;
 
 #[starknet::interface]
 pub trait IRewardSupplier<TContractState> {

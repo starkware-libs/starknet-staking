@@ -3,7 +3,7 @@ use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::interface::{
     CommissionCommitment, IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo,
-    StakerPoolInfo, StakerPoolInfoTrait,
+    StakerPoolInfo,
 };
 use staking::types::{Amount, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};

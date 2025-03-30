@@ -1,8 +1,8 @@
 use core::num::traits::Zero;
 use staking::types::{Amount, Epoch, VecIndex};
 use starknet::storage::{
-    Mutable, MutableVecTrait, StorageAsPath, StoragePath, StoragePointerReadAccess,
-    StoragePointerWriteAccess, Vec, VecTrait,
+    Mutable, MutableVecTrait, StoragePath, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
+    VecTrait,
 };
 use starkware_utils::trace::errors::TraceErrors;
 
