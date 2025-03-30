@@ -127,6 +127,7 @@
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
     - [OPERATIONAL\_EXISTS](#operational_exists)
+    - [STAKER\_ADDRESS\_ALREADY\_USED](#staker_address_already_used)
     - [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
     - [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
     - [CONTRACT\_IS\_PAUSED](#contract_is_paused)
@@ -532,14 +533,16 @@ Add a new staker to the stake.
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_EXISTS](#staker_exists)
 3. [OPERATIONAL\_EXISTS](#operational_exists)
-4. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
-5. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
+4. [STAKER\_ADDRESS\_ALREADY\_USED](#staker_address_already_used)
+5. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
+6. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) is not listed in the contract.
 3. `operational_address` is not listed in the contract.
-4. `amount` is above the minimum amount for staking.
-5. `commission` is not above the maximum commission for staking.
+4. `staker_address` not used.
+5. `amount` is above the minimum amount for staking.
+6. `commission` is not above the maximum commission for staking.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic  <!-- omit from toc -->
@@ -2140,6 +2143,9 @@ Only token admin.
 
 ### OPERATIONAL_EXISTS
 "Operational address already exists."
+
+### STAKER_ADDRESS_ALREADY_USED
+"Staker address is already used"
 
 ### AMOUNT_LESS_THAN_MIN_STAKE
 "Amount is less than min stake - try again with enough funds."

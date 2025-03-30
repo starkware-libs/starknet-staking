@@ -358,7 +358,6 @@ pub(crate) impl DelegatorIntentFlowImpl<
 // Staker1 exit_intent
 // Delegator exit_intent - get current block_timestamp as exit time
 // Staker1 exit_action - cover staker action with while having a delegator in intent
-// Staker1 stake (again)
 // Delegator switch part of intent to staker2's pool - cover switching from a dead staker (should
 // not matter he is back alive)
 // Delegator exit_action in staker1's original pool - cover delegator exit action with dead staker
@@ -423,12 +422,6 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
 
         system.staker_exit_action(staker: staker1);
 
-        // Re-stake after exiting. Pool should be different.
-        system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_epoch_and_attest(staker: staker1);
-        let staker1_second_pool = system.staking.get_pool(staker: staker1);
-        assert!(staker1_pool != staker1_second_pool);
-
         // After the following, delegator has delegated_amount / 2 in staker1, delegated_amount
         // / 4 in intent, and delegated_amount / 4 in staker2.
         let staker2_pool = system.staking.get_pool(staker: staker2);
@@ -440,13 +433,11 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
                 to_pool: staker2_pool,
                 amount: delegated_amount / 4,
             );
-        system.advance_epoch_and_attest(staker: staker1);
         system.advance_epoch_and_attest(staker: staker2);
 
         // After the following, delegator has delegated_amount / 2 in staker1, and
         // delegated_amount / 4 in staker2.
         system.delegator_exit_action(:delegator, pool: staker1_pool);
-        system.advance_epoch_and_attest(staker: staker1);
         system.advance_epoch_and_attest(staker: staker2);
 
         // Claim rewards from second pool and see that the rewards are increasing.
@@ -466,24 +457,18 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         assert!(delegator_reward_after_advance_epoch > delegator_reward_before_advance_epoch);
 
         // Advance epoch and attest.
-        system.advance_epoch_and_attest(staker: staker1);
         system.advance_epoch_and_attest(staker: staker2);
         system.advance_epoch();
 
         // After the following, delegator has delegated_amount / 4 in staker2.
         system.delegator_exit_intent(:delegator, pool: staker1_pool, amount: delegated_amount / 2);
-        system.advance_time(time: system.staking.get_exit_wait_window());
         system.delegator_exit_action(:delegator, pool: staker1_pool);
         system.delegator_claim_rewards(:delegator, pool: staker1_pool);
 
         // Clean up and make all parties exit.
-        system.staker_exit_intent(staker: staker1);
-        system.advance_time(time: system.staking.get_exit_wait_window());
-
         system.staker_exit_intent(staker: staker2);
         system.advance_time(time: system.staking.get_exit_wait_window());
 
-        system.staker_exit_action(staker: staker1);
         system.staker_exit_action(staker: staker2);
         system.delegator_exit_intent(:delegator, pool: staker2_pool, amount: delegated_amount / 4);
         system.delegator_exit_action(:delegator, pool: staker2_pool);
@@ -493,7 +478,6 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
 
         // Assert pools' balances are low.
         assert!(system.token.balance_of(account: staker1_pool) < 100);
-        assert!(system.token.balance_of(account: staker1_second_pool) == 0);
         assert!(system.token.balance_of(account: staker2_pool) < 100);
 
         // Assert all staked amounts were transferred back.
@@ -517,7 +501,6 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
                 + system.token.balance_of(account: staker2.reward.address)
                 + system.token.balance_of(account: delegator.reward.address)
                 + system.token.balance_of(account: staker1_pool)
-                + system.token.balance_of(account: staker1_second_pool)
                 + system.token.balance_of(account: staker2_pool),
         );
     }

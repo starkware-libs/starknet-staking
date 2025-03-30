@@ -110,7 +110,12 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
 
     /// Returns whether the trace is non empty.
     fn is_non_empty(self: StoragePath<StakerBalanceTrace>) -> bool {
-        self.checkpoints.len().is_non_zero()
+        !self.is_empty()
+    }
+
+    /// Returns whether the trace is empty.
+    fn is_empty(self: StoragePath<StakerBalanceTrace>) -> bool {
+        self.checkpoints.len().is_zero()
     }
 }
 
@@ -161,6 +166,11 @@ pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
 
     /// Returns whether the trace is non empty.
     fn is_non_empty(self: StoragePath<Mutable<StakerBalanceTrace>>) -> bool {
-        self.checkpoints.len().is_non_zero()
+        !self.is_empty()
+    }
+
+    /// Returns whether the trace is empty.
+    fn is_empty(self: StoragePath<Mutable<StakerBalanceTrace>>) -> bool {
+        self.checkpoints.len().is_zero()
     }
 }

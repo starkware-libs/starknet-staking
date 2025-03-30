@@ -212,6 +212,7 @@ pub mod Staking {
                 "{}",
                 GenericError::OPERATIONAL_EXISTS,
             );
+            self.assert_staker_address_not_reused(:staker_address);
             assert!(amount >= self.min_stake.read(), "{}", Error::AMOUNT_LESS_THAN_MIN_STAKE);
             assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
 
@@ -1547,6 +1548,14 @@ pub mod Staking {
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
+        }
+
+        fn assert_staker_address_not_reused(self: @ContractState, staker_address: ContractAddress) {
+            assert!(
+                self.staker_balance_trace.entry(key: staker_address).is_empty(),
+                "{}",
+                Error::STAKER_ADDRESS_ALREADY_USED,
+            );
         }
     }
 }

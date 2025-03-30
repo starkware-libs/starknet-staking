@@ -285,6 +285,42 @@ fn test_stake_with_commission_out_of_range() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
 }
 
+#[test]
+#[should_panic(expected: "Staker address is already used")]
+fn test_stake_with_staker_address_already_used() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+
+    // Exit intent.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let unstake_time = staking_dispatcher.unstake_intent();
+
+    // Advance time to enable unstake_action.
+    start_cheat_block_timestamp_global(
+        block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into(),
+    );
+
+    // Exit action.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.unstake_action(:staker_address);
+
+    // Second stake with the same staker address.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher
+        .stake(
+            reward_address: cfg.staker_info.reward_address,
+            operational_address: cfg.staker_info.operational_address,
+            amount: cfg.test_info.stake_amount,
+            pool_enabled: cfg.test_info.pool_enabled,
+            commission: cfg.staker_info.get_pool_info().commission,
+        );
+}
+
 // **Note**: The migration tests will be part of the flow tests.
 // TODO: Test the rewards part here for latest internal staker info, i.e test the rewards are sent
 // to the pool and the right index is returned.
@@ -957,6 +993,8 @@ fn test_add_stake_from_pool_assertions() {
     );
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_action(:staker_address);
+    cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
+    let staker_address = cfg.test_info.staker_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
