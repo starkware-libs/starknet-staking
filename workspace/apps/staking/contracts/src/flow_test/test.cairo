@@ -345,6 +345,15 @@ fn change_balance_claim_rewards_flow_test() {
     test_flow_local(:flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_intent_before_claim_rewards_after_regression_test() {
+    let mut flow = flows::DelegatorIntentBeforeClaimRewardsAfterFlow {
+        staker: Option::None, pool_address: Option::None, delegator: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

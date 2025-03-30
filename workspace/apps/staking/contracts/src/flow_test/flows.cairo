@@ -2756,6 +2756,69 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl<
         );
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Delegator full exit intent
+/// Upgrade
+/// Staker attest
+/// Delegator claim rewards
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorIntentBeforeClaimRewardsAfterFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<DelegatorIntentBeforeClaimRewardsAfterFlow, TTokenState> {
+    fn get_pool_address(
+        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
+    ) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn get_staker_address(
+        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
+    ) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(
+        ref self: DelegatorIntentBeforeClaimRewardsAfterFlow, ref system: SystemState<TTokenState>,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let delegator = system.new_delegator(amount: stake_amount);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: stake_amount);
+        system.delegator_exit_intent(delegator: delegator, :pool, amount: stake_amount);
+
+        self.staker = Option::Some(staker);
+        self.pool_address = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+    }
+
+    fn test(
+        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+        let pool = self.pool_address.unwrap();
+        let delegator = self.delegator.unwrap();
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
