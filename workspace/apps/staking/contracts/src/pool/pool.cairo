@@ -109,7 +109,6 @@ pub mod Pool {
         PoolMemberRewardAddressChanged: Events::PoolMemberRewardAddressChanged,
         StakerRemoved: Events::StakerRemoved,
         PoolMemberRewardClaimed: Events::PoolMemberRewardClaimed,
-        DeletePoolMember: Events::DeletePoolMember,
         NewPoolMember: Events::NewPoolMember,
         SwitchDelegationPool: Events::SwitchDelegationPool,
         PoolMemberExitAction: Events::PoolMemberExitAction,
@@ -302,18 +301,12 @@ pub mod Pool {
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
 
-            // Write the updated pool member info to storage (remove if needed).
-            let member_balance = self.get_or_create_member_balance(:pool_member);
-            if member_balance.balance().is_zero() {
-                // Transfer rewards to delegator's reward address.
-                let (rewards, _) = self.calculate_rewards(:pool_member);
-                pool_member_info._deprecated_unclaimed_rewards += rewards;
-                self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
-                self.remove_pool_member(:pool_member);
-            } else {
-                pool_member_info.unpool_time = Option::None;
-                self.write_pool_member_info(:pool_member, :pool_member_info);
-            }
+            // Migration.
+            self.get_or_create_member_balance(:pool_member);
+
+            // Write the updated pool member info to storage.
+            pool_member_info.unpool_time = Option::None;
+            self.write_pool_member_info(:pool_member, :pool_member_info);
 
             unpool_amount
         }
@@ -343,14 +336,8 @@ pub mod Pool {
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
 
-            let member_balance = self.get_or_create_member_balance(:pool_member);
-            if pool_member_info.unpool_amount.is_zero() && member_balance.balance().is_zero() {
-                // Both unpool_amount and amount are zero, remove pool member.
-                self.remove_pool_member(:pool_member);
-            } else {
-                // Write the updated pool member info to storage.
-                self.write_pool_member_info(:pool_member, :pool_member_info);
-            }
+            // Write the updated pool member info to storage.
+            self.write_pool_member_info(:pool_member, :pool_member_info);
 
             rewards
         }
@@ -598,12 +585,6 @@ pub mod Pool {
 
     #[generate_trait]
     pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
-        fn remove_pool_member(ref self: ContractState, pool_member: ContractAddress) {
-            let reward_address = self.internal_pool_member_info(:pool_member).reward_address;
-            self.pool_member_info.write(pool_member, VInternalPoolMemberInfo::None);
-            self.emit(Events::DeletePoolMember { pool_member, reward_address });
-        }
-
         fn assert_staker_is_active(self: @ContractState) {
             assert!(self.is_staker_active(), "{}", Error::STAKER_INACTIVE);
         }

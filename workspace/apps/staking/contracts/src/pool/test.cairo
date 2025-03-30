@@ -10,8 +10,8 @@ use core::num::traits::zero::Zero;
 use core::option::OptionTrait;
 use core::serde::Serde;
 use event_test_utils::{
-    assert_delegation_pool_member_balance_changed_event, assert_delete_pool_member_event,
-    assert_new_pool_member_event, assert_number_of_events, assert_pool_member_exit_action_event,
+    assert_delegation_pool_member_balance_changed_event, assert_new_pool_member_event,
+    assert_number_of_events, assert_pool_member_exit_action_event,
     assert_pool_member_exit_intent_event, assert_pool_member_reward_address_change_event,
     assert_pool_member_reward_claimed_event, assert_staker_removed_event,
     assert_switch_delegation_pool_event,
@@ -736,16 +736,24 @@ fn test_exit_delegation_pool_action() {
     );
     // Exit delegation pool action and check that:
     // 1. The returned value is correct.
-    // 2. The pool member is erased from the pool member info map.
-    // 3. The pool amount was transferred back to the pool member.
-    // 4. The unclaimed rewards were transferred to the reward account.
+    // 2. The pool amount was transferred back to the pool member.
+    // 3. The unclaimed rewards were transferred to the reward account.
     let mut spy = snforge_std::spy_events();
+    let pool_member_info_before_action = pool_dispatcher
+        .pool_member_info(pool_member: cfg.test_info.pool_member_address);
     let returned_amount = pool_dispatcher
         .exit_delegation_pool_action(pool_member: cfg.test_info.pool_member_address);
     assert!(returned_amount == cfg.pool_member_info._deprecated_amount);
-    let pool_member = pool_dispatcher
-        .get_pool_member_info(pool_member: cfg.test_info.pool_member_address);
-    assert!(pool_member.is_none());
+    let actual_pool_member = pool_dispatcher
+        .pool_member_info(pool_member: cfg.test_info.pool_member_address);
+    let expected_pool_member_info = PoolMemberInfo {
+        amount: Zero::zero(),
+        unpool_time: Option::None,
+        unclaimed_rewards: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        ..pool_member_info_before_action,
+    };
+    assert!(actual_pool_member == expected_pool_member_info);
     let balance_after_action = token_dispatcher.balance_of(cfg.test_info.pool_member_address);
     let reward_account_balance_after = token_dispatcher
         .balance_of(cfg.pool_member_info.reward_address);
@@ -757,26 +765,15 @@ fn test_exit_delegation_pool_action() {
         reward_account_balance_after == reward_account_balance_before
             + unclaimed_rewards_member.into(),
     );
-    // Validate the PoolMemberExitAction, PoolMemberRewardClaimed and DeletePoolMember events.
+    // Validate the PoolMemberExitAction and PoolMemberRewardClaimed events.
     let events = spy.get_events().emitted_by(contract_address: pool_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 3, message: "exit_delegation_pool_action",
+        actual: events.len(), expected: 1, message: "exit_delegation_pool_action",
     );
     assert_pool_member_exit_action_event(
         spied_event: events[0],
         pool_member: cfg.test_info.pool_member_address,
         unpool_amount: delegate_amount,
-    );
-    assert_pool_member_reward_claimed_event(
-        spied_event: events[1],
-        pool_member: cfg.test_info.pool_member_address,
-        reward_address: cfg.pool_member_info.reward_address,
-        amount: unclaimed_rewards_member,
-    );
-    assert_delete_pool_member_event(
-        spied_event: events[2],
-        pool_member: cfg.test_info.pool_member_address,
-        reward_address: cfg.pool_member_info.reward_address,
     );
 }
 

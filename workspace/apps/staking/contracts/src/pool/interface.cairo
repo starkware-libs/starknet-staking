@@ -146,13 +146,6 @@ pub mod Events {
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
-    pub struct DeletePoolMember {
-        #[key]
-        pub pool_member: ContractAddress,
-        pub reward_address: ContractAddress,
-    }
-
-    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct NewPoolMember {
         #[key]
         pub pool_member: ContractAddress,

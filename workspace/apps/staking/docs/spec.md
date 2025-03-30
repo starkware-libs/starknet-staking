@@ -92,7 +92,6 @@
     - [Pool Member Exit Action](#pool-member-exit-action)
     - [Staker Removed](#staker-removed)
     - [New Pool Member](#new-pool-member)
-    - [Delete Pool Member](#delete-pool-member)
     - [Pool Member Reward Claimed](#pool-member-reward-claimed)
     - [Pool Member Reward Address Changed](#pool-member-reward-address-changed)
     - [Switch Delegation Pool](#switch-delegation-pool)
@@ -1581,8 +1580,7 @@ fn exit_delegation_pool_action(
 Executes the intent to exit the stake if enough time have passed. Transfers the funds back to the pool member.
 Return the amount of tokens transferred back to the pool member.
 #### emits <!-- omit from toc -->
-1. [Pool Member Reward Claimed](#pool-member-reward-claimed)
-2. [Delete Pool Member](#delete-pool-member)
+1. [Pool Member Exit Action](#pool-member-exit-action)
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 2. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
@@ -1595,10 +1593,7 @@ Return the amount of tokens transferred back to the pool member.
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. [Remove from delegation pool action](#remove_from_delegation_pool_action).
-2. If the pool member's new balance is zero:
-  1. Transfer rewards to pool member.
-  2. Transfer funds to pool member.
-  3. Remove the member from the pool.
+2. Transfer funds to pool member.
 
 
 ### claim_rewards
@@ -1612,7 +1607,7 @@ fn claim_rewards(
 Update rewards and transfer them to the reward address.
 Return the amount transferred to the reward address.
 #### emits <!-- omit from toc -->
-1. If pool member amount and intent amount are zero: [Delete Pool Member](#delete-pool-member)
+1. [Pool Member Reward Claimed](#pool-member-reward-claimed)
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 2. [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
@@ -1626,9 +1621,7 @@ Only pool member address or reward address can execute.
 #### logic <!-- omit from toc -->
 1. Calculate rewards and update entry_to_claim_from.
 2. Transfer rewards to pool member.
-3. If the member has a balance of zero (and no pending unpool),
-   remove them from the pool.
-4. Else, write updated pool member info.
+3. Write updated pool member info.
 
 ### switch_delegation_pool
 ```rust
@@ -1837,12 +1830,6 @@ Only staking contract can execute.
 | staker_address | address           | ✅     |
 | reward_address | address           | ❌     |
 | amount         | [Amount](#amount) | ❌     |
-
-### Delete Pool Member
-| data           | type    | keyed |
-| -------------- | ------- | ----- |
-| pool_member    | address | ✅     |
-| reward_address | address | ❌     |
 
 ### Pool Member Reward Claimed
 | data           | type              | keyed |

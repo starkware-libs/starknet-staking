@@ -333,20 +333,6 @@ pub(crate) fn assert_delete_staker_event(
     );
 }
 
-pub(crate) fn assert_delete_pool_member_event(
-    spied_event: @(ContractAddress, Event),
-    pool_member: ContractAddress,
-    reward_address: ContractAddress,
-) {
-    let expected_event = PoolEvents::DeletePoolMember { pool_member, reward_address };
-    assert_expected_event_emitted(
-        :spied_event,
-        :expected_event,
-        expected_event_selector: @selector!("DeletePoolMember"),
-        expected_event_name: "DeletePoolMember",
-    );
-}
-
 pub(crate) fn assert_switch_delegation_pool_event(
     spied_event: @(ContractAddress, Event),
     pool_member: ContractAddress,

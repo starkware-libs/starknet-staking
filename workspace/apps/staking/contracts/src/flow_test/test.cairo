@@ -494,6 +494,7 @@ fn two_delegators_full_intent_flow_test() {
     system.advance_epoch_and_attest(:staker);
 
     system.delegator_exit_action(delegator: delegator_x, :pool);
+    system.delegator_claim_rewards(delegator: delegator_x, :pool);
     system.advance_epoch_and_attest(:staker);
 
     system.delegator_exit_intent(delegator: delegator_y, :pool, amount: delegated_amount);
@@ -501,6 +502,7 @@ fn two_delegators_full_intent_flow_test() {
     system.advance_epoch_and_attest(:staker);
 
     system.delegator_exit_action(delegator: delegator_y, :pool);
+    system.delegator_claim_rewards(delegator: delegator_y, :pool);
     system.advance_epoch_and_attest(:staker);
 
     system.staker_exit_intent(:staker);
@@ -579,6 +581,7 @@ fn partial_switches_flow_test() {
     system.advance_epoch_and_attest(staker: second_staker);
 
     system.delegator_exit_action(:delegator, pool: first_pool);
+    system.delegator_claim_rewards(:delegator, pool: first_pool);
     system.advance_epoch_and_attest(staker: first_staker);
     system.advance_epoch_and_attest(staker: second_staker);
 
@@ -610,10 +613,12 @@ fn partial_switches_flow_test() {
     system.advance_epoch_and_attest(staker: first_staker);
     system.advance_epoch_and_attest(staker: second_staker);
     system.delegator_exit_action(:delegator, pool: first_pool);
+    system.delegator_claim_rewards(:delegator, pool: first_pool);
 
     system.delegator_exit_intent(:delegator, pool: second_pool, amount: delegated_amount / 8);
     system.advance_exit_wait_window();
     system.delegator_exit_action(:delegator, pool: second_pool);
+    system.delegator_claim_rewards(:delegator, pool: second_pool);
     system.advance_epoch_and_attest(staker: first_staker);
     system.advance_epoch_and_attest(staker: second_staker);
 
@@ -742,6 +747,7 @@ fn flow_4_switch_member_back_and_forth_test() {
     system.delegator_exit_intent(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
     system.advance_time(time: system.staking.get_exit_wait_window());
     system.delegator_exit_action(delegator: delegator_Y, pool: pool_B);
+    system.delegator_claim_rewards(delegator: delegator_Y, pool: pool_B);
 
     system.staker_exit_intent(staker: staker_B);
     system.staker_exit_intent(staker: staker_A);
@@ -834,10 +840,12 @@ fn delegators_add_to_delegation_pool_flow_test() {
     system.delegator_exit_intent(delegator: first_delegator, :pool, amount: delegator_amount);
     system.advance_time(time: system.staking.get_exit_wait_window());
     system.delegator_exit_action(delegator: first_delegator, :pool);
+    system.delegator_claim_rewards(delegator: first_delegator, :pool);
 
     system.delegator_exit_intent(delegator: second_delegator, :pool, amount: delegator_amount);
     system.advance_time(time: system.staking.get_exit_wait_window());
     system.delegator_exit_action(delegator: second_delegator, :pool);
+    system.delegator_claim_rewards(delegator: second_delegator, :pool);
 
     system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
@@ -980,6 +988,9 @@ fn same_staker_different_pool_flow_test() {
     system.advance_exit_wait_window();
     system.delegator_exit_action(:delegator, pool: second_pool);
     system.delegator_exit_action(:delegator, pool: third_pool);
+    system.delegator_claim_rewards(:delegator, :pool);
+    system.delegator_claim_rewards(:delegator, pool: second_pool);
+    system.delegator_claim_rewards(:delegator, pool: third_pool);
 
     system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
@@ -1066,6 +1077,7 @@ fn add_to_delegation_after_intent_flow_test() {
     system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount);
     system.advance_time(time: system.staking.get_exit_wait_window());
     system.delegator_exit_action(:delegator, :pool);
+    system.delegator_claim_rewards(:delegator, :pool);
 
     system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());

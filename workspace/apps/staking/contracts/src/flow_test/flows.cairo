@@ -80,6 +80,7 @@ pub(crate) impl BasicStakeFlowImpl<
         system.advance_time(time: system.staking.get_exit_wait_window());
 
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
         system.staker_exit_action(:staker);
 
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
@@ -325,6 +326,7 @@ pub(crate) impl DelegatorIntentFlowImpl<
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.advance_epoch_and_attest(:staker);
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
         system.advance_epoch_and_attest(:staker);
 
         system.staker_exit_intent(:staker);
@@ -472,6 +474,7 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         system.delegator_exit_intent(:delegator, pool: staker1_pool, amount: delegated_amount / 2);
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.delegator_exit_action(:delegator, pool: staker1_pool);
+        system.delegator_claim_rewards(:delegator, pool: staker1_pool);
 
         // Clean up and make all parties exit.
         system.staker_exit_intent(staker: staker1);
@@ -484,6 +487,7 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         system.staker_exit_action(staker: staker2);
         system.delegator_exit_intent(:delegator, pool: staker2_pool, amount: delegated_amount / 4);
         system.delegator_exit_action(:delegator, pool: staker2_pool);
+        system.delegator_claim_rewards(:delegator, pool: staker2_pool);
 
         // ------------- Flow complete, now asserts -------------
 
@@ -579,6 +583,7 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.advance_epoch_and_attest(:staker);
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         // Clean up and make all parties exit.
         system.staker_exit_intent(:staker);
@@ -682,6 +687,7 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl<
         system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         // Clean up and make all parties exit.
         system.staker_exit_intent(:staker);
@@ -767,6 +773,7 @@ pub(crate) impl StakerIntentLastActionFirstFlowImpl<
         system.staker_exit_action(:staker);
 
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
         assert!(system.token.balance_of(account: pool) < 100);
@@ -1520,6 +1527,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl<
         system.advance_exit_wait_window();
 
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         let delegator_rewards_after_exit = system
             .token
@@ -1528,7 +1536,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl<
         assert!(delegator_rewards_after_exit == pool_rewards_epoch * 3);
 
         // Enter again in the same epoch of exit action.
-        system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.increase_delegate(:delegator, :pool, amount: delegated_amount);
         system.advance_epoch_and_attest(:staker);
 
         system.advance_epoch_and_attest(:staker);
@@ -1552,6 +1560,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl<
 
         system.staker_exit_action(:staker);
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
         assert!(system.token.balance_of(account: pool) == 0);
@@ -1708,6 +1717,8 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl<
 
         system.staker_exit_action(staker: staker1);
         system.delegator_exit_action(:delegator, pool: pool1);
+        system.delegator_claim_rewards(:delegator, pool: pool1);
+        system.delegator_claim_rewards(:delegator, pool: pool2);
 
         assert!(system.token.balance_of(account: pool1) == 0);
         assert!(
@@ -1784,8 +1795,13 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
 
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
-        assert!(system.get_pool_member_info(:delegator, :pool).is_none());
+        let pool_member_info = system.pool_member_info(:delegator, :pool);
+        assert!(pool_member_info.amount.is_zero());
+        assert!(pool_member_info.unclaimed_rewards.is_zero());
+        assert!(pool_member_info.unpool_amount.is_zero());
+        assert!(pool_member_info.unpool_time.is_none());
     }
 }
 
