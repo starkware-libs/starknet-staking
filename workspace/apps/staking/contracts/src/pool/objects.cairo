@@ -66,9 +66,7 @@ pub(crate) struct InternalPoolMemberInfoV1 {
 
 #[generate_trait]
 pub impl InternalPoolMemberInfoLatestImpl of InternalPoolMemberInfoLatestTrait {
-    fn new(
-        reward_address: ContractAddress, entry_to_claim_from: VecIndex,
-    ) -> InternalPoolMemberInfoV1 {
+    fn new(reward_address: ContractAddress) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address,
             _deprecated_amount: Zero::zero(),
@@ -77,7 +75,7 @@ pub impl InternalPoolMemberInfoLatestImpl of InternalPoolMemberInfoLatestTrait {
             _deprecated_commission: Zero::zero(),
             unpool_amount: Zero::zero(),
             unpool_time: Option::None,
-            entry_to_claim_from,
+            entry_to_claim_from: Zero::zero(),
             reward_checkpoint: PoolMemberCheckpointTrait::new(
                 epoch: Zero::zero(),
                 balance: Zero::zero(),
@@ -130,9 +128,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
         VInternalPoolMemberInfo::V1(value)
     }
 
-    fn new_latest(
-        reward_address: ContractAddress, entry_to_claim_from: VecIndex,
-    ) -> VInternalPoolMemberInfo {
+    fn new_latest(reward_address: ContractAddress) -> VInternalPoolMemberInfo {
         // Initialize `reward_checkpoint` to start at epoch 0 (regardless of when the member
         // joined) with a zero balance.
         // Although the rewards will be computed even for the period before the member joined,
@@ -149,7 +145,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
                 _deprecated_commission: Zero::zero(),
                 unpool_amount: Zero::zero(),
                 unpool_time: Option::None,
-                entry_to_claim_from,
+                entry_to_claim_from: Zero::zero(),
                 reward_checkpoint,
             },
         )
@@ -269,7 +265,7 @@ mod internal_pool_member_info_latest_tests {
     #[test]
     fn test_into() {
         let internal_pool_member_info = InternalPoolMemberInfoLatestTrait::new(
-            reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
+            reward_address: Zero::zero(),
         );
         let pool_member_info: PoolMemberInfo = internal_pool_member_info.into();
         let expected_pool_member_info = PoolMemberInfo {
@@ -287,7 +283,7 @@ mod internal_pool_member_info_latest_tests {
     #[test]
     fn test_new() {
         let pool_member_info = InternalPoolMemberInfoLatestTrait::new(
-            reward_address: POOL_MEMBER_REWARD_ADDRESS(), entry_to_claim_from: Zero::zero(),
+            reward_address: POOL_MEMBER_REWARD_ADDRESS(),
         );
         let expected = InternalPoolMemberInfoLatest {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
