@@ -901,7 +901,7 @@ pub mod Pool {
                 .at(cumulative_rewards_trace_idx);
             if pool_member_checkpoint.epoch() > epoch_at_index {
                 // If pool rewards for epoch j given after pool member balance changed, then pool
-                // member is not eligible in this `reward_info_idx` and it is infact the latest one
+                // member is not eligible in this `rewards_info_idx` and it is infact the latest one
                 // before the staking power change.
                 sigma_at_index
             } else {

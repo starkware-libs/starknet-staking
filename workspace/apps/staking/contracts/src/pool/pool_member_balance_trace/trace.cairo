@@ -16,6 +16,13 @@ pub struct PoolMemberBalanceTrace {
 #[derive(Copy, Drop, Serde, starknet::Store, Debug, PartialEq)]
 pub(crate) struct PoolMemberBalance {
     balance: Amount,
+    /// Index of the first non-existent entry in the cumulative rewards trace at the time of the
+    /// balance change.
+    /// Used in `calculate_rewards`.
+    ///
+    /// Points to an entry in the rewards_info trace that is either:
+    /// 1. The last entry whose epoch is < the epoch of this checkpoint
+    /// 2. The first entry whose epoch is >= the epoch of this checkpoint
     cumulative_rewards_trace_idx: VecIndex,
 }
 
