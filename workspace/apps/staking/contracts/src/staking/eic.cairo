@@ -74,12 +74,7 @@ mod StakingEIC {
             }
 
             // 5. Set attestation contract address.
-            let current_attestation_contract = self.attestation_contract.read();
-            // If attestation_contract is not empty we assume it's already set correctly.
-            // in this case, we must not replace it.
-            if current_attestation_contract.is_zero() {
-                self.attestation_contract.write(attestation_contract);
-            }
+            self.attestation_contract.write(attestation_contract);
         }
     }
 }
