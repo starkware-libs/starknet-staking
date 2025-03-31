@@ -93,7 +93,6 @@ fn test_send_rewards_to_member() {
     );
     // Setup pool_member_info and expected results before sending rewards.
     let unclaimed_rewards = POOL_MEMBER_UNCLAIMED_REWARDS;
-    cfg.pool_member_info._unclaimed_rewards_from_v0 = unclaimed_rewards;
     fund(
         sender: cfg.test_info.owner_address,
         recipient: test_address(),
@@ -102,18 +101,15 @@ fn test_send_rewards_to_member() {
     );
     let member_balance_before_rewards = token_dispatcher
         .balance_of(account: cfg.pool_member_info.reward_address);
-    let expected_pool_member_info = InternalPoolMemberInfoLatest {
-        _unclaimed_rewards_from_v0: Zero::zero(), ..cfg.pool_member_info,
-    };
     // Send rewards to pool member's reward address.
     state
         .send_rewards_to_member(
-            ref pool_member_info: cfg.pool_member_info,
+            pool_member_info: cfg.pool_member_info,
             pool_member: cfg.test_info.pool_member_address,
             :token_dispatcher,
+            amount: unclaimed_rewards,
         );
-    // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
-    assert!(expected_pool_member_info == cfg.pool_member_info);
+    // Check that the staker received the rewards.
     let member_balance_after_rewards = token_dispatcher
         .balance_of(account: cfg.pool_member_info.reward_address);
     assert!(
