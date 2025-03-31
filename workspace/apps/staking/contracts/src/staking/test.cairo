@@ -73,13 +73,14 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, approve,
-    calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards,
-    cheat_reward_for_reward_supplier, constants, declare_pool_contract,
-    declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
-    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
-    general_contract_system_deployment, initialize_staking_state_from_cfg, load_from_simple_map,
-    stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,
-    store_internal_staker_info_v0_to_map, store_to_simple_map,
+    calculate_pool_member_rewards, calculate_staker_own_rewards_including_commission,
+    calculate_staker_total_rewards, cheat_reward_for_reward_supplier, constants,
+    declare_pool_contract, declare_staking_eic_contract, deploy_mock_erc20_contract,
+    deploy_reward_supplier_contract, deploy_staking_contract,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    initialize_staking_state_from_cfg, load_from_simple_map, stake_for_testing_using_dispatcher,
+    stake_from_zero_address, stake_with_pool_enabled, store_internal_staker_info_v0_to_map,
+    store_to_simple_map,
 };
 
 #[test]
@@ -2628,11 +2629,13 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let token_address = cfg.staking_contract_info.token_address;
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    let pool_member = cfg.test_info.pool_member_address;
 
     // Calculate rewards.
     let total_rewards = calculate_staker_total_rewards(
@@ -2644,9 +2647,10 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let epoch_rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards();
     let expected_pool_rewards = epoch_rewards - expected_staker_rewards;
 
-    // Assert staker rewards and pool balance before update.
+    // Assert staker rewards, delegator rewards, and pool balance before update.
     assert!(staker_info_before.unclaimed_rewards_own.is_zero());
     assert!(token_dispatcher.balance_of(pool_contract).is_zero());
+    assert!(pool_dispatcher.pool_member_info(:pool_member).unclaimed_rewards.is_zero());
 
     // Fund reward supplier.
     fund(
@@ -2663,13 +2667,19 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
         contract_address: staking_contract, caller_address: attestation_contract,
     );
     staking_attestation_dispatcher.update_rewards_from_attestation_contract(:staker_address);
+    advance_epoch_global();
 
     // Assert staker rewards update.
     let staker_info_after = staking_dispatcher.staker_info(:staker_address);
     assert!(staker_info_after == staker_info_expected);
 
-    // Assert pool rewards transfer.
+    // Assert pool and delegator rewards.
     assert!(token_dispatcher.balance_of(pool_contract) == expected_pool_rewards.into());
+    // Since there is only one delegator, pool rewards should be the same as the delegator
+    // rewards.
+    assert!(
+        pool_dispatcher.pool_member_info(:pool_member).unclaimed_rewards == expected_pool_rewards,
+    );
 
     // Validate RewardsSuppliedToDelegationPool and StakerRewardsUpdated event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
