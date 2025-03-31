@@ -212,12 +212,12 @@ pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfo
 pub struct PoolContractInfo {
     /// Address of the staker that owns the pool.
     pub staker_address: ContractAddress,
+    /// Indicates whether the staker has been removed from the staking contract.
+    pub staker_removed: bool,
     /// Address of the staking contract.
     pub staking_contract: ContractAddress,
     /// Address of the token contract.
     pub token_address: ContractAddress,
     /// The commission the staker takes from the pool rewards.
     pub commission: Commission,
-    /// Indicates whether the staker has been removed from the staking contract.
-    pub staker_removed: bool,
 }
