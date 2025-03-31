@@ -765,14 +765,7 @@ pub mod Pool {
         ) {
             let member_balance = self.get_or_create_member_balance(:pool_member);
             let current_balance = member_balance.balance();
-            let pool_member_balance = PoolMemberBalanceTrait::new(
-                balance: current_balance + amount,
-                cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length(),
-            );
-            self
-                .pool_member_epoch_balance
-                .entry(pool_member)
-                .insert(key: self.get_next_epoch(), value: pool_member_balance);
+            self.set_next_epoch_balance(:pool_member, amount: current_balance + amount);
             // TODO: Emit event?
         }
 
