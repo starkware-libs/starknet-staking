@@ -29,7 +29,7 @@ use staking::pool::errors::Error;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher,
     IPoolMigrationDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo,
-    PoolMemberInfo,
+    PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait,
 };
 use staking::pool::objects::{
     InternalPoolMemberInfoLatestTrait, InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1,
@@ -1328,7 +1328,7 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
     };
-    let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.into();
+    let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.to_internal();
     let expected_internal_pool_member_info = InternalPoolMemberInfoLatestTrait::new(
         reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
     );
