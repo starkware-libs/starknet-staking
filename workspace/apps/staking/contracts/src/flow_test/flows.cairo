@@ -2869,6 +2869,49 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
         assert!(system.staking.get_total_stake() == total_stake_before + amount);
     }
 }
+
+/// Flow:
+/// Staker stake
+/// Staker attest
+/// Advance epoch
+/// Staker increase stake
+/// Staker exit intent (same epoch)
+/// Staker exit action
+#[derive(Drop, Copy)]
+pub(crate) struct IncreaseStakeIntentSameEpochFlow {}
+pub(crate) impl IncreaseStakeIntentSameEpochFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<IncreaseStakeIntentSameEpochFlow, TTokenState> {
+    fn get_pool_address(self: IncreaseStakeIntentSameEpochFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: IncreaseStakeIntentSameEpochFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: IncreaseStakeIntentSameEpochFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: IncreaseStakeIntentSameEpochFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_stake(:staker, amount: stake_amount);
+        system.staker_exit_intent(:staker);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+
+        assert!(system.token.balance_of(account: staker.staker.address).is_zero());
+        system.staker_exit_action(:staker);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.

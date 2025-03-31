@@ -361,6 +361,12 @@ fn set_open_for_delegation_after_upgrade_flow_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+fn increase_stake_intent_same_epoch_flow_test() {
+    let flow = flows::IncreaseStakeIntentSameEpochFlow {};
+    test_flow_local(:flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
