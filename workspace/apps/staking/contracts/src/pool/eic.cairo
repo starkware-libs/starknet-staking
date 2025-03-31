@@ -12,8 +12,15 @@ mod PoolEIC {
 
     #[storage]
     struct Storage {
+        // --- New fields ---
         // Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
+        // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
+        // calculation.
+        cumulative_rewards_trace: Trace,
+        // Indicates whether the staker has been removed from the staking contract.
+        staker_removed: bool,
+        // --- Existing fields ---
         // Stores the final global index of staking contract, used for updating pending rewards
         // during PoolMemberInfo migration.
         final_staker_index: Option<Index>,
@@ -22,11 +29,6 @@ mod PoolEIC {
         staking_pool_dispatcher: IStakingPoolDispatcher,
         // The staker address, used for the final index and the StakerInfo migration.
         staker_address: ContractAddress,
-        // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
-        // calculation.
-        cumulative_rewards_trace: Trace,
-        // Indicates whether the staker has been removed from the staking contract.
-        staker_removed: bool,
     }
 
     #[abi(embed_v0)]
