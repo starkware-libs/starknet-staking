@@ -13,8 +13,8 @@ pub mod Pool {
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
     use staking::pool::objects::{
-        InternalPoolMemberInfoConvertTrait, InternalPoolMemberInfoLatestTrait, SwitchPoolData,
-        VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait,
+        InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
+        VInternalPoolMemberInfoTrait,
     };
     use staking::pool::pool_member_balance_trace::trace::{
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalance, PoolMemberBalanceTrace,
@@ -417,7 +417,7 @@ pub mod Pool {
                     );
                     // Update the pool member's balance checkpoint.
                     self.increase_next_epoch_balance(:pool_member, :amount);
-                    pool_member_info
+                    VInternalPoolMemberInfoTrait::wrap_latest(value: pool_member_info)
                 },
                 Option::None => {
                     // Pool member does not exist. Create a new record.
@@ -426,7 +426,9 @@ pub mod Pool {
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);
 
-                    let pool_member_info = InternalPoolMemberInfoLatestTrait::new(:reward_address);
+                    let pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
+                        :reward_address,
+                    );
 
                     let staker_address = self.staker_address.read();
                     self
@@ -438,7 +440,8 @@ pub mod Pool {
                     pool_member_info
                 },
             };
-            self.write_pool_member_info(:pool_member, :pool_member_info);
+            // Create the pool member record.
+            self.pool_member_info.write(pool_member, pool_member_info);
 
             let member_balance = self.get_or_create_member_balance(:pool_member);
             let new_delegated_stake = member_balance.balance();

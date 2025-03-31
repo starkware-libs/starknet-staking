@@ -32,9 +32,9 @@ use staking::pool::interface::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait,
 };
 use staking::pool::objects::{
-    InternalPoolMemberInfoLatestTrait, InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1,
-    SwitchPoolData, VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait,
-    VInternalPoolMemberInfoTrait, VStorageContractTest,
+    InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1, SwitchPoolData,
+    VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait,
+    VStorageContractTest,
 };
 use staking::pool::pool::Pool;
 use staking::reward_supplier::interface::{
@@ -1267,9 +1267,16 @@ fn test_pool_member_info_pool_member_doesnt_exist() {
 
 #[test]
 fn test_v_internal_pool_member_info_wrap_latest() {
-    let internal_pool_member_info_latest = InternalPoolMemberInfoLatestTrait::new(
+    let pool_member_info = PoolMemberInfo {
         reward_address: Zero::zero(),
-    );
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    };
+    let internal_pool_member_info_latest: InternalPoolMemberInfoV1 = pool_member_info.to_internal();
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::wrap_latest(
         internal_pool_member_info_latest,
     );
@@ -1285,8 +1292,18 @@ fn test_v_internal_pool_member_info_new_latest() {
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
     );
+    let pool_member_info = PoolMemberInfo {
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    };
+    let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.to_internal();
     let expected_v_internal_pool_member_info = VInternalPoolMemberInfo::V1(
-        InternalPoolMemberInfoLatestTrait::new(reward_address: Zero::zero()),
+        internal_pool_mamber_info,
     );
     assert!(v_internal_pool_member_info == expected_v_internal_pool_member_info);
 }
@@ -1321,10 +1338,10 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
         unpool_time: Option::None,
     };
     let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.to_internal();
-    let expected_internal_pool_member_info = InternalPoolMemberInfoLatestTrait::new(
+    let expected_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
     );
-    assert!(internal_pool_mamber_info == expected_internal_pool_member_info);
+    assert!(internal_pool_mamber_info == expected_internal_pool_member_info.unwrap_latest());
 }
 
 #[test]
