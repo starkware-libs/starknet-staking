@@ -49,7 +49,7 @@ fn test_attest() {
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
     // advance into the attestation window.
-    advance_block_into_attestation_window(:cfg);
+    advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -158,7 +158,7 @@ fn test_is_attestation_done_in_curr_epoch() {
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
     // advance into the attestation window.
-    advance_block_into_attestation_window(:cfg);
+    advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
@@ -192,7 +192,7 @@ fn test_get_last_epoch_attestation_done() {
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
     // advance into the attestation window.
-    advance_block_into_attestation_window(:cfg);
+    advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );

@@ -21,6 +21,7 @@ use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{
     CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, test_address,
 };
+use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::BASE_VALUE;
 use staking::errors::GenericError;
 use staking::flow_test::utils::upgrade_implementation;
@@ -56,12 +57,12 @@ use starkware_utils_testing::test_utils::{
     set_account_as_upgrade_governor,
 };
 use test_utils::{
-    StakingInitConfig, advance_epoch_global, approve,
-    calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards,
-    cheat_reward_for_reward_supplier, constants, declare_pool_contract, declare_pool_eic_contract,
-    deploy_mock_erc20_contract, deploy_staking_contract,
-    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    initialize_pool_state, load_from_simple_map, stake_with_pool_enabled,
+    StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, approve,
+    calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards, constants,
+    declare_pool_contract, declare_pool_eic_contract, deploy_mock_erc20_contract,
+    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
+    general_contract_system_deployment, initialize_pool_state, load_from_simple_map,
+    stake_with_pool_enabled,
 };
 
 #[test]
@@ -700,26 +701,38 @@ fn test_exit_delegation_pool_action() {
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
+    let pool_member = cfg.test_info.pool_member_address;
+    let operational_address = cfg.staker_info.operational_address;
     // Stake and enter delegation pool.
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    let delegate_amount = pool_dispatcher.pool_member_info(:pool_member).amount;
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    // Change global index and exit delegation pool intent.
-    let updated_index = cfg.pool_member_info._deprecated_index + BASE_VALUE;
-    snforge_std::store(
-        target: staking_contract,
-        storage_address: selector!("global_index"),
-        serialized_value: array![updated_index.into()].span(),
+
+    // Fund reward supplier.
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: reward_supplier,
+        amount: cfg.test_info.stake_amount,
+        :token_address,
     );
-    // Calculate the expected rewards and commission.
-    let delegate_amount = cfg.pool_member_info._deprecated_amount;
-    let unclaimed_rewards_member =
-        Zero::zero(); // TODO: Change this after implement calculate_rewards.
-    cheat_reward_for_reward_supplier(
-        :cfg, :reward_supplier, expected_reward: unclaimed_rewards_member, :token_address,
+
+    // Attest.
+    advance_epoch_global();
+    advance_block_into_attestation_window(
+        :cfg, stake: cfg.test_info.stake_amount + delegate_amount,
     );
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: operational_address,
+    );
+    attestation_dispatcher.attest(block_hash: Zero::zero());
+    advance_epoch_global();
+    let unclaimed_rewards_member = pool_dispatcher.pool_member_info(:pool_member).unclaimed_rewards;
+
     // Exit delegation pool intent.
     cheat_caller_address_once(
         contract_address: pool_contract, caller_address: cfg.test_info.pool_member_address,
@@ -727,8 +740,6 @@ fn test_exit_delegation_pool_action() {
     pool_dispatcher.exit_delegation_pool_intent(amount: delegate_amount);
 
     let balance_before_action = token_dispatcher.balance_of(cfg.test_info.pool_member_address);
-    let reward_account_balance_before = token_dispatcher
-        .balance_of(cfg.pool_member_info.reward_address);
     start_cheat_block_timestamp_global(
         block_timestamp: Time::now()
             .add(delta: staking_dispatcher.contract_parameters().exit_wait_window)
@@ -749,21 +760,15 @@ fn test_exit_delegation_pool_action() {
     let expected_pool_member_info = PoolMemberInfo {
         amount: Zero::zero(),
         unpool_time: Option::None,
-        unclaimed_rewards: Zero::zero(),
+        unclaimed_rewards: unclaimed_rewards_member,
         unpool_amount: Zero::zero(),
         ..pool_member_info_before_action,
     };
     assert!(actual_pool_member == expected_pool_member_info);
     let balance_after_action = token_dispatcher.balance_of(cfg.test_info.pool_member_address);
-    let reward_account_balance_after = token_dispatcher
-        .balance_of(cfg.pool_member_info.reward_address);
     assert!(
         balance_after_action == balance_before_action
             + cfg.pool_member_info._deprecated_amount.into(),
-    );
-    assert!(
-        reward_account_balance_after == reward_account_balance_before
-            + unclaimed_rewards_member.into(),
     );
     // Validate the PoolMemberExitAction and PoolMemberRewardClaimed events.
     let events = spy.get_events().emitted_by(contract_address: pool_contract).events;

@@ -1155,10 +1155,10 @@ pub(crate) fn calculate_block_offset(
     block_offset.try_into().unwrap()
 }
 
-pub(crate) fn advance_block_into_attestation_window(cfg: StakingInitConfig) {
+pub(crate) fn advance_block_into_attestation_window(cfg: StakingInitConfig, stake: Amount) {
     // calculate block offset and move the block number forward.
     let block_offset = calculate_block_offset(
-        stake: cfg.test_info.stake_amount.into(),
+        :stake,
         epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
         staker_address: cfg.test_info.staker_address.into(),
         epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),

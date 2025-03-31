@@ -576,7 +576,7 @@ fn test_claim_rewards() {
     // Advance the epoch to ensure the total stake in the current epoch is nonzero, preventing a
     // division by zero when calculating rewards.
     advance_epoch_global();
-    advance_block_into_attestation_window(:cfg);
+    advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
 
     // Calculate the expected staker rewards.
     let staker_info = staking_dispatcher.staker_info(:staker_address);
