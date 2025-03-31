@@ -13,6 +13,7 @@ mod StakingEIC {
 
     #[storage]
     struct Storage {
+        // --- New fields ---
         // Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
         // Epoch info.
@@ -20,12 +21,13 @@ mod StakingEIC {
         // Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
         // an epoch to the updated stake. Stakers that performed unstake_intent are not included.
         total_stake_trace: Trace,
+        // The contract that staker sends attestation transaction to.
+        attestation_contract: ContractAddress,
+        // --- Existing fields ---
         // Deprecated field of the total stake.
         total_stake: Amount,
         // The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
-        // The contract that staker sends attestation transaction to.
-        attestation_contract: ContractAddress,
     }
 
     // TODO: Test all if's.

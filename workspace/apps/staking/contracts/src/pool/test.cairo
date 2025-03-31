@@ -1272,7 +1272,7 @@ fn test_pool_member_info_pool_member_doesnt_exist() {
 #[test]
 fn test_v_internal_pool_member_info_wrap_latest() {
     let internal_pool_member_info_latest = InternalPoolMemberInfoLatestTrait::new(
-        reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
+        reward_address: Zero::zero(),
     );
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::wrap_latest(
         internal_pool_member_info_latest,
@@ -1287,12 +1287,10 @@ fn test_v_internal_pool_member_info_wrap_latest() {
 #[test]
 fn test_v_internal_pool_member_info_new_latest() {
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
-        reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
+        reward_address: Zero::zero(),
     );
     let expected_v_internal_pool_member_info = VInternalPoolMemberInfo::V1(
-        InternalPoolMemberInfoLatestTrait::new(
-            reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
-        ),
+        InternalPoolMemberInfoLatestTrait::new(reward_address: Zero::zero()),
     );
     assert!(v_internal_pool_member_info == expected_v_internal_pool_member_info);
 }
@@ -1309,9 +1307,7 @@ fn test_v_internal_pool_member_info_is_none() {
         unpool_amount: Zero::zero(),
         unpool_time: Option::None,
     );
-    let v_latest = VInternalPoolMemberInfoTrait::new_latest(
-        reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
-    );
+    let v_latest = VInternalPoolMemberInfoTrait::new_latest(reward_address: Zero::zero());
     assert!(v_none.is_none());
     assert!(!v_v0.is_none());
     assert!(!v_latest.is_none());
@@ -1330,7 +1326,7 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
     };
     let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.to_internal();
     let expected_internal_pool_member_info = InternalPoolMemberInfoLatestTrait::new(
-        reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
+        reward_address: Zero::zero(),
     );
     assert!(internal_pool_mamber_info == expected_internal_pool_member_info);
 }

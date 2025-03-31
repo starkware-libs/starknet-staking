@@ -165,18 +165,11 @@ pub mod Pool {
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
             self.set_next_epoch_balance(:pool_member, :amount);
-            // Entry to claim from is the latest in the balance trace.
-            // May not be zero if the member rejoined the pool and has prior balance history.
-            let entry_to_claim_from = self.pool_member_epoch_balance.entry(pool_member).length()
-                - 1;
 
             // Create the pool member record.
             self
                 .pool_member_info
-                .write(
-                    pool_member,
-                    VInternalPoolMemberInfoTrait::new_latest(:reward_address, :entry_to_claim_from),
-                );
+                .write(pool_member, VInternalPoolMemberInfoTrait::new_latest(:reward_address));
 
             // Emit events.
             self
@@ -432,18 +425,7 @@ pub mod Pool {
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);
 
-                    // Entry to claim from is the latest in the balance trace.
-                    // May not be zero if the member rejoined the pool and has prior balance
-                    // history.
-                    let entry_to_claim_from = self
-                        .pool_member_epoch_balance
-                        .entry(pool_member)
-                        .length()
-                        - 1;
-
-                    let pool_member_info = InternalPoolMemberInfoLatestTrait::new(
-                        :reward_address, :entry_to_claim_from,
-                    );
+                    let pool_member_info = InternalPoolMemberInfoLatestTrait::new(:reward_address);
 
                     let staker_address = self.staker_address.read();
                     self
