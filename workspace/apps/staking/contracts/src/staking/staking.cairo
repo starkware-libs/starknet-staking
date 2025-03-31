@@ -212,6 +212,7 @@ pub mod Staking {
                 "{}",
                 GenericError::OPERATIONAL_EXISTS,
             );
+            self.assert_staker_address_not_reused(:staker_address);
             assert!(amount >= self.min_stake.read(), "{}", Error::AMOUNT_LESS_THAN_MIN_STAKE);
             assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
 
@@ -500,8 +501,7 @@ pub mod Staking {
             StakingContractInfo {
                 min_stake: self.min_stake.read(),
                 token_address: self.token_dispatcher.read().contract_address,
-                // TODO: remove the deprecated global index field.
-                global_index: Zero::zero(),
+                attestation_contract: self.attestation_contract.read(),
                 pool_contract_class_hash: self.pool_contract_class_hash.read(),
                 reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
                 exit_wait_window: self.exit_wait_window.read(),
@@ -1041,12 +1041,12 @@ pub mod Staking {
                 );
         }
 
-        fn set_epoch_info(ref self: ContractState, block_duration: u16, epoch_length: u16) {
+        fn set_epoch_info(ref self: ContractState, epoch_duration: u32, epoch_length: u32) {
             self.roles.only_token_admin();
             let mut epoch_info = self.epoch_info.read();
-            epoch_info.update(:block_duration, :epoch_length);
+            epoch_info.update(:epoch_duration, :epoch_length);
             self.epoch_info.write(epoch_info);
-            self.emit(ConfigEvents::EpochInfoChanged { block_duration, epoch_length });
+            self.emit(ConfigEvents::EpochInfoChanged { epoch_duration, epoch_length });
         }
     }
 
@@ -1547,6 +1547,14 @@ pub mod Staking {
             self
                 .staker_info
                 .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
+        }
+
+        fn assert_staker_address_not_reused(self: @ContractState, staker_address: ContractAddress) {
+            assert!(
+                self.staker_balance_trace.entry(key: staker_address).is_empty(),
+                "{}",
+                Error::STAKER_ADDRESS_ALREADY_USED,
+            );
         }
     }
 }

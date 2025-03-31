@@ -1,5 +1,6 @@
 use core::num::traits::zero::Zero;
 use staking::pool::objects::InternalPoolMemberInfoV1;
+use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest};
 use starknet::ContractAddress;
 use starkware_utils::types::time::time::Timestamp;
@@ -146,13 +147,6 @@ pub mod Events {
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
-    pub struct DeletePoolMember {
-        #[key]
-        pub pool_member: ContractAddress,
-        pub reward_address: ContractAddress,
-    }
-
-    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct NewPoolMember {
         #[key]
         pub pool_member: ContractAddress,
@@ -193,19 +187,23 @@ pub struct PoolMemberInfo {
 }
 
 #[cfg(test)]
-pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1 of Into<
-    PoolMemberInfo, InternalPoolMemberInfoV1,
-> {
-    fn into(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
+#[generate_trait]
+pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfoIntoInternalPoolMemberInfoV1Trait {
+    fn to_internal(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address: self.reward_address,
             _deprecated_amount: self.amount,
             _deprecated_index: self.index,
-            _deprecated_unclaimed_rewards: self.unclaimed_rewards,
+            _unclaimed_rewards_from_v0: self.unclaimed_rewards,
             _deprecated_commission: self.commission,
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
             entry_to_claim_from: Zero::zero(),
+            reward_checkpoint: PoolMemberCheckpointTrait::new(
+                epoch: Zero::zero(),
+                balance: self.amount,
+                cumulative_rewards_trace_idx: Zero::zero(),
+            ),
         }
     }
 }
@@ -214,12 +212,12 @@ pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1 of Into<
 pub struct PoolContractInfo {
     /// Address of the staker that owns the pool.
     pub staker_address: ContractAddress,
+    /// Indicates whether the staker has been removed from the staking contract.
+    pub staker_removed: bool,
     /// Address of the staking contract.
     pub staking_contract: ContractAddress,
     /// Address of the token contract.
     pub token_address: ContractAddress,
     /// The commission the staker takes from the pool rewards.
     pub commission: Commission,
-    /// Indicates whether the staker has been removed from the staking contract.
-    pub staker_removed: bool,
 }

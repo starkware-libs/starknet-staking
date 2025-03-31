@@ -8,6 +8,9 @@ pub trait IMockTrace<TContractState> {
     fn length(self: @TContractState) -> u64;
     fn latest_mutable(ref self: TContractState) -> (Epoch, StakerBalance);
     fn is_non_empty(self: @TContractState) -> bool;
+    fn is_non_empty_mutable(ref self: TContractState) -> bool;
+    fn is_empty(self: @TContractState) -> bool;
+    fn is_empty_mutable(ref self: TContractState) -> bool;
 }
 
 #[starknet::contract]
@@ -42,6 +45,18 @@ pub mod MockTrace {
 
         fn is_non_empty(self: @ContractState) -> bool {
             self.trace.is_non_empty()
+        }
+
+        fn is_non_empty_mutable(ref self: ContractState) -> bool {
+            self.trace.is_non_empty()
+        }
+
+        fn is_empty(self: @ContractState) -> bool {
+            self.trace.is_empty()
+        }
+
+        fn is_empty_mutable(ref self: ContractState) -> bool {
+            self.trace.is_empty()
         }
     }
 }

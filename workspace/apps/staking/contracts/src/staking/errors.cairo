@@ -34,11 +34,12 @@ pub(crate) enum Error {
     COMMISSION_COMMITMENT_EXISTS,
     COMMISSION_COMMITMENT_NOT_SET,
     EXPIRATION_EPOCH_TOO_EARLY,
-    INVALID_BLOCK_DURATION,
+    INVALID_EPOCH_DURATION,
     PENULTIMATE_NOT_EXIST,
     INVALID_STARTING_BLOCK,
     INVALID_PENULTIMATE,
     STAKER_BALANCE_NOT_INITIALIZED,
+    STAKER_ADDRESS_ALREADY_USED,
 }
 
 impl DescribableError of Describable<Error> {
@@ -77,11 +78,12 @@ impl DescribableError of Describable<Error> {
             Error::COMMISSION_COMMITMENT_EXISTS => "Commission commitment exists",
             Error::COMMISSION_COMMITMENT_NOT_SET => "Commission commitment not set",
             Error::EXPIRATION_EPOCH_TOO_EARLY => "Expiration epoch is too early, should be later then current epoch",
-            Error::INVALID_BLOCK_DURATION => "Invalid block duration, must be greater than 0",
+            Error::INVALID_EPOCH_DURATION => "Invalid epoch duration, must be greater than 0",
             Error::PENULTIMATE_NOT_EXIST => "Penultimate balance does not exist, staker balance at this epoch is 0",
             Error::INVALID_STARTING_BLOCK => "Invalid starting block, must be greater than or equal to current block number",
             Error::INVALID_PENULTIMATE => "Invalid penultimate epoch, must be lower than or equal to current epoch",
             Error::STAKER_BALANCE_NOT_INITIALIZED => "Staker balance is not initialized",
+            Error::STAKER_ADDRESS_ALREADY_USED => "Staker address is already used",
         }
     }
 }

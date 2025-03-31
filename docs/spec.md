@@ -92,7 +92,6 @@
     - [Pool Member Exit Action](#pool-member-exit-action)
     - [Staker Removed](#staker-removed)
     - [New Pool Member](#new-pool-member)
-    - [Delete Pool Member](#delete-pool-member)
     - [Pool Member Reward Claimed](#pool-member-reward-claimed)
     - [Pool Member Reward Address Changed](#pool-member-reward-address-changed)
     - [Switch Delegation Pool](#switch-delegation-pool)
@@ -128,6 +127,7 @@
     - [STAKER\_EXISTS](#staker_exists)
     - [STAKER\_NOT\_EXISTS](#staker_not_exists)
     - [OPERATIONAL\_EXISTS](#operational_exists)
+    - [STAKER\_ADDRESS\_ALREADY\_USED](#staker_address_already_used)
     - [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
     - [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
     - [CONTRACT\_IS\_PAUSED](#contract_is_paused)
@@ -161,7 +161,7 @@
     - [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
     - [OPERATIONAL\_IN\_USE](#operational_in_use)
     - [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
-    - [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
+    - [INVALID\_EPOCH\_DURATION](#invalid_epoch_duration)
     - [INVALID\_COMMISSION](#invalid_commission)
     - [INVALID\_COMMISSION\_WITH\_COMMITMENT](#invalid_commission_with_commitment)
     - [COMMISSION\_COMMITMENT\_EXISTS](#commission_commitment_exists)
@@ -533,14 +533,16 @@ Add a new staker to the stake.
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_EXISTS](#staker_exists)
 3. [OPERATIONAL\_EXISTS](#operational_exists)
-4. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
-5. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
+4. [STAKER\_ADDRESS\_ALREADY\_USED](#staker_address_already_used)
+5. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
+6. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) is not listed in the contract.
 3. `operational_address` is not listed in the contract.
-4. `amount` is above the minimum amount for staking.
-5. `commission` is not above the maximum commission for staking.
+4. `staker_address` not used.
+5. `amount` is above the minimum amount for staking.
+6. `commission` is not above the maximum commission for staking.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic  <!-- omit from toc -->
@@ -1283,7 +1285,7 @@ Only token admin.
 
 ### set_epoch_info
 ```rust
-fn set_epoch_info(ref self: ContractState, block_duration: u16, epoch_length: u16)
+fn set_epoch_info(ref self: ContractState, epoch_duration: u32, epoch_length: u32)
 ```
 #### description <!-- omit from toc -->
 Set the epoch info.
@@ -1456,15 +1458,15 @@ Staking contract of latest version.
 ### Epoch Info Changed
 | data           | type | keyed |
 | -------------- | ---- | ----- |
-| block_duration | u16  | ❌     |
-| epoch_length   | u16  | ❌     |
+| epoch_duration | u32  | ❌     |
+| epoch_length   | u32  | ❌     |
 
 ### Staker Rewards Updated
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
-| staker_address | address           | ✅    |
-| staker_rewards | [Amount](#amount) | ❌    |
-| pool_rewards   | [Amount](#amount) | ❌    |
+| staker_address | address           | ✅     |
+| staker_rewards | [Amount](#amount) | ❌     |
+| pool_rewards   | [Amount](#amount) | ❌     |
 
 ### Commission Commitment Set
 | data           | type                      | keyed |
@@ -1581,8 +1583,7 @@ fn exit_delegation_pool_action(
 Executes the intent to exit the stake if enough time have passed. Transfers the funds back to the pool member.
 Return the amount of tokens transferred back to the pool member.
 #### emits <!-- omit from toc -->
-1. [Pool Member Reward Claimed](#pool-member-reward-claimed)
-2. [Delete Pool Member](#delete-pool-member)
+1. [Pool Member Exit Action](#pool-member-exit-action)
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 2. [MISSING\_UNDELEGATE\_INTENT](#missing_undelegate_intent)
@@ -1595,10 +1596,7 @@ Return the amount of tokens transferred back to the pool member.
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. [Remove from delegation pool action](#remove_from_delegation_pool_action).
-2. If the pool member's new balance is zero:
-  1. Transfer rewards to pool member.
-  2. Transfer funds to pool member.
-  3. Remove the member from the pool.
+2. Transfer funds to pool member.
 
 
 ### claim_rewards
@@ -1612,7 +1610,7 @@ fn claim_rewards(
 Update rewards and transfer them to the reward address.
 Return the amount transferred to the reward address.
 #### emits <!-- omit from toc -->
-1. If pool member amount and intent amount are zero: [Delete Pool Member](#delete-pool-member)
+1. [Pool Member Reward Claimed](#pool-member-reward-claimed)
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
 2. [POOL\_CLAIM\_REWARDS\_FROM\_UNAUTHORIZED\_ADDRESS](#pool_claim_rewards_from_unauthorized_address)
@@ -1626,9 +1624,7 @@ Only pool member address or reward address can execute.
 #### logic <!-- omit from toc -->
 1. Calculate rewards and update entry_to_claim_from.
 2. Transfer rewards to pool member.
-3. If the member has a balance of zero (and no pending unpool),
-   remove them from the pool.
-4. Else, write updated pool member info.
+3. Write updated pool member info.
 
 ### switch_delegation_pool
 ```rust
@@ -1837,12 +1833,6 @@ Only staking contract can execute.
 | staker_address | address           | ✅     |
 | reward_address | address           | ❌     |
 | amount         | [Amount](#amount) | ❌     |
-
-### Delete Pool Member
-| data           | type    | keyed |
-| -------------- | ------- | ----- |
-| pool_member    | address | ✅     |
-| reward_address | address | ❌     |
 
 ### Pool Member Reward Claimed
 | data           | type              | keyed |
@@ -2154,6 +2144,9 @@ Only token admin.
 ### OPERATIONAL_EXISTS
 "Operational address already exists."
 
+### STAKER_ADDRESS_ALREADY_USED
+"Staker address is already used"
+
 ### AMOUNT_LESS_THAN_MIN_STAKE
 "Amount is less than min stake - try again with enough funds."
 
@@ -2253,8 +2246,8 @@ Only token admin.
 ### INVALID_EPOCH_LENGTH
 "Invalid epoch length, must be greater than 0"
 
-### INVALID_BLOCK_DURATION
-"Invalid block duration, must be greater than 0"
+### INVALID_EPOCH_DURATION
+"Invalid epoch duration, must be greater than 0"
 
 ### INVALID_COMMISSION
 "Commission can only be decreased"

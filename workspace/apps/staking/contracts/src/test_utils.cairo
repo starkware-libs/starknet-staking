@@ -25,6 +25,7 @@ use staking::minting_curve::interface::{
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolMemberInfo};
 use staking::pool::pool::Pool;
+use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
@@ -72,9 +73,11 @@ pub(crate) mod constants {
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
     pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
     pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
-    pub const EPOCH_LENGTH: u16 = 300;
+    // number of blocks in one epoch
+    pub const EPOCH_LENGTH: u32 = 300;
     pub const EPOCH_STARTING_BLOCK: u64 = 463476;
-    pub const BLOCK_DURATION: u16 = 30;
+    // duration of  one epoch in seconds
+    pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
@@ -202,7 +205,7 @@ pub(crate) mod constants {
     }
     pub fn DEFAULT_EPOCH_INFO() -> EpochInfo {
         EpochInfoTrait::new(
-            block_duration: BLOCK_DURATION,
+            epoch_duration: EPOCH_DURATION,
             epoch_length: EPOCH_LENGTH,
             starting_block: max(EPOCH_STARTING_BLOCK, get_block_number()),
         )
@@ -837,6 +840,7 @@ pub(crate) struct TestInfo {
     pub attestation_contract: ContractAddress,
     pub attestation_window: u16,
     pub app_governor: ContractAddress,
+    pub global_index: Index,
 }
 
 #[derive(Drop, Copy)]
@@ -877,16 +881,21 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             _deprecated_amount: POOL_MEMBER_STAKE_AMOUNT,
             _deprecated_index: Zero::zero(),
-            _deprecated_unclaimed_rewards: Zero::zero(),
+            _unclaimed_rewards_from_v0: Zero::zero(),
             _deprecated_commission: COMMISSION,
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),
             entry_to_claim_from: Zero::zero(),
+            reward_checkpoint: PoolMemberCheckpointTrait::new(
+                epoch: Zero::zero(),
+                balance: Zero::zero(),
+                cumulative_rewards_trace_idx: Zero::zero(),
+            ),
         };
         let staking_contract_info = StakingContractInfoCfg {
             min_stake: MIN_STAKE,
             token_address: TOKEN_ADDRESS(),
-            global_index: Zero::zero(),
+            attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
             pool_contract_class_hash: declare_pool_contract(),
             reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW,
@@ -916,6 +925,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
             attestation_window: MIN_ATTESTATION_WINDOW,
             app_governor: APP_GOVERNOR(),
+            global_index: Zero::zero(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,
@@ -939,7 +949,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
 pub struct StakingContractInfoCfg {
     pub min_stake: Amount,
     pub token_address: ContractAddress,
-    pub global_index: Index,
+    pub attestation_contract: ContractAddress,
     pub pool_contract_class_hash: ClassHash,
     pub reward_supplier: ContractAddress,
     pub exit_wait_window: TimeDelta,
@@ -1145,10 +1155,10 @@ pub(crate) fn calculate_block_offset(
     block_offset.try_into().unwrap()
 }
 
-pub(crate) fn advance_block_into_attestation_window(cfg: StakingInitConfig) {
+pub(crate) fn advance_block_into_attestation_window(cfg: StakingInitConfig, stake: Amount) {
     // calculate block offset and move the block number forward.
     let block_offset = calculate_block_offset(
-        stake: cfg.test_info.stake_amount.into(),
+        :stake,
         epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
         staker_address: cfg.test_info.staker_address.into(),
         epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),

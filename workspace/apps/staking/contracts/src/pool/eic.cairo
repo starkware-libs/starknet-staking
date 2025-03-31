@@ -25,6 +25,8 @@ mod PoolEIC {
         // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
         // calculation.
         cumulative_rewards_trace: Trace,
+        // Indicates whether the staker has been removed from the staking contract.
+        staker_removed: bool,
     }
 
     #[abi(embed_v0)]
@@ -40,6 +42,8 @@ mod PoolEIC {
                 .staking_pool_dispatcher
                 .read()
                 .pool_migration(staker_address: self.staker_address.read());
+            assert!(self.final_staker_index.read().is_none(), "INDEX_ALREADY_SET");
+            assert!(!self.staker_removed.read(), "STAKER_ALREADY_REMOVED");
             self.final_staker_index.write(Option::Some(final_index));
 
             // Initialize the cumulative rewards trace.

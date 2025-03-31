@@ -7,7 +7,7 @@ use staking::flow_test::utils::{
     SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
     upgrade_implementation,
 };
-use staking::pool::interface::PoolMemberInfo;
+use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::StakerInfo;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
@@ -80,6 +80,7 @@ pub(crate) impl BasicStakeFlowImpl<
         system.advance_time(time: system.staking.get_exit_wait_window());
 
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
         system.staker_exit_action(:staker);
 
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
@@ -325,6 +326,7 @@ pub(crate) impl DelegatorIntentFlowImpl<
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.advance_epoch_and_attest(:staker);
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
         system.advance_epoch_and_attest(:staker);
 
         system.staker_exit_intent(:staker);
@@ -356,7 +358,6 @@ pub(crate) impl DelegatorIntentFlowImpl<
 // Staker1 exit_intent
 // Delegator exit_intent - get current block_timestamp as exit time
 // Staker1 exit_action - cover staker action with while having a delegator in intent
-// Staker1 stake (again)
 // Delegator switch part of intent to staker2's pool - cover switching from a dead staker (should
 // not matter he is back alive)
 // Delegator exit_action in staker1's original pool - cover delegator exit action with dead staker
@@ -421,12 +422,6 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
 
         system.staker_exit_action(staker: staker1);
 
-        // Re-stake after exiting. Pool should be different.
-        system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_epoch_and_attest(staker: staker1);
-        let staker1_second_pool = system.staking.get_pool(staker: staker1);
-        assert!(staker1_pool != staker1_second_pool);
-
         // After the following, delegator has delegated_amount / 2 in staker1, delegated_amount
         // / 4 in intent, and delegated_amount / 4 in staker2.
         let staker2_pool = system.staking.get_pool(staker: staker2);
@@ -438,13 +433,11 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
                 to_pool: staker2_pool,
                 amount: delegated_amount / 4,
             );
-        system.advance_epoch_and_attest(staker: staker1);
         system.advance_epoch_and_attest(staker: staker2);
 
         // After the following, delegator has delegated_amount / 2 in staker1, and
         // delegated_amount / 4 in staker2.
         system.delegator_exit_action(:delegator, pool: staker1_pool);
-        system.advance_epoch_and_attest(staker: staker1);
         system.advance_epoch_and_attest(staker: staker2);
 
         // Claim rewards from second pool and see that the rewards are increasing.
@@ -464,32 +457,27 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         assert!(delegator_reward_after_advance_epoch > delegator_reward_before_advance_epoch);
 
         // Advance epoch and attest.
-        system.advance_epoch_and_attest(staker: staker1);
         system.advance_epoch_and_attest(staker: staker2);
         system.advance_epoch();
 
         // After the following, delegator has delegated_amount / 4 in staker2.
         system.delegator_exit_intent(:delegator, pool: staker1_pool, amount: delegated_amount / 2);
-        system.advance_time(time: system.staking.get_exit_wait_window());
         system.delegator_exit_action(:delegator, pool: staker1_pool);
+        system.delegator_claim_rewards(:delegator, pool: staker1_pool);
 
         // Clean up and make all parties exit.
-        system.staker_exit_intent(staker: staker1);
-        system.advance_time(time: system.staking.get_exit_wait_window());
-
         system.staker_exit_intent(staker: staker2);
         system.advance_time(time: system.staking.get_exit_wait_window());
 
-        system.staker_exit_action(staker: staker1);
         system.staker_exit_action(staker: staker2);
         system.delegator_exit_intent(:delegator, pool: staker2_pool, amount: delegated_amount / 4);
         system.delegator_exit_action(:delegator, pool: staker2_pool);
+        system.delegator_claim_rewards(:delegator, pool: staker2_pool);
 
         // ------------- Flow complete, now asserts -------------
 
         // Assert pools' balances are low.
         assert!(system.token.balance_of(account: staker1_pool) < 100);
-        assert!(system.token.balance_of(account: staker1_second_pool) == 0);
         assert!(system.token.balance_of(account: staker2_pool) < 100);
 
         // Assert all staked amounts were transferred back.
@@ -513,7 +501,6 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
                 + system.token.balance_of(account: staker2.reward.address)
                 + system.token.balance_of(account: delegator.reward.address)
                 + system.token.balance_of(account: staker1_pool)
-                + system.token.balance_of(account: staker1_second_pool)
                 + system.token.balance_of(account: staker2_pool),
         );
     }
@@ -579,6 +566,7 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.advance_epoch_and_attest(:staker);
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         // Clean up and make all parties exit.
         system.staker_exit_intent(:staker);
@@ -682,6 +670,7 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl<
         system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         // Clean up and make all parties exit.
         system.staker_exit_intent(:staker);
@@ -767,6 +756,7 @@ pub(crate) impl StakerIntentLastActionFirstFlowImpl<
         system.staker_exit_action(:staker);
 
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
         assert!(system.token.balance_of(account: pool) < 100);
@@ -1257,10 +1247,10 @@ pub(crate) impl InternalPoolMemberInfoAfterUpgradeFlowImpl<
             pool_member_info: self.delegator_info.unwrap(),
             updated_index: system.staking.get_global_index(),
         );
-        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.into());
+        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.to_internal());
         assert!(
             get_internal_pool_member_info_after_upgrade == Option::Some(
-                expected_pool_member_info.into(),
+                expected_pool_member_info.to_internal(),
             ),
         );
     }
@@ -1338,10 +1328,10 @@ pub(crate) impl InternalPoolMemberInfoUndelegateAfterUpgradeFlowImpl<
             .get_internal_pool_member_info(:delegator, :pool);
         let mut expected_pool_member_info = self.delegator_info.unwrap();
         expected_pool_member_info.index = system.staking.get_global_index();
-        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.into());
+        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.to_internal());
         assert!(
             get_internal_pool_member_info_after_upgrade == Option::Some(
-                expected_pool_member_info.into(),
+                expected_pool_member_info.to_internal(),
             ),
         );
     }
@@ -1520,6 +1510,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl<
         system.advance_exit_wait_window();
 
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         let delegator_rewards_after_exit = system
             .token
@@ -1528,7 +1519,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl<
         assert!(delegator_rewards_after_exit == pool_rewards_epoch * 3);
 
         // Enter again in the same epoch of exit action.
-        system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.increase_delegate(:delegator, :pool, amount: delegated_amount);
         system.advance_epoch_and_attest(:staker);
 
         system.advance_epoch_and_attest(:staker);
@@ -1552,6 +1543,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl<
 
         system.staker_exit_action(:staker);
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
         assert!(system.token.balance_of(account: pool) == 0);
@@ -1708,6 +1700,8 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl<
 
         system.staker_exit_action(staker: staker1);
         system.delegator_exit_action(:delegator, pool: pool1);
+        system.delegator_claim_rewards(:delegator, pool: pool1);
+        system.delegator_claim_rewards(:delegator, pool: pool2);
 
         assert!(system.token.balance_of(account: pool1) == 0);
         assert!(
@@ -1784,8 +1778,13 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
 
         system.advance_time(time: system.staking.get_exit_wait_window());
         system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
 
-        assert!(system.get_pool_member_info(:delegator, :pool).is_none());
+        let pool_member_info = system.pool_member_info(:delegator, :pool);
+        assert!(pool_member_info.amount.is_zero());
+        assert!(pool_member_info.unclaimed_rewards.is_zero());
+        assert!(pool_member_info.unpool_amount.is_zero());
+        assert!(pool_member_info.unpool_time.is_none());
     }
 }
 
@@ -1945,6 +1944,50 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl<
         system.staker_exit_action(:staker);
 
         assert!(system.get_staker_info(:staker).is_none());
+    }
+}
+
+/// Flow:
+/// Staker stake with pool
+/// Staker exit_intent
+/// Upgrade
+/// Staker attest
+#[derive(Drop, Copy)]
+pub(crate) struct StakerAttestAfterIntentFlow {
+    pub(crate) staker: Option<Staker>,
+}
+
+pub(crate) impl StakerAttestAfterIntentFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<StakerAttestAfterIntentFlow, TTokenState> {
+    fn get_pool_address(self: StakerAttestAfterIntentFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: StakerAttestAfterIntentFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
+    fn setup(ref self: StakerAttestAfterIntentFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.staker_exit_intent(:staker);
+
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(
+        self: StakerAttestAfterIntentFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+
+        system.advance_epoch_and_attest(:staker);
     }
 }
 
@@ -2624,6 +2667,155 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         assert!(
             system.token.balance_of(account: delegator_2.reward.address) == delegator_2_rewards,
         );
+    }
+}
+/// Test Claim Rewards After Upgrade.
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// advance_time
+/// Upgrade
+/// attest
+/// attest
+/// attest
+/// claim_rewards
+#[derive(Drop, Copy)]
+pub(crate) struct PoolClaimRewardsAfterUpgradeFlow {
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) staker: Option<Staker>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) delegator_info: Option<PoolMemberInfo>,
+}
+pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<PoolClaimRewardsAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: PoolClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn get_staker_address(self: PoolClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: PoolClaimRewardsAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+        let one_week = Time::weeks(count: 1);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let delegated_amount = stake_amount / 2;
+        let delegator = system.new_delegator(amount: delegated_amount);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+
+        system.advance_time(time: one_week);
+
+        let delegator_info = system.pool_member_info(:delegator, :pool);
+
+        self.pool_address = Option::Some(pool);
+        self.staker = Option::Some(staker);
+        self.delegator = Option::Some(delegator);
+        self.delegator_info = Option::Some(delegator_info);
+    }
+
+    fn test(
+        self: PoolClaimRewardsAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let delegator_info = self.delegator_info.unwrap();
+        let pool = self.pool_address.unwrap();
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch_and_attest(:staker);
+
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        // Calculate pool rewards
+        let pool_rewards_one_epoch = calculate_pool_rewards(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+        let pool_total_rewards = pool_rewards_one_epoch * 3;
+
+        let expected_pool_rewards = pool_total_rewards + delegator_info.unclaimed_rewards;
+
+        let actual_pool_rewards = system.delegator_claim_rewards(delegator: delegator, :pool);
+
+        assert!(expected_pool_rewards == actual_pool_rewards);
+        assert!(
+            expected_pool_rewards == system.token.balance_of(account: delegator.reward.address),
+        );
+    }
+}
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Delegator full exit intent
+/// Upgrade
+/// Staker attest
+/// Delegator claim rewards
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorIntentBeforeClaimRewardsAfterFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<DelegatorIntentBeforeClaimRewardsAfterFlow, TTokenState> {
+    fn get_pool_address(
+        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
+    ) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn get_staker_address(
+        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
+    ) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(
+        ref self: DelegatorIntentBeforeClaimRewardsAfterFlow, ref system: SystemState<TTokenState>,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let delegator = system.new_delegator(amount: stake_amount);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: stake_amount);
+        system.delegator_exit_intent(delegator: delegator, :pool, amount: stake_amount);
+
+        self.staker = Option::Some(staker);
+        self.pool_address = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+    }
+
+    fn test(
+        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+        let pool = self.pool_address.unwrap();
+        let delegator = self.delegator.unwrap();
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
     }
 }
 // TODO: Implement this flow test.

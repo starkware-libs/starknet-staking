@@ -113,8 +113,35 @@ fn test_staker_balance_update_pool_amount() {
 #[test]
 fn test_is_non_empty() {
     let mut mock_trace = CONTRACT_STATE();
-    assert!(mock_trace.is_non_empty() == false);
+    assert!(!mock_trace.is_non_empty());
 
     mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
-    assert!(mock_trace.is_non_empty() == true);
+    assert!(mock_trace.is_non_empty());
+}
+
+#[test]
+fn test_is_non_empty_mutable() {
+    let mut mock_trace = CONTRACT_STATE();
+    assert!(!mock_trace.is_non_empty_mutable());
+
+    mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
+    assert!(mock_trace.is_non_empty_mutable());
+}
+
+#[test]
+fn test_is_empty() {
+    let mut mock_trace = CONTRACT_STATE();
+    assert!(mock_trace.is_empty());
+
+    mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
+    assert!(!mock_trace.is_empty());
+}
+
+#[test]
+fn test_is_empty_mutable() {
+    let mut mock_trace = CONTRACT_STATE();
+    assert!(mock_trace.is_empty_mutable());
+
+    mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
+    assert!(!mock_trace.is_empty_mutable());
 }

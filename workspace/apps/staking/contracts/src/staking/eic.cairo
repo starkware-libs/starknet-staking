@@ -37,8 +37,8 @@ mod StakingEIC {
             assert(eic_init_data.len() == 6, 'EXPECTED_DATA_LENGTH_6');
             // TODO: Can prev_class_hash be hard coded?
             let prev_class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
-            let block_duration: u16 = (*eic_init_data[1]).try_into().unwrap();
-            let epoch_length: u16 = (*eic_init_data[2]).try_into().unwrap();
+            let epoch_duration: u32 = (*eic_init_data[1]).try_into().unwrap();
+            let epoch_length: u32 = (*eic_init_data[2]).try_into().unwrap();
             let starting_offset: u64 = (*eic_init_data[3]).try_into().unwrap();
             let pool_contract_class_hash: ClassHash = (*eic_init_data[4]).try_into().unwrap();
             let attestation_contract: ContractAddress = (*eic_init_data[5]).try_into().unwrap();
@@ -52,7 +52,7 @@ mod StakingEIC {
             // TODO: What can i check in epoch info? Impl zero for the struct?
             // 2. Initialize the epoch info.
             let epoch_info = EpochInfoTrait::new(
-                :block_duration,
+                :epoch_duration,
                 :epoch_length,
                 starting_block: get_block_number() + starting_offset,
             );
