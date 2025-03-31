@@ -251,7 +251,7 @@ fn test_add_to_delegation_pool() {
     let pool_member_info_after_add = pool_dispatcher.pool_member_info(:pool_member);
     let pool_member_info_expected = PoolMemberInfo {
         amount: pool_member_info_before_add.amount + delegate_amount,
-        index: cfg.staking_contract_info.global_index,
+        index: cfg.test_info.global_index,
         ..pool_member_info_before_add,
     };
     assert!(pool_member_info_after_add == pool_member_info_expected);

@@ -501,8 +501,7 @@ pub mod Staking {
             StakingContractInfo {
                 min_stake: self.min_stake.read(),
                 token_address: self.token_dispatcher.read().contract_address,
-                // TODO: remove the deprecated global index field.
-                global_index: Zero::zero(),
+                attestation_contract: self.attestation_contract.read(),
                 pool_contract_class_hash: self.pool_contract_class_hash.read(),
                 reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
                 exit_wait_window: self.exit_wait_window.read(),

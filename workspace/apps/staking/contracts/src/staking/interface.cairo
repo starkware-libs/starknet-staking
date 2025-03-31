@@ -387,7 +387,7 @@ pub mod ConfigEvents {
 pub struct StakingContractInfo {
     pub min_stake: Amount,
     pub token_address: ContractAddress,
-    pub global_index: Index,
+    pub attestation_contract: ContractAddress,
     pub pool_contract_class_hash: ClassHash,
     pub reward_supplier: ContractAddress,
     pub exit_wait_window: TimeDelta,

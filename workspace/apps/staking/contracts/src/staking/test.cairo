@@ -351,7 +351,7 @@ fn test_contract_parameters() {
     let expected_staking_contract_info = StakingContractInfo {
         min_stake: cfg.staking_contract_info.min_stake,
         token_address: cfg.staking_contract_info.token_address,
-        global_index: cfg.staking_contract_info.global_index,
+        attestation_contract: cfg.test_info.attestation_contract,
         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
         exit_wait_window: cfg.staking_contract_info.exit_wait_window,
@@ -1797,7 +1797,7 @@ fn test_update_commission() {
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let interest = cfg.staking_contract_info.global_index - cfg.staker_info._deprecated_index_V0;
+    let interest = cfg.test_info.global_index - cfg.staker_info._deprecated_index_V0;
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before_update = staking_dispatcher.staker_info(:staker_address);
     assert!(

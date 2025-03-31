@@ -840,6 +840,7 @@ pub(crate) struct TestInfo {
     pub attestation_contract: ContractAddress,
     pub attestation_window: u16,
     pub app_governor: ContractAddress,
+    pub global_index: Index,
 }
 
 #[derive(Drop, Copy)]
@@ -894,7 +895,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         let staking_contract_info = StakingContractInfoCfg {
             min_stake: MIN_STAKE,
             token_address: TOKEN_ADDRESS(),
-            global_index: Zero::zero(),
+            attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
             pool_contract_class_hash: declare_pool_contract(),
             reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW,
@@ -924,6 +925,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
             attestation_window: MIN_ATTESTATION_WINDOW,
             app_governor: APP_GOVERNOR(),
+            global_index: Zero::zero(),
         };
         let reward_supplier = RewardSupplierInfo {
             base_mint_amount: BASE_MINT_AMOUNT,
@@ -947,7 +949,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
 pub struct StakingContractInfoCfg {
     pub min_stake: Amount,
     pub token_address: ContractAddress,
-    pub global_index: Index,
+    pub attestation_contract: ContractAddress,
     pub pool_contract_class_hash: ClassHash,
     pub reward_supplier: ContractAddress,
     pub exit_wait_window: TimeDelta,
