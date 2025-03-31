@@ -354,6 +354,13 @@ fn delegator_intent_before_claim_rewards_after_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn set_open_for_delegation_after_upgrade_flow_test() {
+    let mut flow = flows::SetOpenForDelegationAfterUpgradeFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

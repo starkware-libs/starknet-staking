@@ -2818,6 +2818,57 @@ pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
         assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
     }
 }
+
+/// Flow:
+/// Staker stake without pool
+/// Upgrade
+/// Set open for delegation
+/// Delegator delegate
+#[derive(Drop, Copy)]
+pub(crate) struct SetOpenForDelegationAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<SetOpenForDelegationAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: SetOpenForDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: SetOpenForDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
+    fn setup(ref self: SetOpenForDelegationAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let commission = 200;
+
+        let staker = system.new_staker(amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(
+        self: SetOpenForDelegationAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let commission = 200;
+        let amount = 1000;
+        let staker = self.staker.unwrap();
+
+        let pool = system.set_open_for_delegation(:staker, :commission);
+
+        let delegator = system.new_delegator(amount: amount * 2);
+        let total_stake_before = system.staking.get_total_stake();
+        system.delegate(:delegator, :pool, :amount);
+
+        let delegator_info = system.pool_member_info(:delegator, :pool);
+        assert!(delegator_info.amount == amount);
+        assert!(system.staking.get_total_stake() == total_stake_before + amount);
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
