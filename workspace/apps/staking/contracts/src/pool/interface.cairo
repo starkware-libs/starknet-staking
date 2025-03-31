@@ -1,5 +1,6 @@
 use core::num::traits::zero::Zero;
 use staking::pool::objects::InternalPoolMemberInfoV1;
+use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest};
 use starknet::ContractAddress;
 use starkware_utils::types::time::time::Timestamp;
@@ -199,6 +200,11 @@ pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1 of Into<
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
             entry_to_claim_from: Zero::zero(),
+            reward_checkpoint: PoolMemberCheckpointTrait::new(
+                epoch: Zero::zero(),
+                balance: self.amount,
+                cumulative_rewards_trace_idx: Zero::zero(),
+            ),
         }
     }
 }

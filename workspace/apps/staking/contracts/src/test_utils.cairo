@@ -25,6 +25,7 @@ use staking::minting_curve::interface::{
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolMemberInfo};
 use staking::pool::pool::Pool;
+use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
@@ -884,6 +885,11 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),
             entry_to_claim_from: Zero::zero(),
+            reward_checkpoint: PoolMemberCheckpointTrait::new(
+                epoch: Zero::zero(),
+                balance: Zero::zero(),
+                cumulative_rewards_trace_idx: Zero::zero(),
+            ),
         };
         let staking_contract_info = StakingContractInfoCfg {
             min_stake: MIN_STAKE,

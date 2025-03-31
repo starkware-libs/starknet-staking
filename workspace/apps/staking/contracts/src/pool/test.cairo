@@ -31,9 +31,9 @@ use staking::pool::interface::{
     PoolMemberInfo,
 };
 use staking::pool::objects::{
-    InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1, SwitchPoolData,
-    VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait,
-    VStorageContractTest,
+    InternalPoolMemberInfoLatestTrait, InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1,
+    SwitchPoolData, VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait,
+    VInternalPoolMemberInfoTrait, VStorageContractTest,
 };
 use staking::pool::pool::Pool;
 use staking::reward_supplier::interface::{
@@ -1266,16 +1266,9 @@ fn test_pool_member_info_pool_member_doesnt_exist() {
 
 #[test]
 fn test_v_internal_pool_member_info_wrap_latest() {
-    let internal_pool_member_info_latest = InternalPoolMemberInfoLatest {
-        reward_address: Zero::zero(),
-        _deprecated_amount: Zero::zero(),
-        _deprecated_index: Zero::zero(),
-        _deprecated_unclaimed_rewards: Zero::zero(),
-        _deprecated_commission: Zero::zero(),
-        unpool_amount: Zero::zero(),
-        unpool_time: Option::None,
-        entry_to_claim_from: Zero::zero(),
-    };
+    let internal_pool_member_info_latest = InternalPoolMemberInfoLatestTrait::new(
+        reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
+    );
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::wrap_latest(
         internal_pool_member_info_latest,
     );
@@ -1292,16 +1285,9 @@ fn test_v_internal_pool_member_info_new_latest() {
         reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
     );
     let expected_v_internal_pool_member_info = VInternalPoolMemberInfo::V1(
-        InternalPoolMemberInfoLatest {
-            reward_address: Zero::zero(),
-            _deprecated_amount: Zero::zero(),
-            _deprecated_index: Zero::zero(),
-            _deprecated_unclaimed_rewards: Zero::zero(),
-            _deprecated_commission: Zero::zero(),
-            unpool_amount: Zero::zero(),
-            unpool_time: Option::None,
-            entry_to_claim_from: Zero::zero(),
-        },
+        InternalPoolMemberInfoLatestTrait::new(
+            reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
+        ),
     );
     assert!(v_internal_pool_member_info == expected_v_internal_pool_member_info);
 }
@@ -1338,16 +1324,9 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
         unpool_time: Option::None,
     };
     let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.into();
-    let expected_internal_pool_member_info = InternalPoolMemberInfoV1 {
-        reward_address: Zero::zero(),
-        _deprecated_amount: Zero::zero(),
-        _deprecated_index: Zero::zero(),
-        _deprecated_unclaimed_rewards: Zero::zero(),
-        _deprecated_commission: Zero::zero(),
-        unpool_amount: Zero::zero(),
-        unpool_time: Option::None,
-        entry_to_claim_from: Zero::zero(),
-    };
+    let expected_internal_pool_member_info = InternalPoolMemberInfoLatestTrait::new(
+        reward_address: Zero::zero(), entry_to_claim_from: Zero::zero(),
+    );
     assert!(internal_pool_mamber_info == expected_internal_pool_member_info);
 }
 
