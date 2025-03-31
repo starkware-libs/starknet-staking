@@ -881,7 +881,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: POOL_MEMBER_REWARD_ADDRESS(),
             _deprecated_amount: POOL_MEMBER_STAKE_AMOUNT,
             _deprecated_index: Zero::zero(),
-            _deprecated_unclaimed_rewards: Zero::zero(),
+            _unclaimed_rewards_from_v0: Zero::zero(),
             _deprecated_commission: COMMISSION,
             unpool_time: Option::None,
             unpool_amount: Zero::zero(),

@@ -93,7 +93,7 @@ fn test_send_rewards_to_member() {
     );
     // Setup pool_member_info and expected results before sending rewards.
     let unclaimed_rewards = POOL_MEMBER_UNCLAIMED_REWARDS;
-    cfg.pool_member_info._deprecated_unclaimed_rewards = unclaimed_rewards;
+    cfg.pool_member_info._unclaimed_rewards_from_v0 = unclaimed_rewards;
     fund(
         sender: cfg.test_info.owner_address,
         recipient: test_address(),
@@ -103,7 +103,7 @@ fn test_send_rewards_to_member() {
     let member_balance_before_rewards = token_dispatcher
         .balance_of(account: cfg.pool_member_info.reward_address);
     let expected_pool_member_info = InternalPoolMemberInfoLatest {
-        _deprecated_unclaimed_rewards: Zero::zero(), ..cfg.pool_member_info,
+        _unclaimed_rewards_from_v0: Zero::zero(), ..cfg.pool_member_info,
     };
     // Send rewards to pool member's reward address.
     state
@@ -141,7 +141,7 @@ fn test_enter_delegation_pool() {
         unpool_time: Option::None,
         reward_address: cfg.pool_member_info.reward_address,
         commission: cfg.pool_member_info._deprecated_commission,
-        unclaimed_rewards: cfg.pool_member_info._deprecated_unclaimed_rewards,
+        unclaimed_rewards: cfg.pool_member_info._unclaimed_rewards_from_v0,
         unpool_amount: Zero::zero(),
     };
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };

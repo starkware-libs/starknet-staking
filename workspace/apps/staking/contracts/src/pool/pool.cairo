@@ -333,12 +333,12 @@ pub mod Pool {
                 );
             // TODO: Change back to `unclaimed_rewards` or impl new
             // `send_rewards_to_member` function without `unclaimed_rewards` field.
-            pool_member_info._deprecated_unclaimed_rewards += rewards;
+            pool_member_info._unclaimed_rewards_from_v0 += rewards;
             pool_member_info.entry_to_claim_from = entry_to_claim_from;
             pool_member_info.reward_checkpoint = until_checkpoint;
 
             // Transfer rewards to the pool member.
-            let rewards = pool_member_info._deprecated_unclaimed_rewards;
+            let rewards = pool_member_info._unclaimed_rewards_from_v0;
             let token_dispatcher = self.token_dispatcher.read();
             self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
 
@@ -634,10 +634,10 @@ pub mod Pool {
             token_dispatcher: IERC20Dispatcher,
         ) {
             let reward_address = pool_member_info.reward_address;
-            let amount = pool_member_info._deprecated_unclaimed_rewards;
+            let amount = pool_member_info._unclaimed_rewards_from_v0;
 
             token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
-            pool_member_info._deprecated_unclaimed_rewards = Zero::zero();
+            pool_member_info._unclaimed_rewards_from_v0 = Zero::zero();
 
             // TODO: update entry_to_claim_from of pool member info.
 
