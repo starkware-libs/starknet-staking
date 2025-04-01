@@ -768,8 +768,8 @@ pub mod Pool {
             if latest_epoch <= current_epoch {
                 return latest_value.balance();
             }
-            // TODO: Fix the assert below and uncomment.
-            // assert!(latest_epoch == current_epoch + 1, "{}", Error::INVALID_EPOCH);
+            // Assert latest balance change is in the current epoch.
+            assert!(latest_epoch == current_epoch + 1, "{}", Error::INVALID_LATEST_EPOCH);
 
             // Otherwise, if it's the only change, return the initial value (the value before the
             // migration).
@@ -779,8 +779,7 @@ pub mod Pool {
 
             // Otherwise, the penultimate balance change is the relevant one.
             let (penultimate_epoch, penultimate_value) = trace.penultimate();
-            // TODO: Fix the assert below and uncomment.
-            // assert!(penultimate_epoch <= current_epoch, "{}", Error::INVALID_PENULTIMATE);
+            assert!(penultimate_epoch <= current_epoch, "{}", GenericError::INVALID_PENULTIMATE);
 
             penultimate_value.balance()
         }

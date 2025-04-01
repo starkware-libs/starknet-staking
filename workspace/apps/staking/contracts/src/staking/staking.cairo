@@ -525,7 +525,7 @@ pub mod Staking {
             }
 
             let (epoch, total_stake) = total_stake_trace.penultimate().unwrap();
-            assert!(epoch <= current_epoch, "{}", Error::INVALID_PENULTIMATE);
+            assert!(epoch <= current_epoch, "{}", GenericError::INVALID_PENULTIMATE);
             total_stake
         }
 
@@ -1496,7 +1496,7 @@ pub mod Staking {
             } else {
                 let (epoch, staker_balance) = trace.penultimate();
                 // TODO: Catch this assert in tests.
-                assert!(epoch <= self.get_current_epoch(), "{}", Error::INVALID_PENULTIMATE);
+                assert!(epoch <= self.get_current_epoch(), "{}", GenericError::INVALID_PENULTIMATE);
                 staker_balance
             }
         }
