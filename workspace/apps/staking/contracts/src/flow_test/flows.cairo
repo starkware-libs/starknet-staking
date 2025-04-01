@@ -2921,4 +2921,9 @@ pub(crate) impl IncreaseStakeIntentSameEpochFlowImpl<
 /// Upgrade
 /// Pool call pool_migration - final index and pool balance as before.
 
+// TODO: Implement this flow test.
+// Stake
+// Upgrade
+// Attest at STARTING_EPOCH (should fail)
+
 

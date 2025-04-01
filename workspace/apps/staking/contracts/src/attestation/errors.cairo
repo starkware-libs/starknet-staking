@@ -5,7 +5,7 @@ pub(crate) enum Error {
     ATTEST_OUT_OF_WINDOW,
     ATTEST_WRONG_BLOCK_HASH,
     ATTEST_WINDOW_TOO_SMALL,
-    ATTEST_EPOCH_ZERO,
+    ATTEST_STARTING_EPOCH,
 }
 
 impl DescribableError of Describable<Error> {
@@ -15,7 +15,7 @@ impl DescribableError of Describable<Error> {
             Error::ATTEST_OUT_OF_WINDOW => "Attestation is out of window",
             Error::ATTEST_WRONG_BLOCK_HASH => "Attestation with wrong block hash",
             Error::ATTEST_WINDOW_TOO_SMALL => "Attestation window is too small, must be larger then 10 blocks",
-            Error::ATTEST_EPOCH_ZERO => "Attestation for epoch 0 is not allowed",
+            Error::ATTEST_STARTING_EPOCH => "Attestation for starting epoch is not allowed",
         }
     }
 }

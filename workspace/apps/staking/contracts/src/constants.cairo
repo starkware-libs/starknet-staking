@@ -10,4 +10,4 @@ pub(crate) const DEFAULT_C_NUM: Inflation = 160;
 pub(crate) const MAX_C_NUM: Inflation = 500;
 pub(crate) const C_DENOM: Inflation = 10_000;
 pub(crate) const MIN_ATTESTATION_WINDOW: u16 = 11;
-pub(crate) const FIRST_VALID_EPOCH: Epoch = 1; // Rewards start from epoch 1.
+pub(crate) const STARTING_EPOCH: Epoch = 0;

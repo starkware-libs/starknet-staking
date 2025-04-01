@@ -1,4 +1,5 @@
 use core::num::traits::Zero;
+use staking::constants::STARTING_EPOCH;
 use staking::pool::interface::{IPoolDispatcherTrait, IPoolLibraryDispatcher, PoolMemberInfo};
 use staking::pool::pool_member_balance_trace::trace::{
     PoolMemberCheckpoint, PoolMemberCheckpointTrait,
@@ -91,7 +92,7 @@ pub(crate) impl InternalPoolMemberInfoConvert of InternalPoolMemberInfoConvertTr
             unpool_time: pool_member_info.unpool_time,
             entry_to_claim_from: Zero::zero(),
             reward_checkpoint: PoolMemberCheckpointTrait::new(
-                epoch: Zero::zero(),
+                epoch: STARTING_EPOCH,
                 balance: pool_member_info.amount,
                 cumulative_rewards_trace_idx: Zero::zero(),
             ),
@@ -112,7 +113,9 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
         // Although the rewards will be computed even for the period before the member joined,
         // since the balance is zero, the amount will be zero.
         let reward_checkpoint = PoolMemberCheckpointTrait::new(
-            epoch: Zero::zero(), balance: Zero::zero(), cumulative_rewards_trace_idx: Zero::zero(),
+            epoch: STARTING_EPOCH,
+            balance: Zero::zero(),
+            cumulative_rewards_trace_idx: Zero::zero(),
         );
         VInternalPoolMemberInfo::V1(
             InternalPoolMemberInfoV1 {

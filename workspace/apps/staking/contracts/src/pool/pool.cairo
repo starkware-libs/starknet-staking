@@ -8,7 +8,7 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::FIRST_VALID_EPOCH;
+    use staking::constants::STARTING_EPOCH;
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
@@ -723,7 +723,7 @@ pub mod Pool {
             self
                 .pool_member_epoch_balance
                 .entry(key: pool_member)
-                .insert(key: FIRST_VALID_EPOCH, value: member_balance);
+                .insert(key: STARTING_EPOCH, value: member_balance);
             member_balance
         }
 

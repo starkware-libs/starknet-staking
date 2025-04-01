@@ -1,4 +1,5 @@
 use core::num::traits::zero::Zero;
+use staking::constants::STARTING_EPOCH;
 use staking::pool::objects::InternalPoolMemberInfoV1;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest};
@@ -200,7 +201,7 @@ pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfo
             unpool_time: self.unpool_time,
             entry_to_claim_from: Zero::zero(),
             reward_checkpoint: PoolMemberCheckpointTrait::new(
-                epoch: Zero::zero(),
+                epoch: STARTING_EPOCH,
                 balance: self.amount,
                 cumulative_rewards_trace_idx: Zero::zero(),
             ),

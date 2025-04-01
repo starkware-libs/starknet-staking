@@ -8,7 +8,7 @@ pub mod Attestation {
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
     use staking::attestation::interface::{Events, IAttestation};
-    use staking::constants::MIN_ATTESTATION_WINDOW;
+    use staking::constants::{MIN_ATTESTATION_WINDOW, STARTING_EPOCH};
     use staking::staking::interface::{
         IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
         IStakingDispatcherTrait,
@@ -139,7 +139,7 @@ pub mod Attestation {
                 contract_address: self.staking_contract.read(),
             };
             let current_epoch = staking_dispatcher.get_current_epoch();
-            assert!(current_epoch.is_non_zero(), "{}", Error::ATTEST_EPOCH_ZERO);
+            assert!(current_epoch > STARTING_EPOCH, "{}", Error::ATTEST_STARTING_EPOCH);
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
 
@@ -199,7 +199,7 @@ pub mod Attestation {
         ) {
             let staker_address = staking_attestation_info.staker_address();
             let current_epoch = staking_attestation_info.epoch_id();
-            assert!(current_epoch.is_non_zero(), "{}", Error::ATTEST_EPOCH_ZERO);
+            assert!(current_epoch > STARTING_EPOCH, "{}", Error::ATTEST_STARTING_EPOCH);
             self._assert_attestation_is_not_done(:staker_address, :current_epoch);
             let attestation_window = self.attestation_window.read();
             let target_attestation_block = self
