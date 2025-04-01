@@ -3,6 +3,7 @@
 mod StakingEIC {
     use core::num::traits::Zero;
     use staking::constants::FIRST_VALID_EPOCH;
+    use staking::errors::GenericError;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
     use starknet::class_hash::ClassHash;
@@ -49,6 +50,7 @@ mod StakingEIC {
             // If prev_class_hash is not empty we assume it's already set correctly.
             // in this case, we must not replace it.
             // TODO: Check that prev_class_hash is empty.
+            assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
             self.prev_class_hash.write(0, prev_class_hash);
 
             // TODO: What can i check in epoch info? Impl zero for the struct?
@@ -69,11 +71,11 @@ mod StakingEIC {
             self.total_stake_trace.insert(key: FIRST_VALID_EPOCH, value: total_stake);
 
             // 4. Replace pool contract class hash (if supplied).
-            if pool_contract_class_hash.is_non_zero() {
-                self.pool_contract_class_hash.write(pool_contract_class_hash);
-            }
+            assert!(pool_contract_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
+            self.pool_contract_class_hash.write(pool_contract_class_hash);
 
             // 5. Set attestation contract address.
+            assert!(attestation_contract.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
             self.attestation_contract.write(attestation_contract);
         }
     }

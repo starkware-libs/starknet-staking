@@ -2,6 +2,7 @@
 #[starknet::contract]
 mod PoolEIC {
     use core::num::traits::Zero;
+    use staking::errors::GenericError;
     use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
     use staking::types::{Index, Version};
     use starknet::ContractAddress;
@@ -36,6 +37,7 @@ mod PoolEIC {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
             assert(eic_init_data.len() == 1, 'EXPECTED_DATA_LENGTH_1');
             let class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
+            assert!(class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
             self.prev_class_hash.write(0, class_hash);
 
             // Get the final index.

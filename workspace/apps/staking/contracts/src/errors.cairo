@@ -30,6 +30,8 @@ pub(crate) enum GenericError {
     COMMISSION_ISNT_AMOUNT_TYPE,
     AMOUNT_TOO_HIGH,
     AMOUNT_IS_ZERO,
+    ZERO_CLASS_HASH,
+    ZERO_ADDRESS,
 }
 
 impl DescribableGenericError of Describable<GenericError> {
@@ -58,6 +60,8 @@ impl DescribableGenericError of Describable<GenericError> {
             GenericError::COMMISSION_ISNT_AMOUNT_TYPE => "Commission is too large, expected to fit in u128",
             GenericError::AMOUNT_TOO_HIGH => "Amount is too high",
             GenericError::AMOUNT_IS_ZERO => "Amount is zero",
+            GenericError::ZERO_CLASS_HASH => "Class hash is zero",
+            GenericError::ZERO_ADDRESS => "Address is zero",
         }
     }
 }
