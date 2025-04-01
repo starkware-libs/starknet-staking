@@ -29,12 +29,12 @@ use staking::pool::errors::Error;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher,
     IPoolMigrationDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo,
-    PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait,
+    PoolMemberInfo,
 };
 use staking::pool::objects::{
-    InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1, SwitchPoolData,
-    VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait,
-    VStorageContractTest,
+    InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1,
+    PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, SwitchPoolData, VInternalPoolMemberInfo,
+    VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait, VStorageContractTest,
 };
 use staking::pool::pool::Pool;
 use staking::reward_supplier::interface::{

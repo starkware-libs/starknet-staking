@@ -7,7 +7,8 @@ use staking::flow_test::utils::{
     SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
     upgrade_implementation,
 };
-use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait};
+use staking::pool::interface::PoolMemberInfo;
+use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::StakerInfo;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
