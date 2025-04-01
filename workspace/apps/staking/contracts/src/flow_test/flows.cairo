@@ -2912,6 +2912,53 @@ pub(crate) impl IncreaseStakeIntentSameEpochFlowImpl<
         assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
     }
 }
+
+/// Flow:
+/// First staker stake with pool
+/// First delegator delegate
+/// Second staker stake with pool
+/// Second delegator delegate
+/// Assert total stake
+#[derive(Drop, Copy)]
+pub(crate) struct AssertTotalStakeAfterMultiStakeFlow {}
+pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<AssertTotalStakeAfterMultiStakeFlow, TTokenState> {
+    fn get_pool_address(self: AssertTotalStakeAfterMultiStakeFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: AssertTotalStakeAfterMultiStakeFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: AssertTotalStakeAfterMultiStakeFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: AssertTotalStakeAfterMultiStakeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let stake_amount = system.staking.get_min_stake() * 2;
+        let commission = 200;
+
+        let first_staker = system.new_staker(amount: stake_amount);
+        system.stake(staker: first_staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let first_delegator = system.new_delegator(amount: stake_amount);
+        let first_pool = system.staking.get_pool(staker: first_staker);
+        system.delegate(delegator: first_delegator, pool: first_pool, amount: stake_amount);
+
+        let second_staker = system.new_staker(amount: stake_amount);
+        system.stake(staker: second_staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let second_delegator = system.new_delegator(amount: stake_amount);
+        let second_pool = system.staking.get_pool(staker: second_staker);
+        system.delegate(delegator: second_delegator, pool: second_pool, amount: stake_amount);
+
+        assert!(system.staking.get_total_stake() == stake_amount * 4);
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.

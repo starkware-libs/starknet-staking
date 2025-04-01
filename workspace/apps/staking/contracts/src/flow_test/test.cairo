@@ -367,6 +367,12 @@ fn increase_stake_intent_same_epoch_flow_test() {
     test_flow_local(:flow);
 }
 
+#[test]
+fn assert_total_stake_after_multi_stake_flow_test() {
+    let flow = flows::AssertTotalStakeAfterMultiStakeFlow {};
+    test_flow_local(:flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
