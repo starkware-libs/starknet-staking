@@ -723,12 +723,12 @@ pub mod Pool {
         fn set_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) {
-            let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
+            let trace = self.pool_member_epoch_balance.entry(pool_member);
             let pool_member_balance = PoolMemberBalanceTrait::new(
                 balance: amount,
                 cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length(),
             );
-            member_checkpoint.insert(key: self.get_next_epoch(), value: pool_member_balance);
+            trace.insert(key: self.get_next_epoch(), value: pool_member_balance);
             // TODO: Emit event?
         }
 
