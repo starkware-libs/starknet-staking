@@ -8,7 +8,7 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::{PREV_CONTRACT_VERSION, STARTING_EPOCH};
+    use staking::constants::PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
@@ -17,13 +17,12 @@ pub mod Pool {
         VInternalPoolMemberInfoTrait,
     };
     use staking::pool::pool_member_balance_trace::trace::{
-        MutablePoolMemberBalanceTraceTrait, PoolMemberBalance, PoolMemberBalanceTrace,
-        PoolMemberBalanceTraceTrait, PoolMemberBalanceTrait, PoolMemberCheckpoint,
-        PoolMemberCheckpointTrait,
+        MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
+        PoolMemberBalanceTrait, PoolMemberCheckpoint, PoolMemberCheckpointTrait,
     };
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
-        IStakingPoolDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+        IStakingPoolDispatcherTrait, StakerInfoV1Trait,
     };
     use staking::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
@@ -33,9 +32,7 @@ pub mod Pool {
     };
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
-    use starknet::storage::{
-        Map, StorageMapReadAccess, StoragePath, StoragePathEntry, StoragePointerReadAccess,
-    };
+    use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;

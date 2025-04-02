@@ -1,7 +1,3 @@
-use core::num::traits::zero::Zero;
-use staking::constants::STARTING_EPOCH;
-use staking::pool::objects::InternalPoolMemberInfoV1;
-use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest};
 use starknet::ContractAddress;
 use starkware_utils::types::time::time::Timestamp;
