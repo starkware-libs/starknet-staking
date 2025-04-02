@@ -309,15 +309,16 @@ pub mod Pool {
             let until_checkpoint = self.get_current_checkpoint(:pool_member);
 
             // Calculate rewards and update entry_to_claim_from.
-            let (mut rewards, entry_to_claim_from) = self
+            let (mut rewards, updated_entry_to_claim_from) = self
                 .calculate_rewards(
                     :pool_member,
                     from_checkpoint: pool_member_info.reward_checkpoint,
                     :until_checkpoint,
+                    entry_to_claim_from: pool_member_info.entry_to_claim_from,
                 );
             rewards += pool_member_info._unclaimed_rewards_from_v0;
             pool_member_info._unclaimed_rewards_from_v0 = Zero::zero();
-            pool_member_info.entry_to_claim_from = entry_to_claim_from;
+            pool_member_info.entry_to_claim_from = updated_entry_to_claim_from;
             pool_member_info.reward_checkpoint = until_checkpoint;
 
             // Write the updated pool member info to storage.
@@ -489,6 +490,7 @@ pub mod Pool {
                     :pool_member,
                     from_checkpoint: pool_member_info.reward_checkpoint,
                     until_checkpoint: self.get_current_checkpoint(:pool_member),
+                    entry_to_claim_from: pool_member_info.entry_to_claim_from,
                 );
             let external_pool_member_info = PoolMemberInfo {
                 reward_address: pool_member_info.reward_address,
@@ -765,20 +767,24 @@ pub mod Pool {
         /// Calculates the rewards from `from_checkpoint` (including rewards for
         /// `from_checkpoint.epoch`) to `until_checkpoint` (excluding).
         ///
-        /// Assumption: `from_checkpoint.epoch <= until_checkpoint.epoch <= current_epoch`.
+        /// Assumptions:
+        /// 1. `from_checkpoint.epoch <= until_checkpoint.epoch <= current_epoch`.
+        /// 2. `entry_to_claim_from` is the index of the first entry in the member balance trace
+        /// for which:
+        ///      `epoch >= from_checkpoint.epoch`, or the length of the trace if none exists.
+        ///
+        /// Returns the value of `entry_to_claim_from` for `until_checkpoint`.
         fn calculate_rewards(
             self: @ContractState,
             pool_member: ContractAddress,
             from_checkpoint: PoolMemberCheckpoint,
             until_checkpoint: PoolMemberCheckpoint,
+            mut entry_to_claim_from: VecIndex,
         ) -> (Amount, VecIndex) {
             let pool_member_trace = self.pool_member_epoch_balance.entry(pool_member);
             let until_epoch = until_checkpoint.epoch();
 
             let mut rewards = 0;
-            let mut entry_to_claim_from = self
-                .internal_pool_member_info(:pool_member)
-                .entry_to_claim_from;
 
             let pool_member_trace_length = pool_member_trace.length();
 
