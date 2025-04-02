@@ -936,9 +936,9 @@ Return the commission commitment for the given staker.
 Any address can execute.
 #### logic <!-- omit from toc -->
 
-### staker_info
+### staker_info_v1
 ```rust
-fn staker_info(
+fn staker_info_v1(
   self: @ContractState, 
   staker_address: ContractAddress
 ) -> StakerInfo
@@ -955,9 +955,9 @@ Any address can execute.
 #### logic <!-- omit from toc -->
 1. Return Staker's info.
 
-### get_staker_info
+### get_staker_info_v1
 ```rust
-fn get_staker_info(
+fn get_staker_info_v1(
   self: @ContractState, 
   staker_address: ContractAddress
 ) -> Option<StakerInfo>

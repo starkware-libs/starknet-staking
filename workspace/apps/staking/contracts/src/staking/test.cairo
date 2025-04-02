@@ -136,7 +136,7 @@ fn test_stake() {
     expected_staker_info.pool_info = Option::None;
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    assert!(expected_staker_info == staking_dispatcher.staker_info(:staker_address));
+    assert!(expected_staker_info == staking_dispatcher.staker_info_v1(:staker_address));
 
     let staker_address_from_operational_address = load_from_simple_map(
         map_selector: selector!("operational_address_to_staker_address"),
@@ -377,7 +377,7 @@ fn test_increase_stake_from_staker_address() {
     let staker_address = cfg.test_info.staker_address;
     // Set the same staker address.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let increase_amount = cfg.test_info.stake_amount;
     let expected_staker_info = StakerInfo {
         amount_own: staker_info_before.amount_own + increase_amount, ..staker_info_before,
@@ -387,7 +387,7 @@ fn test_increase_stake_from_staker_address() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.increase_stake(:staker_address, amount: increase_amount);
 
-    let updated_staker_info = staking_dispatcher.staker_info(:staker_address);
+    let updated_staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(expected_staker_info == updated_staker_info);
     assert!(staking_dispatcher.get_total_stake() == expected_staker_info.amount_own);
     // Validate the single StakeBalanceChanged event.
@@ -431,7 +431,7 @@ fn test_increase_stake_from_reward_address() {
         :token_address,
     );
     let staker_address = cfg.test_info.staker_address;
-    let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let increase_amount = cfg.test_info.stake_amount;
     let mut expected_staker_info = staker_info_before;
     expected_staker_info.amount_own += increase_amount;
@@ -439,7 +439,7 @@ fn test_increase_stake_from_reward_address() {
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher.increase_stake(:staker_address, amount: increase_amount);
-    let updated_staker_info = staking_dispatcher.staker_info(:staker_address);
+    let updated_staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(expected_staker_info == updated_staker_info);
     assert!(staking_dispatcher.get_total_stake() == expected_staker_info.amount_own);
     // Validate the single StakeBalanceChanged event.
@@ -524,14 +524,14 @@ fn test_change_reward_address() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-    let staker_info_before_change = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_before_change = staking_dispatcher.staker_info_v1(:staker_address);
     let other_reward_address = OTHER_REWARD_ADDRESS();
 
     // Set the same staker address.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let mut spy = snforge_std::spy_events();
     staking_dispatcher.change_reward_address(reward_address: other_reward_address);
-    let staker_info_after_change = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_after_change = staking_dispatcher.staker_info_v1(:staker_address);
     let staker_info_expected = StakerInfo {
         reward_address: other_reward_address, ..staker_info_before_change,
     };
@@ -586,7 +586,7 @@ fn test_claim_rewards() {
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
 
     // Calculate the expected staker rewards.
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let total_rewards = calculate_staker_total_rewards(
         :staker_info, :staking_contract, :minting_curve_contract,
     );
@@ -613,7 +613,7 @@ fn test_claim_rewards() {
     let staker_rewards = staking_dispatcher.claim_rewards(:staker_address);
     assert!(staker_rewards == expected_staker_rewards);
 
-    let staker_info_after_claim = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_after_claim = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after_claim.unclaimed_rewards_own == Zero::zero());
 
     let staker_reward_address_balance = token_dispatcher
@@ -669,7 +669,7 @@ fn test_unstake_intent() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let mut spy = snforge_std::spy_events();
     let unstake_time = staking_dispatcher.unstake_intent();
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let expected_time = Time::now()
         .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     assert!(staker_info.unstake_time.unwrap() == unstake_time);
@@ -744,7 +744,7 @@ fn test_unstake_action() {
     // Set commission commitment.
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let max_commission = staker_info.get_pool_info().commission;
     let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -757,14 +757,14 @@ fn test_unstake_action() {
         block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into(),
     );
     let unclaimed_rewards_own = staking_dispatcher
-        .staker_info(:staker_address)
+        .staker_info_v1(:staker_address)
         .unclaimed_rewards_own;
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
     assert!(staker_amount == cfg.test_info.stake_amount);
-    let actual_staker_info = staking_dispatcher.get_staker_info(:staker_address);
+    let actual_staker_info = staking_dispatcher.get_staker_info_v1(:staker_address);
     assert!(actual_staker_info.is_none());
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     // StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
@@ -837,7 +837,7 @@ fn test_get_total_stake() {
     assert!(
         staking_dispatcher
             .get_total_stake() == staking_dispatcher
-            .staker_info(:staker_address)
+            .staker_info_v1(:staker_address)
             .amount_own,
     );
 }
@@ -855,7 +855,7 @@ fn test_stake_pool_enabled() {
     if let Option::Some(mut pool_info) = cfg.staker_info.pool_info {
         pool_info
             .pool_contract = staking_dispatcher
-            .staker_info(:staker_address)
+            .staker_info_v1(:staker_address)
             .pool_info
             .unwrap()
             .pool_contract;
@@ -864,7 +864,7 @@ fn test_stake_pool_enabled() {
     let mut expected_staker_info: StakerInfo = cfg.staker_info.into();
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
     // Check that the staker info was updated correctly.
-    assert!(expected_staker_info == staking_dispatcher.staker_info(:staker_address));
+    assert!(expected_staker_info == staking_dispatcher.staker_info_v1(:staker_address));
     // Validate events.
     let events = spy.get_events().emitted_by(staking_contract).events;
     // There are three events: NewDelegationPool, StakeBalanceChange, NewStaker.
@@ -918,7 +918,7 @@ fn test_add_stake_from_pool() {
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let pool_balance_before = token_dispatcher.balance_of(pool_contract);
     let total_stake_before = staking_dispatcher.get_total_stake();
-    let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let pool_info_before = staker_info_before.get_pool_info();
     let mut spy = snforge_std::spy_events();
     start_cheat_block_timestamp_global(
@@ -946,7 +946,7 @@ fn test_add_stake_from_pool() {
     let expected_staker_info = StakerInfo {
         pool_info: Option::Some(expected_pool_info), ..staker_info_before,
     };
-    let staker_info_after = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == expected_staker_info);
 
     // Validate `StakeBalanceChanged` event.
@@ -1028,7 +1028,7 @@ fn test_remove_from_delegation_pool_intent() {
 
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let initial_delegated_stake = staking_dispatcher
-        .staker_info(cfg.test_info.staker_address)
+        .staker_info_v1(cfg.test_info.staker_address)
         .get_pool_info()
         ._deprecated_amount();
     let old_total_stake = staking_dispatcher.get_total_stake();
@@ -1060,7 +1060,9 @@ fn test_remove_from_delegation_pool_intent() {
     expected_pool_info._set_deprecated_amount(cur_delegated_stake);
     expected_staker_info.pool_info = Option::Some(expected_pool_info);
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
-    assert!(staking_dispatcher.staker_info(cfg.test_info.staker_address) == expected_staker_info);
+    assert!(
+        staking_dispatcher.staker_info_v1(cfg.test_info.staker_address) == expected_staker_info,
+    );
 
     // Validate that the total stake is updated.
     let expected_total_stake = old_total_stake - intent_amount;
@@ -1132,7 +1134,9 @@ fn test_remove_from_delegation_pool_intent() {
     expected_pool_info._set_deprecated_amount(cur_delegated_stake);
     expected_pool_info.pool_contract = pool_contract;
     expected_staker_info.pool_info = Option::Some(expected_pool_info);
-    assert!(staking_dispatcher.staker_info(cfg.test_info.staker_address) == expected_staker_info);
+    assert!(
+        staking_dispatcher.staker_info_v1(cfg.test_info.staker_address) == expected_staker_info,
+    );
 
     // Validate that the total stake is updated.
     let expected_total_stake = old_total_stake - new_intent_amount;
@@ -1376,7 +1380,7 @@ fn test_switch_staking_delegation_pool() {
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
     let to_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let to_pool_dispatcher = IPoolDispatcher { contract_address: to_pool_contract };
-    let to_staker_info = staking_dispatcher.staker_info(staker_address: to_staker);
+    let to_staker_info = staking_dispatcher.staker_info_v1(staker_address: to_staker);
     // Pool member remove_from_delegation_pool_intent.
     let pool_member = cfg.test_info.pool_member_address;
     cheat_caller_address_once(contract_address: from_pool_contract, caller_address: pool_member);
@@ -1423,7 +1427,7 @@ fn test_switch_staking_delegation_pool() {
         pool_info._set_deprecated_amount(amount);
         expected_staker_info.pool_info = Option::Some(pool_info);
     }
-    let actual_staker_info = staking_dispatcher.staker_info(staker_address: to_staker);
+    let actual_staker_info = staking_dispatcher.staker_info_v1(staker_address: to_staker);
     assert!(actual_staker_info == expected_staker_info);
     // Check total_stake was updated.
     let expected_total_stake = total_stake_before_switching + switched_amount;
@@ -1707,7 +1711,7 @@ fn test_change_operational_address() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
@@ -1716,7 +1720,7 @@ fn test_change_operational_address() {
     staking_dispatcher.declare_operational_address(:staker_address);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.change_operational_address(:operational_address);
-    let updated_staker_info = staking_dispatcher.staker_info(:staker_address);
+    let updated_staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let expected_staker_info = StakerInfo { operational_address, ..staker_info };
     assert!(updated_staker_info == expected_staker_info);
     // Validate the OperationalAddressDeclared and OperationalAddressChanged events.
@@ -1806,7 +1810,7 @@ fn test_update_commission() {
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let interest = cfg.test_info.global_index - cfg.staker_info._deprecated_index_V0;
     let staker_address = cfg.test_info.staker_address;
-    let staker_info_before_update = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_before_update = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(
         staker_info_before_update
             .get_pool_info()
@@ -1824,7 +1828,7 @@ fn test_update_commission() {
     staking_dispatcher.update_commission(:commission);
 
     // Assert rewards is updated.
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let staker_rewards = compute_rewards_rounded_down(amount: staker_info.amount_own, :interest);
     let pool_info = staker_info.get_pool_info();
     let pool_rewards_including_commission = compute_rewards_rounded_up(
@@ -1877,7 +1881,7 @@ fn test_update_commission_with_commitment() {
 
     // Set commitment.
     let staker_address = cfg.test_info.staker_address;
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let max_commission = staker_info.get_pool_info().commission + 2;
     let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -1889,7 +1893,7 @@ fn test_update_commission_with_commitment() {
     staking_dispatcher.update_commission(:commission);
 
     // Assert commission is updated.
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info.get_pool_info().commission == commission);
 
     // Advance to the expiration epoch.
@@ -1901,7 +1905,7 @@ fn test_update_commission_with_commitment() {
     staking_dispatcher.update_commission(:commission);
 
     // Assert commission is updated.
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info.get_pool_info().commission == commission);
 }
 
@@ -1920,7 +1924,7 @@ fn test_update_commission_assertions_with_commitment() {
 
     // Set commitment.
     let staker_address = cfg.test_info.staker_address;
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let max_commission = staker_info.get_pool_info().commission + 2;
     let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -2050,7 +2054,7 @@ fn test_set_commission_commitment() {
     let token_address = cfg.staking_contract_info.token_address;
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let max_commission = staker_info.get_pool_info().commission * 2;
     let mut spy = snforge_std::spy_events();
     let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
@@ -2110,7 +2114,7 @@ fn test_set_commission_commitment_assertions() {
     let commission = cfg.staker_info.get_pool_info().commission;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.set_open_for_delegation(:commission);
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let max_commission = staker_info.get_pool_info().commission - 1;
     let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -2169,7 +2173,7 @@ fn test_set_open_for_delegation() {
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let pool_contract = staking_dispatcher.set_open_for_delegation(:commission);
-    let pool_info = staking_dispatcher.staker_info(:staker_address).get_pool_info();
+    let pool_info = staking_dispatcher.staker_info_v1(:staker_address).get_pool_info();
     let mut expected_pool_info = cfg.staker_info.get_pool_info();
     expected_pool_info.commission = commission;
     expected_pool_info.pool_contract = pool_contract;
@@ -2396,7 +2400,7 @@ fn test_staker_info() {
     expected_staker_info.pool_info = Option::None;
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info == expected_staker_info);
 }
 
@@ -2407,7 +2411,7 @@ fn test_staker_info_staker_doesnt_exist() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    staking_dispatcher.staker_info(staker_address: NON_STAKER_ADDRESS());
+    staking_dispatcher.staker_info_v1(staker_address: NON_STAKER_ADDRESS());
 }
 
 #[test]
@@ -2419,14 +2423,14 @@ fn test_get_staker_info() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     // Check before staker enters.
-    let option_staker_info = staking_dispatcher.get_staker_info(:staker_address);
+    let option_staker_info = staking_dispatcher.get_staker_info_v1(:staker_address);
     assert!(option_staker_info.is_none());
     // Check after staker enters.
     let mut expected_staker_info: StakerInfo = cfg.staker_info.into();
     expected_staker_info.pool_info = Option::None;
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let option_staker_info = staking_dispatcher.get_staker_info(:staker_address);
+    let option_staker_info = staking_dispatcher.get_staker_info_v1(:staker_address);
     assert!(option_staker_info == Option::Some(expected_staker_info));
 }
 
@@ -2605,7 +2609,7 @@ fn test_update_rewards_from_attestation_contract_only_staker() {
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
-    let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let epoch_rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards();
     let staker_info_expected = StakerInfo {
         unclaimed_rewards_own: epoch_rewards, ..staker_info_before,
@@ -2614,7 +2618,7 @@ fn test_update_rewards_from_attestation_contract_only_staker() {
         contract_address: staking_contract, caller_address: attestation_contract,
     );
     staking_attestation_dispatcher.update_rewards_from_attestation_contract(:staker_address);
-    let staker_info_after = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_expected);
 }
 
@@ -2640,7 +2644,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
-    let staker_info_before = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let pool_member = cfg.test_info.pool_member_address;
 
     // Calculate rewards.
@@ -2676,7 +2680,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     advance_epoch_global();
 
     // Assert staker rewards update.
-    let staker_info_after = staking_dispatcher.staker_info(:staker_address);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_expected);
 
     // Assert pool and delegator rewards.
@@ -3502,7 +3506,7 @@ fn test_get_current_total_staking_power() {
     assert!(
         staking_dispatcher
             .get_current_total_staking_power() == staking_dispatcher
-            .staker_info(:staker_address)
+            .staker_info_v1(:staker_address)
             .amount_own,
     );
 }

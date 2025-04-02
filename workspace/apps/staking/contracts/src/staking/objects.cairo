@@ -2,10 +2,8 @@ use core::cmp::max;
 use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
 use staking::staking::errors::Error;
-use staking::staking::interface::{
-    CommissionCommitment, IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo,
-    StakerPoolInfo,
-};
+use staking::staking::interface::{CommissionCommitment, StakerInfo, StakerPoolInfo};
+use staking::staking::interface_v0::{IStakingV0DispatcherTrait, IStakingV0LibraryDispatcher};
 use staking::types::{Amount, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
@@ -246,8 +244,8 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
     fn convert(
         self: InternalStakerInfo, prev_class_hash: ClassHash, staker_address: ContractAddress,
     ) -> (InternalStakerInfoV1, Amount) {
-        let library_dispatcher = IStakingLibraryDispatcher { class_hash: prev_class_hash };
-        let staker_info = library_dispatcher.staker_info(staker_address);
+        let library_dispatcher = IStakingV0LibraryDispatcher { class_hash: prev_class_hash };
+        let staker_info = library_dispatcher.staker_info(:staker_address);
         let internal_staker_info_v1 = InternalStakerInfoV1 {
             reward_address: staker_info.reward_address,
             operational_address: staker_info.operational_address,

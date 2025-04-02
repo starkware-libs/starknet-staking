@@ -204,11 +204,8 @@ pub mod Pool {
             self.transfer_from_delegator(pool_member: caller_address, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
-            let member_balance = self.get_or_create_member_balance(:pool_member);
-            let old_delegated_stake = member_balance.balance();
-
             // Update the pool member's balance checkpoint.
-            self.increase_next_epoch_balance(:pool_member, :amount);
+            let old_delegated_stake = self.increase_next_epoch_balance(:pool_member, :amount);
             let new_delegated_stake = old_delegated_stake + amount;
 
             // Emit events.
@@ -494,17 +491,21 @@ pub mod Pool {
         // This function provides the pool member info (with projected rewards).
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
             let pool_member_info = self.internal_pool_member_info(:pool_member);
-
-            let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
-            external_pool_member_info.amount = self.get_amount(:pool_member);
             let (rewards, _) = self
                 .calculate_rewards(
                     :pool_member,
                     from_checkpoint: pool_member_info.reward_checkpoint,
                     until_checkpoint: self.get_current_checkpoint(:pool_member),
                 );
-            external_pool_member_info.unclaimed_rewards += rewards;
-            external_pool_member_info.commission = self.get_commission_from_staking_contract();
+            let external_pool_member_info = PoolMemberInfo {
+                reward_address: pool_member_info.reward_address,
+                amount: self.get_amount(:pool_member),
+                index: pool_member_info._deprecated_index,
+                unclaimed_rewards: pool_member_info._unclaimed_rewards_from_v0 + rewards,
+                commission: self.get_commission_from_staking_contract(),
+                unpool_amount: pool_member_info.unpool_amount,
+                unpool_time: pool_member_info.unpool_time,
+            };
             external_pool_member_info
         }
 
@@ -618,7 +619,7 @@ pub mod Pool {
         fn staker_info(self: @ContractState) -> StakerInfo {
             let contract_address = self.staking_pool_dispatcher.read().contract_address;
             let staking_dispatcher = IStakingDispatcher { contract_address };
-            staking_dispatcher.staker_info(staker_address: self.staker_address.read())
+            staking_dispatcher.staker_info_v1(staker_address: self.staker_address.read())
         }
 
         /// Transfer funds of the specified amount from the given delegator to the pool.
@@ -722,21 +723,24 @@ pub mod Pool {
         fn set_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) {
-            let member_checkpoint = self.pool_member_epoch_balance.entry(pool_member);
+            let trace = self.pool_member_epoch_balance.entry(pool_member);
             let pool_member_balance = PoolMemberBalanceTrait::new(
                 balance: amount,
                 cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length(),
             );
-            member_checkpoint.insert(key: self.get_next_epoch(), value: pool_member_balance);
+            trace.insert(key: self.get_next_epoch(), value: pool_member_balance);
             // TODO: Emit event?
         }
 
+        /// Increase the next epoch balance of the pool member by the given `amount`.
+        /// Returns the previous balance.
         fn increase_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
-        ) {
+        ) -> Amount {
             let member_balance = self.get_or_create_member_balance(:pool_member);
             let current_balance = member_balance.balance();
             self.set_next_epoch_balance(:pool_member, amount: current_balance + amount);
+            current_balance
             // TODO: Emit event?
         }
 
@@ -885,7 +889,7 @@ pub mod Pool {
                 contract_address: self.staking_pool_dispatcher.read().contract_address,
             };
             staking_dispatcher
-                .staker_info(staker_address: self.staker_address.read())
+                .staker_info_v1(staker_address: self.staker_address.read())
                 .get_pool_info()
                 .commission
         }

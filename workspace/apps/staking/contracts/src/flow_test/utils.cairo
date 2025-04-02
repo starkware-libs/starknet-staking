@@ -9,7 +9,6 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::MIN_ATTESTATION_WINDOW;
-use staking::flow_test::staking_interface_v0::{IStakingV0Dispatcher, IStakingV0DispatcherTrait};
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
@@ -24,6 +23,7 @@ use staking::staking::interface::{
     IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher,
     IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfoTrait,
 };
+use staking::staking::interface_v0::{IStakingV0Dispatcher, IStakingV0DispatcherTrait};
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
     EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS,
@@ -179,6 +179,11 @@ pub(crate) impl StakingImpl of StakingTrait {
         IStakingDispatcher { contract_address: self.address }
     }
 
+    fn is_v0(self: StakingState) -> bool {
+        let class_hash = snforge_std::get_class_hash(self.address);
+        class_hash == MAINNET_STAKING_CLASS_HASH_V0()
+    }
+
     fn safe_dispatcher(self: StakingState) -> IStakingSafeDispatcher nopanic {
         IStakingSafeDispatcher { contract_address: self.address }
     }
@@ -220,7 +225,11 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_pool(self: StakingState, staker: Staker) -> ContractAddress {
-        let staker_info = self.dispatcher().staker_info(staker_address: staker.staker.address);
+        let staker_info = if self.is_v0() {
+            self.dispatcher_v0().staker_info(staker_address: staker.staker.address)
+        } else {
+            self.dispatcher().staker_info_v1(staker_address: staker.staker.address)
+        };
         staker_info.get_pool_info().pool_contract
     }
 
@@ -886,11 +895,15 @@ pub(crate) impl SystemStakerImpl<
     }
 
     fn staker_info(self: SystemState<TTokenState>, staker: Staker) -> StakerInfo {
-        self.staking.dispatcher().staker_info(staker_address: staker.staker.address)
+        if self.staking.is_v0() {
+            self.staking.dispatcher_v0().staker_info(staker_address: staker.staker.address)
+        } else {
+            self.staking.dispatcher().staker_info_v1(staker_address: staker.staker.address)
+        }
     }
 
     fn get_staker_info(self: SystemState<TTokenState>, staker: Staker) -> Option<StakerInfo> {
-        self.staking.dispatcher().get_staker_info(staker_address: staker.staker.address)
+        self.staking.dispatcher().get_staker_info_v1(staker_address: staker.staker.address)
     }
 
     fn internal_staker_info(
