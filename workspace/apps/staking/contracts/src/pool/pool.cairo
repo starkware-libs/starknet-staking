@@ -204,11 +204,8 @@ pub mod Pool {
             self.transfer_from_delegator(pool_member: caller_address, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
-            let member_balance = self.get_or_create_member_balance(:pool_member);
-            let old_delegated_stake = member_balance.balance();
-
             // Update the pool member's balance checkpoint.
-            self.increase_next_epoch_balance(:pool_member, :amount);
+            let old_delegated_stake = self.increase_next_epoch_balance(:pool_member, :amount);
             let new_delegated_stake = old_delegated_stake + amount;
 
             // Emit events.
@@ -735,12 +732,15 @@ pub mod Pool {
             // TODO: Emit event?
         }
 
+        /// Increase the next epoch balance of the pool member by the given `amount`.
+        /// Returns the previous balance.
         fn increase_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
-        ) {
+        ) -> Amount {
             let member_balance = self.get_or_create_member_balance(:pool_member);
             let current_balance = member_balance.balance();
             self.set_next_epoch_balance(:pool_member, amount: current_balance + amount);
+            current_balance
             // TODO: Emit event?
         }
 
