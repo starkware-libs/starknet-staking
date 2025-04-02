@@ -16,7 +16,7 @@ pub trait IRewardSupplier<TContractState> {
         depositor: EthAddress,
         message: Span<felt252>,
     ) -> bool;
-    fn contract_parameters(self: @TContractState) -> RewardSupplierInfo;
+    fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfo;
 }
 
 pub mod Events {

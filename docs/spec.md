@@ -33,7 +33,7 @@
     - [get\_epoch\_info](#get_epoch_info)
     - [update\_rewards\_from\_attestation\_contract](#update_rewards_from_attestation_contract)
     - [fn get\_attestation\_info\_by\_operational\_address](#fn-get_attestation_info_by_operational_address)
-    - [contract\_parameters](#contract_parameters)
+    - [contract\_parameters\_v1](#contract_parameters_v1)
     - [get\_total\_stake](#get_total_stake)
     - [get\_current\_total\_staking\_power](#get_current_total_staking_power)
     - [get\_pool\_exit\_intent](#get_pool_exit_intent)
@@ -84,7 +84,7 @@
     - [change\_reward\_address](#change_reward_address-1)
     - [pool\_member\_info](#pool_member_info)
     - [get\_pool\_member\_info](#get_pool_member_info)
-    - [contract\_parameters](#contract_parameters-1)
+    - [contract\_parameters\_v1](#contract_parameters_v1-1)
     - [update\_rewards\_from\_staking\_contract](#update_rewards_from_staking_contract)
   - [Events](#events-1)
     - [Pool Member Balance Changed](#pool-member-balance-changed)
@@ -100,14 +100,14 @@
     - [calculate\_current\_epoch\_rewards](#calculate_current_epoch_rewards)
     - [update\_unclaimed\_rewards\_from\_staking\_contract](#update_unclaimed_rewards_from_staking_contract)
     - [claim\_rewards](#claim_rewards-2)
-    - [contract\_parameters](#contract_parameters-2)
+    - [contract\_parameters\_v1](#contract_parameters_v1-2)
     - [on\_receive](#on_receive)
   - [Events](#events-2)
     - [Mint Request](#mint-request)
 - [Minting Curve Contract](#minting-curve-contract)
   - [Functions](#functions-3)
     - [yearly\_mint](#yearly_mint)
-    - [contract\_parameters](#contract_parameters-3)
+    - [contract\_parameters](#contract_parameters)
     - [set\_c\_num](#set_c_num)
   - [Events](#events-3)
     - [Total Supply Changed](#total-supply-changed)
@@ -262,7 +262,7 @@ classDiagram
     set_commission_commitment()
     staker_info()
     get_staker_info()
-    contract_parameters()
+    contract_parameters_v1()
     get_total_stake()
     get_current_total_staking_power()
     get_pool_exit_intent()
@@ -298,7 +298,7 @@ classDiagram
     change_reward_address()
     pool_member_info()
     get_pool_member_info()
-    contract_parameters()
+    contract_parameters_v1()
     switch_delegation_pool()
     enter_delegation_pool_from_staking_contract()
     set_staker_removed()
@@ -341,7 +341,7 @@ classDiagram
     update_unclaimed_rewards_from_staking_contract()
     claim_rewards()
     on_receive()
-    contract_parameters()
+    contract_parameters_v1()
   }
   class MintingCurve {
     staking_dispatcher,
@@ -1046,9 +1046,9 @@ Returns the attestation info for the staker based on it's operational address.
 1. Collect info needed for attestation validation.
 2. Return the info.
 
-### contract_parameters
+### contract_parameters_v1
 ```rust
-fn contract_parameters(self: @ContractState) -> StakingContractInfo
+fn contract_parameters_v1(self: @ContractState) -> StakingContractInfo
 ```
 #### description <!-- omit from toc -->
 Return general parameters of the contract.
@@ -1768,9 +1768,9 @@ Any address can execute.
 #### logic <!-- omit from toc -->
 1. Returns `Option::Some` with [PoolMemberInfo](#poolmemberinfo) if exists, otherwise `Option::None`.
 
-### contract_parameters
+### contract_parameters_v1
 ```rust
-fn contract_parameters(self: @ContractState) -> StakingContractInfo
+fn contract_parameters_v1(self: @ContractState) -> PoolContractInfo
 ```
 #### description <!-- omit from toc -->
 Return [PoolContractInfo](#poolcontractinfo) of the contract.
@@ -1912,9 +1912,9 @@ Transfers `amount` FRI to staking contract
 #### access control <!-- omit from toc -->
 Only staking contract.
 
-### contract_parameters
+### contract_parameters_v1
 ```rust
-fn contract_parameters(self: @TContractState) -> RewardSupplierInfo
+fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfo
 ```
 #### description <!-- omit from toc -->
 Return [RewardSupplierInfo](#RewardSupplierInfo) filled with the corresponding storage values.

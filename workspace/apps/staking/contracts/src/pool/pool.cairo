@@ -512,7 +512,7 @@ pub mod Pool {
             Option::Some(self.pool_member_info(pool_member))
         }
 
-        fn contract_parameters(self: @ContractState) -> PoolContractInfo {
+        fn contract_parameters_v1(self: @ContractState) -> PoolContractInfo {
             PoolContractInfo {
                 staker_address: self.staker_address.read(),
                 staker_removed: self.staker_removed.read(),

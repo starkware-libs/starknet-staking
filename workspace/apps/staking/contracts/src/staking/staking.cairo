@@ -499,7 +499,7 @@ pub mod Staking {
         }
 
 
-        fn contract_parameters(self: @ContractState) -> StakingContractInfo {
+        fn contract_parameters_v1(self: @ContractState) -> StakingContractInfo {
             StakingContractInfo {
                 min_stake: self.min_stake.read(),
                 token_address: self.token_dispatcher.read().contract_address,

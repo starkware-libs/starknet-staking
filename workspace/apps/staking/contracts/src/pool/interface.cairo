@@ -68,7 +68,7 @@ pub trait IPool<TContractState> {
     ) -> Option<PoolMemberInfo>;
 
     /// Return `PoolContractInfo` of the contract.
-    fn contract_parameters(self: @TContractState) -> PoolContractInfo;
+    fn contract_parameters_v1(self: @TContractState) -> PoolContractInfo;
 
     /// Update the cumulative sum in the pool trace with
     /// `rewards` divided by `pool_balance` for the current epoch.
