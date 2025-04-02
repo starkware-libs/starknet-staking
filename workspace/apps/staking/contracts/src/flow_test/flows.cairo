@@ -19,7 +19,7 @@ use staking::test_utils::{
     staker_update_rewards,
 };
 use staking::types::{Amount, Commission, Index};
-use staking::utils::{compute_global_index_diff, compute_rewards_rounded_down};
+use staking::utils::{compute_rewards_per_strk, compute_rewards_rounded_down};
 use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::{Describable, ErrorDisplay};
@@ -2540,8 +2540,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             calculate_pool_member_rewards(
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
-        sigma +=
-            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
 
         system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
 
@@ -2565,8 +2564,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             calculate_pool_member_rewards(
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
-        sigma +=
-            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
 
         system.advance_epoch();
         delegated_amount_1 += stake_amount / 4;
@@ -2586,8 +2584,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             calculate_pool_member_rewards(
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
-        sigma +=
-            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
 
         system
             .delegator_exit_intent(
@@ -2601,8 +2598,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         let pool_rewards = calculate_pool_rewards(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
-        sigma +=
-            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
 
         system
             .delegator_exit_intent(
@@ -2618,12 +2614,10 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         let from_sigma = sigma;
-        sigma +=
-            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
 
         system.advance_epoch_and_attest(:staker);
-        sigma +=
-            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
         delegator_1_rewards +=
             compute_rewards_rounded_down(amount: delegated_amount_1, interest: sigma - from_sigma);
 
@@ -2642,8 +2636,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             calculate_pool_member_rewards(
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
-        sigma +=
-            compute_global_index_diff(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
 
         system.advance_epoch();
 

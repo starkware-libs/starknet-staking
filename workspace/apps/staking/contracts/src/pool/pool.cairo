@@ -29,7 +29,7 @@ pub mod Pool {
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
     };
     use staking::utils::{
-        CheckedIERC20DispatcherTrait, compute_global_index_diff, compute_rewards_rounded_down,
+        CheckedIERC20DispatcherTrait, compute_rewards_per_strk, compute_rewards_rounded_down,
     };
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
@@ -535,7 +535,7 @@ pub mod Pool {
                 .insert(
                     key: self.get_current_epoch(),
                     value: latest
-                        + compute_global_index_diff(
+                        + compute_rewards_per_strk(
                             staking_rewards: rewards, total_stake: pool_balance,
                         ),
                 );
