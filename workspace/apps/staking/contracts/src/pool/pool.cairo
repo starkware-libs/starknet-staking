@@ -619,7 +619,7 @@ pub mod Pool {
         fn staker_info(self: @ContractState) -> StakerInfo {
             let contract_address = self.staking_pool_dispatcher.read().contract_address;
             let staking_dispatcher = IStakingDispatcher { contract_address };
-            staking_dispatcher.staker_info(staker_address: self.staker_address.read())
+            staking_dispatcher.staker_info_v1(staker_address: self.staker_address.read())
         }
 
         /// Transfer funds of the specified amount from the given delegator to the pool.
@@ -889,7 +889,7 @@ pub mod Pool {
                 contract_address: self.staking_pool_dispatcher.read().contract_address,
             };
             staking_dispatcher
-                .staker_info(staker_address: self.staker_address.read())
+                .staker_info_v1(staker_address: self.staker_address.read())
                 .get_pool_info()
                 .commission
         }

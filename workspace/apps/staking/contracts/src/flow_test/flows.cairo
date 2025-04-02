@@ -1,7 +1,6 @@
 use core::num::traits::Zero;
 use staking::constants::{PREV_CONTRACT_VERSION, STRK_IN_FRIS};
 use staking::errors::GenericError;
-use staking::flow_test::staking_interface_v0::IStakingV0DispatcherTrait;
 use staking::flow_test::utils::MainnetClassHashes::MAINNET_POOL_CLASS_HASH_V0;
 use staking::flow_test::utils::{
     Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait, SystemDelegatorTrait,
@@ -12,6 +11,7 @@ use staking::pool::interface::PoolMemberInfo;
 use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::StakerInfo;
+use staking::staking::interface_v0::IStakingV0DispatcherTrait;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_pool_rewards, calculate_pool_rewards_with_pool_balance,

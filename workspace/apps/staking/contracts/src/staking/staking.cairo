@@ -466,7 +466,7 @@ pub mod Staking {
 
         // This function provides the staker info (with projected rewards).
         // If the staker does not exist, it panics.
-        fn staker_info(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
+        fn staker_info_v1(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
             let mut internal_staker_info = self.internal_staker_info(:staker_address);
             if let Option::Some(mut pool_info) = internal_staker_info.pool_info {
                 let pool_amount = self.get_balance(:staker_address).total_amount()
@@ -487,7 +487,7 @@ pub mod Staking {
             if self.staker_info.read(staker_address).is_none() {
                 return Option::None;
             }
-            Option::Some(self.staker_info(:staker_address))
+            Option::Some(self.staker_info_v1(:staker_address))
         }
 
         fn get_current_epoch(self: @ContractState) -> Epoch {

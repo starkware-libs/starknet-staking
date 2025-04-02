@@ -556,7 +556,7 @@ pub(crate) fn stake_with_pool_enabled(
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = staking_dispatcher
-        .staker_info(cfg.test_info.staker_address)
+        .staker_info_v1(cfg.test_info.staker_address)
         .get_pool_info()
         .pool_contract;
     pool_contract
@@ -1086,7 +1086,7 @@ pub(crate) fn calculate_pool_rewards(
     minting_curve_contract: ContractAddress,
 ) -> Amount {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let total_rewards = calculate_staker_total_rewards(
         :staker_info, :staking_contract, :minting_curve_contract,
     );
@@ -1109,7 +1109,7 @@ pub(crate) fn calculate_pool_rewards_with_pool_balance(
     let epoch_rewards = calculate_current_epoch_rewards(:staking_contract, :minting_curve_contract);
     // Calculate staker total rewards.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let staker_info = staking_dispatcher.staker_info(:staker_address);
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let total_amount = staker_balance + pool_balance;
     let total_rewards = mul_wide_and_div(
         lhs: epoch_rewards,
