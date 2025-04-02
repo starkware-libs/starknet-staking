@@ -2963,6 +2963,59 @@ pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl<
         assert!(system.staking.get_total_stake() == stake_amount * 4);
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Staker attest
+/// Delegator full exit intent
+/// Delegator exit action
+#[derive(Drop, Copy)]
+pub(crate) struct DelegateIntentSameEpochFlow {}
+pub(crate) impl DelegateIntentSameEpochFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<DelegateIntentSameEpochFlow, TTokenState> {
+    fn get_pool_address(self: DelegateIntentSameEpochFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: DelegateIntentSameEpochFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: DelegateIntentSameEpochFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: DelegateIntentSameEpochFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount);
+        let delegated_amount = stake_amount;
+        let delegator = system.new_delegator(amount: delegated_amount);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch();
+        system.advance_block_into_attestation_window(:staker);
+
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.attest(:staker);
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+
+        assert!(system.token.balance_of(account: delegator.delegator.address).is_zero());
+        system.delegator_exit_action(:delegator, :pool);
+        assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
+
+        let delegator_info = system.pool_member_info(:delegator, :pool);
+        assert!(delegator_info.amount.is_zero());
+        assert!(delegator_info.unclaimed_rewards.is_zero());
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
