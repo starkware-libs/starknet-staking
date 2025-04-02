@@ -21,7 +21,7 @@ use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfoTrait,
+    IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
 use staking::staking::interface_v0::{IStakingV0Dispatcher, IStakingV0DispatcherTrait};
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
@@ -917,8 +917,12 @@ pub(crate) impl SystemStakerImpl<
 
     fn convert_internal_staker_info(
         self: SystemState<TTokenState>, staker_address: ContractAddress,
-    ) -> InternalStakerInfoLatest {
-        self.staking.migration_dispatcher().convert_internal_staker_info(:staker_address)
+    ) -> (InternalStakerInfoLatest, Amount) {
+        let (internal_staker_info, pool_unclaimed_rewards) = self
+            .staking
+            .migration_dispatcher()
+            .convert_internal_staker_info(:staker_address);
+        (internal_staker_info, pool_unclaimed_rewards)
     }
 
     fn attest(self: SystemState<TTokenState>, staker: Staker) {
@@ -939,7 +943,7 @@ pub(crate) impl SystemStakerImpl<
         let staker_info = self.staker_info(:staker);
         let mut total = staker_info.amount_own;
         if let Option::Some(pool_info) = staker_info.pool_info {
-            total += pool_info._deprecated_amount();
+            total += pool_info.amount;
         }
         total
     }

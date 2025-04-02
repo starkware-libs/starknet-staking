@@ -20,7 +20,7 @@ pub mod Staking {
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
         IStakingMigration, IStakingPause, IStakingPool, PauseEvents, StakerInfo,
-        StakerPoolInfoTrait, StakingContractInfo,
+        StakingContractInfo,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
@@ -32,7 +32,10 @@ pub mod Staking {
         MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
         StakerBalanceTrait,
     };
-    use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest, Version};
+    use staking::types::{
+        Amount, Commission, Epoch, Index, InternalStakerInfoLatest, InternalStakerPoolInfoLatest,
+        Version,
+    };
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
         compute_new_delegated_stake, deploy_delegation_pool_contract,
@@ -235,7 +238,7 @@ pub mod Staking {
                         token_address: token_dispatcher.contract_address,
                         :commission,
                     );
-                Option::Some(StakerPoolInfoTrait::new(:pool_contract, :commission))
+                Option::Some(InternalStakerPoolInfoLatest { pool_contract, commission })
             } else {
                 Option::None
             };
@@ -459,23 +462,25 @@ pub mod Staking {
             // Update staker info and commit to storage.
             // No need to update rewards as there is no change in staked amount (own or delegated).
             staker_info
-                .pool_info = Option::Some(StakerPoolInfoTrait::new(:pool_contract, :commission));
+                .pool_info =
+                    Option::Some(InternalStakerPoolInfoLatest { pool_contract, commission });
             self.write_staker_info(:staker_address, :staker_info);
             pool_contract
         }
 
-        // This function provides the staker info (with projected rewards).
-        // If the staker does not exist, it panics.
+        /// This function provides the staker info (with projected rewards).
+        /// If the staker does not exist, it panics.
+        /// This function assumes the staker trace is initialized.
         fn staker_info_v1(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
-            let mut internal_staker_info = self.internal_staker_info(:staker_address);
-            if let Option::Some(mut pool_info) = internal_staker_info.pool_info {
-                let pool_amount = self.get_balance(:staker_address).total_amount()
-                    - self.get_balance(:staker_address).amount_own();
-                pool_info._set_deprecated_amount(pool_amount);
-                internal_staker_info.pool_info = Option::Some(pool_info);
-            }
+            let internal_staker_info = self.internal_staker_info(:staker_address);
+            let staker_balance = self.get_balance(:staker_address);
             let mut staker_info: StakerInfo = internal_staker_info.into();
-            staker_info.amount_own = self.get_balance(:staker_address).amount_own();
+            // Set staker amount and pool amount from staker balance trace.
+            staker_info.amount_own = staker_balance.amount_own();
+            if let Option::Some(mut pool_info) = staker_info.pool_info {
+                pool_info.amount = staker_balance.pool_amount();
+                staker_info.pool_info = Option::Some(pool_info);
+            }
             staker_info
         }
 
@@ -708,14 +713,15 @@ pub mod Staking {
         }
         fn convert_internal_staker_info(
             ref self: ContractState, staker_address: ContractAddress,
-        ) -> InternalStakerInfoLatest {
+        ) -> (InternalStakerInfoLatest, Amount) {
             let versioned_internal_staker_info = self.staker_info.read(staker_address);
             match versioned_internal_staker_info {
                 VersionedInternalStakerInfo::None => panic_with_byte_array(
                     err: @GenericError::STAKER_NOT_EXISTS.describe(),
                 ),
                 VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
-                    let (internal_staker_info_v1, amount_own) = internal_staker_info_v0
+                    let (internal_staker_info_v1, amount_own, pool_unclaimed_rewards, pool_amount) =
+                        internal_staker_info_v0
                         .convert(self.get_prev_class_hash(), staker_address);
                     self
                         .staker_info
@@ -723,8 +729,11 @@ pub mod Staking {
                             staker_address,
                             VersionedInternalStakerInfo::V1(internal_staker_info_v1),
                         );
-                    self.initialize_staker_balance_trace(:staker_address, :amount_own);
-                    internal_staker_info_v1
+                    self
+                        .initialize_staker_balance_trace(
+                            :staker_address, :amount_own, :pool_amount,
+                        );
+                    (internal_staker_info_v1, pool_unclaimed_rewards)
                 },
                 VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
                     err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
@@ -964,7 +973,8 @@ pub mod Staking {
         fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
             // Prerequisites and asserts.
             self.assert_caller_is_not_zero();
-            let mut staker_info = self.convert_internal_staker_info(:staker_address);
+            let (staker_info, pool_unclaimed_rewards) = self
+                .convert_internal_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info().pool_contract;
             assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
 
@@ -975,7 +985,7 @@ pub mod Staking {
             let token_dispatcher = self.token_dispatcher.read();
             self
                 ._deprecated_send_rewards_to_delegation_pool_V0(
-                    :staker_address, ref :staker_info, :token_dispatcher,
+                    :staker_address, :staker_info, :pool_unclaimed_rewards, :token_dispatcher,
                 );
             self.write_staker_info(:staker_address, :staker_info);
 
@@ -1162,16 +1172,15 @@ pub mod Staking {
         fn _deprecated_send_rewards_to_delegation_pool_V0(
             ref self: ContractState,
             staker_address: ContractAddress,
-            ref staker_info: InternalStakerInfoLatest,
+            staker_info: InternalStakerInfoLatest,
+            pool_unclaimed_rewards: Amount,
             token_dispatcher: IERC20Dispatcher,
         ) {
-            let mut pool_info = staker_info.get_pool_info();
+            let pool_info = staker_info.get_pool_info();
             let pool_address = pool_info.pool_contract;
-            let amount = pool_info._deprecated_unclaimed_rewards();
+            let amount = pool_unclaimed_rewards;
 
             self.send_rewards(reward_address: pool_address, :amount, :token_dispatcher);
-            pool_info._set_deprecated_unclaimed_rewards(unclaimed_rewards: Zero::zero());
-            staker_info.pool_info = Option::Some(pool_info);
 
             self
                 .emit(
@@ -1467,12 +1476,14 @@ pub mod Staking {
 
         /// **Note**: This function should be called only once during migration.
         fn initialize_staker_balance_trace(
-            ref self: ContractState, staker_address: ContractAddress, amount_own: Amount,
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            amount_own: Amount,
+            pool_amount: Amount,
         ) -> StakerBalance {
             let staker_info = self.internal_staker_info(:staker_address);
             let mut staker_balance = StakerBalanceTrait::new(:amount_own);
-            if let Option::Some(pool_info) = staker_info.pool_info {
-                let pool_amount = pool_info._deprecated_amount();
+            if staker_info.pool_info.is_some() {
                 staker_balance.update_pool_amount(new_amount: pool_amount);
             }
             self
