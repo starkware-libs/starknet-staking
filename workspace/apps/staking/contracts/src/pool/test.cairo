@@ -130,7 +130,6 @@ fn test_enter_delegation_pool() {
         operational_address: cfg.staker_info.operational_address,
         unstake_time: Option::None,
         amount_own: cfg.test_info.stake_amount,
-        index: Zero::zero(),
         unclaimed_rewards_own: 0,
         pool_info: Option::Some(expected_pool_info),
     };

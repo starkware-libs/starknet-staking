@@ -1071,7 +1071,6 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
             staker_info: self.staker_info.unwrap(), :global_index,
         )
             .to_v1();
-        expected_staker_info.index = global_index;
         assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }

@@ -335,7 +335,6 @@ impl InternalStakerInfoLatestIntoStakerInfoV1 of Into<InternalStakerInfoLatest, 
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
             amount_own: Zero::zero(),
-            index: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: match self.pool_info {
                 Option::Some(pool_info) => Option::Some(

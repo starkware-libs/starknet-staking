@@ -3004,7 +3004,6 @@ fn test_internal_staker_info_latest_into_staker_info() {
         operational_address: Zero::zero(),
         unstake_time: Option::None,
         amount_own: Zero::zero(),
-        index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
     };
@@ -3054,7 +3053,6 @@ fn test_staker_info_into_internal_staker_info_v1() {
         operational_address: Zero::zero(),
         unstake_time: Option::None,
         amount_own: Zero::zero(),
-        index: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
     };

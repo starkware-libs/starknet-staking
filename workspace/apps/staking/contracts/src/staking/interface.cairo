@@ -411,7 +411,6 @@ pub struct StakerInfoV1 {
     pub operational_address: ContractAddress,
     pub unstake_time: Option<Timestamp>,
     pub amount_own: Amount,
-    pub index: Index,
     pub unclaimed_rewards_own: Amount,
     // TODO: change to new struct StakerPoolInfoV1
     pub pool_info: Option<StakerPoolInfo>,
@@ -447,7 +446,6 @@ pub impl StakerInfoImpl of StakerInfoTrait {
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
             amount_own: self.amount_own,
-            index: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,
         }
