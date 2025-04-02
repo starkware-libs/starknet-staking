@@ -2,7 +2,7 @@ use core::cmp::max;
 use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
 use staking::staking::errors::Error;
-use staking::staking::interface::{CommissionCommitment, StakerInfo, StakerPoolInfo};
+use staking::staking::interface::{CommissionCommitment, StakerInfo, StakerInfoV1, StakerPoolInfo};
 use staking::staking::interface_v0::{IStakingV0DispatcherTrait, IStakingV0LibraryDispatcher};
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
@@ -248,7 +248,7 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
         self: InternalStakerInfo, prev_class_hash: ClassHash, staker_address: ContractAddress,
     ) -> (InternalStakerInfoV1, Amount, Index, Amount, Amount) {
         let library_dispatcher = IStakingV0LibraryDispatcher { class_hash: prev_class_hash };
-        let staker_info = library_dispatcher.staker_info(:staker_address);
+        let staker_info: StakerInfo = library_dispatcher.staker_info(:staker_address);
         let internal_staker_info_v1 = InternalStakerInfoV1 {
             reward_address: staker_info.reward_address,
             operational_address: staker_info.operational_address,
@@ -328,9 +328,9 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
     }
 }
 
-impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, StakerInfo> {
-    fn into(self: InternalStakerInfoLatest) -> StakerInfo {
-        StakerInfo {
+impl InternalStakerInfoLatestIntoStakerInfoV1 of Into<InternalStakerInfoLatest, StakerInfoV1> {
+    fn into(self: InternalStakerInfoLatest) -> StakerInfoV1 {
+        StakerInfoV1 {
             reward_address: self.reward_address,
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
@@ -353,8 +353,8 @@ impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, St
 }
 
 #[cfg(test)]
-pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalStakerInfoV1> {
-    fn into(self: StakerInfo) -> InternalStakerInfoV1 {
+pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfoV1, InternalStakerInfoV1> {
+    fn into(self: StakerInfoV1) -> InternalStakerInfoV1 {
         InternalStakerInfoV1 {
             reward_address: self.reward_address,
             operational_address: self.operational_address,

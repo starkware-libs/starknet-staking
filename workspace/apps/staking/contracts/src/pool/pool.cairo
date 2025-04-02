@@ -23,7 +23,7 @@ pub mod Pool {
     };
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
-        IStakingPoolDispatcherTrait, StakerInfo, StakerInfoTrait,
+        IStakingPoolDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
     };
     use staking::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
@@ -617,12 +617,6 @@ pub mod Pool {
                 .remove_from_delegation_pool_intent(
                     :staker_address, identifier: pool_member.into(), :amount,
                 )
-        }
-
-        fn staker_info(self: @ContractState) -> StakerInfo {
-            let contract_address = self.staking_pool_dispatcher.read().contract_address;
-            let staking_dispatcher = IStakingDispatcher { contract_address };
-            staking_dispatcher.staker_info_v1(staker_address: self.staker_address.read())
         }
 
         /// Transfer funds of the specified amount from the given delegator to the pool.

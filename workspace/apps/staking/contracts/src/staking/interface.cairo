@@ -27,10 +27,10 @@ pub trait IStaking<TContractState> {
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn set_open_for_delegation(ref self: TContractState, commission: Commission) -> ContractAddress;
-    fn staker_info_v1(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
+    fn staker_info_v1(self: @TContractState, staker_address: ContractAddress) -> StakerInfoV1;
     fn get_staker_info_v1(
         self: @TContractState, staker_address: ContractAddress,
-    ) -> Option<StakerInfo>;
+    ) -> Option<StakerInfoV1>;
     fn get_current_epoch(self: @TContractState) -> Epoch;
     fn get_epoch_info(self: @TContractState) -> EpochInfo;
     fn get_staker_commission_commitment(
@@ -393,8 +393,20 @@ pub struct StakingContractInfo {
     pub exit_wait_window: TimeDelta,
 }
 
+/// StakerInfo struct used in V0.
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerInfo {
+    pub reward_address: ContractAddress,
+    pub operational_address: ContractAddress,
+    pub unstake_time: Option<Timestamp>,
+    pub amount_own: Amount,
+    pub index: Index,
+    pub unclaimed_rewards_own: Amount,
+    pub pool_info: Option<StakerPoolInfo>,
+}
+
+#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+pub struct StakerInfoV1 {
     pub reward_address: ContractAddress,
     pub operational_address: ContractAddress,
     pub unstake_time: Option<Timestamp>,
@@ -417,9 +429,28 @@ pub struct StakerPoolInfo {
 }
 
 #[generate_trait]
+pub impl StakerInfoV1Impl of StakerInfoV1Trait {
+    fn get_pool_info(self: StakerInfoV1) -> StakerPoolInfo {
+        self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)
+    }
+}
+
+#[generate_trait]
 pub impl StakerInfoImpl of StakerInfoTrait {
     fn get_pool_info(self: StakerInfo) -> StakerPoolInfo {
         self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)
+    }
+
+    fn to_v1(self: StakerInfo) -> StakerInfoV1 {
+        StakerInfoV1 {
+            reward_address: self.reward_address,
+            operational_address: self.operational_address,
+            unstake_time: self.unstake_time,
+            amount_own: self.amount_own,
+            index: self.index,
+            unclaimed_rewards_own: self.unclaimed_rewards_own,
+            pool_info: self.pool_info,
+        }
     }
 }
 

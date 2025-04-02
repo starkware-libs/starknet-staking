@@ -42,7 +42,7 @@ use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
 use staking::staking::interface::{
-    IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
+    IStakingDispatcher, IStakingDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfo,
 };
 use staking::staking::objects::{
     InternalStakerInfoLatestTrait, UndelegateIntentKey, UndelegateIntentValue,
@@ -125,7 +125,7 @@ fn test_enter_delegation_pool() {
         unclaimed_rewards: Zero::zero(),
         commission: cfg.staker_info.get_pool_info().commission,
     };
-    let expected_staker_info = StakerInfo {
+    let expected_staker_info = StakerInfoV1 {
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
         unstake_time: Option::None,
@@ -575,7 +575,7 @@ fn test_exit_delegation_pool_intent() {
         pool_dispatcher
             .pool_member_info(cfg.test_info.pool_member_address) == expected_pool_member_info,
     );
-    let mut expected_staker_info: StakerInfo = cfg.staker_info.into();
+    let mut expected_staker_info: StakerInfoV1 = cfg.staker_info.into();
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
         pool_info.amount = Zero::zero();
         pool_info.pool_contract = pool_contract;

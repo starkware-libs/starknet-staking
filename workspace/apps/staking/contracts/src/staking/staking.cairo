@@ -19,7 +19,7 @@ pub mod Staking {
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
-        IStakingMigration, IStakingPause, IStakingPool, PauseEvents, StakerInfo,
+        IStakingMigration, IStakingPause, IStakingPool, PauseEvents, StakerInfoV1,
         StakingContractInfo,
     };
     use staking::staking::objects::{
@@ -471,10 +471,10 @@ pub mod Staking {
         /// This function provides the staker info (with projected rewards).
         /// If the staker does not exist, it panics.
         /// This function assumes the staker trace is initialized.
-        fn staker_info_v1(self: @ContractState, staker_address: ContractAddress) -> StakerInfo {
+        fn staker_info_v1(self: @ContractState, staker_address: ContractAddress) -> StakerInfoV1 {
             let internal_staker_info = self.internal_staker_info(:staker_address);
             let staker_balance = self.get_balance(:staker_address);
-            let mut staker_info: StakerInfo = internal_staker_info.into();
+            let mut staker_info: StakerInfoV1 = internal_staker_info.into();
             // Set staker amount and pool amount from staker balance trace.
             staker_info.amount_own = staker_balance.amount_own();
             if let Option::Some(mut pool_info) = staker_info.pool_info {
@@ -488,7 +488,7 @@ pub mod Staking {
         // If the staker does not exist, it returns None.
         fn get_staker_info_v1(
             self: @ContractState, staker_address: ContractAddress,
-        ) -> Option<StakerInfo> {
+        ) -> Option<StakerInfoV1> {
             if self.staker_info.read(staker_address).is_none() {
                 return Option::None;
             }
