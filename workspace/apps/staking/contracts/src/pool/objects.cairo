@@ -57,7 +57,7 @@ pub(crate) struct InternalPoolMemberInfoV1 {
     pub(crate) unpool_time: Option<Timestamp>,
     /// The index of the first entry in the member balance trace for which:
     ///   `epoch >= reward_checkpoint.epoch`,
-    /// (where `epoch = pool_member_epoch_balance[entry_to_claim_from]`)
+    /// (where `epoch = pool_member_epoch_balance[entry_to_claim_from]`),
     /// or the length of the trace if none exists.
     pub(crate) entry_to_claim_from: VecIndex,
     /// The checkpoint to start claiming rewards from.
