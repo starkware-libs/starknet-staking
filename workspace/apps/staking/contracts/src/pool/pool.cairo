@@ -790,12 +790,14 @@ pub mod Pool {
 
             while entry_to_claim_from < pool_member_trace_length {
                 let pool_member_checkpoint = pool_member_trace.at(entry_to_claim_from);
-                // Calculate rewards only up to the current epoch.
+                // If the balance change is after `until_epoch` (and therefore does not affect
+                // the current reward computation), exit the loop.
                 if pool_member_checkpoint.epoch() >= until_epoch {
                     break;
                 }
-                // Calculate rewards up to the current epoch, create current epoch checkpoint if
-                // missing.
+
+                // Compute rewards from (inclusive) the previous balance change (or from
+                // `from_checkpoint`) to (exclusive) the current entry.
                 let to_sigma = self.find_sigma(pool_member_checkpoint);
                 rewards +=
                     compute_rewards_rounded_down(
@@ -806,6 +808,8 @@ pub mod Pool {
                 entry_to_claim_from += 1;
             }
 
+            // Compute the remaining rewards from (inclusive) the last visited balance change in
+            // `pool_member_trace` (or from `from_checkpoint`) to (exclusive) `until_checkpoint`.
             let to_sigma = self.find_sigma(until_checkpoint);
             rewards +=
                 compute_rewards_rounded_down(amount: from_balance, interest: to_sigma - from_sigma);
