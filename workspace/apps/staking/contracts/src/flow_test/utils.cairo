@@ -903,7 +903,7 @@ pub(crate) impl SystemStakerImpl<
     }
 
     fn get_staker_info(self: SystemState<TTokenState>, staker: Staker) -> Option<StakerInfo> {
-        self.staking.dispatcher().get_staker_info(staker_address: staker.staker.address)
+        self.staking.dispatcher().get_staker_info_v1(staker_address: staker.staker.address)
     }
 
     fn internal_staker_info(

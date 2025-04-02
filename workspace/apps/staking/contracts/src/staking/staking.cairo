@@ -481,7 +481,7 @@ pub mod Staking {
 
         // This function provides the staker info (with projected rewards) wrapped in an Option.
         // If the staker does not exist, it returns None.
-        fn get_staker_info(
+        fn get_staker_info_v1(
             self: @ContractState, staker_address: ContractAddress,
         ) -> Option<StakerInfo> {
             if self.staker_info.read(staker_address).is_none() {

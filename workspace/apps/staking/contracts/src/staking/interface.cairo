@@ -28,7 +28,7 @@ pub trait IStaking<TContractState> {
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn set_open_for_delegation(ref self: TContractState, commission: Commission) -> ContractAddress;
     fn staker_info_v1(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
-    fn get_staker_info(
+    fn get_staker_info_v1(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Option<StakerInfo>;
     fn get_current_epoch(self: @TContractState) -> Epoch;

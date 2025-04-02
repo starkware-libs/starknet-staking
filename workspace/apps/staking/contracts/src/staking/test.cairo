@@ -764,7 +764,7 @@ fn test_unstake_action() {
     let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
     assert!(staker_amount == cfg.test_info.stake_amount);
-    let actual_staker_info = staking_dispatcher.get_staker_info(:staker_address);
+    let actual_staker_info = staking_dispatcher.get_staker_info_v1(:staker_address);
     assert!(actual_staker_info.is_none());
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     // StakerRewardClaimed, RewardsSuppliedToDelegationPool and DeleteStaker
@@ -2423,14 +2423,14 @@ fn test_get_staker_info() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     // Check before staker enters.
-    let option_staker_info = staking_dispatcher.get_staker_info(:staker_address);
+    let option_staker_info = staking_dispatcher.get_staker_info_v1(:staker_address);
     assert!(option_staker_info.is_none());
     // Check after staker enters.
     let mut expected_staker_info: StakerInfo = cfg.staker_info.into();
     expected_staker_info.pool_info = Option::None;
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let option_staker_info = staking_dispatcher.get_staker_info(:staker_address);
+    let option_staker_info = staking_dispatcher.get_staker_info_v1(:staker_address);
     assert!(option_staker_info == Option::Some(expected_staker_info));
 }
 
