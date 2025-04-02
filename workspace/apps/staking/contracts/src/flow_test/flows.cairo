@@ -1,5 +1,5 @@
 use core::num::traits::Zero;
-use staking::constants::STRK_IN_FRIS;
+use staking::constants::{PREV_CONTRACT_VERSION, STRK_IN_FRIS};
 use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::MAINNET_POOL_CLASS_HASH_V0;
 use staking::flow_test::utils::{
@@ -2289,7 +2289,9 @@ pub(crate) impl PoolEICFlowImpl<
         );
         // Test.
         let map_selector = selector!("prev_class_hash");
-        let storage_address = snforge_std::map_entry_address(:map_selector, keys: [0].span());
+        let storage_address = snforge_std::map_entry_address(
+            :map_selector, keys: [PREV_CONTRACT_VERSION].span(),
+        );
         let prev_class_hash = *snforge_std::load(
             target: pool_contract, :storage_address, size: Store::<ClassHash>::size().into(),
         )

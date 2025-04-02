@@ -2,7 +2,7 @@
 #[starknet::contract]
 mod StakingEIC {
     use core::num::traits::Zero;
-    use staking::constants::STARTING_EPOCH;
+    use staking::constants::{PREV_CONTRACT_VERSION, STARTING_EPOCH};
     use staking::errors::GenericError;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
@@ -51,7 +51,7 @@ mod StakingEIC {
             // in this case, we must not replace it.
             // TODO: Check that prev_class_hash is empty.
             assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
-            self.prev_class_hash.write(0, prev_class_hash);
+            self.prev_class_hash.write(PREV_CONTRACT_VERSION, prev_class_hash);
 
             // TODO: What can i check in epoch info? Impl zero for the struct?
             // 2. Initialize the epoch info.

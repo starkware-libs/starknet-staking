@@ -8,7 +8,7 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::STARTING_EPOCH;
+    use staking::constants::{PREV_CONTRACT_VERSION, STARTING_EPOCH};
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
@@ -576,7 +576,7 @@ pub mod Pool {
         ///
         /// **Note**: This function must be reimplemented in the next version of the contract.
         fn get_prev_class_hash(self: @ContractState) -> ClassHash {
-            self.prev_class_hash.read(0)
+            self.prev_class_hash.read(PREV_CONTRACT_VERSION)
         }
     }
 

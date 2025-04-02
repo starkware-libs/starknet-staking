@@ -2,6 +2,7 @@
 #[starknet::contract]
 mod PoolEIC {
     use core::num::traits::Zero;
+    use staking::constants::PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
     use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
     use staking::types::{Index, Version};
@@ -38,7 +39,7 @@ mod PoolEIC {
             assert(eic_init_data.len() == 1, 'EXPECTED_DATA_LENGTH_1');
             let class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             assert!(class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
-            self.prev_class_hash.write(0, class_hash);
+            self.prev_class_hash.write(PREV_CONTRACT_VERSION, class_hash);
 
             // Get the final index.
             // Note: The StakerInfo migration happens in this call if haven't happen before.

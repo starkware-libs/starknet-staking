@@ -26,7 +26,9 @@ use snforge_std::{
     start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW};
+use staking::constants::{
+    BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, PREV_CONTRACT_VERSION,
+};
 use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0;
 use staking::flow_test::utils::{declare_staking_contract, upgrade_implementation};
@@ -110,7 +112,11 @@ fn test_constructor() {
     );
     assert!(state.pool_contract_admin.read() == cfg.test_info.pool_contract_admin);
     assert!(
-        state.prev_class_hash.read(0) == cfg.staking_contract_info.prev_staking_contract_class_hash,
+        state
+            .prev_class_hash
+            .read(PREV_CONTRACT_VERSION) == cfg
+            .staking_contract_info
+            .prev_staking_contract_class_hash,
     );
 }
 
@@ -3333,7 +3339,9 @@ fn test_staking_eic() {
     );
     // Test.
     let map_selector = selector!("prev_class_hash");
-    let storage_address = snforge_std::map_entry_address(:map_selector, keys: [0].span());
+    let storage_address = snforge_std::map_entry_address(
+        :map_selector, keys: [PREV_CONTRACT_VERSION].span(),
+    );
     let prev_class_hash = *snforge_std::load(
         target: staking_contract, :storage_address, size: Store::<ClassHash>::size().into(),
     )

@@ -7,7 +7,9 @@ pub mod Staking {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::{DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STARTING_EPOCH};
+    use staking::constants::{
+        DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, PREV_CONTRACT_VERSION, STARTING_EPOCH,
+    };
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -174,7 +176,7 @@ pub mod Staking {
         self.pool_contract_admin.write(pool_contract_admin);
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
-        self.prev_class_hash.write(0, prev_class_hash);
+        self.prev_class_hash.write(PREV_CONTRACT_VERSION, prev_class_hash);
         self.epoch_info.write(epoch_info);
         self.attestation_contract.write(attestation_contract);
         self.total_stake_trace.insert(key: STARTING_EPOCH, value: Zero::zero());
@@ -1112,7 +1114,7 @@ pub mod Staking {
         ///
         /// **Note**: This function must be reimplemented in the next version of the contract.
         fn get_prev_class_hash(self: @ContractState) -> ClassHash {
-            self.prev_class_hash.read(0)
+            self.prev_class_hash.read(PREV_CONTRACT_VERSION)
         }
     }
 

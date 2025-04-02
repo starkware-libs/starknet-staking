@@ -1,4 +1,4 @@
-use staking::types::{Amount, Epoch, Index, Inflation};
+use staking::types::{Amount, Epoch, Index, Inflation, Version};
 use starkware_utils::constants::WEEK;
 use starkware_utils::types::time::time::TimeDelta;
 
@@ -11,3 +11,4 @@ pub(crate) const MAX_C_NUM: Inflation = 500;
 pub(crate) const C_DENOM: Inflation = 10_000;
 pub(crate) const MIN_ATTESTATION_WINDOW: u16 = 11;
 pub(crate) const STARTING_EPOCH: Epoch = 0;
+pub(crate) const PREV_CONTRACT_VERSION: Version = '0';
