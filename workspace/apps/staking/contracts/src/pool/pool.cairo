@@ -596,6 +596,14 @@ pub mod Pool {
         ) -> Timestamp {
             if !self.is_staker_active() {
                 // Don't allow intent if an intent is already in progress and the staker is erased.
+                // Avoid the following flow:
+                // 1. Member intent - moves member balance from the staker's `pool_amount` to
+                // `UndelegateIntentKey`.
+                // 2. Staker intent.
+                // 3. Staker action - transfer the `pool_amount` from the staker to the pool
+                // contract.
+                // 4. Member intent - here it is no longer possible to move balance between the
+                // `pool_amount` and the `UndelegateIntentKey`.
                 assert!(
                     self.internal_pool_member_info(:pool_member).unpool_time.is_none(),
                     "{}",
