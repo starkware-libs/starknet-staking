@@ -75,6 +75,28 @@ fn test_latest() {
 }
 
 #[test]
+fn test_penultimate() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    mock_trace
+        .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
+    mock_trace
+        .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
+
+    let (key, value) = mock_trace.penultimate();
+    assert!(key == 100);
+    assert!(value == PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
+}
+
+#[test]
+#[should_panic(expected: "Penultimate does not exist")]
+fn test_penultimate_not_exist() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    let _ = mock_trace.penultimate();
+}
+
+#[test]
 fn test_length() {
     let mut mock_trace = CONTRACT_STATE();
 

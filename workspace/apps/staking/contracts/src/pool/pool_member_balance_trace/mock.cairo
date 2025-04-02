@@ -7,6 +7,7 @@ pub trait IMockTrace<TContractState> {
         ref self: TContractState, key: Epoch, value: PoolMemberBalance,
     ) -> (PoolMemberBalance, PoolMemberBalance);
     fn latest(self: @TContractState) -> (Epoch, PoolMemberBalance);
+    fn penultimate(self: @TContractState) -> (Epoch, PoolMemberBalance);
     fn length(self: @TContractState) -> u64;
     fn latest_mutable(ref self: TContractState) -> (Epoch, PoolMemberBalance);
     fn is_non_empty(self: @TContractState) -> bool;
@@ -37,6 +38,10 @@ pub mod MockTrace {
 
         fn latest(self: @ContractState) -> (Epoch, PoolMemberBalance) {
             self.trace.latest()
+        }
+
+        fn penultimate(self: @ContractState) -> (Epoch, PoolMemberBalance) {
+            self.trace.penultimate()
         }
 
         fn length(self: @ContractState) -> u64 {
