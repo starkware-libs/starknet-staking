@@ -4,7 +4,7 @@ use staking::constants::STARTING_EPOCH;
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfo, StakerPoolInfo};
 use staking::staking::interface_v0::{IStakingV0DispatcherTrait, IStakingV0LibraryDispatcher};
-use staking::types::{Amount, Epoch, Index, InternalStakerInfoLatest};
+use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
@@ -204,6 +204,12 @@ mod epoch_info_tests {
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+pub struct InternalStakerPoolInfoV1 {
+    pub pool_contract: ContractAddress,
+    pub commission: Commission,
+}
+
+#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 // This struct is used in V0 and should not be in used except for migration purpose.
 struct InternalStakerInfo {
     reward_address: ContractAddress,
@@ -225,7 +231,7 @@ pub(crate) struct InternalStakerInfoV1 {
     // introduced in V1. Still in use in `pool_migration`.
     pub(crate) _deprecated_index_V0: Index,
     pub(crate) unclaimed_rewards_own: Amount,
-    pub(crate) pool_info: Option<StakerPoolInfo>,
+    pub(crate) pool_info: Option<InternalStakerPoolInfoV1>,
     pub(crate) commission_commitment: Option<CommissionCommitment>,
 }
 
@@ -243,7 +249,7 @@ pub(crate) enum VersionedInternalStakerInfo {
 pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
     fn convert(
         self: InternalStakerInfo, prev_class_hash: ClassHash, staker_address: ContractAddress,
-    ) -> (InternalStakerInfoV1, Amount) {
+    ) -> (InternalStakerInfoV1, Amount, Amount, Amount) {
         let library_dispatcher = IStakingV0LibraryDispatcher { class_hash: prev_class_hash };
         let staker_info = library_dispatcher.staker_info(:staker_address);
         let internal_staker_info_v1 = InternalStakerInfoV1 {
@@ -252,12 +258,23 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
             unstake_time: staker_info.unstake_time,
             _deprecated_index_V0: staker_info.index,
             unclaimed_rewards_own: staker_info.unclaimed_rewards_own,
-            pool_info: staker_info.pool_info,
+            pool_info: match staker_info.pool_info {
+                Option::Some(pool_info) => Option::Some(
+                    InternalStakerPoolInfoV1 {
+                        pool_contract: pool_info.pool_contract, commission: pool_info.commission,
+                    },
+                ),
+                Option::None => Option::None,
+            },
             // This assumes that the function is called only during migration. in a different
             // context, the commission commitment will be lost.
             commission_commitment: Option::None,
         };
-        (internal_staker_info_v1, staker_info.amount_own)
+        let (pool_unclaimed_rewards, pool_amount) = match staker_info.pool_info {
+            Option::Some(pool_info) => (pool_info.unclaimed_rewards, pool_info.amount),
+            Option::None => (Zero::zero(), Zero::zero()),
+        };
+        (internal_staker_info_v1, staker_info.amount_own, pool_unclaimed_rewards, pool_amount)
     }
 }
 
@@ -271,7 +288,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
     fn new_latest(
         reward_address: ContractAddress,
         operational_address: ContractAddress,
-        pool_info: Option<StakerPoolInfo>,
+        pool_info: Option<InternalStakerPoolInfoV1>,
     ) -> VersionedInternalStakerInfo {
         VersionedInternalStakerInfo::V1(
             InternalStakerInfoV1 {
@@ -305,7 +322,7 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
         Time::now().add(delta: exit_wait_window)
     }
 
-    fn get_pool_info(self: @InternalStakerInfoLatest) -> StakerPoolInfo {
+    fn get_pool_info(self: @InternalStakerInfoLatest) -> InternalStakerPoolInfoV1 {
         (*self.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 }
@@ -319,7 +336,17 @@ impl InternalStakerInfoLatestIntoStakerInfo of Into<InternalStakerInfoLatest, St
             amount_own: Zero::zero(),
             index: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
-            pool_info: self.pool_info,
+            pool_info: match self.pool_info {
+                Option::Some(pool_info) => Option::Some(
+                    StakerPoolInfo {
+                        pool_contract: pool_info.pool_contract,
+                        amount: Zero::zero(),
+                        unclaimed_rewards: Zero::zero(),
+                        commission: pool_info.commission,
+                    },
+                ),
+                Option::None => Option::None,
+            },
         }
     }
 }
@@ -333,7 +360,14 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalS
             unstake_time: self.unstake_time,
             _deprecated_index_V0: self.index,
             unclaimed_rewards_own: self.unclaimed_rewards_own,
-            pool_info: self.pool_info,
+            pool_info: match self.pool_info {
+                Option::Some(pool_info) => Option::Some(
+                    InternalStakerPoolInfoV1 {
+                        pool_contract: pool_info.pool_contract, commission: pool_info.commission,
+                    },
+                ),
+                Option::None => Option::None,
+            },
             // This assumes that the function is called only during migration. in a different
             // context, the commission commitment will be lost.
             commission_commitment: Option::None,

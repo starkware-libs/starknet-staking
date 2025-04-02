@@ -71,7 +71,7 @@ pub trait IStakingMigration<TContractState> {
     /// This function is used only during migration.
     fn convert_internal_staker_info(
         ref self: TContractState, staker_address: ContractAddress,
-    ) -> InternalStakerInfoLatest;
+    ) -> (InternalStakerInfoLatest, Amount);
 }
 
 /// Interface for the staking pool contract.
@@ -401,42 +401,19 @@ pub struct StakerInfo {
     pub amount_own: Amount,
     pub index: Index,
     pub unclaimed_rewards_own: Amount,
+    // TODO: change to new struct StakerPoolInfoV1
     pub pool_info: Option<StakerPoolInfo>,
 }
 
+/// This struct was used in V0 for both InternalStakerInfo and StakerInfo.
+/// Should not be in used except for migration purpose.
+/// TODO: create a new struct StakerPoolInfoV1 and use it in StakerInfo.
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerPoolInfo {
     pub pool_contract: ContractAddress,
-    // TODO: Create a public version of this struct and make amount public?
-    amount: Amount,
-    // TODO: Create a public version of this struct and make unclaimed_rewards public?
-    unclaimed_rewards: Amount,
+    pub amount: Amount,
+    pub unclaimed_rewards: Amount,
     pub commission: Commission,
-}
-
-#[generate_trait]
-pub impl StakerPoolInfoImpl of StakerPoolInfoTrait {
-    fn new(pool_contract: ContractAddress, commission: Commission) -> StakerPoolInfo {
-        StakerPoolInfo {
-            pool_contract, amount: Zero::zero(), unclaimed_rewards: Zero::zero(), commission,
-        }
-    }
-
-    fn _deprecated_amount(self: @StakerPoolInfo) -> Amount {
-        *self.amount
-    }
-
-    fn _set_deprecated_amount(ref self: StakerPoolInfo, amount: Amount) {
-        self.amount = amount;
-    }
-
-    fn _deprecated_unclaimed_rewards(self: @StakerPoolInfo) -> Amount {
-        *self.unclaimed_rewards
-    }
-
-    fn _set_deprecated_unclaimed_rewards(ref self: StakerPoolInfo, unclaimed_rewards: Amount) {
-        self.unclaimed_rewards = unclaimed_rewards;
-    }
 }
 
 #[generate_trait]

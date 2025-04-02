@@ -42,7 +42,7 @@ use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
 use staking::staking::interface::{
-    IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfoTrait,
+    IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
 };
 use staking::staking::objects::{
     InternalStakerInfoLatestTrait, UndelegateIntentKey, UndelegateIntentValue,
@@ -119,10 +119,12 @@ fn test_enter_delegation_pool() {
     assert!(balance == 0);
     // Check that the staker info was updated correctly.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let mut expected_pool_info = StakerPoolInfoTrait::new(
-        :pool_contract, commission: cfg.staker_info.get_pool_info().commission,
-    );
-    expected_pool_info._set_deprecated_amount(amount: cfg.pool_member_info._deprecated_amount);
+    let mut expected_pool_info = StakerPoolInfo {
+        pool_contract,
+        amount: cfg.pool_member_info._deprecated_amount,
+        unclaimed_rewards: Zero::zero(),
+        commission: cfg.staker_info.get_pool_info().commission,
+    };
     let expected_staker_info = StakerInfo {
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
@@ -231,9 +233,7 @@ fn test_add_to_delegation_pool() {
     let staker_info_after = staking_dispatcher
         .staker_info_v1(staker_address: cfg.test_info.staker_address);
     let mut expected_pool_info = staker_info_before.get_pool_info();
-    expected_pool_info
-        ._set_deprecated_amount(amount: expected_pool_info._deprecated_amount() + delegate_amount);
-    expected_pool_info._set_deprecated_unclaimed_rewards(unclaimed_rewards: Zero::zero());
+    expected_pool_info.amount = expected_pool_info.amount + delegate_amount;
     assert!(expected_pool_info == staker_info_after.get_pool_info());
 }
 
@@ -577,7 +577,7 @@ fn test_exit_delegation_pool_intent() {
     );
     let mut expected_staker_info: StakerInfo = cfg.staker_info.into();
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
-        pool_info._set_deprecated_amount(Zero::zero());
+        pool_info.amount = Zero::zero();
         pool_info.pool_contract = pool_contract;
         expected_staker_info.pool_info = Option::Some(pool_info);
     }
@@ -1144,9 +1144,7 @@ fn test_partial_undelegate() {
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 
     let staker_info = staking_dispatcher.staker_info_v1(cfg.test_info.staker_address);
-    assert!(
-        staker_info.get_pool_info()._deprecated_amount() == cfg.pool_member_info._deprecated_amount,
-    );
+    assert!(staker_info.get_pool_info().amount == cfg.pool_member_info._deprecated_amount);
 
     // Intent 0 and see that the unpool_time is now optional.
     let intent_amount = Zero::zero();
@@ -1169,9 +1167,7 @@ fn test_partial_undelegate() {
     let expected_undelegate_intent_value: UndelegateIntentValue = Zero::zero();
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
     let staker_info = staking_dispatcher.staker_info_v1(cfg.test_info.staker_address);
-    assert!(
-        staker_info.get_pool_info()._deprecated_amount() == cfg.pool_member_info._deprecated_amount,
-    );
+    assert!(staker_info.get_pool_info().amount == cfg.pool_member_info._deprecated_amount);
 }
 
 #[test]
