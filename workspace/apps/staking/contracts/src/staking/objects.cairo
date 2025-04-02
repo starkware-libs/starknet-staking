@@ -2,7 +2,9 @@ use core::cmp::max;
 use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
 use staking::staking::errors::Error;
-use staking::staking::interface::{CommissionCommitment, StakerInfo, StakerInfoV1, StakerPoolInfo};
+use staking::staking::interface::{
+    CommissionCommitment, StakerInfo, StakerInfoV1, StakerPoolInfo, StakerPoolInfoV1,
+};
 use staking::staking::interface_v0::{IStakingV0DispatcherTrait, IStakingV0LibraryDispatcher};
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
@@ -338,10 +340,9 @@ impl InternalStakerInfoLatestIntoStakerInfoV1 of Into<InternalStakerInfoLatest, 
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: match self.pool_info {
                 Option::Some(pool_info) => Option::Some(
-                    StakerPoolInfo {
+                    StakerPoolInfoV1 {
                         pool_contract: pool_info.pool_contract,
                         amount: Zero::zero(),
-                        unclaimed_rewards: Zero::zero(),
                         commission: pool_info.commission,
                     },
                 ),

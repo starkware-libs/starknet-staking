@@ -47,7 +47,7 @@ use staking::staking::interface::{
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
     IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
-    StakerPoolInfo, StakingContractInfo,
+    StakerPoolInfo, StakerPoolInfoV1, StakingContractInfo,
 };
 use staking::staking::objects::{
     AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait,
@@ -935,9 +935,7 @@ fn test_add_stake_from_pool() {
     assert!(pool_balance_after == pool_balance_before - pool_amount.into());
 
     // Validate staker info.
-    let mut expected_pool_info = StakerPoolInfo {
-        amount: pool_amount, unclaimed_rewards: Zero::zero(), ..pool_info_before,
-    };
+    let mut expected_pool_info = StakerPoolInfoV1 { amount: pool_amount, ..pool_info_before };
     let expected_staker_info = StakerInfoV1 {
         pool_info: Option::Some(expected_pool_info), ..staker_info_before,
     };
@@ -1052,10 +1050,9 @@ fn test_remove_from_delegation_pool_intent() {
     expected_staker_info
         .pool_info =
             Option::Some(
-                StakerPoolInfo {
+                StakerPoolInfoV1 {
                     pool_contract,
                     amount: cur_delegated_stake,
-                    unclaimed_rewards: Zero::zero(),
                     commission: internal_pool_info.commission,
                 },
             );
@@ -2168,8 +2165,8 @@ fn test_set_open_for_delegation() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let pool_contract = staking_dispatcher.set_open_for_delegation(:commission);
     let pool_info = staking_dispatcher.staker_info_v1(:staker_address).get_pool_info();
-    let mut expected_pool_info = StakerPoolInfo {
-        pool_contract, amount: Zero::zero(), unclaimed_rewards: Zero::zero(), commission,
+    let mut expected_pool_info = StakerPoolInfoV1 {
+        pool_contract, amount: Zero::zero(), commission,
     };
     assert!(pool_info == expected_pool_info);
 
