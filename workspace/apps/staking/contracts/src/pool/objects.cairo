@@ -140,11 +140,10 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
     }
 }
 
-
-pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfo of Into<
-    InternalPoolMemberInfoLatest, PoolMemberInfo,
-> {
-    fn into(self: InternalPoolMemberInfoLatest) -> PoolMemberInfo {
+#[cfg(test)]
+#[generate_trait]
+pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfoImpl of InternalPoolMemberInfoLatestIntoPoolMemberInfoTrait {
+    fn to_external(self: InternalPoolMemberInfoLatest) -> PoolMemberInfo {
         PoolMemberInfo {
             reward_address: self.reward_address,
             amount: self._deprecated_amount,
@@ -255,54 +254,3 @@ pub mod VStorageContractTest {
         pub new_pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
     }
 }
-
-#[cfg(test)]
-mod internal_pool_member_info_latest_tests {
-    use staking::pool::interface::PoolMemberInfo;
-    use staking::pool::objects::{
-        InternalPoolMemberInfoV1, VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait,
-    };
-    use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
-    use staking::test_utils::constants::DUMMY_ADDRESS;
-    use starkware_utils::types::time::time::Timestamp;
-
-    #[test]
-    fn test_into() {
-        let reward_address = DUMMY_ADDRESS();
-        let amount = 1;
-        let index = 2;
-        let unclaimed_rewards = 3;
-        let commission = 4;
-        let unpool_amount = 5;
-        let unpool_time = Option::Some(Timestamp { seconds: 6 });
-        let entry_to_claim_from = 7;
-        let reward_checkpoint = PoolMemberCheckpointTrait::new(
-            epoch: 8, balance: 9, cumulative_rewards_trace_idx: 10,
-        );
-        let internal_pool_member_info = VInternalPoolMemberInfo::V1(
-            InternalPoolMemberInfoV1 {
-                reward_address,
-                _deprecated_amount: amount,
-                _deprecated_index: index,
-                _unclaimed_rewards_from_v0: unclaimed_rewards,
-                _deprecated_commission: commission,
-                unpool_amount,
-                unpool_time,
-                entry_to_claim_from,
-                reward_checkpoint,
-            },
-        );
-        let pool_member_info: PoolMemberInfo = internal_pool_member_info.unwrap_latest().into();
-        let expected_pool_member_info = PoolMemberInfo {
-            reward_address,
-            amount,
-            index,
-            unclaimed_rewards,
-            commission,
-            unpool_amount,
-            unpool_time,
-        };
-        assert!(pool_member_info == expected_pool_member_info);
-    }
-}
-

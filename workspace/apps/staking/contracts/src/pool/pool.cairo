@@ -494,17 +494,21 @@ pub mod Pool {
         // This function provides the pool member info (with projected rewards).
         fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
             let pool_member_info = self.internal_pool_member_info(:pool_member);
-
-            let mut external_pool_member_info: PoolMemberInfo = pool_member_info.into();
-            external_pool_member_info.amount = self.get_amount(:pool_member);
             let (rewards, _) = self
                 .calculate_rewards(
                     :pool_member,
                     from_checkpoint: pool_member_info.reward_checkpoint,
                     until_checkpoint: self.get_current_checkpoint(:pool_member),
                 );
-            external_pool_member_info.unclaimed_rewards += rewards;
-            external_pool_member_info.commission = self.get_commission_from_staking_contract();
+            let external_pool_member_info = PoolMemberInfo {
+                reward_address: pool_member_info.reward_address,
+                amount: self.get_amount(:pool_member),
+                index: pool_member_info._deprecated_index,
+                unclaimed_rewards: pool_member_info._unclaimed_rewards_from_v0 + rewards,
+                commission: self.get_commission_from_staking_contract(),
+                unpool_amount: pool_member_info.unpool_amount,
+                unpool_time: pool_member_info.unpool_time,
+            };
             external_pool_member_info
         }
 

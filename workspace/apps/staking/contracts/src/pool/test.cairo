@@ -32,9 +32,10 @@ use staking::pool::interface::{
     PoolMemberInfo,
 };
 use staking::pool::objects::{
-    InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1,
-    PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, SwitchPoolData, VInternalPoolMemberInfo,
-    VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait, VStorageContractTest,
+    InternalPoolMemberInfoLatestIntoPoolMemberInfoTrait, InternalPoolMemberInfoTestTrait,
+    InternalPoolMemberInfoV1, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, SwitchPoolData,
+    VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait,
+    VStorageContractTest,
 };
 use staking::pool::pool::Pool;
 use staking::reward_supplier::interface::{
@@ -483,7 +484,7 @@ fn test_claim_rewards() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     // Check that the pool member info was updated correctly.
-    let mut expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
+    let mut expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.to_external();
     assert!(
         pool_dispatcher
             .pool_member_info(cfg.test_info.pool_member_address) == expected_pool_member_info,
@@ -567,7 +568,7 @@ fn test_exit_delegation_pool_intent() {
         unpool_time: Option::Some(expected_time),
         ..cfg.pool_member_info,
     };
-    let mut expected_pool_member_info: PoolMemberInfo = expected_pool_member_info.into();
+    let mut expected_pool_member_info: PoolMemberInfo = expected_pool_member_info.to_external();
     assert!(
         pool_dispatcher
             .pool_member_info(cfg.test_info.pool_member_address) == expected_pool_member_info,
@@ -1121,7 +1122,7 @@ fn test_partial_undelegate() {
     let expected_pool_member_info: PoolMemberInfo = InternalPoolMemberInfoLatest {
         unpool_time: Option::Some(expected_time), ..cfg.pool_member_info,
     }
-        .into();
+        .to_external();
     assert!(actual_pool_member_info == expected_pool_member_info);
     // Validate that the data is written in the exit intents map in staking contract.
     let undelegate_intent_key = UndelegateIntentKey {
@@ -1153,7 +1154,7 @@ fn test_partial_undelegate() {
     let expected_pool_member_info: PoolMemberInfo = InternalPoolMemberInfoLatest {
         unpool_time: Option::None, ..cfg.pool_member_info,
     }
-        .into();
+        .to_external();
     assert!(actual_pool_member_info == expected_pool_member_info);
     // Validate that the intent is removed from the exit intents map in staking contract.
     let actual_undelegate_intent_value = load_from_simple_map(
@@ -1183,7 +1184,7 @@ fn test_get_pool_member_info() {
     assert!(option_pool_member_info.is_none());
     // Check after enter the pool.
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
-    let mut expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
+    let mut expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.to_external();
     let option_pool_member_info = pool_dispatcher.get_pool_member_info(:pool_member);
     assert!(option_pool_member_info == Option::Some(expected_pool_member_info));
 }
@@ -1198,7 +1199,7 @@ fn test_pool_member_info() {
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
-    let mut expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.into();
+    let mut expected_pool_member_info: PoolMemberInfo = cfg.pool_member_info.to_external();
     let pool_member_info = pool_dispatcher.pool_member_info(:pool_member);
     assert!(pool_member_info == expected_pool_member_info);
 
