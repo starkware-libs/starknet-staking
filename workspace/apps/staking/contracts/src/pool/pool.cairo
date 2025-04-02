@@ -223,8 +223,7 @@ pub mod Pool {
             // Asserts.
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
-            let member_balance = self.get_or_create_member_balance(:pool_member);
-            let old_delegated_stake = member_balance.balance();
+            let old_delegated_stake = self.get_latest_member_balance(:pool_member);
             let total_amount = old_delegated_stake + pool_member_info.unpool_amount;
             assert!(amount <= total_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
 
@@ -290,9 +289,6 @@ pub mod Pool {
             pool_member_info.unpool_amount = Zero::zero();
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
-
-            // Migration.
-            self.get_or_create_member_balance(:pool_member);
 
             // Write the updated pool member info to storage.
             pool_member_info.unpool_time = Option::None;
@@ -445,8 +441,7 @@ pub mod Pool {
             // Create the pool member record.
             self.pool_member_info.write(pool_member, pool_member_info);
 
-            let member_balance = self.get_or_create_member_balance(:pool_member);
-            let new_delegated_stake = member_balance.balance();
+            let new_delegated_stake = self.get_latest_member_balance(:pool_member);
 
             // Emit event.
             self
@@ -499,7 +494,7 @@ pub mod Pool {
                 );
             let external_pool_member_info = PoolMemberInfo {
                 reward_address: pool_member_info.reward_address,
-                amount: self.get_amount(:pool_member),
+                amount: self.get_latest_member_balance(:pool_member),
                 index: pool_member_info._deprecated_index,
                 unclaimed_rewards: pool_member_info._unclaimed_rewards_from_v0 + rewards,
                 commission: self.get_commission_from_staking_contract(),
@@ -676,12 +671,12 @@ pub mod Pool {
             self.get_current_epoch() + 1
         }
 
-        fn get_amount(self: @ContractState, pool_member: ContractAddress) -> Amount {
+        fn get_latest_member_balance(self: @ContractState, pool_member: ContractAddress) -> Amount {
             // After upgrading to V1, `pool_member_epoch_balance` remains uninitialized
             // until the pool member's balance is modified for the first time. If initialized,
             // return the `amount` recorded in the trace, which reflects the latest delegated
             // amount.
-            // Otherwise, return `pool_member_info.amount`.
+            // Otherwise, return `pool_member_info._deprecated_amount`.
             let trace = self.pool_member_epoch_balance.entry(key: pool_member);
             if trace.is_non_empty() {
                 let (_, pool_member_balance) = trace.latest();
@@ -689,35 +684,6 @@ pub mod Pool {
             } else {
                 self.internal_pool_member_info(:pool_member)._deprecated_amount
             }
-        }
-
-        /// Return the latest `member_balance` recorded in the `pool_member_epoch_balance`.
-        /// If it is uninitialized, initialize with `pool_member_info` values.
-        fn get_or_create_member_balance(
-            ref self: ContractState, pool_member: ContractAddress,
-        ) -> PoolMemberBalance {
-            let trace = self.pool_member_epoch_balance.entry(key: pool_member);
-            if trace.is_non_empty() {
-                let (_, memeber_balance) = trace.latest();
-                return memeber_balance;
-            }
-            self.initialize_member_balance_trace(:pool_member)
-        }
-
-        /// **Note**: This function should be called only once and only for V0 pool member.
-        fn initialize_member_balance_trace(
-            ref self: ContractState, pool_member: ContractAddress,
-        ) -> PoolMemberBalance {
-            let pool_member_info = self.internal_pool_member_info(:pool_member);
-            let amount = pool_member_info._deprecated_amount;
-            let mut member_balance = PoolMemberBalanceTrait::new(
-                balance: amount, cumulative_rewards_trace_idx: Zero::zero(),
-            );
-            self
-                .pool_member_epoch_balance
-                .entry(key: pool_member)
-                .insert(key: STARTING_EPOCH, value: member_balance);
-            member_balance
         }
 
         fn set_next_epoch_balance(
@@ -737,8 +703,7 @@ pub mod Pool {
         fn increase_next_epoch_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) -> Amount {
-            let member_balance = self.get_or_create_member_balance(:pool_member);
-            let current_balance = member_balance.balance();
+            let current_balance = self.get_latest_member_balance(:pool_member);
             self.set_next_epoch_balance(:pool_member, amount: current_balance + amount);
             current_balance
             // TODO: Emit event?
