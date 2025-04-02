@@ -8,13 +8,13 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::FIRST_VALID_EPOCH;
+    use staking::constants::{PREV_CONTRACT_VERSION, STARTING_EPOCH};
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
     use staking::pool::objects::{
-        InternalPoolMemberInfoConvertTrait, InternalPoolMemberInfoLatestTrait, SwitchPoolData,
-        VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait,
+        InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
+        VInternalPoolMemberInfoTrait,
     };
     use staking::pool::pool_member_balance_trace::trace::{
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalance, PoolMemberBalanceTrace,
@@ -318,25 +318,26 @@ pub mod Pool {
             let until_checkpoint = self.get_current_checkpoint(:pool_member);
 
             // Calculate rewards and update entry_to_claim_from.
-            let (rewards, entry_to_claim_from) = self
+            let (mut rewards, entry_to_claim_from) = self
                 .calculate_rewards(
                     :pool_member,
                     from_checkpoint: pool_member_info.reward_checkpoint,
                     :until_checkpoint,
                 );
-            // TODO: Change back to `unclaimed_rewards` or impl new
-            // `send_rewards_to_member` function without `unclaimed_rewards` field.
-            pool_member_info._unclaimed_rewards_from_v0 += rewards;
+            rewards += pool_member_info._unclaimed_rewards_from_v0;
+            pool_member_info._unclaimed_rewards_from_v0 = Zero::zero();
             pool_member_info.entry_to_claim_from = entry_to_claim_from;
             pool_member_info.reward_checkpoint = until_checkpoint;
 
-            // Transfer rewards to the pool member.
-            let rewards = pool_member_info._unclaimed_rewards_from_v0;
-            let token_dispatcher = self.token_dispatcher.read();
-            self.send_rewards_to_member(ref :pool_member_info, :pool_member, :token_dispatcher);
-
             // Write the updated pool member info to storage.
             self.write_pool_member_info(:pool_member, :pool_member_info);
+
+            // Transfer rewards to the pool member.
+            let token_dispatcher = self.token_dispatcher.read();
+            self
+                .send_rewards_to_member(
+                    :pool_member_info, :pool_member, :token_dispatcher, amount: rewards,
+                );
 
             rewards
         }
@@ -416,7 +417,7 @@ pub mod Pool {
                     );
                     // Update the pool member's balance checkpoint.
                     self.increase_next_epoch_balance(:pool_member, :amount);
-                    pool_member_info
+                    VInternalPoolMemberInfoTrait::wrap_latest(value: pool_member_info)
                 },
                 Option::None => {
                     // Pool member does not exist. Create a new record.
@@ -425,7 +426,9 @@ pub mod Pool {
                     // Update the pool member's balance checkpoint.
                     self.set_next_epoch_balance(:pool_member, :amount);
 
-                    let pool_member_info = InternalPoolMemberInfoLatestTrait::new(:reward_address);
+                    let pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
+                        :reward_address,
+                    );
 
                     let staker_address = self.staker_address.read();
                     self
@@ -437,7 +440,8 @@ pub mod Pool {
                     pool_member_info
                 },
             };
-            self.write_pool_member_info(:pool_member, :pool_member_info);
+            // Create the pool member record.
+            self.pool_member_info.write(pool_member, pool_member_info);
 
             let member_balance = self.get_or_create_member_balance(:pool_member);
             let new_delegated_stake = member_balance.balance();
@@ -572,7 +576,7 @@ pub mod Pool {
         ///
         /// **Note**: This function must be reimplemented in the next version of the contract.
         fn get_prev_class_hash(self: @ContractState) -> ClassHash {
-            self.prev_class_hash.read(0)
+            self.prev_class_hash.read(PREV_CONTRACT_VERSION)
         }
     }
 
@@ -606,23 +610,16 @@ pub mod Pool {
                 )
         }
 
-        /// Sends the rewards to the `pool_member`'s reward address, and zeroes unclaimed_rewards.
-        /// Important note:
-        /// After calling this function, one must write the updated pool_member_info to the storage.
+        /// Sends the rewards to the `pool_member`'s reward address.
         fn send_rewards_to_member(
             ref self: ContractState,
-            ref pool_member_info: InternalPoolMemberInfoLatest,
+            pool_member_info: InternalPoolMemberInfoLatest,
             pool_member: ContractAddress,
             token_dispatcher: IERC20Dispatcher,
+            amount: Amount,
         ) {
             let reward_address = pool_member_info.reward_address;
-            let amount = pool_member_info._unclaimed_rewards_from_v0;
-
             token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
-            pool_member_info._unclaimed_rewards_from_v0 = Zero::zero();
-
-            // TODO: update entry_to_claim_from of pool member info.
-
             self.emit(Events::PoolMemberRewardClaimed { pool_member, reward_address, amount });
         }
 
@@ -726,7 +723,7 @@ pub mod Pool {
             self
                 .pool_member_epoch_balance
                 .entry(key: pool_member)
-                .insert(key: FIRST_VALID_EPOCH, value: member_balance);
+                .insert(key: STARTING_EPOCH, value: member_balance);
             member_balance
         }
 
@@ -771,8 +768,8 @@ pub mod Pool {
             if latest_epoch <= current_epoch {
                 return latest_value.balance();
             }
-            // TODO: Fix the assert below and uncomment.
-            // assert!(latest_epoch == current_epoch + 1, "{}", Error::INVALID_EPOCH);
+            // Assert latest balance change is in the current epoch.
+            assert!(latest_epoch == current_epoch + 1, "{}", Error::INVALID_LATEST_EPOCH);
 
             // Otherwise, if it's the only change, return the initial value (the value before the
             // migration).
@@ -782,8 +779,7 @@ pub mod Pool {
 
             // Otherwise, the penultimate balance change is the relevant one.
             let (penultimate_epoch, penultimate_value) = trace.penultimate();
-            // TODO: Fix the assert below and uncomment.
-            // assert!(penultimate_epoch <= current_epoch, "{}", Error::INVALID_PENULTIMATE);
+            assert!(penultimate_epoch <= current_epoch, "{}", GenericError::INVALID_PENULTIMATE);
 
             penultimate_value.balance()
         }

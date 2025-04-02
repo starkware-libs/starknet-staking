@@ -1,5 +1,6 @@
 use core::cmp::max;
 use core::num::traits::Zero;
+use staking::constants::STARTING_EPOCH;
 use staking::staking::errors::Error;
 use staking::staking::interface::{
     CommissionCommitment, IStakingDispatcherTrait, IStakingLibraryDispatcher, StakerInfo,
@@ -11,7 +12,6 @@ use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
-const STARTING_EPOCH: Epoch = 0;
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct UndelegateIntentKey {

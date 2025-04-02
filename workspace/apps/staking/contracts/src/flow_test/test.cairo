@@ -354,6 +354,25 @@ fn delegator_intent_before_claim_rewards_after_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn set_open_for_delegation_after_upgrade_flow_test() {
+    let mut flow = flows::SetOpenForDelegationAfterUpgradeFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+fn increase_stake_intent_same_epoch_flow_test() {
+    let flow = flows::IncreaseStakeIntentSameEpochFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn assert_total_stake_after_multi_stake_flow_test() {
+    let flow = flows::AssertTotalStakeAfterMultiStakeFlow {};
+    test_flow_local(:flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

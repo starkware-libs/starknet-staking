@@ -29,12 +29,12 @@ use staking::pool::errors::Error;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher,
     IPoolMigrationDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo,
-    PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait,
+    PoolMemberInfo,
 };
 use staking::pool::objects::{
-    InternalPoolMemberInfoLatestTrait, InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1,
-    SwitchPoolData, VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait,
-    VInternalPoolMemberInfoTrait, VStorageContractTest,
+    InternalPoolMemberInfoTestTrait, InternalPoolMemberInfoV1,
+    PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, SwitchPoolData, VInternalPoolMemberInfo,
+    VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait, VStorageContractTest,
 };
 use staking::pool::pool::Pool;
 use staking::reward_supplier::interface::{
@@ -93,7 +93,6 @@ fn test_send_rewards_to_member() {
     );
     // Setup pool_member_info and expected results before sending rewards.
     let unclaimed_rewards = POOL_MEMBER_UNCLAIMED_REWARDS;
-    cfg.pool_member_info._unclaimed_rewards_from_v0 = unclaimed_rewards;
     fund(
         sender: cfg.test_info.owner_address,
         recipient: test_address(),
@@ -102,18 +101,15 @@ fn test_send_rewards_to_member() {
     );
     let member_balance_before_rewards = token_dispatcher
         .balance_of(account: cfg.pool_member_info.reward_address);
-    let expected_pool_member_info = InternalPoolMemberInfoLatest {
-        _unclaimed_rewards_from_v0: Zero::zero(), ..cfg.pool_member_info,
-    };
     // Send rewards to pool member's reward address.
     state
         .send_rewards_to_member(
-            ref pool_member_info: cfg.pool_member_info,
+            pool_member_info: cfg.pool_member_info,
             pool_member: cfg.test_info.pool_member_address,
             :token_dispatcher,
+            amount: unclaimed_rewards,
         );
-    // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
-    assert!(expected_pool_member_info == cfg.pool_member_info);
+    // Check that the staker received the rewards.
     let member_balance_after_rewards = token_dispatcher
         .balance_of(account: cfg.pool_member_info.reward_address);
     assert!(
@@ -1271,9 +1267,16 @@ fn test_pool_member_info_pool_member_doesnt_exist() {
 
 #[test]
 fn test_v_internal_pool_member_info_wrap_latest() {
-    let internal_pool_member_info_latest = InternalPoolMemberInfoLatestTrait::new(
+    let pool_member_info = PoolMemberInfo {
         reward_address: Zero::zero(),
-    );
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    };
+    let internal_pool_member_info_latest: InternalPoolMemberInfoV1 = pool_member_info.to_internal();
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::wrap_latest(
         internal_pool_member_info_latest,
     );
@@ -1289,8 +1292,18 @@ fn test_v_internal_pool_member_info_new_latest() {
     let v_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
     );
+    let pool_member_info = PoolMemberInfo {
+        reward_address: Zero::zero(),
+        amount: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+        commission: Zero::zero(),
+        unpool_amount: Zero::zero(),
+        unpool_time: Option::None,
+    };
+    let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.to_internal();
     let expected_v_internal_pool_member_info = VInternalPoolMemberInfo::V1(
-        InternalPoolMemberInfoLatestTrait::new(reward_address: Zero::zero()),
+        internal_pool_mamber_info,
     );
     assert!(v_internal_pool_member_info == expected_v_internal_pool_member_info);
 }
@@ -1325,10 +1338,10 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
         unpool_time: Option::None,
     };
     let internal_pool_mamber_info: InternalPoolMemberInfoV1 = pool_member_info.to_internal();
-    let expected_internal_pool_member_info = InternalPoolMemberInfoLatestTrait::new(
+    let expected_internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
         reward_address: Zero::zero(),
     );
-    assert!(internal_pool_mamber_info == expected_internal_pool_member_info);
+    assert!(internal_pool_mamber_info == expected_internal_pool_member_info.unwrap_latest());
 }
 
 #[test]
@@ -1417,6 +1430,38 @@ fn test_pool_eic_with_wrong_number_of_data_elements() {
 
     // Upgrade.
     let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+    };
+    // Cheat block timestamp to enable upgrade eligibility.
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: pool_contract, :implementation_data, :upgrade_governor,
+    );
+}
+
+#[test]
+#[should_panic(expected: "Class hash is zero")]
+fn test_pool_eic_zero_class_hash() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let upgrade_governor = cfg.test_info.pool_contract_admin;
+
+    set_account_as_upgrade_governor(
+        contract: pool_contract,
+        account: upgrade_governor,
+        governance_admin: cfg.test_info.pool_contract_admin,
+    );
+
+    // Upgrade.
+    let eic_data = EICData {
+        eic_hash: declare_pool_eic_contract(), eic_init_data: [Zero::zero()].span(),
+    };
     let implementation_data = ImplementationData {
         impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
     };

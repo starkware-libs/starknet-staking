@@ -17,7 +17,9 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global, test_address,
 };
-use staking::constants::{C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW};
+use staking::constants::{
+    C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
+};
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
     IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
@@ -887,7 +889,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             unpool_amount: Zero::zero(),
             entry_to_claim_from: Zero::zero(),
             reward_checkpoint: PoolMemberCheckpointTrait::new(
-                epoch: Zero::zero(),
+                epoch: STARTING_EPOCH,
                 balance: Zero::zero(),
                 cumulative_rewards_trace_idx: Zero::zero(),
             ),

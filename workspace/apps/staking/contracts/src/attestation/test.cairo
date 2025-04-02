@@ -84,7 +84,7 @@ fn test_attest_assertions() {
     );
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
 
-    // TODO: Catch ATTEST_EPOCH_ZERO - attest in epoch 0.
+    // TODO: Catch ATTEST_STARTING_EPOCH - attest in epoch 0.
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
     // advance just before the attestation window.
@@ -169,7 +169,7 @@ fn test_is_attestation_done_in_curr_epoch() {
 }
 
 #[test]
-#[should_panic(expected: "Attestation for epoch 0 is not allowed")]
+#[should_panic(expected: "Attestation for starting epoch is not allowed")]
 fn test_is_attestation_done_in_curr_epoch_zero_epoch() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

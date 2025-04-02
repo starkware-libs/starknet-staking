@@ -14,6 +14,7 @@ pub(crate) enum Error {
     REWARD_ADDRESS_MISMATCH,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     INVALID_ENTRY_TO_CLAIM_FROM,
+    INVALID_LATEST_EPOCH,
 }
 
 impl DescribableError of Describable<Error> {
@@ -31,6 +32,7 @@ impl DescribableError of Describable<Error> {
             Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED => "Switch pool data deserialization failed",
             Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS => "Claim rewards must be called from pool member address or reward address",
             Error::INVALID_ENTRY_TO_CLAIM_FROM => "Invalid entry to claim from",
+            Error::INVALID_LATEST_EPOCH => "Invalid latest epoch",
         }
     }
 }

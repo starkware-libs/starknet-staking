@@ -1,5 +1,5 @@
 use core::num::traits::Zero;
-use staking::constants::STRK_IN_FRIS;
+use staking::constants::{PREV_CONTRACT_VERSION, STRK_IN_FRIS};
 use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::MAINNET_POOL_CLASS_HASH_V0;
 use staking::flow_test::utils::{
@@ -7,7 +7,8 @@ use staking::flow_test::utils::{
     SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
     upgrade_implementation,
 };
-use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait};
+use staking::pool::interface::PoolMemberInfo;
+use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::StakerInfo;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
@@ -2288,7 +2289,9 @@ pub(crate) impl PoolEICFlowImpl<
         );
         // Test.
         let map_selector = selector!("prev_class_hash");
-        let storage_address = snforge_std::map_entry_address(:map_selector, keys: [0].span());
+        let storage_address = snforge_std::map_entry_address(
+            :map_selector, keys: [PREV_CONTRACT_VERSION].span(),
+        );
         let prev_class_hash = *snforge_std::load(
             target: pool_contract, :storage_address, size: Store::<ClassHash>::size().into(),
         )
@@ -2818,6 +2821,147 @@ pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
         assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
     }
 }
+
+/// Flow:
+/// Staker stake without pool
+/// Upgrade
+/// Set open for delegation
+/// Delegator delegate
+#[derive(Drop, Copy)]
+pub(crate) struct SetOpenForDelegationAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<SetOpenForDelegationAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: SetOpenForDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: SetOpenForDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
+    fn setup(ref self: SetOpenForDelegationAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let commission = 200;
+
+        let staker = system.new_staker(amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(
+        self: SetOpenForDelegationAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let commission = 200;
+        let amount = 1000;
+        let staker = self.staker.unwrap();
+
+        let pool = system.set_open_for_delegation(:staker, :commission);
+
+        let delegator = system.new_delegator(amount: amount * 2);
+        let total_stake_before = system.staking.get_total_stake();
+        system.delegate(:delegator, :pool, :amount);
+
+        let delegator_info = system.pool_member_info(:delegator, :pool);
+        assert!(delegator_info.amount == amount);
+        assert!(system.staking.get_total_stake() == total_stake_before + amount);
+    }
+}
+
+/// Flow:
+/// Staker stake
+/// Staker attest
+/// Advance epoch
+/// Staker increase stake
+/// Staker exit intent (same epoch)
+/// Staker exit action
+#[derive(Drop, Copy)]
+pub(crate) struct IncreaseStakeIntentSameEpochFlow {}
+pub(crate) impl IncreaseStakeIntentSameEpochFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<IncreaseStakeIntentSameEpochFlow, TTokenState> {
+    fn get_pool_address(self: IncreaseStakeIntentSameEpochFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: IncreaseStakeIntentSameEpochFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: IncreaseStakeIntentSameEpochFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: IncreaseStakeIntentSameEpochFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_stake(:staker, amount: stake_amount);
+        system.staker_exit_intent(:staker);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+
+        assert!(system.token.balance_of(account: staker.staker.address).is_zero());
+        system.staker_exit_action(:staker);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
+    }
+}
+
+/// Flow:
+/// First staker stake with pool
+/// First delegator delegate
+/// Second staker stake with pool
+/// Second delegator delegate
+/// Assert total stake
+#[derive(Drop, Copy)]
+pub(crate) struct AssertTotalStakeAfterMultiStakeFlow {}
+pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<AssertTotalStakeAfterMultiStakeFlow, TTokenState> {
+    fn get_pool_address(self: AssertTotalStakeAfterMultiStakeFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: AssertTotalStakeAfterMultiStakeFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: AssertTotalStakeAfterMultiStakeFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: AssertTotalStakeAfterMultiStakeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let stake_amount = system.staking.get_min_stake() * 2;
+        let commission = 200;
+
+        let first_staker = system.new_staker(amount: stake_amount);
+        system.stake(staker: first_staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let first_delegator = system.new_delegator(amount: stake_amount);
+        let first_pool = system.staking.get_pool(staker: first_staker);
+        system.delegate(delegator: first_delegator, pool: first_pool, amount: stake_amount);
+
+        let second_staker = system.new_staker(amount: stake_amount);
+        system.stake(staker: second_staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        let second_delegator = system.new_delegator(amount: stake_amount);
+        let second_pool = system.staking.get_pool(staker: second_staker);
+        system.delegate(delegator: second_delegator, pool: second_pool, amount: stake_amount);
+
+        assert!(system.staking.get_total_stake() == stake_amount * 4);
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
@@ -2826,5 +2970,10 @@ pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
 /// Delegator delegate
 /// Upgrade
 /// Pool call pool_migration - final index and pool balance as before.
+
+// TODO: Implement this flow test.
+// Stake
+// Upgrade
+// Attest at STARTING_EPOCH (should fail)
 
 

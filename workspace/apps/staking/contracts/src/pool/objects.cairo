@@ -1,4 +1,5 @@
 use core::num::traits::Zero;
+use staking::constants::STARTING_EPOCH;
 use staking::pool::interface::{IPoolDispatcherTrait, IPoolLibraryDispatcher, PoolMemberInfo};
 use staking::pool::pool_member_balance_trace::trace::{
     PoolMemberCheckpoint, PoolMemberCheckpointTrait,
@@ -64,28 +65,6 @@ pub(crate) struct InternalPoolMemberInfoV1 {
     pub(crate) reward_checkpoint: PoolMemberCheckpoint,
 }
 
-#[generate_trait]
-pub impl InternalPoolMemberInfoLatestImpl of InternalPoolMemberInfoLatestTrait {
-    fn new(reward_address: ContractAddress) -> InternalPoolMemberInfoV1 {
-        InternalPoolMemberInfoV1 {
-            reward_address,
-            _deprecated_amount: Zero::zero(),
-            _deprecated_index: Zero::zero(),
-            _unclaimed_rewards_from_v0: Zero::zero(),
-            _deprecated_commission: Zero::zero(),
-            unpool_amount: Zero::zero(),
-            unpool_time: Option::None,
-            entry_to_claim_from: Zero::zero(),
-            reward_checkpoint: PoolMemberCheckpointTrait::new(
-                epoch: Zero::zero(),
-                balance: Zero::zero(),
-                cumulative_rewards_trace_idx: Zero::zero(),
-            ),
-        }
-    }
-}
-
-
 // **Note**: This struct should be updated in the next version of Internal Pool Member Info.
 #[derive(Debug, PartialEq, Serde, Drop, Copy, starknet::Store)]
 pub(crate) enum VInternalPoolMemberInfo {
@@ -113,7 +92,7 @@ pub(crate) impl InternalPoolMemberInfoConvert of InternalPoolMemberInfoConvertTr
             unpool_time: pool_member_info.unpool_time,
             entry_to_claim_from: Zero::zero(),
             reward_checkpoint: PoolMemberCheckpointTrait::new(
-                epoch: Zero::zero(),
+                epoch: STARTING_EPOCH,
                 balance: pool_member_info.amount,
                 cumulative_rewards_trace_idx: Zero::zero(),
             ),
@@ -134,7 +113,9 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
         // Although the rewards will be computed even for the period before the member joined,
         // since the balance is zero, the amount will be zero.
         let reward_checkpoint = PoolMemberCheckpointTrait::new(
-            epoch: Zero::zero(), balance: Zero::zero(), cumulative_rewards_trace_idx: Zero::zero(),
+            epoch: STARTING_EPOCH,
+            balance: Zero::zero(),
+            cumulative_rewards_trace_idx: Zero::zero(),
         );
         VInternalPoolMemberInfo::V1(
             InternalPoolMemberInfoV1 {
@@ -172,6 +153,28 @@ pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfo of Into<
             commission: self._deprecated_commission,
             unpool_amount: self.unpool_amount,
             unpool_time: self.unpool_time,
+        }
+    }
+}
+
+#[cfg(test)]
+#[generate_trait]
+pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfoIntoInternalPoolMemberInfoV1Trait {
+    fn to_internal(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
+        InternalPoolMemberInfoV1 {
+            reward_address: self.reward_address,
+            _deprecated_amount: self.amount,
+            _deprecated_index: self.index,
+            _unclaimed_rewards_from_v0: self.unclaimed_rewards,
+            _deprecated_commission: self.commission,
+            unpool_amount: self.unpool_amount,
+            unpool_time: self.unpool_time,
+            entry_to_claim_from: Zero::zero(),
+            reward_checkpoint: PoolMemberCheckpointTrait::new(
+                epoch: Zero::zero(),
+                balance: self.amount,
+                cumulative_rewards_trace_idx: Zero::zero(),
+            ),
         }
     }
 }
@@ -257,17 +260,14 @@ pub mod VStorageContractTest {
 mod internal_pool_member_info_latest_tests {
     use core::num::traits::zero::Zero;
     use staking::pool::interface::PoolMemberInfo;
-    use staking::test_utils::constants::POOL_MEMBER_REWARD_ADDRESS;
-    use super::{
-        InternalPoolMemberInfoLatest, InternalPoolMemberInfoLatestTrait, PoolMemberCheckpointTrait,
-    };
+    use super::{VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait};
 
     #[test]
     fn test_into() {
-        let internal_pool_member_info = InternalPoolMemberInfoLatestTrait::new(
+        let internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
             reward_address: Zero::zero(),
         );
-        let pool_member_info: PoolMemberInfo = internal_pool_member_info.into();
+        let pool_member_info: PoolMemberInfo = internal_pool_member_info.unwrap_latest().into();
         let expected_pool_member_info = PoolMemberInfo {
             reward_address: Zero::zero(),
             amount: Zero::zero(),
@@ -278,29 +278,6 @@ mod internal_pool_member_info_latest_tests {
             unpool_time: Option::None,
         };
         assert!(pool_member_info == expected_pool_member_info);
-    }
-
-    #[test]
-    fn test_new() {
-        let pool_member_info = InternalPoolMemberInfoLatestTrait::new(
-            reward_address: POOL_MEMBER_REWARD_ADDRESS(),
-        );
-        let expected = InternalPoolMemberInfoLatest {
-            reward_address: POOL_MEMBER_REWARD_ADDRESS(),
-            _deprecated_amount: Zero::zero(),
-            _deprecated_index: Zero::zero(),
-            _unclaimed_rewards_from_v0: Zero::zero(),
-            _deprecated_commission: Zero::zero(),
-            unpool_amount: Zero::zero(),
-            unpool_time: Option::None,
-            entry_to_claim_from: Zero::zero(),
-            reward_checkpoint: PoolMemberCheckpointTrait::new(
-                epoch: Zero::zero(),
-                balance: Zero::zero(),
-                cumulative_rewards_trace_idx: Zero::zero(),
-            ),
-        };
-        assert_eq!(pool_member_info, expected);
     }
 }
 

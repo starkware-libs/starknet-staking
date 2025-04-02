@@ -1,4 +1,5 @@
 use core::num::traits::zero::Zero;
+use staking::constants::STARTING_EPOCH;
 use staking::pool::objects::InternalPoolMemberInfoV1;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest};
@@ -184,28 +185,6 @@ pub struct PoolMemberInfo {
     /// this is the timestamp of when they could do that.
     /// Else, it is None.
     pub unpool_time: Option<Timestamp>,
-}
-
-#[cfg(test)]
-#[generate_trait]
-pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfoIntoInternalPoolMemberInfoV1Trait {
-    fn to_internal(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
-        InternalPoolMemberInfoV1 {
-            reward_address: self.reward_address,
-            _deprecated_amount: self.amount,
-            _deprecated_index: self.index,
-            _unclaimed_rewards_from_v0: self.unclaimed_rewards,
-            _deprecated_commission: self.commission,
-            unpool_amount: self.unpool_amount,
-            unpool_time: self.unpool_time,
-            entry_to_claim_from: Zero::zero(),
-            reward_checkpoint: PoolMemberCheckpointTrait::new(
-                epoch: Zero::zero(),
-                balance: self.amount,
-                cumulative_rewards_trace_idx: Zero::zero(),
-            ),
-        }
-    }
 }
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]

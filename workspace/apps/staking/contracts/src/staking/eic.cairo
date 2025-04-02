@@ -2,7 +2,8 @@
 #[starknet::contract]
 mod StakingEIC {
     use core::num::traits::Zero;
-    use staking::constants::FIRST_VALID_EPOCH;
+    use staking::constants::{PREV_CONTRACT_VERSION, STARTING_EPOCH};
+    use staking::errors::GenericError;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
     use starknet::class_hash::ClassHash;
@@ -49,7 +50,8 @@ mod StakingEIC {
             // If prev_class_hash is not empty we assume it's already set correctly.
             // in this case, we must not replace it.
             // TODO: Check that prev_class_hash is empty.
-            self.prev_class_hash.write(0, prev_class_hash);
+            assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
+            self.prev_class_hash.write(PREV_CONTRACT_VERSION, prev_class_hash);
 
             // TODO: What can i check in epoch info? Impl zero for the struct?
             // 2. Initialize the epoch info.
@@ -66,20 +68,15 @@ mod StakingEIC {
             // in this case, we must not replace it.
             // TODO: Check that trace is empty, we can't check it now, because eic test deploy
             // the new contract and trace is initialized in new constructor.
-            self.total_stake_trace.insert(key: FIRST_VALID_EPOCH, value: total_stake);
+            self.total_stake_trace.insert(key: STARTING_EPOCH, value: total_stake);
 
             // 4. Replace pool contract class hash (if supplied).
-            if pool_contract_class_hash.is_non_zero() {
-                self.pool_contract_class_hash.write(pool_contract_class_hash);
-            }
+            assert!(pool_contract_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
+            self.pool_contract_class_hash.write(pool_contract_class_hash);
 
             // 5. Set attestation contract address.
-            let current_attestation_contract = self.attestation_contract.read();
-            // If attestation_contract is not empty we assume it's already set correctly.
-            // in this case, we must not replace it.
-            if current_attestation_contract.is_zero() {
-                self.attestation_contract.write(attestation_contract);
-            }
+            assert!(attestation_contract.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
+            self.attestation_contract.write(attestation_contract);
         }
     }
 }
