@@ -15,6 +15,7 @@ pub(crate) enum Error {
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     INVALID_ENTRY_TO_CLAIM_FROM,
     INVALID_LATEST_EPOCH,
+    INVALID_EPOCH,
 }
 
 impl DescribableError of Describable<Error> {
@@ -33,6 +34,7 @@ impl DescribableError of Describable<Error> {
             Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS => "Claim rewards must be called from pool member address or reward address",
             Error::INVALID_ENTRY_TO_CLAIM_FROM => "Invalid entry to claim from",
             Error::INVALID_LATEST_EPOCH => "Invalid latest epoch",
+            Error::INVALID_EPOCH => "Invalid epoch",
         }
     }
 }

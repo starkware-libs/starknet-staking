@@ -764,6 +764,8 @@ pub mod Pool {
 
         /// Calculates the rewards from `from_checkpoint` (including rewards for
         /// `from_checkpoint.epoch`) to `until_checkpoint` (excluding).
+        ///
+        /// Assumption: `from_checkpoint.epoch <= until_checkpoint.epoch <= current_epoch`.
         fn calculate_rewards(
             self: @ContractState,
             pool_member: ContractAddress,
@@ -808,11 +810,19 @@ pub mod Pool {
             (rewards, entry_to_claim_from)
         }
 
-        /// Find the latest rewards aggregated sum (a.k.a sigma) before the change in staking
-        /// power listed in the provided pool member checkpoint.
+        /// Let `pool_balance_i` be the total pool balance at epoch `i` and let `rewards_i` be the
+        ///  pool rewards at epoch `i`. Returns `sum_{0 <= i < epoch}(reward_i / pool_balance_i)`
+        ///  where `epoch = pool_member_checkpoint.epoch`.
+        ///
+        /// Assumption: `pool_member_checkpoint.epoch <= current_epoch`.
         fn find_sigma(
             self: @ContractState, pool_member_checkpoint: PoolMemberCheckpoint,
         ) -> Amount {
+            assert!(
+                pool_member_checkpoint.epoch() <= self.get_current_epoch(),
+                "{}",
+                Error::INVALID_EPOCH,
+            );
             let cumulative_rewards_trace_vec = self.cumulative_rewards_trace;
             let cumulative_rewards_trace_idx = pool_member_checkpoint
                 .cumulative_rewards_trace_idx();
