@@ -258,24 +258,49 @@ pub mod VStorageContractTest {
 
 #[cfg(test)]
 mod internal_pool_member_info_latest_tests {
-    use core::num::traits::zero::Zero;
     use staking::pool::interface::PoolMemberInfo;
-    use super::{VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait};
+    use staking::pool::objects::{
+        InternalPoolMemberInfoV1, VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait,
+    };
+    use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
+    use staking::test_utils::constants::DUMMY_ADDRESS;
+    use starkware_utils::types::time::time::Timestamp;
 
     #[test]
     fn test_into() {
-        let internal_pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
-            reward_address: Zero::zero(),
+        let reward_address = DUMMY_ADDRESS();
+        let amount = 1;
+        let index = 2;
+        let unclaimed_rewards = 3;
+        let commission = 4;
+        let unpool_amount = 5;
+        let unpool_time = Option::Some(Timestamp { seconds: 6 });
+        let entry_to_claim_from = 7;
+        let reward_checkpoint = PoolMemberCheckpointTrait::new(
+            epoch: 8, balance: 9, cumulative_rewards_trace_idx: 10,
+        );
+        let internal_pool_member_info = VInternalPoolMemberInfo::V1(
+            InternalPoolMemberInfoV1 {
+                reward_address,
+                _deprecated_amount: amount,
+                _deprecated_index: index,
+                _unclaimed_rewards_from_v0: unclaimed_rewards,
+                _deprecated_commission: commission,
+                unpool_amount,
+                unpool_time,
+                entry_to_claim_from,
+                reward_checkpoint,
+            },
         );
         let pool_member_info: PoolMemberInfo = internal_pool_member_info.unwrap_latest().into();
         let expected_pool_member_info = PoolMemberInfo {
-            reward_address: Zero::zero(),
-            amount: Zero::zero(),
-            index: Zero::zero(),
-            unclaimed_rewards: Zero::zero(),
-            commission: Zero::zero(),
-            unpool_amount: Zero::zero(),
-            unpool_time: Option::None,
+            reward_address,
+            amount,
+            index,
+            unclaimed_rewards,
+            commission,
+            unpool_amount,
+            unpool_time,
         };
         assert!(pool_member_info == expected_pool_member_info);
     }
