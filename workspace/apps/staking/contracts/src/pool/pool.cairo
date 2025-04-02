@@ -8,7 +8,7 @@ pub mod Pool {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::{PREV_CONTRACT_VERSION, STARTING_EPOCH};
+    use staking::constants::PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
@@ -17,13 +17,12 @@ pub mod Pool {
         VInternalPoolMemberInfoTrait,
     };
     use staking::pool::pool_member_balance_trace::trace::{
-        MutablePoolMemberBalanceTraceTrait, PoolMemberBalance, PoolMemberBalanceTrace,
-        PoolMemberBalanceTraceTrait, PoolMemberBalanceTrait, PoolMemberCheckpoint,
-        PoolMemberCheckpointTrait,
+        MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
+        PoolMemberBalanceTrait, PoolMemberCheckpoint, PoolMemberCheckpointTrait,
     };
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
-        IStakingPoolDispatcherTrait, StakerInfo, StakerInfoTrait,
+        IStakingPoolDispatcherTrait, StakerInfoV1Trait,
     };
     use staking::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
@@ -33,9 +32,7 @@ pub mod Pool {
     };
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
-    use starknet::storage::{
-        Map, StorageMapReadAccess, StoragePath, StoragePathEntry, StoragePointerReadAccess,
-    };
+    use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
@@ -284,15 +281,16 @@ pub mod Pool {
             staking_pool_dispatcher
                 .remove_from_delegation_pool_action(identifier: pool_member.into());
 
-            // Transfer delegated amount to the pool member.
             let unpool_amount = pool_member_info.unpool_amount;
             pool_member_info.unpool_amount = Zero::zero();
-            let token_dispatcher = self.token_dispatcher.read();
-            token_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
+            pool_member_info.unpool_time = Option::None;
 
             // Write the updated pool member info to storage.
-            pool_member_info.unpool_time = Option::None;
             self.write_pool_member_info(:pool_member, :pool_member_info);
+
+            // Transfer delegated amount to the pool member.
+            let token_dispatcher = self.token_dispatcher.read();
+            token_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
 
             unpool_amount
         }
@@ -596,6 +594,14 @@ pub mod Pool {
         ) -> Timestamp {
             if !self.is_staker_active() {
                 // Don't allow intent if an intent is already in progress and the staker is erased.
+                // Avoid the following flow:
+                // 1. Member intent - moves member balance from the staker's `pool_amount` to
+                // `UndelegateIntentKey`.
+                // 2. Staker intent.
+                // 3. Staker action - transfer the `pool_amount` from the staker to the pool
+                // contract.
+                // 4. Member intent - here it is no longer possible to move balance between the
+                // `pool_amount` and the `UndelegateIntentKey`.
                 assert!(
                     self.internal_pool_member_info(:pool_member).unpool_time.is_none(),
                     "{}",
@@ -609,12 +615,6 @@ pub mod Pool {
                 .remove_from_delegation_pool_intent(
                     :staker_address, identifier: pool_member.into(), :amount,
                 )
-        }
-
-        fn staker_info(self: @ContractState) -> StakerInfo {
-            let contract_address = self.staking_pool_dispatcher.read().contract_address;
-            let staking_dispatcher = IStakingDispatcher { contract_address };
-            staking_dispatcher.staker_info_v1(staker_address: self.staker_address.read())
         }
 
         /// Transfer funds of the specified amount from the given delegator to the pool.
@@ -787,12 +787,14 @@ pub mod Pool {
 
             while entry_to_claim_from < pool_member_trace_length {
                 let pool_member_checkpoint = pool_member_trace.at(entry_to_claim_from);
-                // Calculate rewards only up to the current epoch.
+                // If the balance change is after `until_epoch` (and therefore does not affect
+                // the current reward computation), exit the loop.
                 if pool_member_checkpoint.epoch() >= until_epoch {
                     break;
                 }
-                // Calculate rewards up to the current epoch, create current epoch checkpoint if
-                // missing.
+
+                // Compute rewards from (inclusive) the previous balance change (or from
+                // `from_checkpoint`) to (exclusive) the current entry.
                 let to_sigma = self.find_sigma(pool_member_checkpoint);
                 rewards +=
                     compute_rewards_rounded_down(
@@ -803,6 +805,8 @@ pub mod Pool {
                 entry_to_claim_from += 1;
             }
 
+            // Compute the remaining rewards from (inclusive) the last visited balance change in
+            // `pool_member_trace` (or from `from_checkpoint`) to (exclusive) `until_checkpoint`.
             let to_sigma = self.find_sigma(until_checkpoint);
             rewards +=
                 compute_rewards_rounded_down(amount: from_balance, interest: to_sigma - from_sigma);

@@ -21,7 +21,7 @@ use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait,
+    IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::interface_v0::{IStakingV0Dispatcher, IStakingV0DispatcherTrait};
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
@@ -225,12 +225,19 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_pool(self: StakingState, staker: Staker) -> ContractAddress {
-        let staker_info = if self.is_v0() {
-            self.dispatcher_v0().staker_info(staker_address: staker.staker.address)
+        if self.is_v0() {
+            self
+                .dispatcher_v0()
+                .staker_info(staker_address: staker.staker.address)
+                .get_pool_info()
+                .pool_contract
         } else {
-            self.dispatcher().staker_info_v1(staker_address: staker.staker.address)
-        };
-        staker_info.get_pool_info().pool_contract
+            self
+                .dispatcher()
+                .staker_info_v1(staker_address: staker.staker.address)
+                .get_pool_info()
+                .pool_contract
+        }
     }
 
     fn get_min_stake(self: StakingState) -> Amount {
@@ -894,15 +901,15 @@ pub(crate) impl SystemStakerImpl<
         self.staking.dispatcher().update_commission(:commission)
     }
 
-    fn staker_info(self: SystemState<TTokenState>, staker: Staker) -> StakerInfo {
-        if self.staking.is_v0() {
-            self.staking.dispatcher_v0().staker_info(staker_address: staker.staker.address)
-        } else {
-            self.staking.dispatcher().staker_info_v1(staker_address: staker.staker.address)
-        }
+    fn staker_info_v1(self: SystemState<TTokenState>, staker: Staker) -> StakerInfoV1 {
+        self.staking.dispatcher().staker_info_v1(staker_address: staker.staker.address)
     }
 
-    fn get_staker_info(self: SystemState<TTokenState>, staker: Staker) -> Option<StakerInfo> {
+    fn staker_info(self: SystemState<TTokenState>, staker: Staker) -> StakerInfo {
+        self.staking.dispatcher_v0().staker_info(staker_address: staker.staker.address)
+    }
+
+    fn get_staker_info(self: SystemState<TTokenState>, staker: Staker) -> Option<StakerInfoV1> {
         self.staking.dispatcher().get_staker_info_v1(staker_address: staker.staker.address)
     }
 
@@ -917,12 +924,12 @@ pub(crate) impl SystemStakerImpl<
 
     fn convert_internal_staker_info(
         self: SystemState<TTokenState>, staker_address: ContractAddress,
-    ) -> (InternalStakerInfoLatest, Amount) {
-        let (internal_staker_info, pool_unclaimed_rewards) = self
+    ) -> (InternalStakerInfoLatest, Index, Amount) {
+        let (internal_staker_info, index, pool_unclaimed_rewards) = self
             .staking
             .migration_dispatcher()
             .convert_internal_staker_info(:staker_address);
-        (internal_staker_info, pool_unclaimed_rewards)
+        (internal_staker_info, index, pool_unclaimed_rewards)
     }
 
     fn attest(self: SystemState<TTokenState>, staker: Staker) {
@@ -940,7 +947,7 @@ pub(crate) impl SystemStakerImpl<
     }
 
     fn staker_total_amount(self: SystemState<TTokenState>, staker: Staker) -> Amount {
-        let staker_info = self.staker_info(:staker);
+        let staker_info = self.staker_info_v1(:staker);
         let mut total = staker_info.amount_own;
         if let Option::Some(pool_info) = staker_info.pool_info {
             total += pool_info.amount;

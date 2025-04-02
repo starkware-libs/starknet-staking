@@ -10,8 +10,9 @@ use staking::flow_test::utils::{
 use staking::pool::interface::PoolMemberInfo;
 use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
 use staking::staking::errors::Error as StakingError;
-use staking::staking::interface::{StakerInfo, StakerInfoTrait};
+use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerInfoV1, StakerInfoV1Trait};
 use staking::staking::interface_v0::IStakingV0DispatcherTrait;
+use staking::staking::objects::InternalStakerInfoV1;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_pool_rewards, calculate_pool_rewards_with_pool_balance,
@@ -826,10 +827,11 @@ pub(crate) impl StakerInfoAfterUpgradeFlowImpl<
         ref system: SystemState<TTokenState>,
         system_type: SystemType,
     ) {
-        let staker_info_after_upgrade = system.staker_info(staker: self.staker.unwrap());
+        let staker_info_after_upgrade = system.staker_info_v1(staker: self.staker.unwrap());
         let expected_staker_info = staker_update_old_rewards(
             staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
-        );
+        )
+            .to_v1();
         assert!(staker_info_after_upgrade == expected_staker_info);
     }
 }
@@ -884,13 +886,11 @@ pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
         ref system: SystemState<TTokenState>,
         system_type: SystemType,
     ) {
-        let staker_info_after_upgrade = system.staker_info(staker: self.staker.unwrap());
+        let staker_info_after_upgrade = system.staker_info_v1(staker: self.staker.unwrap());
         let mut expected_staker_info = staker_update_old_rewards(
             staker_info: self.staker_info.unwrap(), global_index: system.staking.get_global_index(),
-        );
-        let mut pool_info = self.staker_info.unwrap().get_pool_info();
-        pool_info.unclaimed_rewards = Zero::zero();
-        expected_staker_info.pool_info = Option::Some(pool_info);
+        )
+            .to_v1();
         assert!(staker_info_after_upgrade == expected_staker_info);
     }
 }
@@ -943,10 +943,10 @@ pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
         ref system: SystemState<TTokenState>,
         system_type: SystemType,
     ) {
-        let staker_info_after_upgrade = system.staker_info(staker: self.staker.unwrap());
+        let staker_info_after_upgrade = system.staker_info_v1(staker: self.staker.unwrap());
         let mut expected_staker_info = self.staker_info.unwrap();
         expected_staker_info.index = Zero::zero();
-        assert!(staker_info_after_upgrade == expected_staker_info);
+        assert!(staker_info_after_upgrade == expected_staker_info.to_v1());
     }
 }
 
@@ -999,8 +999,8 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
         let global_index = system.staking.get_global_index();
         let mut expected_staker_info = staker_update_old_rewards(
             staker_info: self.staker_info.unwrap(), :global_index,
-        );
-        expected_staker_info.index = global_index;
+        )
+            .to_v1();
         assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }
@@ -1066,8 +1066,8 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
         let global_index = system.staking.get_global_index();
         let mut expected_staker_info = staker_update_old_rewards(
             staker_info: self.staker_info.unwrap(), :global_index,
-        );
-        expected_staker_info.index = global_index;
+        )
+            .to_v1();
         assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }
@@ -1128,7 +1128,7 @@ pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
     ) {
         let internal_staker_info_after_upgrade = system
             .internal_staker_info(staker: self.staker.unwrap());
-        let expected_staker_info = self.staker_info.unwrap();
+        let expected_staker_info: StakerInfoV1 = self.staker_info.unwrap().to_v1();
         assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }
@@ -1440,7 +1440,7 @@ pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl<
         let stake_amount = self.stake_amount.unwrap();
         system.increase_stake(:staker, amount: stake_amount);
 
-        let staker_info = system.staker_info(:staker);
+        let staker_info = system.staker_info_v1(:staker);
         assert!(staker_info.amount_own == stake_amount * 2);
     }
 }
@@ -1890,7 +1890,7 @@ pub(crate) impl StakerIntentAfterUpgradeFlowImpl<
         let staker = self.staker.unwrap();
         system.staker_exit_intent(:staker);
 
-        let staker_info = system.staker_info(:staker);
+        let staker_info = system.staker_info_v1(:staker);
         assert!(staker_info.unstake_time.is_some());
     }
 }
@@ -1937,7 +1937,7 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl<
         system_type: SystemType,
     ) {
         let staker = self.staker.unwrap();
-        let staker_info = system.staker_info(:staker);
+        let staker_info = system.staker_info_v1(:staker);
         assert!(staker_info.unstake_time.is_some());
 
         let result = system.safe_staker_exit_action(:staker);
@@ -2440,20 +2440,22 @@ pub(crate) impl ConvertInternalStakerInfoFlowImpl<
     ) {
         let staker = self.staker.unwrap();
         let staker_address = staker.staker.address;
-        let (converted_internal_staker_info, pool_unclaimed_rewards) = system
+        let (converted_internal_staker_info, staker_index, pool_unclaimed_rewards) = system
             .convert_internal_staker_info(:staker_address);
         let global_index = system.staking.get_global_index();
         let mut expected_staker_info = staker_update_old_rewards(
             staker_info: self.staker_info.unwrap(), :global_index,
         );
-        expected_staker_info.index = global_index;
         let expected_pool_unclaimed_rewards = expected_staker_info
             .get_pool_info()
             .unclaimed_rewards;
-        assert!(converted_internal_staker_info == expected_staker_info.into());
+        let expected_staker_info_v1: StakerInfoV1 = expected_staker_info.to_v1();
+        assert!(converted_internal_staker_info == expected_staker_info_v1.into());
         // Test writting to storage.
         let actual_internal_staker_info = system.internal_staker_info(:staker);
         assert!(actual_internal_staker_info == converted_internal_staker_info);
+        // Test staker index.
+        assert!(staker_index == global_index);
         // Test pool unclaimed rewards.
         assert!(pool_unclaimed_rewards == expected_pool_unclaimed_rewards);
         // TODO: Test initialization of staker balance trace.

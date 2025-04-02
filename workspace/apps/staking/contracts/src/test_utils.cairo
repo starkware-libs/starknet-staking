@@ -31,7 +31,7 @@ use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
-    IStakingPauseDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
+    IStakingPauseDispatcherTrait, StakerInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfo,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait};
 use staking::staking::staking::Staking;
@@ -871,7 +871,6 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             reward_address: STAKER_REWARD_ADDRESS(),
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
-            _deprecated_index_V0: Zero::zero(),
             unclaimed_rewards_own: 0,
             pool_info: Option::Some(
                 InternalStakerPoolInfoLatest {
@@ -1016,7 +1015,7 @@ pub(crate) fn advance_epoch_global() {
 }
 
 pub(crate) fn calculate_staker_total_rewards(
-    staker_info: StakerInfo,
+    staker_info: StakerInfoV1,
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> Amount {
@@ -1044,7 +1043,7 @@ fn calculate_current_epoch_rewards(
 }
 
 pub(crate) fn calculate_staker_own_rewards_including_commission(
-    staker_info: StakerInfo, total_rewards: Amount,
+    staker_info: StakerInfoV1, total_rewards: Amount,
 ) -> Amount {
     let own_rewards = get_staker_own_rewards(:staker_info, :total_rewards);
     let commission_rewards = get_staker_commission_rewards(
@@ -1053,7 +1052,7 @@ pub(crate) fn calculate_staker_own_rewards_including_commission(
     own_rewards + commission_rewards
 }
 
-fn get_staker_own_rewards(staker_info: StakerInfo, total_rewards: Amount) -> Amount {
+fn get_staker_own_rewards(staker_info: StakerInfoV1, total_rewards: Amount) -> Amount {
     let own_rewards = mul_wide_and_div(
         lhs: total_rewards, rhs: staker_info.amount_own, div: get_total_amount(:staker_info),
     )
@@ -1061,7 +1060,7 @@ fn get_staker_own_rewards(staker_info: StakerInfo, total_rewards: Amount) -> Amo
     own_rewards
 }
 
-fn get_staker_commission_rewards(staker_info: StakerInfo, pool_rewards: Amount) -> Amount {
+fn get_staker_commission_rewards(staker_info: StakerInfoV1, pool_rewards: Amount) -> Amount {
     if let Option::Some(pool_info) = staker_info.pool_info {
         return compute_commission_amount_rounded_down(
             rewards_including_commission: pool_rewards, commission: pool_info.commission,
@@ -1070,7 +1069,7 @@ fn get_staker_commission_rewards(staker_info: StakerInfo, pool_rewards: Amount) 
     Zero::zero()
 }
 
-fn get_total_amount(staker_info: StakerInfo) -> Amount {
+fn get_total_amount(staker_info: StakerInfoV1) -> Amount {
     if let Option::Some(pool_info) = staker_info.pool_info {
         return pool_info.amount + staker_info.amount_own;
     }

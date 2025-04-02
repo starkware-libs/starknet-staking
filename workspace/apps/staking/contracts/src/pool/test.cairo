@@ -42,7 +42,7 @@ use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
 use staking::staking::interface::{
-    IStakingDispatcher, IStakingDispatcherTrait, StakerInfo, StakerInfoTrait, StakerPoolInfo,
+    IStakingDispatcher, IStakingDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
 use staking::staking::objects::{
     InternalStakerInfoLatestTrait, UndelegateIntentKey, UndelegateIntentValue,
@@ -119,18 +119,16 @@ fn test_enter_delegation_pool() {
     assert!(balance == 0);
     // Check that the staker info was updated correctly.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let mut expected_pool_info = StakerPoolInfo {
+    let mut expected_pool_info = StakerPoolInfoV1 {
         pool_contract,
         amount: cfg.pool_member_info._deprecated_amount,
-        unclaimed_rewards: Zero::zero(),
         commission: cfg.staker_info.get_pool_info().commission,
     };
-    let expected_staker_info = StakerInfo {
+    let expected_staker_info = StakerInfoV1 {
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
         unstake_time: Option::None,
         amount_own: cfg.test_info.stake_amount,
-        index: cfg.staker_info._deprecated_index_V0,
         unclaimed_rewards_own: 0,
         pool_info: Option::Some(expected_pool_info),
     };
@@ -575,7 +573,7 @@ fn test_exit_delegation_pool_intent() {
         pool_dispatcher
             .pool_member_info(cfg.test_info.pool_member_address) == expected_pool_member_info,
     );
-    let mut expected_staker_info: StakerInfo = cfg.staker_info.into();
+    let mut expected_staker_info: StakerInfoV1 = cfg.staker_info.into();
     if let Option::Some(mut pool_info) = expected_staker_info.pool_info {
         pool_info.amount = Zero::zero();
         pool_info.pool_contract = pool_contract;
