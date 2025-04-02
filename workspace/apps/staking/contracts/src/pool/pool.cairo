@@ -29,7 +29,7 @@ pub mod Pool {
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
     };
     use staking::utils::{
-        CheckedIERC20DispatcherTrait, compute_global_index_diff, compute_rewards_rounded_down,
+        CheckedIERC20DispatcherTrait, compute_rewards_per_strk, compute_rewards_rounded_down,
     };
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
@@ -334,9 +334,14 @@ pub mod Pool {
 
             // Transfer rewards to the pool member.
             let token_dispatcher = self.token_dispatcher.read();
+            token_dispatcher.checked_transfer(recipient: reward_address, amount: rewards.into());
+
+            // Emit event.
             self
-                .send_rewards_to_member(
-                    :pool_member_info, :pool_member, :token_dispatcher, amount: rewards,
+                .emit(
+                    Events::PoolMemberRewardClaimed {
+                        pool_member, reward_address, amount: rewards,
+                    },
                 );
 
             rewards
@@ -535,7 +540,7 @@ pub mod Pool {
                 .insert(
                     key: self.get_current_epoch(),
                     value: latest
-                        + compute_global_index_diff(
+                        + compute_rewards_per_strk(
                             staking_rewards: rewards, total_stake: pool_balance,
                         ),
                 );
@@ -608,19 +613,6 @@ pub mod Pool {
                 .remove_from_delegation_pool_intent(
                     :staker_address, identifier: pool_member.into(), :amount,
                 )
-        }
-
-        /// Sends the rewards to the `pool_member`'s reward address.
-        fn send_rewards_to_member(
-            ref self: ContractState,
-            pool_member_info: InternalPoolMemberInfoLatest,
-            pool_member: ContractAddress,
-            token_dispatcher: IERC20Dispatcher,
-            amount: Amount,
-        ) {
-            let reward_address = pool_member_info.reward_address;
-            token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
-            self.emit(Events::PoolMemberRewardClaimed { pool_member, reward_address, amount });
         }
 
         fn staker_info(self: @ContractState) -> StakerInfo {

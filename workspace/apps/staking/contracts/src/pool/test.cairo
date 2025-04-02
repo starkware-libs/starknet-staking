@@ -79,45 +79,6 @@ fn test_identity() {
 }
 
 #[test]
-fn test_send_rewards_to_member() {
-    // Initialize pool state.
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let mut state = initialize_pool_state(
-        staker_address: cfg.test_info.staker_address,
-        staking_contract: cfg.test_info.staking_contract,
-        :token_address,
-        governance_admin: cfg.test_info.pool_contract_admin,
-    );
-    // Setup pool_member_info and expected results before sending rewards.
-    let unclaimed_rewards = POOL_MEMBER_UNCLAIMED_REWARDS;
-    fund(
-        sender: cfg.test_info.owner_address,
-        recipient: test_address(),
-        amount: unclaimed_rewards,
-        :token_address,
-    );
-    let member_balance_before_rewards = token_dispatcher
-        .balance_of(account: cfg.pool_member_info.reward_address);
-    // Send rewards to pool member's reward address.
-    state
-        .send_rewards_to_member(
-            pool_member_info: cfg.pool_member_info,
-            pool_member: cfg.test_info.pool_member_address,
-            :token_dispatcher,
-            amount: unclaimed_rewards,
-        );
-    // Check that the staker received the rewards.
-    let member_balance_after_rewards = token_dispatcher
-        .balance_of(account: cfg.pool_member_info.reward_address);
-    assert!(
-        member_balance_after_rewards == member_balance_before_rewards + unclaimed_rewards.into(),
-    );
-}
-
-#[test]
 fn test_enter_delegation_pool() {
     let cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
