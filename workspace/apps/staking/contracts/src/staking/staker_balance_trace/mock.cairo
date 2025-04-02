@@ -5,6 +5,7 @@ use staking::types::Epoch;
 pub trait IMockTrace<TContractState> {
     fn insert(ref self: TContractState, key: Epoch, value: StakerBalance);
     fn latest(self: @TContractState) -> (Epoch, StakerBalance);
+    fn penultimate(self: @TContractState) -> (Epoch, StakerBalance);
     fn length(self: @TContractState) -> u64;
     fn latest_mutable(ref self: TContractState) -> (Epoch, StakerBalance);
     fn is_non_empty(self: @TContractState) -> bool;
@@ -33,6 +34,10 @@ pub mod MockTrace {
 
         fn latest(self: @ContractState) -> (Epoch, StakerBalance) {
             self.trace.latest()
+        }
+
+        fn penultimate(self: @ContractState) -> (Epoch, StakerBalance) {
+            self.trace.penultimate()
         }
 
         fn length(self: @ContractState) -> u64 {

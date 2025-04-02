@@ -55,6 +55,26 @@ fn test_latest() {
 }
 
 #[test]
+fn test_penultimate() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
+    mock_trace.insert(200, StakerBalanceTrait::new(amount_own: 200));
+
+    let (key, value) = mock_trace.penultimate();
+    assert!(key == 100);
+    assert!(value == StakerBalanceTrait::new(amount_own: 100));
+}
+
+#[test]
+#[should_panic(expected: "Penultimate does not exist")]
+fn test_penultimate_not_exist() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    let _ = mock_trace.penultimate();
+}
+
+#[test]
 fn test_length() {
     let mut mock_trace = CONTRACT_STATE();
 
