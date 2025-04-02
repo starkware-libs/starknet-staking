@@ -917,12 +917,12 @@ pub(crate) impl SystemStakerImpl<
 
     fn convert_internal_staker_info(
         self: SystemState<TTokenState>, staker_address: ContractAddress,
-    ) -> (InternalStakerInfoLatest, Amount) {
-        let (internal_staker_info, pool_unclaimed_rewards) = self
+    ) -> (InternalStakerInfoLatest, Index, Amount) {
+        let (internal_staker_info, index, pool_unclaimed_rewards) = self
             .staking
             .migration_dispatcher()
             .convert_internal_staker_info(:staker_address);
-        (internal_staker_info, pool_unclaimed_rewards)
+        (internal_staker_info, index, pool_unclaimed_rewards)
     }
 
     fn attest(self: SystemState<TTokenState>, staker: Staker) {

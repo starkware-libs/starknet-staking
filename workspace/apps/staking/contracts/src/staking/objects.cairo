@@ -227,9 +227,6 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) reward_address: ContractAddress,
     pub(crate) operational_address: ContractAddress,
     pub(crate) unstake_time: Option<Timestamp>,
-    // **Note**: This field was used in V0 and no longer in use in the new rewards mechanism
-    // introduced in V1. Still in use in `pool_migration`.
-    pub(crate) _deprecated_index_V0: Index,
     pub(crate) unclaimed_rewards_own: Amount,
     pub(crate) pool_info: Option<InternalStakerPoolInfoV1>,
     pub(crate) commission_commitment: Option<CommissionCommitment>,
@@ -249,14 +246,13 @@ pub(crate) enum VersionedInternalStakerInfo {
 pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
     fn convert(
         self: InternalStakerInfo, prev_class_hash: ClassHash, staker_address: ContractAddress,
-    ) -> (InternalStakerInfoV1, Amount, Amount, Amount) {
+    ) -> (InternalStakerInfoV1, Amount, Index, Amount, Amount) {
         let library_dispatcher = IStakingV0LibraryDispatcher { class_hash: prev_class_hash };
         let staker_info = library_dispatcher.staker_info(:staker_address);
         let internal_staker_info_v1 = InternalStakerInfoV1 {
             reward_address: staker_info.reward_address,
             operational_address: staker_info.operational_address,
             unstake_time: staker_info.unstake_time,
-            _deprecated_index_V0: staker_info.index,
             unclaimed_rewards_own: staker_info.unclaimed_rewards_own,
             pool_info: match staker_info.pool_info {
                 Option::Some(pool_info) => Option::Some(
@@ -274,7 +270,13 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
             Option::Some(pool_info) => (pool_info.unclaimed_rewards, pool_info.amount),
             Option::None => (Zero::zero(), Zero::zero()),
         };
-        (internal_staker_info_v1, staker_info.amount_own, pool_unclaimed_rewards, pool_amount)
+        (
+            internal_staker_info_v1,
+            staker_info.amount_own,
+            staker_info.index,
+            pool_unclaimed_rewards,
+            pool_amount,
+        )
     }
 }
 
@@ -295,7 +297,6 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 reward_address,
                 operational_address,
                 unstake_time: Option::None,
-                _deprecated_index_V0: Zero::zero(),
                 unclaimed_rewards_own: Zero::zero(),
                 pool_info,
                 commission_commitment: Option::None,
@@ -358,7 +359,6 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfo, InternalS
             reward_address: self.reward_address,
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
-            _deprecated_index_V0: self.index,
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: match self.pool_info {
                 Option::Some(pool_info) => Option::Some(

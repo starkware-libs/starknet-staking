@@ -2440,7 +2440,7 @@ pub(crate) impl ConvertInternalStakerInfoFlowImpl<
     ) {
         let staker = self.staker.unwrap();
         let staker_address = staker.staker.address;
-        let (converted_internal_staker_info, pool_unclaimed_rewards) = system
+        let (converted_internal_staker_info, staker_index, pool_unclaimed_rewards) = system
             .convert_internal_staker_info(:staker_address);
         let global_index = system.staking.get_global_index();
         let mut expected_staker_info = staker_update_old_rewards(
@@ -2454,6 +2454,8 @@ pub(crate) impl ConvertInternalStakerInfoFlowImpl<
         // Test writting to storage.
         let actual_internal_staker_info = system.internal_staker_info(:staker);
         assert!(actual_internal_staker_info == converted_internal_staker_info);
+        // Test staker index.
+        assert!(staker_index == global_index);
         // Test pool unclaimed rewards.
         assert!(pool_unclaimed_rewards == expected_pool_unclaimed_rewards);
         // TODO: Test initialization of staker balance trace.

@@ -713,14 +713,20 @@ pub mod Staking {
         }
         fn convert_internal_staker_info(
             ref self: ContractState, staker_address: ContractAddress,
-        ) -> (InternalStakerInfoLatest, Amount) {
+        ) -> (InternalStakerInfoLatest, Index, Amount) {
             let versioned_internal_staker_info = self.staker_info.read(staker_address);
             match versioned_internal_staker_info {
                 VersionedInternalStakerInfo::None => panic_with_byte_array(
                     err: @GenericError::STAKER_NOT_EXISTS.describe(),
                 ),
                 VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
-                    let (internal_staker_info_v1, amount_own, pool_unclaimed_rewards, pool_amount) =
+                    let (
+                        internal_staker_info_v1,
+                        amount_own,
+                        index,
+                        pool_unclaimed_rewards,
+                        pool_amount,
+                    ) =
                         internal_staker_info_v0
                         .convert(self.get_prev_class_hash(), staker_address);
                     self
@@ -733,7 +739,7 @@ pub mod Staking {
                         .initialize_staker_balance_trace(
                             :staker_address, :amount_own, :pool_amount,
                         );
-                    (internal_staker_info_v1, pool_unclaimed_rewards)
+                    (internal_staker_info_v1, index, pool_unclaimed_rewards)
                 },
                 VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
                     err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
@@ -973,15 +979,12 @@ pub mod Staking {
         fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
             // Prerequisites and asserts.
             self.assert_caller_is_not_zero();
-            let (staker_info, pool_unclaimed_rewards) = self
+            let (staker_info, staker_index, pool_unclaimed_rewards) = self
                 .convert_internal_staker_info(:staker_address);
             let pool_address = staker_info.get_pool_info().pool_contract;
             assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
 
             // Send rewards to pool contract, and commit to storage.
-            // Note: `_deprecated_send_rewards_to_delegation_pool_V0` alters `staker_info` thus
-            // commit to storage is performed only after that.
-            let updated_index = staker_info._deprecated_index_V0;
             let token_dispatcher = self.token_dispatcher.read();
             self
                 ._deprecated_send_rewards_to_delegation_pool_V0(
@@ -989,7 +992,7 @@ pub mod Staking {
                 );
             self.write_staker_info(:staker_address, :staker_info);
 
-            updated_index
+            staker_index
         }
     }
 

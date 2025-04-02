@@ -1029,7 +1029,7 @@ fn test_remove_from_delegation_pool_intent() {
     let mut intent_amount = cfg.pool_member_info._deprecated_amount / 2;
 
     // Increase index.
-    let mut global_index = cfg.staker_info._deprecated_index_V0 + BASE_VALUE;
+    let mut global_index = cfg.test_info.global_index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -1393,7 +1393,7 @@ fn test_switch_staking_delegation_pool() {
     switch_pool_data.serialize(ref output: serialized_data);
 
     let switched_amount = cfg.pool_member_info._deprecated_amount / 2;
-    let updated_index = cfg.staker_info._deprecated_index_V0 + BASE_VALUE;
+    let updated_index = cfg.test_info.global_index + BASE_VALUE;
     snforge_std::store(
         target: staking_contract,
         storage_address: selector!("global_index"),
@@ -1410,7 +1410,7 @@ fn test_switch_staking_delegation_pool() {
             data: serialized_data.span(),
             identifier: pool_member.into(),
         );
-    let interest = updated_index - cfg.staker_info._deprecated_index_V0;
+    let interest = updated_index - cfg.test_info.global_index;
     let pool_rewards_including_commission = compute_rewards_rounded_up(
         amount: cfg.pool_member_info._deprecated_amount, :interest,
     );
@@ -1804,7 +1804,7 @@ fn test_update_commission() {
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let interest = cfg.test_info.global_index - cfg.staker_info._deprecated_index_V0;
+    let interest = 0;
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before_update = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(
@@ -2802,7 +2802,6 @@ fn test_versioned_internal_staker_info_wrap_latest() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        _deprecated_index_V0: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
         commission_commitment: Option::None,
@@ -2889,7 +2888,7 @@ fn test_internal_staker_info_outdated_version() {
         operational_address: cfg.staker_info.operational_address,
         unstake_time: cfg.staker_info.unstake_time,
         amount_own: cfg.test_info.stake_amount,
-        index: cfg.staker_info._deprecated_index_V0,
+        index: cfg.test_info.global_index,
         unclaimed_rewards_own: cfg.staker_info.unclaimed_rewards_own,
         pool_info: Option::None,
     );
@@ -2927,7 +2926,6 @@ fn test_compute_unpool_time() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        _deprecated_index_V0: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
         commission_commitment: Option::None,
@@ -2944,7 +2942,6 @@ fn test_compute_unpool_time() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::Some(unstake_time),
-        _deprecated_index_V0: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
         commission_commitment: Option::None,
@@ -2970,7 +2967,6 @@ fn test_get_pool_info() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        _deprecated_index_V0: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::Some(staker_pool_info),
         commission_commitment: Option::None,
@@ -2985,7 +2981,6 @@ fn test_get_pool_info_panic() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        _deprecated_index_V0: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
         commission_commitment: Option::None,
@@ -2999,7 +2994,6 @@ fn test_internal_staker_info_latest_into_staker_info() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        _deprecated_index_V0: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
         commission_commitment: Option::None,
@@ -3069,7 +3063,6 @@ fn test_staker_info_into_internal_staker_info_v1() {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
-        _deprecated_index_V0: Zero::zero(),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
         commission_commitment: Option::None,

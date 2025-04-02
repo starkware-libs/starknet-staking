@@ -71,7 +71,7 @@ pub trait IStakingMigration<TContractState> {
     /// This function is used only during migration.
     fn convert_internal_staker_info(
         ref self: TContractState, staker_address: ContractAddress,
-    ) -> (InternalStakerInfoLatest, Amount);
+    ) -> (InternalStakerInfoLatest, Index, Amount);
 }
 
 /// Interface for the staking pool contract.
