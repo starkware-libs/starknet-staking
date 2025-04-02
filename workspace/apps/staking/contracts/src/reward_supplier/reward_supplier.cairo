@@ -199,7 +199,7 @@ pub mod RewardSupplier {
             true
         }
 
-        fn contract_parameters(self: @ContractState) -> RewardSupplierInfo {
+        fn contract_parameters_v1(self: @ContractState) -> RewardSupplierInfo {
             RewardSupplierInfo {
                 unclaimed_rewards: self.unclaimed_rewards.read(),
                 l1_pending_requested_amount: self.l1_pending_requested_amount.read(),

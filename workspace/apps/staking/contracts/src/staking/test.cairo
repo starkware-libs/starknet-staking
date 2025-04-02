@@ -347,7 +347,7 @@ fn test_pool_migration_staker_not_exists() {
 }
 
 #[test]
-fn test_contract_parameters() {
+fn test_contract_parameters_v1() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
@@ -363,7 +363,7 @@ fn test_contract_parameters() {
         reward_supplier: cfg.staking_contract_info.reward_supplier,
         exit_wait_window: cfg.staking_contract_info.exit_wait_window,
     };
-    assert!(staking_dispatcher.contract_parameters() == expected_staking_contract_info);
+    assert!(staking_dispatcher.contract_parameters_v1() == expected_staking_contract_info);
 }
 
 #[test]
@@ -671,7 +671,7 @@ fn test_unstake_intent() {
     let unstake_time = staking_dispatcher.unstake_intent();
     let staker_info = staking_dispatcher.staker_info(:staker_address);
     let expected_time = Time::now()
-        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
+        .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     assert!(staker_info.unstake_time.unwrap() == unstake_time);
     assert!(unstake_time == expected_time);
     assert!(staking_dispatcher.get_total_stake() == Zero::zero());
@@ -1075,7 +1075,7 @@ fn test_remove_from_delegation_pool_intent() {
         contract: staking_contract,
     );
     let expected_unpool_time = Time::now()
-        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
+        .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time, amount: intent_amount,
     };
@@ -1148,7 +1148,7 @@ fn test_remove_from_delegation_pool_intent() {
         contract: staking_contract,
     );
     let expected_unpool_time = Time::now()
-        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
+        .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time, amount: new_intent_amount,
     };
@@ -1269,7 +1269,7 @@ fn test_remove_from_delegation_pool_action() {
     // Remove from delegation pool action, and then check that the intent was removed correctly.
     start_cheat_block_timestamp_global(
         block_timestamp: Time::now()
-            .add(delta: staking_dispatcher.contract_parameters().exit_wait_window)
+            .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window)
             .into(),
     );
     let pool_balance_before_action = token_dispatcher.balance_of(pool_contract);
@@ -1848,7 +1848,7 @@ fn test_update_commission() {
 
     // Assert commission is updated in the pool contract.
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    let pool_contracts_parameters = pool_dispatcher.contract_parameters();
+    let pool_contracts_parameters = pool_dispatcher.contract_parameters_v1();
     let expected_pool_contracts_parameters = PoolContractInfo {
         commission, ..pool_contracts_parameters,
     };
@@ -2255,14 +2255,14 @@ fn test_set_min_stake() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let old_min_stake = cfg.staking_contract_info.min_stake;
-    assert!(old_min_stake == staking_dispatcher.contract_parameters().min_stake);
+    assert!(old_min_stake == staking_dispatcher.contract_parameters_v1().min_stake);
     let new_min_stake = old_min_stake / 2;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     staking_config_dispatcher.set_min_stake(min_stake: new_min_stake);
-    assert!(new_min_stake == staking_dispatcher.contract_parameters().min_stake);
+    assert!(new_min_stake == staking_dispatcher.contract_parameters_v1().min_stake);
     // Validate the single MinimumStakeChanged event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_min_stake");
@@ -2290,14 +2290,14 @@ fn test_set_exit_waiting_window() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let old_exit_window = cfg.staking_contract_info.exit_wait_window;
-    assert!(old_exit_window == staking_dispatcher.contract_parameters().exit_wait_window);
+    assert!(old_exit_window == staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let new_exit_window = TimeDelta { seconds: DAY * 7 };
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     staking_config_dispatcher.set_exit_wait_window(exit_wait_window: new_exit_window);
-    assert!(new_exit_window == staking_dispatcher.contract_parameters().exit_wait_window);
+    assert!(new_exit_window == staking_dispatcher.contract_parameters_v1().exit_wait_window);
     // Validate the single ExitWaitWindowChanged event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_exit_wait_window");
@@ -2355,14 +2355,14 @@ fn test_set_reward_supplier() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let old_reward_supplier = cfg.staking_contract_info.reward_supplier;
-    assert!(old_reward_supplier == staking_dispatcher.contract_parameters().reward_supplier);
+    assert!(old_reward_supplier == staking_dispatcher.contract_parameters_v1().reward_supplier);
     let new_reward_supplier = OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS();
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     staking_config_dispatcher.set_reward_supplier(reward_supplier: new_reward_supplier);
-    assert!(new_reward_supplier == staking_dispatcher.contract_parameters().reward_supplier);
+    assert!(new_reward_supplier == staking_dispatcher.contract_parameters_v1().reward_supplier);
     // Validate the single RewardSupplierChanged event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_reward_supplier");
@@ -2453,7 +2453,7 @@ fn test_get_pool_exit_intent() {
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
-    let exit_wait_window = staking_dispatcher.contract_parameters().exit_wait_window;
+    let exit_wait_window = staking_dispatcher.contract_parameters_v1().exit_wait_window;
     // Before intent
     let undelegate_intent_key = UndelegateIntentKey {
         pool_contract, identifier: pool_member.into(),

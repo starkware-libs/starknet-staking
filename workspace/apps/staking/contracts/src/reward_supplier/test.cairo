@@ -132,20 +132,20 @@ fn test_claim_rewards() {
 }
 
 #[test]
-fn test_contract_parameters() {
+fn test_contract_parameters_v1() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
     );
-    // Change the block_timestamp so the contract_parameters() won't return zero for all fields.
+    // Change the block_timestamp so the contract_parameters_v1() won't return zero for all fields.
     let block_timestamp = Time::now().add(delta: Time::seconds(count: 1));
     start_cheat_block_timestamp_global(block_timestamp: block_timestamp.into());
     let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     let expected_info = RewardSupplierInfo {
         unclaimed_rewards: STRK_IN_FRIS, l1_pending_requested_amount: Zero::zero(),
     };
-    assert!(state.contract_parameters() == expected_info);
+    assert!(state.contract_parameters_v1() == expected_info);
 }
 
 #[test]
@@ -162,7 +162,7 @@ fn test_on_receive() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let balance = Zero::zero();
     let credit = balance
-        + reward_supplier_dispatcher.contract_parameters().l1_pending_requested_amount;
+        + reward_supplier_dispatcher.contract_parameters_v1().l1_pending_requested_amount;
     let epochs_in_year = staking_dispatcher.get_epoch_info().epochs_in_year();
     advance_epoch_global();
     cheat_caller_address_once(
@@ -183,7 +183,7 @@ fn test_on_receive() {
     let mut expected_l1_pending_requested_amount = num_msgs * base_mint_amount;
     assert!(
         reward_supplier_dispatcher
-            .contract_parameters()
+            .contract_parameters_v1()
             .l1_pending_requested_amount == expected_l1_pending_requested_amount,
     );
     for _ in 0..num_msgs {
@@ -207,7 +207,7 @@ fn test_on_receive() {
         expected_l1_pending_requested_amount -= base_mint_amount;
         assert!(
             reward_supplier_dispatcher
-                .contract_parameters()
+                .contract_parameters_v1()
                 .l1_pending_requested_amount == expected_l1_pending_requested_amount,
         );
     }
@@ -232,7 +232,7 @@ fn test_on_receive() {
     );
     assert!(
         reward_supplier_dispatcher
-            .contract_parameters()
+            .contract_parameters_v1()
             .l1_pending_requested_amount == Zero::zero(),
     );
 }

@@ -9,6 +9,7 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::MIN_ATTESTATION_WINDOW;
+use staking::flow_test::staking_interface_v0::{IStakingV0Dispatcher, IStakingV0DispatcherTrait};
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
@@ -182,6 +183,10 @@ pub(crate) impl StakingImpl of StakingTrait {
         IStakingSafeDispatcher { contract_address: self.address }
     }
 
+    fn dispatcher_v0(self: StakingState) -> IStakingV0Dispatcher nopanic {
+        IStakingV0Dispatcher { contract_address: self.address }
+    }
+
     fn migration_dispatcher(self: StakingState) -> IStakingMigrationDispatcher nopanic {
         IStakingMigrationDispatcher { contract_address: self.address }
     }
@@ -220,7 +225,7 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_min_stake(self: StakingState) -> Amount {
-        self.dispatcher().contract_parameters().min_stake
+        self.dispatcher().contract_parameters_v1().min_stake
     }
 
     fn get_total_stake(self: StakingState) -> Amount {
@@ -228,7 +233,7 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_exit_wait_window(self: StakingState) -> TimeDelta {
-        self.dispatcher().contract_parameters().exit_wait_window
+        self.dispatcher().contract_parameters_v1().exit_wait_window
     }
 
     fn get_global_index(self: StakingState) -> Index {
@@ -470,7 +475,7 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
     }
 
     fn get_unclaimed_rewards(self: RewardSupplierState) -> Amount {
-        self.dispatcher().contract_parameters().try_into().unwrap().unclaimed_rewards
+        self.dispatcher().contract_parameters_v1().try_into().unwrap().unclaimed_rewards
     }
 }
 
@@ -1109,11 +1114,11 @@ pub(crate) impl SystemDelegatorImpl<
 pub(crate) impl SystemPoolImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of SystemPoolTrait<TTokenState> {
-    fn contract_parameters(
+    fn contract_parameters_v1(
         self: SystemState<TTokenState>, pool: ContractAddress,
     ) -> PoolContractInfo {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.contract_parameters()
+        pool_dispatcher.contract_parameters_v1()
     }
 }
 

@@ -36,7 +36,7 @@ pub trait IStaking<TContractState> {
     fn get_staker_commission_commitment(
         self: @TContractState, staker_address: ContractAddress,
     ) -> CommissionCommitment;
-    fn contract_parameters(self: @TContractState) -> StakingContractInfo;
+    fn contract_parameters_v1(self: @TContractState) -> StakingContractInfo;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn get_current_total_staking_power(self: @TContractState) -> Amount;
     fn get_pool_exit_intent(

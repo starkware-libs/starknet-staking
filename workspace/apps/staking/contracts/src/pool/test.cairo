@@ -599,7 +599,7 @@ fn test_exit_delegation_pool_intent() {
     pool_dispatcher.exit_delegation_pool_intent(amount: cfg.pool_member_info._deprecated_amount);
     // Validate the expected pool member info and staker info.
     let expected_time = Time::now()
-        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
+        .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let mut expected_pool_member_info = InternalPoolMemberInfoLatest {
         _deprecated_amount: Zero::zero(),
         unpool_amount: cfg.pool_member_info._deprecated_amount,
@@ -738,7 +738,7 @@ fn test_exit_delegation_pool_action() {
     let balance_before_action = token_dispatcher.balance_of(cfg.test_info.pool_member_address);
     start_cheat_block_timestamp_global(
         block_timestamp: Time::now()
-            .add(delta: staking_dispatcher.contract_parameters().exit_wait_window)
+            .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window)
             .into(),
     );
     // Exit delegation pool action and check that:
@@ -1094,7 +1094,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
 }
 
 #[test]
-fn test_contract_parameters() {
+fn test_contract_parameters_v1() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -1109,7 +1109,7 @@ fn test_contract_parameters() {
         token_address,
         commission: cfg.staker_info.get_pool_info().commission,
     };
-    assert!(pool_dispatcher.contract_parameters() == expected_pool_contract_info);
+    assert!(pool_dispatcher.contract_parameters_v1() == expected_pool_contract_info);
 }
 
 #[test]
@@ -1156,7 +1156,7 @@ fn test_partial_undelegate() {
     let actual_pool_member_info: PoolMemberInfo = pool_dispatcher
         .pool_member_info(pool_member: cfg.test_info.pool_member_address);
     let expected_time = Time::now()
-        .add(delta: staking_dispatcher.contract_parameters().exit_wait_window);
+        .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let expected_pool_member_info: PoolMemberInfo = InternalPoolMemberInfoLatest {
         unpool_time: Option::Some(expected_time), ..cfg.pool_member_info,
     }
