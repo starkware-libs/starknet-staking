@@ -284,15 +284,16 @@ pub mod Pool {
             staking_pool_dispatcher
                 .remove_from_delegation_pool_action(identifier: pool_member.into());
 
-            // Transfer delegated amount to the pool member.
             let unpool_amount = pool_member_info.unpool_amount;
             pool_member_info.unpool_amount = Zero::zero();
-            let token_dispatcher = self.token_dispatcher.read();
-            token_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
+            pool_member_info.unpool_time = Option::None;
 
             // Write the updated pool member info to storage.
-            pool_member_info.unpool_time = Option::None;
             self.write_pool_member_info(:pool_member, :pool_member_info);
+
+            // Transfer delegated amount to the pool member.
+            let token_dispatcher = self.token_dispatcher.read();
+            token_dispatcher.checked_transfer(recipient: pool_member, amount: unpool_amount.into());
 
             unpool_amount
         }
