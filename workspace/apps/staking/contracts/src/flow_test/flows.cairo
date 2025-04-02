@@ -12,6 +12,7 @@ use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerInfoV1, StakerInfoV1Trait};
 use staking::staking::interface_v0::IStakingV0DispatcherTrait;
+use staking::staking::objects::InternalStakerInfoV1;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_pool_rewards, calculate_pool_rewards_with_pool_balance,
@@ -1003,7 +1004,6 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
             staker_info: self.staker_info.unwrap(), :global_index,
         )
             .to_v1();
-        expected_staker_info.index = global_index;
         assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
     }
 }
@@ -2451,7 +2451,6 @@ pub(crate) impl ConvertInternalStakerInfoFlowImpl<
             staker_info: self.staker_info.unwrap(), :global_index,
         )
             .to_v1();
-        expected_staker_info.index = global_index;
         let expected_pool_unclaimed_rewards = expected_staker_info
             .get_pool_info()
             .unclaimed_rewards;

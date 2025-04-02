@@ -447,7 +447,7 @@ pub impl StakerInfoImpl of StakerInfoTrait {
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
             amount_own: self.amount_own,
-            index: self.index,
+            index: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
             pool_info: self.pool_info,
         }
