@@ -8,7 +8,7 @@ use staking::flow_test::utils::{
     upgrade_implementation,
 };
 use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoTrait};
-use staking::pool::objects::PoolMemberInfoV1IntoInternalPoolMemberInfoV1Trait;
+use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerInfoV1, StakerInfoV1Trait};
 use staking::staking::interface_v0::IStakingV0DispatcherTrait;
@@ -1252,12 +1252,10 @@ pub(crate) impl InternalPoolMemberInfoAfterUpgradeFlowImpl<
             pool_member_info: self.delegator_info.unwrap(),
             updated_index: system.staking.get_global_index(),
         )
-            .to_v1();
-        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.to_internal());
+            .to_internal();
+        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info);
         assert!(
-            get_internal_pool_member_info_after_upgrade == Option::Some(
-                expected_pool_member_info.to_internal(),
-            ),
+            get_internal_pool_member_info_after_upgrade == Option::Some(expected_pool_member_info),
         );
     }
 }
@@ -1332,7 +1330,7 @@ pub(crate) impl InternalPoolMemberInfoUndelegateAfterUpgradeFlowImpl<
             .internal_pool_member_info(:delegator, :pool);
         let get_internal_pool_member_info_after_upgrade = system
             .get_internal_pool_member_info(:delegator, :pool);
-        let mut expected_pool_member_info = self.delegator_info.unwrap().to_v1();
+        let mut expected_pool_member_info = self.delegator_info.unwrap();
         expected_pool_member_info.index = system.staking.get_global_index();
         assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.to_internal());
         assert!(
