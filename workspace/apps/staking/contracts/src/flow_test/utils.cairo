@@ -769,7 +769,7 @@ pub(crate) impl SystemImpl<
                 );
     }
 
-    fn set_staker_for_conversion(
+    fn set_staker_for_migration(
         ref self: SystemState<TTokenState>, staker_address: ContractAddress,
     ) {
         self.staker_address = Option::Some(staker_address);
@@ -924,14 +924,8 @@ pub(crate) impl SystemStakerImpl<
             .internal_staker_info(staker_address: staker.staker.address)
     }
 
-    fn convert_internal_staker_info(
-        self: SystemState<TTokenState>, staker_address: ContractAddress,
-    ) -> (InternalStakerInfoLatest, Index, Amount) {
-        let (internal_staker_info, index, pool_unclaimed_rewards) = self
-            .staking
-            .migration_dispatcher()
-            .convert_internal_staker_info(:staker_address);
-        (internal_staker_info, index, pool_unclaimed_rewards)
+    fn staker_migration(self: SystemState<TTokenState>, staker_address: ContractAddress) {
+        self.staking.migration_dispatcher().staker_migration(:staker_address)
     }
 
     fn attest(self: SystemState<TTokenState>, staker: Staker) {
@@ -1214,7 +1208,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
             self.upgrade_pool_implementation(:pool);
         }
         if let Option::Some(staker_address) = self.staker_address {
-            self.convert_internal_staker_info(staker_address);
+            self.staker_migration(staker_address);
         }
     }
 
@@ -1355,11 +1349,11 @@ pub(crate) fn test_flow_mainnet<
     let mut system = SystemFactoryTrait::mainnet_system();
     flow.setup(ref :system);
     if let Option::Some(pool_address) = flow.get_pool_address() {
-        // Pool upgrade handles the conversion of internal staker info.
+        // Pool upgrade handles the migration of internal staker info.
         system.set_pool_for_upgrade(pool_address);
     } else if let Option::Some(staker_address) = flow.get_staker_address() {
-        // Need to convert internal staker info only if there is no pool to upgrade.
-        system.set_staker_for_conversion(staker_address);
+        // Need to migrate internal staker info only if there is no pool to upgrade.
+        system.set_staker_for_migration(staker_address);
     }
     system.deploy_attestation_and_upgrade_contracts_implementation();
     flow.test(ref :system, system_type: SystemType::Mainnet);

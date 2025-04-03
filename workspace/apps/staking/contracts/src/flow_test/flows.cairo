@@ -846,16 +846,17 @@ pub(crate) impl StakerInfoAfterUpgradeFlowImpl<
 pub(crate) struct StakerInfoWithPoolAfterUpgradeFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) staker_info: Option<StakerInfo>,
+    pub(crate) pool_address: Option<ContractAddress>,
 }
 pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerInfoWithPoolAfterUpgradeFlow, TTokenState> {
     fn get_pool_address(self: StakerInfoWithPoolAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::None
+        self.pool_address
     }
 
     fn get_staker_address(self: StakerInfoWithPoolAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
+        Option::None
     }
 
     fn setup(ref self: StakerInfoWithPoolAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
@@ -876,6 +877,7 @@ pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
 
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(staker_info);
+        self.pool_address = Option::Some(pool);
 
         system.advance_time(time: one_week);
         system.update_global_index_via_change_reward_address(:staker);
@@ -905,16 +907,17 @@ pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
 pub(crate) struct StakerInfoUnstakeAfterUpgradeFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) staker_info: Option<StakerInfo>,
+    pub(crate) pool_address: Option<ContractAddress>,
 }
 pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerInfoUnstakeAfterUpgradeFlow, TTokenState> {
     fn get_pool_address(self: StakerInfoUnstakeAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::None
+        self.pool_address
     }
 
     fn get_staker_address(self: StakerInfoUnstakeAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
+        Option::None
     }
 
     fn setup(ref self: StakerInfoUnstakeAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
@@ -934,6 +937,7 @@ pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
 
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(staker_info);
+        self.pool_address = Option::Some(system.staking.get_pool(:staker));
 
         system.advance_time(time: one_week);
     }
@@ -1015,6 +1019,7 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
 pub(crate) struct InternalStakerInfoWithPoolAfterUpgradeFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) staker_info: Option<StakerInfo>,
+    pub(crate) pool_address: Option<ContractAddress>,
 }
 pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
@@ -1022,13 +1027,13 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
     fn get_pool_address(
         self: InternalStakerInfoWithPoolAfterUpgradeFlow,
     ) -> Option<ContractAddress> {
-        Option::None
+        self.pool_address
     }
 
     fn get_staker_address(
         self: InternalStakerInfoWithPoolAfterUpgradeFlow,
     ) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
+        Option::None
     }
 
     fn setup(
@@ -1051,7 +1056,7 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
 
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(staker_info);
-
+        self.pool_address = Option::Some(pool);
         system.advance_time(time: one_week);
         system.update_global_index_via_change_reward_address(:staker);
     }
@@ -1082,6 +1087,7 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
 pub(crate) struct InternalStakerInfoUnstakeAfterUpgradeFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) staker_info: Option<StakerInfo>,
+    pub(crate) pool_address: Option<ContractAddress>,
 }
 pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
@@ -1089,13 +1095,13 @@ pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
     fn get_pool_address(
         self: InternalStakerInfoUnstakeAfterUpgradeFlow,
     ) -> Option<ContractAddress> {
-        Option::None
+        self.pool_address
     }
 
     fn get_staker_address(
         self: InternalStakerInfoUnstakeAfterUpgradeFlow,
     ) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
+        Option::None
     }
 
     fn setup(
@@ -1117,6 +1123,7 @@ pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
 
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(staker_info);
+        self.pool_address = Option::Some(system.staking.get_pool(:staker));
 
         system.advance_time(time: one_week);
     }
@@ -1952,7 +1959,7 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl<
 }
 
 /// Flow:
-/// Staker stake with pool
+/// Staker stake
 /// Staker exit_intent
 /// Upgrade
 /// Staker attest
@@ -1978,7 +1985,7 @@ pub(crate) impl StakerAttestAfterIntentFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
         system.staker_exit_intent(:staker);
 
         self.staker = Option::Some(staker);
@@ -2391,37 +2398,31 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
     }
 }
 
-/// Test convert_internal_staker_info.
+/// Test staker_migration.
 #[derive(Drop, Copy)]
-pub(crate) struct ConvertInternalStakerInfoFlow {
+pub(crate) struct StakerMigrationFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) staker_info: Option<StakerInfo>,
 }
-
-pub(crate) impl ConvertInternalStakerInfoFlowImpl<
+pub(crate) impl StakerMigrationFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
-> of FlowTrait<ConvertInternalStakerInfoFlow, TTokenState> {
-    fn get_pool_address(self: ConvertInternalStakerInfoFlow) -> Option<ContractAddress> {
+> of FlowTrait<StakerMigrationFlow, TTokenState> {
+    fn get_pool_address(self: StakerMigrationFlow) -> Option<ContractAddress> {
         Option::None
     }
 
-    fn get_staker_address(self: ConvertInternalStakerInfoFlow) -> Option<ContractAddress> {
+    fn get_staker_address(self: StakerMigrationFlow) -> Option<ContractAddress> {
         Option::None
     }
 
-    fn setup(ref self: ConvertInternalStakerInfoFlow, ref system: SystemState<TTokenState>) {
+    fn setup(ref self: StakerMigrationFlow, ref system: SystemState<TTokenState>) {
         let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-
-        let delegated_amount = stake_amount / 2;
-        let delegator = system.new_delegator(amount: delegated_amount);
-        let pool = system.staking.get_pool(:staker);
-        system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
 
         let staker_info = system.staker_info(:staker);
 
@@ -2433,33 +2434,24 @@ pub(crate) impl ConvertInternalStakerInfoFlowImpl<
     }
 
     fn test(
-        self: ConvertInternalStakerInfoFlow,
-        ref system: SystemState<TTokenState>,
-        system_type: SystemType,
+        self: StakerMigrationFlow, ref system: SystemState<TTokenState>, system_type: SystemType,
     ) {
         let staker = self.staker.unwrap();
         let staker_address = staker.staker.address;
-        let (converted_internal_staker_info, staker_index, pool_unclaimed_rewards) = system
-            .convert_internal_staker_info(:staker_address);
+        system.staker_migration(staker_address);
+        let internal_staker_info = system.internal_staker_info(:staker);
         let global_index = system.staking.get_global_index();
         let mut expected_staker_info = staker_update_old_rewards(
             staker_info: self.staker_info.unwrap(), :global_index,
-        );
-        let expected_pool_unclaimed_rewards = expected_staker_info
-            .get_pool_info()
-            .unclaimed_rewards;
-        let expected_staker_info_v1: StakerInfoV1 = expected_staker_info.to_v1();
-        assert!(converted_internal_staker_info == expected_staker_info_v1.into());
-        // Test writting to storage.
-        let actual_internal_staker_info = system.internal_staker_info(:staker);
-        assert!(actual_internal_staker_info == converted_internal_staker_info);
-        // Test staker index.
-        assert!(staker_index == global_index);
-        // Test pool unclaimed rewards.
-        assert!(pool_unclaimed_rewards == expected_pool_unclaimed_rewards);
+        )
+            .to_v1();
+        assert!(internal_staker_info == expected_staker_info.into());
         // TODO: Test initialization of staker balance trace.
     }
 }
+
+// TODO: Test pool migration - including pool_unclaimed_rewards and staker_index, including errors
+// from convert_internal_staker_info
 
 /// Test pool member change balance calculate rewards flow.
 /// Flow:
@@ -3017,6 +3009,46 @@ pub(crate) impl DelegateIntentSameEpochFlowImpl<
         let delegator_info = system.pool_member_info_v1(:delegator, :pool);
         assert!(delegator_info.amount.is_zero());
         assert!(delegator_info.unclaimed_rewards.is_zero());
+    }
+}
+
+/// Flow:
+/// Staker stake with pool
+/// Upgrade
+/// Staker migration - should fail
+#[derive(Drop, Copy)]
+pub(crate) struct StakerMigrationHasPoolFlow {
+    pub(crate) staker_address: Option<ContractAddress>,
+}
+pub(crate) impl StakerMigrationHasPoolFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<StakerMigrationHasPoolFlow, TTokenState> {
+    fn get_pool_address(self: StakerMigrationHasPoolFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: StakerMigrationHasPoolFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: StakerMigrationHasPoolFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        self.staker_address = Option::Some(staker.staker.address);
+    }
+
+    fn test(
+        self: StakerMigrationHasPoolFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker_address.unwrap();
+        system.staker_migration(staker_address: staker);
     }
 }
 // TODO: Implement this flow test.

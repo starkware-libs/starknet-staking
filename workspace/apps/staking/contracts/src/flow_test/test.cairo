@@ -124,7 +124,7 @@ fn staker_info_after_upgrade_regression_test() {
 #[fork("MAINNET_LATEST")]
 fn staker_info_with_pool_after_upgrade_regression_test() {
     let mut flow = flows::StakerInfoWithPoolAfterUpgradeFlow {
-        staker: Option::None, staker_info: Option::None,
+        staker: Option::None, staker_info: Option::None, pool_address: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
@@ -133,7 +133,7 @@ fn staker_info_with_pool_after_upgrade_regression_test() {
 #[fork("MAINNET_LATEST")]
 fn staker_info_unstake_after_upgrade_regression_test() {
     let mut flow = flows::StakerInfoUnstakeAfterUpgradeFlow {
-        staker: Option::None, staker_info: Option::None,
+        staker: Option::None, staker_info: Option::None, pool_address: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
@@ -151,7 +151,7 @@ fn internal_staker_info_after_upgrade_regression_test() {
 #[fork("MAINNET_LATEST")]
 fn internal_staker_info_with_pool_after_upgrade_regression_test() {
     let mut flow = flows::InternalStakerInfoWithPoolAfterUpgradeFlow {
-        staker: Option::None, staker_info: Option::None,
+        staker: Option::None, staker_info: Option::None, pool_address: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
@@ -160,7 +160,7 @@ fn internal_staker_info_with_pool_after_upgrade_regression_test() {
 #[fork("MAINNET_LATEST")]
 fn internal_staker_info_unstake_after_upgrade_regression_test() {
     let mut flow = flows::InternalStakerInfoUnstakeAfterUpgradeFlow {
-        staker: Option::None, staker_info: Option::None,
+        staker: Option::None, staker_info: Option::None, pool_address: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
@@ -332,10 +332,8 @@ fn delegator_switch_after_upgrade_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
-fn convert_internal_staker_info_regression_test() {
-    let mut flow = flows::ConvertInternalStakerInfoFlow {
-        staker: Option::None, staker_info: Option::None,
-    };
+fn staker_migration_regression_test() {
+    let mut flow = flows::StakerMigrationFlow { staker: Option::None, staker_info: Option::None };
     test_flow_mainnet(ref :flow);
 }
 
@@ -377,6 +375,14 @@ fn assert_total_stake_after_multi_stake_flow_test() {
 fn delegate_intent_same_epoch_flow_test() {
     let flow = flows::DelegateIntentSameEpochFlow {};
     test_flow_local(:flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+#[should_panic(expected: "Staker migration is not allowed, staker has a pool")]
+fn staker_migration_has_pool_flow_test() {
+    let mut flow = flows::StakerMigrationHasPoolFlow { staker_address: Option::None };
+    test_flow_mainnet(ref :flow);
 }
 
 /// Flow:

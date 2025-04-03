@@ -36,7 +36,7 @@ pub trait IStaking<TContractState> {
     fn get_staker_commission_commitment(
         self: @TContractState, staker_address: ContractAddress,
     ) -> CommissionCommitment;
-    fn contract_parameters_v1(self: @TContractState) -> StakingContractInfo;
+    fn contract_parameters_v1(self: @TContractState) -> StakingContractInfoV1;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn get_current_total_staking_power(self: @TContractState) -> Amount;
     fn get_pool_exit_intent(
@@ -62,16 +62,15 @@ pub trait IStakingMigration<TContractState> {
         self: @TContractState, staker_address: ContractAddress,
     ) -> InternalStakerInfoLatest;
 
+
     /// Reads the internal staker information for the given `staker_address` from storage
     /// and converts it to V1. Writes the updated version to storage and initializes the staker's
     /// balance trace.
     ///
-    /// Precondition: The staker exists and its version is V0.
+    /// Precondition: The staker exists, does not have a pool and its version is V0.
     ///
     /// This function is used only during migration.
-    fn convert_internal_staker_info(
-        ref self: TContractState, staker_address: ContractAddress,
-    ) -> (InternalStakerInfoLatest, Index, Amount);
+    fn staker_migration(ref self: TContractState, staker_address: ContractAddress);
 }
 
 /// Interface for the staking pool contract.
@@ -383,8 +382,20 @@ pub mod ConfigEvents {
     }
 }
 
+/// `StakingContractInfo` struct used in V0.
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
+    pub min_stake: Amount,
+    pub token_address: ContractAddress,
+    pub global_index: Index,
+    pub pool_contract_class_hash: ClassHash,
+    pub reward_supplier: ContractAddress,
+    pub exit_wait_window: TimeDelta,
+}
+
+/// `StakingContractInfo` struct used in V1.
+#[derive(Copy, Debug, Drop, PartialEq, Serde)]
+pub struct StakingContractInfoV1 {
     pub min_stake: Amount,
     pub token_address: ContractAddress,
     pub attestation_contract: ContractAddress,

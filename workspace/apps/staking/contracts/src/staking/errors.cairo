@@ -39,6 +39,7 @@ pub(crate) enum Error {
     INVALID_STARTING_BLOCK,
     STAKER_BALANCE_NOT_INITIALIZED,
     STAKER_ADDRESS_ALREADY_USED,
+    STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL,
 }
 
 impl DescribableError of Describable<Error> {
@@ -82,6 +83,7 @@ impl DescribableError of Describable<Error> {
             Error::INVALID_STARTING_BLOCK => "Invalid starting block, must be greater than or equal to current block number",
             Error::STAKER_BALANCE_NOT_INITIALIZED => "Staker balance is not initialized",
             Error::STAKER_ADDRESS_ALREADY_USED => "Staker address is already used",
+            Error::STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL => "Staker migration is not allowed, staker has a pool",
         }
     }
 }

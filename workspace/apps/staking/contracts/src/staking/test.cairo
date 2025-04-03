@@ -47,14 +47,15 @@ use staking::staking::interface::{
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
     IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
-    StakerPoolInfo, StakerPoolInfoV1, StakingContractInfo,
+    StakerPoolInfo, StakerPoolInfoV1, StakingContractInfoV1,
 };
 use staking::staking::objects::{
     AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait,
-    InternalStakerInfoTestTrait, InternalStakerInfoV1, InternalStakerPoolInfoV1,
-    UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
-    UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTestTrait,
-    VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
+    InternalStakerInfoTestTrait, InternalStakerInfoTrait, InternalStakerInfoV1,
+    InternalStakerPoolInfoV1, UndelegateIntentKey, UndelegateIntentValue,
+    UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
+    VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
+    VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
 use staking::types::{Amount, InternalStakerInfoLatest};
@@ -355,7 +356,7 @@ fn test_contract_parameters_v1() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
 
-    let expected_staking_contract_info = StakingContractInfo {
+    let expected_staking_contract_info = StakingContractInfoV1 {
         min_stake: cfg.staking_contract_info.min_stake,
         token_address: cfg.staking_contract_info.token_address,
         attestation_contract: cfg.test_info.attestation_contract,
@@ -2896,17 +2897,17 @@ fn test_internal_staker_info_outdated_version() {
 
 #[test]
 #[should_panic(expected: "Staker does not exist")]
-fn test_convert_internal_staker_info_staker_not_exist() {
+fn test_staker_migration_staker_not_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
-    staking_dispatcher.convert_internal_staker_info(staker_address: DUMMY_ADDRESS());
+    staking_dispatcher.staker_migration(staker_address: DUMMY_ADDRESS());
 }
 
 #[test]
 #[should_panic(expected: "Internal Staker Info is already up-to-date")]
-fn test_convert_internal_staker_info_already_up_to_date() {
+fn test_staker_migration_already_up_to_date() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
@@ -2914,7 +2915,7 @@ fn test_convert_internal_staker_info_already_up_to_date() {
     let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    staking_dispatcher.convert_internal_staker_info(:staker_address);
+    staking_dispatcher.staker_migration(:staker_address);
 }
 
 #[test]
@@ -3493,4 +3494,34 @@ fn test_get_current_total_staking_power() {
             .staker_info_v1(:staker_address)
             .amount_own,
     );
+}
+
+#[test]
+fn test_internal_staker_info_pool_info() {
+    let internal_staker_info = InternalStakerInfoTestTrait::new(
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::None,
+    );
+    let staker_pool_info = StakerPoolInfo {
+        pool_contract: Zero::zero(),
+        amount: Zero::zero(),
+        commission: Zero::zero(),
+        unclaimed_rewards: Zero::zero(),
+    };
+    let internal_staker_info_with_pool = InternalStakerInfoTestTrait::new(
+        reward_address: Zero::zero(),
+        operational_address: Zero::zero(),
+        unstake_time: Option::None,
+        amount_own: Zero::zero(),
+        index: Zero::zero(),
+        unclaimed_rewards_own: Zero::zero(),
+        pool_info: Option::Some(staker_pool_info),
+    );
+    assert!(internal_staker_info.pool_info() == Option::None);
+    assert!(internal_staker_info_with_pool.pool_info() == Option::Some(staker_pool_info));
 }

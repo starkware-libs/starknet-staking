@@ -48,7 +48,7 @@
     - [set\_exit\_wait\_window](#set_exit_wait_window)
     - [set\_reward\_supplier](#set_reward_supplier)
     - [set\_epoch\_info](#set_epoch_info)
-    - [convert\_from\_upgraded\_contract](#convert_from_upgraded_contract)
+    - [staker\_migration](#staker_migration)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
@@ -190,10 +190,12 @@
     - [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
     - [ATTEST\_IS\_DONE](#attest_is_done)
     - [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
+    - [STAKER\_MIGRATION\_NOT\_ALLOWED\_WITH\_POOL](#staker_migration_not_allowed_with_pool)
+    - [INTERNAL\_STAKER\_INFO\_ALREADY\_UPDATED](#internal_staker_info_already_updated)
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
-    - [StakingContractInfo](#stakingcontractinfo)
+    - [StakingContractInfoV1](#stakingcontractinfov1)
     - [PoolMemberInfoV1](#poolmemberinfov1)
     - [PoolContractInfo](#poolcontractinfo)
     - [RewardSupplierInfo](#rewardsupplierinfo)
@@ -270,7 +272,7 @@ classDiagram
     set_exit_wait_window()
     set_reward_supplier()
     set_epoch_info()
-    convert_from_upgraded_contract()
+    staker_migration()
     pool_migration()
     declare_operational_address()
     change_operational_address()
@@ -1048,7 +1050,7 @@ Returns the attestation info for the staker based on it's operational address.
 
 ### contract_parameters_v1
 ```rust
-fn contract_parameters_v1(self: @ContractState) -> StakingContractInfo
+fn contract_parameters_v1(self: @ContractState) -> StakingContractInfoV1
 ```
 #### description <!-- omit from toc -->
 Return general parameters of the contract.
@@ -1302,24 +1304,30 @@ Set the epoch info.
 Only token admin.
 #### logic <!-- omit from toc -->
 
-### convert_from_upgraded_contract
+### staker_migration
 ```rust
-fn convert_from_upgraded_contract(
+fn staker_migration(
         self: @TContractState,
         versioned_internal_staker_info: VersionedInternalStakerInfo,
         staker_address: ContractAddress,
     ) -> VersionedInternalStakerInfo
 ```
 #### description <!-- omit from toc -->
-Convert InternalStakerInfo from outdated version.
+Convert InternalStakerInfo from V0 to V1 version.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
-1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [STAKER\_MIGRATION\_NOT\_ALLOWED\_WITH\_POOL](#staker_migration_not_allowed_with_pool)
+3. [INTERNAL\_STAKER\_INFO\_ALREADY\_UPDATED](#internal_staker_info_already_updated)
 #### pre-condition <!-- omit from toc -->
+1. Staker exist in the contract.
+2. Staker does not have a pool.
+3. Staker version is V0.
 #### access control <!-- omit from toc -->
-Staking contract of latest version.
+Any address can execute.
 #### logic <!-- omit from toc -->
 1. Convert versioned_internal_staker_info to newer version.
+2. Initialize the staker's balance trace.
 
 ## Events
 ### Stake Balance Changed
@@ -2333,6 +2341,12 @@ Only token admin.
 ### ATTEST_OUT_OF_WINDOW
 "Attestation is out of window"
 
+### STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL
+"Staker migration is not allowed, staker has a pool"
+
+### INTERNAL_STAKER_INFO_ALREADY_UPDATED
+"Internal Staker Info is already up-to-date"
+
 # Structs
 ### StakerPoolInfo
 | name              | type                      |
@@ -2353,14 +2367,15 @@ Only token admin.
 | unclaimed_rewards_own | [Amount](#amount)                         |
 | pool_info             | Option<[StakerPoolInfo](#stakerpoolinfo)> |
 
-### StakingContractInfo
-| name                     | type              |
-| ------------------------ | ----------------- |
-| min_stake                | [Amount](#amount) |
-| token_address            | address           |
-| global_index             | [Index](#index)   |
-| pool_contract_class_hash | ClassHash         |
-| reward_supplier          | address           |
+### StakingContractInfoV1
+| name                     | type                    |
+| ------------------------ | ----------------------- |
+| min_stake                | [Amount](#amount)       |
+| token_address            | address                 |
+| attestation_contract     | address                 |
+| pool_contract_class_hash | ClassHash               |
+| reward_supplier          | address                 |
+| exit_wait_window         | [TimeDelta](#timedelta) |
 
 ### PoolMemberInfoV1
 | name              | type                            |
