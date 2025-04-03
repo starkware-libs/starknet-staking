@@ -148,7 +148,6 @@ pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Impl of Internal
         PoolMemberInfoV1 {
             reward_address: self.reward_address,
             amount: self._deprecated_amount,
-            index: self._deprecated_index,
             unclaimed_rewards: self._unclaimed_rewards_from_v0,
             commission: self._deprecated_commission,
             unpool_amount: self.unpool_amount,

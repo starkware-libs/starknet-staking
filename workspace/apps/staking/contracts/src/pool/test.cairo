@@ -95,7 +95,6 @@ fn test_enter_delegation_pool() {
     // Check that the pool member info was updated correctly.
     let expected_pool_member_info: PoolMemberInfoV1 = PoolMemberInfoV1 {
         amount: cfg.pool_member_info._deprecated_amount,
-        index: cfg.pool_member_info._deprecated_index,
         unpool_time: Option::None,
         reward_address: cfg.pool_member_info.reward_address,
         commission: cfg.pool_member_info._deprecated_commission,
@@ -211,9 +210,7 @@ fn test_add_to_delegation_pool() {
     pool_dispatcher.add_to_delegation_pool(:pool_member, amount: delegate_amount);
     let pool_member_info_after_add = pool_dispatcher.pool_member_info_v1(:pool_member);
     let pool_member_info_expected = PoolMemberInfoV1 {
-        amount: pool_member_info_before_add.amount + delegate_amount,
-        index: cfg.test_info.global_index,
-        ..pool_member_info_before_add,
+        amount: pool_member_info_before_add.amount + delegate_amount, ..pool_member_info_before_add,
     };
     assert!(pool_member_info_after_add == pool_member_info_expected);
 
@@ -309,9 +306,7 @@ fn test_add_to_delegation_pool_from_reward_address() {
 
     let pool_member_info_after_add = pool_dispatcher.pool_member_info_v1(:pool_member);
     let pool_member_info_expected = PoolMemberInfoV1 {
-        amount: pool_member_info_before_add.amount + delegate_amount,
-        index: Zero::zero(),
-        ..pool_member_info_before_add,
+        amount: pool_member_info_before_add.amount + delegate_amount, ..pool_member_info_before_add,
     };
     assert!(pool_member_info_after_add == pool_member_info_expected);
 }
@@ -948,7 +943,6 @@ fn test_enter_delegation_pool_from_staking_contract() {
 
     // Enter with a new pool member.
     let amount = cfg.pool_member_info._deprecated_amount;
-    let index = cfg.pool_member_info._deprecated_index;
     cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
     pool_dispatcher.enter_delegation_pool_from_staking_contract(:amount, :data);
 
@@ -956,7 +950,6 @@ fn test_enter_delegation_pool_from_staking_contract() {
     let expected_pool_member_info = PoolMemberInfoV1 {
         reward_address,
         amount,
-        index,
         unclaimed_rewards: Zero::zero(),
         commission: cfg.pool_member_info._deprecated_commission,
         unpool_time: Option::None,
@@ -971,7 +964,6 @@ fn test_enter_delegation_pool_from_staking_contract() {
     let expected_pool_member_info = PoolMemberInfoV1 {
         reward_address,
         amount: updated_amount,
-        index,
         unclaimed_rewards: Zero::zero(),
         commission: cfg.pool_member_info._deprecated_commission,
         unpool_time: Option::None,
@@ -1232,7 +1224,6 @@ fn test_v_internal_pool_member_info_wrap_latest() {
     let pool_member_info = PoolMemberInfoV1 {
         reward_address: Zero::zero(),
         amount: Zero::zero(),
-        index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
@@ -1257,7 +1248,6 @@ fn test_v_internal_pool_member_info_new_latest() {
     let pool_member_info = PoolMemberInfoV1 {
         reward_address: Zero::zero(),
         amount: Zero::zero(),
-        index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
@@ -1293,7 +1283,6 @@ fn test_pool_member_info_into_internal_pool_member_info_v1() {
     let pool_member_info = PoolMemberInfoV1 {
         reward_address: Zero::zero(),
         amount: Zero::zero(),
-        index: Zero::zero(),
         unclaimed_rewards: Zero::zero(),
         commission: Zero::zero(),
         unpool_amount: Zero::zero(),
