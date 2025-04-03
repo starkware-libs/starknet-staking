@@ -508,7 +508,7 @@ pub mod Pool {
             external_pool_member_info
         }
 
-        fn get_pool_member_info(
+        fn get_pool_member_info_v1(
             self: @ContractState, pool_member: ContractAddress,
         ) -> Option<PoolMemberInfoV1> {
             if self.pool_member_info.read(pool_member).is_none() {

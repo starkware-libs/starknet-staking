@@ -59,7 +59,7 @@ pub trait IPool<TContractState> {
 
     /// Return `Option<PoolMemberInfoV1>` of `pool_member`.
     /// without throwing an error or panicking.
-    fn get_pool_member_info(
+    fn get_pool_member_info_v1(
         self: @TContractState, pool_member: ContractAddress,
     ) -> Option<PoolMemberInfoV1>;
 
