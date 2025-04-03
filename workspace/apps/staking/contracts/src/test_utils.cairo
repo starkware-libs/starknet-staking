@@ -847,7 +847,7 @@ pub(crate) struct TestInfo {
 }
 
 #[derive(Drop, Copy)]
-struct RewardSupplierInfo {
+struct RewardSupplierInfoV1 {
     pub base_mint_amount: Amount,
     pub minting_curve_contract: ContractAddress,
     pub l1_reward_supplier: felt252,
@@ -862,7 +862,7 @@ pub(crate) struct StakingInitConfig {
     pub staking_contract_info: StakingContractInfoCfg,
     pub minting_curve_contract_info: MintingCurveContractInfo,
     pub test_info: TestInfo,
-    pub reward_supplier: RewardSupplierInfo,
+    pub reward_supplier: RewardSupplierInfoV1,
 }
 
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
@@ -929,7 +929,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             app_governor: APP_GOVERNOR(),
             global_index: Zero::zero(),
         };
-        let reward_supplier = RewardSupplierInfo {
+        let reward_supplier = RewardSupplierInfoV1 {
             base_mint_amount: BASE_MINT_AMOUNT,
             minting_curve_contract: MINTING_CONTRACT_ADDRESS(),
             l1_reward_supplier: L1_REWARD_SUPPLIER,

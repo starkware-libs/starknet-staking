@@ -16,7 +16,7 @@ pub trait IRewardSupplier<TContractState> {
         depositor: EthAddress,
         message: Span<felt252>,
     ) -> bool;
-    fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfo;
+    fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfoV1;
 }
 
 pub mod Events {
@@ -30,7 +30,7 @@ pub mod Events {
 }
 
 #[derive(Debug, Copy, Drop, Serde, PartialEq)]
-pub struct RewardSupplierInfo {
+pub struct RewardSupplierInfoV1 {
     pub unclaimed_rewards: Amount,
     pub l1_pending_requested_amount: Amount,
 }

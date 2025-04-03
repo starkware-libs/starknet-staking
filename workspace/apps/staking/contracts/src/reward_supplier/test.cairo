@@ -19,7 +19,7 @@ use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::pool::Pool;
 use staking::reward_supplier::interface::{
     IRewardSupplier, IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
-    IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfo,
+    IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfoV1,
 };
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
@@ -142,7 +142,7 @@ fn test_contract_parameters_v1() {
     let block_timestamp = Time::now().add(delta: Time::seconds(count: 1));
     start_cheat_block_timestamp_global(block_timestamp: block_timestamp.into());
     let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
-    let expected_info = RewardSupplierInfo {
+    let expected_info = RewardSupplierInfoV1 {
         unclaimed_rewards: STRK_IN_FRIS, l1_pending_requested_amount: Zero::zero(),
     };
     assert!(state.contract_parameters_v1() == expected_info);

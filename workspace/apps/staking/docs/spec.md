@@ -198,7 +198,7 @@
     - [StakingContractInfoV1](#stakingcontractinfov1)
     - [PoolMemberInfoV1](#poolmemberinfov1)
     - [PoolContractInfoV1](#poolcontractinfov1)
-    - [RewardSupplierInfo](#rewardsupplierinfo)
+    - [RewardSupplierInfoV1](#rewardsupplierinfoV1)
     - [UndelegateIntentKey](#undelegateintentkey)
     - [UndelegateIntentValue](#undelegateintentvalue)
     - [TimeStamp](#timestamp)
@@ -1922,10 +1922,10 @@ Only staking contract.
 
 ### contract_parameters_v1
 ```rust
-fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfo
+fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfoV1
 ```
 #### description <!-- omit from toc -->
-Return [RewardSupplierInfo](#RewardSupplierInfo) filled with the corresponding storage values.
+Return [RewardSupplierInfoV1](#RewardSupplierInfoV1) filled with the corresponding storage values.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -2397,10 +2397,9 @@ Only token admin.
 | token_address      | address                   |
 | commission         | [Commission](#commission) |
 
-### RewardSupplierInfo
+### RewardSupplierInfoV1
 | name                        | type                    |
 | --------------------------- | ----------------------- |
-| last_timestamp              | [TimeStamp](#timestamp) |
 | unclaimed_rewards           | [Amount](#amount)       |
 | l1_pending_requested_amount | [Amount](#amount)       |
 
