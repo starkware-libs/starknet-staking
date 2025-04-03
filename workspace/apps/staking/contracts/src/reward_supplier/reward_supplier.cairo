@@ -10,7 +10,7 @@ pub mod RewardSupplier {
     use staking::errors::GenericError;
     use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking::reward_supplier::errors::Error;
-    use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfo};
+    use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfoV1};
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use staking::staking::objects::EpochInfoTrait;
     use staking::types::Amount;
@@ -199,8 +199,8 @@ pub mod RewardSupplier {
             true
         }
 
-        fn contract_parameters_v1(self: @ContractState) -> RewardSupplierInfo {
-            RewardSupplierInfo {
+        fn contract_parameters_v1(self: @ContractState) -> RewardSupplierInfoV1 {
+            RewardSupplierInfoV1 {
                 unclaimed_rewards: self.unclaimed_rewards.read(),
                 l1_pending_requested_amount: self.l1_pending_requested_amount.read(),
             }

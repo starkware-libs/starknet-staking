@@ -28,8 +28,8 @@ use staking::flow_test::utils::upgrade_implementation;
 use staking::pool::errors::Error;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher,
-    IPoolMigrationDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo,
-    PoolMemberInfoV1,
+    IPoolMigrationDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
+    PoolContractInfoV1, PoolMemberInfoV1,
 };
 use staking::pool::objects::{
     InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Trait, InternalPoolMemberInfoTestTrait,
@@ -1060,7 +1060,7 @@ fn test_contract_parameters_v1() {
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    let expected_pool_contract_info = PoolContractInfo {
+    let expected_pool_contract_info = PoolContractInfoV1 {
         staker_address: cfg.test_info.staker_address,
         staker_removed: false,
         staking_contract,

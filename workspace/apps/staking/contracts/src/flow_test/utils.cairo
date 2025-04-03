@@ -12,7 +12,7 @@ use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
-    IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo, PoolMemberInfo,
+    IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfoV1, PoolMemberInfo,
     PoolMemberInfoV1,
 };
 use staking::pool::interface_v0::{IPoolV0Dispatcher, IPoolV0DispatcherTrait};
@@ -23,9 +23,11 @@ use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
-use staking::staking::interface_v0::{IStakingV0Dispatcher, IStakingV0DispatcherTrait};
+use staking::staking::interface_v0::{
+    IStakingV0Dispatcher, IStakingV0DispatcherTrait, StakerInfo, StakerInfoTrait,
+};
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
     EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS,
@@ -1136,7 +1138,7 @@ pub(crate) impl SystemPoolImpl<
 > of SystemPoolTrait<TTokenState> {
     fn contract_parameters_v1(
         self: SystemState<TTokenState>, pool: ContractAddress,
-    ) -> PoolContractInfo {
+    ) -> PoolContractInfoV1 {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.contract_parameters_v1()
     }
