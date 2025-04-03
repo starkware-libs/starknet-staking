@@ -190,7 +190,6 @@ pub(crate) impl PoolMemberInfoImpl of PoolMemberInfoTrait {
         PoolMemberInfoV1 {
             reward_address: self.reward_address,
             amount: self.amount,
-            index: self.index,
             unclaimed_rewards: self.unclaimed_rewards,
             commission: self.commission,
             unpool_amount: self.unpool_amount,
@@ -205,8 +204,6 @@ pub struct PoolMemberInfoV1 {
     pub reward_address: ContractAddress,
     /// The pool member's balance.
     pub amount: Amount,
-    /// Deprecated field previously used in rewards calculation.
-    pub index: Index,
     /// The amount of unclaimed rewards for the pool member.
     pub unclaimed_rewards: Amount,
     /// The commission the staker takes from the pool rewards.

@@ -499,7 +499,6 @@ pub mod Pool {
             let external_pool_member_info = PoolMemberInfoV1 {
                 reward_address: pool_member_info.reward_address,
                 amount: self.get_latest_member_balance(:pool_member),
-                index: pool_member_info._deprecated_index,
                 unclaimed_rewards: pool_member_info._unclaimed_rewards_from_v0 + rewards,
                 commission: self.get_commission_from_staking_contract(),
                 unpool_amount: pool_member_info.unpool_amount,
