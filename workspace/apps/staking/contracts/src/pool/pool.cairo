@@ -11,7 +11,9 @@ pub mod Pool {
     use staking::constants::PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
-    use staking::pool::interface::{Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfo};
+    use staking::pool::interface::{
+        Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfoV1,
+    };
     use staking::pool::objects::{
         InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
         VInternalPoolMemberInfoTrait,
@@ -483,7 +485,9 @@ pub mod Pool {
         }
 
         // This function provides the pool member info (with projected rewards).
-        fn pool_member_info(self: @ContractState, pool_member: ContractAddress) -> PoolMemberInfo {
+        fn pool_member_info_v1(
+            self: @ContractState, pool_member: ContractAddress,
+        ) -> PoolMemberInfoV1 {
             let pool_member_info = self.internal_pool_member_info(:pool_member);
             let (rewards, _) = self
                 .calculate_rewards(
@@ -492,7 +496,7 @@ pub mod Pool {
                     until_checkpoint: self.get_current_checkpoint(:pool_member),
                     entry_to_claim_from: pool_member_info.entry_to_claim_from,
                 );
-            let external_pool_member_info = PoolMemberInfo {
+            let external_pool_member_info = PoolMemberInfoV1 {
                 reward_address: pool_member_info.reward_address,
                 amount: self.get_latest_member_balance(:pool_member),
                 index: pool_member_info._deprecated_index,
@@ -504,13 +508,13 @@ pub mod Pool {
             external_pool_member_info
         }
 
-        fn get_pool_member_info(
+        fn get_pool_member_info_v1(
             self: @ContractState, pool_member: ContractAddress,
-        ) -> Option<PoolMemberInfo> {
+        ) -> Option<PoolMemberInfoV1> {
             if self.pool_member_info.read(pool_member).is_none() {
                 return Option::None;
             }
-            Option::Some(self.pool_member_info(pool_member))
+            Option::Some(self.pool_member_info_v1(pool_member))
         }
 
         fn contract_parameters_v1(self: @ContractState) -> PoolContractInfo {

@@ -1,6 +1,7 @@
 use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
-use staking::pool::interface::{IPoolDispatcherTrait, IPoolLibraryDispatcher, PoolMemberInfo};
+use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoV1};
+use staking::pool::interface_v0::{IPoolV0DispatcherTrait, IPoolV0LibraryDispatcher};
 use staking::pool::pool_member_balance_trace::trace::{
     PoolMemberCheckpoint, PoolMemberCheckpointTrait,
 };
@@ -80,8 +81,8 @@ pub(crate) impl InternalPoolMemberInfoConvert of InternalPoolMemberInfoConvertTr
     fn convert(
         self: InternalPoolMemberInfo, prev_class_hash: ClassHash, pool_member: ContractAddress,
     ) -> InternalPoolMemberInfoV1 {
-        let library_dispatcher = IPoolLibraryDispatcher { class_hash: prev_class_hash };
-        let pool_member_info = library_dispatcher.pool_member_info(pool_member);
+        let library_dispatcher = IPoolV0LibraryDispatcher { class_hash: prev_class_hash };
+        let pool_member_info: PoolMemberInfo = library_dispatcher.pool_member_info(pool_member);
         InternalPoolMemberInfoV1 {
             reward_address: pool_member_info.reward_address,
             _deprecated_amount: pool_member_info.amount,
@@ -142,9 +143,9 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
 
 #[cfg(test)]
 #[generate_trait]
-pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfoImpl of InternalPoolMemberInfoLatestIntoPoolMemberInfoTrait {
-    fn to_external(self: InternalPoolMemberInfoLatest) -> PoolMemberInfo {
-        PoolMemberInfo {
+pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Impl of InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Trait {
+    fn to_external(self: InternalPoolMemberInfoLatest) -> PoolMemberInfoV1 {
+        PoolMemberInfoV1 {
             reward_address: self.reward_address,
             amount: self._deprecated_amount,
             index: self._deprecated_index,
@@ -158,8 +159,8 @@ pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfoImpl of InternalPo
 
 #[cfg(test)]
 #[generate_trait]
-pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfoIntoInternalPoolMemberInfoV1Trait {
-    fn to_internal(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
+pub(crate) impl PoolMemberInfoV1IntoInternalPoolMemberInfoV1Impl of PoolMemberInfoV1IntoInternalPoolMemberInfoV1Trait {
+    fn to_internal(self: PoolMemberInfoV1) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address: self.reward_address,
             _deprecated_amount: self.amount,

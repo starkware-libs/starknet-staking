@@ -7,8 +7,8 @@ use staking::flow_test::utils::{
     SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
     upgrade_implementation,
 };
-use staking::pool::interface::PoolMemberInfo;
-use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
+use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoTrait};
+use staking::pool::objects::PoolMemberInfoV1IntoInternalPoolMemberInfoV1Trait;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerInfoV1, StakerInfoV1Trait};
 use staking::staking::interface_v0::IStakingV0DispatcherTrait;
@@ -1251,7 +1251,8 @@ pub(crate) impl InternalPoolMemberInfoAfterUpgradeFlowImpl<
         let expected_pool_member_info = pool_update_rewards(
             pool_member_info: self.delegator_info.unwrap(),
             updated_index: system.staking.get_global_index(),
-        );
+        )
+            .to_v1();
         assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.to_internal());
         assert!(
             get_internal_pool_member_info_after_upgrade == Option::Some(
@@ -1331,7 +1332,7 @@ pub(crate) impl InternalPoolMemberInfoUndelegateAfterUpgradeFlowImpl<
             .internal_pool_member_info(:delegator, :pool);
         let get_internal_pool_member_info_after_upgrade = system
             .get_internal_pool_member_info(:delegator, :pool);
-        let mut expected_pool_member_info = self.delegator_info.unwrap();
+        let mut expected_pool_member_info = self.delegator_info.unwrap().to_v1();
         expected_pool_member_info.index = system.staking.get_global_index();
         assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.to_internal());
         assert!(
@@ -1391,7 +1392,7 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
         let delegated_amount = self.delegated_amount.unwrap();
         system.increase_delegate(:delegator, :pool, amount: delegated_amount);
 
-        let delegator_info = system.pool_member_info(:delegator, :pool);
+        let delegator_info = system.pool_member_info_v1(:delegator, :pool);
         assert!(delegator_info.amount == delegated_amount * 2);
     }
 }
@@ -1785,7 +1786,7 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
         system.delegator_exit_action(:delegator, :pool);
         system.delegator_claim_rewards(:delegator, :pool);
 
-        let pool_member_info = system.pool_member_info(:delegator, :pool);
+        let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
         assert!(pool_member_info.amount.is_zero());
         assert!(pool_member_info.unclaimed_rewards.is_zero());
         assert!(pool_member_info.unpool_amount.is_zero());
@@ -1842,7 +1843,7 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl<
         let delegated_amount = self.delegated_amount.unwrap();
         system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
 
-        let delegator_info = system.pool_member_info(:delegator, :pool);
+        let delegator_info = system.pool_member_info_v1(:delegator, :pool);
         assert!(delegator_info.unpool_amount == delegated_amount);
         assert!(delegator_info.amount.is_zero());
         assert!(delegator_info.unpool_time.is_some());
@@ -2065,9 +2066,9 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
                 amount: delegated_amount / 2,
             );
 
-        let delegator_info_first_pool = system.pool_member_info(:delegator, :pool);
+        let delegator_info_first_pool = system.pool_member_info_v1(:delegator, :pool);
         assert!(delegator_info_first_pool.amount == delegated_amount / 2);
-        let delegator_info_second_pool = system.pool_member_info(:delegator, pool: second_pool);
+        let delegator_info_second_pool = system.pool_member_info_v1(:delegator, pool: second_pool);
         assert!(delegator_info_second_pool.amount == delegated_amount / 2);
     }
 }
@@ -2178,12 +2179,12 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
         let pool = self.pool_address.unwrap();
         let delegator = self.delegator.unwrap();
 
-        let unclaimed_rewards = system.pool_member_info(:delegator, :pool).unclaimed_rewards;
+        let unclaimed_rewards = system.pool_member_info_v1(:delegator, :pool).unclaimed_rewards;
         assert!(unclaimed_rewards == system.delegator_claim_rewards(:delegator, :pool));
         assert!(unclaimed_rewards == system.token.balance_of(account: delegator.reward.address));
 
         let unclaimed_rewards_after_claim = system
-            .pool_member_info(:delegator, :pool)
+            .pool_member_info_v1(:delegator, :pool)
             .unclaimed_rewards;
         assert!(unclaimed_rewards_after_claim == Zero::zero());
     }
@@ -2384,10 +2385,10 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
         // Although the delegator has switched their entire delegated amount to the second pool,
         // they remain a member of the original pool. Keeping the delegator in the pool ensures they
         // can still receive any additional rewards that they may get for the current epoch.
-        let delegator_info_first_pool = system.pool_member_info(:delegator, :pool);
+        let delegator_info_first_pool = system.pool_member_info_v1(:delegator, :pool);
         assert!(delegator_info_first_pool.amount.is_zero());
 
-        let delegator_info_second_pool = system.pool_member_info(:delegator, pool: second_pool);
+        let delegator_info_second_pool = system.pool_member_info_v1(:delegator, pool: second_pool);
         assert!(delegator_info_second_pool.amount == delegated_amount);
     }
 }
@@ -2655,10 +2656,10 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             compute_rewards_rounded_down(amount: delegated_amount_2, interest: sigma);
 
         let calculated_rewards_1 = system
-            .pool_member_info(delegator: delegator_1, :pool)
+            .pool_member_info_v1(delegator: delegator_1, :pool)
             .unclaimed_rewards;
         let calculated_rewards_2 = system
-            .pool_member_info(delegator: delegator_2, :pool)
+            .pool_member_info_v1(delegator: delegator_2, :pool)
             .unclaimed_rewards;
 
         let actual_rewards_1 = system.delegator_claim_rewards(delegator: delegator_1, :pool);
@@ -2872,7 +2873,7 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
         let total_stake_before = system.staking.get_total_stake();
         system.delegate(:delegator, :pool, :amount);
 
-        let delegator_info = system.pool_member_info(:delegator, :pool);
+        let delegator_info = system.pool_member_info_v1(:delegator, :pool);
         assert!(delegator_info.amount == amount);
         assert!(system.staking.get_total_stake() == total_stake_before + amount);
     }
@@ -3015,7 +3016,7 @@ pub(crate) impl DelegateIntentSameEpochFlowImpl<
         system.delegator_exit_action(:delegator, :pool);
         assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
 
-        let delegator_info = system.pool_member_info(:delegator, :pool);
+        let delegator_info = system.pool_member_info_v1(:delegator, :pool);
         assert!(delegator_info.amount.is_zero());
         assert!(delegator_info.unclaimed_rewards.is_zero());
     }

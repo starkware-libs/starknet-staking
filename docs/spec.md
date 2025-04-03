@@ -82,8 +82,8 @@
     - [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract)
     - [set\_staker\_removed](#set_staker_removed)
     - [change\_reward\_address](#change_reward_address-1)
-    - [pool\_member\_info](#pool_member_info)
-    - [get\_pool\_member\_info](#get_pool_member_info)
+    - [pool\_member\_info\_v1](#pool_member_info_v1)
+    - [get\_pool\_member\_info\_v1](#get_pool_member_info_v1)
     - [contract\_parameters\_v1](#contract_parameters_v1-1)
     - [update\_rewards\_from\_staking\_contract](#update_rewards_from_staking_contract)
   - [Events](#events-1)
@@ -194,7 +194,7 @@
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
     - [StakingContractInfo](#stakingcontractinfo)
-    - [PoolMemberInfo](#poolmemberinfo)
+    - [PoolMemberInfoV1](#poolmemberinfov1)
     - [PoolContractInfo](#poolcontractinfo)
     - [RewardSupplierInfo](#rewardsupplierinfo)
     - [UndelegateIntentKey](#undelegateintentkey)
@@ -1732,15 +1732,15 @@ Only pool member can execute.
 #### logic <!-- omit from toc -->
 1. Change registered `reward_address` for the pool member.
 
-### pool_member_info
+### pool_member_info_v1
 ```rust
-fn pool_member_info(
+fn pool_member_info_v1(
   self: @ContractState, 
   pool_member: ContractAddress
-) -> PoolMemberInfo
+) -> PoolMemberInfoV1
 ```
 #### description <!-- omit from toc -->
-Return [PoolMemberInfo](#poolmemberinfo) of the given pool member.
+Return [PoolMemberInfoV1](#poolmemberinfov1) of the given pool member.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
@@ -1751,22 +1751,22 @@ Any address can execute.
 #### logic <!-- omit from toc -->
 1. Return Pool member info.
 
-### get_pool_member_info
+### get_pool_member_info_v1
 ```rust
-fn get_pool_member_info(
+fn get_pool_member_info_v1(
   self: @ContractState, 
   pool_member: ContractAddress
-) -> Option<>PoolMemberInfo
+) -> Option<PoolMemberInfoV1>
 ```
 #### description <!-- omit from toc -->
-Return Option<[PoolMemberInfo](#poolmemberinfo)> of the given pool member without throwing an error or panicking.
+Return Option<[PoolMemberInfoV1](#poolmemberinfov1)> of the given pool member without throwing an error or panicking.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
-1. Returns `Option::Some` with [PoolMemberInfo](#poolmemberinfo) if exists, otherwise `Option::None`.
+1. Returns `Option::Some` with [PoolMemberInfoV1](#poolmemberinfov1) if exists, otherwise `Option::None`.
 
 ### contract_parameters_v1
 ```rust
@@ -2362,7 +2362,7 @@ Only token admin.
 | pool_contract_class_hash | ClassHash         |
 | reward_supplier          | address           |
 
-### PoolMemberInfo
+### PoolMemberInfoV1
 | name              | type                            |
 | ----------------- | ------------------------------- |
 | reward_address    | address                         |

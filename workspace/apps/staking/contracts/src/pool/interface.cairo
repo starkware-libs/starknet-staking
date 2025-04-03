@@ -54,14 +54,14 @@ pub trait IPool<TContractState> {
     /// Change the `reward_address` for a pool member.
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
 
-    /// Return `PoolMemberInfo` of `pool_member`.
-    fn pool_member_info(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
+    /// Return `PoolMemberInfoV1` of `pool_member`.
+    fn pool_member_info_v1(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfoV1;
 
-    /// Return `Option<PoolMemberInfo>` of `pool_member``
+    /// Return `Option<PoolMemberInfoV1>` of `pool_member`.
     /// without throwing an error or panicking.
-    fn get_pool_member_info(
+    fn get_pool_member_info_v1(
         self: @TContractState, pool_member: ContractAddress,
-    ) -> Option<PoolMemberInfo>;
+    ) -> Option<PoolMemberInfoV1>;
 
     /// Return `PoolContractInfo` of the contract.
     fn contract_parameters_v1(self: @TContractState) -> PoolContractInfo;
@@ -163,8 +163,44 @@ pub mod Events {
     }
 }
 
+/// Pool member info used in V0.
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub struct PoolMemberInfo {
+    /// Address to send the member's rewards to.
+    pub reward_address: ContractAddress,
+    /// The pool member's balance.
+    pub amount: Amount,
+    /// Deprecated field previously used in rewards calculation.
+    pub index: Index,
+    /// The amount of unclaimed rewards for the pool member.
+    pub unclaimed_rewards: Amount,
+    /// The commission the staker takes from the pool rewards.
+    pub commission: Commission,
+    /// Amount of funds pending to be removed from the pool.
+    pub unpool_amount: Amount,
+    /// If the pool member has shown intent to unpool,
+    /// this is the timestamp of when they could do that.
+    /// Else, it is None.
+    pub unpool_time: Option<Timestamp>,
+}
+
+#[generate_trait]
+pub(crate) impl PoolMemberInfoImpl of PoolMemberInfoTrait {
+    fn to_v1(self: PoolMemberInfo) -> PoolMemberInfoV1 {
+        PoolMemberInfoV1 {
+            reward_address: self.reward_address,
+            amount: self.amount,
+            index: self.index,
+            unclaimed_rewards: self.unclaimed_rewards,
+            commission: self.commission,
+            unpool_amount: self.unpool_amount,
+            unpool_time: self.unpool_time,
+        }
+    }
+}
+
+#[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
+pub struct PoolMemberInfoV1 {
     /// Address to send the member's rewards to.
     pub reward_address: ContractAddress,
     /// The pool member's balance.
