@@ -47,7 +47,7 @@ use staking::staking::interface::{
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
     IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
-    StakerPoolInfo, StakerPoolInfoV1, StakingContractInfo,
+    StakerPoolInfo, StakerPoolInfoV1, StakingContractInfoV1,
 };
 use staking::staking::objects::{
     AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait,
@@ -356,7 +356,7 @@ fn test_contract_parameters_v1() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
 
-    let expected_staking_contract_info = StakingContractInfo {
+    let expected_staking_contract_info = StakingContractInfoV1 {
         min_stake: cfg.staking_contract_info.min_stake,
         token_address: cfg.staking_contract_info.token_address,
         attestation_contract: cfg.test_info.attestation_contract,

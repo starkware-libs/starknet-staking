@@ -36,7 +36,7 @@ pub trait IStaking<TContractState> {
     fn get_staker_commission_commitment(
         self: @TContractState, staker_address: ContractAddress,
     ) -> CommissionCommitment;
-    fn contract_parameters_v1(self: @TContractState) -> StakingContractInfo;
+    fn contract_parameters_v1(self: @TContractState) -> StakingContractInfoV1;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn get_current_total_staking_power(self: @TContractState) -> Amount;
     fn get_pool_exit_intent(
@@ -382,8 +382,20 @@ pub mod ConfigEvents {
     }
 }
 
+/// `StakingContractInfo` struct used in V0.
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
+    pub min_stake: Amount,
+    pub token_address: ContractAddress,
+    pub global_index: Index,
+    pub pool_contract_class_hash: ClassHash,
+    pub reward_supplier: ContractAddress,
+    pub exit_wait_window: TimeDelta,
+}
+
+/// `StakingContractInfo` struct used in V1.
+#[derive(Copy, Debug, Drop, PartialEq, Serde)]
+pub struct StakingContractInfoV1 {
     pub min_stake: Amount,
     pub token_address: ContractAddress,
     pub attestation_contract: ContractAddress,

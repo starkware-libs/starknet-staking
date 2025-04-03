@@ -20,7 +20,7 @@ pub mod Staking {
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
         IStakingMigration, IStakingPause, IStakingPool, PauseEvents, StakerInfoV1,
-        StakingContractInfo,
+        StakingContractInfoV1,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
@@ -504,8 +504,8 @@ pub mod Staking {
         }
 
 
-        fn contract_parameters_v1(self: @ContractState) -> StakingContractInfo {
-            StakingContractInfo {
+        fn contract_parameters_v1(self: @ContractState) -> StakingContractInfoV1 {
+            StakingContractInfoV1 {
                 min_stake: self.min_stake.read(),
                 token_address: self.token_dispatcher.read().contract_address,
                 attestation_contract: self.attestation_contract.read(),

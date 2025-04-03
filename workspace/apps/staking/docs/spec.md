@@ -195,7 +195,7 @@
 - [Structs](#structs)
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
-    - [StakingContractInfo](#stakingcontractinfo)
+    - [StakingContractInfoV1](#stakingcontractinfov1)
     - [PoolMemberInfoV1](#poolmemberinfov1)
     - [PoolContractInfo](#poolcontractinfo)
     - [RewardSupplierInfo](#rewardsupplierinfo)
@@ -1050,7 +1050,7 @@ Returns the attestation info for the staker based on it's operational address.
 
 ### contract_parameters_v1
 ```rust
-fn contract_parameters_v1(self: @ContractState) -> StakingContractInfo
+fn contract_parameters_v1(self: @ContractState) -> StakingContractInfoV1
 ```
 #### description <!-- omit from toc -->
 Return general parameters of the contract.
@@ -2367,14 +2367,15 @@ Only token admin.
 | unclaimed_rewards_own | [Amount](#amount)                         |
 | pool_info             | Option<[StakerPoolInfo](#stakerpoolinfo)> |
 
-### StakingContractInfo
-| name                     | type              |
-| ------------------------ | ----------------- |
-| min_stake                | [Amount](#amount) |
-| token_address            | address           |
-| global_index             | [Index](#index)   |
-| pool_contract_class_hash | ClassHash         |
-| reward_supplier          | address           |
+### StakingContractInfoV1
+| name                     | type                    |
+| ------------------------ | ----------------------- |
+| min_stake                | [Amount](#amount)       |
+| token_address            | address                 |
+| attestation_contract     | address                 |
+| pool_contract_class_hash | ClassHash               |
+| reward_supplier          | address                 |
+| exit_wait_window         | [TimeDelta](#timedelta) |
 
 ### PoolMemberInfoV1
 | name              | type                            |
