@@ -404,18 +404,6 @@ pub struct StakingContractInfoV1 {
     pub exit_wait_window: TimeDelta,
 }
 
-/// StakerInfo struct used in V0.
-#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-pub struct StakerInfo {
-    pub reward_address: ContractAddress,
-    pub operational_address: ContractAddress,
-    pub unstake_time: Option<Timestamp>,
-    pub amount_own: Amount,
-    pub index: Index,
-    pub unclaimed_rewards_own: Amount,
-    pub pool_info: Option<StakerPoolInfo>,
-}
-
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerInfoV1 {
     pub reward_address: ContractAddress,
@@ -424,16 +412,6 @@ pub struct StakerInfoV1 {
     pub amount_own: Amount,
     pub unclaimed_rewards_own: Amount,
     pub pool_info: Option<StakerPoolInfoV1>,
-}
-
-/// This struct was used in V0 for both InternalStakerInfo and StakerInfo.
-/// Should not be in used except for migration purpose.
-#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-pub struct StakerPoolInfo {
-    pub pool_contract: ContractAddress,
-    pub amount: Amount,
-    pub unclaimed_rewards: Amount,
-    pub commission: Commission,
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
@@ -447,33 +425,6 @@ pub struct StakerPoolInfoV1 {
 pub impl StakerInfoV1Impl of StakerInfoV1Trait {
     fn get_pool_info(self: StakerInfoV1) -> StakerPoolInfoV1 {
         self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)
-    }
-}
-
-#[generate_trait]
-pub impl StakerInfoImpl of StakerInfoTrait {
-    fn get_pool_info(self: StakerInfo) -> StakerPoolInfo {
-        self.pool_info.expect_with_err(Error::MISSING_POOL_CONTRACT)
-    }
-
-    fn to_v1(self: StakerInfo) -> StakerInfoV1 {
-        StakerInfoV1 {
-            reward_address: self.reward_address,
-            operational_address: self.operational_address,
-            unstake_time: self.unstake_time,
-            amount_own: self.amount_own,
-            unclaimed_rewards_own: self.unclaimed_rewards_own,
-            pool_info: match self.pool_info {
-                Option::Some(pool_info) => Option::Some(
-                    StakerPoolInfoV1 {
-                        pool_contract: pool_info.pool_contract,
-                        amount: pool_info.amount,
-                        commission: pool_info.commission,
-                    },
-                ),
-                Option::None => Option::None,
-            },
-        }
     }
 }
 

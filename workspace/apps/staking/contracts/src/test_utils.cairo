@@ -31,8 +31,9 @@ use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
     IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
-    IStakingPauseDispatcherTrait, StakerInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfo,
+    IStakingPauseDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
+use staking::staking::interface_v0::{StakerInfo, StakerPoolInfo};
 use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait};
 use staking::staking::staking::Staking;
 use staking::types::{

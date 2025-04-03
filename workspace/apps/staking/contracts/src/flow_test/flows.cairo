@@ -10,8 +10,8 @@ use staking::flow_test::utils::{
 use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoTrait};
 use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
 use staking::staking::errors::Error as StakingError;
-use staking::staking::interface::{StakerInfo, StakerInfoTrait, StakerInfoV1, StakerInfoV1Trait};
-use staking::staking::interface_v0::IStakingV0DispatcherTrait;
+use staking::staking::interface::{StakerInfoV1, StakerInfoV1Trait};
+use staking::staking::interface_v0::{IStakingV0DispatcherTrait, StakerInfo, StakerInfoTrait};
 use staking::staking::objects::InternalStakerInfoV1;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
 use staking::test_utils::{

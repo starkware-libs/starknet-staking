@@ -47,8 +47,9 @@ use staking::staking::interface::{
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
     IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
-    StakerPoolInfo, StakerPoolInfoV1, StakingContractInfoV1,
+    StakerPoolInfoV1, StakingContractInfoV1,
 };
+use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{
     AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait,
     InternalStakerInfoTestTrait, InternalStakerInfoTrait, InternalStakerInfoV1,

@@ -2,10 +2,10 @@ use core::cmp::max;
 use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
 use staking::staking::errors::Error;
-use staking::staking::interface::{
-    CommissionCommitment, StakerInfo, StakerInfoV1, StakerPoolInfo, StakerPoolInfoV1,
+use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
+use staking::staking::interface_v0::{
+    IStakingV0DispatcherTrait, IStakingV0LibraryDispatcher, StakerInfo, StakerPoolInfo,
 };
-use staking::staking::interface_v0::{IStakingV0DispatcherTrait, IStakingV0LibraryDispatcher};
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;

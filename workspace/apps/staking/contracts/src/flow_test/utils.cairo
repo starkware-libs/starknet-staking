@@ -23,9 +23,11 @@ use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, StakerInfo, StakerInfoTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
-use staking::staking::interface_v0::{IStakingV0Dispatcher, IStakingV0DispatcherTrait};
+use staking::staking::interface_v0::{
+    IStakingV0Dispatcher, IStakingV0DispatcherTrait, StakerInfo, StakerInfoTrait,
+};
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
     EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS,
