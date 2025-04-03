@@ -7,8 +7,9 @@ use staking::flow_test::utils::{
     SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
     upgrade_implementation,
 };
-use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoTrait};
-use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
+use staking::pool::interface_v0::{
+    PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
+};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{StakerInfoV1, StakerInfoV1Trait};
 use staking::staking::interface_v0::{IStakingV0DispatcherTrait, StakerInfo, StakerInfoTrait};
