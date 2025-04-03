@@ -24,9 +24,9 @@ pub mod Staking {
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
-        InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait, UndelegateIntentKey,
-        UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
-        VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
+        InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTrait,
+        UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
+        UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
@@ -711,40 +711,25 @@ pub mod Staking {
                 VersionedInternalStakerInfo::V1(internal_staker_info_v1) => internal_staker_info_v1,
             }
         }
-        fn convert_internal_staker_info(
-            ref self: ContractState, staker_address: ContractAddress,
-        ) -> (InternalStakerInfoLatest, Index, Amount) {
+
+        fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
             let versioned_internal_staker_info = self.staker_info.read(staker_address);
             match versioned_internal_staker_info {
                 VersionedInternalStakerInfo::None => panic_with_byte_array(
                     err: @GenericError::STAKER_NOT_EXISTS.describe(),
                 ),
                 VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
-                    let (
-                        internal_staker_info_v1,
-                        amount_own,
-                        index,
-                        pool_unclaimed_rewards,
-                        pool_amount,
-                    ) =
-                        internal_staker_info_v0
-                        .convert(self.get_prev_class_hash(), staker_address);
-                    self
-                        .staker_info
-                        .write(
-                            staker_address,
-                            VersionedInternalStakerInfo::V1(internal_staker_info_v1),
-                        );
-                    self
-                        .initialize_staker_balance_trace(
-                            :staker_address, :amount_own, :pool_amount,
-                        );
-                    (internal_staker_info_v1, index, pool_unclaimed_rewards)
+                    if let Option::Some(_) = internal_staker_info_v0.pool_info() {
+                        panic_with_byte_array(
+                            err: @Error::STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL.describe(),
+                        )
+                    }
+                    self.convert_internal_staker_info(:staker_address)
                 },
                 VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
                     err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
                 ),
-            }
+            };
         }
     }
 
@@ -1133,6 +1118,49 @@ pub mod Staking {
 
     #[generate_trait]
     pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+        /// Reads the internal staker information for the given `staker_address` from storage
+        /// and converts it to V1. Writes the updated version to storage and initializes the
+        /// staker's balance trace.
+        ///
+        /// Precondition: The staker exists and its version is V0.
+        ///
+        /// This function is used only during migration.
+        fn convert_internal_staker_info(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) -> (InternalStakerInfoLatest, Index, Amount) {
+            let versioned_internal_staker_info = self.staker_info.read(staker_address);
+            match versioned_internal_staker_info {
+                VersionedInternalStakerInfo::None => panic_with_byte_array(
+                    err: @GenericError::STAKER_NOT_EXISTS.describe(),
+                ),
+                VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
+                    let (
+                        internal_staker_info_v1,
+                        amount_own,
+                        index,
+                        pool_unclaimed_rewards,
+                        pool_amount,
+                    ) =
+                        internal_staker_info_v0
+                        .convert(self.get_prev_class_hash(), staker_address);
+                    self
+                        .staker_info
+                        .write(
+                            staker_address,
+                            VersionedInternalStakerInfo::V1(internal_staker_info_v1),
+                        );
+                    self
+                        .initialize_staker_balance_trace(
+                            :staker_address, :amount_own, :pool_amount,
+                        );
+                    (internal_staker_info_v1, index, pool_unclaimed_rewards)
+                },
+                VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
+                    err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
+                ),
+            }
+        }
+
         fn send_rewards(
             self: @ContractState,
             reward_address: ContractAddress,

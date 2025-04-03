@@ -315,6 +315,13 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
 }
 
 #[generate_trait]
+pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
+    fn pool_info(self: @InternalStakerInfo) -> Option<StakerPoolInfo> {
+        *self.pool_info
+    }
+}
+
+#[generate_trait]
 pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
     fn compute_unpool_time(
         self: @InternalStakerInfoLatest, exit_wait_window: TimeDelta,
