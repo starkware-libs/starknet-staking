@@ -12,7 +12,7 @@ use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
-    IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo, PoolMemberInfo,
+    IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfoV1, PoolMemberInfo,
     PoolMemberInfoV1,
 };
 use staking::pool::interface_v0::{IPoolV0Dispatcher, IPoolV0DispatcherTrait};
@@ -1136,7 +1136,7 @@ pub(crate) impl SystemPoolImpl<
 > of SystemPoolTrait<TTokenState> {
     fn contract_parameters_v1(
         self: SystemState<TTokenState>, pool: ContractAddress,
-    ) -> PoolContractInfo {
+    ) -> PoolContractInfoV1 {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.contract_parameters_v1()
     }

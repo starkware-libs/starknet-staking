@@ -33,7 +33,7 @@ use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0;
 use staking::flow_test::utils::{declare_staking_contract, upgrade_implementation};
 use staking::pool::errors::Error as PoolError;
-use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfo};
+use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfoV1};
 use staking::pool::objects::SwitchPoolData;
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
@@ -1845,7 +1845,7 @@ fn test_update_commission() {
     // Assert commission is updated in the pool contract.
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let pool_contracts_parameters = pool_dispatcher.contract_parameters_v1();
-    let expected_pool_contracts_parameters = PoolContractInfo {
+    let expected_pool_contracts_parameters = PoolContractInfoV1 {
         commission, ..pool_contracts_parameters,
     };
     assert!(pool_contracts_parameters == expected_pool_contracts_parameters);

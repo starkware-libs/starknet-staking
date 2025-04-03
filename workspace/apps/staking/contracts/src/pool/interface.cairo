@@ -63,8 +63,8 @@ pub trait IPool<TContractState> {
         self: @TContractState, pool_member: ContractAddress,
     ) -> Option<PoolMemberInfoV1>;
 
-    /// Return `PoolContractInfo` of the contract.
-    fn contract_parameters_v1(self: @TContractState) -> PoolContractInfo;
+    /// Return `PoolContractInfoV1` of the contract.
+    fn contract_parameters_v1(self: @TContractState) -> PoolContractInfoV1;
 
     /// Update the cumulative sum in the pool trace with
     /// `rewards` divided by `pool_balance` for the current epoch.
@@ -217,7 +217,7 @@ pub struct PoolMemberInfoV1 {
 }
 
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
-pub struct PoolContractInfo {
+pub struct PoolContractInfoV1 {
     /// Address of the staker that owns the pool.
     pub staker_address: ContractAddress,
     /// Indicates whether the staker has been removed from the staking contract.

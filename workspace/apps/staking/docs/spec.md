@@ -197,7 +197,7 @@
     - [StakerInfo](#stakerinfo)
     - [StakingContractInfoV1](#stakingcontractinfov1)
     - [PoolMemberInfoV1](#poolmemberinfov1)
-    - [PoolContractInfo](#poolcontractinfo)
+    - [PoolContractInfoV1](#poolcontractinfov1)
     - [RewardSupplierInfo](#rewardsupplierinfo)
     - [UndelegateIntentKey](#undelegateintentkey)
     - [UndelegateIntentValue](#undelegateintentvalue)
@@ -1778,10 +1778,10 @@ Any address can execute.
 
 ### contract_parameters_v1
 ```rust
-fn contract_parameters_v1(self: @ContractState) -> PoolContractInfo
+fn contract_parameters_v1(self: @ContractState) -> PoolContractInfoV1
 ```
 #### description <!-- omit from toc -->
-Return [PoolContractInfo](#poolcontractinfo) of the contract.
+Return [PoolContractInfoV1](#poolcontractinfov1) of the contract.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -2388,14 +2388,14 @@ Only token admin.
 | unpool_amount     | [Amount](#amount)               |
 | unpool_time       | Option<[TimeStamp](#timestamp)> |
 
-### PoolContractInfo
+### PoolContractInfoV1
 | name               | type                      |
 | ------------------ | ------------------------- |
 | staker_address     | address                   |
+| staker_removed     | bool                      |
 | staking_contract   | address                   |
 | token_address      | address                   |
 | commission         | [Commission](#commission) |
-| staker_removed     | bool                      |
 
 ### RewardSupplierInfo
 | name                        | type                    |

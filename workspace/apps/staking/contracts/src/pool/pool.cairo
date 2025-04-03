@@ -12,7 +12,7 @@ pub mod Pool {
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{
-        Events, IPool, IPoolMigration, PoolContractInfo, PoolMemberInfoV1,
+        Events, IPool, IPoolMigration, PoolContractInfoV1, PoolMemberInfoV1,
     };
     use staking::pool::objects::{
         InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
@@ -516,8 +516,8 @@ pub mod Pool {
             Option::Some(self.pool_member_info_v1(pool_member))
         }
 
-        fn contract_parameters_v1(self: @ContractState) -> PoolContractInfo {
-            PoolContractInfo {
+        fn contract_parameters_v1(self: @ContractState) -> PoolContractInfoV1 {
+            PoolContractInfoV1 {
                 staker_address: self.staker_address.read(),
                 staker_removed: self.staker_removed.read(),
                 staking_contract: self.staking_pool_dispatcher.read().contract_address,
