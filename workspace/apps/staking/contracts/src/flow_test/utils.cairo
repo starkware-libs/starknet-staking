@@ -13,7 +13,9 @@ use staking::minting_curve::interface::IMintingCurveDispatcher;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
     IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfo, PoolMemberInfo,
+    PoolMemberInfoV1,
 };
+use staking::pool::interface_v0::{IPoolV0Dispatcher, IPoolV0DispatcherTrait};
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
@@ -1106,15 +1108,15 @@ pub(crate) impl SystemDelegatorImpl<
     fn pool_member_info(
         self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
     ) -> PoolMemberInfo {
-        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        let pool_dispatcher = IPoolV0Dispatcher { contract_address: pool };
         pool_dispatcher.pool_member_info(pool_member: delegator.delegator.address)
     }
 
-    fn get_pool_member_info(
+    fn pool_member_info_v1(
         self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
-    ) -> Option<PoolMemberInfo> {
+    ) -> PoolMemberInfoV1 {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.get_pool_member_info(pool_member: delegator.delegator.address)
+        pool_dispatcher.pool_member_info(pool_member: delegator.delegator.address)
     }
 
     fn internal_pool_member_info(

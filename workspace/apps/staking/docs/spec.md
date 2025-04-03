@@ -194,7 +194,7 @@
     - [StakerPoolInfo](#stakerpoolinfo)
     - [StakerInfo](#stakerinfo)
     - [StakingContractInfo](#stakingcontractinfo)
-    - [PoolMemberInfo](#poolmemberinfo)
+    - [PoolMemberInfoV1](#poolmemberinfov1)
     - [PoolContractInfo](#poolcontractinfo)
     - [RewardSupplierInfo](#rewardsupplierinfo)
     - [UndelegateIntentKey](#undelegateintentkey)
@@ -1737,10 +1737,10 @@ Only pool member can execute.
 fn pool_member_info(
   self: @ContractState, 
   pool_member: ContractAddress
-) -> PoolMemberInfo
+) -> PoolMemberInfoV1
 ```
 #### description <!-- omit from toc -->
-Return [PoolMemberInfo](#poolmemberinfo) of the given pool member.
+Return [PoolMemberInfoV1](#poolmemberinfov1) of the given pool member.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
@@ -1756,17 +1756,17 @@ Any address can execute.
 fn get_pool_member_info(
   self: @ContractState, 
   pool_member: ContractAddress
-) -> Option<>PoolMemberInfo
+) -> Option<PoolMemberInfoV1>
 ```
 #### description <!-- omit from toc -->
-Return Option<[PoolMemberInfo](#poolmemberinfo)> of the given pool member without throwing an error or panicking.
+Return Option<[PoolMemberInfoV1](#poolmemberinfov1)> of the given pool member without throwing an error or panicking.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
-1. Returns `Option::Some` with [PoolMemberInfo](#poolmemberinfo) if exists, otherwise `Option::None`.
+1. Returns `Option::Some` with [PoolMemberInfoV1](#poolmemberinfov1) if exists, otherwise `Option::None`.
 
 ### contract_parameters_v1
 ```rust
@@ -2362,7 +2362,7 @@ Only token admin.
 | pool_contract_class_hash | ClassHash         |
 | reward_supplier          | address           |
 
-### PoolMemberInfo
+### PoolMemberInfoV1
 | name              | type                            |
 | ----------------- | ------------------------------- |
 | reward_address    | address                         |
