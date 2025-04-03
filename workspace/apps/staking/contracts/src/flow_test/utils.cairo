@@ -1116,7 +1116,7 @@ pub(crate) impl SystemDelegatorImpl<
         self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
     ) -> PoolMemberInfoV1 {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.pool_member_info(pool_member: delegator.delegator.address)
+        pool_dispatcher.pool_member_info_v1(pool_member: delegator.delegator.address)
     }
 
     fn internal_pool_member_info(

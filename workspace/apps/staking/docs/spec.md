@@ -82,7 +82,7 @@
     - [enter\_delegation\_pool\_from\_staking\_contract](#enter_delegation_pool_from_staking_contract)
     - [set\_staker\_removed](#set_staker_removed)
     - [change\_reward\_address](#change_reward_address-1)
-    - [pool\_member\_info](#pool_member_info)
+    - [pool\_member\_info\_v1](#pool_member_info_v1)
     - [get\_pool\_member\_info](#get_pool_member_info)
     - [contract\_parameters\_v1](#contract_parameters_v1-1)
     - [update\_rewards\_from\_staking\_contract](#update_rewards_from_staking_contract)
@@ -1732,9 +1732,9 @@ Only pool member can execute.
 #### logic <!-- omit from toc -->
 1. Change registered `reward_address` for the pool member.
 
-### pool_member_info
+### pool_member_info_v1
 ```rust
-fn pool_member_info(
+fn pool_member_info_v1(
   self: @ContractState, 
   pool_member: ContractAddress
 ) -> PoolMemberInfoV1

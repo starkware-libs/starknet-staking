@@ -1439,7 +1439,7 @@ fn test_switch_staking_delegation_pool() {
     );
     assert!(actual_undelegate_intent_value.amount == expected_undelegate_intent_value_amount);
     assert!(actual_undelegate_intent_value.unpool_time.is_non_zero());
-    assert!(to_pool_dispatcher.pool_member_info(:pool_member).amount == switched_amount);
+    assert!(to_pool_dispatcher.pool_member_info_v1(:pool_member).amount == switched_amount);
     let caller_address = from_pool_contract;
     // Switch again with the rest of the amount, and verify the intent is removed.
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
@@ -2651,7 +2651,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     // Assert staker rewards, delegator rewards, and pool balance before update.
     assert!(staker_info_before.unclaimed_rewards_own.is_zero());
     assert!(token_dispatcher.balance_of(pool_contract).is_zero());
-    assert!(pool_dispatcher.pool_member_info(:pool_member).unclaimed_rewards.is_zero());
+    assert!(pool_dispatcher.pool_member_info_v1(:pool_member).unclaimed_rewards.is_zero());
 
     // Fund reward supplier.
     fund(
@@ -2679,7 +2679,9 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     // Since there is only one delegator, pool rewards should be the same as the delegator
     // rewards.
     assert!(
-        pool_dispatcher.pool_member_info(:pool_member).unclaimed_rewards == expected_pool_rewards,
+        pool_dispatcher
+            .pool_member_info_v1(:pool_member)
+            .unclaimed_rewards == expected_pool_rewards,
     );
 
     // Validate RewardsSuppliedToDelegationPool and StakerRewardsUpdated event.

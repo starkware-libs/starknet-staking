@@ -55,7 +55,7 @@ pub trait IPool<TContractState> {
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
 
     /// Return `PoolMemberInfoV1` of `pool_member`.
-    fn pool_member_info(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfoV1;
+    fn pool_member_info_v1(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfoV1;
 
     /// Return `Option<PoolMemberInfoV1>` of `pool_member`.
     /// without throwing an error or panicking.

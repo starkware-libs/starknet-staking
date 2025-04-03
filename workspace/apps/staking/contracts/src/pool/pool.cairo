@@ -485,7 +485,7 @@ pub mod Pool {
         }
 
         // This function provides the pool member info (with projected rewards).
-        fn pool_member_info(
+        fn pool_member_info_v1(
             self: @ContractState, pool_member: ContractAddress,
         ) -> PoolMemberInfoV1 {
             let pool_member_info = self.internal_pool_member_info(:pool_member);
@@ -514,7 +514,7 @@ pub mod Pool {
             if self.pool_member_info.read(pool_member).is_none() {
                 return Option::None;
             }
-            Option::Some(self.pool_member_info(pool_member))
+            Option::Some(self.pool_member_info_v1(pool_member))
         }
 
         fn contract_parameters_v1(self: @ContractState) -> PoolContractInfo {
