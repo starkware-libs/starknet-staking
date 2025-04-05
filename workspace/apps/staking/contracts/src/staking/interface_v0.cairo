@@ -13,6 +13,8 @@ pub trait IStakingV0<TContractState> {
 }
 
 /// StakerInfo struct used in V0.
+/// **Note**: This struct should not be used in V1. It should only be used for testing and migration
+/// purposes.
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerInfo {
     pub reward_address: ContractAddress,
