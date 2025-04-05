@@ -16,6 +16,8 @@ pub trait IPoolV0<TContractState> {
 }
 
 /// Pool member info used in V0.
+/// **Note**: This struct should not be used in V1. It should only be used for testing and migration
+/// purposes.
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
 pub struct PoolMemberInfo {
     /// Address to send the member's rewards to.
