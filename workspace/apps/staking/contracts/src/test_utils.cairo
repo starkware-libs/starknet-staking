@@ -25,7 +25,8 @@ use staking::minting_curve::interface::{
     IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
 };
 use staking::minting_curve::minting_curve::MintingCurve;
-use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolMemberInfo};
+use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
+use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;

@@ -7,8 +7,9 @@ use staking::flow_test::utils::{
     SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
     upgrade_implementation,
 };
-use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoTrait};
-use staking::pool::objects::PoolMemberInfoIntoInternalPoolMemberInfoV1Trait;
+use staking::pool::interface_v0::{
+    PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
+};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{StakerInfoV1, StakerInfoV1Trait};
 use staking::staking::interface_v0::{IStakingV0DispatcherTrait, StakerInfo, StakerInfoTrait};
@@ -3049,6 +3050,77 @@ pub(crate) impl StakerMigrationHasPoolFlowImpl<
     ) {
         let staker = self.staker_address.unwrap();
         system.staker_migration(staker_address: staker);
+    }
+}
+
+/// Flow:
+/// Staker stake
+/// Staker Attest
+/// Staker exit intent
+/// Staker exit action
+/// Second staker stake with same operational address
+/// Second staker Attest
+/// Second staker exit intent
+/// Second staker exit action
+#[derive(Drop, Copy)]
+pub(crate) struct TwoStakersSameOperationalAddressFlow {}
+pub(crate) impl TwoStakersSameOperationalAddressFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<TwoStakersSameOperationalAddressFlow, TTokenState> {
+    fn get_pool_address(self: TwoStakersSameOperationalAddressFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: TwoStakersSameOperationalAddressFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(
+        ref self: TwoStakersSameOperationalAddressFlow, ref system: SystemState<TTokenState>,
+    ) {}
+
+    fn test(
+        self: TwoStakersSameOperationalAddressFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let initial_reward_supplier_balance = system
+            .token
+            .balance_of(account: system.reward_supplier.address);
+        let commission = 200;
+
+        let first_staker = system.new_staker(amount: stake_amount);
+        system.stake(staker: first_staker, amount: stake_amount, pool_enabled: false, :commission);
+        system.advance_epoch_and_attest(staker: first_staker);
+
+        system.staker_exit_intent(staker: first_staker);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.staker_exit_action(staker: first_staker);
+
+        let mut second_staker = system.new_staker(amount: stake_amount);
+        second_staker.operational.address = first_staker.operational.address;
+        system.stake(staker: second_staker, amount: stake_amount, pool_enabled: false, :commission);
+        system.advance_epoch_and_attest(staker: second_staker);
+
+        system.staker_exit_intent(staker: second_staker);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.staker_exit_action(staker: second_staker);
+
+        assert!(system.token.balance_of(account: system.staking.address).is_zero());
+        assert!(system.token.balance_of(account: first_staker.staker.address) == stake_amount);
+        assert!(system.token.balance_of(account: second_staker.staker.address) == stake_amount);
+        assert!(system.token.balance_of(account: first_staker.reward.address).is_non_zero());
+        assert!(system.token.balance_of(account: second_staker.reward.address).is_non_zero());
+        assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
+                + system.token.balance_of(account: first_staker.reward.address)
+                + system.token.balance_of(account: second_staker.reward.address),
+        );
     }
 }
 // TODO: Implement this flow test.

@@ -385,6 +385,12 @@ fn staker_migration_has_pool_flow_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+fn two_stakers_same_operational_address_flow_test() {
+    let flow = flows::TwoStakersSameOperationalAddressFlow {};
+    test_flow_local(:flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

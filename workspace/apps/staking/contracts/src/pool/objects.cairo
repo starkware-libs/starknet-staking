@@ -1,7 +1,7 @@
 use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
-use staking::pool::interface::{PoolMemberInfo, PoolMemberInfoV1};
-use staking::pool::interface_v0::{IPoolV0DispatcherTrait, IPoolV0LibraryDispatcher};
+use staking::pool::interface::PoolMemberInfoV1;
+use staking::pool::interface_v0::{IPoolV0DispatcherTrait, IPoolV0LibraryDispatcher, PoolMemberInfo};
 use staking::pool::pool_member_balance_trace::trace::{
     PoolMemberCheckpoint, PoolMemberCheckpointTrait,
 };
@@ -164,28 +164,6 @@ pub(crate) impl PoolMemberInfoV1IntoInternalPoolMemberInfoV1Impl of PoolMemberIn
             reward_address: self.reward_address,
             _deprecated_amount: self.amount,
             _deprecated_index: Zero::zero(),
-            _unclaimed_rewards_from_v0: self.unclaimed_rewards,
-            _deprecated_commission: self.commission,
-            unpool_amount: self.unpool_amount,
-            unpool_time: self.unpool_time,
-            entry_to_claim_from: Zero::zero(),
-            reward_checkpoint: PoolMemberCheckpointTrait::new(
-                epoch: Zero::zero(),
-                balance: self.amount,
-                cumulative_rewards_trace_idx: Zero::zero(),
-            ),
-        }
-    }
-}
-
-#[cfg(test)]
-#[generate_trait]
-pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfoIntoInternalPoolMemberInfoV1Trait {
-    fn to_internal(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
-        InternalPoolMemberInfoV1 {
-            reward_address: self.reward_address,
-            _deprecated_amount: self.amount,
-            _deprecated_index: self.index,
             _unclaimed_rewards_from_v0: self.unclaimed_rewards,
             _deprecated_commission: self.commission,
             unpool_amount: self.unpool_amount,
