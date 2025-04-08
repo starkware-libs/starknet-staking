@@ -163,7 +163,9 @@ mod epoch_info_tests {
     use core::num::traits::Zero;
     use snforge_std::start_cheat_block_number_global;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
+    use staking::test_utils::constants::{EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK};
     use starknet::get_block_number;
+    use starkware_utils_testing::test_utils::advance_block_number_global;
 
     #[test]
     fn test_new() {
@@ -202,6 +204,31 @@ mod epoch_info_tests {
     fn test_new_with_invalid_starting_block() {
         start_cheat_block_number_global(block_number: 1);
         EpochInfoTrait::new(epoch_duration: 1, epoch_length: 1, starting_block: Zero::zero());
+    }
+
+    #[test]
+    fn test_epoch_len_in_blocks() {
+        let old_epoch_duration = EPOCH_DURATION;
+        let old_epoch_length = EPOCH_LENGTH;
+        let starting_block = EPOCH_STARTING_BLOCK;
+        start_cheat_block_number_global(block_number: starting_block);
+        let mut epoch_info = EpochInfoTrait::new(
+            epoch_duration: old_epoch_duration, epoch_length: old_epoch_length, :starting_block,
+        );
+        assert!(epoch_info.epoch_len_in_blocks() == old_epoch_length);
+
+        // Updates epoch info.
+        let new_epoch_duration = old_epoch_duration * 15;
+        let new_epoch_length = old_epoch_length * 15;
+        advance_block_number_global(blocks: old_epoch_length.into());
+        epoch_info.update(epoch_duration: new_epoch_duration, epoch_length: new_epoch_length);
+
+        // Assert that the epoch length remains unchanged in the same epoch.
+        assert!(epoch_info.epoch_len_in_blocks() == old_epoch_length);
+
+        // Assert that the epoch length is updated after advancing epoch.
+        advance_block_number_global(blocks: old_epoch_length.into());
+        assert!(epoch_info.epoch_len_in_blocks() == new_epoch_length);
     }
 }
 
