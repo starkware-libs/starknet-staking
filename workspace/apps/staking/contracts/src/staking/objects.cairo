@@ -230,6 +230,83 @@ mod epoch_info_tests {
         advance_block_number_global(blocks: old_epoch_length.into());
         assert!(epoch_info.epoch_len_in_blocks() == new_epoch_length);
     }
+
+    #[test]
+    fn test_update() {
+        let old_epoch_duration = EPOCH_DURATION;
+        let old_epoch_length = EPOCH_LENGTH;
+        let starting_block = EPOCH_STARTING_BLOCK;
+        start_cheat_block_number_global(block_number: starting_block);
+        let mut epoch_info = EpochInfoTrait::new(
+            epoch_duration: old_epoch_duration, epoch_length: old_epoch_length, :starting_block,
+        );
+        advance_block_number_global(blocks: old_epoch_length.into());
+
+        let new_epoch_duration = old_epoch_duration * 15;
+        let new_epoch_length = old_epoch_length * 15;
+        let expected_epoch_info = EpochInfo {
+            epoch_duration: new_epoch_duration,
+            length: new_epoch_length,
+            starting_block: epoch_info.current_epoch_starting_block() + epoch_info.length.into(),
+            starting_epoch: epoch_info.current_epoch() + 1,
+            previous_length: epoch_info.length,
+            previous_epoch_duration: epoch_info.epoch_duration,
+        };
+        epoch_info.update(epoch_duration: new_epoch_duration, epoch_length: new_epoch_length);
+        assert!(epoch_info == expected_epoch_info);
+    }
+
+    #[test]
+    #[should_panic(expected: "Invalid epoch length, must be greater than 0")]
+    fn test_update_with_invalid_epoch_length() {
+        let epoch_duration = EPOCH_DURATION;
+        let epoch_length = EPOCH_LENGTH;
+        let starting_block = EPOCH_STARTING_BLOCK;
+        start_cheat_block_number_global(block_number: starting_block);
+        let mut epoch_info = EpochInfoTrait::new(:epoch_duration, :epoch_length, :starting_block);
+        advance_block_number_global(blocks: epoch_length.into());
+
+        epoch_info.update(:epoch_duration, epoch_length: Zero::zero());
+    }
+
+    #[test]
+    #[should_panic(expected: "Invalid epoch duration, must be greater than 0")]
+    fn test_update_with_invalid_epoch_duration() {
+        let epoch_duration = EPOCH_DURATION;
+        let epoch_length = EPOCH_LENGTH;
+        let starting_block = EPOCH_STARTING_BLOCK;
+        start_cheat_block_number_global(block_number: starting_block);
+        let mut epoch_info = EpochInfoTrait::new(:epoch_duration, :epoch_length, :starting_block);
+        advance_block_number_global(blocks: epoch_length.into());
+
+        epoch_info.update(epoch_duration: Zero::zero(), :epoch_length);
+    }
+
+    #[test]
+    #[should_panic(expected: "Epoch info already updated in this epoch")]
+    fn test_update_twice() {
+        let epoch_duration = EPOCH_DURATION;
+        let epoch_length = EPOCH_LENGTH;
+        let starting_block = EPOCH_STARTING_BLOCK;
+        start_cheat_block_number_global(block_number: starting_block);
+        let mut epoch_info = EpochInfoTrait::new(:epoch_duration, :epoch_length, :starting_block);
+        advance_block_number_global(blocks: epoch_length.into());
+
+        epoch_info.update(:epoch_duration, :epoch_length);
+        epoch_info.update(:epoch_duration, :epoch_length);
+    }
+
+    #[test]
+    #[should_panic(expected: "Epoch info can not be updated in the first epoch")]
+    fn test_update_in_first_epoch() {
+        let epoch_duration = EPOCH_DURATION;
+        let epoch_length = EPOCH_LENGTH;
+        let starting_block = EPOCH_STARTING_BLOCK;
+        start_cheat_block_number_global(block_number: starting_block);
+        let mut epoch_info = EpochInfoTrait::new(:epoch_duration, :epoch_length, :starting_block);
+
+        epoch_info.update(:epoch_duration, :epoch_length);
+    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
