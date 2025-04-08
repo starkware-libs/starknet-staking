@@ -32,7 +32,7 @@ mod StakingEIC {
     }
 
     // TODO: Test all if's.
-    // Expected data : [prev_class_hash, block_duration, epoch_length, starting_offset,
+    // Expected data : [prev_class_hash, epoch_duration, epoch_length, starting_offset,
     // pool_contract_class_hash, attestation_contract]
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {

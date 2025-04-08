@@ -1195,33 +1195,31 @@ pub(crate) impl PoolUpgradeFlowImpl<
     }
 }
 
-/// Test InternalPoolMemberInfo migration with internal_pool_member_info and
-/// get_internal_pool_member_info functions.
+/// Test pool member info migration with internal_pool_member_info, get_internal_pool_member_info
+/// and pool_member_info_v1 functions.
 /// Flow:
 /// Staker stake with pool
 /// Delegator delegate
 /// Upgrade
-/// internal_pool_member_info & get_internal_pool_member_info
+/// internal_pool_member_info & get_internal_pool_member_info & pool_member_info_v1
 #[derive(Drop, Copy)]
-pub(crate) struct InternalPoolMemberInfoAfterUpgradeFlow {
+pub(crate) struct PoolMemberInfoAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegator_info: Option<PoolMemberInfo>,
 }
-pub(crate) impl InternalPoolMemberInfoAfterUpgradeFlowImpl<
+pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
-> of FlowTrait<InternalPoolMemberInfoAfterUpgradeFlow, TTokenState> {
-    fn get_pool_address(self: InternalPoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
+> of FlowTrait<PoolMemberInfoAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: PoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
 
-    fn get_staker_address(self: InternalPoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
+    fn get_staker_address(self: PoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
         Option::None
     }
 
-    fn setup(
-        ref self: InternalPoolMemberInfoAfterUpgradeFlow, ref system: SystemState<TTokenState>,
-    ) {
+    fn setup(ref self: PoolMemberInfoAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
         let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
@@ -1246,12 +1244,13 @@ pub(crate) impl InternalPoolMemberInfoAfterUpgradeFlowImpl<
     }
 
     fn test(
-        self: InternalPoolMemberInfoAfterUpgradeFlow,
+        self: PoolMemberInfoAfterUpgradeFlow,
         ref system: SystemState<TTokenState>,
         system_type: SystemType,
     ) {
         let delegator = self.delegator.unwrap();
         let pool = self.pool_address.unwrap();
+        let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
         let internal_pool_member_info_after_upgrade = system
             .internal_pool_member_info(:delegator, :pool);
         let get_internal_pool_member_info_after_upgrade = system
@@ -1259,47 +1258,46 @@ pub(crate) impl InternalPoolMemberInfoAfterUpgradeFlowImpl<
         let expected_pool_member_info = pool_update_rewards(
             pool_member_info: self.delegator_info.unwrap(),
             updated_index: system.staking.get_global_index(),
-        )
-            .to_internal();
-        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info);
+        );
+        assert!(pool_member_info == expected_pool_member_info.to_v1());
+        assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.to_internal());
         assert!(
-            get_internal_pool_member_info_after_upgrade == Option::Some(expected_pool_member_info),
+            get_internal_pool_member_info_after_upgrade == Option::Some(
+                expected_pool_member_info.to_internal(),
+            ),
         );
     }
 }
 
-/// Test InternalPoolMemberInfo migration with internal_staker_info and
-/// get_internal_pool_member_info functions.
+/// Test pool member info migration with internal_pool_member_info, get_internal_pool_member_info
+/// and pool_member_info_v1 functions.
 /// Flow:
 /// Staker stake with pool
 /// Delegator delegate
 /// Delegator exit_intent
 /// Upgrade
-/// internal_pool_member_info & get_internal_pool_member_info
+/// internal_pool_member_info & get_internal_pool_member_info & pool_member_info_v1
 #[derive(Drop, Copy)]
-pub(crate) struct InternalPoolMemberInfoUndelegateAfterUpgradeFlow {
+pub(crate) struct PoolMemberInfoUndelegateAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegator_info: Option<PoolMemberInfo>,
 }
-pub(crate) impl InternalPoolMemberInfoUndelegateAfterUpgradeFlowImpl<
+pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
-> of FlowTrait<InternalPoolMemberInfoUndelegateAfterUpgradeFlow, TTokenState> {
-    fn get_pool_address(
-        self: InternalPoolMemberInfoUndelegateAfterUpgradeFlow,
-    ) -> Option<ContractAddress> {
+> of FlowTrait<PoolMemberInfoUndelegateAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: PoolMemberInfoUndelegateAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
 
     fn get_staker_address(
-        self: InternalPoolMemberInfoUndelegateAfterUpgradeFlow,
+        self: PoolMemberInfoUndelegateAfterUpgradeFlow,
     ) -> Option<ContractAddress> {
         Option::None
     }
 
     fn setup(
-        ref self: InternalPoolMemberInfoUndelegateAfterUpgradeFlow,
-        ref system: SystemState<TTokenState>,
+        ref self: PoolMemberInfoUndelegateAfterUpgradeFlow, ref system: SystemState<TTokenState>,
     ) {
         let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
         let stake_amount = min_stake * 2;
@@ -1328,18 +1326,20 @@ pub(crate) impl InternalPoolMemberInfoUndelegateAfterUpgradeFlowImpl<
     }
 
     fn test(
-        self: InternalPoolMemberInfoUndelegateAfterUpgradeFlow,
+        self: PoolMemberInfoUndelegateAfterUpgradeFlow,
         ref system: SystemState<TTokenState>,
         system_type: SystemType,
     ) {
         let delegator = self.delegator.unwrap();
         let pool = self.pool_address.unwrap();
+        let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
         let internal_pool_member_info_after_upgrade = system
             .internal_pool_member_info(:delegator, :pool);
         let get_internal_pool_member_info_after_upgrade = system
             .get_internal_pool_member_info(:delegator, :pool);
         let mut expected_pool_member_info = self.delegator_info.unwrap();
         expected_pool_member_info.index = system.staking.get_global_index();
+        assert!(pool_member_info == expected_pool_member_info.to_v1());
         assert!(internal_pool_member_info_after_upgrade == expected_pool_member_info.to_internal());
         assert!(
             get_internal_pool_member_info_after_upgrade == Option::Some(
