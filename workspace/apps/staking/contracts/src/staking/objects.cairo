@@ -329,6 +329,43 @@ mod epoch_info_tests {
         advance_block_number_global(blocks: old_epoch_length.into());
         assert!(epoch_info.epochs_in_year() == SECONDS_IN_YEAR / new_epoch_duration.into());
     }
+
+    #[test]
+    fn test_current_epoch() {
+        let epoch_duration = EPOCH_DURATION;
+        let old_epoch_length = EPOCH_LENGTH;
+        let starting_block = EPOCH_STARTING_BLOCK;
+        start_cheat_block_number_global(block_number: starting_block);
+        let mut epoch_info = EpochInfoTrait::new(
+            :epoch_duration, epoch_length: old_epoch_length, :starting_block,
+        );
+        let current_epoch_before = epoch_info.current_epoch();
+
+        advance_block_number_global(blocks: old_epoch_length.into() - 1);
+        assert!(epoch_info.current_epoch() == current_epoch_before);
+
+        advance_block_number_global(blocks: 1);
+        assert!(epoch_info.current_epoch() == current_epoch_before + 1);
+
+        // Updates epoch info.
+        let new_epoch_length = old_epoch_length * 15;
+        let current_epoch_before = epoch_info.current_epoch();
+        epoch_info.update(:epoch_duration, epoch_length: new_epoch_length);
+
+        assert!(epoch_info.current_epoch() == current_epoch_before);
+
+        advance_block_number_global(blocks: old_epoch_length.into() - 1);
+        assert!(epoch_info.current_epoch() == current_epoch_before);
+
+        advance_block_number_global(blocks: 1);
+        assert!(epoch_info.current_epoch() == current_epoch_before + 1);
+
+        advance_block_number_global(blocks: new_epoch_length.into() - 1);
+        assert!(epoch_info.current_epoch() == current_epoch_before + 1);
+
+        advance_block_number_global(blocks: 1);
+        assert!(epoch_info.current_epoch() == current_epoch_before + 2);
+    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
