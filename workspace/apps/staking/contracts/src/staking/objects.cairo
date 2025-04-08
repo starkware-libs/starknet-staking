@@ -166,6 +166,7 @@ mod epoch_info_tests {
     use staking::test_utils::constants::{EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK};
     use starknet::get_block_number;
     use starkware_utils_testing::test_utils::advance_block_number_global;
+    use super::SECONDS_IN_YEAR;
 
     #[test]
     fn test_new() {
@@ -306,6 +307,27 @@ mod epoch_info_tests {
         let mut epoch_info = EpochInfoTrait::new(:epoch_duration, :epoch_length, :starting_block);
 
         epoch_info.update(:epoch_duration, :epoch_length);
+    }
+
+    #[test]
+    fn test_epochs_in_year() {
+        let old_epoch_duration = EPOCH_DURATION;
+        let old_epoch_length = EPOCH_LENGTH;
+        let starting_block = EPOCH_STARTING_BLOCK;
+        start_cheat_block_number_global(block_number: starting_block);
+        let mut epoch_info = EpochInfoTrait::new(
+            epoch_duration: old_epoch_duration, epoch_length: old_epoch_length, :starting_block,
+        );
+        assert!(epoch_info.epochs_in_year() == SECONDS_IN_YEAR / old_epoch_duration.into());
+
+        let new_epoch_duration = old_epoch_duration * 15;
+        let new_epoch_length = old_epoch_length * 15;
+        advance_block_number_global(blocks: old_epoch_length.into());
+        epoch_info.update(epoch_duration: new_epoch_duration, epoch_length: new_epoch_length);
+        assert!(epoch_info.epochs_in_year() == SECONDS_IN_YEAR / old_epoch_duration.into());
+
+        advance_block_number_global(blocks: old_epoch_length.into());
+        assert!(epoch_info.epochs_in_year() == SECONDS_IN_YEAR / new_epoch_duration.into());
     }
 }
 
