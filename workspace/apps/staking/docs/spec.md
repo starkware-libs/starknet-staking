@@ -117,7 +117,7 @@
     - [attest](#attest)
     - [is\_attestation\_done\_in\_curr\_epoch](#is_attestation_done_in_curr_epoch)
     - [get\_last\_epoch\_attestation\_done](#get_last_epoch_attestation_done)
-    - [validate\_next\_epoch\_attestation\_block](#validate_next_epoch_attestation_block)
+    - [get\_current\_epoch\_target\_attestation\_block](#get_current_epoch_target_attestation_block)
     - [attestation\_window](#attestation_window)
     - [set\_attestation\_window](#set_attestation_window)
   - [Events](#events-4)
@@ -358,7 +358,7 @@ classDiagram
     attest()
     is_attestation_done_in_curr_epoch()
     get_last_epoch_attestation_done()
-    validate_next_epoch_attestation_block()
+    get_current_epoch_target_attestation_block()
     set_attestation_window()
   }
   class AttestInfo{
@@ -2079,24 +2079,21 @@ Returns the last epoch that `staker_address` finished his job.
 #### access control <!-- omit from toc -->
 Any address can execute.
 
-### validate_next_epoch_attestation_block
+### get_current_epoch_target_attestation_block
 ```rust
-fn validate_next_epoch_attestation_block(
+fn get_current_epoch_target_attestation_block(
     self: @TContractState,
-    operational_address: ContractAddress,
-    block_number: u64) -> bool;
+    operational_address: ContractAddress,) -> u64;
 ```
 
 #### description <!-- omit from toc -->
-Checks if this is the block in the next epoch this `operational_address` should attest to.
-Note: this function is not intended to be used in production, and is not guaranteed to return the correct result under all state conditions, please read the docs.
+Returns the target attestation block that `operational_address` should attest to in this epoch.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 2. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### logic <!-- omit from toc -->
-1. Calculates the expected attestation block for next epoch
-2. Compares the result with the given block number
+1. Calculates the target attestation block for current epoch
 #### access control <!-- omit from toc -->
 Any address can execute.
 
