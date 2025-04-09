@@ -366,6 +366,43 @@ mod epoch_info_tests {
         advance_block_number_global(blocks: 1);
         assert!(epoch_info.current_epoch() == current_epoch_before + 2);
     }
+
+    #[test]
+    fn test_current_epoch_starting_block() {
+        let epoch_duration = EPOCH_DURATION;
+        let old_epoch_length = EPOCH_LENGTH;
+        let starting_block = EPOCH_STARTING_BLOCK;
+        start_cheat_block_number_global(block_number: starting_block);
+        let mut epoch_info = EpochInfoTrait::new(
+            :epoch_duration, epoch_length: old_epoch_length, :starting_block,
+        );
+
+        let mut expected_epoch_starting_block = starting_block;
+        advance_block_number_global(blocks: old_epoch_length.into() - 1);
+        assert!(epoch_info.current_epoch_starting_block() == expected_epoch_starting_block);
+
+        advance_block_number_global(blocks: 1);
+        expected_epoch_starting_block += old_epoch_length.into();
+        assert!(epoch_info.current_epoch_starting_block() == expected_epoch_starting_block);
+
+        // Updates epoch info.
+        let new_epoch_length = old_epoch_length.into() * 15;
+        epoch_info.update(:epoch_duration, epoch_length: new_epoch_length);
+
+        advance_block_number_global(blocks: old_epoch_length.into() - 1);
+        assert!(epoch_info.current_epoch_starting_block() == expected_epoch_starting_block);
+
+        advance_block_number_global(blocks: 1);
+        expected_epoch_starting_block += old_epoch_length.into();
+        assert!(epoch_info.current_epoch_starting_block() == expected_epoch_starting_block);
+
+        advance_block_number_global(blocks: new_epoch_length.into() - 1);
+        assert!(epoch_info.current_epoch_starting_block() == expected_epoch_starting_block);
+
+        advance_block_number_global(blocks: 1);
+        expected_epoch_starting_block += new_epoch_length.into();
+        assert!(epoch_info.current_epoch_starting_block() == expected_epoch_starting_block);
+    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
