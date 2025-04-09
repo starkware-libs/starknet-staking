@@ -145,28 +145,15 @@ pub mod Attestation {
 
         /// This function is used to help integration partners test the correct
         /// computation of the target attestation block.
-        /// It is not intended to be used in production, due to it's limitations as stated
-        /// below.
-        ///
-        /// **Note**: This function does not return the correct result if it is called in
-        ///  the same epoch that an attestation info update is performed in.
-        /// In addition, it assumes no changes to the staking power or any other parameters
-        /// that affect the attestation block calculation.
-        fn validate_next_epoch_attestation_block(
-            self: @ContractState, operational_address: ContractAddress, block_number: u64,
-        ) -> bool {
-            let attestation_window = self.attestation_window.read();
+        fn get_current_epoch_target_attestation_block(
+            self: @ContractState, operational_address: ContractAddress,
+        ) -> u64 {
             let staking_dispatcher = IStakingAttestationDispatcher {
                 contract_address: self.staking_contract.read(),
             };
-            let attestation_info = staking_dispatcher
+            let staking_attestation_info = staking_dispatcher
                 .get_attestation_info_by_operational_address(:operational_address);
-            let next_attestation_info = attestation_info.get_next_epoch_attestation_info();
-            let target_attestation_block = self
-                ._calculate_target_attestation_block(
-                    staking_attestation_info: next_attestation_info, :attestation_window,
-                );
-            target_attestation_block == block_number
+            self._calculate_target_attestation_block(:staking_attestation_info)
         }
 
         fn attestation_window(self: @ContractState) -> u16 {
@@ -201,12 +188,9 @@ pub mod Attestation {
             let current_epoch = staking_attestation_info.epoch_id();
             assert!(current_epoch > STARTING_EPOCH, "{}", Error::ATTEST_STARTING_EPOCH);
             self._assert_attestation_is_not_done(:staker_address, :current_epoch);
-            let attestation_window = self.attestation_window.read();
             let target_attestation_block = self
-                ._calculate_target_attestation_block(
-                    :staking_attestation_info, :attestation_window,
-                );
-            self._assert_attest_in_window(:target_attestation_block, :attestation_window);
+                ._calculate_target_attestation_block(:staking_attestation_info);
+            self._assert_attest_in_window(:target_attestation_block);
 
             // Check the attestation data (correct block hash).
             let target_block_hash = self.get_target_block_hash(:target_attestation_block);
@@ -228,9 +212,7 @@ pub mod Attestation {
         }
 
         fn _calculate_target_attestation_block(
-            self: @ContractState,
-            staking_attestation_info: StakingAttestationInfo,
-            attestation_window: u16,
+            self: @ContractState, staking_attestation_info: StakingAttestationInfo,
         ) -> u64 {
             // Compute staker hash for the attestation.
             let hash = PoseidonTrait::new()
@@ -239,6 +221,7 @@ pub mod Attestation {
                 .update(staking_attestation_info.staker_address().into())
                 .finalize();
             // Calculate staker's block number in this epoch.
+            let attestation_window = self.attestation_window.read();
             let block_offset: u256 = hash
                 .into() % (staking_attestation_info.epoch_len() - attestation_window.into())
                 .into();
@@ -248,9 +231,8 @@ pub mod Attestation {
             target_attestation_block
         }
 
-        fn _assert_attest_in_window(
-            self: @ContractState, target_attestation_block: u64, attestation_window: u16,
-        ) {
+        fn _assert_attest_in_window(self: @ContractState, target_attestation_block: u64) {
+            let attestation_window = self.attestation_window.read();
             let current_block_number = get_block_number();
             let min_block = target_attestation_block + MIN_ATTESTATION_WINDOW.into();
             let max_block = target_attestation_block + attestation_window.into();

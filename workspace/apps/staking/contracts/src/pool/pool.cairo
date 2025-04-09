@@ -773,8 +773,9 @@ pub mod Pool {
         /// Assumptions:
         /// 1. `from_checkpoint.epoch <= until_checkpoint.epoch <= current_epoch`.
         /// 2. `entry_to_claim_from` is the index of the first entry in the member balance trace
-        /// for which:
-        ///      `epoch >= from_checkpoint.epoch`, or the length of the trace if none exists.
+        ///    for which:
+        ///      `epoch >= from_checkpoint.epoch`,
+        ///    or the length of the trace if none exists.
         ///
         /// Returns the value of `entry_to_claim_from` for `until_checkpoint`.
         fn calculate_rewards(
