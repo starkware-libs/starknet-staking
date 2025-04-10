@@ -92,9 +92,9 @@ library RolesLib {
         }
 
         if (securityRolesInitialized()) {
-            // If SecurityAdmin initialized,
+            // If SecurityAdmin is initialized,
             // then provisionalSecAdmin must already be a `SecurityAdmin`.
-            // If it's not initilized - initialize it.
+            // If it's not initialized - initialize it.
             require(
                 AccessControl.hasRole(SECURITY_ADMIN, provisionalSecAdmin),
                 "SECURITY_ROLES_ALREADY_INITIALIZED"
