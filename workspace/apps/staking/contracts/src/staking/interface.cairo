@@ -383,6 +383,8 @@ pub mod ConfigEvents {
 }
 
 /// `StakingContractInfo` struct used in V0.
+/// **Note**: This struct should not be used in V1. It should only be used for testing.
+#[cfg(test)]
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
     pub min_stake: Amount,

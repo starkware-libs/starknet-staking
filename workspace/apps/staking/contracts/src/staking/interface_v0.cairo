@@ -6,10 +6,18 @@ use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::types::time::time::Timestamp;
 
 /// Staking V0 interface.
+/// Used for migration purposes.
 #[starknet::interface]
 pub trait IStakingV0<TContractState> {
-    fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn staker_info(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
+}
+
+/// Staking V0 interface.
+/// Used for testing purposes.
+#[cfg(test)]
+#[starknet::interface]
+pub trait IStakingV0ForTests<TContractState> {
+    fn contract_parameters(self: @TContractState) -> StakingContractInfo;
 }
 
 /// StakerInfo struct used in V0.

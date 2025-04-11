@@ -12,7 +12,7 @@ use staking::pool::interface_v0::{
 };
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{StakerInfoV1, StakerInfoV1Trait};
-use staking::staking::interface_v0::{IStakingV0DispatcherTrait, StakerInfo, StakerInfoTrait};
+use staking::staking::interface_v0::{StakerInfo, StakerInfoTrait};
 use staking::staking::objects::InternalStakerInfoV1;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
 use staking::test_utils::{
@@ -806,7 +806,7 @@ pub(crate) impl StakerInfoAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: StakerInfoAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -861,7 +861,7 @@ pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: StakerInfoWithPoolAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -922,7 +922,7 @@ pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: StakerInfoUnstakeAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -977,7 +977,7 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: InternalStakerInfoAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1040,7 +1040,7 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
     fn setup(
         ref self: InternalStakerInfoWithPoolAfterUpgradeFlow, ref system: SystemState<TTokenState>,
     ) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1108,7 +1108,7 @@ pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
     fn setup(
         ref self: InternalStakerInfoUnstakeAfterUpgradeFlow, ref system: SystemState<TTokenState>,
     ) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1166,7 +1166,7 @@ pub(crate) impl PoolUpgradeFlowImpl<
     }
 
     fn setup(ref self: PoolUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1220,7 +1220,7 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: PoolMemberInfoAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1299,7 +1299,7 @@ pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl<
     fn setup(
         ref self: PoolMemberInfoUndelegateAfterUpgradeFlow, ref system: SystemState<TTokenState>,
     ) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1372,7 +1372,7 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: IncreaseDelegationAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let delegated_amount = stake_amount;
         let staker = system.new_staker(amount: stake_amount * 2);
@@ -1425,7 +1425,7 @@ pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: IncreaseStakeAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1758,7 +1758,7 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: DelegatorActionAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1823,7 +1823,7 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: DelegatorIntentAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1877,7 +1877,7 @@ pub(crate) impl StakerIntentAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: StakerIntentAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1925,7 +1925,7 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: StakerActionAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -1981,7 +1981,7 @@ pub(crate) impl StakerAttestAfterIntentFlowImpl<
     }
 
     fn setup(ref self: StakerAttestAfterIntentFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -2029,7 +2029,7 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
     fn setup(
         ref self: DelegatorPartialIntentAfterUpgradeFlow, ref system: SystemState<TTokenState>,
     ) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -2102,7 +2102,7 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: ChangeCommissionAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -2157,7 +2157,7 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
     fn setup(
         ref self: DelegatorClaimRewardsAfterUpgradeFlow, ref system: SystemState<TTokenState>,
     ) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -2213,7 +2213,7 @@ pub(crate) impl PoolMigrationAssertionsFlowImpl<
     }
 
     fn setup(ref self: PoolMigrationAssertionsFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker_no_pool = system.new_staker(amount: stake_amount * 2);
         system
@@ -2267,7 +2267,7 @@ pub(crate) impl PoolEICFlowImpl<
     }
 
     fn setup(ref self: PoolEICFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         system.stake(staker: staker, amount: stake_amount, pool_enabled: true, commission: 200);
@@ -2345,7 +2345,7 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: DelegatorSwitchAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -2417,7 +2417,7 @@ pub(crate) impl StakerMigrationFlowImpl<
     }
 
     fn setup(ref self: StakerMigrationFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -2698,7 +2698,7 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: PoolClaimRewardsAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
@@ -2787,7 +2787,7 @@ pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
     fn setup(
         ref self: DelegatorIntentBeforeClaimRewardsAfterFlow, ref system: SystemState<TTokenState>,
     ) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let delegator = system.new_delegator(amount: stake_amount);
@@ -2840,7 +2840,7 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
     }
 
     fn setup(ref self: SetOpenForDelegationAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let commission = 200;
 
@@ -3033,7 +3033,7 @@ pub(crate) impl StakerMigrationHasPoolFlowImpl<
     }
 
     fn setup(ref self: StakerMigrationHasPoolFlow, ref system: SystemState<TTokenState>) {
-        let min_stake = system.staking.dispatcher_v0().contract_parameters().min_stake;
+        let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;

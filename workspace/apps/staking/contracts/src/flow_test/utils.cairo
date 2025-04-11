@@ -25,7 +25,8 @@ use staking::staking::interface::{
     IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::interface_v0::{
-    IStakingV0Dispatcher, IStakingV0DispatcherTrait, StakerInfo, StakerInfoTrait,
+    IStakingV0Dispatcher, IStakingV0DispatcherTrait, IStakingV0ForTestsDispatcher,
+    IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
@@ -195,6 +196,10 @@ pub(crate) impl StakingImpl of StakingTrait {
         IStakingV0Dispatcher { contract_address: self.address }
     }
 
+    fn dispatcher_v0_for_tests(self: StakingState) -> IStakingV0ForTestsDispatcher nopanic {
+        IStakingV0ForTestsDispatcher { contract_address: self.address }
+    }
+
     fn migration_dispatcher(self: StakingState) -> IStakingMigrationDispatcher nopanic {
         IStakingMigrationDispatcher { contract_address: self.address }
     }
@@ -244,7 +249,11 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_min_stake(self: StakingState) -> Amount {
-        self.dispatcher().contract_parameters_v1().min_stake
+        if self.is_v0() {
+            self.dispatcher_v0_for_tests().contract_parameters().min_stake
+        } else {
+            self.dispatcher().contract_parameters_v1().min_stake
+        }
     }
 
     fn get_total_stake(self: StakingState) -> Amount {
