@@ -820,7 +820,7 @@ pub(crate) impl StakerInfoAfterUpgradeFlowImpl<
         self.staker_info = Option::Some(staker_info);
 
         system.advance_time(time: one_week);
-        system.update_global_index_via_change_reward_address(:staker);
+        system.staking.update_global_index_if_needed();
     }
 
     fn test(
@@ -881,7 +881,7 @@ pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
 
         system.advance_time(time: one_week);
-        system.update_global_index_via_change_reward_address(:staker);
+        system.staking.update_global_index_if_needed();
     }
 
     fn test(
@@ -991,7 +991,7 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
         self.staker_info = Option::Some(staker_info);
 
         system.advance_time(time: one_week);
-        system.update_global_index_via_change_reward_address(:staker);
+        system.staking.update_global_index_if_needed();
     }
 
     fn test(
@@ -1059,7 +1059,7 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
         self.staker_info = Option::Some(staker_info);
         self.pool_address = Option::Some(pool);
         system.advance_time(time: one_week);
-        system.update_global_index_via_change_reward_address(:staker);
+        system.staking.update_global_index_if_needed();
     }
 
     fn test(
@@ -1240,7 +1240,7 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
         self.delegator_info = Option::Some(delegator_info);
 
         system.advance_time(time: one_week);
-        system.update_global_index_via_change_reward_address(:staker);
+        system.staking.update_global_index_if_needed();
     }
 
     fn test(
@@ -2174,7 +2174,7 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
         self.delegator = Option::Some(delegator);
 
         system.advance_time(time: one_week);
-        system.update_global_index_via_change_reward_address(:staker);
+        system.staking.update_global_index_if_needed();
     }
 
     fn test(
@@ -2431,7 +2431,7 @@ pub(crate) impl StakerMigrationFlowImpl<
         self.staker_info = Option::Some(staker_info);
 
         system.advance_time(time: one_week);
-        system.update_global_index_via_change_reward_address(:staker);
+        system.staking.update_global_index_if_needed();
     }
 
     fn test(

@@ -18,6 +18,7 @@ pub trait IStakingV0<TContractState> {
 #[starknet::interface]
 pub trait IStakingV0ForTests<TContractState> {
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
+    fn update_global_index_if_needed(ref self: TContractState) -> bool;
 }
 
 /// StakerInfo struct used in V0.
