@@ -256,6 +256,19 @@ fn pool_claim_rewards_flow_test() {
 }
 
 #[test]
+#[fork("MAINNET_LATEST")]
+fn pool_change_balance_after_upgrade_regression_test() {
+    let mut flow = flows::PoolChangeBalanceAfterUpgradeFlow {
+        pool_address: Option::None,
+        staker: Option::None,
+        delegator: Option::None,
+        delegator_info: Option::None,
+        delegated_amount: Zero::zero(),
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
 fn delegator_exit_and_enter_again_flow_test() {
     let flow = flows::DelegatorExitAndEnterAgainFlow {};
     test_flow_local(:flow);
@@ -350,6 +363,12 @@ fn claim_rewards_multiple_delegators_flow_test() {
 }
 
 #[test]
+fn pool_claim_after_claim_flow_test() {
+    let flow = flows::PoolClaimAfterClaimFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn change_balance_claim_rewards_flow_test() {
     let mut flow = flows::ChangeBalanceClaimRewardsFlow {};
     test_flow_local(:flow);
@@ -431,6 +450,18 @@ fn delegator_action_with_non_upgraded_pool_regression_test() {
         third_delegator: Option::None,
         third_delegator_info: Option::None,
         initial_reward_supplier_balance: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn switch_with_non_upgraded_pool_regression_test() {
+    let mut flow = flows::SwitchWithNonUpgradedPoolFlow {
+        pool_address: Option::None,
+        first_delegator: Option::None,
+        second_delegator: Option::None,
+        stake_amount: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
