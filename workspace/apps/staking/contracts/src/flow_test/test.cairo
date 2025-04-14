@@ -454,6 +454,18 @@ fn delegator_action_with_non_upgraded_pool_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn switch_with_non_upgraded_pool_regression_test() {
+    let mut flow = flows::SwitchWithNonUpgradedPoolFlow {
+        pool_address: Option::None,
+        first_delegator: Option::None,
+        second_delegator: Option::None,
+        stake_amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
