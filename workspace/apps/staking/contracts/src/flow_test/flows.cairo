@@ -3957,6 +3957,65 @@ pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl<
         // TODO: Intent and switch with a third delegator and catch `MISSING_UNDELEGATE_INTENT`.
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Delegator exit intent
+/// Delegator exit action
+/// Upgrade
+/// Delegator enter
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorExitBeforeEnterAfterFlow {
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<DelegatorExitBeforeEnterAfterFlow, TTokenState> {
+    fn get_pool_address(self: DelegatorExitBeforeEnterAfterFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn get_staker_address(self: DelegatorExitBeforeEnterAfterFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: DelegatorExitBeforeEnterAfterFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let commission = 200;
+        let one_week = Time::weeks(count: 1);
+
+        let staker = system.new_staker(amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+
+        let delegator = system.new_delegator(amount: stake_amount);
+        system.delegate(:delegator, :pool, amount: stake_amount);
+        system.advance_time(time: one_week);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: stake_amount);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.delegator_exit_action(:delegator, :pool);
+
+        self.pool_address = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+    }
+
+    fn test(
+        self: DelegatorExitBeforeEnterAfterFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let pool = self.pool_address.unwrap();
+        let delegator = self.delegator.unwrap();
+        let delegate_amount = 100;
+
+        system.delegate(:delegator, :pool, amount: delegate_amount);
+        assert!(system.pool_member_info_v1(:delegator, :pool).amount == delegate_amount);
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.

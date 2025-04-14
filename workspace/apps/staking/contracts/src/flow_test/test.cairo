@@ -466,6 +466,15 @@ fn switch_with_non_upgraded_pool_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_exit_before_enter_after_regression_test() {
+    let mut flow = flows::DelegatorExitBeforeEnterAfterFlow {
+        pool_address: Option::None, delegator: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
