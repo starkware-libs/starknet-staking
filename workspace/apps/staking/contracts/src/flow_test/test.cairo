@@ -338,6 +338,12 @@ fn staker_migration_regression_test() {
 }
 
 #[test]
+fn claim_rewards_multiple_delegators_flow_test() {
+    let mut flow = flows::ClaimRewardsMultipleDelegatorsFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn change_balance_claim_rewards_flow_test() {
     let mut flow = flows::ChangeBalanceClaimRewardsFlow {};
     test_flow_local(:flow);
