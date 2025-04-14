@@ -13,7 +13,7 @@ use staking::pool::interface_v0::{
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{StakerInfoV1, StakerInfoV1Trait};
 use staking::staking::interface_v0::{StakerInfo, StakerInfoTrait};
-use staking::staking::objects::InternalStakerInfoV1;
+use staking::staking::objects::StakerInfoIntoInternalStakerInfoV1ITrait;
 use staking::test_utils::constants::UPGRADE_GOVERNOR;
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_pool_rewards, calculate_pool_rewards_with_pool_balance,
@@ -1006,7 +1006,7 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
             staker_info: self.staker_info.unwrap(), :global_index,
         )
             .to_v1();
-        assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
+        assert!(internal_staker_info_after_upgrade == expected_staker_info.to_internal());
     }
 }
 
@@ -1074,7 +1074,7 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
             staker_info: self.staker_info.unwrap(), :global_index,
         )
             .to_v1();
-        assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
+        assert!(internal_staker_info_after_upgrade == expected_staker_info.to_internal());
     }
 }
 
@@ -1137,7 +1137,7 @@ pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
         let internal_staker_info_after_upgrade = system
             .internal_staker_info(staker: self.staker.unwrap());
         let expected_staker_info: StakerInfoV1 = self.staker_info.unwrap().to_v1();
-        assert!(internal_staker_info_after_upgrade == expected_staker_info.into());
+        assert!(internal_staker_info_after_upgrade == expected_staker_info.to_internal());
     }
 }
 
@@ -2446,7 +2446,7 @@ pub(crate) impl StakerMigrationFlowImpl<
             staker_info: self.staker_info.unwrap(), :global_index,
         )
             .to_v1();
-        assert!(internal_staker_info == expected_staker_info.into());
+        assert!(internal_staker_info == expected_staker_info.to_internal());
         // TODO: Test initialization of staker balance trace.
     }
 }

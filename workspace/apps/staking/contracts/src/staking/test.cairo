@@ -53,10 +53,10 @@ use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{
     AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait,
     InternalStakerInfoTestTrait, InternalStakerInfoTrait, InternalStakerInfoV1,
-    InternalStakerPoolInfoV1, UndelegateIntentKey, UndelegateIntentValue,
-    UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
-    VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
-    VersionedStorageContractTest,
+    InternalStakerPoolInfoV1, StakerInfoIntoInternalStakerInfoV1ITrait, UndelegateIntentKey,
+    UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
+    VersionedInternalStakerInfo, VersionedInternalStakerInfoTestTrait,
+    VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
 use staking::types::{Amount, InternalStakerInfoLatest};
@@ -3034,7 +3034,7 @@ fn test_staker_info_into_internal_staker_info_v1() {
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
     };
-    let internal_staker_info: InternalStakerInfoV1 = staker_info.into();
+    let internal_staker_info: InternalStakerInfoV1 = staker_info.to_internal();
     let expected_internal_staker_info = InternalStakerInfoV1 {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
