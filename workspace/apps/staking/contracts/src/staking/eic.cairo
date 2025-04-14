@@ -47,14 +47,10 @@ mod StakingEIC {
             let attestation_contract: ContractAddress = (*eic_init_data[5]).try_into().unwrap();
 
             // 1. Set previous class hash.
-            // If prev_class_hash is not empty we assume it's already set correctly.
-            // in this case, we must not replace it.
-            // TODO: Check that prev_class_hash is empty.
             assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
             self.prev_class_hash.write(PREV_CONTRACT_VERSION, prev_class_hash);
 
-            // TODO: What can i check in epoch info? Impl zero for the struct?
-            // 2. Initialize the epoch info.
+            // 2. Set epoch info.
             let epoch_info = EpochInfoTrait::new(
                 :epoch_duration,
                 :epoch_length,

@@ -183,7 +183,6 @@ pub trait IStakingConfig<TContractState> {
 
 #[starknet::interface]
 pub trait IStakingAttestation<TContractState> {
-    // TODO: Rename once internal update_rewards is deleted.
     fn update_rewards_from_attestation_contract(
         ref self: TContractState, staker_address: ContractAddress,
     );
