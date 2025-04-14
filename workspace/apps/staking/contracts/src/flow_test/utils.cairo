@@ -291,6 +291,10 @@ pub(crate) impl StakingImpl of StakingTrait {
     fn get_epoch_info(self: StakingState) -> EpochInfo {
         self.dispatcher().get_epoch_info()
     }
+
+    fn update_global_index_if_needed(self: StakingState) -> bool {
+        self.dispatcher_v0_for_tests().update_global_index_if_needed()
+    }
 }
 
 /// The `MintingCurveRoles` struct represents the various roles involved in the minting curve
@@ -972,16 +976,6 @@ pub(crate) impl SystemStakerImpl<
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
         self.staking.dispatcher().change_reward_address(:reward_address)
-    }
-
-    /// Ensures the global index is up-to-date by invoking `change_reward_address`.
-    /// **Note**: In version 0 of the staking contract, the `change_reward_address` function also
-    /// triggers an update of the global index if needed. Call that fucntion before upgrading the
-    /// staking contract in order to update global index.
-    fn update_global_index_via_change_reward_address(
-        self: SystemState<TTokenState>, staker: Staker,
-    ) {
-        self.change_reward_address(:staker, reward_address: staker.reward.address)
     }
 
     #[feature("safe_dispatcher")]
