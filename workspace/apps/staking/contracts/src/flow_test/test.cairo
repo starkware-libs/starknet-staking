@@ -338,6 +338,12 @@ fn staker_migration_regression_test() {
 }
 
 #[test]
+fn claim_rewards_multiple_delegators_flow_test() {
+    let mut flow = flows::ClaimRewardsMultipleDelegatorsFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn change_balance_claim_rewards_flow_test() {
     let mut flow = flows::ChangeBalanceClaimRewardsFlow {};
     test_flow_local(:flow);
@@ -389,6 +395,21 @@ fn staker_migration_has_pool_flow_test() {
 fn two_stakers_same_operational_address_flow_test() {
     let flow = flows::TwoStakersSameOperationalAddressFlow {};
     test_flow_local(:flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn claim_rewards_with_non_upgraded_pool_flow_test() {
+    let mut flow = flows::ClaimRewardsWithNonUpgradedPoolFlow {
+        pool_address: Option::None,
+        first_delegator: Option::None,
+        first_delegator_info: Option::None,
+        second_delegator: Option::None,
+        second_delegator_info: Option::None,
+        third_delegator: Option::None,
+        third_delegator_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
 }
 
 /// Flow:

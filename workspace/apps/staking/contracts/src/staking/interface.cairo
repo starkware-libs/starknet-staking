@@ -183,7 +183,6 @@ pub trait IStakingConfig<TContractState> {
 
 #[starknet::interface]
 pub trait IStakingAttestation<TContractState> {
-    // TODO: Rename once internal update_rewards is deleted.
     fn update_rewards_from_attestation_contract(
         ref self: TContractState, staker_address: ContractAddress,
     );
@@ -383,6 +382,8 @@ pub mod ConfigEvents {
 }
 
 /// `StakingContractInfo` struct used in V0.
+/// **Note**: This struct should not be used in V1. It should only be used for testing.
+#[cfg(test)]
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
     pub min_stake: Amount,

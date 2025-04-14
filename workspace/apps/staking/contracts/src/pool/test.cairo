@@ -59,11 +59,11 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, approve,
-    calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards, constants,
-    declare_pool_contract, declare_pool_eic_contract, deploy_mock_erc20_contract,
-    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
-    general_contract_system_deployment, initialize_pool_state, load_from_simple_map,
-    stake_with_pool_enabled,
+    calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards,
+    claim_rewards_for_pool_member, constants, declare_pool_contract, declare_pool_eic_contract,
+    deploy_mock_erc20_contract, deploy_staking_contract,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    initialize_pool_state, load_from_simple_map, stake_with_pool_enabled,
 };
 
 #[test]
@@ -534,6 +534,31 @@ fn test_claim_rewards() {
         reward_address: cfg.pool_member_info.reward_address,
         amount: actual_reward,
     );
+}
+
+#[test]
+fn test_claim_rewards_no_rewards() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_contract = cfg.test_info.staking_contract;
+
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+
+    let pool_member = cfg.test_info.pool_member_address;
+    // Balance is zero.
+    let rewards = claim_rewards_for_pool_member(:pool_contract, :pool_member);
+    assert!(rewards == Zero::zero());
+    assert!(token_dispatcher.balance_of(cfg.pool_member_info.reward_address) == Zero::zero());
+
+    advance_epoch_global();
+
+    // Balance is not zero but no rewards.
+    let rewards = claim_rewards_for_pool_member(:pool_contract, :pool_member);
+    assert!(rewards == Zero::zero());
+    assert!(token_dispatcher.balance_of(cfg.pool_member_info.reward_address) == Zero::zero());
 }
 
 #[test]
