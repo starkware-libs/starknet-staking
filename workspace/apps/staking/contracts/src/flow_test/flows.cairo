@@ -3120,6 +3120,134 @@ pub(crate) impl DelegateIntentSameEpochFlowImpl<
     }
 }
 
+/// Test Pool claim_rewards flow.
+/// Flow:
+/// Staker stake with pool
+/// attest
+/// Delegator1 delegate
+/// Delegator2 delegate
+/// Delegator3 delegate
+/// Delegator1 claim_rewards
+/// attest
+/// Delegator1 claim_rewards - Cover zero epochs
+/// attest
+/// Delegator2 claim_rewards - Cover one epoch
+/// attest
+/// Delegator3 claim_rewards - Cover two epochs
+/// attest
+/// Delegator2 claim_rewards
+/// Exit intent staker and all delegators
+/// Exit action staker and all delegators
+#[derive(Drop, Copy)]
+pub(crate) struct PoolClaimRewardsFlow {}
+pub(crate) impl PoolClaimRewardsFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<PoolClaimRewardsFlow, TTokenState> {
+    fn get_pool_address(self: PoolClaimRewardsFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: PoolClaimRewardsFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: PoolClaimRewardsFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: PoolClaimRewardsFlow, ref system: SystemState<TTokenState>, system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount);
+        let commission = 200;
+        let initial_reward_supplier_balance = system
+            .token
+            .balance_of(account: system.reward_supplier.address);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch_and_attest(:staker);
+
+        let delegated_amount_1 = stake_amount / 2;
+        let delegator_1 = system.new_delegator(amount: delegated_amount_1);
+        let delegated_amount_2 = stake_amount / 4;
+        let delegator_2 = system.new_delegator(amount: delegated_amount_2);
+        let delegated_amount_3 = stake_amount / 8;
+        let delegator_3 = system.new_delegator(amount: delegated_amount_3);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(delegator: delegator_1, :pool, amount: delegated_amount_1);
+        system.delegate(delegator: delegator_2, :pool, amount: delegated_amount_2);
+        system.delegate(delegator: delegator_3, :pool, amount: delegated_amount_3);
+
+        let rewards_1 = system.delegator_claim_rewards(delegator: delegator_1, :pool);
+        assert!(rewards_1 == Zero::zero());
+        assert!(system.token.balance_of(account: delegator_1.reward.address) == Zero::zero());
+
+        system.advance_epoch_and_attest(:staker);
+
+        let rewards_1 = system
+            .delegator_claim_rewards(delegator: delegator_1, :pool); // Cover zero epochs
+        assert!(rewards_1 == Zero::zero());
+        assert!(system.token.balance_of(account: delegator_1.reward.address) == Zero::zero());
+
+        system.advance_epoch_and_attest(:staker);
+
+        system.delegator_claim_rewards(delegator: delegator_2, :pool); // Cover one epoch
+
+        system.advance_epoch_and_attest(:staker);
+
+        system.delegator_claim_rewards(delegator: delegator_3, :pool); // Cover two epochs
+
+        system.advance_epoch_and_attest(:staker);
+
+        system.delegator_claim_rewards(delegator: delegator_2, :pool);
+
+        system.delegator_exit_intent(delegator: delegator_1, :pool, amount: delegated_amount_1);
+        system.delegator_exit_intent(delegator: delegator_2, :pool, amount: delegated_amount_2);
+        system.delegator_exit_intent(delegator: delegator_3, :pool, amount: delegated_amount_3);
+        system.staker_exit_intent(:staker);
+
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.advance_epoch();
+
+        system.delegator_exit_action(delegator: delegator_1, :pool);
+        system.delegator_exit_action(delegator: delegator_2, :pool);
+        system.delegator_exit_action(delegator: delegator_3, :pool);
+        system.staker_exit_action(:staker);
+
+        system.delegator_claim_rewards(delegator: delegator_1, :pool);
+        system.delegator_claim_rewards(delegator: delegator_2, :pool);
+        system.delegator_claim_rewards(delegator: delegator_3, :pool);
+
+        let rewards_1 = system.token.balance_of(account: delegator_1.reward.address);
+        let rewards_2 = system.token.balance_of(account: delegator_2.reward.address);
+        let rewards_3 = system.token.balance_of(account: delegator_3.reward.address);
+
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount);
+        assert!(
+            system.token.balance_of(account: delegator_1.delegator.address) == delegated_amount_1,
+        );
+        assert!(
+            system.token.balance_of(account: delegator_2.delegator.address) == delegated_amount_2,
+        );
+        assert!(
+            system.token.balance_of(account: delegator_3.delegator.address) == delegated_amount_3,
+        );
+        assert!(system.token.balance_of(account: pool) == 0);
+        assert!(rewards_1 > rewards_2);
+        assert!(rewards_2 > rewards_3);
+        assert!(rewards_3.is_non_zero());
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
+                + system.token.balance_of(account: staker.reward.address)
+                + rewards_1
+                + rewards_2
+                + rewards_3,
+        );
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// Upgrade
