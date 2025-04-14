@@ -2874,6 +2874,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         );
     }
 }
+
 /// Test Claim Rewards After Upgrade.
 /// Flow:
 /// Staker stake with pool
@@ -2883,6 +2884,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
 /// attest
 /// attest
 /// attest
+/// pool_member_info (calculate_rewards)
 /// claim_rewards
 #[derive(Drop, Copy)]
 pub(crate) struct PoolClaimRewardsAfterUpgradeFlow {
@@ -2952,8 +2954,11 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl<
 
         let expected_pool_rewards = pool_total_rewards + delegator_info.unclaimed_rewards;
 
+        let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+
         let actual_pool_rewards = system.delegator_claim_rewards(delegator: delegator, :pool);
 
+        assert!(pool_member_info.unclaimed_rewards == expected_pool_rewards);
         assert!(expected_pool_rewards == actual_pool_rewards);
         assert!(
             expected_pool_rewards == system.token.balance_of(account: delegator.reward.address),
