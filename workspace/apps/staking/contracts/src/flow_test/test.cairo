@@ -256,6 +256,19 @@ fn pool_claim_rewards_flow_test() {
 }
 
 #[test]
+#[fork("MAINNET_LATEST")]
+fn pool_change_balance_after_upgrade_regression_test() {
+    let mut flow = flows::PoolChangeBalanceAfterUpgradeFlow {
+        pool_address: Option::None,
+        staker: Option::None,
+        delegator: Option::None,
+        delegator_info: Option::None,
+        delegated_amount: Zero::zero(),
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
 fn delegator_exit_and_enter_again_flow_test() {
     let flow = flows::DelegatorExitAndEnterAgainFlow {};
     test_flow_local(:flow);
