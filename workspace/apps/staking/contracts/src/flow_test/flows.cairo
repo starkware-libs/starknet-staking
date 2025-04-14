@@ -3230,6 +3230,113 @@ pub(crate) impl TwoStakersSameOperationalAddressFlowImpl<
         );
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// First delegator delegate
+/// Second delegator delegate
+/// Third delegator delegate
+/// First delegator full exit intent
+/// Second delegator partial exit intent
+/// Staker exit intent
+/// Staker exit action
+/// Upgrade (without upgrading the pool)
+/// First delegator claim rewards
+/// Second delegator claim rewards
+/// Third delegator claim rewards
+#[derive(Drop, Copy)]
+pub(crate) struct ClaimRewardsWithNonUpgradedPoolFlow {
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) first_delegator: Option<Delegator>,
+    pub(crate) first_delegator_info: Option<PoolMemberInfo>,
+    pub(crate) second_delegator: Option<Delegator>,
+    pub(crate) second_delegator_info: Option<PoolMemberInfo>,
+    pub(crate) third_delegator: Option<Delegator>,
+    pub(crate) third_delegator_info: Option<PoolMemberInfo>,
+}
+pub(crate) impl ClaimRewardsWithNonUpgradedPoolFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<ClaimRewardsWithNonUpgradedPoolFlow, TTokenState> {
+    fn get_pool_address(self: ClaimRewardsWithNonUpgradedPoolFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: ClaimRewardsWithNonUpgradedPoolFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: ClaimRewardsWithNonUpgradedPoolFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let commission = 200;
+        let one_week = Time::weeks(count: 1);
+
+        let staker = system.new_staker(amount: stake_amount);
+        system.stake(staker: staker, amount: stake_amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+
+        let first_delegator = system.new_delegator(amount: stake_amount);
+        let second_delegator = system.new_delegator(amount: stake_amount);
+        let third_delegator = system.new_delegator(amount: stake_amount);
+
+        system.delegate(delegator: first_delegator, :pool, amount: stake_amount);
+        system.delegate(delegator: second_delegator, :pool, amount: stake_amount);
+        system.delegate(delegator: third_delegator, :pool, amount: stake_amount);
+        system.advance_time(time: one_week);
+
+        system.delegator_exit_intent(delegator: first_delegator, :pool, amount: stake_amount);
+        system.delegator_exit_intent(delegator: second_delegator, :pool, amount: stake_amount / 2);
+        system.advance_time(time: one_week);
+
+        system.staker_exit_intent(:staker);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.staker_exit_action(:staker);
+
+        self.pool_address = Option::Some(pool);
+        self.first_delegator = Option::Some(first_delegator);
+        self
+            .first_delegator_info =
+                Option::Some(system.pool_member_info(delegator: first_delegator, :pool));
+        self.second_delegator = Option::Some(second_delegator);
+        self
+            .second_delegator_info =
+                Option::Some(system.pool_member_info(delegator: second_delegator, :pool));
+        self.third_delegator = Option::Some(third_delegator);
+        self
+            .third_delegator_info =
+                Option::Some(system.pool_member_info(delegator: third_delegator, :pool));
+    }
+
+    fn test(
+        self: ClaimRewardsWithNonUpgradedPoolFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let pool = self.pool_address.unwrap();
+        let first_delegator = self.first_delegator.unwrap();
+        let first_delegator_info = self.first_delegator_info.unwrap();
+        let second_delegator = self.second_delegator.unwrap();
+        let second_delegator_info = self.second_delegator_info.unwrap();
+        let third_delegator = self.third_delegator.unwrap();
+        let third_delegator_info = self.third_delegator_info.unwrap();
+
+        assert!(
+            first_delegator_info
+                .unclaimed_rewards == system
+                .delegator_claim_rewards(delegator: first_delegator, :pool),
+        );
+        assert!(
+            second_delegator_info
+                .unclaimed_rewards == system
+                .delegator_claim_rewards(delegator: second_delegator, :pool),
+        );
+        assert!(
+            third_delegator_info
+                .unclaimed_rewards == system
+                .delegator_claim_rewards(delegator: third_delegator, :pool),
+        );
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.

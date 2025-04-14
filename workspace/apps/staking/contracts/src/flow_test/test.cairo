@@ -397,6 +397,21 @@ fn two_stakers_same_operational_address_flow_test() {
     test_flow_local(:flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn claim_rewards_with_non_upgraded_pool_flow_test() {
+    let mut flow = flows::ClaimRewardsWithNonUpgradedPoolFlow {
+        pool_address: Option::None,
+        first_delegator: Option::None,
+        first_delegator_info: Option::None,
+        second_delegator: Option::None,
+        second_delegator_info: Option::None,
+        third_delegator: Option::None,
+        third_delegator_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

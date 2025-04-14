@@ -261,7 +261,11 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_exit_wait_window(self: StakingState) -> TimeDelta {
-        self.dispatcher().contract_parameters_v1().exit_wait_window
+        if self.is_v0() {
+            self.dispatcher_v0_for_tests().contract_parameters().exit_wait_window
+        } else {
+            self.dispatcher().contract_parameters_v1().exit_wait_window
+        }
     }
 
     fn get_global_index(self: StakingState) -> Index {
