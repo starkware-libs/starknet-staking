@@ -21,8 +21,9 @@ use staking::reward_supplier::interface::{
 use staking::staking::interface::{
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
-    IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingPauseDispatcher, IStakingPauseDispatcherTrait, IStakingPoolSafeDispatcher,
+    IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
+    StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::interface_v0::{
     IStakingV0Dispatcher, IStakingV0DispatcherTrait, IStakingV0ForTestsDispatcher,
@@ -204,6 +205,10 @@ pub(crate) impl StakingImpl of StakingTrait {
         IStakingMigrationDispatcher { contract_address: self.address }
     }
 
+    fn pause_dispatcher(self: StakingState) -> IStakingPauseDispatcher nopanic {
+        IStakingPauseDispatcher { contract_address: self.address }
+    }
+
     fn set_roles(self: StakingState) {
         set_account_as_upgrade_governor(
             contract: self.address,
@@ -294,6 +299,20 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn update_global_index_if_needed(self: StakingState) -> bool {
         self.dispatcher_v0_for_tests().update_global_index_if_needed()
+    }
+
+    fn pause(self: StakingState) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.security_agent,
+        );
+        self.pause_dispatcher().pause()
+    }
+
+    fn unpause(self: StakingState) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.security_admin,
+        );
+        self.pause_dispatcher().unpause()
     }
 }
 
@@ -1216,6 +1235,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
 
     /// Upgrades the contracts in the system state with local implementations.
     fn upgrade_contracts_implementation(self: SystemState<STRKTokenState>) {
+        self.staking.pause();
         self.upgrade_staking_implementation();
         self.upgrade_reward_supplier_implementation();
         self.upgrade_minting_curve_implementation();
@@ -1225,6 +1245,7 @@ impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
         if let Option::Some(staker_address) = self.staker_address {
             self.staker_migration(staker_address);
         }
+        self.staking.unpause();
     }
 
     /// Upgrades the staking contract in the system state with a local implementation.
