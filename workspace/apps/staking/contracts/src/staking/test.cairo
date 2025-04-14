@@ -1040,14 +1040,6 @@ fn test_remove_from_delegation_pool_intent() {
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     let mut intent_amount = cfg.pool_member_info._deprecated_amount / 2;
 
-    // Increase index.
-    let mut global_index = cfg.test_info.global_index + BASE_VALUE;
-    snforge_std::store(
-        target: staking_contract,
-        storage_address: selector!("global_index"),
-        serialized_value: array![global_index.into()].span(),
-    );
-
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     staking_pool_dispatcher
         .remove_from_delegation_pool_intent(
@@ -1118,14 +1110,6 @@ fn test_remove_from_delegation_pool_intent() {
     // Decrease intent amount.
     let old_intent_amount = intent_amount;
     let new_intent_amount = old_intent_amount / 2;
-
-    // Increase index.
-    global_index = global_index + BASE_VALUE;
-    snforge_std::store(
-        target: staking_contract,
-        storage_address: selector!("global_index"),
-        serialized_value: array![global_index.into()].span(),
-    );
 
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     staking_pool_dispatcher
@@ -1373,7 +1357,6 @@ fn test_switch_staking_delegation_pool() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let reward_supplier = cfg.staking_contract_info.reward_supplier;
 
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
@@ -1404,12 +1387,6 @@ fn test_switch_staking_delegation_pool() {
     switch_pool_data.serialize(ref output: serialized_data);
 
     let switched_amount = cfg.pool_member_info._deprecated_amount / 2;
-    let updated_index = cfg.test_info.global_index + BASE_VALUE;
-    snforge_std::store(
-        target: staking_contract,
-        storage_address: selector!("global_index"),
-        serialized_value: array![updated_index.into()].span(),
-    );
     let mut spy = snforge_std::spy_events();
     let caller_address = from_pool_contract;
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
@@ -1421,15 +1398,6 @@ fn test_switch_staking_delegation_pool() {
             data: serialized_data.span(),
             identifier: pool_member.into(),
         );
-    let interest = updated_index - cfg.test_info.global_index;
-    let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: cfg.pool_member_info._deprecated_amount, :interest,
-    );
-    let commission_amount = compute_commission_amount_rounded_down(
-        rewards_including_commission: pool_rewards_including_commission,
-        commission: cfg.staker_info.get_pool_info().commission,
-    );
-    let unclaimed_rewards_pool = pool_rewards_including_commission - commission_amount;
     let mut expected_staker_info = to_staker_info;
     let mut expected_pool_info = expected_staker_info.get_pool_info();
     expected_pool_info.amount = switched_amount;
@@ -1457,9 +1425,6 @@ fn test_switch_staking_delegation_pool() {
     let caller_address = from_pool_contract;
     // Switch again with the rest of the amount, and verify the intent is removed.
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
-    cheat_reward_for_reward_supplier(
-        :cfg, :reward_supplier, expected_reward: unclaimed_rewards_pool, :token_address,
-    );
     staking_pool_dispatcher
         .switch_staking_delegation_pool(
             :to_staker,
