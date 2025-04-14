@@ -363,6 +363,12 @@ fn claim_rewards_multiple_delegators_flow_test() {
 }
 
 #[test]
+fn pool_claim_after_claim_flow_test() {
+    let flow = flows::PoolClaimAfterClaimFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn change_balance_claim_rewards_flow_test() {
     let mut flow = flows::ChangeBalanceClaimRewardsFlow {};
     test_flow_local(:flow);
