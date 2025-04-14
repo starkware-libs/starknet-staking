@@ -418,6 +418,23 @@ fn claim_rewards_with_non_upgraded_pool_flow_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_action_with_non_upgraded_pool_regression_test() {
+    let mut flow = flows::DelegatorActionWithNonUpgradedPoolFlow {
+        staker: Option::None,
+        pool_address: Option::None,
+        first_delegator: Option::None,
+        first_delegator_info: Option::None,
+        second_delegator: Option::None,
+        second_delegator_info: Option::None,
+        third_delegator: Option::None,
+        third_delegator_info: Option::None,
+        initial_reward_supplier_balance: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
