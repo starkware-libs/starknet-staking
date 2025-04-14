@@ -596,6 +596,14 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
         )
 }
 
+pub(crate) fn claim_rewards_for_pool_member(
+    pool_contract: ContractAddress, pool_member: ContractAddress,
+) -> Amount {
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    pool_dispatcher.claim_rewards(:pool_member)
+}
+
 /// *****WARNING*****
 /// This function only works on simple data types or structs that have no special implementations
 /// for Hash, Store, or Serde traits. It also won't work on any standard enum.
