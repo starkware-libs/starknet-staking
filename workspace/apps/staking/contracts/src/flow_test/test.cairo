@@ -490,6 +490,12 @@ fn delegator_intent_with_non_upgraded_pool_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+fn add_to_delegation_after_exit_action_flow_test() {
+    let flow = flows::AddToDelegationAfterExitActionFlow {};
+    test_flow_local(:flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

@@ -4144,6 +4144,57 @@ pub(crate) impl DelegatorIntentWithNonUpgradedPoolFlowImpl<
         assert_panic_with_error(result, PoolError::UNDELEGATE_IN_PROGRESS.describe());
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Delegator exit intent
+/// Delegator exit action
+/// Delegator add to delegation
+#[derive(Drop, Copy)]
+pub(crate) struct AddToDelegationAfterExitActionFlow {}
+pub(crate) impl AddToDelegationAfterExitActionFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<AddToDelegationAfterExitActionFlow, TTokenState> {
+    fn get_pool_address(self: AddToDelegationAfterExitActionFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: AddToDelegationAfterExitActionFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: AddToDelegationAfterExitActionFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: AddToDelegationAfterExitActionFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let commission = 200;
+
+        let staker = system.new_staker(amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+
+        let delegator = system.new_delegator(amount: stake_amount);
+        system.delegate(:delegator, :pool, amount: stake_amount);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: stake_amount);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.delegator_exit_action(:delegator, :pool);
+        assert!(system.pool_member_info_v1(:delegator, :pool).amount.is_zero());
+
+        system.increase_delegate(:delegator, :pool, amount: stake_amount);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        assert!(system.pool_member_info_v1(:delegator, :pool).amount == stake_amount);
+        assert!(system.pool_member_info_v1(:delegator, :pool).unclaimed_rewards.is_non_zero());
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
