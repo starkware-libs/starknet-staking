@@ -1059,6 +1059,14 @@ pub(crate) impl SystemDelegatorImpl<
         pool_dispatcher.exit_delegation_pool_intent(:amount)
     }
 
+    #[feature("safe_dispatcher")]
+    fn safe_delegator_exit_intent(
+        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
+    ) -> Result<(), Array<felt252>> {
+        let safe_pool_dispatcher = IPoolSafeDispatcher { contract_address: pool };
+        safe_pool_dispatcher.exit_delegation_pool_intent(:amount)
+    }
+
     fn delegator_exit_action(
         self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
     ) -> Amount {

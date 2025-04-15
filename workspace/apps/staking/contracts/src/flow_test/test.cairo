@@ -475,6 +475,21 @@ fn delegator_exit_before_enter_after_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_intent_with_non_upgraded_pool_regression_test() {
+    let mut flow = flows::DelegatorIntentWithNonUpgradedPoolFlow {
+        pool_address: Option::None,
+        first_delegator: Option::None,
+        first_delegator_info: Option::None,
+        second_delegator: Option::None,
+        second_delegator_info: Option::None,
+        third_delegator: Option::None,
+        third_delegator_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
