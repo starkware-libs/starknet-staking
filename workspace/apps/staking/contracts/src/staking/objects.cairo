@@ -560,8 +560,9 @@ impl InternalStakerInfoLatestIntoStakerInfoV1 of Into<InternalStakerInfoLatest, 
 }
 
 #[cfg(test)]
-pub(crate) impl StakerInfoIntoInternalStakerInfoV1 of Into<StakerInfoV1, InternalStakerInfoV1> {
-    fn into(self: StakerInfoV1) -> InternalStakerInfoV1 {
+#[generate_trait]
+pub(crate) impl StakerInfoIntoInternalStakerInfoV1Impl of StakerInfoIntoInternalStakerInfoV1ITrait {
+    fn to_internal(self: StakerInfoV1) -> InternalStakerInfoV1 {
         InternalStakerInfoV1 {
             reward_address: self.reward_address,
             operational_address: self.operational_address,
