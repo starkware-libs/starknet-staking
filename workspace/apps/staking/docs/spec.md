@@ -873,12 +873,14 @@ Update the commission.
 5. [INVALID\_COMMISSION](#invalid_commission)
 6. [INVALID\_COMMISSION\_WITH\_COMMITMENT](#invalid_commission_with_commitment)
 7. [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
+8. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker exist in the contract.
 3. Delegation pool exist for the staker.
 4. If there is no active commission commitment, `commission` must be lower than the current 
 commission.
+5. `commission` is not above the maximum commission for staking.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->

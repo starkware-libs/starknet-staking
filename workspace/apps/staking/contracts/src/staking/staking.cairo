@@ -598,6 +598,7 @@ pub mod Staking {
         fn update_commission(ref self: ContractState, commission: Commission) {
             // Prerequisites and asserts.
             self.general_prerequisites();
+            assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);

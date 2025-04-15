@@ -2016,6 +2016,23 @@ fn test_update_commission_staker_in_exit_window() {
 }
 
 #[test]
+#[should_panic(expected: "Commission is out of range, expected to be 0-10000")]
+fn test_update_commission_commission_out_of_range() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let commission = COMMISSION_DENOMINATOR + 1;
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
+    );
+    staking_dispatcher.update_commission(:commission);
+}
+
+#[test]
 fn test_set_commission_commitment() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
