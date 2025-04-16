@@ -2041,8 +2041,7 @@ fn test_set_commission_commitment() {
     let token_address = cfg.staking_contract_info.token_address;
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
-    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
-    let max_commission = staker_info.get_pool_info().commission * 2;
+    let max_commission = COMMISSION_DENOMINATOR;
     let mut spy = snforge_std::spy_events();
     let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -2085,6 +2084,14 @@ fn test_set_commission_commitment_assertions() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
 
+    // Should catch COMMISSION_OUT_OF_RANGE.
+    let max_commission = COMMISSION_DENOMINATOR + 1;
+    let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let result = staking_safe_dispatcher
+        .set_commission_commitment(:max_commission, :expiration_epoch);
+    assert_panic_with_error(:result, expected_error: Error::COMMISSION_OUT_OF_RANGE.describe());
+
     // Should catch STAKER_NOT_EXISTS.
     let result = staking_safe_dispatcher
         .set_commission_commitment(max_commission: Zero::zero(), expiration_epoch: Zero::zero());
@@ -2103,7 +2110,6 @@ fn test_set_commission_commitment_assertions() {
     staking_dispatcher.set_open_for_delegation(:commission);
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let max_commission = staker_info.get_pool_info().commission - 1;
-    let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_safe_dispatcher
         .set_commission_commitment(:max_commission, :expiration_epoch);

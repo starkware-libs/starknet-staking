@@ -651,6 +651,7 @@ pub mod Staking {
             ref self: ContractState, max_commission: Commission, expiration_epoch: Epoch,
         ) {
             self.general_prerequisites();
+            assert!(max_commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
