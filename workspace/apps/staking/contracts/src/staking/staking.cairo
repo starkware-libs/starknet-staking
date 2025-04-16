@@ -52,7 +52,7 @@ pub mod Staking {
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
-    pub const CONTRACT_VERSION: felt252 = '1.0.0';
+    pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
 

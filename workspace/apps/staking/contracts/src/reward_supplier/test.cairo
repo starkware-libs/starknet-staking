@@ -50,10 +50,10 @@ fn test_identity() {
     assert!(mint_curve_identity == 'Minting Curve');
     assert!(pool_identity == 'Staking Delegation Pool');
 
-    assert!(staking_version == '1.0.0');
-    assert!(reward_supplier_version == '1.0.0');
+    assert!(staking_version == '2.0.0');
+    assert!(reward_supplier_version == '2.0.0');
     assert!(mint_curve_version == '1.0.0');
-    assert!(pool_version == '1.0.0');
+    assert!(pool_version == '2.0.0');
 
     // Test identity on deployed instances.
     let mut cfg: StakingInitConfig = Default::default();

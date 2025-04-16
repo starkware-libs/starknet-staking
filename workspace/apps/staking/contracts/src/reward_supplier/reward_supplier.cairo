@@ -25,7 +25,7 @@ pub mod RewardSupplier {
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::ceil_of_division;
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
-    pub const CONTRACT_VERSION: felt252 = '1.0.0';
+    pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
