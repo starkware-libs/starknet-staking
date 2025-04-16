@@ -52,7 +52,7 @@ pub mod Staking {
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
-    pub const CONTRACT_VERSION: felt252 = '1.0.0';
+    pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
 
@@ -651,6 +651,7 @@ pub mod Staking {
             ref self: ContractState, max_commission: Commission, expiration_epoch: Epoch,
         ) {
             self.general_prerequisites();
+            assert!(max_commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);

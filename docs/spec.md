@@ -906,6 +906,7 @@ commission to any commission that is lower than `max_commission`.
 6. [MAX\_COMMISSION\_TOO\_LOW](#max_commission_too_low)
 7. [EXPIRATION\_EPOCH\_TOO\_EARLY](#expiration_epoch_too_early)
 8. [EXPIRATION\_EPOCH\_TOO\_FAR](#expiration_epoch_too_far)
+9. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker exist in the contract.
@@ -915,6 +916,7 @@ commission to any commission that is lower than `max_commission`.
 6. `max_commission` should be greater than or equal to the current commission.
 7. `expiration_epoch` should be greater than the current epoch.
 8. `expiration_epoch` should be no further than 1 year from the current epoch.
+9. `commission` is not above the maximum commission for staking.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->
