@@ -1,5 +1,7 @@
 use staking::staking::errors::Error;
-use staking::staking::interface::{StakerInfoV1, StakerPoolInfoV1, StakingContractInfo};
+#[cfg(test)]
+use staking::staking::interface::StakingContractInfo;
+use staking::staking::interface::{StakerInfoV1, StakerPoolInfoV1};
 use staking::types::{Amount, Commission, Index};
 use starknet::ContractAddress;
 use starkware_utils::errors::OptionAuxTrait;
