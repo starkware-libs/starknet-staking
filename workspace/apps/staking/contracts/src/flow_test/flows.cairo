@@ -1,10 +1,11 @@
 use core::num::traits::Zero;
-use staking::constants::{PREV_CONTRACT_VERSION, STRK_IN_FRIS};
+use snforge_std::start_cheat_block_number_global;
+use staking::constants::{MIN_ATTESTATION_WINDOW, PREV_CONTRACT_VERSION, STRK_IN_FRIS};
 use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::MAINNET_POOL_CLASS_HASH_V0;
 use staking::flow_test::utils::{
-    Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait, SystemDelegatorTrait,
-    SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
+    AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
+    SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
     upgrade_implementation,
 };
 use staking::pool::errors::Error as PoolError;
@@ -14,12 +15,12 @@ use staking::pool::interface_v0::{
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{StakerInfoV1, StakerInfoV1Trait};
 use staking::staking::interface_v0::{StakerInfo, StakerInfoTrait};
-use staking::staking::objects::StakerInfoIntoInternalStakerInfoV1ITrait;
-use staking::test_utils::constants::UPGRADE_GOVERNOR;
+use staking::staking::objects::{EpochInfoTrait, StakerInfoIntoInternalStakerInfoV1ITrait};
+use staking::test_utils::constants::{EPOCH_DURATION, UPGRADE_GOVERNOR};
 use staking::test_utils::{
-    calculate_pool_member_rewards, calculate_pool_rewards, calculate_pool_rewards_with_pool_balance,
-    declare_pool_contract, declare_pool_eic_contract, deserialize_option, pool_update_rewards,
-    staker_update_old_rewards,
+    calculate_block_offset, calculate_pool_member_rewards, calculate_pool_rewards,
+    calculate_pool_rewards_with_pool_balance, declare_pool_contract, declare_pool_eic_contract,
+    deserialize_option, pool_update_rewards, staker_update_old_rewards,
 };
 use staking::types::{Amount, Commission, Index};
 use staking::utils::{compute_rewards_per_strk, compute_rewards_rounded_down};
@@ -31,7 +32,6 @@ use starkware_utils::types::time::time::Time;
 use starkware_utils_testing::test_utils::{
     TokenTrait, assert_panic_with_error, cheat_caller_address_once, set_account_as_upgrade_governor,
 };
-
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
 /// Staker increase_stake - cover if pool amount = 0 in calc_rew
@@ -4193,6 +4193,78 @@ pub(crate) impl AddToDelegationAfterExitActionFlowImpl<
 
         assert!(system.pool_member_info_v1(:delegator, :pool).amount == stake_amount);
         assert!(system.pool_member_info_v1(:delegator, :pool).unclaimed_rewards.is_non_zero());
+    }
+}
+
+/// Flow:
+/// Staker stake
+/// Set epoch info
+/// Staker attest
+/// Advance epoch
+/// Assert epoch rewards are changed
+#[derive(Drop, Copy)]
+pub(crate) struct SetEpochInfoFlow {}
+pub(crate) impl SetEpochInfoFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<SetEpochInfoFlow, TTokenState> {
+    fn get_pool_address(self: SetEpochInfoFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: SetEpochInfoFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: SetEpochInfoFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(self: SetEpochInfoFlow, ref system: SystemState<TTokenState>, system_type: SystemType) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let commission = 200;
+
+        let staker = system.new_staker(amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch();
+
+        let target_block_before_set = system
+            .attestation
+            .unwrap()
+            .get_current_epoch_target_attestation_block(
+                operational_address: staker.operational.address,
+            );
+        let epoch_rewards_before_set = system.reward_supplier.calculate_current_epoch_rewards();
+        assert!(epoch_rewards_before_set.is_non_zero());
+
+        // Set new epoch info.
+        let new_epoch_duration = EPOCH_DURATION * 15;
+        let new_epoch_length = system.staking.get_epoch_info().epoch_len_in_blocks() * 15;
+        system
+            .staking
+            .set_epoch_info(epoch_duration: new_epoch_duration, epoch_length: new_epoch_length);
+
+        let target_block_after_set = system
+            .attestation
+            .unwrap()
+            .get_current_epoch_target_attestation_block(
+                operational_address: staker.operational.address,
+            );
+        assert!(target_block_after_set == target_block_before_set);
+
+        let epoch_rewards_after_set = system.reward_supplier.calculate_current_epoch_rewards();
+        assert!(epoch_rewards_after_set == epoch_rewards_before_set);
+
+        // Advance block into attestation window and attest.
+        start_cheat_block_number_global(
+            block_number: MIN_ATTESTATION_WINDOW.into() + target_block_after_set,
+        );
+        system.attest(:staker);
+        assert!(epoch_rewards_after_set == system.staker_info_v1(:staker).unclaimed_rewards_own);
+
+        system.advance_epoch();
+        let epoch_rewards_after_advance_epoch = system
+            .reward_supplier
+            .calculate_current_epoch_rewards();
+        assert!(epoch_rewards_after_advance_epoch > epoch_rewards_before_set);
     }
 }
 // TODO: Implement this flow test.

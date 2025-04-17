@@ -2,13 +2,15 @@ use core::num::traits::Zero;
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows;
 use staking::flow_test::utils::{
-    RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemStakerTrait,
-    SystemTrait, test_flow_local, test_flow_mainnet,
+    RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemFactoryTrait,
+    SystemReplaceabilityTrait, SystemStakerTrait, SystemTrait, test_flow_local, test_flow_mainnet,
 };
+use staking::staking::errors::Error;
 use staking::test_utils::StakingInitConfig;
+use starkware_utils::errors::Describable;
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::types::time::time::Time;
-use starkware_utils_testing::test_utils::TokenTrait;
+use starkware_utils_testing::test_utils::{TokenTrait, assert_panic_with_error};
 
 #[test]
 fn basic_stake_flow_test() {
@@ -493,6 +495,12 @@ fn delegator_intent_with_non_upgraded_pool_regression_test() {
 #[test]
 fn add_to_delegation_after_exit_action_flow_test() {
     let flow = flows::AddToDelegationAfterExitActionFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn set_epoch_info_flow_test() {
+    let flow = flows::SetEpochInfoFlow {};
     test_flow_local(:flow);
 }
 
@@ -1110,6 +1118,52 @@ fn add_to_delegation_after_intent_flow_test() {
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
             + system.token.balance_of(account: pool),
+    );
+}
+
+/// Flow:
+/// Staker stake
+/// Staker delegate
+/// Set pool for upgrade
+/// Deploy attestation
+/// Upgrade staking implementation
+/// Upgrade reward supplier implementation
+/// Pool migration
+#[test]
+#[fork("MAINNET_LATEST")]
+fn test_pool_migration() {
+    let mut system = SystemFactoryTrait::mainnet_system();
+
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount * 2);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
+
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: stake_amount);
+    system.delegate(:delegator, :pool, amount: stake_amount / 2);
+
+    let one_week = Time::weeks(count: 1);
+    system.advance_time(time: one_week);
+    system.staking.update_global_index_if_needed();
+
+    let staker_info = system.staker_info(:staker);
+    let pool_unclaimed_rewards = staker_info.pool_info.unwrap().unclaimed_rewards;
+
+    system.set_pool_for_upgrade(pool_address: pool);
+    system.deploy_attestation();
+    system.upgrade_staking_implementation();
+    system.upgrade_reward_supplier_implementation();
+
+    // Pool migration.
+    assert!(system.token.balance_of(account: pool).is_zero());
+    let staker_index_after_migration = system.staking.pool_migration(:staker, pool_address: pool);
+    assert!(staker_index_after_migration == staker_info.index);
+    assert!(system.token.balance_of(account: pool) == pool_unclaimed_rewards);
+
+    let result = system.staking.safe_pool_migration(:staker);
+    assert_panic_with_error(
+        :result, expected_error: Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
     );
 }
 
