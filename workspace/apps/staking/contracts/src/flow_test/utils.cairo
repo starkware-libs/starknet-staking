@@ -305,6 +305,14 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.dispatcher().get_epoch_info()
     }
 
+    fn set_epoch_info(self: StakingState, epoch_duration: u32, epoch_length: u32) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.token_admin,
+        );
+        let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: self.address };
+        staking_config_dispatcher.set_epoch_info(:epoch_duration, :epoch_length);
+    }
+
     fn update_global_index_if_needed(self: StakingState) -> bool {
         self.dispatcher_v0_for_tests().update_global_index_if_needed()
     }
@@ -550,6 +558,10 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
     fn get_unclaimed_rewards(self: RewardSupplierState) -> Amount {
         self.dispatcher().contract_parameters_v1().try_into().unwrap().unclaimed_rewards
     }
+
+    fn calculate_current_epoch_rewards(self: RewardSupplierState) -> Amount {
+        self.dispatcher().calculate_current_epoch_rewards()
+    }
 }
 
 /// The `PoolRoles` struct represents the various roles involved in the pool contract.
@@ -580,7 +592,7 @@ struct AttestationState {
 }
 
 #[generate_trait]
-impl AttestationImpl of AttestationTrait {
+pub(crate) impl AttestationImpl of AttestationTrait {
     fn deploy(self: AttestationConfig, staking: StakingState) -> AttestationState {
         let mut calldata = ArrayTrait::new();
         staking.address.serialize(ref calldata);
@@ -593,6 +605,12 @@ impl AttestationImpl of AttestationTrait {
 
     fn dispatcher(self: AttestationState) -> IAttestationDispatcher nopanic {
         IAttestationDispatcher { contract_address: self.address }
+    }
+
+    fn get_current_epoch_target_attestation_block(
+        self: AttestationState, operational_address: ContractAddress,
+    ) -> u64 {
+        self.dispatcher().get_current_epoch_target_attestation_block(:operational_address)
     }
 }
 
@@ -617,7 +635,7 @@ pub(crate) struct SystemState<TTokenState> {
     pub minting_curve: MintingCurveState,
     pub reward_supplier: RewardSupplierState,
     pub pool: Option<PoolState>,
-    attestation: Option<AttestationState>,
+    pub(crate) attestation: Option<AttestationState>,
     pub base_account: felt252,
     staker_address: Option<ContractAddress>,
 }

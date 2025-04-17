@@ -498,6 +498,12 @@ fn add_to_delegation_after_exit_action_flow_test() {
     test_flow_local(:flow);
 }
 
+#[test]
+fn set_epoch_info_flow_test() {
+    let flow = flows::SetEpochInfoFlow {};
+    test_flow_local(:flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
