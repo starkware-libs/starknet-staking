@@ -1167,3 +1167,23 @@ fn test_pool_migration() {
     );
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn test_pool_migration_caller_not_pool() {
+    let mut system = SystemFactoryTrait::mainnet_system();
+
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount * 2);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
+    let pool = system.staking.get_pool(:staker);
+
+    system.set_pool_for_upgrade(pool_address: pool);
+    system.deploy_attestation();
+    system.upgrade_staking_implementation();
+    system.upgrade_reward_supplier_implementation();
+
+    let result = system.staking.safe_pool_migration(:staker);
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
+}
+
