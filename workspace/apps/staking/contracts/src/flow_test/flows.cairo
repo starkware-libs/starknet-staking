@@ -3270,6 +3270,75 @@ pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl<
     }
 }
 
+/// Test total_stake after upgrade
+#[derive(Drop, Copy)]
+pub(crate) struct TotalStakeAfterUpgradeFlow {
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) pool_address2: Option<ContractAddress>,
+    pub(crate) total_stake: Option<Amount>,
+}
+pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<TotalStakeAfterUpgradeFlow, TTokenState> {
+    fn get_pool_address(self: TotalStakeAfterUpgradeFlow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn get_staker_address(self: TotalStakeAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: TotalStakeAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let commission = 200;
+        let staker1 = system.new_staker(amount: stake_amount);
+        system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
+        let pool1 = system.staking.get_pool(staker: staker1);
+        let delegator1 = system.new_delegator(amount: 2 * stake_amount);
+        system.delegate(delegator: delegator1, pool: pool1, amount: stake_amount);
+        let delegator2 = system.new_delegator(amount: 2 * stake_amount);
+        system.delegate(delegator: delegator2, pool: pool1, amount: stake_amount);
+        system.delegator_exit_intent(delegator: delegator1, pool: pool1, amount: stake_amount);
+
+        let staker2 = system.new_staker(amount: stake_amount);
+        system.stake(staker: staker2, amount: stake_amount, pool_enabled: true, :commission);
+        let pool2 = system.staking.get_pool(staker: staker2);
+        system.delegate(delegator: delegator1, pool: pool2, amount: stake_amount);
+        system.staker_exit_intent(staker: staker2);
+
+        let total_stake = system.staking.get_total_stake();
+
+        self.pool_address = Option::Some(pool1);
+        self.pool_address2 = Option::Some(pool2);
+        self.total_stake = Option::Some(total_stake);
+    }
+
+    fn test(
+        self: TotalStakeAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        // TODO: upgrade more then one pool in utils. for now upgrade the second pool manually.
+        let pool2 = self.pool_address2.unwrap();
+        let pool_contract_admin = system.staking.get_pool_contract_admin();
+        let upgrade_governor = UPGRADE_GOVERNOR();
+        set_account_as_upgrade_governor(
+            contract: pool2, account: upgrade_governor, governance_admin: pool_contract_admin,
+        );
+        let eic_data = EICData {
+            eic_hash: declare_pool_eic_contract(),
+            eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into()].span(),
+        };
+        let implementation_data = ImplementationData {
+            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+        };
+        upgrade_implementation(contract_address: pool2, :implementation_data, :upgrade_governor);
+        // Test total stake after upgrade
+        assert!(system.staking.get_total_stake() == self.total_stake.unwrap());
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// Delegator delegate
