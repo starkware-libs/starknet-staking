@@ -1286,7 +1286,6 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
         self.staking.pause();
         self.upgrade_staking_implementation();
         self.upgrade_reward_supplier_implementation();
-        self.upgrade_minting_curve_implementation();
         if let Option::Some(pool) = self.pool {
             self.upgrade_pool_implementation(:pool);
         }
@@ -1329,18 +1328,6 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
             contract_address: self.reward_supplier.address,
             :implementation_data,
             upgrade_governor: self.reward_supplier.roles.upgrade_governor,
-        );
-    }
-
-    /// Upgrades the minting curve contract in the system state with a local implementation.
-    fn upgrade_minting_curve_implementation(self: SystemState<STRKTokenState>) {
-        let implementation_data = ImplementationData {
-            impl_hash: declare_minting_curve_contract(), eic_data: Option::None, final: false,
-        };
-        upgrade_implementation(
-            contract_address: self.minting_curve.address,
-            :implementation_data,
-            upgrade_governor: self.minting_curve.roles.upgrade_governor,
         );
     }
 
