@@ -5,7 +5,7 @@
       "dependsOn": []
     },
     "pack": {
-      "dependsOn": ["lint", "test"]
+      "dependsOn": ["lint", "build", "test"]
     }
   }
 }
