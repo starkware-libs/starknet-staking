@@ -591,8 +591,8 @@ fn unstake_intent(ref self: ContractState) -> TimeStamp
 ```
 #### description <!-- omit from toc -->
 Inform of the intent to exit the stake. 
-This will remove the funds from the stake, and block the staker's ability to attest starting from the current epoch.
-This will also start the exit window timeout.
+This will remove the funds from the staking protocol, initiate an exit window timeout, and block the staker's ability to attest starting from the current epoch.
+This will also block the staker's ability to re-stake from the same address in the future.
 Return the time in which the staker will be able to unstake.
 #### emits <!-- omit from toc -->
 1. [Staker Exit Intent](#staker-exit-intent)
