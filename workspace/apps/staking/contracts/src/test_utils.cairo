@@ -63,6 +63,7 @@ pub(crate) mod constants {
     use staking::types::{Amount, Commission, Index};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
+    use starkware_utils::types::time::time::Timestamp;
 
     pub const STAKER_INITIAL_BALANCE: Amount = 1000000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000 * STRK_IN_FRIS;
@@ -84,6 +85,7 @@ pub(crate) mod constants {
     // duration of  one epoch in seconds
     pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
+    pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         'CALLER_ADDRESS'.try_into().unwrap()
