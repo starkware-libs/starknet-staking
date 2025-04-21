@@ -3,7 +3,7 @@ use constants::{
     CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH,
     EPOCH_STARTING_BLOCK, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
     OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
-    STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET,
+    STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET, UNPOOL_TIME,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -2743,8 +2743,6 @@ fn test_update_rewards_from_attestation_contract_assertions() {
     let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
     assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
 }
-
-const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
 
 #[test]
 fn test_undelegate_intent_zero() {
