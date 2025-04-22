@@ -11,7 +11,6 @@ starkware_utils.workspace = true
 [dev-dependencies]
 assert_macros.workspace = true
 snforge_std.workspace = true
-snforge_scarb_plugin.workspace = true
 starkware_utils_testing.workspace = true
 
 [profile.dev.cairo]
@@ -35,3 +34,5 @@ sort-module-level-items = true
 
 [tool]
 snforge.workspace = true
+scarb.workspace = true
+

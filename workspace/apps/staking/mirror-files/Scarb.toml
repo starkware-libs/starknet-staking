@@ -5,11 +5,10 @@ members = ["workspace/apps/staking/contracts"]
 starknet = "2.11.0"
 assert_macros = "2.11.0"
 openzeppelin = "1.0.0"
-openzeppelin_testing = "1.0.0"
-snforge_std = "0.34.0"
-snforge_scarb_plugin = "0.34.0"
-starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "8952f308128ae6e7ceb1c9bb5d30d587ffccd5c6" }
-starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "8952f308128ae6e7ceb1c9bb5d30d587ffccd5c6" }
+openzeppelin_testing = "3.0.0"
+snforge_std = "0.41.0"
+starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "c13701e14230c9afba736fc174cc60f9be745d37" }
+starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "c13701e14230c9afba736fc174cc60f9be745d37" }
 
 [scripts]
 test = "snforge test"
@@ -22,6 +21,9 @@ inlining-strategy = "avoid"
 [[workspace.tool.snforge.fork]]
 name = "MAINNET_LATEST"
 
-url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
+url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_8"
 
 block_id.tag = "latest"
+
+[workspace.tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]

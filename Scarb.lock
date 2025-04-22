@@ -98,9 +98,9 @@ checksum = "sha256:1deb811a239c4f9cc28fc302039e2ffcb19911698a8c612487207448d70d2
 
 [[package]]
 name = "openzeppelin_testing"
-version = "1.0.0"
+version = "3.0.0"
 source = "registry+https://scarbs.xyz/"
-checksum = "sha256:6a8328d2240707412b6b636692aa2523b9f74d38f9a66dfbf61dd1fbbec3935f"
+checksum = "sha256:fef2baa73bc86044edcc63eec7a8345c652a7f90420b987d811251736f7eb317"
 dependencies = [
  "snforge_std",
 ]
@@ -135,7 +135,6 @@ version = "0.1.0"
 dependencies = [
  "openzeppelin",
  "openzeppelin_testing",
- "snforge_scarb_plugin",
  "snforge_std",
  "starkware_utils",
  "starkware_utils_testing",
@@ -143,15 +142,15 @@ dependencies = [
 
 [[package]]
 name = "snforge_scarb_plugin"
-version = "0.34.1"
+version = "0.41.0"
 source = "registry+https://scarbs.xyz/"
-checksum = "sha256:3a1bcfcd8e65cb3c9a437f59c44969756a78a99450ea3e7bd9362a7e97e1778e"
+checksum = "sha256:7228a3ea74d8decfb2294cee9251b537bbd58b3e243e9327f55e72a99ab5fb53"
 
 [[package]]
 name = "snforge_std"
-version = "0.34.1"
+version = "0.41.0"
 source = "registry+https://scarbs.xyz/"
-checksum = "sha256:61df5e54dbe1c946861f0580dc5e06f87a7a71c42d27931dccf7f3824f59ac34"
+checksum = "sha256:edf116cbf62cbe2487f188cf28ceb9f42b08cfa14e197524281c3ce932f4a5e6"
 dependencies = [
  "snforge_scarb_plugin",
 ]
@@ -161,7 +160,6 @@ name = "staking"
 version = "1.14.5"
 dependencies = [
  "openzeppelin",
- "snforge_scarb_plugin",
  "snforge_std",
  "starkware_utils",
  "starkware_utils_testing",
@@ -169,16 +167,16 @@ dependencies = [
 
 [[package]]
 name = "starkware_utils"
-version = "0.1.0"
-source = "git+https://github.com/starkware-libs/starkware-starknet-utils?rev=8952f308128ae6e7ceb1c9bb5d30d587ffccd5c6#8952f308128ae6e7ceb1c9bb5d30d587ffccd5c6"
+version = "0.1.1"
+source = "git+https://github.com/starkware-libs/starkware-starknet-utils?branch=main#c13701e14230c9afba736fc174cc60f9be745d37"
 dependencies = [
  "openzeppelin",
 ]
 
 [[package]]
 name = "starkware_utils_testing"
-version = "0.1.0"
-source = "git+https://github.com/starkware-libs/starkware-starknet-utils?rev=8952f308128ae6e7ceb1c9bb5d30d587ffccd5c6#8952f308128ae6e7ceb1c9bb5d30d587ffccd5c6"
+version = "1.0.0"
+source = "git+https://github.com/starkware-libs/starkware-starknet-utils?branch=main#c13701e14230c9afba736fc174cc60f9be745d37"
 dependencies = [
  "openzeppelin",
  "openzeppelin_testing",
