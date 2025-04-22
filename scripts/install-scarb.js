@@ -1,9 +1,9 @@
 const { execSync } = require('node:child_process');
 const fs = require('fs');
 
-const asdfVersion = 'v0.14.1';
-const scarbVersion = '2.11.0';
-const foundryVersion = '0.38.2';
+const asdfVersion = 'v0.16.0';
+const scarbVersion = '2.11.4';
+const foundryVersion = '0.41.0';
 
 const asdfTargetDir = `${process.env.HOME}/.asdf`;
 
