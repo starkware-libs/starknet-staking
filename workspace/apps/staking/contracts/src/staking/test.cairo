@@ -330,13 +330,6 @@ fn test_stake_with_staker_address_already_used() {
         );
 }
 
-// **Note**: The migration tests will be part of the flow tests.
-// TODO: Test the rewards part here for latest internal staker info, i.e test the rewards are sent
-// to the pool and the right index is returned.
-#[ignore]
-#[test]
-fn test_pool_migration() {}
-
 #[test]
 #[should_panic(expected: "Staker does not exist")]
 fn test_pool_migration_staker_not_exists() {
