@@ -165,7 +165,7 @@ library Math {
         // `msb(a) <= a < 2*msb(a)`.
         // We also know that `k`, the position of the most significant bit, is such that `msb(a) = 2**k`.
         // This gives `2**k < a <= 2**(k+1)` → `2**(k/2) <= sqrt(a) < 2 ** (k/2+1)`.
-        // Using an algorithm similar to the msb conmputation, we are able to compute `result = 2**(k/2)` which is a
+        // Using an algorithm similar to the msb computation, we are able to compute `result = 2**(k/2)` which is a
         // good first aproximation of `sqrt(a)` with at least 1 correct bit.
         uint256 result = 1;
         uint256 x = a;
