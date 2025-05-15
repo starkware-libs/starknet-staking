@@ -514,6 +514,12 @@ fn set_epoch_info_flow_test() {
     test_flow_local(:flow);
 }
 
+#[test]
+fn attest_after_delegator_intent_flow_test() {
+    let flow = flows::AttestAfterDelegatorIntentFlow {};
+    test_flow_local(:flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
