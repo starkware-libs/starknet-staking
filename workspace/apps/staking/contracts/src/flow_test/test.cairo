@@ -489,8 +489,8 @@ fn two_stakers_same_operational_address_flow_test() {
 
 // #[test]
 // #[fork("MAINNET_LATEST")]
-// fn delegator_intent_with_non_upgraded_pool_regression_test() {
-//     let mut flow = flows::DelegatorIntentWithNonUpgradedPoolFlow {
+// fn delegator_exit_with_non_upgraded_pool_regression_test() {
+//     let mut flow = flows::DelegatorExitWithNonUpgradedPoolFlow {
 //         pool_address: Option::None,
 //         first_delegator: Option::None,
 //         first_delegator_info: Option::None,

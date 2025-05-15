@@ -4089,14 +4089,20 @@ pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl<
 
 /// Flow:
 /// Staker stake with pool
-/// delegator delegate
+/// First delegator delegate
+/// Second delegator delegate
+/// Third delegator delegate
+/// Third delegator exit intent
 /// Staker exit intent
 /// Staker exit action
 /// Upgrade (without upgrading the pool)
-/// delegator exit intent
-/// delegator exit action
+/// First delegator exit intent
+/// First delegator exit action
+/// Second delegator exit intent
+/// Second delegator exit action
+/// Third delegator exit intent
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorIntentWithNonUpgradedPoolFlow {
+pub(crate) struct DelegatorExitWithNonUpgradedPoolFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) first_delegator: Option<Delegator>,
     pub(crate) first_delegator_info: Option<PoolMemberInfo>,
@@ -4105,20 +4111,18 @@ pub(crate) struct DelegatorIntentWithNonUpgradedPoolFlow {
     pub(crate) third_delegator: Option<Delegator>,
     pub(crate) third_delegator_info: Option<PoolMemberInfo>,
 }
-pub(crate) impl DelegatorIntentWithNonUpgradedPoolFlowImpl<
+pub(crate) impl DelegatorExitWithNonUpgradedPoolFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
-> of FlowTrait<DelegatorIntentWithNonUpgradedPoolFlow, TTokenState> {
-    fn get_pool_address(self: DelegatorIntentWithNonUpgradedPoolFlow) -> Option<ContractAddress> {
+> of FlowTrait<DelegatorExitWithNonUpgradedPoolFlow, TTokenState> {
+    fn get_pool_address(self: DelegatorExitWithNonUpgradedPoolFlow) -> Option<ContractAddress> {
         Option::None
     }
 
-    fn get_staker_address(self: DelegatorIntentWithNonUpgradedPoolFlow) -> Option<ContractAddress> {
+    fn get_staker_address(self: DelegatorExitWithNonUpgradedPoolFlow) -> Option<ContractAddress> {
         Option::None
     }
 
-    fn setup(
-        ref self: DelegatorIntentWithNonUpgradedPoolFlow, ref system: SystemState<TTokenState>,
-    ) {
+    fn setup(ref self: DelegatorExitWithNonUpgradedPoolFlow, ref system: SystemState<TTokenState>) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let commission = 200;
@@ -4160,7 +4164,7 @@ pub(crate) impl DelegatorIntentWithNonUpgradedPoolFlowImpl<
     }
 
     fn test(
-        self: DelegatorIntentWithNonUpgradedPoolFlow,
+        self: DelegatorExitWithNonUpgradedPoolFlow,
         ref system: SystemState<TTokenState>,
         system_type: SystemType,
     ) {
@@ -4183,6 +4187,13 @@ pub(crate) impl DelegatorIntentWithNonUpgradedPoolFlowImpl<
                 .unpool_amount == first_delegator_info
                 .amount,
         );
+        system.delegator_exit_action(delegator: first_delegator, :pool);
+        assert!(
+            system
+                .token
+                .balance_of(account: first_delegator.delegator.address) == first_delegator_info
+                .amount,
+        );
 
         system
             .delegator_exit_intent(
@@ -4199,6 +4210,14 @@ pub(crate) impl DelegatorIntentWithNonUpgradedPoolFlowImpl<
             system
                 .pool_member_info(delegator: second_delegator, :pool)
                 .unpool_amount == second_delegator_info
+                .amount
+                / 2,
+        );
+        system.delegator_exit_action(delegator: second_delegator, :pool);
+        assert!(
+            system
+                .token
+                .balance_of(account: second_delegator.delegator.address) == second_delegator_info
                 .amount
                 / 2,
         );
