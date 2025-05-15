@@ -4336,6 +4336,53 @@ pub(crate) impl SetEpochInfoFlowImpl<
         assert!(epoch_rewards_after_advance_epoch > epoch_rewards_before_set);
     }
 }
+
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Delegator exit intent
+/// Staker Attest
+/// Assert zero rewards for the delegator
+#[derive(Drop, Copy)]
+pub(crate) struct AttestAfterDelegatorIntentFlow {}
+pub(crate) impl AttestAfterDelegatorIntentFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<AttestAfterDelegatorIntentFlow, TTokenState> {
+    fn get_pool_address(self: AttestAfterDelegatorIntentFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: AttestAfterDelegatorIntentFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: AttestAfterDelegatorIntentFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: AttestAfterDelegatorIntentFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let commission = 200;
+
+        let staker = system.new_staker(amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch();
+
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: stake_amount);
+        system.delegate(:delegator, :pool, amount: stake_amount);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: stake_amount);
+
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+
+        assert!(system.pool_member_info_v1(:delegator, :pool).unclaimed_rewards.is_zero());
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
