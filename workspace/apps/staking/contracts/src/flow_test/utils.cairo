@@ -1397,15 +1397,24 @@ pub(crate) enum SystemType {
 }
 
 pub(crate) trait FlowTrait<
-    TFlow, TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+    TFlow,
+    TTokenState,
+    +Drop<TFlow>,
+    +TokenTrait<TTokenState>,
+    +Drop<TTokenState>,
+    +Copy<TTokenState>,
 > {
-    fn get_pool_address(self: TFlow) -> Option<ContractAddress>;
-    fn get_staker_address(self: TFlow) -> Option<ContractAddress>;
-    fn setup(ref self: TFlow, ref system: SystemState<TTokenState>);
+    fn get_pool_address(self: TFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+    fn get_staker_address(self: TFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+    fn setup(ref self: TFlow, ref system: SystemState<TTokenState>) {}
     fn test(self: TFlow, ref system: SystemState<TTokenState>, system_type: SystemType);
 }
 
-pub(crate) fn test_flow_local<TFlow, +FlowTrait<TFlow, TokenState>, +Drop<TFlow>, +Copy<TFlow>>(
+pub(crate) fn test_flow_local<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow, TokenState>>(
     flow: TFlow,
 ) {
     let mut system = SystemFactoryTrait::local_system();
@@ -1413,7 +1422,7 @@ pub(crate) fn test_flow_local<TFlow, +FlowTrait<TFlow, TokenState>, +Drop<TFlow>
 }
 
 pub(crate) fn test_flow_mainnet<
-    TFlow, +FlowTrait<TFlow, STRKTokenState>, +Drop<TFlow>, +Copy<TFlow>,
+    TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow, STRKTokenState>,
 >(
     ref flow: TFlow,
 ) {
