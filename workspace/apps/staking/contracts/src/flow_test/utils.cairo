@@ -6,7 +6,10 @@ use MainnetClassHashes::{
 use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
+use snforge_std::{
+    ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global,
+    start_cheat_block_timestamp_global,
+};
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::minting_curve::interface::IMintingCurveDispatcher;
@@ -1437,4 +1440,20 @@ pub(crate) fn test_flow_mainnet<
     }
     system.deploy_attestation_and_upgrade_contracts_implementation();
     flow.test(ref :system, system_type: SystemType::Mainnet);
+}
+
+#[test]
+fn test_advance_epoch() {
+    let mut system = SystemFactoryTrait::local_system();
+
+    start_cheat_block_number_global(block_number: EPOCH_STARTING_BLOCK - 1);
+    system.advance_epoch();
+    assert!(get_block_number() == EPOCH_STARTING_BLOCK);
+
+    system.advance_epoch();
+    let epoch_len_in_blocks = system.staking.get_epoch_info().epoch_len_in_blocks();
+    assert!(get_block_number() == EPOCH_STARTING_BLOCK + epoch_len_in_blocks.into());
+
+    system.advance_epoch();
+    assert!(get_block_number() == EPOCH_STARTING_BLOCK + (epoch_len_in_blocks * 2).into());
 }
