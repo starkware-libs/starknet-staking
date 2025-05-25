@@ -78,13 +78,13 @@ use starkware_utils_testing::test_utils::{
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, approve,
     calculate_pool_member_rewards, calculate_staker_own_rewards_including_commission,
-    calculate_staker_total_rewards, cheat_reward_for_reward_supplier, constants,
-    declare_pool_contract, declare_staking_eic_contract, deploy_mock_erc20_contract,
-    deploy_reward_supplier_contract, deploy_staking_contract,
-    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    initialize_staking_state_from_cfg, load_from_simple_map, stake_for_testing_using_dispatcher,
-    stake_from_zero_address, stake_with_pool_enabled, store_internal_staker_info_v0_to_map,
-    store_to_simple_map,
+    calculate_staker_total_rewards, cheat_reward_for_reward_supplier,
+    cheat_target_attestation_block_hash, constants, declare_pool_contract,
+    declare_staking_eic_contract, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
+    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
+    general_contract_system_deployment, initialize_staking_state_from_cfg, load_from_simple_map,
+    stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,
+    store_internal_staker_info_v0_to_map, store_to_simple_map,
 };
 
 #[test]
@@ -609,10 +609,12 @@ fn test_claim_rewards() {
         :token_address,
     );
 
+    let block_hash = Zero::zero();
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: cfg.staker_info.operational_address,
     );
-    attestation_dispatcher.attest(block_hash: Zero::zero());
+    attestation_dispatcher.attest(:block_hash);
 
     // Claim rewards and validate the results.
     let mut spy = snforge_std::spy_events();

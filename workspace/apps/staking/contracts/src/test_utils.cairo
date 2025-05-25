@@ -15,8 +15,10 @@ use core::poseidon::PoseidonTrait;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global, test_address,
+    ContractClassTrait, DeclareResultTrait, start_cheat_block_hash_global,
+    start_cheat_block_number_global, test_address,
 };
+use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
     C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
 };
@@ -1205,4 +1207,14 @@ pub(crate) fn advance_block_into_attestation_window(cfg: StakingInitConfig, stak
         attestation_window: MIN_ATTESTATION_WINDOW,
     );
     advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
+}
+
+pub(crate) fn cheat_target_attestation_block_hash(cfg: StakingInitConfig, block_hash: felt252) {
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
+    let operational_address = cfg.staker_info.operational_address;
+    let target_attestation_block = attestation_dispatcher
+        .get_current_epoch_target_attestation_block(:operational_address);
+
+    start_cheat_block_hash_global(block_number: target_attestation_block, :block_hash);
 }

@@ -243,18 +243,9 @@ pub mod Attestation {
             );
         }
 
-        /// **Note**: This function has two implementations.
-        /// In test environments, the syscall is not supported, returns zero or errors unexpectedly.
-        /// This allows the function to be tested without relying on the actual block hash
-        /// retrieval syscall.
-        #[cfg(not(target: 'test'))]
+        // TODO: Provide a descriptive error message for unwrap failure.
         fn get_target_block_hash(self: @ContractState, target_attestation_block: u64) -> felt252 {
             get_block_hash_syscall(target_attestation_block).unwrap()
-        }
-
-        #[cfg(target: 'test')]
-        fn get_target_block_hash(self: @ContractState, target_attestation_block: u64) -> felt252 {
-            Zero::zero()
         }
     }
 }
