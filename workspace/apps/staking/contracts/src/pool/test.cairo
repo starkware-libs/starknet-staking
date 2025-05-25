@@ -61,11 +61,11 @@ use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
     advance_block_into_attestation_window, advance_epoch_global, approve, calculate_pool_rewards,
     calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards,
-    claim_rewards_for_pool_member, constants, declare_pool_contract, declare_pool_eic_contract,
-    deploy_mock_erc20_contract, deploy_staking_contract,
-    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    initialize_pool_state, load_from_simple_map, stake_with_pool_enabled,
-    update_rewards_from_staking_contract_for_testing,
+    cheat_target_attestation_block_hash, claim_rewards_for_pool_member, constants,
+    declare_pool_contract, declare_pool_eic_contract, deploy_mock_erc20_contract,
+    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
+    general_contract_system_deployment, initialize_pool_state, load_from_simple_map,
+    stake_with_pool_enabled, update_rewards_from_staking_contract_for_testing,
 };
 
 #[test]
@@ -800,10 +800,12 @@ fn test_exit_delegation_pool_action() {
     advance_block_into_attestation_window(
         :cfg, stake: cfg.test_info.stake_amount + delegate_amount,
     );
+    let block_hash = Zero::zero();
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    attestation_dispatcher.attest(block_hash: Zero::zero());
+    attestation_dispatcher.attest(:block_hash);
     advance_epoch_global();
     let unclaimed_rewards_member = pool_dispatcher
         .pool_member_info_v1(:pool_member)

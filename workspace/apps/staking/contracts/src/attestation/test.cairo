@@ -1,5 +1,6 @@
 use core::num::traits::Zero;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
+use snforge_std::start_cheat_block_hash_global;
 use staking::attestation::attestation::Attestation;
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{
@@ -26,7 +27,8 @@ use starkware_utils_testing::test_utils::{
 use test_utils::constants::DUMMY_ADDRESS;
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global,
-    calculate_block_offset, general_contract_system_deployment, stake_for_testing_using_dispatcher,
+    calculate_block_offset, cheat_target_attestation_block_hash, general_contract_system_deployment,
+    stake_for_testing_using_dispatcher,
 };
 
 #[test]
@@ -50,16 +52,20 @@ fn test_attest() {
     advance_epoch_global();
     // advance into the attestation window.
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
+
+    let block_hash = Zero::zero();
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    let epoch = staking_dispatcher.get_current_epoch();
-    attestation_dispatcher.attest(block_hash: Zero::zero());
+    attestation_dispatcher.attest(:block_hash);
+
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
     assert!(is_attestation_done == true);
     let events = spy.get_events().emitted_by(contract_address: attestation_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "attest");
+    let epoch = staking_dispatcher.get_current_epoch();
     assert_staker_attestation_successful_event(spied_event: events[0], :staker_address, :epoch);
 }
 
@@ -98,10 +104,12 @@ fn test_attest_assertions() {
     advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() - 1);
 
     // catch ATTEST_OUT_OF_WINDOW - attest before the attestation window.
+    let block_hash = Zero::zero();
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    let result = attestation_safe_dispatcher.attest(block_hash: Zero::zero());
+    let result = attestation_safe_dispatcher.attest(:block_hash);
     assert_panic_with_error(:result, expected_error: Error::ATTEST_OUT_OF_WINDOW.describe());
 
     // advance past the attestation window.
@@ -110,10 +118,11 @@ fn test_attest_assertions() {
     );
 
     // catch ATTEST_OUT_OF_WINDOW - attest after the attestation window.
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    let result = attestation_safe_dispatcher.attest(block_hash: Zero::zero());
+    let result = attestation_safe_dispatcher.attest(:block_hash);
     assert_panic_with_error(:result, expected_error: Error::ATTEST_OUT_OF_WINDOW.describe());
 
     // advance to next epoch.
@@ -131,16 +140,17 @@ fn test_attest_assertions() {
     );
     advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
     // successful attest.
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    attestation_dispatcher.attest(block_hash: Zero::zero());
+    attestation_dispatcher.attest(:block_hash);
     // TODO: Catch ATTEST_WRONG_BLOCK_HASH.
     // Catch ATTEST_IS_DONE.
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    let result = attestation_safe_dispatcher.attest(block_hash: Zero::zero());
+    let result = attestation_safe_dispatcher.attest(:block_hash);
     assert_panic_with_error(:result, expected_error: Error::ATTEST_IS_DONE.describe());
 }
 
@@ -159,10 +169,13 @@ fn test_is_attestation_done_in_curr_epoch() {
     advance_epoch_global();
     // advance into the attestation window.
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
+
+    let block_hash = Zero::zero();
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    attestation_dispatcher.attest(block_hash: Zero::zero());
+    attestation_dispatcher.attest(:block_hash);
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
     assert!(is_attestation_done == true);
@@ -193,10 +206,13 @@ fn test_get_last_epoch_attestation_done() {
     advance_epoch_global();
     // advance into the attestation window.
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
+
+    let block_hash = Zero::zero();
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
-    attestation_dispatcher.attest(block_hash: Zero::zero());
+    attestation_dispatcher.attest(:block_hash);
     let last_epoch_attesation_done = attestation_dispatcher
         .get_last_epoch_attestation_done(:staker_address);
     assert!(last_epoch_attesation_done == 1);

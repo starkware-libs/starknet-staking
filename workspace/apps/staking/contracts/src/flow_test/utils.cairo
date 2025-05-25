@@ -7,8 +7,8 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, start_cheat_block_number_global,
-    start_cheat_block_timestamp_global,
+    ContractClassTrait, DeclareResultTrait, start_cheat_block_hash_global,
+    start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::MIN_ATTESTATION_WINDOW;
@@ -866,6 +866,23 @@ pub(crate) impl SystemImpl<
     }
 }
 
+#[generate_trait]
+impl InternalSystemImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of InternalSystemTrait<TTokenState> {
+    fn cheat_target_attestation_block_hash(
+        self: SystemState<TTokenState>, staker: Staker, block_hash: felt252,
+    ) {
+        let target_attestation_block = self
+            .attestation
+            .unwrap()
+            .get_current_epoch_target_attestation_block(
+                operational_address: staker.operational.address,
+            );
+        start_cheat_block_hash_global(block_number: target_attestation_block, :block_hash);
+    }
+}
+
 /// The `Account` struct represents an account in the staking system.
 /// It includes the account's address, amount of tokens, token state, and staking state.
 #[derive(Drop, Copy)]
@@ -1005,11 +1022,13 @@ pub(crate) impl SystemStakerImpl<
     }
 
     fn attest(self: SystemState<TTokenState>, staker: Staker) {
+        let block_hash = Zero::zero();
+        self.cheat_target_attestation_block_hash(:staker, :block_hash);
         cheat_caller_address_once(
             contract_address: self.attestation.unwrap().address,
             caller_address: staker.operational.address,
         );
-        self.attestation.unwrap().dispatcher().attest(block_hash: Zero::zero());
+        self.attestation.unwrap().dispatcher().attest(:block_hash);
     }
 
     fn advance_epoch_and_attest(self: SystemState<TTokenState>, staker: Staker) {
