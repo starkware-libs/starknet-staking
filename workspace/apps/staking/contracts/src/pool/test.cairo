@@ -1490,13 +1490,6 @@ fn test_pool_eic_with_wrong_number_of_data_elements() {
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let upgrade_governor = cfg.test_info.pool_contract_admin;
-
-    set_account_as_upgrade_governor(
-        contract: pool_contract,
-        account: upgrade_governor,
-        governance_admin: cfg.test_info.pool_contract_admin,
-    );
 
     // Upgrade.
     let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
@@ -1508,7 +1501,7 @@ fn test_pool_eic_with_wrong_number_of_data_elements() {
         block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
     );
     upgrade_implementation(
-        contract_address: pool_contract, :implementation_data, :upgrade_governor,
+        contract_address: pool_contract, :implementation_data, upgrade_governor: staking_contract,
     );
 }
 
@@ -1520,13 +1513,6 @@ fn test_pool_eic_zero_class_hash() {
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let upgrade_governor = cfg.test_info.pool_contract_admin;
-
-    set_account_as_upgrade_governor(
-        contract: pool_contract,
-        account: upgrade_governor,
-        governance_admin: cfg.test_info.pool_contract_admin,
-    );
 
     // Upgrade.
     let eic_data = EICData {
@@ -1540,7 +1526,7 @@ fn test_pool_eic_zero_class_hash() {
         block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
     );
     upgrade_implementation(
-        contract_address: pool_contract, :implementation_data, :upgrade_governor,
+        contract_address: pool_contract, :implementation_data, upgrade_governor: staking_contract,
     );
 }
 

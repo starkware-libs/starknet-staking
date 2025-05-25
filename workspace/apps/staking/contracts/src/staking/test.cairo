@@ -1549,7 +1549,7 @@ fn test_switch_staking_delegation_pool_assertions() {
 }
 
 #[test]
-fn test_pool_contract_admin_role() {
+fn test_pool_contract_roles() {
     let cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
@@ -1565,6 +1565,7 @@ fn test_pool_contract_admin_role() {
             .is_governance_admin(account: cfg.test_info.pool_contract_admin),
     );
     assert!(pool_contract_roles_dispatcher.is_governance_admin(account: staking_contract));
+    assert!(pool_contract_roles_dispatcher.is_upgrade_governor(account: staking_contract));
     assert!(!pool_contract_roles_dispatcher.is_governance_admin(account: DUMMY_ADDRESS()));
 }
 
