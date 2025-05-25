@@ -46,6 +46,7 @@ pub mod Staking {
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
     use starkware_utils::errors::{Describable, OptionAuxTrait};
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::mul_wide_and_div;
@@ -1302,15 +1303,19 @@ pub mod Staking {
         ) -> ContractAddress {
             let class_hash = self.pool_contract_class_hash.read();
             let contract_address_salt: felt252 = Time::now().seconds.into();
-            let governance_admin = self.pool_contract_admin.read();
             let pool_contract = deploy_delegation_pool_contract(
                 :class_hash,
                 :contract_address_salt,
                 :staker_address,
                 :staking_contract,
                 :token_address,
-                :governance_admin,
+                governance_admin: staking_contract,
             );
+            let pool_contract_roles_dispatcher = IRolesDispatcher {
+                contract_address: pool_contract,
+            };
+            let governance_admin = self.pool_contract_admin.read();
+            pool_contract_roles_dispatcher.register_governance_admin(account: governance_admin);
             self.emit(Events::NewDelegationPool { staker_address, pool_contract, commission });
             pool_contract
         }
