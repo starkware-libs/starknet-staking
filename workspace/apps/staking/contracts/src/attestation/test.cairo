@@ -139,13 +139,21 @@ fn test_attest_assertions() {
         attestation_window: new_attestation_window,
     );
     advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
-    // successful attest.
+
+    // Catch ATTEST_WRONG_BLOCK_HASH.
     cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
+    let result = attestation_safe_dispatcher.attest(block_hash: 'wrong_block_hash');
+    assert_panic_with_error(:result, expected_error: Error::ATTEST_WRONG_BLOCK_HASH.describe());
+
+    // successful attest.
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: operational_address,
+    );
     attestation_dispatcher.attest(:block_hash);
-    // TODO: Catch ATTEST_WRONG_BLOCK_HASH.
+
     // Catch ATTEST_IS_DONE.
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
