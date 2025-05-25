@@ -598,12 +598,41 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
         )
 }
 
+pub(crate) fn add_to_delegation_pool_with_pool_member(
+    pool_contract: ContractAddress,
+    pool_member: ContractAddress,
+    amount: Amount,
+    token_address: ContractAddress,
+) {
+    approve(owner: pool_member, spender: pool_contract, :amount, :token_address);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
+    pool_dispatcher.add_to_delegation_pool(:pool_member, :amount);
+}
+
 pub(crate) fn claim_rewards_for_pool_member(
     pool_contract: ContractAddress, pool_member: ContractAddress,
 ) -> Amount {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     pool_dispatcher.claim_rewards(:pool_member)
+}
+
+pub(crate) fn update_rewards_from_staking_contract_for_testing(
+    cfg: StakingInitConfig, pool_contract: ContractAddress, rewards: Amount, pool_balance: Amount,
+) {
+    let token_address = cfg.staking_contract_info.token_address;
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: pool_contract,
+        amount: rewards,
+        :token_address,
+    );
+    cheat_caller_address_once(
+        contract_address: pool_contract, caller_address: cfg.test_info.staking_contract,
+    );
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    pool_dispatcher.update_rewards_from_staking_contract(:rewards, :pool_balance);
 }
 
 /// *****WARNING*****
