@@ -1314,6 +1314,7 @@ pub mod Staking {
             let pool_contract_roles_dispatcher = IRolesDispatcher {
                 contract_address: pool_contract,
             };
+            pool_contract_roles_dispatcher.register_upgrade_governor(account: staking_contract);
             let governance_admin = self.pool_contract_admin.read();
             pool_contract_roles_dispatcher.register_governance_admin(account: governance_admin);
             self.emit(Events::NewDelegationPool { staker_address, pool_contract, commission });
