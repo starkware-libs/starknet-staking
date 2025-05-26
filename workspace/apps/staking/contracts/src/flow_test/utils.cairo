@@ -34,8 +34,8 @@ use staking::staking::interface_v0::{
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
-    EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS,
-    UPGRADE_GOVERNOR,
+    EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS,
+    STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
@@ -1328,6 +1328,7 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
                 STARTING_BLOCK_OFFSET.into(),
                 declare_pool_contract().into(),
                 self.attestation.unwrap().address.into(),
+                MAINNET_SECURITY_COUNSEL_ADDRESS().into(),
             ]
                 .span(),
         };

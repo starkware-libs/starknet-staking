@@ -3019,7 +3019,7 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
     ) {
         // TODO: upgrade more then one pool in utils. for now upgrade the second pool manually.
         let pool2 = self.pool_address2.unwrap();
-        let pool_contract_admin = system.staking.get_pool_contract_admin();
+        let pool_contract_admin = system.pool.unwrap().governance_admin;
         let upgrade_governor = UPGRADE_GOVERNOR();
         set_account_as_upgrade_governor(
             contract: pool2, account: upgrade_governor, governance_admin: pool_contract_admin,

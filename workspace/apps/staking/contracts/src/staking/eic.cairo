@@ -29,6 +29,8 @@ mod StakingEIC {
         total_stake: Amount,
         // The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
+        // Governance admin of the delegation pool contract.
+        pool_contract_admin: ContractAddress,
     }
 
     // TODO: Test all if's.
@@ -37,7 +39,7 @@ mod StakingEIC {
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
-            assert(eic_init_data.len() == 6, 'EXPECTED_DATA_LENGTH_6');
+            assert(eic_init_data.len() == 7, 'EXPECTED_DATA_LENGTH_7');
             // TODO: Can prev_class_hash be hard coded?
             let prev_class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             let epoch_duration: u32 = (*eic_init_data[1]).try_into().unwrap();
@@ -45,6 +47,7 @@ mod StakingEIC {
             let starting_offset: u64 = (*eic_init_data[3]).try_into().unwrap();
             let pool_contract_class_hash: ClassHash = (*eic_init_data[4]).try_into().unwrap();
             let attestation_contract: ContractAddress = (*eic_init_data[5]).try_into().unwrap();
+            let pool_contract_admin: ContractAddress = (*eic_init_data[6]).try_into().unwrap();
 
             // 1. Set previous class hash.
             assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
@@ -73,6 +76,10 @@ mod StakingEIC {
             // 5. Set attestation contract address.
             assert!(attestation_contract.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
             self.attestation_contract.write(attestation_contract);
+
+            // 6. Set pool contract admin address (SC).
+            assert!(pool_contract_admin.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
+            self.pool_contract_admin.write(pool_contract_admin);
         }
     }
 }
