@@ -9,6 +9,7 @@ pub mod Staking {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::constants::{
         DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, PREV_CONTRACT_VERSION, STARTING_EPOCH,
+        STRK_TOKEN_ADDRESS,
     };
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
@@ -117,7 +118,12 @@ pub mod Staking {
         prev_class_hash: Map<Version, ClassHash>,
         // Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
         // an epoch to the updated stake. Stakers that performed unstake_intent are not included.
-        total_stake_trace: Trace,
+        // Deprecated field of the total stake, used in V1.
+        // total_stake_trace: Trace,
+        // Map token address to checkpoints tracking total stake changes over time, with each
+        // checkpoint mapping an epoch to the updated stake. Stakers that performed unstake_intent
+        // are not included.
+        tokens_total_stake_trace: Map<ContractAddress, Trace>,
         // Map staker address to their balance trace.
         staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
         // Map staker address to their pool info.
@@ -186,7 +192,10 @@ pub mod Staking {
         self.prev_class_hash.write(PREV_CONTRACT_VERSION, prev_class_hash);
         self.epoch_info.write(epoch_info);
         self.attestation_contract.write(attestation_contract);
-        self.total_stake_trace.insert(key: STARTING_EPOCH, value: Zero::zero());
+        self
+            .tokens_total_stake_trace
+            .entry(STRK_TOKEN_ADDRESS)
+            .insert(key: STARTING_EPOCH, value: Zero::zero());
     }
 
     #[abi(embed_v0)]
@@ -520,7 +529,7 @@ pub mod Staking {
         }
 
         fn get_total_stake(self: @ContractState) -> Amount {
-            let total_stake_trace = self.total_stake_trace;
+            let total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
             // Trace is initialized with a zero stake at the first valid epoch, so it is safe to
             // unwrap.
             let (_, total_stake) = total_stake_trace.latest().unwrap().into();
@@ -528,7 +537,7 @@ pub mod Staking {
         }
 
         fn get_current_total_staking_power(self: @ContractState) -> Amount {
-            let total_stake_trace = self.total_stake_trace;
+            let total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
             let current_epoch = self.get_current_epoch();
             let (epoch, total_stake) = total_stake_trace.latest().unwrap();
             if epoch <= current_epoch {
@@ -1344,7 +1353,10 @@ pub mod Staking {
         }
 
         fn update_total_stake(ref self: ContractState, new_total_stake: Amount) {
-            self.total_stake_trace.insert(key: self.get_next_epoch(), value: new_total_stake);
+            self
+                .tokens_total_stake_trace
+                .entry(STRK_TOKEN_ADDRESS)
+                .insert(key: self.get_next_epoch(), value: new_total_stake);
         }
 
         /// Wrap initial operations required in any public staking function.

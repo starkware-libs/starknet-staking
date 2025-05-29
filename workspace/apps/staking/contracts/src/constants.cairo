@@ -1,4 +1,5 @@
 use staking::types::{Amount, Epoch, Index, Inflation, Version};
+use starknet::ContractAddress;
 use starkware_utils::constants::WEEK;
 use starkware_utils::types::time::time::TimeDelta;
 
@@ -12,3 +13,7 @@ pub(crate) const C_DENOM: Inflation = 10_000;
 pub(crate) const MIN_ATTESTATION_WINDOW: u16 = 11;
 pub(crate) const STARTING_EPOCH: Epoch = 0;
 pub(crate) const PREV_CONTRACT_VERSION: Version = '0';
+pub(crate) const STRK_TOKEN_ADDRESS: ContractAddress =
+    0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
+    .try_into()
+    .unwrap();
