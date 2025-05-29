@@ -53,8 +53,9 @@ use starkware_utils::constants::{NAME, SYMBOL};
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     Deployable, TokenConfig, TokenState, TokenTrait, advance_block_number_global,
-    cheat_caller_address_once, set_account_as_app_role_admin, set_account_as_security_admin,
-    set_account_as_security_agent, set_account_as_token_admin, set_account_as_upgrade_governor,
+    cheat_caller_address_once, set_account_as_app_governor, set_account_as_app_role_admin,
+    set_account_as_security_admin, set_account_as_security_agent, set_account_as_token_admin,
+    set_account_as_upgrade_governor,
 };
 
 mod MainnetAddresses {
@@ -99,6 +100,7 @@ pub(crate) struct StakingRoles {
     pub security_agent: ContractAddress,
     pub app_role_admin: ContractAddress,
     pub token_admin: ContractAddress,
+    pub app_governor: ContractAddress,
 }
 
 /// The `StakingConfig` struct represents the configuration settings for the staking contract.
@@ -246,6 +248,11 @@ pub(crate) impl StakingImpl of StakingTrait {
             account: self.roles.token_admin,
             app_role_admin: self.roles.app_role_admin,
         );
+        set_account_as_app_governor(
+            contract: self.address,
+            account: self.roles.app_governor,
+            app_role_admin: self.roles.app_role_admin,
+        );
     }
 
     fn get_pool(self: StakingState, staker: Staker) -> ContractAddress {
@@ -310,7 +317,7 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn set_epoch_info(self: StakingState, epoch_duration: u32, epoch_length: u32) {
         cheat_caller_address_once(
-            contract_address: self.address, caller_address: self.roles.token_admin,
+            contract_address: self.address, caller_address: self.roles.app_governor,
         );
         let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: self.address };
         staking_config_dispatcher.set_epoch_info(:epoch_duration, :epoch_length);
@@ -672,6 +679,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
                 security_agent: cfg.test_info.security_agent,
                 app_role_admin: cfg.test_info.app_role_admin,
                 token_admin: cfg.test_info.token_admin,
+                app_governor: cfg.test_info.app_governor,
             },
         };
         let minting_curve = MintingCurveConfig {

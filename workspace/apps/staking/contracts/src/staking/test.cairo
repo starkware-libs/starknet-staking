@@ -1,10 +1,10 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
     CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH,
-    EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN,
-    OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS,
-    OTHER_STAKER_ADDRESS, STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET,
-    UNPOOL_TIME,
+    EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS, NON_APP_GOVERNOR, NON_STAKER_ADDRESS,
+    NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
+    OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, STAKER_ADDRESS,
+    STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET, UNPOOL_TIME,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -2560,7 +2560,7 @@ fn test_current_epoch_starting_block() {
     let new_epoch_duration = EPOCH_DURATION / 15;
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     staking_config_dispatcher
         .set_epoch_info(epoch_duration: new_epoch_duration, epoch_length: new_epoch_len);
@@ -3225,7 +3225,7 @@ fn test_set_epoch_info() {
     let new_length = 2 * EPOCH_LENGTH;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     advance_epoch_global();
     staking_config_dispatcher
@@ -3249,14 +3249,14 @@ fn test_set_epoch_info() {
 }
 
 #[test]
-#[should_panic(expected: "ONLY_TOKEN_ADMIN")]
-fn test_set_epoch_info_not_token_admin() {
+#[should_panic(expected: "ONLY_APP_GOVERNOR")]
+fn test_set_epoch_info_not_app_governor() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
-    let non_token_admin = NON_TOKEN_ADMIN();
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: non_token_admin);
+    let non_app_governor = NON_APP_GOVERNOR();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: non_app_governor);
     staking_config_dispatcher
         .set_epoch_info(epoch_duration: EPOCH_DURATION, epoch_length: EPOCH_LENGTH);
 }
@@ -3275,7 +3275,7 @@ fn test_set_epoch_info_assertions() {
 
     // Catch INVALID_EPOCH_LENGTH.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     let result = staking_safe_dispatcher
         .set_epoch_info(:epoch_duration, epoch_length: Zero::zero());
@@ -3283,7 +3283,7 @@ fn test_set_epoch_info_assertions() {
 
     // Catch INVALID_EPOCH_DURATION.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     let result = staking_safe_dispatcher
         .set_epoch_info(epoch_duration: Zero::zero(), :epoch_length);
