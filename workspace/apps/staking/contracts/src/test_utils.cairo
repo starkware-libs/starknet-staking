@@ -173,6 +173,9 @@ pub(crate) mod constants {
     pub fn NON_SECURITY_AGENT() -> ContractAddress {
         'NON_SECURITY_AGENT'.try_into().unwrap()
     }
+    pub fn NON_APP_GOVERNOR() -> ContractAddress {
+        'NON_APP_GOVERNOR'.try_into().unwrap()
+    }
     pub fn STRK_TOKEN_ADDRESS() -> ContractAddress {
         0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d.try_into().unwrap()
     }
@@ -391,6 +394,11 @@ pub(crate) fn set_default_roles(staking_contract: ContractAddress, cfg: StakingI
         contract: staking_contract,
         account: cfg.test_info.upgrade_governor,
         governance_admin: cfg.test_info.governance_admin,
+    );
+    set_account_as_app_governor(
+        contract: staking_contract,
+        account: cfg.test_info.app_governor,
+        app_role_admin: cfg.test_info.app_role_admin,
     );
 }
 
