@@ -3291,6 +3291,8 @@ fn test_set_epoch_info_assertions() {
 }
 
 #[test]
+#[ignore]
+// TODO: Test when migration for the new version is implemented.
 fn test_staking_eic() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

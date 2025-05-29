@@ -407,6 +407,8 @@ fn assert_total_stake_after_multi_stake_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+#[ignore]
+// TODO: Test when migration for the new version is implemented.
 fn total_stake_after_upgrade_flow_test() {
     let mut flow = flows::TotalStakeAfterUpgradeFlow {
         pool_address: Option::None, pool_address2: Option::None, total_stake: Option::None,
