@@ -9,6 +9,7 @@ use staking::staking::interface_v0::{
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::iterable_map::IterableMap;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
@@ -409,6 +410,16 @@ mod epoch_info_tests {
 pub struct InternalStakerPoolInfoV1 {
     pub pool_contract: ContractAddress,
     pub commission: Commission,
+}
+
+#[starknet::storage_node]
+pub(crate) struct InternalStakerPoolInfoV2 {
+    /// Commission for all pools.
+    pub(crate) commission: Option<Commission>,
+    /// Map pool contract to their token address.
+    pub(crate) pools: IterableMap<ContractAddress, ContractAddress>,
+    /// The commitment to the commission.
+    pub(crate) commission_commitment: Option<CommissionCommitment>,
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
