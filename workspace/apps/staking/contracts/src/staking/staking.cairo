@@ -25,8 +25,9 @@ pub mod Staking {
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
         InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTrait,
-        UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
-        UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
+        InternalStakerPoolInfoV2, UndelegateIntentKey, UndelegateIntentValue,
+        UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
+        VersionedInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
@@ -119,6 +120,8 @@ pub mod Staking {
         total_stake_trace: Trace,
         // Map staker address to their balance trace.
         staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
+        // Map staker address to their pool info.
+        staker_pool_info: Map<ContractAddress, InternalStakerPoolInfoV2>,
     }
 
     #[event]
