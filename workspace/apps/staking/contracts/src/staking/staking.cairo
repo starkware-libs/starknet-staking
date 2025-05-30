@@ -43,7 +43,7 @@ pub mod Staking {
         compute_new_delegated_stake, deploy_delegation_pool_contract,
     };
     use starknet::class_hash::ClassHash;
-    use starknet::storage::{Map, StoragePathEntry};
+    use starknet::storage::{Map, Mutable, StoragePath, StoragePathEntry};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
@@ -1139,6 +1139,28 @@ pub mod Staking {
             // unwrap.
             let (_, total_stake) = total_stake_trace.latest().unwrap().into();
             total_stake
+        }
+
+        /// Return StoragePath to the internal staker pool information for the given
+        /// `staker_address`.
+        fn internal_staker_pool_info(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> StoragePath<InternalStakerPoolInfoV2> {
+            // TODO: Check if we can remove the assert for the staker existence.
+            // Assert that the staker exists.
+            self.internal_staker_info(:staker_address);
+            self.staker_pool_info.entry(staker_address)
+        }
+
+        /// Return Mutable StoragePath to the internal staker pool information for the given
+        /// `staker_address`.
+        fn internal_staker_pool_info_mut(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) -> StoragePath<Mutable<InternalStakerPoolInfoV2>> {
+            // TODO: Check if we can remove the assert for the staker existence.
+            // Assert that the staker exists.
+            self.internal_staker_info(:staker_address);
+            self.staker_pool_info.entry(staker_address)
         }
 
         /// Reads the internal staker information for the given `staker_address` from storage
