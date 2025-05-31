@@ -13,7 +13,7 @@ try {
   );
 } catch {
   console.log('asdf already exists');
-  return;
+  process.exit(0);
 }
 
 process.env.PATH = `${process.env.PATH}:${asdfTargetDir}/bin:${asdfTargetDir}/shims`;
