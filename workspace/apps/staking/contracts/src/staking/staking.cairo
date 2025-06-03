@@ -51,6 +51,7 @@ pub mod Staking {
     use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
     use starkware_utils::errors::{Describable, OptionAuxTrait};
     use starkware_utils::interfaces::identity::Identity;
+    use starkware_utils::iterable_map::IterableMap;
     use starkware_utils::math::utils::mul_wide_and_div;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
@@ -128,6 +129,8 @@ pub mod Staking {
         staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
         // Map staker address to their pool info.
         staker_pool_info: Map<ContractAddress, InternalStakerPoolInfoV2>,
+        // Map token address to whether it's active.
+        btc_tokens: IterableMap<ContractAddress, bool>,
     }
 
     #[event]
