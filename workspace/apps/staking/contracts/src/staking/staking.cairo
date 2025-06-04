@@ -1176,23 +1176,19 @@ pub mod Staking {
 
         /// Return StoragePath to the internal staker pool information for the given
         /// `staker_address`.
+        /// Note: This function does not check if the staker exists.
         fn internal_staker_pool_info(
             self: @ContractState, staker_address: ContractAddress,
         ) -> StoragePath<InternalStakerPoolInfoV2> {
-            // TODO: Check if we can remove the assert for the staker existence.
-            // Assert that the staker exists.
-            self.internal_staker_info(:staker_address);
             self.staker_pool_info.entry(staker_address)
         }
 
         /// Return Mutable StoragePath to the internal staker pool information for the given
         /// `staker_address`.
+        /// Note: This function does not check if the staker exists.
         fn internal_staker_pool_info_mut(
             ref self: ContractState, staker_address: ContractAddress,
         ) -> StoragePath<Mutable<InternalStakerPoolInfoV2>> {
-            // TODO: Check if we can remove the assert for the staker existence.
-            // Assert that the staker exists.
-            self.internal_staker_info(:staker_address);
             self.staker_pool_info.entry(staker_address)
         }
 
