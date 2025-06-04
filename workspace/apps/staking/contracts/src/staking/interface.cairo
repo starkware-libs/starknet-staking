@@ -197,6 +197,12 @@ pub trait IStakingTokenManager<TContractState> {
     /// It impacts the current epoch’s rewards, potentially increasing or decreasing them,
     /// and may cause uneven distribution of rewards among stakers for this epoch.
     fn enable_token(ref self: TContractState, token_address: ContractAddress);
+    /// Disable token for getting rewards.
+    ///
+    /// **Important note:** This function takes effect immediately upon execution.
+    /// It impacts the current epoch’s rewards, potentially increasing or decreasing them,
+    /// and may cause uneven distribution of rewards among stakers for this epoch.
+    fn disable_token(ref self: TContractState, token_address: ContractAddress);
 }
 
 #[starknet::interface]

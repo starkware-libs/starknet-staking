@@ -44,6 +44,7 @@ pub(crate) enum Error {
     TOKEN_ALREADY_EXISTS,
     TOKEN_NOT_EXISTS,
     TOKEN_ALREADY_ENABLED,
+    TOKEN_ALREADY_DISABLED,
 }
 
 impl DescribableError of Describable<Error> {
@@ -92,6 +93,7 @@ impl DescribableError of Describable<Error> {
             Error::TOKEN_ALREADY_EXISTS => "Token already exists",
             Error::TOKEN_NOT_EXISTS => "Token does not exist",
             Error::TOKEN_ALREADY_ENABLED => "Token is already enabled",
+            Error::TOKEN_ALREADY_DISABLED => "Token is already disabled",
         }
     }
 }
