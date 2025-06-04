@@ -1096,6 +1096,15 @@ pub mod Staking {
             self.btc_tokens.write(token_address, true);
             // TODO: emit event
         }
+
+        fn disable_token(ref self: ContractState, token_address: ContractAddress) {
+            self.roles.only_security_agent();
+            let active_status: Option<bool> = self.btc_tokens.read(token_address);
+            assert!(active_status.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
+            assert!(active_status.unwrap(), "{}", Error::TOKEN_ALREADY_DISABLED);
+            self.btc_tokens.write(token_address, false);
+            // TODO: emit event
+        }
     }
 
     #[abi(embed_v0)]
