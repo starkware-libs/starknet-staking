@@ -331,7 +331,9 @@ fn test_stake_with_staker_address_already_used() {
         );
 }
 
+// TODO: Test when implement migration.
 #[test]
+#[ignore]
 #[should_panic(expected: "Staker does not exist")]
 fn test_pool_migration_staker_not_exists() {
     let mut cfg: StakingInitConfig = Default::default();
@@ -342,7 +344,9 @@ fn test_pool_migration_staker_not_exists() {
     staking_pool_dispatcher.pool_migration(:staker_address);
 }
 
+// TODO: Test when implement migration.
 #[test]
+#[ignore]
 #[should_panic(expected: "Zero address caller is not allowed")]
 fn test_pool_migration_with_zero_address_caller() {
     let mut cfg: StakingInitConfig = Default::default();
@@ -2892,7 +2896,9 @@ fn test_internal_staker_info_outdated_version() {
     staking_dispatcher.internal_staker_info(:staker_address);
 }
 
+// TODO: Test when implement migration.
 #[test]
+#[ignore]
 #[should_panic(expected: "Staker does not exist")]
 fn test_staker_migration_staker_not_exist() {
     let mut cfg: StakingInitConfig = Default::default();
@@ -2902,7 +2908,9 @@ fn test_staker_migration_staker_not_exist() {
     staking_dispatcher.staker_migration(staker_address: DUMMY_ADDRESS());
 }
 
+// TODO: Test when implement migration.
 #[test]
+#[ignore]
 #[should_panic(expected: "Internal Staker Info is already up-to-date")]
 fn test_staker_migration_already_up_to_date() {
     let mut cfg: StakingInitConfig = Default::default();

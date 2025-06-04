@@ -730,24 +730,26 @@ pub mod Staking {
             }
         }
 
-        fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
-            let versioned_internal_staker_info = self.staker_info.read(staker_address);
-            match versioned_internal_staker_info {
-                VersionedInternalStakerInfo::None => panic_with_byte_array(
-                    err: @GenericError::STAKER_NOT_EXISTS.describe(),
-                ),
-                VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
-                    if let Option::Some(_) = internal_staker_info_v0.pool_info() {
-                        panic_with_byte_array(
-                            err: @Error::STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL.describe(),
-                        )
-                    }
-                    self.convert_internal_staker_info(:staker_address)
-                },
-                VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
-                    err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
-                ),
-            };
+        // TODO: Implement this function for the new version.
+        fn staker_migration(
+            ref self: ContractState, staker_address: ContractAddress,
+        ) { //     let versioned_internal_staker_info = self.staker_info.read(staker_address);
+        //     match versioned_internal_staker_info {
+        //         VersionedInternalStakerInfo::None => panic_with_byte_array(
+        //             err: @GenericError::STAKER_NOT_EXISTS.describe(),
+        //         ),
+        //         VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
+        //             if let Option::Some(_) = internal_staker_info_v0.pool_info() {
+        //                 panic_with_byte_array(
+        //                     err: @Error::STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL.describe(),
+        //                 )
+        //             }
+        //             self.convert_internal_staker_info(:staker_address)
+        //         },
+        //         VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
+        //             err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
+        //         ),
+        //     };
         }
     }
 
@@ -979,23 +981,26 @@ pub mod Staking {
                 );
         }
 
+        /// TODO: Implement this function for the new version.
         fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
-            // Prerequisites and asserts.
-            self.assert_caller_is_not_zero();
-            let (staker_info, staker_index, pool_unclaimed_rewards) = self
-                .convert_internal_staker_info(:staker_address);
-            let pool_address = staker_info.get_pool_info().pool_contract;
-            assert!(get_caller_address() == pool_address, "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
+            // // Prerequisites and asserts.
+            // self.assert_caller_is_not_zero();
+            // let (staker_info, staker_index, pool_unclaimed_rewards) = self
+            //     .convert_internal_staker_info(:staker_address);
+            // let pool_address = staker_info.get_pool_info().pool_contract;
+            // assert!(get_caller_address() == pool_address, "{}",
+            // Error::CALLER_IS_NOT_POOL_CONTRACT);
 
-            // Send rewards to pool contract, and commit to storage.
-            let token_dispatcher = self.token_dispatcher.read();
-            self
-                ._deprecated_send_rewards_to_delegation_pool_V0(
-                    :staker_address, :staker_info, :pool_unclaimed_rewards, :token_dispatcher,
-                );
-            self.write_staker_info(:staker_address, :staker_info);
+            // // Send rewards to pool contract, and commit to storage.
+            // let token_dispatcher = self.token_dispatcher.read();
+            // self
+            //     ._deprecated_send_rewards_to_delegation_pool_V0(
+            //         :staker_address, :staker_info, :pool_unclaimed_rewards, :token_dispatcher,
+            //     );
+            // self.write_staker_info(:staker_address, :staker_info);
 
-            staker_index
+            // staker_index
+            Zero::zero()
         }
     }
 
@@ -1166,6 +1171,7 @@ pub mod Staking {
             self.staker_pool_info.entry(staker_address)
         }
 
+        /// TODO: Implement this function for the new version.
         /// Reads the internal staker information for the given `staker_address` from storage
         /// and converts it to V1. Writes the updated version to storage and initializes the
         /// staker's balance trace.
@@ -1173,41 +1179,41 @@ pub mod Staking {
         /// Precondition: The staker exists and its version is V0.
         ///
         /// This function is used only during migration.
-        fn convert_internal_staker_info(
-            ref self: ContractState, staker_address: ContractAddress,
-        ) -> (InternalStakerInfoLatest, Index, Amount) {
-            let versioned_internal_staker_info = self.staker_info.read(staker_address);
-            match versioned_internal_staker_info {
-                VersionedInternalStakerInfo::None => panic_with_byte_array(
-                    err: @GenericError::STAKER_NOT_EXISTS.describe(),
-                ),
-                VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
-                    let (
-                        internal_staker_info_v1,
-                        amount_own,
-                        index,
-                        pool_unclaimed_rewards,
-                        pool_amount,
-                    ) =
-                        internal_staker_info_v0
-                        .convert(self.get_prev_class_hash(), staker_address);
-                    self
-                        .staker_info
-                        .write(
-                            staker_address,
-                            VersionedInternalStakerInfo::V1(internal_staker_info_v1),
-                        );
-                    self
-                        .initialize_staker_balance_trace(
-                            :staker_address, :amount_own, :pool_amount,
-                        );
-                    (internal_staker_info_v1, index, pool_unclaimed_rewards)
-                },
-                VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
-                    err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
-                ),
-            }
-        }
+        // fn convert_internal_staker_info(
+        //     ref self: ContractState, staker_address: ContractAddress,
+        // ) -> (InternalStakerInfoLatest, Index, Amount) {
+        //     let versioned_internal_staker_info = self.staker_info.read(staker_address);
+        //     match versioned_internal_staker_info {
+        //         VersionedInternalStakerInfo::None => panic_with_byte_array(
+        //             err: @GenericError::STAKER_NOT_EXISTS.describe(),
+        //         ),
+        //         VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
+        //             let (
+        //                 internal_staker_info_v1,
+        //                 amount_own,
+        //                 index,
+        //                 pool_unclaimed_rewards,
+        //                 pool_amount,
+        //             ) =
+        //                 internal_staker_info_v0
+        //                 .convert(self.get_prev_class_hash(), staker_address);
+        //             self
+        //                 .staker_info
+        //                 .write(
+        //                     staker_address,
+        //                     VersionedInternalStakerInfo::V1(internal_staker_info_v1),
+        //                 );
+        //             self
+        //                 .initialize_staker_balance_trace(
+        //                     :staker_address, :amount_own, :pool_amount,
+        //                 );
+        //             (internal_staker_info_v1, index, pool_unclaimed_rewards)
+        //         },
+        //         VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
+        //             err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
+        //         ),
+        //     }
+        // }
 
         fn send_rewards(
             self: @ContractState,
@@ -1584,24 +1590,25 @@ pub mod Staking {
             staker_balance
         }
 
+        // TODO: Change or remove this function when implementing migration.
         /// **Note**: This function should be called only once during migration.
-        fn initialize_staker_balance_trace(
-            ref self: ContractState,
-            staker_address: ContractAddress,
-            amount_own: Amount,
-            pool_amount: Amount,
-        ) -> StakerBalance {
-            let staker_info = self.internal_staker_info(:staker_address);
-            let mut staker_balance = StakerBalanceTrait::new(:amount_own);
-            if staker_info.pool_info.is_some() {
-                staker_balance.update_pool_amount(new_amount: pool_amount);
-            }
-            self
-                .staker_balance_trace
-                .entry(key: staker_address)
-                .insert(key: STARTING_EPOCH, value: staker_balance);
-            staker_balance
-        }
+        // fn initialize_staker_balance_trace(
+        //     ref self: ContractState,
+        //     staker_address: ContractAddress,
+        //     amount_own: Amount,
+        //     pool_amount: Amount,
+        // ) -> StakerBalance {
+        //     let staker_info = self.internal_staker_info(:staker_address);
+        //     let mut staker_balance = StakerBalanceTrait::new(:amount_own);
+        //     if staker_info.pool_info.is_some() {
+        //         staker_balance.update_pool_amount(new_amount: pool_amount);
+        //     }
+        //     self
+        //         .staker_balance_trace
+        //         .entry(key: staker_address)
+        //         .insert(key: STARTING_EPOCH, value: staker_balance);
+        //     staker_balance
+        // }
 
         fn get_pool_balance_curr_epoch(
             self: @ContractState, staker_address: ContractAddress,
