@@ -256,7 +256,10 @@ pub mod Staking {
                         token_address: token_dispatcher.contract_address,
                         :commission,
                     );
-                Option::Some(InternalStakerPoolInfoLatest { pool_contract, commission })
+                self.write_staker_commission(:staker_address, :commission);
+                Option::Some(
+                    InternalStakerPoolInfoLatest { pool_contract, commission: Zero::zero() },
+                )
             } else {
                 Option::None
             };
@@ -479,9 +482,13 @@ pub mod Staking {
 
             // Update staker info and commit to storage.
             // No need to update rewards as there is no change in staked amount (own or delegated).
+            self.write_staker_commission(:staker_address, :commission);
+            // TODO: deprecate once new struct of internal staker pool info is used.
             staker_info
                 .pool_info =
-                    Option::Some(InternalStakerPoolInfoLatest { pool_contract, commission });
+                    Option::Some(
+                        InternalStakerPoolInfoLatest { pool_contract, commission: Zero::zero() },
+                    );
             self.write_staker_info(:staker_address, :staker_info);
             pool_contract
         }
@@ -497,6 +504,9 @@ pub mod Staking {
             staker_info.amount_own = staker_balance.amount_own();
             if let Option::Some(mut pool_info) = staker_info.pool_info {
                 pool_info.amount = staker_balance.pool_amount();
+                // Set commission from the new storage variable internal_staker_pool_info.
+                // Commission must be set since staker has a pool.
+                pool_info.commission = self.read_staker_commission(:staker_address);
                 staker_info.pool_info = Option::Some(pool_info);
             }
             staker_info
@@ -614,13 +624,11 @@ pub mod Staking {
             self.general_prerequisites();
             assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
             let staker_address = get_caller_address();
-            let mut staker_info = self.internal_staker_info(:staker_address);
+            let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
-            let (pool_contract, old_commission) = {
-                let pool_info = staker_info.get_pool_info();
-                (pool_info.pool_contract, pool_info.commission)
-            };
+            let pool_contract = staker_info.get_pool_info().pool_contract;
+            let old_commission = self.read_staker_commission(:staker_address);
 
             if let Option::Some(commission_commitment) = staker_info.commission_commitment {
                 if self.is_commission_commitment_active(:commission_commitment) {
@@ -643,14 +651,8 @@ pub mod Staking {
                 assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
             }
 
-            // Update commission in this contract, and in the associated pool contract.
-            {
-                let mut pool_info = staker_info.get_pool_info();
-                pool_info.commission = commission;
-                staker_info.pool_info = Option::Some(pool_info);
-            }
-
-            self.write_staker_info(:staker_address, :staker_info);
+            // Update commission in storage.
+            self.write_staker_commission(:staker_address, :commission);
 
             // Emit event.
             self
@@ -678,7 +680,8 @@ pub mod Staking {
                     Error::COMMISSION_COMMITMENT_EXISTS,
                 );
             }
-            assert!(pool_info.commission <= max_commission, "{}", Error::MAX_COMMISSION_TOO_LOW);
+            let current_commission = self.read_staker_commission(:staker_address);
+            assert!(current_commission <= max_commission, "{}", Error::MAX_COMMISSION_TOO_LOW);
             assert!(expiration_epoch > current_epoch, "{}", Error::EXPIRATION_EPOCH_TOO_EARLY);
             assert!(
                 expiration_epoch - current_epoch <= self.get_epoch_info().epochs_in_year(),
@@ -1212,6 +1215,20 @@ pub mod Staking {
             token_address.unwrap()
         }
 
+        fn read_staker_commission(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> Commission {
+            let internal_staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            internal_staker_pool_info.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
+        }
+
+        fn write_staker_commission(
+            ref self: ContractState, staker_address: ContractAddress, commission: Commission,
+        ) {
+            let internal_staker_pool_info = self.internal_staker_pool_info_mut(:staker_address);
+            internal_staker_pool_info.commission.write(Option::Some(commission));
+        }
+
         /// TODO: Implement this function for the new version.
         /// Reads the internal staker information for the given `staker_address` from storage
         /// and converts it to V1. Writes the updated version to storage and initializes the
@@ -1554,7 +1571,7 @@ pub mod Staking {
             let own_rewards = self.staker_own_rewards(:staker_address, :total_rewards);
             let commission_rewards = self
                 .get_staker_commission_rewards(
-                    :staker_info, pool_rewards: total_rewards - own_rewards,
+                    :staker_address, :staker_info, pool_rewards: total_rewards - own_rewards,
                 );
             own_rewards + commission_rewards
         }
@@ -1600,15 +1617,20 @@ pub mod Staking {
         }
 
         fn get_staker_commission_rewards(
-            self: @ContractState, staker_info: InternalStakerInfoLatest, pool_rewards: Amount,
+            self: @ContractState,
+            staker_address: ContractAddress,
+            staker_info: InternalStakerInfoLatest,
+            pool_rewards: Amount,
         ) -> Amount {
-            if let Option::Some(pool_info) = staker_info.pool_info {
+            if let Option::Some(_) = staker_info.pool_info {
+                let commission = self.read_staker_commission(:staker_address);
                 return compute_commission_amount_rounded_down(
-                    rewards_including_commission: pool_rewards, commission: pool_info.commission,
+                    rewards_including_commission: pool_rewards, :commission,
                 );
             }
             Zero::zero()
         }
+
 
         fn get_next_epoch(self: @ContractState) -> Epoch {
             self.get_current_epoch() + 1
