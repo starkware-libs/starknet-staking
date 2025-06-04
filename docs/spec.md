@@ -49,6 +49,9 @@
     - [set\_reward\_supplier](#set_reward_supplier)
     - [set\_epoch\_info](#set_epoch_info)
     - [staker\_migration](#staker_migration)
+    - [add\_token](#add_token)
+    - [enable\_token](#enable_token)
+    - [disable\_token](#disable_token)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
@@ -285,6 +288,9 @@ classDiagram
     unpause()
     get_current_epoch()
     internal_staker_info()
+    add_token()
+    enable_token()
+    disable_token()
   }
   class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
@@ -1333,6 +1339,54 @@ Any address can execute.
 1. Convert versioned_internal_staker_info to newer version.
 2. Initialize the staker's balance trace.
 
+### add_token
+```rust
+fn add_token(ref self: ContractState, token_address: ContractAddress)
+```
+#### description <!-- omit from toc -->
+Add a new token to the staking contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
+2. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
+3. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only security admin.
+#### logic <!-- omit from toc -->
+
+### enable_token
+```rust
+fn enable_token(ref self: ContractState, token_address: ContractAddress)
+```
+#### description <!-- omit from toc -->
+Enable a token for getting rewards.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
+2. [TOKEN\_NOT\_EXISTS](#token_not_exists)
+3. [TOKEN\_ALREADY\_ENABLED](#token_already_enabled)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only security admin.
+#### logic <!-- omit from toc -->
+
+### disable_token
+```rust
+fn disable_token(ref self: ContractState, token_address: ContractAddress)
+```
+#### description <!-- omit from toc -->
+Disable a token for getting rewards.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [ONLY\_SECURITY\_AGENT](#only_security_agent)
+2. [TOKEN\_NOT\_EXISTS](#token_not_exists)
+3. [TOKEN\_ALREADY\_DISABLED](#token_already_disabled)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only security agent.
+#### logic <!-- omit from toc -->
+
 ## Events
 ### Stake Balance Changed
 | data                | type              | keyed |
@@ -2347,6 +2401,21 @@ Only token admin.
 
 ### INTERNAL_STAKER_INFO_ALREADY_UPDATED
 "Internal Staker Info is already up-to-date"
+
+### TOKEN_NOT_EXISTS
+"Token does not exist"
+
+### TOKEN_ALREADY_ENABLED
+"Token is already enabled"
+
+### TOKEN_ALREADY_DISABLED
+"Token is already disabled"
+
+### INVALID_TOKEN_ADDRESS
+"Invalid token address"
+
+### TOKEN_ALREADY_EXISTS
+"Token already exists"
 
 # Structs
 ### StakerPoolInfo

@@ -53,7 +53,33 @@ pnpm install
 ## Implementation specification
 Specs document found [here](docs/spec.md)
 
-
+## Verify Class Hash
+To ensure that the on-chain class hash corresponds to the code in this repository, follow these steps:
+- :wrench: Environment Requirements
+  - scarb version:
+    - `scarb --version` -> `2.11.2`
+    - if not, install scarb:
+      - `asdf install scarb 2.11.2`
+      - `asdf global scarb 2.11.2`
+  - starkli version:
+    - `starkli --version` -> `0.4.1`
+- :mag: Verification Steps
+  - Checkout the Correct Code Version
+    - Make sure you're on the exact Git commit or tag used for deployment:
+      - `git checkout <commit-hash-or-tag>`
+      - commit_hash: `06d2fffb288937ed76d58165debe46f1796273c1`
+      - tag: `@staking/contracts-v1.0.1-dev.510`
+  - Build the Contract
+    - Use Scarb to compile the contract:
+      - `scarb build`
+  - Compute the Local Class Hash
+    - Use Starkli to calculate the class hash from the compiled contract:
+      - `starkli class-hash target/dev/staking_X.contract_class.json`
+      - where `X` is the name of the contract (e.g. `Staking`, `Attestation`)
+  - Compare with On-Chain Class Hash
+    - Look up the deployed class hash on a block explorer (e.g., [StarkScan](https://starkscan.io/) or [Voyager](https://voyager.online/))
+    - Ensure it matches the one computed locally
+  
 ## Getting help
 
 Reach out to the maintainer at any of the following:
