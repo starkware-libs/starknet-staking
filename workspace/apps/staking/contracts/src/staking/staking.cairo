@@ -1187,6 +1187,17 @@ pub mod Staking {
             self.staker_pool_info.entry(staker_address)
         }
 
+        /// Returns the token address for the given `staker_address` and `pool_contract`.
+        /// Panic if the given `pool_contract` doesn't belong to the given `staker_address`.
+        fn get_pool_token(
+            self: @ContractState, staker_address: ContractAddress, pool_contract: ContractAddress,
+        ) -> ContractAddress {
+            let internal_staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            let token_address = internal_staker_pool_info.pools.read(pool_contract);
+            assert!(token_address.is_some(), "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
+            token_address.unwrap()
+        }
+
         /// TODO: Implement this function for the new version.
         /// Reads the internal staker information for the given `staker_address` from storage
         /// and converts it to V1. Writes the updated version to storage and initializes the
