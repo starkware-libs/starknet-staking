@@ -3608,6 +3608,39 @@ fn test_add_token_assertions() {
         .add_token(token_address: BTC_TOKEN_ADDRESS());
     assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_EXISTS.describe());
 }
-// TODO: Test add_token once implement is_active_token.
+// TODO: Test add_token, enable_token once implement is_active_token.
 
+#[test]
+#[feature("safe_dispatcher")]
+fn test_enable_token_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_token_manager_safe_dispatcher = IStakingTokenManagerSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    // Catch ONLY_SECURITY_ADMIN.
+    let result = staking_token_manager_safe_dispatcher
+        .enable_token(token_address: BTC_TOKEN_ADDRESS());
+    assert_panic_with_error(:result, expected_error: "ONLY_SECURITY_ADMIN");
 
+    // Catch TOKEN_NOT_EXISTS.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    let result = staking_token_manager_safe_dispatcher
+        .enable_token(token_address: BTC_TOKEN_ADDRESS());
+    assert_panic_with_error(:result, expected_error: Error::TOKEN_NOT_EXISTS.describe());
+
+    // Catch TOKEN_ALREADY_ENABLED.
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: cfg.test_info.security_admin,
+        span: CheatSpan::TargetCalls(3),
+    );
+    let _ = staking_token_manager_safe_dispatcher.add_token(token_address: BTC_TOKEN_ADDRESS());
+    let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: BTC_TOKEN_ADDRESS());
+    let result = staking_token_manager_safe_dispatcher
+        .enable_token(token_address: BTC_TOKEN_ADDRESS());
+    assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_ENABLED.describe());
+}

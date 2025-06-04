@@ -42,6 +42,8 @@ pub(crate) enum Error {
     STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL,
     INVALID_TOKEN_ADDRESS,
     TOKEN_ALREADY_EXISTS,
+    TOKEN_NOT_EXISTS,
+    TOKEN_ALREADY_ENABLED,
 }
 
 impl DescribableError of Describable<Error> {
@@ -88,6 +90,8 @@ impl DescribableError of Describable<Error> {
             Error::STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL => "Staker migration is not allowed, staker has a pool",
             Error::INVALID_TOKEN_ADDRESS => "Invalid token address",
             Error::TOKEN_ALREADY_EXISTS => "Token already exists",
+            Error::TOKEN_NOT_EXISTS => "Token does not exist",
+            Error::TOKEN_ALREADY_ENABLED => "Token is already enabled",
         }
     }
 }
