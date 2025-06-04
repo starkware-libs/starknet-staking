@@ -630,7 +630,8 @@ pub mod Staking {
             let pool_contract = staker_info.get_pool_info().pool_contract;
             let old_commission = self.read_staker_commission(:staker_address);
 
-            if let Option::Some(commission_commitment) = staker_info.commission_commitment {
+            if let Option::Some(commission_commitment) = self
+                .read_staker_commission_commitment(:staker_address) {
                 if self.is_commission_commitment_active(:commission_commitment) {
                     assert!(
                         commission <= commission_commitment.max_commission,
@@ -669,11 +670,12 @@ pub mod Staking {
             self.general_prerequisites();
             assert!(max_commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
             let staker_address = get_caller_address();
-            let mut staker_info = self.internal_staker_info(:staker_address);
+            let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             let pool_info = staker_info.get_pool_info();
             let current_epoch = self.get_current_epoch();
-            if let Option::Some(commission_commitment) = staker_info.commission_commitment {
+            if let Option::Some(commission_commitment) = self
+                .read_staker_commission_commitment(:staker_address) {
                 assert!(
                     !self.is_commission_commitment_active(:commission_commitment),
                     "{}",
@@ -689,8 +691,7 @@ pub mod Staking {
                 Error::EXPIRATION_EPOCH_TOO_FAR,
             );
             let commission_commitment = CommissionCommitment { max_commission, expiration_epoch };
-            staker_info.commission_commitment = Option::Some(commission_commitment);
-            self.write_staker_info(:staker_address, :staker_info);
+            self.write_staker_commission_commitment(:staker_address, :commission_commitment);
             self
                 .emit(
                     Events::CommissionCommitmentSet {
@@ -702,11 +703,11 @@ pub mod Staking {
         fn get_staker_commission_commitment(
             self: @ContractState, staker_address: ContractAddress,
         ) -> CommissionCommitment {
-            let staker_info = self.internal_staker_info(:staker_address);
-            if staker_info.commission_commitment.is_none() {
-                panic_with_byte_array(err: @Error::COMMISSION_COMMITMENT_NOT_SET.describe());
-            }
-            staker_info.commission_commitment.unwrap()
+            // Assert that the staker exists.
+            self.internal_staker_info(:staker_address);
+            self
+                .read_staker_commission_commitment(:staker_address)
+                .expect_with_err(Error::COMMISSION_COMMITMENT_NOT_SET)
         }
 
         fn is_paused(self: @ContractState) -> bool {
@@ -1227,6 +1228,23 @@ pub mod Staking {
         ) {
             let internal_staker_pool_info = self.internal_staker_pool_info_mut(:staker_address);
             internal_staker_pool_info.commission.write(Option::Some(commission));
+        }
+
+        fn read_staker_commission_commitment(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> Option<CommissionCommitment> {
+            self.internal_staker_pool_info(:staker_address).commission_commitment.read()
+        }
+
+        fn write_staker_commission_commitment(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            commission_commitment: CommissionCommitment,
+        ) {
+            let internal_staker_pool_info = self.internal_staker_pool_info_mut(:staker_address);
+            internal_staker_pool_info
+                .commission_commitment
+                .write(Option::Some(commission_commitment));
         }
 
         /// TODO: Implement this function for the new version.
