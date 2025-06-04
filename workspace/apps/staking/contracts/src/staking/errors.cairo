@@ -40,6 +40,8 @@ pub(crate) enum Error {
     STAKER_BALANCE_NOT_INITIALIZED,
     STAKER_ADDRESS_ALREADY_USED,
     STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL,
+    INVALID_TOKEN_ADDRESS,
+    TOKEN_ALREADY_EXISTS,
 }
 
 impl DescribableError of Describable<Error> {
@@ -84,6 +86,8 @@ impl DescribableError of Describable<Error> {
             Error::STAKER_BALANCE_NOT_INITIALIZED => "Staker balance is not initialized",
             Error::STAKER_ADDRESS_ALREADY_USED => "Staker address is already used",
             Error::STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL => "Staker migration is not allowed, staker has a pool",
+            Error::INVALID_TOKEN_ADDRESS => "Invalid token address",
+            Error::TOKEN_ALREADY_EXISTS => "Token already exists",
         }
     }
 }

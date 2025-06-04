@@ -225,6 +225,9 @@ pub(crate) mod constants {
     pub(crate) fn MAINNET_SECURITY_COUNSEL_ADDRESS() -> ContractAddress {
         0x663cc699d9c51b7d4d434e06f5982692167546ce525d9155edb476ac9a117d6.try_into().unwrap()
     }
+    pub fn BTC_TOKEN_ADDRESS() -> ContractAddress {
+        'BTC_TOKEN_ADDRESS'.try_into().unwrap()
+    }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
     ref cfg: StakingInitConfig,

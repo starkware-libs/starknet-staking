@@ -1,8 +1,8 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
-    CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH,
-    EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS, NON_APP_GOVERNOR, NON_STAKER_ADDRESS,
-    NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
+    BTC_TOKEN_ADDRESS, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION,
+    EPOCH_LENGTH, EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS, NON_APP_GOVERNOR,
+    NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
     OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, STAKER_ADDRESS,
     STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET, UNPOOL_TIME,
 };
@@ -29,6 +29,7 @@ use snforge_std::{
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
     BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, PREV_CONTRACT_VERSION,
+    STRK_TOKEN_ADDRESS,
 };
 use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::MAINNET_STAKING_CLASS_HASH_V0;
@@ -47,8 +48,9 @@ use staking::staking::interface::{
     IStakingConfigSafeDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
-    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
-    StakerPoolInfoV1, StakingContractInfoV1,
+    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, IStakingTokenManagerSafeDispatcher,
+    IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
+    StakingContractInfoV1,
 };
 use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{
@@ -3572,3 +3574,40 @@ fn test_internal_staker_info_pool_info() {
     assert!(internal_staker_info.pool_info() == Option::None);
     assert!(internal_staker_info_with_pool.pool_info() == Option::Some(staker_pool_info));
 }
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_add_token_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_token_manager_safe_dispatcher = IStakingTokenManagerSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    // Catch ONLY_SECURITY_ADMIN.
+    let result = staking_token_manager_safe_dispatcher
+        .add_token(token_address: BTC_TOKEN_ADDRESS());
+    assert_panic_with_error(:result, expected_error: "ONLY_SECURITY_ADMIN");
+
+    // Catch INVALID_TOKEN_ADDRESS.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    let result = staking_token_manager_safe_dispatcher.add_token(token_address: STRK_TOKEN_ADDRESS);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_TOKEN_ADDRESS.describe());
+
+    // Catch TOKEN_ALREADY_EXISTS.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    let _ = staking_token_manager_safe_dispatcher.add_token(token_address: BTC_TOKEN_ADDRESS());
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    let result = staking_token_manager_safe_dispatcher
+        .add_token(token_address: BTC_TOKEN_ADDRESS());
+    assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_EXISTS.describe());
+}
+// TODO: Test add_token once implement is_active_token.
+
+
