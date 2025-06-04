@@ -532,11 +532,7 @@ pub mod Staking {
         }
 
         fn get_total_stake(self: @ContractState) -> Amount {
-            let total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
-            // Trace is initialized with a zero stake at the first valid epoch, so it is safe to
-            // unwrap.
-            let (_, total_stake) = total_stake_trace.latest().unwrap().into();
-            total_stake
+            self._get_total_stake(token_address: STRK_TOKEN_ADDRESS)
         }
 
         fn get_current_total_staking_power(self: @ContractState) -> Amount {
