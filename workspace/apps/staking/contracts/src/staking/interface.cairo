@@ -182,6 +182,18 @@ pub trait IStakingConfig<TContractState> {
 }
 
 #[starknet::interface]
+pub trait IStakingTokenManager<TContractState> {
+    /// Add a new token to the staking contract.
+    ///
+    /// **Important note:** This function should be called only a limited number of times.
+    /// Adding too many tokens can lead to unbounded complexity and potential performance issues.
+    /// The token set is intended to remain fixed and small, ensuring all loops over it are safely
+    /// bounded.
+    /// It is the security admin's responsibility to enforce this token limit.
+    fn add_token(ref self: TContractState, token_address: ContractAddress);
+}
+
+#[starknet::interface]
 pub trait IStakingAttestation<TContractState> {
     fn update_rewards_from_attestation_contract(
         ref self: TContractState, staker_address: ContractAddress,

@@ -20,8 +20,8 @@ pub mod Staking {
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
-        IStakingMigration, IStakingPause, IStakingPool, PauseEvents, StakerInfoV1,
-        StakingContractInfoV1,
+        IStakingMigration, IStakingPause, IStakingPool, IStakingTokenManager, PauseEvents,
+        StakerInfoV1, StakingContractInfoV1,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
@@ -51,7 +51,9 @@ pub mod Staking {
     use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
     use starkware_utils::errors::{Describable, OptionAuxTrait};
     use starkware_utils::interfaces::identity::Identity;
-    use starkware_utils::iterable_map::IterableMap;
+    use starkware_utils::iterable_map::{
+        IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
+    };
     use starkware_utils::math::utils::mul_wide_and_div;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
@@ -1066,6 +1068,24 @@ pub mod Staking {
             epoch_info.update(:epoch_duration, :epoch_length);
             self.epoch_info.write(epoch_info);
             self.emit(ConfigEvents::EpochInfoChanged { epoch_duration, epoch_length });
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl StakingTokenManagerImpl of IStakingTokenManager<ContractState> {
+        fn add_token(ref self: ContractState, token_address: ContractAddress) {
+            self.roles.only_security_admin();
+            assert!(token_address != STRK_TOKEN_ADDRESS, "{}", Error::INVALID_TOKEN_ADDRESS);
+            assert!(
+                self.btc_tokens.read(token_address).is_none(), "{}", Error::TOKEN_ALREADY_EXISTS,
+            );
+            self.btc_tokens.write(token_address, false);
+            // Initialize the token total stake trace.
+            self
+                .tokens_total_stake_trace
+                .entry(token_address)
+                .insert(key: self.get_current_epoch(), value: Zero::zero());
+            // TODO: emit event
         }
     }
 
