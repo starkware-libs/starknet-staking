@@ -1017,9 +1017,14 @@ fn test_add_stake_from_pool_assertions() {
     assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.describe());
 
     // Should catch CALLER_IS_NOT_POOL_CONTRACT.
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
     let commission = cfg.staker_info.get_pool_info().commission;
-    staking_dispatcher.set_open_for_delegation(:commission);
+    staking_dispatcher.set_commission(:commission);
+    staking_dispatcher.set_open_for_delegation();
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
     assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
 }
@@ -1204,8 +1209,13 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     // Should catch CALLER_IS_NOT_POOL_CONTRACT.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let commission = cfg.staker_info.get_pool_info().commission;
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let pool_contract = staking_dispatcher.set_open_for_delegation(:commission);
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_dispatcher.set_commission(:commission);
+    let pool_contract = staking_dispatcher.set_open_for_delegation();
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
     assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
@@ -1977,7 +1987,6 @@ fn test_set_commission_with_same_commission() {
 }
 
 #[test]
-#[ignore]
 fn test_set_commission_initialize_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
@@ -1985,14 +1994,18 @@ fn test_set_commission_initialize_commission() {
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
-    );
+    let staker_address = cfg.test_info.staker_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    staking_dispatcher.set_commission(commission: cfg.staker_info.get_pool_info().commission);
-    // TODO: Test commission with view function when view of commission is available even if staker
-// has no pool.
-// TODO: Test event.
+    let commission = cfg.staker_info.get_pool_info().commission;
+    staking_dispatcher.set_commission(:commission);
+    // TODO: Assert commission before openning a pool - when view of commission is available.
+    // Assert commission after openning a pool.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_open_for_delegation();
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info.get_pool_info().commission == commission);
+    // TODO: Test event.
 }
 
 #[test]
@@ -2106,8 +2119,13 @@ fn test_set_commission_commitment_assertions() {
 
     // Should catch MAX_COMMISSION_TOO_LOW.
     let commission = cfg.staker_info.get_pool_info().commission;
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.set_open_for_delegation(:commission);
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_dispatcher.set_commission(:commission);
+    staking_dispatcher.set_open_for_delegation();
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let max_commission = staker_info.get_pool_info().commission - 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -2164,8 +2182,13 @@ fn test_set_open_for_delegation() {
     let staker_address = cfg.test_info.staker_address;
     let commission = cfg.staker_info.get_pool_info().commission;
     let mut spy = snforge_std::spy_events();
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let pool_contract = staking_dispatcher.set_open_for_delegation(:commission);
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_dispatcher.set_commission(:commission);
+    let pool_contract = staking_dispatcher.set_open_for_delegation();
     let pool_info = staking_dispatcher.staker_info_v1(:staker_address).get_pool_info();
     let mut expected_pool_info = StakerPoolInfoV1 {
         pool_contract, amount: Zero::zero(), commission,
@@ -2180,8 +2203,8 @@ fn test_set_open_for_delegation() {
 }
 
 #[test]
-#[should_panic(expected: "Commission is out of range, expected to be 0-10000")]
-fn test_set_open_for_delegation_commission_out_of_range() {
+#[should_panic(expected: "Commission is not set")]
+fn test_set_open_for_delegation_commission_not_set() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -2192,7 +2215,7 @@ fn test_set_open_for_delegation_commission_out_of_range() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
-    staking_dispatcher.set_open_for_delegation(commission: COMMISSION_DENOMINATOR + 1);
+    staking_dispatcher.set_open_for_delegation();
 }
 
 #[test]
@@ -2209,7 +2232,7 @@ fn test_set_open_for_delegation_unstake_in_progress() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.set_open_for_delegation(commission: COMMISSION_DENOMINATOR - 1);
+    staking_dispatcher.set_open_for_delegation();
 }
 
 #[test]
@@ -2223,8 +2246,7 @@ fn test_set_open_for_delegation_staker_not_exist() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
-    staking_dispatcher
-        .set_open_for_delegation(commission: cfg.staker_info.get_pool_info().commission);
+    staking_dispatcher.set_open_for_delegation();
 }
 
 #[test]
@@ -2240,8 +2262,7 @@ fn test_set_open_for_delegation_staker_has_pool() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
-    staking_dispatcher
-        .set_open_for_delegation(commission: cfg.staker_info.get_pool_info().commission);
+    staking_dispatcher.set_open_for_delegation();
 }
 
 #[test]
