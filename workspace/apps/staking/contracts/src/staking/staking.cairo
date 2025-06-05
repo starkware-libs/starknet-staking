@@ -627,7 +627,6 @@ pub mod Staking {
             let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
-            let pool_contract = staker_info.get_pool_info().pool_contract;
             let old_commission = self.read_staker_commission(:staker_address);
 
             if let Option::Some(commission_commitment) = self
