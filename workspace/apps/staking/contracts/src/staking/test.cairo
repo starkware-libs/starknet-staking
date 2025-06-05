@@ -1979,8 +1979,8 @@ fn test_update_commission_with_same_commission() {
 }
 
 #[test]
-#[should_panic(expected: "Staker does not have a pool contract")]
-fn test_update_commission_with_no_pool() {
+#[should_panic(expected: "Commission is not set")]
+fn test_update_commission_commission_not_set() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
