@@ -7,8 +7,9 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, start_cheat_block_hash_global,
-    start_cheat_block_number_global, start_cheat_block_timestamp_global,
+    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address,
+    start_cheat_block_hash_global, start_cheat_block_number_global,
+    start_cheat_block_timestamp_global,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::MIN_ATTESTATION_WINDOW;
@@ -981,13 +982,17 @@ pub(crate) impl SystemStakerImpl<
         self.staking.safe_dispatcher().unstake_action(staker_address: staker.staker.address)
     }
 
+    // TODO: remove commission parameter and call set_commission first if needed.
     fn set_open_for_delegation(
         self: SystemState<TTokenState>, staker: Staker, commission: Commission,
     ) -> ContractAddress {
-        cheat_caller_address_once(
-            contract_address: self.staking.address, caller_address: staker.staker.address,
+        cheat_caller_address(
+            contract_address: self.staking.address,
+            caller_address: staker.staker.address,
+            span: CheatSpan::TargetCalls(2),
         );
-        self.staking.dispatcher().set_open_for_delegation(:commission)
+        self.staking.dispatcher().set_commission(:commission);
+        self.staking.dispatcher().set_open_for_delegation()
     }
 
     fn staker_claim_rewards(self: SystemState<TTokenState>, staker: Staker) -> Amount {

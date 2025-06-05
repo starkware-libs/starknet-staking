@@ -460,16 +460,14 @@ pub mod Staking {
                 );
         }
 
-        fn set_open_for_delegation(
-            ref self: ContractState, commission: Commission,
-        ) -> ContractAddress {
+        fn set_open_for_delegation(ref self: ContractState) -> ContractAddress {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-            assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
             assert!(staker_info.pool_info.is_none(), "{}", Error::STAKER_ALREADY_HAS_POOL);
+            let commission = self.read_staker_commission(:staker_address);
 
             // Deploy delegation pool contract.
             let pool_contract = self
@@ -480,10 +478,8 @@ pub mod Staking {
                     :commission,
                 );
 
-            // Update staker info and commit to storage.
-            // No need to update rewards as there is no change in staked amount (own or delegated).
-            self.write_staker_commission(:staker_address, :commission);
             // TODO: deprecate once new struct of internal staker pool info is used.
+            // Update staker info and commit to storage.
             staker_info
                 .pool_info =
                     Option::Some(

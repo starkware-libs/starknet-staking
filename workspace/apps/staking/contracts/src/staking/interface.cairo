@@ -26,7 +26,7 @@ pub trait IStaking<TContractState> {
     fn unstake_intent(ref self: TContractState) -> Timestamp;
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
-    fn set_open_for_delegation(ref self: TContractState, commission: Commission) -> ContractAddress;
+    fn set_open_for_delegation(ref self: TContractState) -> ContractAddress;
     fn staker_info_v1(self: @TContractState, staker_address: ContractAddress) -> StakerInfoV1;
     fn get_staker_info_v1(
         self: @TContractState, staker_address: ContractAddress,

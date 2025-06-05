@@ -202,7 +202,7 @@ fn test_set_open_for_delegation_when_paused() {
     let staking_dispatcher = IStakingDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.set_open_for_delegation(commission: 0);
+    staking_dispatcher.set_open_for_delegation();
 }
 
 #[test]
