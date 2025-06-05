@@ -659,7 +659,7 @@ pub mod Staking {
             self
                 .emit(
                     Events::CommissionChanged {
-                        staker_address, pool_contract, old_commission, new_commission: commission,
+                        staker_address, old_commission, new_commission: commission,
                     },
                 );
         }

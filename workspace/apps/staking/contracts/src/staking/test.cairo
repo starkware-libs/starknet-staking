@@ -1835,11 +1835,7 @@ fn test_update_commission() {
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "update_commission");
     assert_commission_changed_event(
-        spied_event: events[0],
-        :staker_address,
-        :pool_contract,
-        new_commission: commission,
-        :old_commission,
+        spied_event: events[0], :staker_address, new_commission: commission, :old_commission,
     );
 }
 
