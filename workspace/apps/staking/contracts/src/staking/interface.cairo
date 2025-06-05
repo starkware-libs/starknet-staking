@@ -44,7 +44,7 @@ pub trait IStaking<TContractState> {
     ) -> UndelegateIntentValue;
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
-    fn update_commission(ref self: TContractState, commission: Commission);
+    fn set_commission(ref self: TContractState, commission: Commission);
     fn set_commission_commitment(
         ref self: TContractState, max_commission: Commission, expiration_epoch: Epoch,
     );

@@ -1776,7 +1776,7 @@ fn test_change_operational_address_is_not_eligible() {
 }
 
 #[test]
-fn test_update_commission() {
+fn test_set_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -1801,7 +1801,7 @@ fn test_update_commission() {
     let old_commission = cfg.staker_info.get_pool_info().commission;
     let commission = old_commission - 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.update_commission(:commission);
+    staking_dispatcher.set_commission(:commission);
 
     // Assert rewards is updated.
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
@@ -1833,14 +1833,14 @@ fn test_update_commission() {
     assert!(pool_contracts_parameters == expected_pool_contracts_parameters);
     // Validate the single CommissionChanged event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 1, message: "update_commission");
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_commission");
     assert_commission_changed_event(
         spied_event: events[0], :staker_address, new_commission: commission, :old_commission,
     );
 }
 
 #[test]
-fn test_update_commission_with_commitment() {
+fn test_set_commission_with_commitment() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -1860,7 +1860,7 @@ fn test_update_commission_with_commitment() {
     // Update commission.
     let mut commission = max_commission;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.update_commission(:commission);
+    staking_dispatcher.set_commission(:commission);
 
     // Assert commission is updated.
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
@@ -1872,7 +1872,7 @@ fn test_update_commission_with_commitment() {
     // Lower commission.
     commission = commission - 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.update_commission(:commission);
+    staking_dispatcher.set_commission(:commission);
 
     // Assert commission is updated.
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
@@ -1882,7 +1882,7 @@ fn test_update_commission_with_commitment() {
 
 #[test]
 #[feature("safe_dispatcher")]
-fn test_update_commission_assertions_with_commitment() {
+fn test_set_commission_assertions_with_commitment() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -1903,7 +1903,7 @@ fn test_update_commission_assertions_with_commitment() {
     // Should catch INVALID_COMMISSION_WITH_COMMITMENT.
     let commission = max_commission + 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let result = staking_safe_dispatcher.update_commission(:commission);
+    let result = staking_safe_dispatcher.set_commission(:commission);
     assert_panic_with_error(
         :result, expected_error: GenericError::INVALID_COMMISSION_WITH_COMMITMENT.describe(),
     );
@@ -1911,9 +1911,9 @@ fn test_update_commission_assertions_with_commitment() {
     // Should catch INVALID_SAME_COMMISSION.
     let commission = max_commission;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.update_commission(:commission);
+    staking_dispatcher.set_commission(:commission);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let result = staking_safe_dispatcher.update_commission(:commission);
+    let result = staking_safe_dispatcher.set_commission(:commission);
     assert_panic_with_error(
         :result, expected_error: GenericError::INVALID_SAME_COMMISSION.describe(),
     );
@@ -1924,7 +1924,7 @@ fn test_update_commission_assertions_with_commitment() {
     // Should catch COMMISSION_COMMITMENT_EXPIRED.
     let commission = max_commission;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    let result = staking_safe_dispatcher.update_commission(:commission);
+    let result = staking_safe_dispatcher.set_commission(:commission);
     assert_panic_with_error(
         :result, expected_error: GenericError::COMMISSION_COMMITMENT_EXPIRED.describe(),
     );
@@ -1932,7 +1932,7 @@ fn test_update_commission_assertions_with_commitment() {
 
 #[test]
 #[should_panic(expected: "Staker does not exist")]
-fn test_update_commission_caller_not_staker() {
+fn test_set_commission_caller_not_staker() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -1941,13 +1941,12 @@ fn test_update_commission_caller_not_staker() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
-    staking_dispatcher
-        .update_commission(commission: cfg.staker_info.get_pool_info().commission - 1);
+    staking_dispatcher.set_commission(commission: cfg.staker_info.get_pool_info().commission - 1);
 }
 
 #[test]
 #[should_panic(expected: "Commission can only be decreased")]
-fn test_update_commission_with_higher_commission() {
+fn test_set_commission_with_higher_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -1958,13 +1957,12 @@ fn test_update_commission_with_higher_commission() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
-    staking_dispatcher
-        .update_commission(commission: cfg.staker_info.get_pool_info().commission + 1);
+    staking_dispatcher.set_commission(commission: cfg.staker_info.get_pool_info().commission + 1);
 }
 
 #[test]
 #[should_panic(expected: "Commission can only be decreased")]
-fn test_update_commission_with_same_commission() {
+fn test_set_commission_with_same_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -1975,12 +1973,12 @@ fn test_update_commission_with_same_commission() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
-    staking_dispatcher.update_commission(commission: cfg.staker_info.get_pool_info().commission);
+    staking_dispatcher.set_commission(commission: cfg.staker_info.get_pool_info().commission);
 }
 
 #[test]
-#[should_panic(expected: "Commission is not set")]
-fn test_update_commission_commission_not_set() {
+#[ignore]
+fn test_set_commission_initialize_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -1991,12 +1989,15 @@ fn test_update_commission_commission_not_set() {
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    staking_dispatcher.update_commission(commission: cfg.staker_info.get_pool_info().commission);
+    staking_dispatcher.set_commission(commission: cfg.staker_info.get_pool_info().commission);
+    // TODO: Test commission with view function when view of commission is available even if staker
+// has no pool.
+// TODO: Test event.
 }
 
 #[test]
 #[should_panic(expected: "Unstake is in progress, staker is in an exit window")]
-fn test_update_commission_staker_in_exit_window() {
+fn test_set_commission_staker_in_exit_window() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -2011,13 +2012,12 @@ fn test_update_commission_staker_in_exit_window() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
-    staking_dispatcher
-        .update_commission(commission: cfg.staker_info.get_pool_info().commission - 1);
+    staking_dispatcher.set_commission(commission: cfg.staker_info.get_pool_info().commission - 1);
 }
 
 #[test]
 #[should_panic(expected: "Commission is out of range, expected to be 0-10000")]
-fn test_update_commission_commission_out_of_range() {
+fn test_set_commission_commission_out_of_range() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
@@ -2029,7 +2029,7 @@ fn test_update_commission_commission_out_of_range() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
-    staking_dispatcher.update_commission(:commission);
+    staking_dispatcher.set_commission(:commission);
 }
 
 #[test]

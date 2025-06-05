@@ -502,6 +502,7 @@ pub mod Staking {
             let mut staker_info: StakerInfoV1 = internal_staker_info.into();
             // Set staker amount and pool amount from staker balance trace.
             staker_info.amount_own = staker_balance.amount_own();
+            // TODO: return commission info even if staker has no pool.
             if let Option::Some(mut pool_info) = staker_info.pool_info {
                 pool_info.amount = staker_balance.pool_amount();
                 // Set commission from the new storage variable internal_staker_pool_info.
@@ -619,7 +620,7 @@ pub mod Staking {
             self.emit(Events::OperationalAddressDeclared { operational_address, staker_address });
         }
 
-        fn update_commission(ref self: ContractState, commission: Commission) {
+        fn set_commission(ref self: ContractState, commission: Commission) {
             // Prerequisites and asserts.
             self.general_prerequisites();
             assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
@@ -627,40 +628,12 @@ pub mod Staking {
             let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
-            let old_commission = self.read_staker_commission(:staker_address);
-
-            if let Option::Some(commission_commitment) = self
-                .read_staker_commission_commitment(:staker_address) {
-                if self.is_commission_commitment_active(:commission_commitment) {
-                    assert!(
-                        commission <= commission_commitment.max_commission,
-                        "{}",
-                        GenericError::INVALID_COMMISSION_WITH_COMMITMENT,
-                    );
-                    assert!(
-                        commission != old_commission, "{}", GenericError::INVALID_SAME_COMMISSION,
-                    );
-                } else {
-                    assert!(
-                        commission < old_commission,
-                        "{}",
-                        GenericError::COMMISSION_COMMITMENT_EXPIRED,
-                    );
-                }
+            if self.has_commission(:staker_address) {
+                self.update_commission(:staker_address, :commission);
             } else {
-                assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
+                self.write_staker_commission(:staker_address, :commission);
+                // TODO: emit event.
             }
-
-            // Update commission in storage.
-            self.write_staker_commission(:staker_address, :commission);
-
-            // Emit event.
-            self
-                .emit(
-                    Events::CommissionChanged {
-                        staker_address, old_commission, new_commission: commission,
-                    },
-                );
         }
 
         fn set_commission_commitment(
@@ -1222,6 +1195,11 @@ pub mod Staking {
             internal_staker_pool_info.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
         }
 
+        fn has_commission(self: @ContractState, staker_address: ContractAddress) -> bool {
+            let internal_staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            internal_staker_pool_info.commission.read().is_some()
+        }
+
         fn write_staker_commission(
             ref self: ContractState, staker_address: ContractAddress, commission: Commission,
         ) {
@@ -1244,6 +1222,45 @@ pub mod Staking {
             internal_staker_pool_info
                 .commission_commitment
                 .write(Option::Some(commission_commitment));
+        }
+
+        fn update_commission(
+            ref self: ContractState, staker_address: ContractAddress, commission: Commission,
+        ) {
+            let old_commission = self.read_staker_commission(:staker_address);
+
+            if let Option::Some(commission_commitment) = self
+                .read_staker_commission_commitment(:staker_address) {
+                if self.is_commission_commitment_active(:commission_commitment) {
+                    assert!(
+                        commission <= commission_commitment.max_commission,
+                        "{}",
+                        GenericError::INVALID_COMMISSION_WITH_COMMITMENT,
+                    );
+                    assert!(
+                        commission != old_commission, "{}", GenericError::INVALID_SAME_COMMISSION,
+                    );
+                } else {
+                    assert!(
+                        commission < old_commission,
+                        "{}",
+                        GenericError::COMMISSION_COMMITMENT_EXPIRED,
+                    );
+                }
+            } else {
+                assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
+            }
+
+            // Update commission in storage.
+            self.write_staker_commission(:staker_address, :commission);
+
+            // Emit event.
+            self
+                .emit(
+                    Events::CommissionChanged {
+                        staker_address, old_commission, new_commission: commission,
+                    },
+                );
         }
 
         /// TODO: Implement this function for the new version.
