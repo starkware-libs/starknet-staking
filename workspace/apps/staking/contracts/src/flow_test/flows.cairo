@@ -495,7 +495,7 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
         system.delegate(:delegator, :pool, amount: delegated_amount);
 
         // Update commission to 0%
-        system.update_commission(:staker, commission: Zero::zero());
+        system.set_commission(:staker, commission: Zero::zero());
         system.advance_epoch_and_attest(:staker);
 
         system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
@@ -575,7 +575,7 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl<
         assert!(system.token.balance_of(account: pool).is_zero());
 
         // Update commission to 0%.
-        system.update_commission(:staker, commission: Zero::zero());
+        system.set_commission(:staker, commission: Zero::zero());
         system.advance_epoch_and_attest(:staker);
         assert!(system.token.balance_of(account: pool).is_non_zero());
 
@@ -1930,7 +1930,7 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
         let staker = self.staker.unwrap();
         let pool = self.pool_address.unwrap();
         let new_commission = self.commission.unwrap() - 1;
-        system.update_commission(:staker, commission: new_commission);
+        system.set_commission(:staker, commission: new_commission);
 
         assert!(new_commission == system.contract_parameters_v1(:pool).commission);
     }

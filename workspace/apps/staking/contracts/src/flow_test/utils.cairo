@@ -997,11 +997,11 @@ pub(crate) impl SystemStakerImpl<
         self.staking.dispatcher().claim_rewards(staker_address: staker.staker.address)
     }
 
-    fn update_commission(self: SystemState<TTokenState>, staker: Staker, commission: Commission) {
+    fn set_commission(self: SystemState<TTokenState>, staker: Staker, commission: Commission) {
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self.staking.dispatcher().update_commission(:commission)
+        self.staking.dispatcher().set_commission(:commission)
     }
 
     fn staker_info_v1(self: SystemState<TTokenState>, staker: Staker) -> StakerInfoV1 {

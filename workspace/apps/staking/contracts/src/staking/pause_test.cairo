@@ -231,14 +231,14 @@ fn test_declare_operational_address_when_paused() {
 
 #[test]
 #[should_panic(expected: "Contract is paused")]
-fn test_update_commission_when_paused() {
+fn test_set_commission_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.update_commission(commission: 0);
+    staking_dispatcher.set_commission(commission: 0);
 }
 
 #[test]
