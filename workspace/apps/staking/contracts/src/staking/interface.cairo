@@ -251,8 +251,6 @@ pub mod Events {
     pub struct CommissionChanged {
         #[key]
         pub staker_address: ContractAddress,
-        #[key]
-        pub pool_contract: ContractAddress,
         pub new_commission: Commission,
         pub old_commission: Commission,
     }

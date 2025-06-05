@@ -156,12 +156,11 @@ pub(crate) fn assert_staker_reward_address_change_event(
 pub(crate) fn assert_commission_changed_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
-    pool_contract: ContractAddress,
     new_commission: Commission,
     old_commission: Commission,
 ) {
     let expected_event = StakingEvents::CommissionChanged {
-        staker_address, pool_contract, new_commission, old_commission,
+        staker_address, new_commission, old_commission,
     };
     assert_expected_event_emitted(
         :spied_event,
