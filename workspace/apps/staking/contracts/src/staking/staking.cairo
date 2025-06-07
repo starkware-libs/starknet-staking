@@ -221,8 +221,6 @@ pub mod Staking {
             reward_address: ContractAddress,
             operational_address: ContractAddress,
             amount: Amount,
-            pool_enabled: bool,
-            commission: Commission,
         ) {
             // Prerequisites and asserts.
             self.general_prerequisites();
@@ -237,7 +235,6 @@ pub mod Staking {
             );
             self.assert_staker_address_not_reused(:staker_address);
             assert!(amount >= self.min_stake.read(), "{}", Error::AMOUNT_LESS_THAN_MIN_STAKE);
-            assert!(commission <= COMMISSION_DENOMINATOR, "{}", Error::COMMISSION_OUT_OF_RANGE);
 
             // Transfer funds from staker. Sufficient approvals is a pre-condition.
             let staking_contract = get_contract_address();
@@ -246,23 +243,6 @@ pub mod Staking {
                 .checked_transfer_from(
                     sender: staker_address, recipient: staking_contract, amount: amount.into(),
                 );
-
-            // If pool is enabled, deploy a pool contract.
-            let pool_info = if pool_enabled {
-                let pool_contract = self
-                    .deploy_delegation_pool_from_staking_contract(
-                        :staker_address,
-                        :staking_contract,
-                        token_address: token_dispatcher.contract_address,
-                        :commission,
-                    );
-                self.write_staker_commission(:staker_address, :commission);
-                Option::Some(
-                    InternalStakerPoolInfoLatest { pool_contract, commission: Zero::zero() },
-                )
-            } else {
-                Option::None
-            };
 
             let staker_balance = StakerBalanceTrait::new(amount_own: amount);
             self.insert_staker_balance(:staker_address, :staker_balance);
@@ -273,7 +253,7 @@ pub mod Staking {
                 .write(
                     staker_address,
                     VersionedInternalStakerInfoTrait::new_latest(
-                        :reward_address, :operational_address, :pool_info,
+                        :reward_address, :operational_address,
                     ),
                 );
 

@@ -501,9 +501,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
     }
 
     fn new_latest(
-        reward_address: ContractAddress,
-        operational_address: ContractAddress,
-        pool_info: Option<InternalStakerPoolInfoV1>,
+        reward_address: ContractAddress, operational_address: ContractAddress,
     ) -> VersionedInternalStakerInfo {
         VersionedInternalStakerInfo::V1(
             InternalStakerInfoV1 {
@@ -511,7 +509,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 operational_address,
                 unstake_time: Option::None,
                 unclaimed_rewards_own: Zero::zero(),
-                pool_info,
+                pool_info: Option::None,
                 commission_commitment: Option::None,
             },
         )
