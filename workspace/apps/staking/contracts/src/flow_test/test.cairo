@@ -271,6 +271,12 @@ fn pool_claim_rewards_flow_test() {
 // }
 
 #[test]
+fn pool_calculate_rewards_twice_flow_test() {
+    let flow = flows::PoolCalculateRewardsTwiceFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn delegator_exit_and_enter_again_flow_test() {
     let flow = flows::DelegatorExitAndEnterAgainFlow {};
     test_flow_local(:flow);
