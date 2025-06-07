@@ -1422,7 +1422,6 @@ Only security agent.
 | data           | type                      | keyed |
 | -------------- | ------------------------- | ----- |
 | staker_address | address                   | ✅     |
-| pool_address   | address                   | ✅     |
 | new_commission | [Commission](#commission) | ❌     |
 | old_commission | [Commission](#commission) | ❌     |
 
