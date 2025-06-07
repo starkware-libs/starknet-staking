@@ -1200,6 +1200,18 @@ pub mod Staking {
                 .write(Option::Some(commission_commitment));
         }
 
+        fn write_new_pool(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            pool_contract: ContractAddress,
+            token_address: ContractAddress,
+        ) {
+            self
+                .internal_staker_pool_info_mut(:staker_address)
+                .pools
+                .write(pool_contract, token_address);
+        }
+
         fn update_commission(
             ref self: ContractState, staker_address: ContractAddress, commission: Commission,
         ) {
