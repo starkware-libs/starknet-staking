@@ -15,8 +15,8 @@ use core::poseidon::PoseidonTrait;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, start_cheat_block_hash_global,
-    start_cheat_block_number_global, test_address,
+    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address,
+    start_cheat_block_hash_global, start_cheat_block_number_global, test_address,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
@@ -530,9 +530,16 @@ pub(crate) fn stake_for_testing(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
             cfg.test_info.stake_amount,
-            cfg.test_info.pool_enabled,
-            cfg.staker_info.get_pool_info().commission,
         );
+    if cfg.test_info.pool_enabled {
+        cheat_caller_address(
+            contract_address: staking_contract,
+            caller_address: cfg.test_info.staker_address,
+            span: CheatSpan::TargetCalls(2),
+        );
+        state.set_commission(commission: cfg.staker_info.get_pool_info().commission);
+        state.set_open_for_delegation();
+    }
 }
 
 pub(crate) fn stake_for_testing_using_dispatcher(
@@ -548,9 +555,16 @@ pub(crate) fn stake_for_testing_using_dispatcher(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
             cfg.test_info.stake_amount,
-            cfg.test_info.pool_enabled,
-            cfg.staker_info.get_pool_info().commission,
         );
+    if cfg.test_info.pool_enabled {
+        cheat_caller_address(
+            contract_address: staking_contract,
+            caller_address: cfg.test_info.staker_address,
+            span: CheatSpan::TargetCalls(2),
+        );
+        staking_dispatcher.set_commission(commission: cfg.staker_info.get_pool_info().commission);
+        staking_dispatcher.set_open_for_delegation();
+    }
 }
 
 pub(crate) fn stake_from_zero_address(
@@ -565,8 +579,6 @@ pub(crate) fn stake_from_zero_address(
             cfg.staker_info.reward_address,
             cfg.staker_info.operational_address,
             cfg.test_info.stake_amount,
-            cfg.test_info.pool_enabled,
-            cfg.staker_info.get_pool_info().commission,
         );
 }
 

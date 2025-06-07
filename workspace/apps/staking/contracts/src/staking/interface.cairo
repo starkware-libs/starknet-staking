@@ -16,8 +16,6 @@ pub trait IStaking<TContractState> {
         reward_address: ContractAddress,
         operational_address: ContractAddress,
         amount: Amount,
-        pool_enabled: bool,
-        commission: Commission,
     );
     fn increase_stake(
         ref self: TContractState, staker_address: ContractAddress, amount: Amount,

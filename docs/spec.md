@@ -526,31 +526,26 @@ fn stake(
   ref self: TContractState,
   reward_address: ContractAddress,
   operational_address: ContractAddress,
-  amount: Amount,
-  pool_enabled: bool,
-  commission: Commission
+  amount: Amount
 )
 ```
 #### description <!-- omit from toc -->
 Add a new staker to the stake.
 #### emits <!-- omit from toc -->
-1. [New Delegation Pool](#new-delegation-pool) - if `pool_enabled` is true
-2. [New Staker](#new-staker)
-3. [Stake Balance Changed](#stake-balance-changed)
+1. [New Staker](#new-staker)
+2. [Stake Balance Changed](#stake-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_EXISTS](#staker_exists)
 3. [OPERATIONAL\_EXISTS](#operational_exists)
 4. [STAKER\_ADDRESS\_ALREADY\_USED](#staker_address_already_used)
 5. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
-6. [COMMISSION\_OUT\_OF\_RANGE](#commission_out_of_range)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) is not listed in the contract.
 3. `operational_address` is not listed in the contract.
 4. `staker_address` not used.
 5. `amount` is above the minimum amount for staking.
-6. `commission` is not above the maximum commission for staking.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic  <!-- omit from toc -->
@@ -560,7 +555,6 @@ Only staker address.
    1. Staker index = current global index.
    2. Unclaimed amount = 0.
    3. amount = given amount.
-4. If pool enabled then deploy a pool contract instance.
 
 ### increase_stake
 ```rust
