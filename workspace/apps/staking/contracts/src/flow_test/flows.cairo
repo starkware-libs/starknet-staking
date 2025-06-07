@@ -3994,6 +3994,69 @@ pub(crate) impl AttestAfterDelegatorIntentFlowImpl<
         assert!(system.pool_member_info_v1(:delegator, :pool).unclaimed_rewards.is_zero());
     }
 }
+
+/// Test calculate rewards twice
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// attest
+/// attest
+/// pool_member_info
+/// attest
+/// attest
+/// pool_member_info
+#[derive(Drop, Copy)]
+pub(crate) struct PoolCalculateRewardsTwiceFlow {}
+pub(crate) impl PoolCalculateRewardsTwiceFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<PoolCalculateRewardsTwiceFlow, TTokenState> {
+    fn get_pool_address(self: PoolCalculateRewardsTwiceFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn get_staker_address(self: PoolCalculateRewardsTwiceFlow) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup(ref self: PoolCalculateRewardsTwiceFlow, ref system: SystemState<TTokenState>) {}
+
+    fn test(
+        self: PoolCalculateRewardsTwiceFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount);
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch_and_attest(:staker);
+
+        let delegated_amount = stake_amount / 2;
+        let delegator = system.new_delegator(amount: delegated_amount);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch_and_attest(:staker);
+
+        let pool_rewards_one_epoch = calculate_pool_rewards(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+
+        let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+        assert!(pool_member_info.unclaimed_rewards == pool_rewards_one_epoch);
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch_and_attest(:staker);
+
+        let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+        assert!(pool_member_info.unclaimed_rewards == 3 * pool_rewards_one_epoch);
+    }
+}
 // TODO: Implement this flow test.
 /// Test calling pool migration after upgrade.
 /// Should do nothing because pool migration is called in the upgrade proccess.
