@@ -307,7 +307,7 @@ pub mod Events {
         pub staker_address: ContractAddress,
         pub reward_address: ContractAddress,
         pub operational_address: ContractAddress,
-        pub pool_contract: Option<ContractAddress>,
+        pub pool_contracts: Span<ContractAddress>,
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]

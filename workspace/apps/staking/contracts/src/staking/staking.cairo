@@ -1441,16 +1441,17 @@ pub mod Staking {
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
             let operational_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(operational_address, Zero::zero());
+            let mut pool_contracts: Array<ContractAddress> = array![];
+            if let Option::Some(pool_info) = staker_info.pool_info {
+                pool_contracts.append(pool_info.pool_contract);
+            }
             self
                 .emit(
                     Events::DeleteStaker {
                         staker_address,
                         reward_address: staker_info.reward_address,
                         operational_address,
-                        pool_contract: match staker_info.pool_info {
-                            Option::Some(pool_info) => Option::Some(pool_info.pool_contract),
-                            Option::None => Option::None,
-                        },
+                        pool_contracts: pool_contracts.span(),
                     },
                 );
         }
