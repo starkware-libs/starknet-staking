@@ -442,7 +442,7 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) unstake_time: Option<Timestamp>,
     pub(crate) unclaimed_rewards_own: Amount,
     pub(crate) pool_info: Option<InternalStakerPoolInfoV1>,
-    pub(crate) commission_commitment: Option<CommissionCommitment>,
+    pub(crate) _deprecated_commission_commitment: Option<CommissionCommitment>,
 }
 
 // **Note**: This struct should be updated in the next version of Internal Staker Info.
@@ -477,7 +477,7 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
             },
             // This assumes that the function is called only during migration. in a different
             // context, the commission commitment will be lost.
-            commission_commitment: Option::None,
+            _deprecated_commission_commitment: Option::None,
         };
         let (pool_unclaimed_rewards, pool_amount) = match staker_info.pool_info {
             Option::Some(pool_info) => (pool_info.unclaimed_rewards, pool_info.amount),
@@ -510,7 +510,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 unstake_time: Option::None,
                 unclaimed_rewards_own: Zero::zero(),
                 pool_info: Option::None,
-                commission_commitment: Option::None,
+                _deprecated_commission_commitment: Option::None,
             },
         )
     }
@@ -587,7 +587,7 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1Impl of StakerInfoIntoInternal
             },
             // This assumes that the function is called only during migration. in a different
             // context, the commission commitment will be lost.
-            commission_commitment: Option::None,
+            _deprecated_commission_commitment: Option::None,
         }
     }
 }

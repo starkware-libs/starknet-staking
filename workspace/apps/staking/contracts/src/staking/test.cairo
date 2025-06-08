@@ -2754,7 +2754,7 @@ fn test_versioned_internal_staker_info_wrap_latest() {
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-        commission_commitment: Option::None,
+        _deprecated_commission_commitment: Option::None,
     };
     let versioned_internal_staker_info = VersionedInternalStakerInfoTrait::wrap_latest(
         internal_staker_info,
@@ -2882,7 +2882,7 @@ fn test_compute_unpool_time() {
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-        commission_commitment: Option::None,
+        _deprecated_commission_commitment: Option::None,
     };
     assert!(
         internal_staker_info
@@ -2898,7 +2898,7 @@ fn test_compute_unpool_time() {
         unstake_time: Option::Some(unstake_time),
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-        commission_commitment: Option::None,
+        _deprecated_commission_commitment: Option::None,
     };
 
     // Unstake time > current time.
@@ -2923,7 +2923,7 @@ fn test_get_pool_info() {
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::Some(staker_pool_info),
-        commission_commitment: Option::None,
+        _deprecated_commission_commitment: Option::None,
     };
     assert!(internal_staker_info.get_pool_info() == staker_pool_info);
 }
@@ -2937,7 +2937,7 @@ fn test_get_pool_info_panic() {
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-        commission_commitment: Option::None,
+        _deprecated_commission_commitment: Option::None,
     };
     internal_staker_info.get_pool_info();
 }
@@ -2950,7 +2950,7 @@ fn test_internal_staker_info_latest_into_staker_info() {
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-        commission_commitment: Option::None,
+        _deprecated_commission_commitment: Option::None,
     };
     let staker_info: StakerInfoV1 = internal_staker_info.into();
     let expected_staker_info = StakerInfoV1 {
@@ -3017,7 +3017,7 @@ fn test_staker_info_into_internal_staker_info_v1() {
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
         pool_info: Option::None,
-        commission_commitment: Option::None,
+        _deprecated_commission_commitment: Option::None,
     };
     assert!(internal_staker_info == expected_internal_staker_info);
 }
