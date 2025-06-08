@@ -133,8 +133,9 @@ pub mod Staking {
         // staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
         // Map staker address to their own balance trace.
         staker_own_balance_trace: Map<ContractAddress, Trace>,
-        // Map staker address to their delegated balance trace.
-        staker_delegated_balance_trace: Map<ContractAddress, Trace>,
+        // Map staker address to their delegated balance trace per token address (map token address
+        // to their balance trace).
+        staker_delegated_balance_trace: Map<ContractAddress, Map<ContractAddress, Trace>>,
         // Map staker address to their pool info.
         staker_pool_info: Map<ContractAddress, InternalStakerPoolInfoV2>,
         // Map token address to whether it's active.
@@ -252,7 +253,12 @@ pub mod Staking {
 
             self.insert_staker_own_balance(:staker_address, own_balance: amount);
             // TODO: Consider initialize delegated trace in set_open_for_delegation instead of here.
-            self.insert_staker_delegated_balance(:staker_address, delegated_balance: Zero::zero());
+            self
+                .insert_staker_delegated_balance(
+                    :staker_address,
+                    token_address: STRK_TOKEN_ADDRESS,
+                    delegated_balance: Zero::zero(),
+                );
 
             // Create the record for the staker.
             self
@@ -323,7 +329,8 @@ pub mod Staking {
             let new_self_stake = old_self_stake + amount;
 
             // Emit events.
-            let old_delegated_stake = self.get_delegated_balance(:staker_address);
+            let old_delegated_stake = self
+                .get_delegated_balance(:staker_address, token_address: STRK_TOKEN_ADDRESS);
             let new_delegated_stake = old_delegated_stake;
             self
                 .emit(
@@ -374,7 +381,8 @@ pub mod Staking {
 
             // Write off the staker's stake and delegated stake from the total stake.
             let old_self_stake = self.get_own_balance(:staker_address);
-            let old_delegated_stake = self.get_delegated_balance(:staker_address);
+            let old_delegated_stake = self
+                .get_delegated_balance(:staker_address, token_address: STRK_TOKEN_ADDRESS);
             let total_amount = old_self_stake + old_delegated_stake;
             self.remove_from_total_stake(token_address: STRK_TOKEN_ADDRESS, amount: total_amount);
 
@@ -414,7 +422,8 @@ pub mod Staking {
 
             // Return stake to staker, return delegated stake to pool, and remove staker.
             let staker_amount = self.get_own_balance(:staker_address);
-            let pool_balance = self.get_delegated_balance(:staker_address);
+            let pool_balance = self
+                .get_delegated_balance(:staker_address, token_address: STRK_TOKEN_ADDRESS);
             token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
             self
@@ -486,7 +495,9 @@ pub mod Staking {
             staker_info.amount_own = self.get_own_balance(:staker_address);
             // TODO: return commission info even if staker has no pool.
             if let Option::Some(mut pool_info) = staker_info.pool_info {
-                pool_info.amount = self.get_delegated_balance(:staker_address);
+                pool_info
+                    .amount = self
+                    .get_delegated_balance(:staker_address, token_address: STRK_TOKEN_ADDRESS);
                 // Set commission from the new storage variable internal_staker_pool_info.
                 // Commission must be set since staker has a pool.
                 pool_info.commission = self.read_staker_commission(:staker_address);
@@ -734,11 +745,14 @@ pub mod Staking {
                 );
 
             // Update the staker's staked amount, and add to total_stake.
-            let old_delegated_stake = self.get_delegated_balance(:staker_address);
+            let old_delegated_stake = self
+                .get_delegated_balance(:staker_address, token_address: STRK_TOKEN_ADDRESS);
             let new_delegated_stake = old_delegated_stake + amount;
             self
                 .insert_staker_delegated_balance(
-                    :staker_address, delegated_balance: new_delegated_stake,
+                    :staker_address,
+                    token_address: STRK_TOKEN_ADDRESS,
+                    delegated_balance: new_delegated_stake,
                 );
             self.add_to_total_stake(token_address: STRK_TOKEN_ADDRESS, :amount);
 
@@ -767,7 +781,8 @@ pub mod Staking {
             let staker_info = self.internal_staker_info(:staker_address);
             self.assert_caller_is_pool_contract(staker_info: @staker_info);
 
-            let old_delegated_stake = self.get_delegated_balance(:staker_address);
+            let old_delegated_stake = self
+                .get_delegated_balance(:staker_address, token_address: STRK_TOKEN_ADDRESS);
             let pool_contract = staker_info.get_pool_info().pool_contract;
 
             // Update the delegated stake according to the new intent.
@@ -777,7 +792,11 @@ pub mod Staking {
             // After this call, the staker balance will be updated.
             let new_delegated_stake = self
                 .update_delegated_stake(
-                    :staker_address, :staker_info, :old_intent_amount, :new_intent_amount,
+                    :staker_address,
+                    token_address: STRK_TOKEN_ADDRESS,
+                    :staker_info,
+                    :old_intent_amount,
+                    :new_intent_amount,
                 );
             self
                 .update_undelegate_intent_value(
@@ -883,11 +902,16 @@ pub mod Staking {
             assert!(to_pool == to_staker_pool_contract, "{}", Error::DELEGATION_POOL_MISMATCH);
 
             // Update `to_staker`'s delegated stake amount, and add to total stake.
-            let old_delegated_stake = self.get_delegated_balance(staker_address: to_staker);
+            let old_delegated_stake = self
+                .get_delegated_balance(
+                    staker_address: to_staker, token_address: STRK_TOKEN_ADDRESS,
+                );
             let new_delegated_stake = old_delegated_stake + switched_amount;
             self
                 .insert_staker_delegated_balance(
-                    staker_address: to_staker, delegated_balance: new_delegated_stake,
+                    staker_address: to_staker,
+                    token_address: STRK_TOKEN_ADDRESS,
+                    delegated_balance: new_delegated_stake,
                 );
             self.add_to_total_stake(token_address: STRK_TOKEN_ADDRESS, amount: switched_amount);
 
@@ -1103,7 +1127,7 @@ pub mod Staking {
             let current_epoch_starting_block = epoch_info.current_epoch_starting_block();
             AttestationInfoTrait::new(
                 staker_address: staker_address,
-                stake: self.get_staker_total_balance_curr_epoch(:staker_address),
+                stake: self.get_staker_total_strk_balance_curr_epoch(:staker_address),
                 epoch_len: epoch_len,
                 epoch_id: epoch_id,
                 current_epoch_starting_block: current_epoch_starting_block,
@@ -1408,7 +1432,12 @@ pub mod Staking {
             staker_info: InternalStakerInfoLatest,
         ) {
             self.insert_staker_own_balance(:staker_address, own_balance: Zero::zero());
-            self.insert_staker_delegated_balance(:staker_address, delegated_balance: Zero::zero());
+            self
+                .insert_staker_delegated_balance(
+                    :staker_address,
+                    token_address: STRK_TOKEN_ADDRESS,
+                    delegated_balance: Zero::zero(),
+                );
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
             let operational_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(operational_address, Zero::zero());
@@ -1527,11 +1556,12 @@ pub mod Staking {
         fn update_delegated_stake(
             ref self: ContractState,
             staker_address: ContractAddress,
+            token_address: ContractAddress,
             staker_info: InternalStakerInfoLatest,
             old_intent_amount: Amount,
             new_intent_amount: Amount,
         ) -> Amount {
-            let old_delegated_stake = self.get_delegated_balance(:staker_address);
+            let old_delegated_stake = self.get_delegated_balance(:staker_address, :token_address);
             let new_delegated_stake = compute_new_delegated_stake(
                 :old_delegated_stake, :old_intent_amount, :new_intent_amount,
             );
@@ -1548,7 +1578,7 @@ pub mod Staking {
             }
             self
                 .insert_staker_delegated_balance(
-                    :staker_address, delegated_balance: new_delegated_stake,
+                    :staker_address, :token_address, delegated_balance: new_delegated_stake,
                 );
             new_delegated_stake
         }
@@ -1580,7 +1610,7 @@ pub mod Staking {
                 .calculate_current_epoch_rewards();
             mul_wide_and_div(
                 lhs: epoch_rewards,
-                rhs: self.get_staker_total_balance_curr_epoch(:staker_address),
+                rhs: self.get_staker_total_strk_balance_curr_epoch(:staker_address),
                 div: self.get_current_total_staking_power(),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
@@ -1609,7 +1639,10 @@ pub mod Staking {
             if let Option::Some(pool_info) = staker_info.pool_info {
                 let pool_contract = pool_info.pool_contract;
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-                let pool_balance = self.get_staker_delegated_balance_curr_epoch(:staker_address);
+                let pool_balance = self
+                    .get_staker_delegated_balance_curr_epoch(
+                        :staker_address, token_address: STRK_TOKEN_ADDRESS,
+                    );
                 pool_dispatcher
                     .update_rewards_from_staking_contract(rewards: pool_rewards, :pool_balance);
                 self
@@ -1632,7 +1665,9 @@ pub mod Staking {
         ) -> Amount {
             let own_balance_curr_epoch = self.get_staker_own_balance_curr_epoch(:staker_address);
             let delegated_balance_curr_epoch = self
-                .get_staker_delegated_balance_curr_epoch(:staker_address);
+                .get_staker_delegated_balance_curr_epoch(
+                    :staker_address, token_address: STRK_TOKEN_ADDRESS,
+                );
             let own_rewards = mul_wide_and_div(
                 lhs: total_rewards,
                 rhs: own_balance_curr_epoch,
@@ -1672,11 +1707,15 @@ pub mod Staking {
         }
 
         fn insert_staker_delegated_balance(
-            ref self: ContractState, staker_address: ContractAddress, delegated_balance: Amount,
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            token_address: ContractAddress,
+            delegated_balance: Amount,
         ) {
             self
                 .staker_delegated_balance_trace
                 .entry(staker_address)
+                .entry(token_address)
                 .insert(key: self.get_next_epoch(), value: delegated_balance);
         }
 
@@ -1693,9 +1732,15 @@ pub mod Staking {
             own_balance
         }
 
-        /// Return the latest delegated balance recorded in the `staker_delegated_balance_trace`.
-        fn get_delegated_balance(self: @ContractState, staker_address: ContractAddress) -> Amount {
-            let trace = self.staker_delegated_balance_trace.entry(key: staker_address);
+        /// Return the latest delegated balance recorded in the `staker_delegated_balance_trace` of
+        /// the given `token_address`.
+        fn get_delegated_balance(
+            self: @ContractState, staker_address: ContractAddress, token_address: ContractAddress,
+        ) -> Amount {
+            let trace = self
+                .staker_delegated_balance_trace
+                .entry(key: staker_address)
+                .entry(key: token_address);
             // TODO: Consider replace the error with delegated balance not initialized? or with the
             // generic one from the result?
             let (_, delegated_balance) = trace
@@ -1708,12 +1753,15 @@ pub mod Staking {
             delegated_balance
         }
 
-        fn get_staker_total_balance_curr_epoch(
+        /// Return the total STRK balance of the staker in the current epoch.
+        fn get_staker_total_strk_balance_curr_epoch(
             self: @ContractState, staker_address: ContractAddress,
         ) -> Amount {
             let curr_own_balance = self.get_staker_own_balance_curr_epoch(:staker_address);
             let curr_delegated_balance = self
-                .get_staker_delegated_balance_curr_epoch(:staker_address);
+                .get_staker_delegated_balance_curr_epoch(
+                    :staker_address, token_address: STRK_TOKEN_ADDRESS,
+                );
             curr_own_balance + curr_delegated_balance
         }
 
@@ -1755,9 +1803,12 @@ pub mod Staking {
         }
 
         fn get_staker_delegated_balance_curr_epoch(
-            self: @ContractState, staker_address: ContractAddress,
+            self: @ContractState, staker_address: ContractAddress, token_address: ContractAddress,
         ) -> Amount {
-            let trace = self.staker_delegated_balance_trace.entry(key: staker_address);
+            let trace = self
+                .staker_delegated_balance_trace
+                .entry(key: staker_address)
+                .entry(key: token_address);
             let (epoch, delegated_balance) = trace.latest().unwrap_or_else(|err| panic!("{err}"));
             if epoch <= self.get_current_epoch() {
                 delegated_balance
