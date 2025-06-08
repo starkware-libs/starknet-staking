@@ -409,7 +409,7 @@ mod epoch_info_tests {
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct InternalStakerPoolInfoV1 {
     pub pool_contract: ContractAddress,
-    pub commission: Commission,
+    pub _deprecated_commission: Commission,
 }
 
 #[starknet::storage_node]
@@ -470,7 +470,8 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
             pool_info: match staker_info.pool_info {
                 Option::Some(pool_info) => Option::Some(
                     InternalStakerPoolInfoV1 {
-                        pool_contract: pool_info.pool_contract, commission: pool_info.commission,
+                        pool_contract: pool_info.pool_contract,
+                        _deprecated_commission: pool_info.commission,
                     },
                 ),
                 Option::None => Option::None,
@@ -559,7 +560,7 @@ impl InternalStakerInfoLatestIntoStakerInfoV1 of Into<InternalStakerInfoLatest, 
                     StakerPoolInfoV1 {
                         pool_contract: pool_info.pool_contract,
                         amount: Zero::zero(),
-                        commission: pool_info.commission,
+                        commission: pool_info._deprecated_commission,
                     },
                 ),
                 Option::None => Option::None,
@@ -580,7 +581,8 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1Impl of StakerInfoIntoInternal
             pool_info: match self.pool_info {
                 Option::Some(pool_info) => Option::Some(
                     InternalStakerPoolInfoV1 {
-                        pool_contract: pool_info.pool_contract, commission: pool_info.commission,
+                        pool_contract: pool_info.pool_contract,
+                        _deprecated_commission: pool_info.commission,
                     },
                 ),
                 Option::None => Option::None,

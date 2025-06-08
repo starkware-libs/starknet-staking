@@ -463,7 +463,9 @@ pub mod Staking {
             staker_info
                 .pool_info =
                     Option::Some(
-                        InternalStakerPoolInfoLatest { pool_contract, commission: Zero::zero() },
+                        InternalStakerPoolInfoLatest {
+                            pool_contract, _deprecated_commission: Zero::zero(),
+                        },
                     );
             self.write_staker_info(:staker_address, :staker_info);
             pool_contract
