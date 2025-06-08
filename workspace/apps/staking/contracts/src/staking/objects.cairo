@@ -7,9 +7,10 @@ use staking::staking::interface_v0::{
     IStakingV0DispatcherTrait, IStakingV0LibraryDispatcher, StakerInfo, StakerPoolInfo,
 };
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
+use starknet::storage::StoragePath;
 use starknet::{ClassHash, ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
-use starkware_utils::iterable_map::IterableMap;
+use starkware_utils::iterable_map::{IterableMap, IterableMapIntoIterImpl};
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
@@ -420,6 +421,17 @@ pub(crate) struct InternalStakerPoolInfoV2 {
     pub(crate) pools: IterableMap<ContractAddress, ContractAddress>,
     /// The commitment to the commission.
     pub(crate) commission_commitment: Option<CommissionCommitment>,
+}
+
+#[generate_trait]
+pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
+    fn get_pools(self: StoragePath<InternalStakerPoolInfoV2>) -> Span<ContractAddress> {
+        let mut pools: Array<ContractAddress> = array![];
+        for (pool_contract, _) in self.pools {
+            pools.append(pool_contract);
+        }
+        pools.span()
+    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
