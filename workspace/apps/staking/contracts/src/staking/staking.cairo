@@ -622,7 +622,7 @@ pub mod Staking {
             let staker_address = get_caller_address();
             let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-            let pool_info = staker_info.get_pool_info();
+            self.assert_staker_has_pool(:staker_info);
             let current_epoch = self.get_current_epoch();
             if let Option::Some(commission_commitment) = self
                 .read_staker_commission_commitment(:staker_address) {
@@ -632,6 +632,7 @@ pub mod Staking {
                     Error::COMMISSION_COMMITMENT_EXISTS,
                 );
             }
+            // Staker must have a commission since he has a pool.
             let current_commission = self.read_staker_commission(:staker_address);
             assert!(current_commission <= max_commission, "{}", Error::MAX_COMMISSION_TOO_LOW);
             assert!(expiration_epoch > current_epoch, "{}", Error::EXPIRATION_EPOCH_TOO_EARLY);
@@ -1772,6 +1773,10 @@ pub mod Staking {
                 "{}",
                 Error::STAKER_ADDRESS_ALREADY_USED,
             );
+        }
+
+        fn assert_staker_has_pool(self: @ContractState, staker_info: InternalStakerInfoLatest) {
+            assert!(staker_info.pool_info.is_some(), "{}", Error::MISSING_POOL_CONTRACT);
         }
     }
 }
