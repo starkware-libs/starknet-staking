@@ -319,10 +319,10 @@ pub(crate) fn assert_delete_staker_event(
     staker_address: ContractAddress,
     reward_address: ContractAddress,
     operational_address: ContractAddress,
-    pool_contract: Option<ContractAddress>,
+    pool_contracts: Span<ContractAddress>,
 ) {
     let expected_event = StakingEvents::DeleteStaker {
-        staker_address, reward_address, operational_address, pool_contract,
+        staker_address, reward_address, operational_address, pool_contracts,
     };
     assert_expected_event_emitted(
         :spied_event,

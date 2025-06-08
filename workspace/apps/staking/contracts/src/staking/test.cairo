@@ -780,7 +780,7 @@ fn test_unstake_action() {
         :staker_address,
         reward_address: cfg.staker_info.reward_address,
         operational_address: cfg.staker_info.operational_address,
-        pool_contract: Option::Some(pool_contract),
+        pool_contracts: [pool_contract].span(),
     );
 }
 

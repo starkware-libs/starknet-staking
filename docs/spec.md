@@ -1447,7 +1447,7 @@ Only security agent.
 | staker_address      | address         | ✅     |
 | reward_address      | address         | ❌     |
 | operational_address | address         | ❌     |
-| pool_contract       | Option<address> | ❌     |
+| pool_contracts      | Span<address>   | ❌     |
 
 ### Staker Reward Claimed
 | data           | type              | keyed |
