@@ -949,7 +949,8 @@ pub(crate) impl SystemStakerImpl<
                 :amount,
             );
         if pool_enabled {
-            self.set_open_for_delegation(:staker, :commission);
+            self.set_commission(:staker, :commission);
+            self.set_open_for_delegation(:staker);
         }
     }
 
@@ -985,16 +986,10 @@ pub(crate) impl SystemStakerImpl<
         self.staking.safe_dispatcher().unstake_action(staker_address: staker.staker.address)
     }
 
-    // TODO: remove commission parameter and call set_commission first if needed.
-    fn set_open_for_delegation(
-        self: SystemState<TTokenState>, staker: Staker, commission: Commission,
-    ) -> ContractAddress {
-        cheat_caller_address(
-            contract_address: self.staking.address,
-            caller_address: staker.staker.address,
-            span: CheatSpan::TargetCalls(2),
+    fn set_open_for_delegation(self: SystemState<TTokenState>, staker: Staker) -> ContractAddress {
+        cheat_caller_address_once(
+            contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self.staking.dispatcher().set_commission(:commission);
         self.staking.dispatcher().set_open_for_delegation()
     }
 
