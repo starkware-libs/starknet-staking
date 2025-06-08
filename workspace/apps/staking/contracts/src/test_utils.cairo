@@ -516,32 +516,6 @@ pub(crate) fn fund_and_approve_for_stake(
     );
 }
 
-// Stake according to the given configuration, the staker is cfg.test_info.staker_address.
-pub(crate) fn stake_for_testing(
-    ref state: ContractState, cfg: StakingInitConfig, token_address: ContractAddress,
-) {
-    let staking_contract = test_address();
-    fund_and_approve_for_stake(:cfg, :staking_contract, :token_address);
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
-    );
-    state
-        .stake(
-            cfg.staker_info.reward_address,
-            cfg.staker_info.operational_address,
-            cfg.test_info.stake_amount,
-        );
-    if cfg.test_info.pool_enabled {
-        cheat_caller_address(
-            contract_address: staking_contract,
-            caller_address: cfg.test_info.staker_address,
-            span: CheatSpan::TargetCalls(2),
-        );
-        state.set_commission(commission: cfg.staker_info.get_pool_info().commission);
-        state.set_open_for_delegation();
-    }
-}
-
 pub(crate) fn stake_for_testing_using_dispatcher(
     cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress,
 ) {
