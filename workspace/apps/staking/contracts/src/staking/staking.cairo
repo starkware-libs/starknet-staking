@@ -43,7 +43,7 @@ pub mod Staking {
         compute_new_delegated_stake, deploy_delegation_pool_contract,
     };
     use starknet::class_hash::ClassHash;
-    use starknet::storage::{Map, Mutable, StoragePath, StoragePathEntry};
+    use starknet::storage::{Map, Mutable, PendingStoragePath, StoragePath, StoragePathEntry};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
@@ -1149,13 +1149,18 @@ pub mod Staking {
             self.staker_pool_info.entry(staker_address)
         }
 
+        fn staker_pools(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> PendingStoragePath<IterableMap<ContractAddress, ContractAddress>> {
+            self.internal_staker_pool_info(:staker_address).pools
+        }
+
         /// Returns the token address for the given `staker_address` and `pool_contract`.
         /// Panic if the given `pool_contract` doesn't belong to the given `staker_address`.
         fn get_pool_token(
             self: @ContractState, staker_address: ContractAddress, pool_contract: ContractAddress,
         ) -> ContractAddress {
-            let internal_staker_pool_info = self.internal_staker_pool_info(:staker_address);
-            let token_address = internal_staker_pool_info.pools.read(pool_contract);
+            let token_address = self.staker_pools(:staker_address).read(pool_contract);
             assert!(token_address.is_some(), "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
             token_address.unwrap()
         }
