@@ -1213,7 +1213,7 @@ pub mod Staking {
             // If undelegate_intent.staker_address is zero, it means the intent is for the STRK
             // token (it was created before the BTC version).
             if undelegate_intent.staker_address.is_zero() {
-                STRK_TOKEN_ADDRESS
+                self.strk_token_address()
             } else {
                 self
                     .get_pool_token(
