@@ -1193,6 +1193,24 @@ pub mod Staking {
             token_address.unwrap()
         }
 
+        /// Returns the token address for the given `undelegate_intent` and `pool_contract`.
+        fn get_undelegate_intent_token(
+            self: @ContractState,
+            undelegate_intent: UndelegateIntentValue,
+            pool_contract: ContractAddress,
+        ) -> ContractAddress {
+            // If undelegate_intent.staker_address is zero, it means the intent is for the STRK
+            // token (it was created before the BTC version).
+            if undelegate_intent.staker_address.is_zero() {
+                STRK_TOKEN_ADDRESS
+            } else {
+                self
+                    .get_pool_token(
+                        staker_address: undelegate_intent.staker_address, :pool_contract,
+                    )
+            }
+        }
+
         fn read_staker_commission(
             self: @ContractState, staker_address: ContractAddress,
         ) -> Commission {
