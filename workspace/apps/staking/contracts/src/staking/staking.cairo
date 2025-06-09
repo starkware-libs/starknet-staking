@@ -310,10 +310,6 @@ pub mod Staking {
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
 
-            // Update the staker info to account for accumulated rewards, before updating their
-            // staked amount.
-            let old_self_stake = self.get_own_balance(:staker_address);
-
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
             let token_dispatcher = self.token_dispatcher.read();
@@ -325,8 +321,8 @@ pub mod Staking {
                 );
 
             // Update staker's staked amount, and total stake.
-            self.increase_staker_own_amount(:staker_address, :amount);
-            let new_self_stake = old_self_stake + amount;
+            let (old_self_stake, new_self_stake) = self
+                .increase_staker_own_amount(:staker_address, :amount);
 
             // Emit events.
             let old_delegated_stake = self
@@ -1835,11 +1831,12 @@ pub mod Staking {
 
         fn increase_staker_own_amount(
             ref self: ContractState, staker_address: ContractAddress, amount: Amount,
-        ) {
+        ) -> (Amount, Amount) {
             let old_own_balance = self.get_own_balance(:staker_address);
             let new_own_balance = old_own_balance + amount;
             self.insert_staker_own_balance(:staker_address, own_balance: new_own_balance);
             self.add_to_total_stake(token_address: self.strk_token_address(), :amount);
+            (old_own_balance, new_own_balance)
         }
 
         fn is_commission_commitment_active(
