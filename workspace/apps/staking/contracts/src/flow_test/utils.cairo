@@ -927,15 +927,7 @@ impl StakerImpl of StakerTrait {
 pub(crate) impl SystemStakerImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of SystemStakerTrait<TTokenState> {
-    // TODO: Remove pool_enabled and add additional call to set_open_for_delegation in each flow
-    // that use pool_enabled=true.
-    fn stake(
-        self: SystemState<TTokenState>,
-        staker: Staker,
-        amount: Amount,
-        pool_enabled: bool,
-        commission: Commission,
-    ) {
+    fn stake(self: SystemState<TTokenState>, staker: Staker, amount: Amount) {
         self.token.approve(owner: staker.staker.address, spender: self.staking.address, :amount);
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
@@ -948,10 +940,6 @@ pub(crate) impl SystemStakerImpl<
                 operational_address: staker.operational.address,
                 :amount,
             );
-        if pool_enabled {
-            self.set_commission(:staker, :commission);
-            self.set_open_for_delegation(:staker);
-        }
     }
 
     fn increase_stake(self: SystemState<TTokenState>, staker: Staker, amount: Amount) -> Amount {
