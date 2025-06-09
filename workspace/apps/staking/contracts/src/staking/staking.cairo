@@ -800,7 +800,7 @@ pub mod Staking {
                 );
             self
                 .update_undelegate_intent_value(
-                    :staker_info, :undelegate_intent_key, :new_intent_amount,
+                    :staker_address, :staker_info, :undelegate_intent_key, :new_intent_amount,
                 );
 
             self
@@ -1588,6 +1588,7 @@ pub mod Staking {
         /// time.
         fn update_undelegate_intent_value(
             ref self: ContractState,
+            staker_address: ContractAddress,
             staker_info: InternalStakerInfoLatest,
             undelegate_intent_key: UndelegateIntentKey,
             new_intent_amount: Amount,
@@ -1597,7 +1598,8 @@ pub mod Staking {
             } else {
                 let unpool_time = staker_info
                     .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
-                UndelegateIntentValue { amount: new_intent_amount, unpool_time }
+                assert!(staker_address.is_non_zero(), "{}", Error::CALLER_IS_ZERO_ADDRESS);
+                UndelegateIntentValue { amount: new_intent_amount, unpool_time, staker_address }
             };
             self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
         }

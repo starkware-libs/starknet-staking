@@ -27,11 +27,15 @@ pub(crate) struct UndelegateIntentKey {
 pub(crate) struct UndelegateIntentValue {
     pub unpool_time: Timestamp,
     pub amount: Amount,
+    // TODO: Consider change to token_address.
+    pub staker_address: ContractAddress,
 }
 
 pub(crate) impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentValue> {
     fn zero() -> UndelegateIntentValue {
-        UndelegateIntentValue { unpool_time: Zero::zero(), amount: Zero::zero() }
+        UndelegateIntentValue {
+            unpool_time: Zero::zero(), amount: Zero::zero(), staker_address: Zero::zero(),
+        }
     }
 
     fn is_zero(self: @UndelegateIntentValue) -> bool {
