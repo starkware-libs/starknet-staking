@@ -10,7 +10,7 @@ use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest}
 use starknet::storage::StoragePath;
 use starknet::{ClassHash, ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
-use starkware_utils::iterable_map::{IterableMap, IterableMapIntoIterImpl};
+use starkware_utils::iterable_map::{IterableMap, IterableMapIntoIterImpl, IterableMapTrait};
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
@@ -435,6 +435,11 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
             pools.append(pool_contract);
         }
         pools.span()
+    }
+
+    /// Returns true if the staker has a pool.
+    fn has_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> bool {
+        self.pools.len() > 0
     }
 }
 
