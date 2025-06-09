@@ -709,6 +709,7 @@ fn test_exit_delegation_pool_intent() {
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
         amount: expected_pool_member_info.unpool_amount.into(),
+        staker_address: cfg.test_info.staker_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 
@@ -1253,6 +1254,7 @@ fn test_partial_undelegate() {
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
         amount: expected_pool_member_info.unpool_amount,
+        staker_address: cfg.test_info.staker_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 

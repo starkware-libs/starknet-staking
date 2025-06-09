@@ -2484,10 +2484,11 @@ Only token admin.
 | identifier    | felt252 |
 
 ### UndelegateIntentValue
-| name        | type                    |
-| ----------- | ----------------------- |
-| unpool_time | [TimeStamp](#timestamp) |
-| amount      | [Amount](#amount)       |
+| name            | type                    |
+| --------------- | ----------------------- |
+| unpool_time     | [TimeStamp](#timestamp) |
+| amount          | [Amount](#amount)       |
+| staker_address  | address                 |
 
 ### TimeStamp
 | name    | type |
