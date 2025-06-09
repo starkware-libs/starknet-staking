@@ -3572,7 +3572,8 @@ fn test_add_token_assertions() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
     );
-    let result = staking_token_manager_safe_dispatcher.add_token(token_address: STRK_TOKEN_ADDRESS);
+    let result = staking_token_manager_safe_dispatcher
+        .add_token(token_address: cfg.staking_contract_info.token_address);
     assert_panic_with_error(:result, expected_error: Error::INVALID_TOKEN_ADDRESS.describe());
 
     // Catch TOKEN_ALREADY_EXISTS.
