@@ -1183,6 +1183,17 @@ pub mod Staking {
             self.internal_staker_pool_info(:staker_address).pools
         }
 
+        fn get_staker_strk_pool(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> Option<ContractAddress> {
+            for (pool_contract, token_address) in self.staker_pools(:staker_address) {
+                if token_address == self.strk_token_address() {
+                    return Option::Some(pool_contract);
+                }
+            }
+            Option::None
+        }
+
         /// Returns the token address for the given `staker_address` and `pool_contract`.
         /// Panic if the given `pool_contract` doesn't belong to the given `staker_address`.
         fn get_pool_token(
