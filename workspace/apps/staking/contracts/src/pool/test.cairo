@@ -123,7 +123,7 @@ fn test_enter_delegation_pool() {
     let mut expected_pool_info = StakerPoolInfoV1 {
         pool_contract,
         amount: cfg.pool_member_info._deprecated_amount,
-        commission: cfg.staker_info.get_pool_info()._deprecated_commission,
+        commission: cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
     };
     let expected_staker_info = StakerInfoV1 {
         reward_address: cfg.staker_info.reward_address,
@@ -1187,7 +1187,7 @@ fn test_contract_parameters_v1() {
         staker_removed: false,
         staking_contract,
         token_address,
-        commission: cfg.staker_info.get_pool_info()._deprecated_commission,
+        commission: cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
     };
     assert!(pool_dispatcher.contract_parameters_v1() == expected_pool_contract_info);
 }

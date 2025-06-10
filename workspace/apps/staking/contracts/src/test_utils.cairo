@@ -537,7 +537,9 @@ pub(crate) fn stake_for_testing_using_dispatcher(
             span: CheatSpan::TargetCalls(2),
         );
         staking_dispatcher
-            .set_commission(commission: cfg.staker_info.get_pool_info()._deprecated_commission);
+            .set_commission(
+                commission: cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
+            );
         staking_dispatcher.set_open_for_delegation();
     }
 }
@@ -916,9 +918,10 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             operational_address: OPERATIONAL_ADDRESS(),
             unstake_time: Option::None,
             unclaimed_rewards_own: 0,
-            pool_info: Option::Some(
+            _deprecated_pool_info: Option::Some(
                 InternalStakerPoolInfoLatest {
-                    pool_contract: POOL_CONTRACT_ADDRESS(), _deprecated_commission: COMMISSION,
+                    _deprecated_pool_contract: POOL_CONTRACT_ADDRESS(),
+                    _deprecated_commission: COMMISSION,
                 },
             ),
             _deprecated_commission_commitment: Option::None,

@@ -952,7 +952,7 @@ fn test_add_stake_from_pool_assertions() {
         caller_address: staker_address,
         span: CheatSpan::TargetCalls(2),
     );
-    let commission = cfg.staker_info.get_pool_info()._deprecated_commission;
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
     staking_dispatcher.set_commission(:commission);
     staking_dispatcher.set_open_for_delegation();
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
@@ -989,7 +989,7 @@ fn test_remove_from_delegation_pool_intent() {
     let mut cur_delegated_stake = initial_delegated_stake - intent_amount;
     let mut expected_staker_info: StakerInfoV1 = cfg.staker_info.into();
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
-    let mut internal_pool_info = cfg.staker_info.get_pool_info();
+    let mut internal_pool_info = cfg.staker_info._deprecated_get_pool_info();
     expected_staker_info
         .pool_info =
             Option::Some(
@@ -1142,7 +1142,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
 
     // Should catch CALLER_IS_NOT_POOL_CONTRACT.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let commission = cfg.staker_info.get_pool_info()._deprecated_commission;
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
     cheat_caller_address(
         contract_address: staking_contract,
         caller_address: staker_address,
@@ -1738,13 +1738,13 @@ fn test_set_commission() {
             .get_pool_info()
             .commission == cfg
             .staker_info
-            .get_pool_info()
+            ._deprecated_get_pool_info()
             ._deprecated_commission,
     );
 
     // Update commission.
     let mut spy = snforge_std::spy_events();
-    let old_commission = cfg.staker_info.get_pool_info()._deprecated_commission;
+    let old_commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
     let commission = old_commission - 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.set_commission(:commission);
@@ -1888,7 +1888,9 @@ fn test_set_commission_caller_not_staker() {
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     staking_dispatcher
-        .set_commission(commission: cfg.staker_info.get_pool_info()._deprecated_commission - 1);
+        .set_commission(
+            commission: cfg.staker_info._deprecated_get_pool_info()._deprecated_commission - 1,
+        );
 }
 
 #[test]
@@ -1905,7 +1907,9 @@ fn test_set_commission_with_higher_commission() {
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
     staking_dispatcher
-        .set_commission(commission: cfg.staker_info.get_pool_info()._deprecated_commission + 1);
+        .set_commission(
+            commission: cfg.staker_info._deprecated_get_pool_info()._deprecated_commission + 1,
+        );
 }
 
 #[test]
@@ -1922,7 +1926,9 @@ fn test_set_commission_with_same_commission() {
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
     staking_dispatcher
-        .set_commission(commission: cfg.staker_info.get_pool_info()._deprecated_commission);
+        .set_commission(
+            commission: cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
+        );
 }
 
 #[test]
@@ -1936,7 +1942,7 @@ fn test_set_commission_initialize_commission() {
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let commission = cfg.staker_info.get_pool_info()._deprecated_commission;
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
     staking_dispatcher.set_commission(:commission);
     // TODO: Assert commission before openning a pool - when view of commission is available.
     // Assert commission after openning a pool.
@@ -1965,7 +1971,9 @@ fn test_set_commission_staker_in_exit_window() {
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
     staking_dispatcher
-        .set_commission(commission: cfg.staker_info.get_pool_info()._deprecated_commission - 1);
+        .set_commission(
+            commission: cfg.staker_info._deprecated_get_pool_info()._deprecated_commission - 1,
+        );
 }
 
 #[test]
@@ -2058,7 +2066,7 @@ fn test_set_commission_commitment_assertions() {
     assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.describe());
 
     // Should catch MAX_COMMISSION_TOO_LOW.
-    let commission = cfg.staker_info.get_pool_info()._deprecated_commission;
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
     cheat_caller_address(
         contract_address: staking_contract,
         caller_address: staker_address,
@@ -2120,7 +2128,7 @@ fn test_set_open_for_delegation() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-    let commission = cfg.staker_info.get_pool_info()._deprecated_commission;
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address(
         contract_address: staking_contract,
@@ -2785,7 +2793,7 @@ fn test_versioned_internal_staker_info_wrap_latest() {
         operational_address: Zero::zero(),
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
+        _deprecated_pool_info: Option::None,
         _deprecated_commission_commitment: Option::None,
     };
     let versioned_internal_staker_info = VersionedInternalStakerInfoTrait::wrap_latest(
@@ -2837,7 +2845,7 @@ fn test_internal_staker_info() {
     let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let mut expected_internal_staker_info = cfg.staker_info;
-    expected_internal_staker_info.pool_info = Option::None;
+    expected_internal_staker_info._deprecated_pool_info = Option::None;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let internal_staker_info = staking_dispatcher.internal_staker_info(:staker_address);
     assert!(internal_staker_info == expected_internal_staker_info);
@@ -2913,7 +2921,7 @@ fn test_compute_unpool_time() {
         operational_address: Zero::zero(),
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
+        _deprecated_pool_info: Option::None,
         _deprecated_commission_commitment: Option::None,
     };
     assert!(
@@ -2929,7 +2937,7 @@ fn test_compute_unpool_time() {
         operational_address: Zero::zero(),
         unstake_time: Option::Some(unstake_time),
         unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
+        _deprecated_pool_info: Option::None,
         _deprecated_commission_commitment: Option::None,
     };
 
@@ -2945,19 +2953,19 @@ fn test_compute_unpool_time() {
 }
 
 #[test]
-fn test_get_pool_info() {
+fn test_deprecated_get_pool_info() {
     let staker_pool_info = InternalStakerPoolInfoV1 {
-        pool_contract: Zero::zero(), _deprecated_commission: Zero::zero(),
+        _deprecated_pool_contract: Zero::zero(), _deprecated_commission: Zero::zero(),
     };
     let internal_staker_info = InternalStakerInfoLatest {
         reward_address: Zero::zero(),
         operational_address: Zero::zero(),
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::Some(staker_pool_info),
+        _deprecated_pool_info: Option::Some(staker_pool_info),
         _deprecated_commission_commitment: Option::None,
     };
-    assert!(internal_staker_info.get_pool_info() == staker_pool_info);
+    assert!(internal_staker_info._deprecated_get_pool_info() == staker_pool_info);
 }
 
 #[test]
@@ -2968,10 +2976,10 @@ fn test_get_pool_info_panic() {
         operational_address: Zero::zero(),
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
+        _deprecated_pool_info: Option::None,
         _deprecated_commission_commitment: Option::None,
     };
-    internal_staker_info.get_pool_info();
+    internal_staker_info._deprecated_get_pool_info();
 }
 
 #[test]
@@ -2981,7 +2989,7 @@ fn test_internal_staker_info_latest_into_staker_info() {
         operational_address: Zero::zero(),
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
+        _deprecated_pool_info: Option::None,
         _deprecated_commission_commitment: Option::None,
     };
     let staker_info: StakerInfoV1 = internal_staker_info.into();
@@ -3048,7 +3056,7 @@ fn test_staker_info_into_internal_staker_info_v1() {
         operational_address: Zero::zero(),
         unstake_time: Option::None,
         unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
+        _deprecated_pool_info: Option::None,
         _deprecated_commission_commitment: Option::None,
     };
     assert!(internal_staker_info == expected_internal_staker_info);

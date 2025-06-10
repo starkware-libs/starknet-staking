@@ -1396,8 +1396,8 @@ pub mod Staking {
             pool_unclaimed_rewards: Amount,
             token_dispatcher: IERC20Dispatcher,
         ) {
-            let pool_info = staker_info.get_pool_info();
-            let pool_address = pool_info.pool_contract;
+            let pool_info = staker_info._deprecated_get_pool_info();
+            let pool_address = pool_info._deprecated_pool_contract;
             let amount = pool_unclaimed_rewards;
 
             self.send_rewards(reward_address: pool_address, :amount, :token_dispatcher);
