@@ -933,7 +933,7 @@ fn test_add_stake_from_pool_assertions() {
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
     assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
 
-    // Should catch MISSING_POOL_CONTRACT.
+    // Should catch CALLER_IS_NOT_POOL_CONTRACT.
     start_cheat_block_timestamp_global(
         block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into(),
     );
@@ -944,7 +944,7 @@ fn test_add_stake_from_pool_assertions() {
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.describe());
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
 
     // Should catch CALLER_IS_NOT_POOL_CONTRACT.
     cheat_caller_address(
@@ -1133,12 +1133,12 @@ fn test_remove_from_delegation_pool_intent_assertions() {
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 
-    // Should catch MISSING_POOL_CONTRACT.
+    // Should catch CALLER_IS_NOT_POOL_CONTRACT.
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_POOL_CONTRACT.describe());
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
 
     // Should catch CALLER_IS_NOT_POOL_CONTRACT.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
