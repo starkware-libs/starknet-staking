@@ -1794,17 +1794,7 @@ pub mod Staking {
             self: @ContractState, staker_address: ContractAddress,
         ) -> Amount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
-            let (epoch, own_balance) = trace.latest().unwrap_or_else(|err| panic!("{err}"));
-            if epoch <= self.get_current_epoch() {
-                own_balance
-            } else {
-                let (epoch, own_balance) = trace
-                    .penultimate()
-                    .unwrap_or_else(|err| panic!("{err}"));
-                // TODO: Catch this assert in tests.
-                assert!(epoch <= self.get_current_epoch(), "{}", GenericError::INVALID_PENULTIMATE);
-                own_balance
-            }
+            self.balance_at_curr_epoch(:trace)
         }
 
         fn get_staker_delegated_balance_curr_epoch(
@@ -1814,16 +1804,18 @@ pub mod Staking {
                 .staker_delegated_balance_trace
                 .entry(key: staker_address)
                 .entry(key: token_address);
-            let (epoch, delegated_balance) = trace.latest().unwrap_or_else(|err| panic!("{err}"));
+            self.balance_at_curr_epoch(:trace)
+        }
+
+        fn balance_at_curr_epoch(self: @ContractState, trace: StoragePath<Trace>) -> Amount {
+            let (epoch, balance) = trace.latest().unwrap_or_else(|err| panic!("{err}"));
             if epoch <= self.get_current_epoch() {
-                delegated_balance
+                balance
             } else {
-                let (epoch, delegated_balance) = trace
-                    .penultimate()
-                    .unwrap_or_else(|err| panic!("{err}"));
+                let (epoch, balance) = trace.penultimate().unwrap_or_else(|err| panic!("{err}"));
                 // TODO: Catch this assert in tests.
                 assert!(epoch <= self.get_current_epoch(), "{}", GenericError::INVALID_PENULTIMATE);
-                delegated_balance
+                balance
             }
         }
 
