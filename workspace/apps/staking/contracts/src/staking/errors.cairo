@@ -46,6 +46,7 @@ pub(crate) enum Error {
     TOKEN_ALREADY_ENABLED,
     TOKEN_ALREADY_DISABLED,
     COMMISSION_NOT_SET,
+    TOKEN_MISMATCH,
 }
 
 impl DescribableError of Describable<Error> {
@@ -96,6 +97,7 @@ impl DescribableError of Describable<Error> {
             Error::TOKEN_ALREADY_ENABLED => "Token is already enabled",
             Error::TOKEN_ALREADY_DISABLED => "Token is already disabled",
             Error::COMMISSION_NOT_SET => "Commission is not set",
+            Error::TOKEN_MISMATCH => "Token mismatch",
         }
     }
 }

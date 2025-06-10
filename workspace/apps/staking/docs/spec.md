@@ -202,6 +202,7 @@
     - [TOKEN\_ALREADY\_ENABLED](#token_already_enabled)
     - [TOKEN\_ALREADY\_DISABLED](#token_already_disabled)
     - [COMMISSION\_NOT\_SET](#commission_not_set)
+    - [TOKEN\_MISMATCH](#token_mismatch)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -695,8 +696,7 @@ Delegation pool contract's way to add funds to the staking pool.
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-5. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+4. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker is listed in the contract.
@@ -728,9 +728,8 @@ Return the time in which the pool member will be able to exit.
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
 3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-5. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
-6. [AMOUNT\_TOO\_HIGH](#amount_too_high)
+4. [CALLER\_IS\_NOT\_POOL\_CONTRACT](#caller_is_not_pool_contract)
+5. [AMOUNT\_TOO\_HIGH](#amount_too_high)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker is listed in the contract.
@@ -793,8 +792,8 @@ Execute a pool member request to move from one staker's delegation pool to anoth
 5. [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
 6. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 7. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-8. [MISSING\_POOL\_CONTRACT](#missing_pool_contract)
-9. [DELEGATION\_POOL\_MISMATCH](#delegation_pool_mismatch)
+8. [DELEGATION\_POOL\_MISMATCH](#delegation_pool_mismatch)
+9. [TOKEN\_MISMATCH](#token_mismatch)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. `switched_amount` is not zero.
@@ -802,6 +801,7 @@ Execute a pool member request to move from one staker's delegation pool to anoth
 4. `to_pool` is not the caller pool.
 5. `to_staker` exist in the contract and is not in exit window.
 6. `to_pool` is the delegation pool contract for `to_staker`.
+7. `to_pool` is of the same token as the intent pool.
 #### access control <!-- omit from toc -->
 Only pool contract for the given staker can execute.
 #### logic <!-- omit from toc -->
@@ -956,7 +956,7 @@ fn staker_info_v1(
 ) -> StakerInfoV1
 ```
 #### description <!-- omit from toc -->
-Return [StakerInfoV1](#stakerinfov1) of the given staker.
+Return [StakerInfoV1](#stakerinfov1) of the given staker. If the staker has a STRK pool, return the STRK pool info inside the [StakerInfoV1](#stakerinfov1).
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -965,7 +965,8 @@ Return [StakerInfoV1](#stakerinfov1) of the given staker.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
-1. Return Staker's info.
+1. Read STRK pool info if exists.
+2. Return Staker's info.
 
 ### get_staker_info_v1
 ```rust
@@ -2422,6 +2423,9 @@ Only token admin.
 
 ### TOKEN_ALREADY_EXISTS
 "Token already exists"
+
+### TOKEN_MISMATCH
+"Token mismatch"
 
 # Structs
 ### StakerPoolInfoV1
