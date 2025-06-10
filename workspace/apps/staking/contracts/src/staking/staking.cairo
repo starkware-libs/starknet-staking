@@ -732,7 +732,9 @@ pub mod Staking {
             let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             let pool_contract = get_caller_address();
-            let token_address = self.get_pool_token(:staker_address, :pool_contract);
+            let token_address = self
+                .get_pool_token(:staker_address, :pool_contract)
+                .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
 
             // Transfer funds from the pool contract to the staking contract.
             // Sufficient approval is a pre-condition.
@@ -775,7 +777,9 @@ pub mod Staking {
             self.general_prerequisites();
             let staker_info = self.internal_staker_info(:staker_address);
             let pool_contract = get_caller_address();
-            let token_address = self.get_pool_token(:staker_address, :pool_contract);
+            let token_address = self
+                .get_pool_token(:staker_address, :pool_contract)
+                .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
 
             let old_delegated_stake = self.get_delegated_balance(:staker_address, :token_address);
 
@@ -899,11 +903,10 @@ pub mod Staking {
 
             // More asserts.
             assert!(to_staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-            // TODO: get_pool_token return option/result for more informative
-            // (DELEGATION_POOL_MISMATCH) error message here.
             // TODO: Catch this error in tests.
             let to_token_address = self
-                .get_pool_token(staker_address: to_staker, pool_contract: to_pool);
+                .get_pool_token(staker_address: to_staker, pool_contract: to_pool)
+                .expect_with_err(Error::DELEGATION_POOL_MISMATCH);
             assert!(token_address == to_token_address, "{}", Error::TOKEN_MISMATCH);
 
             // Update `to_staker`'s delegated stake amount, and add to total stake.
@@ -1195,10 +1198,8 @@ pub mod Staking {
         /// Panic if the given `pool_contract` doesn't belong to the given `staker_address`.
         fn get_pool_token(
             self: @ContractState, staker_address: ContractAddress, pool_contract: ContractAddress,
-        ) -> ContractAddress {
-            let token_address = self.staker_pools(:staker_address).read(pool_contract);
-            assert!(token_address.is_some(), "{}", Error::CALLER_IS_NOT_POOL_CONTRACT);
-            token_address.unwrap()
+        ) -> Option<ContractAddress> {
+            self.staker_pools(:staker_address).read(pool_contract)
         }
 
         /// Returns the token address for the given `undelegate_intent` and `pool_contract`.
@@ -1216,6 +1217,7 @@ pub mod Staking {
                     .get_pool_token(
                         staker_address: undelegate_intent.staker_address, :pool_contract,
                     )
+                    .expect_with_err(Error::INVALID_UNDELEGATE_INTENT_VALUE)
             }
         }
 
