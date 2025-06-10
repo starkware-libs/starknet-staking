@@ -2,7 +2,7 @@
 #[starknet::contract]
 mod StakingEIC {
     use core::num::traits::Zero;
-    use staking::constants::{PREV_CONTRACT_VERSION, STARTING_EPOCH};
+    use staking::constants::{STARTING_EPOCH, V1_PREV_CONTRACT_VERSION};
     use staking::errors::GenericError;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
@@ -51,7 +51,7 @@ mod StakingEIC {
 
             // 1. Set previous class hash.
             assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
-            self.prev_class_hash.write(PREV_CONTRACT_VERSION, prev_class_hash);
+            self.prev_class_hash.write(V1_PREV_CONTRACT_VERSION, prev_class_hash);
 
             // 2. Set epoch info.
             let epoch_info = EpochInfoTrait::new(
