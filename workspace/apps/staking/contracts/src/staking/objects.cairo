@@ -413,7 +413,7 @@ mod epoch_info_tests {
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct InternalStakerPoolInfoV1 {
-    pub pool_contract: ContractAddress,
+    pub _deprecated_pool_contract: ContractAddress,
     pub _deprecated_commission: Commission,
 }
 
@@ -462,7 +462,7 @@ pub(crate) struct InternalStakerInfoV1 {
     pub(crate) operational_address: ContractAddress,
     pub(crate) unstake_time: Option<Timestamp>,
     pub(crate) unclaimed_rewards_own: Amount,
-    pub(crate) pool_info: Option<InternalStakerPoolInfoV1>,
+    pub(crate) _deprecated_pool_info: Option<InternalStakerPoolInfoV1>,
     pub(crate) _deprecated_commission_commitment: Option<CommissionCommitment>,
 }
 
@@ -488,10 +488,10 @@ pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
             operational_address: staker_info.operational_address,
             unstake_time: staker_info.unstake_time,
             unclaimed_rewards_own: staker_info.unclaimed_rewards_own,
-            pool_info: match staker_info.pool_info {
+            _deprecated_pool_info: match staker_info.pool_info {
                 Option::Some(pool_info) => Option::Some(
                     InternalStakerPoolInfoV1 {
-                        pool_contract: pool_info.pool_contract,
+                        _deprecated_pool_contract: pool_info.pool_contract,
                         _deprecated_commission: pool_info.commission,
                     },
                 ),
@@ -531,7 +531,7 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
                 operational_address,
                 unstake_time: Option::None,
                 unclaimed_rewards_own: Zero::zero(),
-                pool_info: Option::None,
+                _deprecated_pool_info: Option::None,
                 _deprecated_commission_commitment: Option::None,
             },
         )
@@ -563,8 +563,8 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
         Time::now().add(delta: exit_wait_window)
     }
 
-    fn get_pool_info(self: @InternalStakerInfoLatest) -> InternalStakerPoolInfoV1 {
-        (*self.pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
+    fn _deprecated_get_pool_info(self: @InternalStakerInfoLatest) -> InternalStakerPoolInfoV1 {
+        (*self._deprecated_pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }
 }
 
@@ -576,10 +576,10 @@ impl InternalStakerInfoLatestIntoStakerInfoV1 of Into<InternalStakerInfoLatest, 
             unstake_time: self.unstake_time,
             amount_own: Zero::zero(),
             unclaimed_rewards_own: self.unclaimed_rewards_own,
-            pool_info: match self.pool_info {
+            pool_info: match self._deprecated_pool_info {
                 Option::Some(pool_info) => Option::Some(
                     StakerPoolInfoV1 {
-                        pool_contract: pool_info.pool_contract,
+                        pool_contract: pool_info._deprecated_pool_contract,
                         amount: Zero::zero(),
                         commission: pool_info._deprecated_commission,
                     },
@@ -599,10 +599,10 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1Impl of StakerInfoIntoInternal
             operational_address: self.operational_address,
             unstake_time: self.unstake_time,
             unclaimed_rewards_own: self.unclaimed_rewards_own,
-            pool_info: match self.pool_info {
+            _deprecated_pool_info: match self.pool_info {
                 Option::Some(pool_info) => Option::Some(
                     InternalStakerPoolInfoV1 {
-                        pool_contract: pool_info.pool_contract,
+                        _deprecated_pool_contract: pool_info.pool_contract,
                         _deprecated_commission: pool_info.commission,
                     },
                 ),
