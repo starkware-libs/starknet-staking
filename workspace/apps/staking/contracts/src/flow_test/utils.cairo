@@ -76,9 +76,19 @@ pub(crate) mod MainnetClassHashes {
         0x31578ba8535c5be427c03412d596fe17d3cecfc2b4a3040b841c009fe4ac5f5.try_into().unwrap()
     }
 
+    /// Class hash of the second staking contract deployed on mainnet (upgraded in V1).
+    pub(crate) fn MAINNET_STAKING_CLASS_HASH_V1() -> ClassHash {
+        0x03f85b23fd3c13e55134f583f22f3046d0e2cc2e6a6c61431137cee9d55deaf7.try_into().unwrap()
+    }
+
     /// Class hash of the first reward supplier contract deployed on mainnet.
     pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash {
         0x7cbbebcdbbce7bd45611d8b679e524b63586429adee0f858b7f0994d709d648.try_into().unwrap()
+    }
+
+    /// Class hash of the second reward supplier contract deployed on mainnet (upgraded in V1).
+    pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1() -> ClassHash {
+        0x7dbce96b61d0195129103eca514936992f290062bcb95c7528f7383b062cde7.try_into().unwrap()
     }
 
     /// Class hash of the first minting curve contract deployed on mainnet.
@@ -89,6 +99,16 @@ pub(crate) mod MainnetClassHashes {
     /// Class hash of the first pool contract deployed on mainnet.
     pub(crate) fn MAINNET_POOL_CLASS_HASH_V0() -> ClassHash {
         0x072ddc6cc22fb26453334e9cf1cbb92f12d2946d058e2b2b571c65d0f23d6516.try_into().unwrap()
+    }
+
+    /// Class hash of the second pool contract deployed on mainnet (upgraded in V1).
+    pub(crate) fn MAINNET_POOL_CLASS_HASH_V1() -> ClassHash {
+        0x05f6abc83b23af3af179388e1e2bf93096047ba6d8c480360d3c88f7d175bdef.try_into().unwrap()
+    }
+
+    /// Class hash of the first attestation contract deployed on mainnet (deployed in V1).
+    pub(crate) fn MAINNET_ATTESTATION_CLASS_HASH_V1() -> ClassHash {
+        0x06f9f82c74ee893a56f12480fac55ff89855e38cd132ee50ac11cb51f83623d3.try_into().unwrap()
     }
 }
 
