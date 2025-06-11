@@ -1,6 +1,9 @@
 // An External Initializer Contract to upgrade a staking contract.
+// This EIC was used to upgrade the staking contract from V0 to V1.
+// This eic is now deprecated. Used only for flow tests.
+#[cfg(test)]
 #[starknet::contract]
-mod StakingEIC {
+mod StakingEICV0toV1 {
     use core::num::traits::Zero;
     use staking::constants::{STARTING_EPOCH, V1_PREV_CONTRACT_VERSION};
     use staking::errors::GenericError;
