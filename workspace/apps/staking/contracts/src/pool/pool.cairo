@@ -157,18 +157,17 @@ pub mod Pool {
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
 
+            // Create the pool member record.
+            self
+                .pool_member_info
+                .write(pool_member, VInternalPoolMemberInfoTrait::new_latest(:reward_address));
+            self.set_next_epoch_balance(:pool_member, :amount);
+
             // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
             let staker_address = self.staker_address.read();
             self.transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
-
-            self.set_next_epoch_balance(:pool_member, :amount);
-
-            // Create the pool member record.
-            self
-                .pool_member_info
-                .write(pool_member, VInternalPoolMemberInfoTrait::new_latest(:reward_address));
 
             // Emit events.
             self
