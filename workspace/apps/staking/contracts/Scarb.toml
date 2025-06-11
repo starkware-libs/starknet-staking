@@ -36,3 +36,5 @@ sort-module-level-items = true
 snforge.workspace = true
 scarb.workspace = true
 
+[features]
+fork_test = []
