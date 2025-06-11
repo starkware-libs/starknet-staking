@@ -1811,12 +1811,13 @@ pub mod Staking {
 
         fn balance_at_curr_epoch(self: @ContractState, trace: StoragePath<Trace>) -> Amount {
             let (epoch, balance) = trace.latest().unwrap_or_else(|err| panic!("{err}"));
-            if epoch <= self.get_current_epoch() {
+            let curr_epoch = self.get_current_epoch();
+            if epoch <= curr_epoch {
                 balance
             } else {
                 let (epoch, balance) = trace.penultimate().unwrap_or_else(|err| panic!("{err}"));
                 // TODO: Catch this assert in tests.
-                assert!(epoch <= self.get_current_epoch(), "{}", GenericError::INVALID_PENULTIMATE);
+                assert!(epoch <= curr_epoch, "{}", GenericError::INVALID_PENULTIMATE);
                 balance
             }
         }
