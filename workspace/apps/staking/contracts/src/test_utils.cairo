@@ -473,6 +473,10 @@ pub(crate) fn declare_staking_eic_contract_v0_v1() -> ClassHash {
     *snforge_std::declare("StakingEICV0toV1").unwrap().contract_class().class_hash
 }
 
+pub(crate) fn declare_staking_eic_contract_v1_v2() -> ClassHash {
+    *snforge_std::declare("StakingEICV1toV2").unwrap().contract_class().class_hash
+}
+
 pub(crate) fn declare_pool_eic_contract() -> ClassHash {
     *snforge_std::declare("PoolEIC").unwrap().contract_class().class_hash
 }
