@@ -40,7 +40,7 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
-    declare_staking_eic_contract,
+    declare_staking_eic_contract_v0_v1,
 };
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
@@ -1339,7 +1339,7 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     /// Upgrades the staking contract in the system state with a local implementation.
     fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
         let eic_data = EICData {
-            eic_hash: declare_staking_eic_contract(),
+            eic_hash: declare_staking_eic_contract_v0_v1(),
             eic_init_data: array![
                 MAINNET_STAKING_CLASS_HASH_V0().into(),
                 EPOCH_DURATION.into(),
