@@ -699,26 +699,24 @@ pub mod Staking {
             }
         }
 
-        // TODO: Implement this function for the new version.
-        fn staker_migration(
-            ref self: ContractState, staker_address: ContractAddress,
-        ) { //     let versioned_internal_staker_info = self.staker_info.read(staker_address);
-        //     match versioned_internal_staker_info {
-        //         VersionedInternalStakerInfo::None => panic_with_byte_array(
-        //             err: @GenericError::STAKER_NOT_EXISTS.describe(),
-        //         ),
-        //         VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
-        //             if let Option::Some(_) = internal_staker_info_v0.pool_info() {
-        //                 panic_with_byte_array(
-        //                     err: @Error::STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL.describe(),
-        //                 )
-        //             }
-        //             self.convert_internal_staker_info(:staker_address)
-        //         },
-        //         VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
-        //             err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
-        //         ),
-        //     };
+        // TODO: Consider restricting this function to be called only once and by us? Or make the
+        // implementation robust for multiple calls?
+        // TODO: Test this function.
+        fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
+            let internal_staker_info = self.internal_staker_info(:staker_address);
+            if let Option::Some(pool_info) = internal_staker_info._deprecated_pool_info {
+                let token_address = self.strk_token_address();
+                let pool_contract = pool_info._deprecated_pool_contract;
+                self.write_new_pool(:staker_address, :pool_contract, :token_address);
+                let commission = pool_info._deprecated_commission;
+                self.write_staker_commission(:staker_address, :commission);
+            }
+            // Note: Staker might have a commission commitment only if he has a pool.
+            if let Option::Some(commission_commitment) = internal_staker_info
+                ._deprecated_commission_commitment {
+                self.write_staker_commission_commitment(:staker_address, :commission_commitment);
+            }
+            // TODO: Implement staker balance migration.
         }
     }
 
