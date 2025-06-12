@@ -3307,9 +3307,11 @@ fn test_staking_eic() {
     );
 
     // Upgrade.
+    let new_pool_contract_class_hash = declare_pool_contract();
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract_v1_v2(),
-        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into()].span(),
+        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), new_pool_contract_class_hash.into()]
+            .span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -3340,10 +3342,18 @@ fn test_staking_eic() {
     )
         .at(0);
     assert!(v1_prev_class_hash.try_into().unwrap() == MAINNET_STAKING_CLASS_HASH_V0());
+    // Test pool contract class hash.
+    let pool_contract_class_hash = *snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("pool_contract_class_hash"),
+        size: Store::<ClassHash>::size().into(),
+    )
+        .at(0);
+    assert!(pool_contract_class_hash.try_into().unwrap() == new_pool_contract_class_hash);
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_1')]
+#[should_panic(expected: 'EXPECTED_DATA_LENGTH_2')]
 fn test_staking_eic_with_wrong_number_of_data_elemnts() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -3374,7 +3384,32 @@ fn test_staking_eic_prev_class_hash_zero_class_hash() {
     let upgrade_governor = cfg.test_info.upgrade_governor;
     // Upgrade.
     let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract_v1_v2(), eic_init_data: [Zero::zero()].span(),
+        eic_hash: declare_staking_eic_contract_v1_v2(),
+        eic_init_data: [Zero::zero(), declare_pool_contract().into()].span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
+    };
+    // Cheat block timestamp to enable upgrade eligibility.
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: staking_contract, :implementation_data, :upgrade_governor,
+    );
+}
+
+#[test]
+#[should_panic(expected: "Class hash is zero")]
+fn test_staking_eic_pool_contract_zero_class_hash() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    // Upgrade.
+    let eic_data = EICData {
+        eic_hash: declare_staking_eic_contract_v1_v2(),
+        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), Zero::zero()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
