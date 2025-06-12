@@ -2888,9 +2888,7 @@ fn test_internal_staker_info_outdated_version() {
     staking_dispatcher.internal_staker_info(:staker_address);
 }
 
-// TODO: Test when implement migration.
 #[test]
-#[ignore]
 #[should_panic(expected: "Staker does not exist")]
 fn test_staker_migration_staker_not_exist() {
     let mut cfg: StakingInitConfig = Default::default();
@@ -2900,11 +2898,9 @@ fn test_staker_migration_staker_not_exist() {
     staking_dispatcher.staker_migration(staker_address: DUMMY_ADDRESS());
 }
 
-// TODO: Test when implement migration.
 #[test]
-#[ignore]
-#[should_panic(expected: "Internal Staker Info is already up-to-date")]
-fn test_staker_migration_already_up_to_date() {
+#[should_panic(expected: "Outdated version of Internal Staker Info")]
+fn test_staker_migration_outdated_version() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
@@ -2912,6 +2908,17 @@ fn test_staker_migration_already_up_to_date() {
     let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    store_internal_staker_info_v0_to_map(
+        :staker_address,
+        :staking_contract,
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        unstake_time: cfg.staker_info.unstake_time,
+        amount_own: cfg.test_info.stake_amount,
+        index: cfg.test_info.global_index,
+        unclaimed_rewards_own: cfg.staker_info.unclaimed_rewards_own,
+        pool_info: Option::None,
+    );
     staking_dispatcher.staker_migration(:staker_address);
 }
 
