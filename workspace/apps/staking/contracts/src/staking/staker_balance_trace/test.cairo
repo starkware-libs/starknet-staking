@@ -88,6 +88,19 @@ fn test_length() {
 }
 
 #[test]
+fn test_length_mutable() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    assert!(mock_trace.length_mutable() == 0);
+
+    mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
+    assert!(mock_trace.length_mutable() == 1);
+
+    mock_trace.insert(200, StakerBalanceTrait::new(amount_own: 200));
+    assert!(mock_trace.length_mutable() == 2);
+}
+
+#[test]
 fn test_latest_mutable() {
     let mut mock_trace = CONTRACT_STATE();
 
