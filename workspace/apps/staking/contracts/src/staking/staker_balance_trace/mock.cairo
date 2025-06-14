@@ -12,6 +12,7 @@ pub trait IMockTrace<TContractState> {
     fn is_non_empty_mutable(ref self: TContractState) -> bool;
     fn is_empty(self: @TContractState) -> bool;
     fn is_empty_mutable(ref self: TContractState) -> bool;
+    fn length_mutable(ref self: TContractState) -> u64;
 }
 
 #[starknet::contract]
@@ -62,6 +63,10 @@ pub mod MockTrace {
 
         fn is_empty_mutable(ref self: ContractState) -> bool {
             self.trace.is_empty()
+        }
+
+        fn length_mutable(ref self: ContractState) -> u64 {
+            self.trace.length()
         }
     }
 }

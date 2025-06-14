@@ -172,4 +172,9 @@ pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
     fn is_empty(self: StoragePath<Mutable<StakerBalanceTrace>>) -> bool {
         self.checkpoints.len().is_zero()
     }
+
+    /// Returns the total number of checkpoints.
+    fn length(self: StoragePath<Mutable<StakerBalanceTrace>>) -> u64 {
+        self.checkpoints.len()
+    }
 }
