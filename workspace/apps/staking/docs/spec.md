@@ -1349,8 +1349,9 @@ Add a new token to the staking contract.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
-2. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
-3. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
+2. [ZERO\_ADDRESS](#zero_address)
+3. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
+4. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only security admin.
@@ -2417,6 +2418,9 @@ Only token admin.
 
 ### TOKEN_ALREADY_DISABLED
 "Token is already disabled"
+
+### ZERO_ADDRESS
+"Zero address"
 
 ### INVALID_TOKEN_ADDRESS
 "Invalid token address"

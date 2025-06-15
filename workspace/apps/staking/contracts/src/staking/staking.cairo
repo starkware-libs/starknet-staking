@@ -1051,6 +1051,7 @@ pub mod Staking {
     impl StakingTokenManagerImpl of IStakingTokenManager<ContractState> {
         fn add_token(ref self: ContractState, token_address: ContractAddress) {
             self.roles.only_security_admin();
+            assert!(token_address.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
             assert!(token_address != self.strk_token_address(), "{}", Error::INVALID_TOKEN_ADDRESS);
             assert!(
                 self.btc_tokens.read(token_address).is_none(), "{}", Error::TOKEN_ALREADY_EXISTS,

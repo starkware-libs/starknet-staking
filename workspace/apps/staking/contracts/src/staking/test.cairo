@@ -3556,6 +3556,13 @@ fn test_add_token_assertions() {
         .add_token(token_address: BTC_TOKEN_ADDRESS());
     assert_panic_with_error(:result, expected_error: "ONLY_SECURITY_ADMIN");
 
+    // Catch ZERO_ADDRESS.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    let result = staking_token_manager_safe_dispatcher.add_token(token_address: Zero::zero());
+    assert_panic_with_error(:result, expected_error: GenericError::ZERO_ADDRESS.describe());
+
     // Catch INVALID_TOKEN_ADDRESS.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
