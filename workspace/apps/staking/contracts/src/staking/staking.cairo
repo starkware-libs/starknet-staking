@@ -458,7 +458,7 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
-            let mut staker_info = self.internal_staker_info(:staker_address);
+            let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             assert!(
                 self.get_staker_strk_pool(:staker_address).is_none(),
