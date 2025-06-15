@@ -133,8 +133,8 @@ pub mod Staking {
         tokens_total_stake_trace: Map<ContractAddress, Trace>,
         // Map staker address to their balance trace.
         // Deprecated field of the staker balance trace, used in V1.
-        // Will be uncommented when implementing migration.
-        // staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
+        // Now used only for migration from V1 to V2.
+        staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
         // Map staker address to their own balance trace.
         staker_own_balance_trace: Map<ContractAddress, Trace>,
         // Map staker address to their delegated balance trace per token address (map token address
@@ -703,6 +703,7 @@ pub mod Staking {
         // implementation robust for multiple calls?
         // TODO: Test this function.
         fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
+            // Migrate staker pool info.
             let internal_staker_info = self.internal_staker_info(:staker_address);
             if let Option::Some(pool_info) = internal_staker_info._deprecated_pool_info {
                 let token_address = self.strk_token_address();
@@ -716,7 +717,15 @@ pub mod Staking {
                 ._deprecated_commission_commitment {
                 self.write_staker_commission_commitment(:staker_address, :commission_commitment);
             }
-            // TODO: Implement staker balance migration.
+            // Migrate staker balance trace.
+            let trace_len = self.staker_balance_trace.entry(staker_address).length();
+            assert!(trace_len > 0, "{}", Error::STAKER_BALANCE_NOT_INITIALIZED);
+            let n = 3;
+            if trace_len >= n {
+                self.migrate_staker_balance_trace(:staker_address, :n);
+            } else {
+                self.migrate_staker_balance_trace(:staker_address, n: trace_len);
+            }
         }
     }
 
@@ -1156,6 +1165,27 @@ pub mod Staking {
             // unwrap.
             let (_, total_stake) = total_stake_trace.latest().unwrap().into();
             total_stake
+        }
+
+        /// Migrate the n latest checkpoints of the staker balance trace.
+        /// n can be only 1, 2 or 3.
+        fn migrate_staker_balance_trace(
+            ref self: ContractState, staker_address: ContractAddress, n: u64,
+        ) {
+            let deprecated_trace = self.staker_balance_trace.entry(staker_address);
+            let len = deprecated_trace.length();
+            let own_balance_trace = self.staker_own_balance_trace.entry(staker_address);
+            let delegated_balance_trace = self
+                .staker_delegated_balance_trace
+                .entry(staker_address)
+                .entry(self.strk_token_address());
+            for i in len - n..len {
+                let (epoch, staker_balance) = deprecated_trace.at(i);
+                let own_balance = staker_balance.amount_own();
+                let delegated_balance = staker_balance.pool_amount();
+                own_balance_trace.insert(key: epoch, value: own_balance);
+                delegated_balance_trace.insert(key: epoch, value: delegated_balance);
+            }
         }
 
         /// Return StoragePath to the internal staker pool information for the given
