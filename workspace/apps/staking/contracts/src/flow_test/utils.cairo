@@ -52,6 +52,7 @@ use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait, get_block_
 use starkware_utils::components::replaceability::interface::{
     EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
 };
+use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::constants::{NAME, SYMBOL};
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
@@ -619,14 +620,23 @@ pub(crate) struct PoolState {
 }
 
 #[derive(Drop, Copy)]
+pub(crate) struct AttestationRoles {
+    pub upgrade_governor: ContractAddress,
+    pub app_governor: ContractAddress,
+}
+
+#[derive(Drop, Copy)]
 struct AttestationConfig {
     pub governance_admin: ContractAddress,
     pub attestation_window: u16,
+    pub roles: AttestationRoles,
 }
 
 #[derive(Drop, Copy)]
 struct AttestationState {
-    address: ContractAddress,
+    pub address: ContractAddress,
+    pub governance_admin: ContractAddress,
+    pub roles: AttestationRoles,
 }
 
 #[generate_trait]
@@ -638,7 +648,13 @@ pub(crate) impl AttestationImpl of AttestationTrait {
         self.attestation_window.serialize(ref calldata);
         let attestation_contract = snforge_std::declare("Attestation").unwrap().contract_class();
         let (attestation_contract_address, _) = attestation_contract.deploy(@calldata).unwrap();
-        AttestationState { address: attestation_contract_address }
+        let attestation = AttestationState {
+            address: attestation_contract_address,
+            governance_admin: self.governance_admin,
+            roles: self.roles,
+        };
+        attestation.set_roles();
+        attestation
     }
 
     fn deploy_mainnet_contract_v1(
@@ -656,13 +672,42 @@ pub(crate) impl AttestationImpl of AttestationTrait {
             deploy_from_zero: false,
         )
             .unwrap_syscall();
-        // TODO: Add roles.
-        AttestationState { address: attestation_contract_address }
+        let attestation = AttestationState {
+            address: attestation_contract_address,
+            governance_admin: self.governance_admin,
+            roles: self.roles,
+        };
+        attestation.set_roles();
+        attestation
     }
 
 
     fn dispatcher(self: AttestationState) -> IAttestationDispatcher nopanic {
         IAttestationDispatcher { contract_address: self.address }
+    }
+
+    fn set_roles(self: AttestationState) {
+        set_account_as_upgrade_governor(
+            contract: self.address,
+            account: self.roles.upgrade_governor,
+            governance_admin: self.governance_admin,
+        );
+        set_account_as_app_role_admin(
+            contract: self.address,
+            account: self.governance_admin,
+            governance_admin: self.governance_admin,
+        );
+        set_account_as_app_governor(
+            contract: self.address,
+            account: self.roles.app_governor,
+            app_role_admin: self.governance_admin,
+        );
+        // Remove governance admin from app role admin.
+        let roles_dispatcher = IRolesDispatcher { contract_address: self.address };
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.governance_admin,
+        );
+        roles_dispatcher.remove_app_role_admin(account: self.governance_admin);
     }
 
     fn get_current_epoch_target_attestation_block(
@@ -750,6 +795,10 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         let attestation = AttestationConfig {
             governance_admin: cfg.test_info.governance_admin,
             attestation_window: cfg.test_info.attestation_window,
+            roles: AttestationRoles {
+                upgrade_governor: cfg.test_info.upgrade_governor,
+                app_governor: cfg.test_info.app_governor,
+            },
         };
         SystemConfig { token, staking, minting_curve, reward_supplier, attestation }
     }
@@ -1381,6 +1430,10 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         let attestation_config = AttestationConfig {
             governance_admin: cfg.test_info.governance_admin,
             attestation_window: cfg.test_info.attestation_window,
+            roles: AttestationRoles {
+                upgrade_governor: cfg.test_info.upgrade_governor,
+                app_governor: cfg.test_info.app_governor,
+            },
         };
         let attestation_state = attestation_config
             .deploy_mainnet_contract_v1(staking: self.staking);
