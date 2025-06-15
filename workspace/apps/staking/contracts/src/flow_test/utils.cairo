@@ -1301,18 +1301,19 @@ impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
 #[generate_trait]
 /// Replaceability utils for internal use of the system. Meant to be used before running a
 /// regression test.
-pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
+/// This trait is used for the upgrade from V0 to V1 implementation.
+pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     /// Deploy attestation contract and upgrades the contracts in the system state with local
     /// implementations.
-    fn deploy_attestation_and_upgrade_contracts_implementation(
+    fn deploy_attestation_and_upgrade_contracts_implementation_v1(
         ref self: SystemState<STRKTokenState>,
     ) {
-        self.deploy_attestation();
-        self.upgrade_contracts_implementation();
+        self.deploy_attestation_v1();
+        self.upgrade_contracts_implementation_v1();
     }
 
     /// Deploy attestation contract.
-    fn deploy_attestation(ref self: SystemState<STRKTokenState>) {
+    fn deploy_attestation_v1(ref self: SystemState<STRKTokenState>) {
         let cfg: StakingInitConfig = Default::default();
         let attestation_config = AttestationConfig {
             governance_admin: cfg.test_info.governance_admin,
@@ -1323,12 +1324,12 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     }
 
     /// Upgrades the contracts in the system state with local implementations.
-    fn upgrade_contracts_implementation(self: SystemState<STRKTokenState>) {
+    fn upgrade_contracts_implementation_v1(self: SystemState<STRKTokenState>) {
         self.staking.pause();
-        self.upgrade_staking_implementation();
-        self.upgrade_reward_supplier_implementation();
+        self.upgrade_staking_implementation_v1();
+        self.upgrade_reward_supplier_implementation_v1();
         if let Option::Some(pool) = self.pool {
-            self.upgrade_pool_implementation(:pool);
+            self.upgrade_pool_implementation_v1(:pool);
         }
         if let Option::Some(staker_address) = self.staker_address {
             self.staker_migration(staker_address);
@@ -1337,7 +1338,7 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     }
 
     /// Upgrades the staking contract in the system state with a local implementation.
-    fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
+    fn upgrade_staking_implementation_v1(self: SystemState<STRKTokenState>) {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v0_v1(),
             eic_init_data: array![
@@ -1362,7 +1363,7 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     }
 
     /// Upgrades the reward supplier contract in the system state with a local implementation.
-    fn upgrade_reward_supplier_implementation(self: SystemState<STRKTokenState>) {
+    fn upgrade_reward_supplier_implementation_v1(self: SystemState<STRKTokenState>) {
         let implementation_data = ImplementationData {
             impl_hash: declare_reward_supplier_contract(), eic_data: Option::None, final: false,
         };
@@ -1374,7 +1375,7 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     }
 
     /// Upgrades the pool contract in the system state with a local implementation.
-    fn upgrade_pool_implementation(self: SystemState<STRKTokenState>, pool: PoolState) {
+    fn upgrade_pool_implementation_v1(self: SystemState<STRKTokenState>, pool: PoolState) {
         let eic_data = EICData {
             eic_hash: declare_pool_eic_contract(),
             eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into()].span(),
@@ -1477,7 +1478,7 @@ pub(crate) fn test_flow_mainnet<
         // Need to migrate internal staker info only if there is no pool to upgrade.
         system.set_staker_for_migration(staker_address);
     }
-    system.deploy_attestation_and_upgrade_contracts_implementation();
+    system.deploy_attestation_and_upgrade_contracts_implementation_v1();
     flow.test(ref :system, system_type: SystemType::Mainnet);
 }
 

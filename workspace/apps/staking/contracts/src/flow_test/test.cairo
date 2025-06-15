@@ -3,7 +3,7 @@ use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows;
 use staking::flow_test::utils::{
     RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemFactoryTrait,
-    SystemReplaceabilityTrait, SystemStakerTrait, SystemTrait, test_flow_local, test_flow_mainnet,
+    SystemReplaceabilityV1Trait, SystemStakerTrait, SystemTrait, test_flow_local, test_flow_mainnet,
 };
 use staking::staking::errors::Error;
 use staking::test_utils::StakingInitConfig;

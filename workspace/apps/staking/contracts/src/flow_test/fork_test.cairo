@@ -1,7 +1,7 @@
 use core::num::traits::Zero;
 use staking::flow_test::flows;
 use staking::flow_test::utils::{
-    StakingTrait, SystemDelegatorTrait, SystemFactoryTrait, SystemReplaceabilityTrait,
+    StakingTrait, SystemDelegatorTrait, SystemFactoryTrait, SystemReplaceabilityV1Trait,
     SystemStakerTrait, SystemTrait, test_flow_mainnet,
 };
 use staking::staking::errors::Error;
@@ -425,9 +425,9 @@ fn test_pool_migration() {
     let pool_unclaimed_rewards = staker_info.pool_info.unwrap().unclaimed_rewards;
 
     system.set_pool_for_upgrade(pool_address: pool);
-    system.deploy_attestation();
-    system.upgrade_staking_implementation();
-    system.upgrade_reward_supplier_implementation();
+    system.deploy_attestation_v1();
+    system.upgrade_staking_implementation_v1();
+    system.upgrade_reward_supplier_implementation_v1();
 
     // Pool migration.
     assert!(system.token.balance_of(account: pool).is_zero());
@@ -453,9 +453,9 @@ fn test_pool_migration_caller_not_pool() {
     let pool = system.staking.get_pool(:staker);
 
     system.set_pool_for_upgrade(pool_address: pool);
-    system.deploy_attestation();
-    system.upgrade_staking_implementation();
-    system.upgrade_reward_supplier_implementation();
+    system.deploy_attestation_v1();
+    system.upgrade_staking_implementation_v1();
+    system.upgrade_reward_supplier_implementation_v1();
 
     let result = system.staking.safe_pool_migration(:staker);
     assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
