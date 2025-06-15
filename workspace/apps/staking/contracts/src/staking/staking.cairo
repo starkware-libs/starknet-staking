@@ -1871,21 +1871,11 @@ pub mod Staking {
                 Error::MISSING_POOL_CONTRACT,
             );
         }
-    }
 
-    // TODO: Refactor tests to use the actual STRK token address and remove this trait.
-    #[generate_trait]
-    pub(crate) impl InternalStakingTest of InternalStakingTestTrait {
-        /// **Note**: This function has two implementations.
-        /// In test environments, we use the token address of the deployed mock ERC20 contract.
-        #[cfg(not(target: 'test'))]
+        // TODO: Refactor tests to use the actual STRK token address and use const
+        // STRK_TOKEN_ADDRESS instead?
         fn strk_token_address(self: @ContractState) -> ContractAddress {
-            STRK_TOKEN_ADDRESS
-        }
-
-        #[cfg(target: 'test')]
-        fn strk_token_address(self: @ContractState) -> ContractAddress {
-            0x1a581f14d1aa503eb19255b18ef6ec9099b9b4b37546b74c0c6d3ab84ac6d2f.try_into().unwrap()
+            self.token_dispatcher.read().contract_address
         }
     }
 }
