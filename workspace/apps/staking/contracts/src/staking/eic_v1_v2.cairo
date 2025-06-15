@@ -32,7 +32,7 @@ mod StakingEICV1toV2 {
         token_dispatcher: IERC20Dispatcher,
     }
 
-    /// Expected data : [prev_class_hash]
+    /// Expected data : [prev_class_hash, pool_contract_class_hash]
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
