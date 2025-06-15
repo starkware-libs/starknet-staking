@@ -51,9 +51,7 @@ pub(crate) impl BasicStakeFlowImpl<
             .token
             .balance_of(account: system.reward_supplier.address);
         let staker = system.new_staker(amount: stake_amount * 2);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, commission: 200);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
         system.advance_epoch_and_attest(:staker);
 
         system.increase_stake(:staker, amount: stake_amount / 2);
@@ -125,9 +123,7 @@ pub(crate) impl DelegatorIntentAfterStakerActionFlowImpl<
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -193,7 +189,7 @@ pub(crate) impl SetOpenForDelegationFlowImpl<
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
 
-        system.stake(:staker, amount: initial_stake_amount);
+        system.stake(:staker, amount: initial_stake_amount, pool_enabled: false, :commission);
         system.advance_epoch_and_attest(:staker);
 
         system.increase_stake(:staker, amount: initial_stake_amount / 2);
@@ -203,8 +199,7 @@ pub(crate) impl SetOpenForDelegationFlowImpl<
         system.staker_claim_rewards(:staker);
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
 
-        system.set_commission(:staker, :commission);
-        let pool = system.set_open_for_delegation(:staker);
+        let pool = system.set_open_for_delegation(:staker, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let delegator = system.new_delegator(amount: initial_stake_amount);
@@ -269,9 +264,7 @@ pub(crate) impl DelegatorIntentFlowImpl<
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -361,14 +354,10 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         let delegator = system.new_delegator(amount: delegated_amount);
         let commission = 200;
 
-        system.stake(staker: staker1, amount: stake_amount);
-        system.set_commission(staker: staker1, :commission);
-        system.set_open_for_delegation(staker: staker1);
+        system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(staker: staker1);
 
-        system.stake(staker: staker2, amount: stake_amount);
-        system.set_commission(staker: staker2, :commission);
-        system.set_open_for_delegation(staker: staker2);
+        system.stake(staker: staker2, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(staker: staker1);
         system.advance_epoch_and_attest(staker: staker2);
 
@@ -499,9 +488,7 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
         let commission = 10000;
 
         // Stake with commission 100%
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -579,9 +566,7 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl<
         let commission = 10000;
 
         // Stake with commission 100%.
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -663,9 +648,7 @@ pub(crate) impl StakerIntentLastActionFirstFlowImpl<
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
 
-        system.stake(:staker, amount: initial_stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: initial_stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -729,7 +712,7 @@ pub(crate) impl StakerInfoAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
 
         let staker_info = system.staker_info(:staker);
 
@@ -780,9 +763,7 @@ pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -839,9 +820,7 @@ pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         system.advance_time(time: one_week);
 
@@ -891,7 +870,7 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
 
         let staker_info = system.staker_info(:staker);
 
@@ -948,9 +927,7 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1012,9 +989,7 @@ pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         system.advance_time(time: one_week);
 
@@ -1067,9 +1042,7 @@ pub(crate) impl PoolUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1120,9 +1093,7 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1195,9 +1166,7 @@ pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1265,9 +1234,7 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
         let delegated_amount = stake_amount;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegator = system.new_delegator(amount: delegated_amount * 2);
         let pool = system.staking.get_pool(:staker);
@@ -1316,9 +1283,7 @@ pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         self.staker = Option::Some(staker);
         self.stake_amount = Option::Some(stake_amount);
@@ -1378,9 +1343,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl<
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
 
-        system.stake(:staker, amount: initial_stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: initial_stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -1501,12 +1464,10 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl<
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
 
-        system.stake(staker: staker1, amount: initial_stake_amount);
-        system.set_commission(staker: staker1, :commission);
-        system.set_open_for_delegation(staker: staker1);
-        system.stake(staker: staker2, amount: initial_stake_amount);
-        system.set_commission(staker: staker2, :commission);
-        system.set_open_for_delegation(staker: staker2);
+        system
+            .stake(staker: staker1, amount: initial_stake_amount, pool_enabled: true, :commission);
+        system
+            .stake(staker: staker2, amount: initial_stake_amount, pool_enabled: true, :commission);
         let pool1 = system.staking.get_pool(staker: staker1);
         let pool2 = system.staking.get_pool(staker: staker2);
 
@@ -1627,9 +1588,7 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1690,9 +1649,7 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let delegator = system.new_delegator(amount: stake_amount);
         let pool = system.staking.get_pool(:staker);
         system.delegate(:delegator, :pool, amount: stake_amount);
@@ -1741,9 +1698,7 @@ pub(crate) impl StakerIntentAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         self.staker = Option::Some(staker);
         let pool = system.staking.get_pool(:staker);
@@ -1787,9 +1742,7 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.staker_exit_intent(:staker);
 
         self.staker = Option::Some(staker);
@@ -1840,7 +1793,7 @@ pub(crate) impl StakerAttestAfterIntentFlowImpl<
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
 
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
         system.staker_exit_intent(:staker);
 
         self.staker = Option::Some(staker);
@@ -1883,11 +1836,7 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
-
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
-
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let delegated_amount = stake_amount;
         let delegator = system.new_delegator(amount: delegated_amount);
         let pool = system.staking.get_pool(:staker);
@@ -1910,9 +1859,10 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
 
         let commission = 200;
         let second_staker = system.new_staker(amount: delegated_amount);
-        system.stake(staker: second_staker, amount: delegated_amount);
-        system.set_commission(staker: second_staker, :commission);
-        system.set_open_for_delegation(staker: second_staker);
+        system
+            .stake(
+                staker: second_staker, amount: delegated_amount, pool_enabled: true, :commission,
+            );
         let second_pool = system.staking.get_pool(staker: second_staker);
         system
             .switch_delegation_pool(
@@ -1954,9 +1904,7 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -2008,9 +1956,7 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -2055,11 +2001,15 @@ pub(crate) impl PoolMigrationAssertionsFlowImpl<
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker_no_pool = system.new_staker(amount: stake_amount * 2);
-        system.stake(staker: staker_no_pool, amount: stake_amount);
+        system
+            .stake(
+                staker: staker_no_pool, amount: stake_amount, pool_enabled: false, commission: 200,
+            );
         let staker_with_pool = system.new_staker(amount: stake_amount * 2);
-        system.stake(staker: staker_with_pool, amount: stake_amount);
-        system.set_commission(staker: staker_with_pool, commission: 200);
-        system.set_open_for_delegation(staker: staker_with_pool);
+        system
+            .stake(
+                staker: staker_with_pool, amount: stake_amount, pool_enabled: true, commission: 200,
+            );
         self.staker_no_pool = Option::Some(staker_no_pool);
         self.staker_with_pool = Option::Some(staker_with_pool);
     }
@@ -2097,9 +2047,7 @@ pub(crate) impl PoolEICFlowImpl<
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, commission: 200);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
         let pool = system.staking.get_pool(:staker);
         self.pool_address = Option::Some(pool);
     }
@@ -2175,9 +2123,7 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -2201,9 +2147,10 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
 
         let commission = 200;
         let second_staker = system.new_staker(amount: delegated_amount);
-        system.stake(staker: second_staker, amount: delegated_amount);
-        system.set_commission(staker: second_staker, :commission);
-        system.set_open_for_delegation(staker: second_staker);
+        system
+            .stake(
+                staker: second_staker, amount: delegated_amount, pool_enabled: true, :commission,
+            );
         let second_pool = system.staking.get_pool(staker: second_staker);
         system
             .switch_delegation_pool(
@@ -2240,7 +2187,7 @@ pub(crate) impl StakerMigrationFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
 
         let staker_info = system.staker_info(:staker);
 
@@ -2286,9 +2233,7 @@ pub(crate) impl ClaimRewardsMultipleDelegatorsFlowImpl<
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount);
         let commission = 200;
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let delegated_amount = min_stake;
@@ -2404,9 +2349,7 @@ pub(crate) impl PoolClaimAfterClaimFlowImpl<
             .token
             .balance_of(account: system.reward_supplier.address);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let delegated_amount = stake_amount / 2;
@@ -2507,9 +2450,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
         system.advance_epoch_and_attest(:staker);
 
@@ -2700,9 +2641,7 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -2790,9 +2729,7 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: 2 * delegated_amount);
@@ -2885,9 +2822,7 @@ pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
         let delegator = system.new_delegator(amount: stake_amount);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
         system.delegate(:delegator, :pool, amount: stake_amount);
         system.delegator_exit_intent(delegator: delegator, :pool, amount: stake_amount);
@@ -2934,7 +2869,7 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
         let stake_amount = min_stake * 2;
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
         self.staker = Option::Some(staker);
     }
 
@@ -2947,8 +2882,7 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
         let amount = 1000;
         let staker = self.staker.unwrap();
 
-        system.set_commission(:staker, :commission);
-        let pool = system.set_open_for_delegation(:staker);
+        let pool = system.set_open_for_delegation(:staker, :commission);
 
         let delegator = system.new_delegator(amount: amount * 2);
         let total_stake_before = system.staking.get_total_stake();
@@ -2980,7 +2914,7 @@ pub(crate) impl IncreaseStakeIntentSameEpochFlowImpl<
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
         system.advance_epoch_and_attest(:staker);
 
         system.increase_stake(:staker, amount: stake_amount);
@@ -3013,18 +2947,14 @@ pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl<
         let commission = 200;
 
         let first_staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: first_staker, amount: stake_amount);
-        system.set_commission(staker: first_staker, :commission);
-        system.set_open_for_delegation(staker: first_staker);
+        system.stake(staker: first_staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
         let first_pool = system.staking.get_pool(staker: first_staker);
         system.delegate(delegator: first_delegator, pool: first_pool, amount: stake_amount);
 
         let second_staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: second_staker, amount: stake_amount);
-        system.set_commission(staker: second_staker, :commission);
-        system.set_open_for_delegation(staker: second_staker);
+        system.stake(staker: second_staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let second_delegator = system.new_delegator(amount: stake_amount);
         let second_pool = system.staking.get_pool(staker: second_staker);
@@ -3053,9 +2983,7 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
         let stake_amount = min_stake * 2;
         let commission = 200;
         let staker1 = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker1, amount: stake_amount);
-        system.set_commission(staker: staker1, :commission);
-        system.set_open_for_delegation(staker: staker1);
+        system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
         let pool1 = system.staking.get_pool(staker: staker1);
         let delegator1 = system.new_delegator(amount: 2 * stake_amount);
         system.delegate(delegator: delegator1, pool: pool1, amount: stake_amount);
@@ -3064,9 +2992,7 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
         system.delegator_exit_intent(delegator: delegator1, pool: pool1, amount: stake_amount);
 
         let staker2 = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker2, amount: stake_amount);
-        system.set_commission(staker: staker2, :commission);
-        system.set_open_for_delegation(staker: staker2);
+        system.stake(staker: staker2, amount: stake_amount, pool_enabled: true, :commission);
         let pool2 = system.staking.get_pool(staker: staker2);
         system.delegate(delegator: delegator1, pool: pool2, amount: stake_amount);
         system.staker_exit_intent(staker: staker2);
@@ -3126,9 +3052,7 @@ pub(crate) impl DelegateIntentSameEpochFlowImpl<
         let delegator = system.new_delegator(amount: delegated_amount);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch();
         system.advance_block_into_attestation_window(:staker);
 
@@ -3182,9 +3106,7 @@ pub(crate) impl PoolClaimRewardsFlowImpl<
             .token
             .balance_of(account: system.reward_supplier.address);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let delegated_amount_1 = stake_amount / 2;
@@ -3285,9 +3207,7 @@ pub(crate) impl StakerMigrationHasPoolFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         self.staker_address = Option::Some(staker.staker.address);
     }
@@ -3328,7 +3248,10 @@ pub(crate) impl TwoStakersSameOperationalAddressFlowImpl<
             .balance_of(account: system.reward_supplier.address);
 
         let first_staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: first_staker, amount: stake_amount);
+        system
+            .stake(
+                staker: first_staker, amount: stake_amount, pool_enabled: false, commission: 200,
+            );
         system.advance_epoch_and_attest(staker: first_staker);
 
         system.staker_exit_intent(staker: first_staker);
@@ -3337,7 +3260,10 @@ pub(crate) impl TwoStakersSameOperationalAddressFlowImpl<
 
         let mut second_staker = system.new_staker(amount: stake_amount);
         second_staker.operational.address = first_staker.operational.address;
-        system.stake(staker: second_staker, amount: stake_amount);
+        system
+            .stake(
+                staker: second_staker, amount: stake_amount, pool_enabled: false, commission: 200,
+            );
         system.advance_epoch_and_attest(staker: second_staker);
 
         system.staker_exit_intent(staker: second_staker);
@@ -3393,9 +3319,7 @@ pub(crate) impl ClaimRewardsWithNonUpgradedPoolFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
@@ -3488,9 +3412,7 @@ pub(crate) impl DelegatorActionWithNonUpgradedPoolFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
@@ -3660,9 +3582,7 @@ pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
@@ -3700,9 +3620,7 @@ pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl<
         let commission = 200;
 
         let to_staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: to_staker, amount: stake_amount);
-        system.set_commission(staker: to_staker, :commission);
-        system.set_open_for_delegation(staker: to_staker);
+        system.stake(staker: to_staker, amount: stake_amount, pool_enabled: true, :commission);
         let to_pool = system.staking.get_pool(staker: to_staker);
 
         system
@@ -3767,9 +3685,7 @@ pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let delegator = system.new_delegator(amount: stake_amount);
@@ -3832,9 +3748,7 @@ pub(crate) impl DelegatorExitWithNonUpgradedPoolFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
@@ -3959,9 +3873,7 @@ pub(crate) impl AddToDelegationAfterExitActionFlowImpl<
         let commission = 200;
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let delegator = system.new_delegator(amount: stake_amount);
@@ -3998,9 +3910,7 @@ pub(crate) impl SetEpochInfoFlowImpl<
         let commission = 200;
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch();
 
         let target_block_before_set = system
@@ -4066,9 +3976,7 @@ pub(crate) impl AttestAfterDelegatorIntentFlowImpl<
         let commission = 200;
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch();
 
         let pool = system.staking.get_pool(:staker);
@@ -4121,9 +4029,7 @@ pub(crate) impl PoolCalculateRewardsTwiceFlowImpl<
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let delegated_amount = stake_amount / 2;

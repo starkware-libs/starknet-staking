@@ -411,7 +411,7 @@ fn test_pool_migration() {
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount * 2);
-    system.stake(:staker, amount: stake_amount);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
 
     let pool = system.staking.get_pool(:staker);
     let delegator = system.new_delegator(amount: stake_amount);
@@ -449,7 +449,7 @@ fn test_pool_migration_caller_not_pool() {
     let min_stake = system.staking.get_min_stake();
     let stake_amount = min_stake * 2;
     let staker = system.new_staker(amount: stake_amount * 2);
-    system.stake(:staker, amount: stake_amount);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
     let pool = system.staking.get_pool(:staker);
 
     system.set_pool_for_upgrade(pool_address: pool);

@@ -1,7 +1,9 @@
 use MainnetAddresses::MAINNET_L2_BRIDGE_ADDRESS;
 use MainnetClassHashes::{
-    MAINNET_MINTING_CURVE_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V0,
-    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V0,
+    MAINNET_ATTESTATION_CLASS_HASH_V1, MAINNET_MINTING_CURVE_CLASS_HASH_V0,
+    MAINNET_POOL_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V1, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0,
+    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V0,
+    MAINNET_STAKING_CLASS_HASH_V1,
 };
 use core::num::traits::zero::Zero;
 use core::traits::Into;
@@ -213,6 +215,11 @@ pub(crate) impl StakingImpl of StakingTrait {
     fn is_v0(self: StakingState) -> bool {
         let class_hash = snforge_std::get_class_hash(self.address);
         class_hash == MAINNET_STAKING_CLASS_HASH_V0()
+    }
+
+    fn is_v1(self: StakingState) -> bool {
+        let class_hash = snforge_std::get_class_hash(self.address);
+        class_hash == MAINNET_STAKING_CLASS_HASH_V1()
     }
 
     fn safe_dispatcher(self: StakingState) -> IStakingSafeDispatcher nopanic {
@@ -634,6 +641,26 @@ pub(crate) impl AttestationImpl of AttestationTrait {
         AttestationState { address: attestation_contract_address }
     }
 
+    fn deploy_mainnet_contract_v1(
+        self: AttestationConfig, staking: StakingState,
+    ) -> AttestationState {
+        let mut calldata = ArrayTrait::new();
+        staking.address.serialize(ref calldata);
+        self.governance_admin.serialize(ref calldata);
+        self.attestation_window.serialize(ref calldata);
+        let contract_address_salt: felt252 = Time::now().seconds.into();
+        let (attestation_contract_address, _) = deploy_syscall(
+            class_hash: MAINNET_ATTESTATION_CLASS_HASH_V1(),
+            :contract_address_salt,
+            calldata: calldata.span(),
+            deploy_from_zero: false,
+        )
+            .unwrap_syscall();
+        // TODO: Add roles.
+        AttestationState { address: attestation_contract_address }
+    }
+
+
     fn dispatcher(self: AttestationState) -> IAttestationDispatcher nopanic {
         IAttestationDispatcher { contract_address: self.address }
     }
@@ -947,19 +974,41 @@ impl StakerImpl of StakerTrait {
 pub(crate) impl SystemStakerImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of SystemStakerTrait<TTokenState> {
-    fn stake(self: SystemState<TTokenState>, staker: Staker, amount: Amount) {
+    fn stake(
+        self: SystemState<TTokenState>,
+        staker: Staker,
+        amount: Amount,
+        pool_enabled: bool,
+        commission: Commission,
+    ) {
         self.token.approve(owner: staker.staker.address, spender: self.staking.address, :amount);
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self
-            .staking
-            .dispatcher()
-            .stake(
-                reward_address: staker.reward.address,
-                operational_address: staker.operational.address,
-                :amount,
-            );
+        if self.staking.is_v0() || self.staking.is_v1() {
+            self
+                .staking
+                .dispatcher_v0_for_tests()
+                .stake(
+                    reward_address: staker.reward.address,
+                    operational_address: staker.operational.address,
+                    :amount,
+                    :pool_enabled,
+                    :commission,
+                );
+        } else {
+            self
+                .staking
+                .dispatcher()
+                .stake(
+                    reward_address: staker.reward.address,
+                    operational_address: staker.operational.address,
+                    :amount,
+                );
+            if pool_enabled {
+                self.set_open_for_delegation(:staker, :commission);
+            }
+        }
     }
 
     fn increase_stake(self: SystemState<TTokenState>, staker: Staker, amount: Amount) -> Amount {
@@ -994,11 +1043,21 @@ pub(crate) impl SystemStakerImpl<
         self.staking.safe_dispatcher().unstake_action(staker_address: staker.staker.address)
     }
 
-    fn set_open_for_delegation(self: SystemState<TTokenState>, staker: Staker) -> ContractAddress {
-        cheat_caller_address_once(
-            contract_address: self.staking.address, caller_address: staker.staker.address,
-        );
-        self.staking.dispatcher().set_open_for_delegation()
+    fn set_open_for_delegation(
+        self: SystemState<TTokenState>, staker: Staker, commission: Commission,
+    ) -> ContractAddress {
+        if self.staking.is_v0() || self.staking.is_v1() {
+            cheat_caller_address_once(
+                contract_address: self.staking.address, caller_address: staker.staker.address,
+            );
+            self.staking.dispatcher_v0_for_tests().set_open_for_delegation(:commission)
+        } else {
+            self.set_commission(:staker, :commission);
+            cheat_caller_address_once(
+                contract_address: self.staking.address, caller_address: staker.staker.address,
+            );
+            self.staking.dispatcher().set_open_for_delegation()
+        }
     }
 
     fn staker_claim_rewards(self: SystemState<TTokenState>, staker: Staker) -> Amount {
@@ -1012,7 +1071,11 @@ pub(crate) impl SystemStakerImpl<
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self.staking.dispatcher().set_commission(:commission)
+        if self.staking.is_v0() || self.staking.is_v1() {
+            self.staking.dispatcher_v0_for_tests().update_commission(:commission)
+        } else {
+            self.staking.dispatcher().set_commission(:commission)
+        }
     }
 
     fn staker_info_v1(self: SystemState<TTokenState>, staker: Staker) -> StakerInfoV1 {
@@ -1319,7 +1382,8 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
             governance_admin: cfg.test_info.governance_admin,
             attestation_window: cfg.test_info.attestation_window,
         };
-        let attestation_state = attestation_config.deploy(staking: self.staking);
+        let attestation_state = attestation_config
+            .deploy_mainnet_contract_v1(staking: self.staking);
         self.attestation = Option::Some(attestation_state);
     }
 
@@ -1353,7 +1417,9 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
                 .span(),
         };
         let implementation_data = ImplementationData {
-            impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
+            impl_hash: MAINNET_STAKING_CLASS_HASH_V1(),
+            eic_data: Option::Some(eic_data),
+            final: false,
         };
         upgrade_implementation(
             contract_address: self.staking.address,
@@ -1365,7 +1431,9 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     /// Upgrades the reward supplier contract in the system state with a local implementation.
     fn upgrade_reward_supplier_implementation_v1(self: SystemState<STRKTokenState>) {
         let implementation_data = ImplementationData {
-            impl_hash: declare_reward_supplier_contract(), eic_data: Option::None, final: false,
+            impl_hash: MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1(),
+            eic_data: Option::None,
+            final: false,
         };
         upgrade_implementation(
             contract_address: self.reward_supplier.address,
@@ -1381,7 +1449,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
             eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into()].span(),
         };
         let implementation_data = ImplementationData {
-            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+            impl_hash: MAINNET_POOL_CLASS_HASH_V1(), eic_data: Option::Some(eic_data), final: false,
         };
         upgrade_implementation(
             contract_address: pool.address,

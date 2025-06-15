@@ -161,9 +161,7 @@ fn switch_to_same_delegation_pool_flow_test() {
     let commission = 200;
     let one_week = Time::weeks(count: 1);
 
-    system.stake(:staker, amount: stake_amount);
-    system.set_commission(:staker, :commission);
-    system.set_open_for_delegation(:staker);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_time(time: one_week);
 
     let pool = system.staking.get_pool(:staker);
@@ -207,9 +205,7 @@ fn delegator_claim_rewards_flow_test() {
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
 
-    system.stake(:staker, amount: stake_amount);
-    system.set_commission(:staker, :commission);
-    system.set_open_for_delegation(:staker);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_epoch_and_attest(:staker);
 
     let pool = system.staking.get_pool(:staker);
@@ -270,9 +266,7 @@ fn two_delegators_full_intent_flow_test() {
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
 
-    system.stake(:staker, amount: stake_amount);
-    system.set_commission(:staker, :commission);
-    system.set_open_for_delegation(:staker);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_epoch_and_attest(:staker);
 
     let pool = system.staking.get_pool(:staker);
@@ -349,9 +343,7 @@ fn partial_switches_flow_test() {
     let commission = 200;
 
     let first_staker = system.new_staker(amount: stake_amount);
-    system.stake(staker: first_staker, amount: stake_amount);
-    system.set_commission(staker: first_staker, :commission);
-    system.set_open_for_delegation(staker: first_staker);
+    system.stake(staker: first_staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_epoch_and_attest(staker: first_staker);
 
     let delegated_amount = stake_amount;
@@ -361,9 +353,7 @@ fn partial_switches_flow_test() {
     system.advance_epoch_and_attest(staker: first_staker);
 
     let second_staker = system.new_staker(amount: stake_amount);
-    system.stake(staker: second_staker, amount: stake_amount);
-    system.set_commission(staker: second_staker, :commission);
-    system.set_open_for_delegation(staker: second_staker);
+    system.stake(staker: second_staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_epoch_and_attest(staker: first_staker);
     system.advance_epoch_and_attest(staker: second_staker);
 
@@ -486,17 +476,13 @@ fn flow_4_switch_member_back_and_forth_test() {
     let commission = 200;
 
     let staker_A = system.new_staker(amount: stake_amount);
-    system.stake(staker: staker_A, amount: stake_amount);
-    system.set_commission(staker: staker_A, :commission);
-    system.set_open_for_delegation(staker: staker_A);
+    system.stake(staker: staker_A, amount: stake_amount, pool_enabled: true, :commission);
     assert!(system.staking.get_total_stake() == stake_amount);
     let pool_A = system.staking.get_pool(staker: staker_A);
     system.advance_epoch_and_attest(staker: staker_A);
 
     let staker_B = system.new_staker(amount: stake_amount);
-    system.stake(staker: staker_B, amount: stake_amount);
-    system.set_commission(staker: staker_B, :commission);
-    system.set_open_for_delegation(staker: staker_B);
+    system.stake(staker: staker_B, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_epoch_and_attest(staker: staker_B);
     system.advance_epoch_and_attest(staker: staker_A);
     let pool_B = system.staking.get_pool(staker: staker_B);
@@ -615,9 +601,7 @@ fn delegators_add_to_delegation_pool_flow_test() {
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
 
-    system.stake(:staker, amount: stake_amount);
-    system.set_commission(:staker, :commission);
-    system.set_open_for_delegation(:staker);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_epoch_and_attest(:staker);
 
     let pool = system.staking.get_pool(:staker);
@@ -716,9 +700,7 @@ fn add_to_delegation_after_intent_flow_test() {
         .balance_of(account: system.reward_supplier.address);
     let commission = 200;
 
-    system.stake(:staker, amount: stake_amount);
-    system.set_commission(:staker, :commission);
-    system.set_open_for_delegation(:staker);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
     system.advance_epoch_and_attest(:staker);
 
     let pool = system.staking.get_pool(:staker);

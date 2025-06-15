@@ -21,6 +21,16 @@ pub trait IStakingV0<TContractState> {
 pub trait IStakingV0ForTests<TContractState> {
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
     fn update_global_index_if_needed(ref self: TContractState) -> bool;
+    fn stake(
+        self: @TContractState,
+        reward_address: ContractAddress,
+        operational_address: ContractAddress,
+        amount: Amount,
+        pool_enabled: bool,
+        commission: Commission,
+    );
+    fn set_open_for_delegation(self: @TContractState, commission: Commission) -> ContractAddress;
+    fn update_commission(ref self: TContractState, commission: Commission);
 }
 
 /// StakerInfo struct used in V0.
