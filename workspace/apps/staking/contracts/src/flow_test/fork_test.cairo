@@ -272,7 +272,9 @@ fn pool_migration_assertions_regression_test() {
 #[test]
 #[fork("MAINNET_LATEST")]
 fn pool_eic_regression_test() {
-    let mut flow = flows::PoolEICFlow { pool_address: Option::None };
+    let mut flow = flows::PoolEICFlow {
+        pool_address: Option::None, pool_contract_admin: Option::None,
+    };
     test_flow_mainnet(ref :flow);
 }
 

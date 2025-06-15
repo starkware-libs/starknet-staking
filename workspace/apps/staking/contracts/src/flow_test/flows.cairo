@@ -2039,6 +2039,7 @@ pub(crate) impl PoolMigrationAssertionsFlowImpl<
 #[derive(Drop, Copy)]
 pub(crate) struct PoolEICFlow {
     pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) pool_contract_admin: Option<ContractAddress>,
 }
 pub(crate) impl PoolEICFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
@@ -2050,12 +2051,14 @@ pub(crate) impl PoolEICFlowImpl<
         system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
         let pool = system.staking.get_pool(:staker);
         self.pool_address = Option::Some(pool);
+        let pool_contract_admin = system.staking.get_pool_contract_admin();
+        self.pool_contract_admin = Option::Some(pool_contract_admin);
     }
 
     fn test(self: PoolEICFlow, ref system: SystemState<TTokenState>, system_type: SystemType) {
         let pool_contract = self.pool_address.unwrap();
         let upgrade_governor = UPGRADE_GOVERNOR();
-        let pool_contract_admin = system.staking.get_pool_contract_admin();
+        let pool_contract_admin = self.pool_contract_admin.unwrap();
         set_account_as_upgrade_governor(
             contract: pool_contract,
             account: upgrade_governor,
