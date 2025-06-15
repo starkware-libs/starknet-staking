@@ -210,7 +210,7 @@ pub mod Staking {
         self.attestation_contract.write(attestation_contract);
         self
             .tokens_total_stake_trace
-            .entry(self.strk_token_address())
+            .entry(token_address)
             .insert(key: STARTING_EPOCH, value: Zero::zero());
     }
 
