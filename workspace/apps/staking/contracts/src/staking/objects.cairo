@@ -7,10 +7,13 @@ use staking::staking::interface_v0::{
     IStakingV0DispatcherTrait, IStakingV0LibraryDispatcher, StakerInfo, StakerPoolInfo,
 };
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
-use starknet::storage::StoragePath;
+use starknet::storage::{Mutable, PendingStoragePath, StoragePath};
 use starknet::{ClassHash, ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
-use starkware_utils::iterable_map::{IterableMap, IterableMapIntoIterImpl, IterableMapTrait};
+use starkware_utils::iterable_map::{
+    IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapTrait,
+    IterableMapWriteAccessImpl,
+};
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
@@ -427,8 +430,40 @@ pub(crate) struct InternalStakerPoolInfoV2 {
     pub(crate) commission_commitment: Option<CommissionCommitment>,
 }
 
+// TODO: Move traits to seperate file.
+// TODO: Test.
 #[generate_trait]
 pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
+    fn pools(
+        self: StoragePath<InternalStakerPoolInfoV2>,
+    ) -> PendingStoragePath<IterableMap<ContractAddress, ContractAddress>> {
+        self.pools
+    }
+
+    fn commission_opt(self: StoragePath<InternalStakerPoolInfoV2>) -> Option<Commission> {
+        self.commission.read()
+    }
+
+    fn commission(self: StoragePath<InternalStakerPoolInfoV2>) -> Commission {
+        self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
+    }
+
+    fn commission_commitment_opt(
+        self: StoragePath<InternalStakerPoolInfoV2>,
+    ) -> Option<CommissionCommitment> {
+        self.commission_commitment.read()
+    }
+
+    fn commission_commitment(self: StoragePath<InternalStakerPoolInfoV2>) -> CommissionCommitment {
+        self.commission_commitment.read().expect_with_err(Error::COMMISSION_COMMITMENT_NOT_SET)
+    }
+
+    fn get_pool_token(
+        self: StoragePath<InternalStakerPoolInfoV2>, pool_contract: ContractAddress,
+    ) -> Option<ContractAddress> {
+        self.pools.read(pool_contract)
+    }
+
     fn get_pools(self: StoragePath<InternalStakerPoolInfoV2>) -> Span<ContractAddress> {
         let mut pools: Array<ContractAddress> = array![];
         for (pool_contract, _) in self.pools {
@@ -440,6 +475,77 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
     /// Returns true if the staker has a pool.
     fn has_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> bool {
         self.pools.len() > 0
+    }
+
+    // TODO: Remove strk_token_address param once use strk token in tests.
+    fn get_strk_pool(
+        self: StoragePath<InternalStakerPoolInfoV2>, strk_token_address: ContractAddress,
+    ) -> Option<ContractAddress> {
+        for (pool_contract, token_address) in self.pools {
+            if token_address == strk_token_address {
+                return Option::Some(pool_contract);
+            }
+        }
+        Option::None
+    }
+}
+
+#[generate_trait]
+pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTrait {
+    // TODO: as_non_mut.
+    fn commission_opt(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Option<Commission> {
+        self.commission.read()
+    }
+
+    // TODO: as_non_mut.
+    fn commission(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Commission {
+        self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
+    }
+
+    // TODO: as_non_mut.
+    fn commission_commitment_opt(
+        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
+    ) -> Option<CommissionCommitment> {
+        self.commission_commitment.read()
+    }
+
+    // TODO: as_non_mut.
+    fn has_pool(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> bool {
+        self.pools.len() > 0
+    }
+
+    // TODO: as_non_mut.
+    // TODO: Remove strk_token_address param once use strk token in tests.
+    fn get_strk_pool(
+        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, strk_token_address: ContractAddress,
+    ) -> Option<ContractAddress> {
+        for (pool_contract, token_address) in self.pools {
+            if token_address == strk_token_address {
+                return Option::Some(pool_contract);
+            }
+        }
+        Option::None
+    }
+
+    fn write_new_pool(
+        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
+        pool_contract: ContractAddress,
+        token_address: ContractAddress,
+    ) {
+        self.pools.write(pool_contract, token_address);
+    }
+
+    fn write_commission(
+        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, commission: Commission,
+    ) {
+        self.commission.write(Option::Some(commission));
+    }
+
+    fn write_commission_commitment(
+        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
+        commission_commitment: CommissionCommitment,
+    ) {
+        self.commission_commitment.write(Option::Some(commission_commitment));
     }
 }
 
