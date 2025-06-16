@@ -48,6 +48,7 @@ pub trait IStaking<TContractState> {
         ref self: TContractState, max_commission: Commission, expiration_epoch: Epoch,
     );
     fn is_paused(self: @TContractState) -> bool;
+    fn get_active_tokens(self: @TContractState) -> Span<ContractAddress>;
 }
 
 // **Note**: This trait must be reimplemented in the next version of the contract.

@@ -686,6 +686,16 @@ pub mod Staking {
         fn is_paused(self: @ContractState) -> bool {
             self.is_paused.read()
         }
+
+        fn get_active_tokens(self: @ContractState) -> Span<ContractAddress> {
+            let mut active_tokens: Array<ContractAddress> = array![self.strk_token_address()];
+            for (token_address, is_active) in self.btc_tokens {
+                if is_active {
+                    active_tokens.append(token_address);
+                }
+            }
+            active_tokens.span()
+        }
     }
 
     #[abi(embed_v0)]

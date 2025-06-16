@@ -50,7 +50,8 @@ use staking::staking::interface::{
     IStakingConfigSafeDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
-    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, IStakingTokenManagerSafeDispatcher,
+    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
+    IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
     IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
     StakingContractInfoV1,
 };
@@ -3583,7 +3584,94 @@ fn test_add_token_assertions() {
         .add_token(token_address: BTC_TOKEN_ADDRESS());
     assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_EXISTS.describe());
 }
-// TODO: Test add_token, enable_token, disable_token once implement is_active_token.
+
+#[test]
+fn test_get_active_tokens() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let active_tokens = staking_dispatcher.get_active_tokens();
+    assert!(active_tokens.len() == 1);
+    assert!(*active_tokens[0] == cfg.staking_contract_info.token_address);
+}
+
+#[test]
+fn test_add_token() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_token_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    let btc_token_address = BTC_TOKEN_ADDRESS();
+    // Add the BTC token.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    staking_token_dispatcher.add_token(token_address: btc_token_address);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let active_tokens = staking_dispatcher.get_active_tokens();
+    // The STRK token is always active.
+    // The BTC token is not active yet.
+    assert!(active_tokens.len() == 1);
+    assert!(*active_tokens[0] == cfg.staking_contract_info.token_address);
+}
+
+#[test]
+fn test_enable_token() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_token_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    let btc_token_address = BTC_TOKEN_ADDRESS();
+    // Add and enable the BTC token.
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: cfg.test_info.security_admin,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_token_dispatcher.add_token(token_address: btc_token_address);
+    staking_token_dispatcher.enable_token(token_address: btc_token_address);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let active_tokens = staking_dispatcher.get_active_tokens();
+    assert!(active_tokens.len() == 2);
+    assert!(*active_tokens[0] == cfg.staking_contract_info.token_address);
+    assert!(*active_tokens[1] == btc_token_address);
+}
+
+#[test]
+fn test_disable_token() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_token_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    let btc_token_address = BTC_TOKEN_ADDRESS();
+    // Add and enable the BTC token.
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: cfg.test_info.security_admin,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_token_dispatcher.add_token(token_address: btc_token_address);
+    staking_token_dispatcher.enable_token(token_address: btc_token_address);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    // Active tokens: STRK, BTC.
+    assert!(staking_dispatcher.get_active_tokens().len() == 2);
+    // Disable the BTC token.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
+    );
+    staking_token_dispatcher.disable_token(token_address: btc_token_address);
+    let active_tokens = staking_dispatcher.get_active_tokens();
+    // Only the STRK token is active.
+    assert!(active_tokens.len() == 1);
+    assert!(*active_tokens[0] == cfg.staking_contract_info.token_address);
+}
 
 #[test]
 #[feature("safe_dispatcher")]
