@@ -3313,7 +3313,7 @@ fn test_staking_eic() {
         :storage_address,
         serialized_value: [MAINNET_STAKING_CLASS_HASH_V0().into()].span(),
     );
-    // Store 3 checkpoints in total stake trace since its a precondition in the EIC.
+    // Store 3 checkpoints in total stake trace.
     let trace_address = selector!("total_stake_trace");
     let total_stake_0: Amount = cfg.test_info.stake_amount;
     let total_stake_1: Amount = total_stake_0 + cfg.test_info.stake_amount;
@@ -3421,8 +3421,8 @@ fn test_staking_eic_with_wrong_number_of_data_elemnts() {
 }
 
 #[test]
-#[should_panic(expected: "Index out of bounds")]
-fn test_staking_eic_total_stake_trace_length_less_than_3() {
+#[should_panic(expected: "Empty trace")]
+fn test_staking_eic_total_stake_trace_empty() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;

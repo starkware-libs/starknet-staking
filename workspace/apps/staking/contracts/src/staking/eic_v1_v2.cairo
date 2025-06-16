@@ -50,7 +50,6 @@ mod StakingEICV1toV2 {
             self.pool_contract_class_hash.write(pool_contract_class_hash);
 
             // 3. Migrate total_stake_trace.
-            // Note: This part assumes that self.total_stake_trace.length >= 3.
             self.migrate_total_stake_trace();
         }
     }
@@ -58,12 +57,18 @@ mod StakingEICV1toV2 {
     #[generate_trait]
     impl EICHelper of IEICHelper {
         /// Migrate the deprecated total stake trace to tokens_total_stake_trace.
-        /// Precondition: total_stake_trace.length() >= 3.
+        /// Migrate up to 3 latest checkpoints.
         fn migrate_total_stake_trace(ref self: ContractState) {
             let deprecated_trace = self.total_stake_trace;
+            assert!(!deprecated_trace.is_empty(), "{}", TraceErrors::EMPTY_TRACE);
             let len = deprecated_trace.length();
-            let n = 3;
-            assert!(len >= n, "{}", TraceErrors::INDEX_OUT_OF_BOUNDS);
+            let n = {
+                if len >= 3 {
+                    3
+                } else {
+                    len
+                }
+            };
             let strk_token_address = self.token_dispatcher.read().contract_address;
             let strk_total_stake_trace = self.tokens_total_stake_trace.entry(strk_token_address);
             for i in len - n..len {
