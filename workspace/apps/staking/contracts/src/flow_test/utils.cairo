@@ -42,7 +42,7 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
-    declare_staking_eic_contract_v0_v1,
+    declare_staking_eic_contract_v0_v1, declare_staking_eic_contract_v1_v2,
 };
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
@@ -1415,7 +1415,7 @@ impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
 /// regression test.
 /// This trait is used for the upgrade from V0 to V1 implementation.
 pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
-    /// Deploy attestation contract and upgrades the contracts in the system state with local
+    /// Deploy attestation contract and upgrades the contracts in the system state with V1
     /// implementations.
     fn deploy_attestation_and_upgrade_contracts_implementation_v1(
         ref self: SystemState<STRKTokenState>,
@@ -1440,7 +1440,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         self.attestation = Option::Some(attestation_state);
     }
 
-    /// Upgrades the contracts in the system state with local implementations.
+    /// Upgrades the contracts in the system state with V1 implementations.
     fn upgrade_contracts_implementation_v1(self: SystemState<STRKTokenState>) {
         self.staking.pause();
         self.upgrade_staking_implementation_v1();
@@ -1454,7 +1454,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         self.staking.unpause();
     }
 
-    /// Upgrades the staking contract in the system state with a local implementation.
+    /// Upgrades the staking contract in the system state with V1 implementation.
     fn upgrade_staking_implementation_v1(self: SystemState<STRKTokenState>) {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v0_v1(),
@@ -1481,7 +1481,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         );
     }
 
-    /// Upgrades the reward supplier contract in the system state with a local implementation.
+    /// Upgrades the reward supplier contract in the system state with V1 implementation.
     fn upgrade_reward_supplier_implementation_v1(self: SystemState<STRKTokenState>) {
         let implementation_data = ImplementationData {
             impl_hash: MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1(),
@@ -1495,7 +1495,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         );
     }
 
-    /// Upgrades the pool contract in the system state with a local implementation.
+    /// Upgrades the pool contract in the system state with V1 implementation.
     fn upgrade_pool_implementation_v1(self: SystemState<STRKTokenState>, pool: PoolState) {
         let eic_data = EICData {
             eic_hash: declare_pool_eic_contract(),
@@ -1508,6 +1508,54 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
             contract_address: pool.address,
             :implementation_data,
             upgrade_governor: pool.roles.upgrade_governor,
+        );
+    }
+}
+
+#[generate_trait]
+/// Replaceability utils for internal use of the system. Meant to be used before running a
+/// regression test.
+/// This trait is used for the upgrade from V1 to V2 implementation.
+pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
+    /// Upgrades the contracts in the system state with local
+    /// implementations.
+    fn upgrade_contracts_implementation_v2(self: SystemState<STRKTokenState>) {
+        // TODO: add pause?
+        self.upgrade_staking_implementation_v2();
+        self.upgrade_reward_supplier_implementation_v2();
+        if let Option::Some(staker_address) = self.staker_address {
+            self.staker_migration(staker_address);
+        }
+    }
+
+    /// Upgrades the staking contract in the system state with a local implementation.
+    fn upgrade_staking_implementation_v2(self: SystemState<STRKTokenState>) {
+        let eic_data = EICData {
+            eic_hash: declare_staking_eic_contract_v1_v2(),
+            eic_init_data: array![
+                MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
+            ]
+                .span(),
+        };
+        let implementation_data = ImplementationData {
+            impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.staking.address,
+            :implementation_data,
+            upgrade_governor: self.staking.roles.upgrade_governor,
+        );
+    }
+
+    /// Upgrades the reward supplier contract in the system state with a local implementation.
+    fn upgrade_reward_supplier_implementation_v2(self: SystemState<STRKTokenState>) {
+        let implementation_data = ImplementationData {
+            impl_hash: declare_reward_supplier_contract(), eic_data: Option::None, final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.reward_supplier.address,
+            :implementation_data,
+            upgrade_governor: self.reward_supplier.roles.upgrade_governor,
         );
     }
 }
@@ -1575,6 +1623,7 @@ pub(crate) trait FlowTrait<
         Option::None
     }
     fn setup(ref self: TFlow, ref system: SystemState<TTokenState>) {}
+    fn setup_v1(ref self: TFlow, ref system: SystemState<TTokenState>) {}
     fn test(self: TFlow, ref system: SystemState<TTokenState>, system_type: SystemType);
 }
 
@@ -1600,6 +1649,11 @@ pub(crate) fn test_flow_mainnet<
         system.set_staker_for_migration(staker_address);
     }
     system.deploy_attestation_and_upgrade_contracts_implementation_v1();
+    flow.setup_v1(ref :system);
+    if let Option::Some(staker_address) = flow.get_staker_address() {
+        system.set_staker_for_migration(staker_address);
+    }
+    system.upgrade_contracts_implementation_v2();
     flow.test(ref :system, system_type: SystemType::Mainnet);
 }
 

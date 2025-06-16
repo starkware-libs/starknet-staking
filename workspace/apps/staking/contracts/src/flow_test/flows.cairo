@@ -752,6 +752,10 @@ pub(crate) struct StakerInfoWithPoolAfterUpgradeFlow {
 pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerInfoWithPoolAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: StakerInfoWithPoolAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: StakerInfoWithPoolAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -809,6 +813,10 @@ pub(crate) struct StakerInfoUnstakeAfterUpgradeFlow {
 pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerInfoUnstakeAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: StakerInfoUnstakeAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: StakerInfoUnstakeAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -912,6 +920,12 @@ pub(crate) struct InternalStakerInfoWithPoolAfterUpgradeFlow {
 pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<InternalStakerInfoWithPoolAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(
+        self: InternalStakerInfoWithPoolAfterUpgradeFlow,
+    ) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(
         self: InternalStakerInfoWithPoolAfterUpgradeFlow,
     ) -> Option<ContractAddress> {
@@ -974,6 +988,12 @@ pub(crate) struct InternalStakerInfoUnstakeAfterUpgradeFlow {
 pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<InternalStakerInfoUnstakeAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(
+        self: InternalStakerInfoUnstakeAfterUpgradeFlow,
+    ) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(
         self: InternalStakerInfoUnstakeAfterUpgradeFlow,
     ) -> Option<ContractAddress> {
@@ -1028,10 +1048,15 @@ pub(crate) struct PoolUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Amount,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl PoolUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: PoolUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1052,6 +1077,7 @@ pub(crate) impl PoolUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = delegated_amount;
+        self.staker = Option::Some(staker);
     }
 
     fn test(self: PoolUpgradeFlow, ref system: SystemState<TTokenState>, system_type: SystemType) {
@@ -1078,10 +1104,15 @@ pub(crate) struct PoolMemberInfoAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegator_info: Option<PoolMemberInfo>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolMemberInfoAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: PoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1105,7 +1136,7 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegator_info = Option::Some(delegator_info);
-
+        self.staker = Option::Some(staker);
         system.advance_time(time: one_week);
         system.staking.update_global_index_if_needed();
     }
@@ -1149,10 +1180,17 @@ pub(crate) struct PoolMemberInfoUndelegateAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegator_info: Option<PoolMemberInfo>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolMemberInfoUndelegateAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(
+        self: PoolMemberInfoUndelegateAfterUpgradeFlow,
+    ) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolMemberInfoUndelegateAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1182,7 +1220,7 @@ pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegator_info = Option::Some(delegator_info);
-
+        self.staker = Option::Some(staker);
         system.advance_time(time: one_week);
     }
 
@@ -1220,10 +1258,15 @@ pub(crate) struct IncreaseDelegationAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<IncreaseDelegationAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: IncreaseDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: IncreaseDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1243,6 +1286,7 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -1273,6 +1317,10 @@ pub(crate) struct IncreaseStakeAfterUpgradeFlow {
 pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<IncreaseStakeAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: IncreaseStakeAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: IncreaseStakeAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1574,10 +1622,15 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl<
 pub(crate) struct DelegatorActionAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorActionAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorActionAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorActionAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1598,6 +1651,7 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
 
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -1635,10 +1689,15 @@ pub(crate) struct DelegatorIntentAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorIntentAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorIntentAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorIntentAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1657,6 +1716,7 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(stake_amount);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -1688,6 +1748,10 @@ pub(crate) struct StakerIntentAfterUpgradeFlow {
 pub(crate) impl StakerIntentAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerIntentAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: StakerIntentAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: StakerIntentAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1732,6 +1796,10 @@ pub(crate) struct StakerActionAfterUpgradeFlow {
 pub(crate) impl StakerActionAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerActionAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: StakerActionAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: StakerActionAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1821,10 +1889,15 @@ pub(crate) struct DelegatorPartialIntentAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorPartialIntentAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorPartialIntentAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorPartialIntentAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1845,6 +1918,7 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -1894,6 +1968,10 @@ pub(crate) struct ChangeCommissionAfterUpgradeFlow {
 pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<ChangeCommissionAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: ChangeCommissionAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: ChangeCommissionAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1939,10 +2017,15 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
 pub(crate) struct DelegatorClaimRewardsAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorClaimRewardsAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1965,6 +2048,7 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
 
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
+        self.staker = Option::Some(staker);
 
         system.advance_time(time: one_week);
         system.staking.update_global_index_if_needed();
@@ -2112,10 +2196,15 @@ pub(crate) struct DelegatorSwitchAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorSwitchAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorSwitchAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorSwitchAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -2137,6 +2226,7 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -2633,6 +2723,10 @@ pub(crate) struct PoolClaimRewardsAfterUpgradeFlow {
 pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolClaimRewardsAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: PoolClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -2721,6 +2815,10 @@ pub(crate) struct PoolChangeBalanceAfterUpgradeFlow {
 pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolChangeBalanceAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: PoolChangeBalanceAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolChangeBalanceAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -2810,6 +2908,12 @@ pub(crate) struct DelegatorIntentBeforeClaimRewardsAfterFlow {
 pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorIntentBeforeClaimRewardsAfterFlow, TTokenState> {
+    fn get_staker_address(
+        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
+    ) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(
         self: DelegatorIntentBeforeClaimRewardsAfterFlow,
     ) -> Option<ContractAddress> {
@@ -2973,10 +3077,15 @@ pub(crate) struct TotalStakeAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) pool_address2: Option<ContractAddress>,
     pub(crate) total_stake: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<TotalStakeAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: TotalStakeAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: TotalStakeAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -3005,13 +3114,10 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool1);
         self.pool_address2 = Option::Some(pool2);
         self.total_stake = Option::Some(total_stake);
+        self.staker = Option::Some(staker1);
     }
 
-    fn test(
-        self: TotalStakeAfterUpgradeFlow,
-        ref system: SystemState<TTokenState>,
-        system_type: SystemType,
-    ) {
+    fn setup_v1(ref self: TotalStakeAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
         // TODO: upgrade more then one pool in utils. for now upgrade the second pool manually.
         let pool2 = self.pool_address2.unwrap();
         let pool_contract_admin = system.pool.unwrap().governance_admin;
@@ -3027,6 +3133,16 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
             impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
         };
         upgrade_implementation(contract_address: pool2, :implementation_data, :upgrade_governor);
+    }
+
+    fn test(
+        self: TotalStakeAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        // TODO: upgrade more then one staker in utils. for now upgrade the second staker manually.
+        let staker2 = self.staker.unwrap();
+        system.staker_migration(staker_address: staker2.staker.address);
         // Test total stake after upgrade
         assert!(system.staking.get_total_stake() == self.total_stake.unwrap());
     }
@@ -3673,10 +3789,15 @@ pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl<
 pub(crate) struct DelegatorExitBeforeEnterAfterFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorExitBeforeEnterAfterFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorExitBeforeEnterAfterFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorExitBeforeEnterAfterFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -3701,6 +3822,7 @@ pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl<
 
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
