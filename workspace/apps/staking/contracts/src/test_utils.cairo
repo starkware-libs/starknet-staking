@@ -1295,3 +1295,15 @@ pub(crate) fn load_trace_length(contract_address: ContractAddress, trace_address
         .unwrap();
     length
 }
+
+/// Load from iterable map.
+pub(crate) fn load_from_iterable_map<
+    K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<Option<V>>,
+>(
+    contract_address: ContractAddress, map_address: felt252, key: K,
+) -> Option<V> {
+    let map_storage_address = snforge_std::map_entry_address(
+        map_selector: map_address, keys: [selector!("_inner_map")].span(),
+    );
+    load_option_from_simple_map(map_selector: map_storage_address, :key, contract: contract_address)
+}
