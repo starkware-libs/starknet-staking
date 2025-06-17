@@ -5,6 +5,7 @@ use Pool::{
 use constants::{
     DUMMY_ADDRESS, NON_POOL_MEMBER_ADDRESS, NOT_STAKING_CONTRACT_ADDRESS, OTHER_OPERATIONAL_ADDRESS,
     OTHER_REWARD_ADDRESS, OTHER_STAKER_ADDRESS, POOL_MEMBER_ADDRESS, POOL_MEMBER_UNCLAIMED_REWARDS,
+    STRK_TOKEN_NAME,
 };
 use core::num::traits::zero::Zero;
 use core::option::OptionTrait;
@@ -73,7 +74,9 @@ fn test_identity() {
     let cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -86,7 +89,9 @@ fn test_enter_delegation_pool() {
     let cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -408,7 +413,9 @@ fn test_change_reward_address() {
     let cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -448,7 +455,7 @@ fn test_change_reward_address() {
 fn test_change_reward_address_pool_member_not_exist() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address,
+        cfg.test_info.initial_supply, cfg.test_info.owner_address, STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let mut state = initialize_pool_state(
@@ -1029,7 +1036,9 @@ fn test_claim_rewards_unauthorized_address() {
     let cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -1047,7 +1056,9 @@ fn test_claim_rewards_unauthorized_address() {
 fn test_enter_delegation_pool_from_staking_contract() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
@@ -1177,7 +1188,9 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
 fn test_contract_parameters_v1() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
@@ -1197,7 +1210,9 @@ fn test_contract_parameters_v1() {
 fn test_update_rewards_from_staking_contract_caller_not_staking_contract() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);

@@ -7,7 +7,8 @@ use constants::{
     POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS,
     POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT,
     STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
-    STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
+    STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_TOKEN_NAME, TOKEN_ADDRESS, TOKEN_ADMIN,
+    UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
 use core::num::traits::zero::Zero;
@@ -48,7 +49,7 @@ use staking::utils::{
     compute_rewards_rounded_down, compute_rewards_rounded_up,
 };
 use starknet::{ClassHash, ContractAddress, Store};
-use starkware_utils::constants::{NAME, SYMBOL};
+use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::types::time::time::{TimeDelta, Timestamp};
@@ -228,12 +229,15 @@ pub(crate) mod constants {
     pub fn BTC_TOKEN_ADDRESS() -> ContractAddress {
         'BTC_TOKEN_ADDRESS'.try_into().unwrap()
     }
+    pub fn STRK_TOKEN_NAME() -> ByteArray {
+        "STRK_TOKEN_NAME"
+    }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
     ref cfg: StakingInitConfig,
 ) -> Staking::ContractState {
     let token_address = deploy_mock_erc20_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address,
+        cfg.test_info.initial_supply, cfg.test_info.owner_address, STRK_TOKEN_NAME(),
     );
     cfg.staking_contract_info.token_address = token_address;
     initialize_staking_state(
@@ -340,10 +344,10 @@ pub(crate) fn initialize_reward_supplier_state(
 }
 
 pub(crate) fn deploy_mock_erc20_contract(
-    initial_supply: u256, owner_address: ContractAddress,
+    initial_supply: u256, owner_address: ContractAddress, name: ByteArray,
 ) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
-    NAME().serialize(ref calldata);
+    name.serialize(ref calldata);
     SYMBOL().serialize(ref calldata);
     initial_supply.serialize(ref calldata);
     owner_address.serialize(ref calldata);
@@ -762,7 +766,9 @@ pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -
 pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     // Deploy contracts: ERC20, MintingCurve, RewardSupplier, Staking.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     cfg.staking_contract_info.token_address = token_address;
     // Deploy the minting_curve, with faked staking_address.

@@ -38,7 +38,7 @@ use staking::staking::interface_v0::{
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
     EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS,
-    STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS, UPGRADE_GOVERNOR,
+    STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS, STRK_TOKEN_NAME, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
@@ -53,7 +53,7 @@ use starkware_utils::components::replaceability::interface::{
     EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
 };
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
-use starkware_utils::constants::{NAME, SYMBOL};
+use starkware_utils::constants::SYMBOL;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     Deployable, TokenConfig, TokenState, TokenTrait, advance_block_number_global,
@@ -750,7 +750,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
     /// provided staking initialization configuration.
     fn basic_stake_flow_cfg(cfg: StakingInitConfig) -> SystemConfig {
         let token = TokenConfig {
-            name: NAME(),
+            name: STRK_TOKEN_NAME(),
             symbol: SYMBOL(),
             initial_supply: cfg.test_info.initial_supply,
             owner: cfg.test_info.owner_address,

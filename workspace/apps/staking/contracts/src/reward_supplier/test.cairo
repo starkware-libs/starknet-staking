@@ -26,7 +26,9 @@ use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
 use staking::staking::staking::Staking;
 use staking::test_utils;
-use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
+use staking::test_utils::constants::{
+    NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS, STRK_TOKEN_NAME,
+};
 use staking::types::Amount;
 use staking::utils::compute_threshold;
 use starknet::Store;
@@ -74,7 +76,9 @@ fn test_reward_supplier_constructor() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -101,7 +105,9 @@ fn test_claim_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     // Deploy the staking contract and stake.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -136,7 +142,9 @@ fn test_contract_parameters_v1() {
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     // Change the block_timestamp so the contract_parameters_v1() won't return zero for all fields.
     let block_timestamp = Time::now().add(delta: Time::seconds(count: 1));
