@@ -178,3 +178,29 @@ fn test_is_empty_mutable() {
     mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
     assert!(!mock_trace.is_empty_mutable());
 }
+
+#[test]
+fn test_at_mutable() {
+    let mut mock_trace = CONTRACT_STATE();
+    mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
+    mock_trace.insert(200, StakerBalanceTrait::new(amount_own: 200));
+    mock_trace.insert(300, StakerBalanceTrait::new(amount_own: 300));
+    let (key, value) = mock_trace.at_mutable(0);
+    assert!(key == 100);
+    assert!(value == StakerBalanceTrait::new(amount_own: 100));
+
+    let (key, value) = mock_trace.at_mutable(1);
+    assert!(key == 200);
+    assert!(value == StakerBalanceTrait::new(amount_own: 200));
+
+    let (key, value) = mock_trace.at_mutable(2);
+    assert!(key == 300);
+    assert!(value == StakerBalanceTrait::new(amount_own: 300));
+}
+
+#[test]
+#[should_panic(expected: "Index out of bounds")]
+fn test_at_mutable_out_of_bounds() {
+    let mut mock_trace = CONTRACT_STATE();
+    mock_trace.at_mutable(0);
+}

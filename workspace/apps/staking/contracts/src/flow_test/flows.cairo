@@ -51,9 +51,7 @@ pub(crate) impl BasicStakeFlowImpl<
             .token
             .balance_of(account: system.reward_supplier.address);
         let staker = system.new_staker(amount: stake_amount * 2);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, commission: 200);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
         system.advance_epoch_and_attest(:staker);
 
         system.increase_stake(:staker, amount: stake_amount / 2);
@@ -125,9 +123,7 @@ pub(crate) impl DelegatorIntentAfterStakerActionFlowImpl<
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -193,7 +189,7 @@ pub(crate) impl SetOpenForDelegationFlowImpl<
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
 
-        system.stake(:staker, amount: initial_stake_amount);
+        system.stake(:staker, amount: initial_stake_amount, pool_enabled: false, :commission);
         system.advance_epoch_and_attest(:staker);
 
         system.increase_stake(:staker, amount: initial_stake_amount / 2);
@@ -203,8 +199,7 @@ pub(crate) impl SetOpenForDelegationFlowImpl<
         system.staker_claim_rewards(:staker);
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
 
-        system.set_commission(:staker, :commission);
-        let pool = system.set_open_for_delegation(:staker);
+        let pool = system.set_open_for_delegation(:staker, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let delegator = system.new_delegator(amount: initial_stake_amount);
@@ -269,9 +264,7 @@ pub(crate) impl DelegatorIntentFlowImpl<
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -361,14 +354,10 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl<
         let delegator = system.new_delegator(amount: delegated_amount);
         let commission = 200;
 
-        system.stake(staker: staker1, amount: stake_amount);
-        system.set_commission(staker: staker1, :commission);
-        system.set_open_for_delegation(staker: staker1);
+        system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(staker: staker1);
 
-        system.stake(staker: staker2, amount: stake_amount);
-        system.set_commission(staker: staker2, :commission);
-        system.set_open_for_delegation(staker: staker2);
+        system.stake(staker: staker2, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(staker: staker1);
         system.advance_epoch_and_attest(staker: staker2);
 
@@ -499,9 +488,7 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl<
         let commission = 10000;
 
         // Stake with commission 100%
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -579,9 +566,7 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl<
         let commission = 10000;
 
         // Stake with commission 100%.
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -663,9 +648,7 @@ pub(crate) impl StakerIntentLastActionFirstFlowImpl<
             .balance_of(account: system.reward_supplier.address);
         let commission = 200;
 
-        system.stake(:staker, amount: initial_stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: initial_stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -729,7 +712,7 @@ pub(crate) impl StakerInfoAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
 
         let staker_info = system.staker_info(:staker);
 
@@ -769,6 +752,10 @@ pub(crate) struct StakerInfoWithPoolAfterUpgradeFlow {
 pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerInfoWithPoolAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: StakerInfoWithPoolAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: StakerInfoWithPoolAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -780,9 +767,7 @@ pub(crate) impl StakerInfoWithPoolAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -828,6 +813,10 @@ pub(crate) struct StakerInfoUnstakeAfterUpgradeFlow {
 pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerInfoUnstakeAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: StakerInfoUnstakeAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: StakerInfoUnstakeAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -839,9 +828,7 @@ pub(crate) impl StakerInfoUnstakeAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         system.advance_time(time: one_week);
 
@@ -891,7 +878,7 @@ pub(crate) impl InternalStakerInfoAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
 
         let staker_info = system.staker_info(:staker);
 
@@ -933,6 +920,12 @@ pub(crate) struct InternalStakerInfoWithPoolAfterUpgradeFlow {
 pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<InternalStakerInfoWithPoolAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(
+        self: InternalStakerInfoWithPoolAfterUpgradeFlow,
+    ) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(
         self: InternalStakerInfoWithPoolAfterUpgradeFlow,
     ) -> Option<ContractAddress> {
@@ -948,9 +941,7 @@ pub(crate) impl InternalStakerInfoWithPoolAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -997,6 +988,12 @@ pub(crate) struct InternalStakerInfoUnstakeAfterUpgradeFlow {
 pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<InternalStakerInfoUnstakeAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(
+        self: InternalStakerInfoUnstakeAfterUpgradeFlow,
+    ) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(
         self: InternalStakerInfoUnstakeAfterUpgradeFlow,
     ) -> Option<ContractAddress> {
@@ -1012,9 +1009,7 @@ pub(crate) impl InternalStakerInfoUnstakeAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         system.advance_time(time: one_week);
 
@@ -1053,10 +1048,15 @@ pub(crate) struct PoolUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Amount,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl PoolUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: PoolUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1067,9 +1067,7 @@ pub(crate) impl PoolUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1079,6 +1077,7 @@ pub(crate) impl PoolUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = delegated_amount;
+        self.staker = Option::Some(staker);
     }
 
     fn test(self: PoolUpgradeFlow, ref system: SystemState<TTokenState>, system_type: SystemType) {
@@ -1105,10 +1104,15 @@ pub(crate) struct PoolMemberInfoAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegator_info: Option<PoolMemberInfo>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolMemberInfoAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: PoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1120,9 +1124,7 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1134,7 +1136,7 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegator_info = Option::Some(delegator_info);
-
+        self.staker = Option::Some(staker);
         system.advance_time(time: one_week);
         system.staking.update_global_index_if_needed();
     }
@@ -1178,10 +1180,17 @@ pub(crate) struct PoolMemberInfoUndelegateAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegator_info: Option<PoolMemberInfo>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolMemberInfoUndelegateAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(
+        self: PoolMemberInfoUndelegateAfterUpgradeFlow,
+    ) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolMemberInfoUndelegateAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1195,9 +1204,7 @@ pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1213,7 +1220,7 @@ pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegator_info = Option::Some(delegator_info);
-
+        self.staker = Option::Some(staker);
         system.advance_time(time: one_week);
     }
 
@@ -1251,10 +1258,15 @@ pub(crate) struct IncreaseDelegationAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<IncreaseDelegationAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: IncreaseDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: IncreaseDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1265,9 +1277,7 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
         let delegated_amount = stake_amount;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegator = system.new_delegator(amount: delegated_amount * 2);
         let pool = system.staking.get_pool(:staker);
@@ -1276,6 +1286,7 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -1306,6 +1317,10 @@ pub(crate) struct IncreaseStakeAfterUpgradeFlow {
 pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<IncreaseStakeAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: IncreaseStakeAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: IncreaseStakeAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1316,9 +1331,7 @@ pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         self.staker = Option::Some(staker);
         self.stake_amount = Option::Some(stake_amount);
@@ -1378,9 +1391,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl<
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
 
-        system.stake(:staker, amount: initial_stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: initial_stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -1501,12 +1512,10 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl<
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
 
-        system.stake(staker: staker1, amount: initial_stake_amount);
-        system.set_commission(staker: staker1, :commission);
-        system.set_open_for_delegation(staker: staker1);
-        system.stake(staker: staker2, amount: initial_stake_amount);
-        system.set_commission(staker: staker2, :commission);
-        system.set_open_for_delegation(staker: staker2);
+        system
+            .stake(staker: staker1, amount: initial_stake_amount, pool_enabled: true, :commission);
+        system
+            .stake(staker: staker2, amount: initial_stake_amount, pool_enabled: true, :commission);
         let pool1 = system.staking.get_pool(staker: staker1);
         let pool2 = system.staking.get_pool(staker: staker2);
 
@@ -1613,10 +1622,15 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl<
 pub(crate) struct DelegatorActionAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorActionAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorActionAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorActionAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1627,9 +1641,7 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1639,6 +1651,7 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl<
 
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -1676,10 +1689,15 @@ pub(crate) struct DelegatorIntentAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorIntentAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorIntentAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorIntentAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1690,9 +1708,7 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let delegator = system.new_delegator(amount: stake_amount);
         let pool = system.staking.get_pool(:staker);
         system.delegate(:delegator, :pool, amount: stake_amount);
@@ -1700,6 +1716,7 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(stake_amount);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -1731,6 +1748,10 @@ pub(crate) struct StakerIntentAfterUpgradeFlow {
 pub(crate) impl StakerIntentAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerIntentAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: StakerIntentAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: StakerIntentAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1741,9 +1762,7 @@ pub(crate) impl StakerIntentAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         self.staker = Option::Some(staker);
         let pool = system.staking.get_pool(:staker);
@@ -1777,6 +1796,10 @@ pub(crate) struct StakerActionAfterUpgradeFlow {
 pub(crate) impl StakerActionAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<StakerActionAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: StakerActionAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: StakerActionAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1787,9 +1810,7 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.staker_exit_intent(:staker);
 
         self.staker = Option::Some(staker);
@@ -1840,7 +1861,7 @@ pub(crate) impl StakerAttestAfterIntentFlowImpl<
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
 
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
         system.staker_exit_intent(:staker);
 
         self.staker = Option::Some(staker);
@@ -1868,10 +1889,15 @@ pub(crate) struct DelegatorPartialIntentAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorPartialIntentAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorPartialIntentAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorPartialIntentAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1883,11 +1909,7 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
-
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
-
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let delegated_amount = stake_amount;
         let delegator = system.new_delegator(amount: delegated_amount);
         let pool = system.staking.get_pool(:staker);
@@ -1896,6 +1918,7 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -1910,9 +1933,10 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl<
 
         let commission = 200;
         let second_staker = system.new_staker(amount: delegated_amount);
-        system.stake(staker: second_staker, amount: delegated_amount);
-        system.set_commission(staker: second_staker, :commission);
-        system.set_open_for_delegation(staker: second_staker);
+        system
+            .stake(
+                staker: second_staker, amount: delegated_amount, pool_enabled: true, :commission,
+            );
         let second_pool = system.staking.get_pool(staker: second_staker);
         system
             .switch_delegation_pool(
@@ -1944,6 +1968,10 @@ pub(crate) struct ChangeCommissionAfterUpgradeFlow {
 pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<ChangeCommissionAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: ChangeCommissionAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: ChangeCommissionAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -1954,9 +1982,7 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -1991,10 +2017,15 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl<
 pub(crate) struct DelegatorClaimRewardsAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorClaimRewardsAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -2008,9 +2039,7 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -2019,6 +2048,7 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl<
 
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
+        self.staker = Option::Some(staker);
 
         system.advance_time(time: one_week);
         system.staking.update_global_index_if_needed();
@@ -2055,11 +2085,15 @@ pub(crate) impl PoolMigrationAssertionsFlowImpl<
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker_no_pool = system.new_staker(amount: stake_amount * 2);
-        system.stake(staker: staker_no_pool, amount: stake_amount);
+        system
+            .stake(
+                staker: staker_no_pool, amount: stake_amount, pool_enabled: false, commission: 200,
+            );
         let staker_with_pool = system.new_staker(amount: stake_amount * 2);
-        system.stake(staker: staker_with_pool, amount: stake_amount);
-        system.set_commission(staker: staker_with_pool, commission: 200);
-        system.set_open_for_delegation(staker: staker_with_pool);
+        system
+            .stake(
+                staker: staker_with_pool, amount: stake_amount, pool_enabled: true, commission: 200,
+            );
         self.staker_no_pool = Option::Some(staker_no_pool);
         self.staker_with_pool = Option::Some(staker_with_pool);
     }
@@ -2089,6 +2123,7 @@ pub(crate) impl PoolMigrationAssertionsFlowImpl<
 #[derive(Drop, Copy)]
 pub(crate) struct PoolEICFlow {
     pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) pool_contract_admin: Option<ContractAddress>,
 }
 pub(crate) impl PoolEICFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
@@ -2097,17 +2132,17 @@ pub(crate) impl PoolEICFlowImpl<
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, commission: 200);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
         let pool = system.staking.get_pool(:staker);
         self.pool_address = Option::Some(pool);
+        let pool_contract_admin = system.staking.get_pool_contract_admin();
+        self.pool_contract_admin = Option::Some(pool_contract_admin);
     }
 
     fn test(self: PoolEICFlow, ref system: SystemState<TTokenState>, system_type: SystemType) {
         let pool_contract = self.pool_address.unwrap();
         let upgrade_governor = UPGRADE_GOVERNOR();
-        let pool_contract_admin = system.staking.get_pool_contract_admin();
+        let pool_contract_admin = self.pool_contract_admin.unwrap();
         set_account_as_upgrade_governor(
             contract: pool_contract,
             account: upgrade_governor,
@@ -2161,10 +2196,15 @@ pub(crate) struct DelegatorSwitchAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorSwitchAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorSwitchAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorSwitchAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -2175,9 +2215,7 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -2188,6 +2226,7 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -2201,9 +2240,10 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl<
 
         let commission = 200;
         let second_staker = system.new_staker(amount: delegated_amount);
-        system.stake(staker: second_staker, amount: delegated_amount);
-        system.set_commission(staker: second_staker, :commission);
-        system.set_open_for_delegation(staker: second_staker);
+        system
+            .stake(
+                staker: second_staker, amount: delegated_amount, pool_enabled: true, :commission,
+            );
         let second_pool = system.staking.get_pool(staker: second_staker);
         system
             .switch_delegation_pool(
@@ -2240,7 +2280,7 @@ pub(crate) impl StakerMigrationFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
 
         let staker_info = system.staker_info(:staker);
 
@@ -2286,9 +2326,7 @@ pub(crate) impl ClaimRewardsMultipleDelegatorsFlowImpl<
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount);
         let commission = 200;
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let delegated_amount = min_stake;
@@ -2404,9 +2442,7 @@ pub(crate) impl PoolClaimAfterClaimFlowImpl<
             .token
             .balance_of(account: system.reward_supplier.address);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let delegated_amount = stake_amount / 2;
@@ -2507,9 +2543,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
         system.advance_epoch_and_attest(:staker);
 
@@ -2689,6 +2723,10 @@ pub(crate) struct PoolClaimRewardsAfterUpgradeFlow {
 pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolClaimRewardsAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: PoolClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -2700,9 +2738,7 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: delegated_amount);
@@ -2779,6 +2815,10 @@ pub(crate) struct PoolChangeBalanceAfterUpgradeFlow {
 pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolChangeBalanceAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: PoolChangeBalanceAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: PoolChangeBalanceAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -2790,9 +2830,7 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl<
         let commission = 200;
         let one_week = Time::weeks(count: 1);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let delegated_amount = stake_amount / 2;
         let delegator = system.new_delegator(amount: 2 * delegated_amount);
@@ -2870,6 +2908,12 @@ pub(crate) struct DelegatorIntentBeforeClaimRewardsAfterFlow {
 pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorIntentBeforeClaimRewardsAfterFlow, TTokenState> {
+    fn get_staker_address(
+        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
+    ) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(
         self: DelegatorIntentBeforeClaimRewardsAfterFlow,
     ) -> Option<ContractAddress> {
@@ -2885,9 +2929,7 @@ pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl<
         let delegator = system.new_delegator(amount: stake_amount);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
         system.delegate(:delegator, :pool, amount: stake_amount);
         system.delegator_exit_intent(delegator: delegator, :pool, amount: stake_amount);
@@ -2934,7 +2976,7 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
         let stake_amount = min_stake * 2;
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
         self.staker = Option::Some(staker);
     }
 
@@ -2947,8 +2989,7 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
         let amount = 1000;
         let staker = self.staker.unwrap();
 
-        system.set_commission(:staker, :commission);
-        let pool = system.set_open_for_delegation(:staker);
+        let pool = system.set_open_for_delegation(:staker, :commission);
 
         let delegator = system.new_delegator(amount: amount * 2);
         let total_stake_before = system.staking.get_total_stake();
@@ -2980,7 +3021,7 @@ pub(crate) impl IncreaseStakeIntentSameEpochFlowImpl<
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
-        system.stake(:staker, amount: stake_amount);
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
         system.advance_epoch_and_attest(:staker);
 
         system.increase_stake(:staker, amount: stake_amount);
@@ -3013,18 +3054,14 @@ pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl<
         let commission = 200;
 
         let first_staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: first_staker, amount: stake_amount);
-        system.set_commission(staker: first_staker, :commission);
-        system.set_open_for_delegation(staker: first_staker);
+        system.stake(staker: first_staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
         let first_pool = system.staking.get_pool(staker: first_staker);
         system.delegate(delegator: first_delegator, pool: first_pool, amount: stake_amount);
 
         let second_staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: second_staker, amount: stake_amount);
-        system.set_commission(staker: second_staker, :commission);
-        system.set_open_for_delegation(staker: second_staker);
+        system.stake(staker: second_staker, amount: stake_amount, pool_enabled: true, :commission);
 
         let second_delegator = system.new_delegator(amount: stake_amount);
         let second_pool = system.staking.get_pool(staker: second_staker);
@@ -3040,10 +3077,15 @@ pub(crate) struct TotalStakeAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) pool_address2: Option<ContractAddress>,
     pub(crate) total_stake: Option<Amount>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<TotalStakeAfterUpgradeFlow, TTokenState> {
+    fn get_staker_address(self: TotalStakeAfterUpgradeFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: TotalStakeAfterUpgradeFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -3053,9 +3095,7 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
         let stake_amount = min_stake * 2;
         let commission = 200;
         let staker1 = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker1, amount: stake_amount);
-        system.set_commission(staker: staker1, :commission);
-        system.set_open_for_delegation(staker: staker1);
+        system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
         let pool1 = system.staking.get_pool(staker: staker1);
         let delegator1 = system.new_delegator(amount: 2 * stake_amount);
         system.delegate(delegator: delegator1, pool: pool1, amount: stake_amount);
@@ -3064,9 +3104,7 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
         system.delegator_exit_intent(delegator: delegator1, pool: pool1, amount: stake_amount);
 
         let staker2 = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker2, amount: stake_amount);
-        system.set_commission(staker: staker2, :commission);
-        system.set_open_for_delegation(staker: staker2);
+        system.stake(staker: staker2, amount: stake_amount, pool_enabled: true, :commission);
         let pool2 = system.staking.get_pool(staker: staker2);
         system.delegate(delegator: delegator1, pool: pool2, amount: stake_amount);
         system.staker_exit_intent(staker: staker2);
@@ -3076,13 +3114,10 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
         self.pool_address = Option::Some(pool1);
         self.pool_address2 = Option::Some(pool2);
         self.total_stake = Option::Some(total_stake);
+        self.staker = Option::Some(staker1);
     }
 
-    fn test(
-        self: TotalStakeAfterUpgradeFlow,
-        ref system: SystemState<TTokenState>,
-        system_type: SystemType,
-    ) {
+    fn setup_v1(ref self: TotalStakeAfterUpgradeFlow, ref system: SystemState<TTokenState>) {
         // TODO: upgrade more then one pool in utils. for now upgrade the second pool manually.
         let pool2 = self.pool_address2.unwrap();
         let pool_contract_admin = system.pool.unwrap().governance_admin;
@@ -3098,6 +3133,16 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
             impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
         };
         upgrade_implementation(contract_address: pool2, :implementation_data, :upgrade_governor);
+    }
+
+    fn test(
+        self: TotalStakeAfterUpgradeFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        // TODO: upgrade more then one staker in utils. for now upgrade the second staker manually.
+        let staker2 = self.staker.unwrap();
+        system.staker_migration(staker_address: staker2.staker.address);
         // Test total stake after upgrade
         assert!(system.staking.get_total_stake() == self.total_stake.unwrap());
     }
@@ -3126,9 +3171,7 @@ pub(crate) impl DelegateIntentSameEpochFlowImpl<
         let delegator = system.new_delegator(amount: delegated_amount);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch();
         system.advance_block_into_attestation_window(:staker);
 
@@ -3182,9 +3225,7 @@ pub(crate) impl PoolClaimRewardsFlowImpl<
             .token
             .balance_of(account: system.reward_supplier.address);
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let delegated_amount_1 = stake_amount / 2;
@@ -3285,9 +3326,7 @@ pub(crate) impl StakerMigrationHasPoolFlowImpl<
         let staker = system.new_staker(amount: stake_amount * 2);
         let commission = 200;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         self.staker_address = Option::Some(staker.staker.address);
     }
@@ -3328,7 +3367,10 @@ pub(crate) impl TwoStakersSameOperationalAddressFlowImpl<
             .balance_of(account: system.reward_supplier.address);
 
         let first_staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: first_staker, amount: stake_amount);
+        system
+            .stake(
+                staker: first_staker, amount: stake_amount, pool_enabled: false, commission: 200,
+            );
         system.advance_epoch_and_attest(staker: first_staker);
 
         system.staker_exit_intent(staker: first_staker);
@@ -3337,7 +3379,10 @@ pub(crate) impl TwoStakersSameOperationalAddressFlowImpl<
 
         let mut second_staker = system.new_staker(amount: stake_amount);
         second_staker.operational.address = first_staker.operational.address;
-        system.stake(staker: second_staker, amount: stake_amount);
+        system
+            .stake(
+                staker: second_staker, amount: stake_amount, pool_enabled: false, commission: 200,
+            );
         system.advance_epoch_and_attest(staker: second_staker);
 
         system.staker_exit_intent(staker: second_staker);
@@ -3393,9 +3438,7 @@ pub(crate) impl ClaimRewardsWithNonUpgradedPoolFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
@@ -3488,9 +3531,7 @@ pub(crate) impl DelegatorActionWithNonUpgradedPoolFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
@@ -3660,9 +3701,7 @@ pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
@@ -3700,9 +3739,7 @@ pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl<
         let commission = 200;
 
         let to_staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: to_staker, amount: stake_amount);
-        system.set_commission(staker: to_staker, :commission);
-        system.set_open_for_delegation(staker: to_staker);
+        system.stake(staker: to_staker, amount: stake_amount, pool_enabled: true, :commission);
         let to_pool = system.staking.get_pool(staker: to_staker);
 
         system
@@ -3752,10 +3789,15 @@ pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl<
 pub(crate) struct DelegatorExitBeforeEnterAfterFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<DelegatorExitBeforeEnterAfterFlow, TTokenState> {
+    fn get_staker_address(self: DelegatorExitBeforeEnterAfterFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
     fn get_pool_address(self: DelegatorExitBeforeEnterAfterFlow) -> Option<ContractAddress> {
         self.pool_address
     }
@@ -3767,9 +3809,7 @@ pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let delegator = system.new_delegator(amount: stake_amount);
@@ -3782,6 +3822,7 @@ pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl<
 
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
+        self.staker = Option::Some(staker);
     }
 
     fn test(
@@ -3832,9 +3873,7 @@ pub(crate) impl DelegatorExitWithNonUpgradedPoolFlowImpl<
         let one_week = Time::weeks(count: 1);
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let first_delegator = system.new_delegator(amount: stake_amount);
@@ -3959,9 +3998,7 @@ pub(crate) impl AddToDelegationAfterExitActionFlowImpl<
         let commission = 200;
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
 
         let delegator = system.new_delegator(amount: stake_amount);
@@ -3998,9 +4035,7 @@ pub(crate) impl SetEpochInfoFlowImpl<
         let commission = 200;
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch();
 
         let target_block_before_set = system
@@ -4066,9 +4101,7 @@ pub(crate) impl AttestAfterDelegatorIntentFlowImpl<
         let commission = 200;
 
         let staker = system.new_staker(amount: stake_amount);
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch();
 
         let pool = system.staking.get_pool(:staker);
@@ -4121,9 +4154,7 @@ pub(crate) impl PoolCalculateRewardsTwiceFlowImpl<
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
 
-        system.stake(:staker, amount: stake_amount);
-        system.set_commission(:staker, :commission);
-        system.set_open_for_delegation(:staker);
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let delegated_amount = stake_amount / 2;

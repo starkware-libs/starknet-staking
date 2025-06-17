@@ -1,7 +1,9 @@
 use MainnetAddresses::MAINNET_L2_BRIDGE_ADDRESS;
 use MainnetClassHashes::{
-    MAINNET_MINTING_CURVE_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V0,
-    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V0,
+    MAINNET_ATTESTATION_CLASS_HASH_V1, MAINNET_MINTING_CURVE_CLASS_HASH_V0,
+    MAINNET_POOL_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V1, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0,
+    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V0,
+    MAINNET_STAKING_CLASS_HASH_V1,
 };
 use core::num::traits::zero::Zero;
 use core::traits::Into;
@@ -40,7 +42,7 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
-    declare_staking_eic_contract_v0_v1,
+    declare_staking_eic_contract_v0_v1, declare_staking_eic_contract_v1_v2,
 };
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
@@ -50,6 +52,7 @@ use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait, get_block_
 use starkware_utils::components::replaceability::interface::{
     EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
 };
+use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::constants::{NAME, SYMBOL};
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
@@ -213,6 +216,11 @@ pub(crate) impl StakingImpl of StakingTrait {
     fn is_v0(self: StakingState) -> bool {
         let class_hash = snforge_std::get_class_hash(self.address);
         class_hash == MAINNET_STAKING_CLASS_HASH_V0()
+    }
+
+    fn is_v1(self: StakingState) -> bool {
+        let class_hash = snforge_std::get_class_hash(self.address);
+        class_hash == MAINNET_STAKING_CLASS_HASH_V1()
     }
 
     fn safe_dispatcher(self: StakingState) -> IStakingSafeDispatcher nopanic {
@@ -612,14 +620,23 @@ pub(crate) struct PoolState {
 }
 
 #[derive(Drop, Copy)]
+pub(crate) struct AttestationRoles {
+    pub upgrade_governor: ContractAddress,
+    pub app_governor: ContractAddress,
+}
+
+#[derive(Drop, Copy)]
 struct AttestationConfig {
     pub governance_admin: ContractAddress,
     pub attestation_window: u16,
+    pub roles: AttestationRoles,
 }
 
 #[derive(Drop, Copy)]
 struct AttestationState {
-    address: ContractAddress,
+    pub address: ContractAddress,
+    pub governance_admin: ContractAddress,
+    pub roles: AttestationRoles,
 }
 
 #[generate_trait]
@@ -631,11 +648,66 @@ pub(crate) impl AttestationImpl of AttestationTrait {
         self.attestation_window.serialize(ref calldata);
         let attestation_contract = snforge_std::declare("Attestation").unwrap().contract_class();
         let (attestation_contract_address, _) = attestation_contract.deploy(@calldata).unwrap();
-        AttestationState { address: attestation_contract_address }
+        let attestation = AttestationState {
+            address: attestation_contract_address,
+            governance_admin: self.governance_admin,
+            roles: self.roles,
+        };
+        attestation.set_roles();
+        attestation
     }
+
+    fn deploy_mainnet_contract_v1(
+        self: AttestationConfig, staking: StakingState,
+    ) -> AttestationState {
+        let mut calldata = ArrayTrait::new();
+        staking.address.serialize(ref calldata);
+        self.governance_admin.serialize(ref calldata);
+        self.attestation_window.serialize(ref calldata);
+        let contract_address_salt: felt252 = Time::now().seconds.into();
+        let (attestation_contract_address, _) = deploy_syscall(
+            class_hash: MAINNET_ATTESTATION_CLASS_HASH_V1(),
+            :contract_address_salt,
+            calldata: calldata.span(),
+            deploy_from_zero: false,
+        )
+            .unwrap_syscall();
+        let attestation = AttestationState {
+            address: attestation_contract_address,
+            governance_admin: self.governance_admin,
+            roles: self.roles,
+        };
+        attestation.set_roles();
+        attestation
+    }
+
 
     fn dispatcher(self: AttestationState) -> IAttestationDispatcher nopanic {
         IAttestationDispatcher { contract_address: self.address }
+    }
+
+    fn set_roles(self: AttestationState) {
+        set_account_as_upgrade_governor(
+            contract: self.address,
+            account: self.roles.upgrade_governor,
+            governance_admin: self.governance_admin,
+        );
+        set_account_as_app_role_admin(
+            contract: self.address,
+            account: self.governance_admin,
+            governance_admin: self.governance_admin,
+        );
+        set_account_as_app_governor(
+            contract: self.address,
+            account: self.roles.app_governor,
+            app_role_admin: self.governance_admin,
+        );
+        // Remove governance admin from app role admin.
+        let roles_dispatcher = IRolesDispatcher { contract_address: self.address };
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.governance_admin,
+        );
+        roles_dispatcher.remove_app_role_admin(account: self.governance_admin);
     }
 
     fn get_current_epoch_target_attestation_block(
@@ -723,6 +795,10 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         let attestation = AttestationConfig {
             governance_admin: cfg.test_info.governance_admin,
             attestation_window: cfg.test_info.attestation_window,
+            roles: AttestationRoles {
+                upgrade_governor: cfg.test_info.upgrade_governor,
+                app_governor: cfg.test_info.app_governor,
+            },
         };
         SystemConfig { token, staking, minting_curve, reward_supplier, attestation }
     }
@@ -947,19 +1023,41 @@ impl StakerImpl of StakerTrait {
 pub(crate) impl SystemStakerImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of SystemStakerTrait<TTokenState> {
-    fn stake(self: SystemState<TTokenState>, staker: Staker, amount: Amount) {
+    fn stake(
+        self: SystemState<TTokenState>,
+        staker: Staker,
+        amount: Amount,
+        pool_enabled: bool,
+        commission: Commission,
+    ) {
         self.token.approve(owner: staker.staker.address, spender: self.staking.address, :amount);
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self
-            .staking
-            .dispatcher()
-            .stake(
-                reward_address: staker.reward.address,
-                operational_address: staker.operational.address,
-                :amount,
-            );
+        if self.staking.is_v0() || self.staking.is_v1() {
+            self
+                .staking
+                .dispatcher_v0_for_tests()
+                .stake(
+                    reward_address: staker.reward.address,
+                    operational_address: staker.operational.address,
+                    :amount,
+                    :pool_enabled,
+                    :commission,
+                );
+        } else {
+            self
+                .staking
+                .dispatcher()
+                .stake(
+                    reward_address: staker.reward.address,
+                    operational_address: staker.operational.address,
+                    :amount,
+                );
+            if pool_enabled {
+                self.set_open_for_delegation(:staker, :commission);
+            }
+        }
     }
 
     fn increase_stake(self: SystemState<TTokenState>, staker: Staker, amount: Amount) -> Amount {
@@ -994,11 +1092,21 @@ pub(crate) impl SystemStakerImpl<
         self.staking.safe_dispatcher().unstake_action(staker_address: staker.staker.address)
     }
 
-    fn set_open_for_delegation(self: SystemState<TTokenState>, staker: Staker) -> ContractAddress {
-        cheat_caller_address_once(
-            contract_address: self.staking.address, caller_address: staker.staker.address,
-        );
-        self.staking.dispatcher().set_open_for_delegation()
+    fn set_open_for_delegation(
+        self: SystemState<TTokenState>, staker: Staker, commission: Commission,
+    ) -> ContractAddress {
+        if self.staking.is_v0() || self.staking.is_v1() {
+            cheat_caller_address_once(
+                contract_address: self.staking.address, caller_address: staker.staker.address,
+            );
+            self.staking.dispatcher_v0_for_tests().set_open_for_delegation(:commission)
+        } else {
+            self.set_commission(:staker, :commission);
+            cheat_caller_address_once(
+                contract_address: self.staking.address, caller_address: staker.staker.address,
+            );
+            self.staking.dispatcher().set_open_for_delegation()
+        }
     }
 
     fn staker_claim_rewards(self: SystemState<TTokenState>, staker: Staker) -> Amount {
@@ -1012,7 +1120,11 @@ pub(crate) impl SystemStakerImpl<
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
-        self.staking.dispatcher().set_commission(:commission)
+        if self.staking.is_v0() || self.staking.is_v1() {
+            self.staking.dispatcher_v0_for_tests().update_commission(:commission)
+        } else {
+            self.staking.dispatcher().set_commission(:commission)
+        }
     }
 
     fn staker_info_v1(self: SystemState<TTokenState>, staker: Staker) -> StakerInfoV1 {
@@ -1301,34 +1413,40 @@ impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
 #[generate_trait]
 /// Replaceability utils for internal use of the system. Meant to be used before running a
 /// regression test.
-pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
-    /// Deploy attestation contract and upgrades the contracts in the system state with local
+/// This trait is used for the upgrade from V0 to V1 implementation.
+pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
+    /// Deploy attestation contract and upgrades the contracts in the system state with V1
     /// implementations.
-    fn deploy_attestation_and_upgrade_contracts_implementation(
+    fn deploy_attestation_and_upgrade_contracts_implementation_v1(
         ref self: SystemState<STRKTokenState>,
     ) {
-        self.deploy_attestation();
-        self.upgrade_contracts_implementation();
+        self.deploy_attestation_v1();
+        self.upgrade_contracts_implementation_v1();
     }
 
     /// Deploy attestation contract.
-    fn deploy_attestation(ref self: SystemState<STRKTokenState>) {
+    fn deploy_attestation_v1(ref self: SystemState<STRKTokenState>) {
         let cfg: StakingInitConfig = Default::default();
         let attestation_config = AttestationConfig {
             governance_admin: cfg.test_info.governance_admin,
             attestation_window: cfg.test_info.attestation_window,
+            roles: AttestationRoles {
+                upgrade_governor: cfg.test_info.upgrade_governor,
+                app_governor: cfg.test_info.app_governor,
+            },
         };
-        let attestation_state = attestation_config.deploy(staking: self.staking);
+        let attestation_state = attestation_config
+            .deploy_mainnet_contract_v1(staking: self.staking);
         self.attestation = Option::Some(attestation_state);
     }
 
-    /// Upgrades the contracts in the system state with local implementations.
-    fn upgrade_contracts_implementation(self: SystemState<STRKTokenState>) {
+    /// Upgrades the contracts in the system state with V1 implementations.
+    fn upgrade_contracts_implementation_v1(self: SystemState<STRKTokenState>) {
         self.staking.pause();
-        self.upgrade_staking_implementation();
-        self.upgrade_reward_supplier_implementation();
+        self.upgrade_staking_implementation_v1();
+        self.upgrade_reward_supplier_implementation_v1();
         if let Option::Some(pool) = self.pool {
-            self.upgrade_pool_implementation(:pool);
+            self.upgrade_pool_implementation_v1(:pool);
         }
         if let Option::Some(staker_address) = self.staker_address {
             self.staker_migration(staker_address);
@@ -1336,8 +1454,8 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
         self.staking.unpause();
     }
 
-    /// Upgrades the staking contract in the system state with a local implementation.
-    fn upgrade_staking_implementation(self: SystemState<STRKTokenState>) {
+    /// Upgrades the staking contract in the system state with V1 implementation.
+    fn upgrade_staking_implementation_v1(self: SystemState<STRKTokenState>) {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v0_v1(),
             eic_init_data: array![
@@ -1352,6 +1470,74 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
                 .span(),
         };
         let implementation_data = ImplementationData {
+            impl_hash: MAINNET_STAKING_CLASS_HASH_V1(),
+            eic_data: Option::Some(eic_data),
+            final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.staking.address,
+            :implementation_data,
+            upgrade_governor: self.staking.roles.upgrade_governor,
+        );
+    }
+
+    /// Upgrades the reward supplier contract in the system state with V1 implementation.
+    fn upgrade_reward_supplier_implementation_v1(self: SystemState<STRKTokenState>) {
+        let implementation_data = ImplementationData {
+            impl_hash: MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1(),
+            eic_data: Option::None,
+            final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.reward_supplier.address,
+            :implementation_data,
+            upgrade_governor: self.reward_supplier.roles.upgrade_governor,
+        );
+    }
+
+    /// Upgrades the pool contract in the system state with V1 implementation.
+    fn upgrade_pool_implementation_v1(self: SystemState<STRKTokenState>, pool: PoolState) {
+        let eic_data = EICData {
+            eic_hash: declare_pool_eic_contract(),
+            eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into()].span(),
+        };
+        let implementation_data = ImplementationData {
+            impl_hash: MAINNET_POOL_CLASS_HASH_V1(), eic_data: Option::Some(eic_data), final: false,
+        };
+        upgrade_implementation(
+            contract_address: pool.address,
+            :implementation_data,
+            upgrade_governor: pool.roles.upgrade_governor,
+        );
+    }
+}
+
+#[generate_trait]
+/// Replaceability utils for internal use of the system. Meant to be used before running a
+/// regression test.
+/// This trait is used for the upgrade from V1 to V2 implementation.
+pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
+    /// Upgrades the contracts in the system state with local
+    /// implementations.
+    fn upgrade_contracts_implementation_v2(self: SystemState<STRKTokenState>) {
+        // TODO: add pause?
+        self.upgrade_staking_implementation_v2();
+        self.upgrade_reward_supplier_implementation_v2();
+        if let Option::Some(staker_address) = self.staker_address {
+            self.staker_migration(staker_address);
+        }
+    }
+
+    /// Upgrades the staking contract in the system state with a local implementation.
+    fn upgrade_staking_implementation_v2(self: SystemState<STRKTokenState>) {
+        let eic_data = EICData {
+            eic_hash: declare_staking_eic_contract_v1_v2(),
+            eic_init_data: array![
+                MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
+            ]
+                .span(),
+        };
+        let implementation_data = ImplementationData {
             impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
         };
         upgrade_implementation(
@@ -1362,7 +1548,7 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
     }
 
     /// Upgrades the reward supplier contract in the system state with a local implementation.
-    fn upgrade_reward_supplier_implementation(self: SystemState<STRKTokenState>) {
+    fn upgrade_reward_supplier_implementation_v2(self: SystemState<STRKTokenState>) {
         let implementation_data = ImplementationData {
             impl_hash: declare_reward_supplier_contract(), eic_data: Option::None, final: false,
         };
@@ -1370,22 +1556,6 @@ pub(crate) impl SystemReplaceabilityImpl of SystemReplaceabilityTrait {
             contract_address: self.reward_supplier.address,
             :implementation_data,
             upgrade_governor: self.reward_supplier.roles.upgrade_governor,
-        );
-    }
-
-    /// Upgrades the pool contract in the system state with a local implementation.
-    fn upgrade_pool_implementation(self: SystemState<STRKTokenState>, pool: PoolState) {
-        let eic_data = EICData {
-            eic_hash: declare_pool_eic_contract(),
-            eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into()].span(),
-        };
-        let implementation_data = ImplementationData {
-            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
-        };
-        upgrade_implementation(
-            contract_address: pool.address,
-            :implementation_data,
-            upgrade_governor: pool.roles.upgrade_governor,
         );
     }
 }
@@ -1453,6 +1623,7 @@ pub(crate) trait FlowTrait<
         Option::None
     }
     fn setup(ref self: TFlow, ref system: SystemState<TTokenState>) {}
+    fn setup_v1(ref self: TFlow, ref system: SystemState<TTokenState>) {}
     fn test(self: TFlow, ref system: SystemState<TTokenState>, system_type: SystemType);
 }
 
@@ -1477,7 +1648,12 @@ pub(crate) fn test_flow_mainnet<
         // Need to migrate internal staker info only if there is no pool to upgrade.
         system.set_staker_for_migration(staker_address);
     }
-    system.deploy_attestation_and_upgrade_contracts_implementation();
+    system.deploy_attestation_and_upgrade_contracts_implementation_v1();
+    flow.setup_v1(ref :system);
+    if let Option::Some(staker_address) = flow.get_staker_address() {
+        system.set_staker_for_migration(staker_address);
+    }
+    system.upgrade_contracts_implementation_v2();
     flow.test(ref :system, system_type: SystemType::Mainnet);
 }
 

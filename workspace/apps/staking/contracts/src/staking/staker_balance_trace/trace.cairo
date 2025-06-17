@@ -177,4 +177,13 @@ pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
     fn length(self: StoragePath<Mutable<StakerBalanceTrace>>) -> u64 {
         self.checkpoints.len()
     }
+
+    /// Returns the checkpoint at the given index.
+    fn at(self: StoragePath<Mutable<StakerBalanceTrace>>, index: u64) -> (Epoch, StakerBalance) {
+        let checkpoints = self.checkpoints;
+        let len = checkpoints.len();
+        assert!(index < len, "{}", TraceErrors::INDEX_OUT_OF_BOUNDS);
+        let checkpoint = checkpoints[index].read();
+        (checkpoint.key, checkpoint.value)
+    }
 }

@@ -326,8 +326,8 @@ pub mod Pool {
             self.write_pool_member_info(:pool_member, :pool_member_info);
 
             // Transfer rewards to the pool member.
-            let token_dispatcher = self.token_dispatcher.read();
-            token_dispatcher.checked_transfer(recipient: reward_address, amount: rewards.into());
+            let reward_token = IERC20Dispatcher { contract_address: self.strk_token_address() };
+            reward_token.checked_transfer(recipient: reward_address, amount: rewards.into());
 
             // Emit event.
             self
@@ -890,6 +890,15 @@ pub mod Pool {
             self
                 .pool_member_info
                 .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
+        }
+
+        // TODO: Refactor tests to use the actual STRK token address and remove this function, just
+        // use the STRK_TOKEN_ADDRESS constant.
+        fn strk_token_address(self: @ContractState) -> ContractAddress {
+            let staking_dispatcher = IStakingDispatcher {
+                contract_address: self.staking_pool_dispatcher.read().contract_address,
+            };
+            staking_dispatcher.contract_parameters_v1().token_address
         }
     }
 }

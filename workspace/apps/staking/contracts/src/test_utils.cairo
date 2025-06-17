@@ -1226,3 +1226,84 @@ pub(crate) fn cheat_target_attestation_block_hash(cfg: StakingInitConfig, block_
 
     start_cheat_block_hash_global(block_number: target_attestation_block, :block_hash);
 }
+
+// TODO: Make checkpoint public (in utils-trace) and remove this.
+#[derive(Copy, Drop, Serde, starknet::Store)]
+struct Checkpoint {
+    key: u64,
+    value: u128,
+}
+
+/// Append a new checkpoint with the given `key`, `value` to the trace.
+pub(crate) fn append_to_trace(
+    contract_address: ContractAddress, trace_address: felt252, key: u64, value: u128,
+) {
+    let current_length = load_trace_length(:contract_address, :trace_address);
+    let new_length = current_length + 1;
+    // Store new length.
+    let vector_storage_address = snforge_std::map_entry_address(
+        map_selector: trace_address, keys: [selector!("checkpoints")].span(),
+    );
+    snforge_std::store(
+        target: contract_address,
+        storage_address: vector_storage_address,
+        serialized_value: [new_length.into()].span(),
+    );
+    // Store checkpoint.
+    let checkpoint = Checkpoint { key, value };
+    let storage_address = snforge_std::map_entry_address(
+        map_selector: vector_storage_address, keys: [current_length.into()].span(),
+    );
+    let mut serialized_value = array![];
+    checkpoint.serialize(ref serialized_value);
+    snforge_std::store(
+        target: contract_address, :storage_address, serialized_value: serialized_value.span(),
+    );
+}
+
+/// Load a (key, value) pair from the trace at the given `index`.
+pub(crate) fn load_from_trace(
+    contract_address: ContractAddress, trace_address: felt252, index: u64,
+) -> (u64, u128) {
+    let vector_storage_address = snforge_std::map_entry_address(
+        map_selector: trace_address, keys: [selector!("checkpoints")].span(),
+    );
+    let storage_address = snforge_std::map_entry_address(
+        map_selector: vector_storage_address, keys: [index.into()].span(),
+    );
+    let mut serialized_checkpoint = snforge_std::load(
+        target: contract_address, :storage_address, size: Store::<Checkpoint>::size().into(),
+    )
+        .span();
+    let checkpoint = Serde::<Checkpoint>::deserialize(ref serialized_checkpoint)
+        .expect('Failed deserialize');
+    (checkpoint.key, checkpoint.value)
+}
+
+/// Load the length of the trace.
+pub(crate) fn load_trace_length(contract_address: ContractAddress, trace_address: felt252) -> u64 {
+    let vector_storage_address = snforge_std::map_entry_address(
+        map_selector: trace_address, keys: [selector!("checkpoints")].span(),
+    );
+    let length: u64 = (*snforge_std::load(
+        target: contract_address,
+        storage_address: vector_storage_address,
+        size: Store::<u64>::size().into(),
+    )
+        .at(0))
+        .try_into()
+        .unwrap();
+    length
+}
+
+/// Load from iterable map.
+pub(crate) fn load_from_iterable_map<
+    K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<Option<V>>,
+>(
+    contract_address: ContractAddress, map_address: felt252, key: K,
+) -> Option<V> {
+    let map_storage_address = snforge_std::map_entry_address(
+        map_selector: map_address, keys: [selector!("_inner_map")].span(),
+    );
+    load_option_from_simple_map(map_selector: map_storage_address, :key, contract: contract_address)
+}

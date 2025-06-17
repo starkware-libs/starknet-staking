@@ -52,6 +52,7 @@
     - [add\_token](#add_token)
     - [enable\_token](#enable_token)
     - [disable\_token](#disable_token)
+    - [get\_active\_tokens](#get_active_tokens)
   - [Events](#events)
     - [Stake Balance Changed](#stake-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
@@ -299,6 +300,7 @@ classDiagram
     add_token()
     enable_token()
     disable_token()
+    get_active_tokens()
   }
   class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
@@ -1349,8 +1351,9 @@ Add a new token to the staking contract.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
-2. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
-3. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
+2. [ZERO\_ADDRESS](#zero_address)
+3. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
+4. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only security admin.
@@ -1386,6 +1389,19 @@ Disable a token for getting rewards.
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only security agent.
+#### logic <!-- omit from toc -->
+
+### get_active_tokens
+```rust
+fn get_active_tokens(self: @ContractState) -> Span<ContractAddress>
+```
+#### description <!-- omit from toc -->
+Get all active tokens.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address.
 #### logic <!-- omit from toc -->
 
 ## Events
@@ -2417,6 +2433,9 @@ Only token admin.
 
 ### TOKEN_ALREADY_DISABLED
 "Token is already disabled"
+
+### ZERO_ADDRESS
+"Zero address"
 
 ### INVALID_TOKEN_ADDRESS
 "Invalid token address"
