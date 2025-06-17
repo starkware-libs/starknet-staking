@@ -7,8 +7,8 @@ assert_macros = "2.11.0"
 openzeppelin = "1.0.0"
 openzeppelin_testing = "3.0.0"
 snforge_std = "0.41.0"
-starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "c13701e14230c9afba736fc174cc60f9be745d37" }
-starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "c13701e14230c9afba736fc174cc60f9be745d37" }
+starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", branch = "main" }
+starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", branch = "main" }
 
 [scripts]
 test = "snforge test"
