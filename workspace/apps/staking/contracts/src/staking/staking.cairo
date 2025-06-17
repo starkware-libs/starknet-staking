@@ -629,8 +629,11 @@ pub mod Staking {
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
             let staker_pool_info_mut = self.internal_staker_pool_info_mut(:staker_address);
-            if staker_pool_info_mut.commission_opt().is_some() {
-                self.update_commission(:staker_address, :staker_pool_info_mut, :commission);
+            if let Option::Some(old_commission) = staker_pool_info_mut.commission_opt() {
+                self
+                    .update_commission(
+                        :staker_address, :staker_pool_info_mut, :old_commission, :commission,
+                    );
             } else {
                 staker_pool_info_mut.write_commission(:commission)
                 // TODO: emit event.
@@ -1251,10 +1254,9 @@ pub mod Staking {
             ref self: ContractState,
             staker_address: ContractAddress,
             staker_pool_info_mut: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
+            old_commission: Commission,
             commission: Commission,
         ) {
-            let old_commission = staker_pool_info_mut.commission();
-
             if let Option::Some(commission_commitment) = staker_pool_info_mut
                 .commission_commitment_opt() {
                 if self.is_commission_commitment_active(:commission_commitment) {
