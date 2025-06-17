@@ -4,7 +4,7 @@ use constants::{
     EPOCH_LENGTH, EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS, NON_APP_GOVERNOR,
     NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
     OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, STAKER_ADDRESS,
-    STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET, UNPOOL_TIME,
+    STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET, STRK_TOKEN_NAME, UNPOOL_TIME,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -1263,7 +1263,9 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
     let cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     // Deploy staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -1513,7 +1515,9 @@ fn test_pool_contract_roles() {
     let cfg: StakingInitConfig = Default::default();
     // Deploy the token contract.
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     // Deploy the staking contract and stake with pool enabled.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
@@ -1632,7 +1636,9 @@ fn test_declare_operational_address_operational_address_exists() {
 fn test_change_operational_address() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -1671,7 +1677,9 @@ fn test_change_operational_address() {
 fn test_change_operational_address_staker_doesnt_exist() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -1730,7 +1738,9 @@ fn test_change_operational_address_is_not_eligible() {
 fn test_set_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -1794,7 +1804,9 @@ fn test_set_commission() {
 fn test_set_commission_with_commitment() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -1836,7 +1848,9 @@ fn test_set_commission_with_commitment() {
 fn test_set_commission_assertions_with_commitment() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -1886,7 +1900,9 @@ fn test_set_commission_assertions_with_commitment() {
 fn test_set_commission_caller_not_staker() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -1903,7 +1919,9 @@ fn test_set_commission_caller_not_staker() {
 fn test_set_commission_with_higher_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
@@ -1922,7 +1940,9 @@ fn test_set_commission_with_higher_commission() {
 fn test_set_commission_with_same_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
@@ -1940,7 +1960,9 @@ fn test_set_commission_with_same_commission() {
 fn test_set_commission_initialize_commission() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -1963,7 +1985,9 @@ fn test_set_commission_initialize_commission() {
 fn test_set_commission_staker_in_exit_window() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -1986,7 +2010,9 @@ fn test_set_commission_staker_in_exit_window() {
 fn test_set_commission_commission_out_of_range() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -2127,7 +2153,9 @@ fn test_set_commission_commitment_assertions() {
 fn test_set_open_for_delegation() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -2160,7 +2188,9 @@ fn test_set_open_for_delegation() {
 fn test_set_open_for_delegation_commission_not_set() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2176,7 +2206,9 @@ fn test_set_open_for_delegation_commission_not_set() {
 fn test_set_open_for_delegation_unstake_in_progress() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2193,7 +2225,9 @@ fn test_set_open_for_delegation_unstake_in_progress() {
 fn test_set_open_for_delegation_staker_not_exist() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2207,7 +2241,9 @@ fn test_set_open_for_delegation_staker_not_exist() {
 fn test_set_open_for_delegation_staker_has_pool() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply, owner_address: cfg.test_info.owner_address,
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
     );
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
