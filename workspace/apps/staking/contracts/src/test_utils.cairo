@@ -235,6 +235,10 @@ pub(crate) mod constants {
     pub fn BTC_TOKEN_NAME() -> ByteArray {
         "BTC_TOKEN_NAME"
     }
+
+    pub fn DUMMY_BTC_TOKEN_ADDRESS() -> ContractAddress {
+        'DUMMY_BTC_TOKEN_ADDRESS'.try_into().unwrap()
+    }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
     ref cfg: StakingInitConfig,
