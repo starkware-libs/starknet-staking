@@ -154,17 +154,6 @@ pub trait IStakingPool<TContractState> {
         data: Span<felt252>,
         identifier: felt252,
     );
-
-    /// Transfers the staker's pooled stake rewards to the pool contract (the caller).
-    /// Used only for upgrade purposes.
-    ///
-    /// The flow:
-    /// 1. StakerInfo migration.
-    /// 2. Update the rewards for `staker_address`.
-    /// 3. Send `pool_info.unclaimed_rewards` FRI to the pool contract.
-    /// 4. Set pool_info.unclaimed_rewards to zero.
-    /// 5. Return the final index.
-    fn pool_migration(ref self: TContractState, staker_address: ContractAddress) -> Index;
 }
 
 #[starknet::interface]

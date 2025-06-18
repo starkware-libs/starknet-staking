@@ -993,28 +993,6 @@ pub mod Staking {
                     },
                 );
         }
-
-        /// TODO: Implement this function for the new version.
-        fn pool_migration(ref self: ContractState, staker_address: ContractAddress) -> Index {
-            // // Prerequisites and asserts.
-            // self.assert_caller_is_not_zero();
-            // let (staker_info, staker_index, pool_unclaimed_rewards) = self
-            //     .convert_internal_staker_info(:staker_address);
-            // let pool_address = staker_info.get_pool_info().pool_contract;
-            // assert!(get_caller_address() == pool_address, "{}",
-            // Error::CALLER_IS_NOT_POOL_CONTRACT);
-
-            // // Send rewards to pool contract, and commit to storage.
-            // let token_dispatcher = self.token_dispatcher.read();
-            // self
-            //     ._deprecated_send_rewards_to_delegation_pool_V0(
-            //         :staker_address, :staker_info, :pool_unclaimed_rewards, :token_dispatcher,
-            //     );
-            // self.write_staker_info(:staker_address, :staker_info);
-
-            // staker_index
-            Zero::zero()
-        }
     }
 
     #[abi(embed_v0)]

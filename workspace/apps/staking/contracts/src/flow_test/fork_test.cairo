@@ -280,24 +280,6 @@ fn staker_attest_after_intent_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
-fn pool_migration_assertions_regression_test() {
-    let mut flow = flows::PoolMigrationAssertionsFlow {
-        staker_no_pool: Option::None, staker_with_pool: Option::None,
-    };
-    test_flow_mainnet(ref :flow);
-}
-
-#[test]
-#[fork("MAINNET_LATEST")]
-fn pool_eic_regression_test() {
-    let mut flow = flows::PoolEICFlow {
-        pool_address: Option::None, pool_contract_admin: Option::None,
-    };
-    test_flow_mainnet(ref :flow);
-}
-
-#[test]
-#[fork("MAINNET_LATEST")]
 fn delegator_switch_after_upgrade_regression_test() {
     let mut flow = flows::DelegatorSwitchAfterUpgradeFlow {
         pool_address: Option::None,
@@ -419,70 +401,4 @@ fn delegator_exit_with_non_upgraded_pool_regression_test() {
         third_delegator_info: Option::None,
     };
     test_flow_mainnet(ref :flow);
-}
-
-/// Flow:
-/// Staker stake
-/// Staker delegate
-/// Set pool for upgrade
-/// Deploy attestation
-/// Upgrade staking implementation
-/// Upgrade reward supplier implementation
-/// Pool migration
-#[test]
-#[fork("MAINNET_LATEST")]
-fn test_pool_migration() {
-    let mut system = SystemFactoryTrait::mainnet_system();
-
-    let min_stake = system.staking.get_min_stake();
-    let stake_amount = min_stake * 2;
-    let staker = system.new_staker(amount: stake_amount * 2);
-    system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
-
-    let pool = system.staking.get_pool(:staker);
-    let delegator = system.new_delegator(amount: stake_amount);
-    system.delegate(:delegator, :pool, amount: stake_amount / 2);
-
-    let one_week = Time::weeks(count: 1);
-    system.advance_time(time: one_week);
-    system.staking.update_global_index_if_needed();
-
-    let staker_info = system.staker_info(:staker);
-    let pool_unclaimed_rewards = staker_info.pool_info.unwrap().unclaimed_rewards;
-
-    system.set_pool_for_upgrade(pool_address: pool);
-    system.deploy_attestation_v1();
-    system.upgrade_staking_implementation_v1();
-    system.upgrade_reward_supplier_implementation_v1();
-
-    // Pool migration.
-    assert!(system.token.balance_of(account: pool).is_zero());
-    let staker_index_after_migration = system.staking.pool_migration(:staker, pool_address: pool);
-    assert!(staker_index_after_migration == staker_info.index);
-    assert!(system.token.balance_of(account: pool) == pool_unclaimed_rewards);
-
-    let result = system.staking.safe_pool_migration(:staker);
-    assert_panic_with_error(
-        :result, expected_error: Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
-    );
-}
-
-#[test]
-#[fork("MAINNET_LATEST")]
-fn test_pool_migration_caller_not_pool() {
-    let mut system = SystemFactoryTrait::mainnet_system();
-
-    let min_stake = system.staking.get_min_stake();
-    let stake_amount = min_stake * 2;
-    let staker = system.new_staker(amount: stake_amount * 2);
-    system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
-    let pool = system.staking.get_pool(:staker);
-
-    system.set_pool_for_upgrade(pool_address: pool);
-    system.deploy_attestation_v1();
-    system.upgrade_staking_implementation_v1();
-    system.upgrade_reward_supplier_implementation_v1();
-
-    let result = system.staking.safe_pool_migration(:staker);
-    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
 }

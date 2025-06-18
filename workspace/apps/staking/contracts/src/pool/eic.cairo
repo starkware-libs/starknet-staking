@@ -1,10 +1,13 @@
 // An External Initializer Contract to upgrade a pool contract.
+#[cfg(test)]
 #[starknet::contract]
 mod PoolEIC {
     use core::num::traits::Zero;
     use staking::constants::V1_PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
-    use staking::staking::interface::{IStakingPoolDispatcher, IStakingPoolDispatcherTrait};
+    use staking::staking::interface_v0::{
+        IStakingPoolV1ForTestsDispatcher, IStakingPoolV1ForTestsDispatcherTrait,
+    };
     use staking::types::{Index, Version};
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
@@ -28,7 +31,7 @@ mod PoolEIC {
         final_staker_index: Option<Index>,
         // Dispatcher for the staking contract's pool functions, used for the final index and the
         // StakerInfo migration.
-        staking_pool_dispatcher: IStakingPoolDispatcher,
+        staking_pool_dispatcher: IStakingPoolV1ForTestsDispatcher,
         // The staker address, used for the final index and the StakerInfo migration.
         staker_address: ContractAddress,
     }
