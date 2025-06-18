@@ -193,6 +193,7 @@ pub mod Staking {
         prev_class_hash: ClassHash,
         epoch_info: EpochInfo,
         attestation_contract: ContractAddress,
+        btc_token_address: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
@@ -211,6 +212,12 @@ pub mod Staking {
         self
             .tokens_total_stake_trace
             .entry(token_address)
+            .insert(key: STARTING_EPOCH, value: Zero::zero());
+        assert!(btc_token_address != token_address, "{}", Error::INVALID_TOKEN_ADDRESS);
+        self.btc_tokens.write(btc_token_address, true);
+        self
+            .tokens_total_stake_trace
+            .entry(btc_token_address)
             .insert(key: STARTING_EPOCH, value: Zero::zero());
     }
 
