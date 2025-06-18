@@ -325,33 +325,6 @@ fn test_stake_with_staker_address_already_used() {
         );
 }
 
-// TODO: Test when implement migration.
-#[test]
-#[ignore]
-#[should_panic(expected: "Staker does not exist")]
-fn test_pool_migration_staker_not_exists() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    let staker_address = cfg.test_info.staker_address;
-    staking_pool_dispatcher.pool_migration(:staker_address);
-}
-
-// TODO: Test when implement migration.
-#[test]
-#[ignore]
-#[should_panic(expected: "Zero address caller is not allowed")]
-fn test_pool_migration_with_zero_address_caller() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    let staker_address = cfg.test_info.staker_address;
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: Zero::zero());
-    staking_pool_dispatcher.pool_migration(:staker_address);
-}
-
 #[test]
 fn test_contract_parameters_v1() {
     let mut cfg: StakingInitConfig = Default::default();

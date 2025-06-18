@@ -371,16 +371,6 @@ pub(crate) impl StakingImpl of StakingTrait {
         );
         self.pause_dispatcher().unpause()
     }
-
-    fn pool_migration(self: StakingState, staker: Staker, pool_address: ContractAddress) -> Index {
-        cheat_caller_address_once(contract_address: self.address, caller_address: pool_address);
-        self.staking_pool_dispatcher().pool_migration(staker_address: staker.staker.address)
-    }
-
-    #[feature("safe_dispatcher")]
-    fn safe_pool_migration(self: StakingState, staker: Staker) -> Result<Index, Array<felt252>> {
-        self.safe_staking_pool_dispatcher().pool_migration(staker_address: staker.staker.address)
-    }
 }
 
 /// The `MintingCurveRoles` struct represents the various roles involved in the minting curve
@@ -1199,16 +1189,6 @@ pub(crate) impl SystemStakerImpl<
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
         self.staking.dispatcher().change_reward_address(:reward_address)
-    }
-
-    #[feature("safe_dispatcher")]
-    fn safe_dispatcher_pool_migration(
-        self: SystemState<TTokenState>, staker: Staker,
-    ) -> Result<Index, Array<felt252>> {
-        let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
-            contract_address: self.staking.address,
-        };
-        staking_pool_safe_dispatcher.pool_migration(staker_address: staker.staker.address)
     }
 }
 

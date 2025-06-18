@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod eic;
 pub(crate) mod errors;
 pub mod interface;
