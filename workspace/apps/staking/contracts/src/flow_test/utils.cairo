@@ -37,9 +37,9 @@ use staking::staking::interface_v0::{
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
-    BTC_TOKEN_NAME, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
-    MAINNET_SECURITY_COUNSEL_ADDRESS, STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS, STRK_TOKEN_NAME,
-    UPGRADE_GOVERNOR,
+    BTC_TOKEN_NAME, DUMMY_ADDRESS, DUMMY_BTC_TOKEN_ADDRESS, EPOCH_DURATION, EPOCH_LENGTH,
+    EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS, STARTING_BLOCK_OFFSET,
+    STRK_TOKEN_ADDRESS, STRK_TOKEN_NAME, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
@@ -737,6 +737,7 @@ struct SystemConfig {
 #[derive(Drop, Copy)]
 pub(crate) struct SystemState<TTokenState> {
     pub token: TTokenState,
+    pub btc_token: TokenState,
     pub staking: StakingState,
     pub minting_curve: MintingCurveState,
     pub reward_supplier: RewardSupplierState,
@@ -837,6 +838,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         staking_config_dispatcher.set_reward_supplier(reward_supplier: reward_supplier.address);
         let system_state = SystemState {
             token,
+            btc_token,
             staking,
             minting_curve,
             reward_supplier,
@@ -854,6 +856,8 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
     fn deploy_mainnet_contracts_v0(self: SystemConfig) -> SystemState<STRKTokenState> {
         let token_address = STRK_TOKEN_ADDRESS();
         let token = STRKTokenState { address: token_address };
+        // TODO: Change this once we have the BTC token address.
+        let btc_token = TokenState { address: DUMMY_BTC_TOKEN_ADDRESS(), owner: DUMMY_ADDRESS() };
         let staking = self.staking.deploy_mainnet_contract_v0(:token_address);
         let minting_curve = self.minting_curve.deploy_mainnet_contract_v0(:staking);
         let reward_supplier = self
@@ -875,6 +879,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         advance_block_number_global(blocks: EPOCH_STARTING_BLOCK);
         SystemState {
             token,
+            btc_token,
             staking,
             minting_curve,
             reward_supplier,
@@ -1543,7 +1548,9 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v1_v2(),
             eic_init_data: array![
-                MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
+                MAINNET_STAKING_CLASS_HASH_V1().into(),
+                declare_pool_contract().into(),
+                self.btc_token.address.into(),
             ]
                 .span(),
         };
