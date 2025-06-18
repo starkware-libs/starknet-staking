@@ -37,8 +37,9 @@ use staking::staking::interface_v0::{
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
-    EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS,
-    STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS, STRK_TOKEN_NAME, UPGRADE_GOVERNOR,
+    BTC_TOKEN_NAME, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
+    MAINNET_SECURITY_COUNSEL_ADDRESS, STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS, STRK_TOKEN_NAME,
+    UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
@@ -160,7 +161,7 @@ pub(crate) struct StakingState {
 
 #[generate_trait]
 pub(crate) impl StakingImpl of StakingTrait {
-    fn deploy(self: StakingConfig, token: TokenState) -> StakingState {
+    fn deploy(self: StakingConfig, token: TokenState, btc_token: TokenState) -> StakingState {
         let mut calldata = ArrayTrait::new();
         token.address.serialize(ref calldata);
         self.min_stake.serialize(ref calldata);
@@ -171,6 +172,7 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.prev_staking_contract_class_hash.serialize(ref calldata);
         self.epoch_info.serialize(ref calldata);
         self.attestation_contract.serialize(ref calldata);
+        btc_token.address.serialize(ref calldata);
         let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
         let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
         let staking = StakingState {
@@ -722,6 +724,7 @@ pub(crate) impl AttestationImpl of AttestationTrait {
 #[derive(Drop)]
 struct SystemConfig {
     token: TokenConfig,
+    btc_token: TokenConfig,
     staking: StakingConfig,
     minting_curve: MintingCurveConfig,
     reward_supplier: RewardSupplierConfig,
@@ -751,6 +754,12 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
     fn basic_stake_flow_cfg(cfg: StakingInitConfig) -> SystemConfig {
         let token = TokenConfig {
             name: STRK_TOKEN_NAME(),
+            symbol: SYMBOL(),
+            initial_supply: cfg.test_info.initial_supply,
+            owner: cfg.test_info.owner_address,
+        };
+        let btc_token = TokenConfig {
+            name: BTC_TOKEN_NAME(),
             symbol: SYMBOL(),
             initial_supply: cfg.test_info.initial_supply,
             owner: cfg.test_info.owner_address,
@@ -800,13 +809,14 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
                 app_governor: cfg.test_info.app_governor,
             },
         };
-        SystemConfig { token, staking, minting_curve, reward_supplier, attestation }
+        SystemConfig { token, btc_token, staking, minting_curve, reward_supplier, attestation }
     }
 
     /// Deploys the system configuration and returns the system state.
     fn deploy(self: SystemConfig) -> SystemState<TokenState> {
         let token = self.token.deploy();
-        let staking = self.staking.deploy(:token);
+        let btc_token = self.btc_token.deploy();
+        let staking = self.staking.deploy(:token, :btc_token);
         let minting_curve = self.minting_curve.deploy(:staking);
         let reward_supplier = self.reward_supplier.deploy(:minting_curve, :staking, :token);
         let attestation = self.attestation.deploy(:staking);

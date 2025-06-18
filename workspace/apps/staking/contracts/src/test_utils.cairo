@@ -1,14 +1,14 @@
 use Staking::ContractState;
 use constants::{
-    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BUFFER,
-    COMMISSION, DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
-    GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE,
-    OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN,
-    POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS,
-    POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT,
-    STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
-    STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_TOKEN_NAME, TOKEN_ADDRESS, TOKEN_ADMIN,
-    UPGRADE_GOVERNOR,
+    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BTC_TOKEN_ADDRESS,
+    BTC_TOKEN_NAME, BUFFER, COMMISSION, DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH,
+    EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER,
+    MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS,
+    POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
+    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS,
+    SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS,
+    STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_TOKEN_NAME, TOKEN_ADDRESS,
+    TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
 use core::num::traits::zero::Zero;
@@ -232,6 +232,9 @@ pub(crate) mod constants {
     pub fn STRK_TOKEN_NAME() -> ByteArray {
         "STRK_TOKEN_NAME"
     }
+    pub fn BTC_TOKEN_NAME() -> ByteArray {
+        "BTC_TOKEN_NAME"
+    }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
     ref cfg: StakingInitConfig,
@@ -240,6 +243,10 @@ pub(crate) fn initialize_staking_state_from_cfg(
         cfg.test_info.initial_supply, cfg.test_info.owner_address, STRK_TOKEN_NAME(),
     );
     cfg.staking_contract_info.token_address = token_address;
+    let btc_token_address = deploy_mock_erc20_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address, BTC_TOKEN_NAME(),
+    );
+    cfg.staking_contract_info.btc_token_address = btc_token_address;
     initialize_staking_state(
         :token_address,
         min_stake: cfg.staking_contract_info.min_stake,
@@ -250,6 +257,7 @@ pub(crate) fn initialize_staking_state_from_cfg(
         prev_class_hash: cfg.staking_contract_info.prev_staking_contract_class_hash,
         epoch_info: cfg.staking_contract_info.epoch_info,
         attestation_contract: cfg.test_info.attestation_contract,
+        :btc_token_address,
     )
 }
 pub(crate) fn initialize_staking_state(
@@ -262,6 +270,7 @@ pub(crate) fn initialize_staking_state(
     prev_class_hash: ClassHash,
     epoch_info: EpochInfo,
     attestation_contract: ContractAddress,
+    btc_token_address: ContractAddress,
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
@@ -276,6 +285,7 @@ pub(crate) fn initialize_staking_state(
         :prev_class_hash,
         :epoch_info,
         :attestation_contract,
+        :btc_token_address,
     );
     state
 }
@@ -357,7 +367,7 @@ pub(crate) fn deploy_mock_erc20_contract(
 }
 
 pub(crate) fn deploy_staking_contract(
-    token_address: ContractAddress, cfg: StakingInitConfig,
+    token_address: ContractAddress, btc_token_address: ContractAddress, cfg: StakingInitConfig,
 ) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     token_address.serialize(ref calldata);
@@ -369,6 +379,7 @@ pub(crate) fn deploy_staking_contract(
     cfg.staking_contract_info.prev_staking_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.epoch_info.serialize(ref calldata);
     cfg.test_info.attestation_contract.serialize(ref calldata);
+    btc_token_address.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     set_default_roles(staking_contract: staking_contract_address, :cfg);
@@ -771,6 +782,12 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         name: STRK_TOKEN_NAME(),
     );
     cfg.staking_contract_info.token_address = token_address;
+    let btc_token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+    );
+    cfg.staking_contract_info.btc_token_address = btc_token_address;
     // Deploy the minting_curve, with faked staking_address.
     let minting_curve = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve;
@@ -778,7 +795,7 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     let reward_supplier = deploy_reward_supplier_contract(:cfg);
     cfg.staking_contract_info.reward_supplier = reward_supplier;
     // Deploy the staking contract.
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
     // Deploy the attestation contract.
     let attestation_contract = deploy_attestation_contract(:cfg);
@@ -960,6 +977,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW,
             prev_staking_contract_class_hash: DUMMY_CLASS_HASH(),
             epoch_info: DEFAULT_EPOCH_INFO(),
+            btc_token_address: BTC_TOKEN_ADDRESS(),
         };
         let minting_curve_contract_info = MintingCurveContractInfo {
             c_num: DEFAULT_C_NUM, c_denom: C_DENOM,
@@ -1014,6 +1032,7 @@ pub struct StakingContractInfoCfg {
     pub exit_wait_window: TimeDelta,
     pub prev_staking_contract_class_hash: ClassHash,
     pub epoch_info: EpochInfo,
+    pub btc_token_address: ContractAddress,
 }
 
 /// Update rewards for staker and pool.
