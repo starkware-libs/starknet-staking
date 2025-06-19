@@ -26,6 +26,7 @@ pub trait IStaking<TContractState> {
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn set_open_for_delegation(ref self: TContractState) -> ContractAddress;
     fn staker_info_v1(self: @TContractState, staker_address: ContractAddress) -> StakerInfoV1;
+    fn staker_pool_info(self: @TContractState, staker_address: ContractAddress) -> StakerPoolInfoV2;
     fn get_staker_info_v1(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Option<StakerInfoV1>;
@@ -416,6 +417,7 @@ pub struct StakingContractInfoV1 {
     pub exit_wait_window: TimeDelta,
 }
 
+/// `StakerInfo` struct used in V1.
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerInfoV1 {
     pub reward_address: ContractAddress,
@@ -426,11 +428,27 @@ pub struct StakerInfoV1 {
     pub pool_info: Option<StakerPoolInfoV1>,
 }
 
+/// `StakerPoolInfo` struct used in V1 as a part of `StakerInfoV1`.
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerPoolInfoV1 {
     pub pool_contract: ContractAddress,
     pub amount: Amount,
     pub commission: Commission,
+}
+
+/// `StakerPoolInfo` struct used in V2.
+#[derive(Debug, PartialEq, Drop, Serde, Copy)]
+pub struct StakerPoolInfoV2 {
+    pub commission: Option<Commission>,
+    pub pools: Span<PoolInfo>,
+}
+
+/// `PoolInfo` struct used in V2 as a part of `StakerPoolInfoV2`.
+#[derive(Debug, PartialEq, Drop, Serde, Copy)]
+pub struct PoolInfo {
+    pub pool_contract: ContractAddress,
+    pub token_address: ContractAddress,
+    pub amount: Amount,
 }
 
 #[generate_trait]

@@ -20,8 +20,8 @@ pub mod Staking {
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
-        IStakingMigration, IStakingPause, IStakingPool, IStakingTokenManager, PauseEvents,
-        StakerInfoV1, StakerPoolInfoV1, StakingContractInfoV1,
+        IStakingMigration, IStakingPause, IStakingPool, IStakingTokenManager, PauseEvents, PoolInfo,
+        StakerInfoV1, StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
@@ -501,7 +501,6 @@ pub mod Staking {
             let mut staker_info: StakerInfoV1 = internal_staker_info.into();
             // Set staker amount and pool amount from staker balance trace.
             staker_info.amount_own = self.get_own_balance(:staker_address);
-            // TODO: return commission info even if staker has no pool.
             let staker_pool_info = self.internal_staker_pool_info(:staker_address);
             if let Option::Some(pool_contract) = staker_pool_info
                 .get_strk_pool(strk_token_address: self.strk_token_address()) {
@@ -529,6 +528,21 @@ pub mod Staking {
                 return Option::None;
             }
             Option::Some(self.staker_info_v1(:staker_address))
+        }
+
+        fn staker_pool_info(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> StakerPoolInfoV2 {
+            // Assert that the staker exists.
+            self.internal_staker_info(:staker_address);
+            let internal_staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            let commission = internal_staker_pool_info.commission_opt();
+            let mut pools: Array<PoolInfo> = array![];
+            for (pool_contract, token_address) in internal_staker_pool_info.pools() {
+                let amount = self.get_delegated_balance(:staker_address, :token_address);
+                pools.append(PoolInfo { pool_contract, token_address, amount });
+            }
+            StakerPoolInfoV2 { commission, pools: pools.span() }
         }
 
         fn get_current_epoch(self: @ContractState) -> Epoch {
