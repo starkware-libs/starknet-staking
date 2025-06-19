@@ -5,7 +5,7 @@ mod PoolEIC {
     use core::num::traits::Zero;
     use staking::constants::V1_PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
-    use staking::staking::interface_v0::{
+    use staking::staking::interface_v1::{
         IStakingPoolV1ForTestsDispatcher, IStakingPoolV1ForTestsDispatcherTrait,
     };
     use staking::types::{Index, Version};

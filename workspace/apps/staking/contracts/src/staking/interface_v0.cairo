@@ -31,14 +31,6 @@ pub trait IStakingV0ForTests<TContractState> {
     fn update_commission(ref self: TContractState, commission: Commission);
 }
 
-/// Staking V1 interface.
-/// Used for testing purposes.
-#[cfg(test)]
-#[starknet::interface]
-pub trait IStakingPoolV1ForTests<TContractState> {
-    fn pool_migration(ref self: TContractState, staker_address: ContractAddress) -> Index;
-}
-
 /// StakerInfo struct used in V0.
 /// **Note**: This struct should not be used in V1. It should only be used for testing and migration
 /// purposes.
