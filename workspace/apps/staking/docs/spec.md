@@ -872,6 +872,7 @@ fn set_commission(
 ```
 #### description <!-- omit from toc -->
 Initialize or update the commission.
+Note: `commission` should be between 0 and 10000. for example 1000 is 10%.
 #### emits <!-- omit from toc -->
 [Commission Changed](#commission-changed)
 #### errors <!-- omit from toc -->
@@ -903,6 +904,7 @@ Only staker address.
 #### description <!-- omit from toc -->
 Set a commitment that expire in `expiration_epoch`, The commitment allows the staker to update his
 commission to any commission that is lower than `max_commission`.
+Note: `max_commission` should be between 0 and 10000. for example 1000 is 10%.
 #### emits <!-- omit from toc -->
 1. [Commission Commitment Set](#commission-commitment-set)
 #### errors <!-- omit from toc -->
