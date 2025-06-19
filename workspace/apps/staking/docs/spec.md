@@ -29,6 +29,7 @@
     - [get\_staker\_commission\_commitment](#get_staker_commission_commitment)
     - [staker\_info\_v1](#staker_info_v1)
     - [get\_staker\_info\_v1](#get_staker_info_v1)
+    - [staker\_pool\_info](#staker_pool_info)
     - [get\_current\_epoch](#get_current_epoch)
     - [get\_epoch\_info](#get_epoch_info)
     - [update\_rewards\_from\_attestation\_contract](#update_rewards_from_attestation_contract)
@@ -207,6 +208,8 @@
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
+    - [PoolInfo](#poolinfo)
+    - [StakerPoolInfoV2](#stakerpoolinfov2)
     - [StakingContractInfoV1](#stakingcontractinfov1)
     - [PoolMemberInfoV1](#poolmemberinfov1)
     - [PoolContractInfoV1](#poolcontractinfov1)
@@ -276,6 +279,7 @@ classDiagram
     set_commission_commitment()
     staker_info()
     get_staker_info()
+    staker_pool_info()
     contract_parameters_v1()
     get_total_stake()
     get_current_total_staking_power()
@@ -988,6 +992,24 @@ Returns Option<[StakerInfoV1](#stakerinfov1)> of the given staker without throwi
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. Returns `Option::Some` with [StakerInfoV1](#stakerinfov1) if exists, otherwise `Option::None`.
+
+### staker_pool_info
+```rust
+fn staker_pool_info(
+  self: @ContractState, 
+  staker_address: ContractAddress
+) -> StakerPoolInfoV2
+```
+#### description <!-- omit from toc -->
+Return [StakerPoolInfoV2](#stakerpoolinfov2) of the given staker.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Return [StakerPoolInfoV2](#stakerpoolinfov2).
 
 ### get_current_epoch
 ```rust
@@ -2465,6 +2487,19 @@ Only token admin.
 | amount_own            | [Amount](#amount)                         |
 | unclaimed_rewards_own | [Amount](#amount)                         |
 | pool_info             | Option<[StakerPoolInfoV1](#stakerpoolinfov1)> |
+
+### PoolInfo
+| name              | type                      |
+| ----------------- | ------------------------- |
+| pool_contract     | address                   |
+| token_address     | address                   |
+| amount            | [Amount](#amount)         |
+
+### StakerPoolInfoV2
+| name              | type                              |
+| ----------------- | --------------------------------- |
+| commission        | Option<[Commission](#commission)> |
+| pools             | Span<[PoolInfo](#poolinfo)>       |
 
 ### StakingContractInfoV1
 | name                     | type                    |

@@ -52,8 +52,8 @@ use staking::staking::interface::{
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
     IStakingSafeDispatcher, IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
     IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
-    IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
-    StakingContractInfoV1,
+    IStakingTokenManagerSafeDispatcherTrait, PoolInfo, StakerInfoV1, StakerInfoV1Trait,
+    StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1,
 };
 use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{
@@ -2484,6 +2484,36 @@ fn test_staker_info_staker_doesnt_exist() {
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher.staker_info_v1(staker_address: NON_STAKER_ADDRESS());
+}
+
+#[test]
+fn test_staker_pool_info() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let expected_pool_info = PoolInfo { pool_contract, token_address, amount: Zero::zero() };
+    let mut expected_staker_pool_info = StakerPoolInfoV2 {
+        commission: Option::Some(
+            cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
+        ),
+        pools: [expected_pool_info].span(),
+    };
+    let staker_pool_info = staking_dispatcher.staker_pool_info(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_staker_pool_info_staker_doesnt_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher.staker_pool_info(staker_address: NON_STAKER_ADDRESS());
 }
 
 #[test]
