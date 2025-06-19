@@ -1292,50 +1292,6 @@ pub mod Staking {
                 );
         }
 
-        /// TODO: Implement this function for the new version.
-        /// Reads the internal staker information for the given `staker_address` from storage
-        /// and converts it to V1. Writes the updated version to storage and initializes the
-        /// staker's balance trace.
-        ///
-        /// Precondition: The staker exists and its version is V0.
-        ///
-        /// This function is used only during migration.
-        // fn convert_internal_staker_info(
-        //     ref self: ContractState, staker_address: ContractAddress,
-        // ) -> (InternalStakerInfoLatest, Index, Amount) {
-        //     let versioned_internal_staker_info = self.staker_info.read(staker_address);
-        //     match versioned_internal_staker_info {
-        //         VersionedInternalStakerInfo::None => panic_with_byte_array(
-        //             err: @GenericError::STAKER_NOT_EXISTS.describe(),
-        //         ),
-        //         VersionedInternalStakerInfo::V0(internal_staker_info_v0) => {
-        //             let (
-        //                 internal_staker_info_v1,
-        //                 amount_own,
-        //                 index,
-        //                 pool_unclaimed_rewards,
-        //                 pool_amount,
-        //             ) =
-        //                 internal_staker_info_v0
-        //                 .convert(self.get_prev_class_hash(), staker_address);
-        //             self
-        //                 .staker_info
-        //                 .write(
-        //                     staker_address,
-        //                     VersionedInternalStakerInfo::V1(internal_staker_info_v1),
-        //                 );
-        //             self
-        //                 .initialize_staker_balance_trace(
-        //                     :staker_address, :amount_own, :pool_amount,
-        //                 );
-        //             (internal_staker_info_v1, index, pool_unclaimed_rewards)
-        //         },
-        //         VersionedInternalStakerInfo::V1(_) => panic_with_byte_array(
-        //             err: @Error::INTERNAL_STAKER_INFO_ALREADY_UPDATED.describe(),
-        //         ),
-        //     }
-        // }
-
         fn send_rewards(
             self: @ContractState,
             reward_address: ContractAddress,
@@ -1766,26 +1722,6 @@ pub mod Staking {
                 );
             curr_own_balance + curr_delegated_balance
         }
-
-        // TODO: Change or remove this function when implementing migration.
-        /// **Note**: This function should be called only once during migration.
-        // fn initialize_staker_balance_trace(
-        //     ref self: ContractState,
-        //     staker_address: ContractAddress,
-        //     amount_own: Amount,
-        //     pool_amount: Amount,
-        // ) -> StakerBalance {
-        //     let staker_info = self.internal_staker_info(:staker_address);
-        //     let mut staker_balance = StakerBalanceTrait::new(:amount_own);
-        //     if staker_info.pool_info.is_some() {
-        //         staker_balance.update_pool_amount(new_amount: pool_amount);
-        //     }
-        //     self
-        //         .staker_balance_trace
-        //         .entry(key: staker_address)
-        //         .insert(key: STARTING_EPOCH, value: staker_balance);
-        //     staker_balance
-        // }
 
         fn get_staker_own_balance_curr_epoch(
             self: @ContractState, staker_address: ContractAddress,
