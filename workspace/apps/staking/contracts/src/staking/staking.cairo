@@ -496,6 +496,9 @@ pub mod Staking {
         /// This function provides the staker info (with projected rewards).
         /// If the staker does not exist, it panics.
         /// This function assumes the staker trace is initialized.
+        ///
+        /// *Note*: V1 pool contracts use this function to get the commission. Breaking this
+        /// function will require upgrading the V1 pool contracts.
         fn staker_info_v1(self: @ContractState, staker_address: ContractAddress) -> StakerInfoV1 {
             let internal_staker_info = self.internal_staker_info(:staker_address);
             let mut staker_info: StakerInfoV1 = internal_staker_info.into();
