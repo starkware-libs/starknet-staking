@@ -293,7 +293,12 @@ fn delegator_switch_after_upgrade_regression_test() {
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_migration_regression_test() {
-    let mut flow = flows::StakerMigrationFlow { staker: Option::None, staker_info: Option::None };
+    let mut flow = flows::StakerMigrationFlow {
+        staker: Option::None,
+        staker_info: Option::None,
+        internal_staker_info: Option::None,
+        commission_commitment: Option::None,
+    };
     test_flow_mainnet(ref :flow);
 }
 
@@ -324,14 +329,6 @@ fn total_stake_after_upgrade_flow_test() {
         total_stake: Option::None,
         staker: Option::None,
     };
-    test_flow_mainnet(ref :flow);
-}
-
-#[test]
-#[fork("MAINNET_LATEST")]
-#[should_panic(expected: "Staker migration is not allowed, staker has a pool")]
-fn staker_migration_has_pool_flow_test() {
-    let mut flow = flows::StakerMigrationHasPoolFlow { staker_address: Option::None };
     test_flow_mainnet(ref :flow);
 }
 

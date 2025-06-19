@@ -25,11 +25,12 @@ use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
 use staking::staking::interface::{
-    IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingDispatcher,
-    IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
-    IStakingPauseDispatcher, IStakingPauseDispatcherTrait, IStakingPoolDispatcher,
-    IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
-    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+    CommissionCommitment, IStakingConfigDispatcher, IStakingConfigDispatcherTrait,
+    IStakingDispatcher, IStakingDispatcherTrait, IStakingMigrationDispatcher,
+    IStakingMigrationDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
+    IStakingPoolDispatcher, IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher,
+    IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
+    StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::interface_v0::{
     IStakingV0Dispatcher, IStakingV0DispatcherTrait, IStakingV0ForTestsDispatcher,
@@ -46,7 +47,7 @@ use staking::test_utils::{
     declare_staking_eic_contract_v0_v1, declare_staking_eic_contract_v1_v2,
 };
 use staking::types::{
-    Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
+    Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
 };
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait, get_block_number};
@@ -310,6 +311,14 @@ pub(crate) impl StakingImpl of StakingTrait {
         }
     }
 
+    fn get_token_address(self: StakingState) -> ContractAddress {
+        if self.is_v0() {
+            self.dispatcher_v0_for_tests().contract_parameters().token_address
+        } else {
+            self.dispatcher().contract_parameters_v1().token_address
+        }
+    }
+
     fn get_total_stake(self: StakingState) -> Amount {
         self.dispatcher().get_total_stake()
     }
@@ -344,6 +353,10 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn get_epoch_info(self: StakingState) -> EpochInfo {
         self.dispatcher().get_epoch_info()
+    }
+
+    fn get_current_epoch(self: StakingState) -> Epoch {
+        self.dispatcher().get_current_epoch()
     }
 
     fn set_epoch_info(self: StakingState, epoch_duration: u32, epoch_length: u32) {
@@ -1132,6 +1145,18 @@ pub(crate) impl SystemStakerImpl<
         }
     }
 
+    fn set_commission_commitment(
+        self: SystemState<TTokenState>,
+        staker: Staker,
+        max_commission: Commission,
+        expiration_epoch: Epoch,
+    ) {
+        cheat_caller_address_once(
+            contract_address: self.staking.address, caller_address: staker.staker.address,
+        );
+        self.staking.dispatcher().set_commission_commitment(:max_commission, :expiration_epoch)
+    }
+
     fn staker_info_v1(self: SystemState<TTokenState>, staker: Staker) -> StakerInfoV1 {
         self.staking.dispatcher().staker_info_v1(staker_address: staker.staker.address)
     }
@@ -1142,6 +1167,15 @@ pub(crate) impl SystemStakerImpl<
 
     fn get_staker_info(self: SystemState<TTokenState>, staker: Staker) -> Option<StakerInfoV1> {
         self.staking.dispatcher().get_staker_info_v1(staker_address: staker.staker.address)
+    }
+
+    fn get_staker_commission_commitment(
+        self: SystemState<TTokenState>, staker: Staker,
+    ) -> CommissionCommitment {
+        self
+            .staking
+            .dispatcher()
+            .get_staker_commission_commitment(staker_address: staker.staker.address)
     }
 
     fn internal_staker_info(
