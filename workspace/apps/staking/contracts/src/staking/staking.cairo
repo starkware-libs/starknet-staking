@@ -744,7 +744,6 @@ pub mod Staking {
 
         // TODO: Consider restricting this function to be called only once and by us? Or make the
         // implementation robust for multiple calls?
-        // TODO: Test this function.
         fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
             // Migrate staker pool info.
             let internal_staker_info = self.internal_staker_info(:staker_address);
