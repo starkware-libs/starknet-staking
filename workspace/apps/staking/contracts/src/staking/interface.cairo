@@ -3,7 +3,7 @@ use staking::staking::errors::Error;
 use staking::staking::objects::{
     AttestationInfo, EpochInfo, UndelegateIntentKey, UndelegateIntentValue,
 };
-use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
+use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::types::time::time::{TimeDelta, Timestamp};
@@ -391,19 +391,6 @@ pub mod ConfigEvents {
         pub epoch_duration: u32,
         pub epoch_length: u32,
     }
-}
-
-/// `StakingContractInfo` struct used in V0.
-/// **Note**: This struct should not be used in V1. It should only be used for testing.
-#[cfg(test)]
-#[derive(Copy, Debug, Drop, PartialEq, Serde)]
-pub struct StakingContractInfo {
-    pub min_stake: Amount,
-    pub token_address: ContractAddress,
-    pub global_index: Index,
-    pub pool_contract_class_hash: ClassHash,
-    pub reward_supplier: ContractAddress,
-    pub exit_wait_window: TimeDelta,
 }
 
 /// `StakingContractInfo` struct used in V1.
