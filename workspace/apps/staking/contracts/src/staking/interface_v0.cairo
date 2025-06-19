@@ -1,11 +1,9 @@
 use staking::staking::errors::Error;
-#[cfg(test)]
-use staking::staking::interface::StakingContractInfo;
 use staking::staking::interface::{StakerInfoV1, StakerPoolInfoV1};
 use staking::types::{Amount, Commission, Index};
-use starknet::ContractAddress;
+use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
-use starkware_utils::types::time::time::Timestamp;
+use starkware_utils::types::time::time::{TimeDelta, Timestamp};
 
 /// Staking V0 interface.
 /// Used for migration purposes.
@@ -90,4 +88,17 @@ pub struct StakerPoolInfo {
     pub amount: Amount,
     pub unclaimed_rewards: Amount,
     pub commission: Commission,
+}
+
+/// `StakingContractInfo` struct used in V0.
+/// **Note**: This struct should not be used in V1. It should only be used for testing.
+#[cfg(test)]
+#[derive(Copy, Debug, Drop, PartialEq, Serde)]
+pub struct StakingContractInfo {
+    pub min_stake: Amount,
+    pub token_address: ContractAddress,
+    pub global_index: Index,
+    pub pool_contract_class_hash: ClassHash,
+    pub reward_supplier: ContractAddress,
+    pub exit_wait_window: TimeDelta,
 }
