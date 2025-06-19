@@ -876,10 +876,12 @@ pub mod Pool {
             let staking_dispatcher = IStakingDispatcher {
                 contract_address: self.staking_pool_dispatcher.read().contract_address,
             };
+            // The staker must have commission since he has a pool (this contract). So unwrap is
+            // safe.
             staking_dispatcher
-                .staker_info_v1(staker_address: self.staker_address.read())
-                .get_pool_info()
+                .staker_pool_info(staker_address: self.staker_address.read())
                 .commission
+                .unwrap()
         }
 
         fn write_pool_member_info(
