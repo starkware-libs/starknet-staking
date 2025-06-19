@@ -2496,7 +2496,7 @@ fn test_staker_pool_info() {
     let staker_address = cfg.test_info.staker_address;
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
     let expected_pool_info = PoolInfo { pool_contract, token_address, amount: Zero::zero() };
-    let mut expected_staker_pool_info = StakerPoolInfoV2 {
+    let expected_staker_pool_info = StakerPoolInfoV2 {
         commission: Option::Some(
             cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
         ),
