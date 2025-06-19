@@ -323,6 +323,10 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.dispatcher().get_total_stake()
     }
 
+    fn get_current_total_staking_power(self: StakingState) -> Amount {
+        self.dispatcher().get_current_total_staking_power()
+    }
+
     fn get_exit_wait_window(self: StakingState) -> TimeDelta {
         if self.is_v0() {
             self.dispatcher_v0_for_tests().contract_parameters().exit_wait_window

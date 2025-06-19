@@ -320,14 +320,12 @@ fn set_open_for_delegation_after_upgrade_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
-#[ignore]
-// TODO: Test when migration for the new version is implemented.
 fn total_stake_after_upgrade_flow_test() {
     let mut flow = flows::TotalStakeAfterUpgradeFlow {
-        pool_address: Option::None,
-        pool_address2: Option::None,
         total_stake: Option::None,
+        current_total_stake: Option::None,
         staker: Option::None,
+        staker2: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
