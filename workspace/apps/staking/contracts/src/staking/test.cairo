@@ -2005,8 +2005,9 @@ fn test_set_commission_initialize_commission() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
     staking_dispatcher.set_commission(:commission);
-    // TODO: Assert commission before openning a pool - when view of commission is available.
-    // Assert commission after openning a pool.
+    let staker_pool_info = staking_dispatcher.staker_pool_info(:staker_address);
+    assert!(staker_pool_info.commission == Option::Some(commission));
+    // Assert commission in staker_info_v1 after openning a strk pool.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.set_open_for_delegation();
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
