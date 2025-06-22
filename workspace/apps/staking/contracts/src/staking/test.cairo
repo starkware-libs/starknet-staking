@@ -2809,7 +2809,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
         spied_event: events[0],
         :staker_address,
         staker_rewards: expected_staker_rewards,
-        pool_rewards: expected_pool_rewards,
+        pool_rewards: [(pool_contract, expected_pool_rewards)].span(),
     );
     assert_rewards_supplied_to_delegation_pool_event(
         spied_event: events[1],

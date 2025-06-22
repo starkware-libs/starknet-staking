@@ -1568,11 +1568,11 @@ Any address.
 | epoch_length   | u32  | ❌     |
 
 ### Staker Rewards Updated
-| data           | type              | keyed |
-| -------------- | ----------------- | ----- |
-| staker_address | address           | ✅     |
-| staker_rewards | [Amount](#amount) | ❌     |
-| pool_rewards   | [Amount](#amount) | ❌     |
+| data           | type                               | keyed  |
+| -------------- | ---------------------------------- | ------ |
+| staker_address | address                            | ✅     |
+| staker_rewards | [Amount](#amount)                  | ❌     |
+| pool_rewards   | Span<(address, [Amount](#amount))> | ❌     |
 
 ### Commission Commitment Set
 | data           | type                      | keyed |

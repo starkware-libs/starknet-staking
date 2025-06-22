@@ -290,7 +290,7 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         pub staker_rewards: Amount,
-        pub pool_rewards: Amount,
+        pub pool_rewards: Span<(ContractAddress, Amount)>,
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]

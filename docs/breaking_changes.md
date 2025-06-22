@@ -11,6 +11,7 @@
   - [Events](#events)
     - [CommissionChanged](#commissionchanged)
     - [DeleteStaker](#deletestaker)
+    - [StakerRewardsUpdated](#stakerrewardsupdated)
 </details>
 
 ## Staking Contract
@@ -143,3 +144,25 @@ pub struct DeleteStaker {
 Changes:
 1. Rename `pool_contract` to `pool_contracts`.
 2. Change type from `Option<ContractAddress>` to `Span<ContractAddress>` - staker may have more than one pool.
+
+#### StakerRewardsUpdated
+Before:
+```rust
+pub struct StakerRewardsUpdated {
+   #[key]
+   pub staker_address: ContractAddress,
+   pub staker_rewards: Amount,
+   pub pool_rewards: Amount,
+}
+```
+After:
+```rust
+pub struct StakerRewardsUpdated {
+   #[key]
+   pub staker_address: ContractAddress,
+   pub staker_rewards: Amount,
+   pub pool_rewards: Span<(ContractAddress, Amount)>,
+}
+```
+Changes:
+1. Change type of `pool_rewards` to `Span<(ContractAddress, Amount)>` - now holds tuples of (pool_contract, pool_rewards) for each pool that gets rewards.
