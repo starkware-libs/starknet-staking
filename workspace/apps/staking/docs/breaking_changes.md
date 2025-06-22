@@ -12,6 +12,7 @@
     - [CommissionChanged](#commissionchanged)
     - [DeleteStaker](#deletestaker)
     - [StakerRewardsUpdated](#stakerrewardsupdated)
+    - [StakerExitIntent](#stakerexitintent)
 </details>
 
 ## Staking Contract
@@ -167,3 +168,24 @@ pub struct StakerRewardsUpdated {
 ```
 Changes:
 1. Change type of `pool_rewards` to `Span<(ContractAddress, Amount)>` - now holds tuples of (pool_contract, pool_rewards) for each pool that gets rewards.
+
+#### StakerExitIntent
+Before:
+```rust
+pub struct StakerExitIntent {
+   #[key]
+   pub staker_address: ContractAddress,
+   pub exit_timestamp: Timestamp,
+   pub amount: Amount,
+}
+```
+After:
+```rust
+pub struct StakerExitIntent {
+   #[key]
+   pub staker_address: ContractAddress,
+   pub exit_timestamp: Timestamp,
+}
+```
+Changes:
+1. Remove `amount` field.

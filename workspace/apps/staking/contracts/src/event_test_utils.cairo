@@ -27,9 +27,8 @@ pub(crate) fn assert_staker_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     exit_timestamp: Timestamp,
-    amount: Amount,
 ) {
-    let expected_event = StakingEvents::StakerExitIntent { staker_address, exit_timestamp, amount };
+    let expected_event = StakingEvents::StakerExitIntent { staker_address, exit_timestamp };
     assert_expected_event_emitted(
         :spied_event,
         :expected_event,

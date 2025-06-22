@@ -252,7 +252,6 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         pub exit_timestamp: Timestamp,
-        pub amount: Amount,
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]

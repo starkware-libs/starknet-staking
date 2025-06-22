@@ -1434,7 +1434,6 @@ Any address.
 | -------------- | ----------------- | ----- |
 | staker_address | address           | ✅     |
 | exit_timestamp | time              | ❌     |
-| amount         | [Amount](#amount) | ❌     |
 
 ### Rewards Supplied To Delegation Pool
 | data           | type              | keyed |

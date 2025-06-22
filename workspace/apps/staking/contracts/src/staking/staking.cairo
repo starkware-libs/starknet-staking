@@ -397,12 +397,7 @@ pub mod Staking {
                 );
 
             // Emit events.
-            self
-                .emit(
-                    Events::StakerExitIntent {
-                        staker_address, exit_timestamp: unstake_time, amount: total_amount,
-                    },
-                );
+            self.emit(Events::StakerExitIntent { staker_address, exit_timestamp: unstake_time });
             self
                 .emit(
                     Events::StakeBalanceChanged {

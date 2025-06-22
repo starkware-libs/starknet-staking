@@ -660,10 +660,7 @@ fn test_unstake_intent() {
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_intent");
     assert_staker_exit_intent_event(
-        spied_event: events[0],
-        :staker_address,
-        exit_timestamp: expected_time,
-        amount: cfg.test_info.stake_amount,
+        spied_event: events[0], :staker_address, exit_timestamp: expected_time,
     );
     assert_stake_balance_changed_event(
         spied_event: events[1],
