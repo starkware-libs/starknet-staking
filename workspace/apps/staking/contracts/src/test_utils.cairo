@@ -553,7 +553,7 @@ pub(crate) fn stake_for_testing_using_dispatcher(
             cfg.staker_info.operational_address,
             cfg.test_info.stake_amount,
         );
-    if cfg.test_info.pool_enabled {
+    if cfg.test_info.strk_pool_enabled {
         cheat_caller_address(
             contract_address: staking_contract,
             caller_address: cfg.test_info.staker_address,
@@ -585,7 +585,7 @@ pub(crate) fn stake_from_zero_address(
 pub(crate) fn stake_with_pool_enabled(
     mut cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress,
 ) -> ContractAddress {
-    cfg.test_info.pool_enabled = true;
+    cfg.test_info.strk_pool_enabled = true;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_contract = staking_dispatcher
@@ -908,7 +908,7 @@ pub(crate) struct TestInfo {
     pub initial_supply: u256,
     pub staker_initial_balance: Amount,
     pub pool_member_initial_balance: Amount,
-    pub pool_enabled: bool,
+    pub strk_pool_enabled: bool,
     pub stake_amount: Amount,
     pub staking_contract: ContractAddress,
     pub pool_contract_admin: ContractAddress,
@@ -994,7 +994,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             initial_supply: INITIAL_SUPPLY.into(),
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
-            pool_enabled: false,
+            strk_pool_enabled: false,
             stake_amount: STAKE_AMOUNT,
             staking_contract: STAKING_CONTRACT_ADDRESS(),
             pool_contract_admin: POOL_CONTRACT_ADMIN(),
