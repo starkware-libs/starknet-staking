@@ -196,7 +196,6 @@
     - [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
     - [ATTEST\_IS\_DONE](#attest_is_done)
     - [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
-    - [STAKER\_MIGRATION\_NOT\_ALLOWED\_WITH\_POOL](#staker_migration_not_allowed_with_pool)
     - [STAKER\_INFO\_ALREADY\_UPDATED](#staker_info_already_updated)
     - [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
     - [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
@@ -2423,9 +2422,6 @@ Only token admin.
 
 ### ATTEST_OUT_OF_WINDOW
 "Attestation is out of window"
-
-### STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL
-"Staker migration is not allowed, staker has a pool"
 
 ### STAKER_INFO_ALREADY_UPDATED
 "Staker Info is already up-to-date"
