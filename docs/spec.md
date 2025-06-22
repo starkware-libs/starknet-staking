@@ -196,7 +196,7 @@
     - [ATTEST\_IS\_DONE](#attest_is_done)
     - [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
     - [STAKER\_MIGRATION\_NOT\_ALLOWED\_WITH\_POOL](#staker_migration_not_allowed_with_pool)
-    - [INTERNAL\_STAKER\_INFO\_ALREADY\_UPDATED](#internal_staker_info_already_updated)
+    - [STAKER\_INFO\_ALREADY\_UPDATED](#staker_info_already_updated)
     - [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
     - [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
     - [TOKEN\_NOT\_EXISTS](#token_not_exists)
@@ -1331,7 +1331,7 @@ Convert InternalStakerInfo from V0 to V1 version.
 #### errors <!-- omit from toc -->
 1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 2. [STAKER\_MIGRATION\_NOT\_ALLOWED\_WITH\_POOL](#staker_migration_not_allowed_with_pool)
-3. [INTERNAL\_STAKER\_INFO\_ALREADY\_UPDATED](#internal_staker_info_already_updated)
+3. [STAKER\_INFO\_ALREADY\_UPDATED](#staker_info_already_updated)
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.
 2. Staker does not have a pool.
@@ -2422,8 +2422,8 @@ Only token admin.
 ### STAKER_MIGRATION_NOT_ALLOWED_WITH_POOL
 "Staker migration is not allowed, staker has a pool"
 
-### INTERNAL_STAKER_INFO_ALREADY_UPDATED
-"Internal Staker Info is already up-to-date"
+### STAKER_INFO_ALREADY_UPDATED
+"Staker Info is already up-to-date"
 
 ### TOKEN_NOT_EXISTS
 "Token does not exist"
