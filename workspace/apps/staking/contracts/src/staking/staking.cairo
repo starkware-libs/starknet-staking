@@ -1144,9 +1144,21 @@ pub mod Staking {
                 );
             staker_info.unclaimed_rewards_own += staker_rewards;
             let pool_rewards = total_rewards - staker_rewards;
+            // TODO: change the pool_rewards_list once update rewards to all pools is implemented.
+            let strk_pool_contract = staker_pool_info
+                .get_strk_pool(strk_token_address: self.strk_token_address());
+            let pool_rewards_list = {
+                if strk_pool_contract.is_some() && pool_rewards > 0 {
+                    [(strk_pool_contract.unwrap(), pool_rewards)].span()
+                } else {
+                    [].span()
+                }
+            };
             self
                 .emit(
-                    Events::StakerRewardsUpdated { staker_address, staker_rewards, pool_rewards },
+                    Events::StakerRewardsUpdated {
+                        staker_address, staker_rewards, pool_rewards: pool_rewards_list,
+                    },
                 );
             self.update_pool_rewards(:staker_address, :staker_pool_info, :pool_rewards);
             self.write_staker_info(:staker_address, :staker_info);

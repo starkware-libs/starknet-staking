@@ -551,7 +551,7 @@ pub(crate) fn assert_staker_rewards_updated_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     staker_rewards: Amount,
-    pool_rewards: Amount,
+    pool_rewards: Span<(ContractAddress, Amount)>,
 ) {
     let expected_event = StakingEvents::StakerRewardsUpdated {
         staker_address, staker_rewards, pool_rewards,
