@@ -1077,7 +1077,7 @@ pub(crate) impl SystemStakerImpl<
                     :amount,
                 );
             if pool_enabled {
-                self.set_open_for_delegation(:staker, :commission);
+                self.set_open_for_strk_delegation(:staker, :commission);
             }
         }
     }
@@ -1114,7 +1114,7 @@ pub(crate) impl SystemStakerImpl<
         self.staking.safe_dispatcher().unstake_action(staker_address: staker.staker.address)
     }
 
-    fn set_open_for_delegation(
+    fn set_open_for_strk_delegation(
         self: SystemState<TTokenState>, staker: Staker, commission: Commission,
     ) -> ContractAddress {
         if self.staking.is_v0() || self.staking.is_v1() {
