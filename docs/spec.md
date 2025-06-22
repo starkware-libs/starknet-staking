@@ -578,7 +578,7 @@ fn increase_stake(
 ``` 
 #### description <!-- omit from toc -->
 Increase the amount staked for an existing staker.
-Return the updated total amount.
+Return the updated self stake amount.
 #### emits <!-- omit from toc -->
 [Stake Own Balance Changed](#stake-own-balance-changed)
 #### errors <!-- omit from toc -->
@@ -1323,26 +1323,24 @@ Only token admin.
 ```rust
 fn staker_migration(
         self: @TContractState,
-        versioned_internal_staker_info: VersionedInternalStakerInfo,
         staker_address: ContractAddress,
-    ) -> VersionedInternalStakerInfo
+    );
 ```
 #### description <!-- omit from toc -->
-Convert InternalStakerInfo from V0 to V1 version.
+Migrate staker pool info to the new storage variable staker_pool_info and migrate staker balance trace.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
-1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-2. [STAKER\_MIGRATION\_NOT\_ALLOWED\_WITH\_POOL](#staker_migration_not_allowed_with_pool)
-3. [STAKER\_INFO\_ALREADY\_UPDATED](#staker_info_already_updated)
+1. [STAKER\_INFO\_ALREADY\_UPDATED](#staker_info_already_updated)
+2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.
-2. Staker does not have a pool.
-3. Staker version is V0.
+2. Staker version is V1.
+3. Staker balance trace is initialized.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
-1. Convert versioned_internal_staker_info to newer version.
-2. Initialize the staker's balance trace.
+1. Migrate staker pool info.
+2. Migrate staker balance trace.
 
 ### add_token
 ```rust
