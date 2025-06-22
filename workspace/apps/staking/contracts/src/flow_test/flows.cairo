@@ -2324,6 +2324,42 @@ pub(crate) impl StakerMigrationFlowImpl<
 // TODO: Test staker_migration with 2 entries in the trace.
 // TODO: Test staker_migration with staker in intent.
 
+// Test staker_migration called twice.
+#[derive(Drop, Copy)]
+pub(crate) struct StakerMigrationCalledTwiceFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerMigrationCalledTwiceFlowImpl<
+    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
+> of FlowTrait<StakerMigrationCalledTwiceFlow, TTokenState> {
+    fn get_staker_address(self: StakerMigrationCalledTwiceFlow) -> Option<ContractAddress> {
+        Option::Some(self.staker?.staker.address)
+    }
+
+    fn setup_v1(ref self: StakerMigrationCalledTwiceFlow, ref system: SystemState<TTokenState>) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        /// Staker balance trace: epoch 1, stake_amount.
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(
+        self: StakerMigrationCalledTwiceFlow,
+        ref system: SystemState<TTokenState>,
+        system_type: SystemType,
+    ) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        // Should panic.
+        system.staker_migration(:staker_address);
+    }
+}
+
 /// Test claim_rewards with multiple delegators.
 #[derive(Drop, Copy)]
 pub(crate) struct ClaimRewardsMultipleDelegatorsFlow {}

@@ -746,9 +746,16 @@ pub mod Staking {
             }
         }
 
-        // TODO: Consider restricting this function to be called only once and by us? Or make the
-        // implementation robust for multiple calls?
+        /// Migrate staker pool info and balance trace.
+        ///
+        /// **Note**: This function should be called only once per staker during upgrade.
         fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
+            // Assert the staker is not migrated yet.
+            assert!(
+                self.staker_own_balance_trace.entry(staker_address).is_empty(),
+                "{}",
+                Error::STAKER_INFO_ALREADY_UPDATED,
+            );
             // Migrate staker pool info.
             let internal_staker_info = self.internal_staker_info(:staker_address);
             let staker_pool_info_mut = self.internal_staker_pool_info_mut(:staker_address);
