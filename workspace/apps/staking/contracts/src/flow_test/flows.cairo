@@ -200,7 +200,7 @@ pub(crate) impl SetOpenForDelegationFlowImpl<
         system.staker_claim_rewards(:staker);
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
 
-        let pool = system.set_open_for_delegation(:staker, :commission);
+        let pool = system.set_open_for_strk_delegation(:staker, :commission);
         system.advance_epoch_and_attest(:staker);
 
         let delegator = system.new_delegator(amount: initial_stake_amount);
@@ -3002,7 +3002,7 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl<
         let amount = 1000;
         let staker = self.staker.unwrap();
 
-        let pool = system.set_open_for_delegation(:staker, :commission);
+        let pool = system.set_open_for_strk_delegation(:staker, :commission);
 
         let delegator = system.new_delegator(amount: amount * 2);
         let total_stake_before = system.staking.get_total_stake();
