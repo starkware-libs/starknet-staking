@@ -212,12 +212,20 @@ pub mod Events {
     use starknet::ContractAddress;
     use starkware_utils::types::time::time::Timestamp;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
-    pub struct StakeBalanceChanged {
+    pub struct StakeOwnBalanceChanged {
         #[key]
         pub staker_address: ContractAddress,
         pub old_self_stake: Amount,
-        pub old_delegated_stake: Amount,
         pub new_self_stake: Amount,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct StakeDelegatedBalanceChanged {
+        #[key]
+        pub staker_address: ContractAddress,
+        #[key]
+        pub token_address: ContractAddress,
+        pub old_delegated_stake: Amount,
         pub new_delegated_stake: Amount,
     }
 

@@ -13,6 +13,7 @@
     - [DeleteStaker](#deletestaker)
     - [StakerRewardsUpdated](#stakerrewardsupdated)
     - [StakerExitIntent](#stakerexitintent)
+    - [StakeBalanceChanged](#stakebalancechanged)
 </details>
 
 ## Staking Contract
@@ -189,3 +190,39 @@ pub struct StakerExitIntent {
 ```
 Changes:
 1. Remove `amount` field.
+
+#### StakeBalanceChanged
+Before:
+```rust
+pub struct StakeBalanceChanged {
+   #[key]
+   pub staker_address: ContractAddress,
+   pub old_self_stake: Amount,
+   pub old_delegated_stake: Amount,
+   pub new_self_stake: Amount,
+   pub new_delegated_stake: Amount,
+}
+```
+After:
+```rust
+pub struct StakeOwnBalanceChanged {
+   #[key]
+   pub staker_address: ContractAddress,
+   pub old_self_stake: Amount,
+   pub new_self_stake: Amount,
+}
+```
+```rust
+pub struct StakeDelegatedBalanceChanged {
+   #[key]
+   pub staker_address: ContractAddress,
+   #[key]
+   pub token_address: ContractAddress,
+   pub old_delegated_stake: Amount,
+   pub new_delegated_stake: Amount,
+}
+```
+Changes:
+1. Split `StakeBalanceChanged` event to `StakeOwnBalanceChanged` (staker self stake) and `StakeDelegatedBalanceChanged` (staker delegated stake - per token).
+2. `StakeOwnBalanceChanged` holds `old_self_stake` and `new_self_stake` but not `old_delegated_stake` and `new_delegated_stake`.
+3. `StakeDelegatedBalanceChanged` holds `token_address`, and `old_delegated_stake` and `new_delegated_stake` for the specific token.
