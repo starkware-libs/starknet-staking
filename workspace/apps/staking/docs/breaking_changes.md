@@ -8,6 +8,7 @@
     - [update_commission](#update_commission)
     - [set_open_for_delegation](#set_open_for_delegation)
     - [get_pool_exit_intent](#get_pool_exit_intent)
+    - [increase_stake](#increase_stake)
   - [Events](#events)
     - [CommissionChanged](#commissionchanged)
     - [DeleteStaker](#deletestaker)
@@ -97,6 +98,18 @@ pub(crate) struct UndelegateIntentValue {
 ```
 Changes:
 1. Add `staker_address` to `UndelegateIntentValue`.
+
+#### increase_stake
+Before:
+```rust
+fn increase_stake(ref self: TContractState, staker_address: ContractAddress, amount: Amount) -> Amount;
+```
+After:
+```rust
+fn increase_stake(ref self: TContractState, staker_address: ContractAddress, amount: Amount) -> Amount;
+```
+Changes:
+1. Change return value - in the previous version, the return value was the new total stake amount (self + delegated) of the staker. Now, the return value is the new self stake amount.
 
 ### Events
 #### CommissionChanged

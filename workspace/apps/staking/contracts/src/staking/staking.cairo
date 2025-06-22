@@ -340,10 +340,6 @@ pub mod Staking {
                     },
                 );
             new_self_stake
-                + self
-                    .get_delegated_balance(
-                        :staker_address, token_address: self.strk_token_address(),
-                    )
         }
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> Amount {

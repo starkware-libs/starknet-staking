@@ -578,7 +578,7 @@ fn increase_stake(
 ``` 
 #### description <!-- omit from toc -->
 Increase the amount staked for an existing staker.
-Return the updated total amount.
+Return the updated self stake amount.
 #### emits <!-- omit from toc -->
 [Stake Own Balance Changed](#stake-own-balance-changed)
 #### errors <!-- omit from toc -->
