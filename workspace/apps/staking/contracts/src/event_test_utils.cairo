@@ -55,22 +55,38 @@ pub(crate) fn assert_new_staker_event(
     );
 }
 
-pub(crate) fn assert_stake_balance_changed_event(
+pub(crate) fn assert_stake_own_balance_changed_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     old_self_stake: Amount,
-    old_delegated_stake: Amount,
     new_self_stake: Amount,
-    new_delegated_stake: Amount,
 ) {
-    let expected_event = StakingEvents::StakeBalanceChanged {
-        staker_address, old_self_stake, old_delegated_stake, new_self_stake, new_delegated_stake,
+    let expected_event = StakingEvents::StakeOwnBalanceChanged {
+        staker_address, old_self_stake, new_self_stake,
     };
     assert_expected_event_emitted(
         :spied_event,
         :expected_event,
-        expected_event_selector: @selector!("StakeBalanceChanged"),
-        expected_event_name: "StakeBalanceChanged",
+        expected_event_selector: @selector!("StakeOwnBalanceChanged"),
+        expected_event_name: "StakeOwnBalanceChanged",
+    );
+}
+
+pub(crate) fn assert_stake_delegated_balance_changed_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    token_address: ContractAddress,
+    old_delegated_stake: Amount,
+    new_delegated_stake: Amount,
+) {
+    let expected_event = StakingEvents::StakeDelegatedBalanceChanged {
+        staker_address, token_address, old_delegated_stake, new_delegated_stake,
+    };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("StakeDelegatedBalanceChanged"),
+        expected_event_name: "StakeDelegatedBalanceChanged",
     );
 }
 

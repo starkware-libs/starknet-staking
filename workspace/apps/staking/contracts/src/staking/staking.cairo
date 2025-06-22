@@ -157,7 +157,8 @@ pub mod Staking {
         AccessControlEvent: AccessControlComponent::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
-        StakeBalanceChanged: Events::StakeBalanceChanged,
+        StakeOwnBalanceChanged: Events::StakeOwnBalanceChanged,
+        StakeDelegatedBalanceChanged: Events::StakeDelegatedBalanceChanged,
         NewDelegationPool: Events::NewDelegationPool,
         StakerExitIntent: Events::StakerExitIntent,
         StakerRewardAddressChanged: Events::StakerRewardAddressChanged,
@@ -296,12 +297,8 @@ pub mod Staking {
                 );
             self
                 .emit(
-                    Events::StakeBalanceChanged {
-                        staker_address,
-                        old_self_stake: Zero::zero(),
-                        old_delegated_stake: Zero::zero(),
-                        new_self_stake: amount,
-                        new_delegated_stake: Zero::zero(),
+                    Events::StakeOwnBalanceChanged {
+                        staker_address, old_self_stake: Zero::zero(), new_self_stake: amount,
                     },
                 );
         }
@@ -336,20 +333,17 @@ pub mod Staking {
                 .increase_staker_own_amount(:staker_address, :amount);
 
             // Emit events.
-            let old_delegated_stake = self
-                .get_delegated_balance(:staker_address, token_address: self.strk_token_address());
-            let new_delegated_stake = old_delegated_stake;
             self
                 .emit(
-                    Events::StakeBalanceChanged {
-                        staker_address,
-                        old_self_stake,
-                        old_delegated_stake,
-                        new_self_stake,
-                        new_delegated_stake,
+                    Events::StakeOwnBalanceChanged {
+                        staker_address, old_self_stake, new_self_stake,
                     },
                 );
-            new_self_stake + new_delegated_stake
+            new_self_stake
+                + self
+                    .get_delegated_balance(
+                        :staker_address, token_address: self.strk_token_address(),
+                    )
         }
 
         fn claim_rewards(ref self: ContractState, staker_address: ContractAddress) -> Amount {
@@ -398,14 +392,20 @@ pub mod Staking {
 
             // Emit events.
             self.emit(Events::StakerExitIntent { staker_address, exit_timestamp: unstake_time });
+            // TODO: Emit this event only for existing pools.
             self
                 .emit(
-                    Events::StakeBalanceChanged {
+                    Events::StakeDelegatedBalanceChanged {
                         staker_address,
-                        old_self_stake,
+                        token_address: self.strk_token_address(),
                         old_delegated_stake,
-                        new_self_stake: Zero::zero(),
                         new_delegated_stake: Zero::zero(),
+                    },
+                );
+            self
+                .emit(
+                    Events::StakeOwnBalanceChanged {
+                        staker_address, old_self_stake, new_self_stake: Zero::zero(),
                     },
                 );
             unstake_time
@@ -811,15 +811,10 @@ pub mod Staking {
             self.add_to_total_stake(:token_address, :amount);
 
             // Emit event.
-            let self_stake = self.get_own_balance(:staker_address);
             self
                 .emit(
-                    Events::StakeBalanceChanged {
-                        staker_address,
-                        old_self_stake: self_stake,
-                        old_delegated_stake,
-                        new_self_stake: self_stake,
-                        new_delegated_stake,
+                    Events::StakeDelegatedBalanceChanged {
+                        staker_address, token_address, old_delegated_stake, new_delegated_stake,
                     },
                 );
         }
@@ -871,15 +866,10 @@ pub mod Staking {
             // an event indicating the staked amount (own and delegated) to be zero
             // had already been emitted, thus unneeded now.
             if staker_info.unstake_time.is_none() {
-                let staker_amount_own = self.get_own_balance(:staker_address);
                 self
                     .emit(
-                        Events::StakeBalanceChanged {
-                            staker_address,
-                            old_self_stake: staker_amount_own,
-                            old_delegated_stake,
-                            new_self_stake: staker_amount_own,
-                            new_delegated_stake,
+                        Events::StakeDelegatedBalanceChanged {
+                            staker_address, token_address, old_delegated_stake, new_delegated_stake,
                         },
                     );
             }
@@ -992,14 +982,12 @@ pub mod Staking {
                 .enter_delegation_pool_from_staking_contract(amount: switched_amount, :data);
 
             // Emit event.
-            let to_staker_self_stake = self.get_own_balance(staker_address: to_staker);
             self
                 .emit(
-                    Events::StakeBalanceChanged {
+                    Events::StakeDelegatedBalanceChanged {
                         staker_address: to_staker,
-                        old_self_stake: to_staker_self_stake,
+                        token_address,
                         old_delegated_stake,
-                        new_self_stake: to_staker_self_stake,
                         new_delegated_stake,
                     },
                 );

@@ -16,9 +16,10 @@ use event_test_utils::{
     assert_minimum_stake_changed_event, assert_new_delegation_pool_event, assert_new_staker_event,
     assert_number_of_events, assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
-    assert_rewards_supplied_to_delegation_pool_event, assert_stake_balance_changed_event,
-    assert_staker_exit_intent_event, assert_staker_reward_address_change_event,
-    assert_staker_reward_claimed_event, assert_staker_rewards_updated_event,
+    assert_rewards_supplied_to_delegation_pool_event, assert_stake_delegated_balance_changed_event,
+    assert_stake_own_balance_changed_event, assert_staker_exit_intent_event,
+    assert_staker_reward_address_change_event, assert_staker_reward_claimed_event,
+    assert_staker_rewards_updated_event,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
@@ -182,13 +183,11 @@ fn test_stake() {
         operational_address: cfg.staker_info.operational_address,
         self_stake: cfg.test_info.stake_amount,
     );
-    assert_stake_balance_changed_event(
+    assert_stake_own_balance_changed_event(
         spied_event: events[1],
         :staker_address,
         old_self_stake: Zero::zero(),
-        old_delegated_stake: Zero::zero(),
         new_self_stake: cfg.test_info.stake_amount,
-        new_delegated_stake: Zero::zero(),
     );
 }
 
@@ -372,17 +371,11 @@ fn test_increase_stake_from_staker_address() {
     // Validate the single StakeBalanceChanged event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
-    let mut new_delegated_stake = Zero::zero();
-    if let Option::Some(pool_info) = expected_staker_info.pool_info {
-        new_delegated_stake = pool_info.amount;
-    }
-    assert_stake_balance_changed_event(
+    assert_stake_own_balance_changed_event(
         spied_event: events[0],
         :staker_address,
         old_self_stake: staker_info_before.amount_own,
-        old_delegated_stake: 0,
         new_self_stake: updated_staker_info.amount_own,
-        :new_delegated_stake,
     );
 }
 
@@ -424,13 +417,11 @@ fn test_increase_stake_from_reward_address() {
     // Validate the single StakeBalanceChanged event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "increase_stake");
-    assert_stake_balance_changed_event(
+    assert_stake_own_balance_changed_event(
         spied_event: events[0],
         :staker_address,
         old_self_stake: staker_info_before.amount_own,
-        old_delegated_stake: Zero::zero(),
         new_self_stake: expected_staker_info.amount_own,
-        new_delegated_stake: Zero::zero(),
     );
 }
 
@@ -658,17 +649,22 @@ fn test_unstake_intent() {
     assert!(staking_dispatcher.get_total_stake() == Zero::zero());
     // Validate StakerExitIntent and StakeBalanceChanged events.
     let events = spy.get_events().emitted_by(staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_intent");
+    assert_number_of_events(actual: events.len(), expected: 3, message: "unstake_intent");
     assert_staker_exit_intent_event(
         spied_event: events[0], :staker_address, exit_timestamp: expected_time,
     );
-    assert_stake_balance_changed_event(
+    assert_stake_delegated_balance_changed_event(
         spied_event: events[1],
         :staker_address,
-        old_self_stake: cfg.test_info.stake_amount,
+        :token_address,
         old_delegated_stake: 0,
-        new_self_stake: 0,
         new_delegated_stake: 0,
+    );
+    assert_stake_own_balance_changed_event(
+        spied_event: events[2],
+        :staker_address,
+        old_self_stake: cfg.test_info.stake_amount,
+        new_self_stake: 0,
     );
 }
 
@@ -872,12 +868,11 @@ fn test_add_stake_from_pool() {
     // Validate `StakeBalanceChanged` event.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "add_stake_from_pool");
-    assert_stake_balance_changed_event(
+    assert_stake_delegated_balance_changed_event(
         spied_event: events[0],
         staker_address: cfg.test_info.staker_address,
-        old_self_stake: cfg.test_info.stake_amount,
+        :token_address,
         old_delegated_stake: Zero::zero(),
-        new_self_stake: cfg.test_info.stake_amount,
         new_delegated_stake: pool_amount,
     );
 }
@@ -1018,12 +1013,11 @@ fn test_remove_from_delegation_pool_intent() {
         old_intent_amount: Zero::zero(),
         new_intent_amount: intent_amount,
     );
-    assert_stake_balance_changed_event(
+    assert_stake_delegated_balance_changed_event(
         spied_event: events[1],
         staker_address: cfg.test_info.staker_address,
-        old_self_stake: cfg.test_info.stake_amount,
+        :token_address,
         old_delegated_stake: initial_delegated_stake,
-        new_self_stake: cfg.test_info.stake_amount,
         new_delegated_stake: cur_delegated_stake,
     );
 
@@ -1086,12 +1080,11 @@ fn test_remove_from_delegation_pool_intent() {
         :old_intent_amount,
         :new_intent_amount,
     );
-    assert_stake_balance_changed_event(
+    assert_stake_delegated_balance_changed_event(
         spied_event: events[3],
         staker_address: cfg.test_info.staker_address,
-        old_self_stake: cfg.test_info.stake_amount,
+        :token_address,
         old_delegated_stake: prev_delegated_stake,
-        new_self_stake: cfg.test_info.stake_amount,
         new_delegated_stake: cur_delegated_stake,
     );
 }
@@ -1381,13 +1374,11 @@ fn test_switch_staking_delegation_pool() {
     assert_number_of_events(
         actual: events.len(), expected: 4, message: "switch_staking_delegation_pool",
     );
-    let self_stake = to_staker_info.amount_own;
-    assert_stake_balance_changed_event(
+    assert_stake_delegated_balance_changed_event(
         spied_event: events[0],
         staker_address: to_staker,
-        old_self_stake: self_stake,
+        :token_address,
         old_delegated_stake: Zero::zero(),
-        new_self_stake: self_stake,
         new_delegated_stake: switched_amount,
     );
     assert_change_delegation_pool_intent_event(
@@ -1397,12 +1388,11 @@ fn test_switch_staking_delegation_pool() {
         old_intent_amount: cfg.pool_member_info._deprecated_amount,
         new_intent_amount: cfg.pool_member_info._deprecated_amount - switched_amount,
     );
-    assert_stake_balance_changed_event(
+    assert_stake_delegated_balance_changed_event(
         spied_event: events[2],
         staker_address: to_staker,
-        old_self_stake: self_stake,
+        :token_address,
         old_delegated_stake: switched_amount,
-        new_self_stake: self_stake,
         new_delegated_stake: switched_amount * 2,
     );
     assert_change_delegation_pool_intent_event(

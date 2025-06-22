@@ -54,7 +54,8 @@
     - [disable\_token](#disable_token)
     - [get\_active\_tokens](#get_active_tokens)
   - [Events](#events)
-    - [Stake Balance Changed](#stake-balance-changed)
+    - [Stake Own Balance Changed](#stake-own-balance-changed)
+    - [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
     - [New Delegation Pool](#new-delegation-pool)
     - [New Staker](#new-staker)
     - [Staker Exit intent](#staker-exit-intent)
@@ -545,7 +546,7 @@ fn stake(
 Add a new staker to the stake.
 #### emits <!-- omit from toc -->
 1. [New Staker](#new-staker)
-2. [Stake Balance Changed](#stake-balance-changed)
+2. [Stake Own Balance Changed](#stake-own-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_EXISTS](#staker_exists)
@@ -579,7 +580,7 @@ fn increase_stake(
 Increase the amount staked for an existing staker.
 Return the updated total amount.
 #### emits <!-- omit from toc -->
-[Stake Balance Changed](#stake-balance-changed)
+[Stake Own Balance Changed](#stake-own-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -607,7 +608,8 @@ This will also block the staker's ability to re-stake from the same address in t
 Return the time in which the staker will be able to unstake.
 #### emits <!-- omit from toc -->
 1. [Staker Exit Intent](#staker-exit-intent)
-2. [Stake Balance Changed](#stake-balance-changed)
+2. [Stake Own Balance Changed](#stake-own-balance-changed)
+3. [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -695,7 +697,7 @@ fn add_stake_from_pool(
 Delegation pool contract's way to add funds to the staking pool.
 #### return <!-- omit from toc -->
 #### emits <!-- omit from toc -->
-1. [Stake Balance Changed](#stake-balance-changed)
+1. [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -727,7 +729,7 @@ Inform the staker that an amount will be reduced from the delegation pool.
 Return the time in which the pool member will be able to exit.
 #### emits <!-- omit from toc -->
 1. [Remove From Delegation Pool Intent](#remove-from-delegation-pool-intent)
-2. [Stake Balance Changed](#stake-balance-changed)
+2. [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
@@ -786,7 +788,7 @@ fn switch_staking_delegation_pool(
 #### description <!-- omit from toc -->
 Execute a pool member request to move from one staker's delegation pool to another staker's delegation pool.
 #### emits <!-- omit from toc -->
-1. [Stake Balance Changed](#stake-balance-changed)
+1. [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
 2. [Change Delegation Pool Intent](#change-delegation-pool-intent)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
@@ -1405,13 +1407,19 @@ Any address.
 #### logic <!-- omit from toc -->
 
 ## Events
-### Stake Balance Changed
+### Stake Own Balance Changed
 | data                | type              | keyed |
 | ------------------- | ----------------- | ----- |
 | staker_address      | address           | ✅     |
 | old_self_stake      | [Amount](#amount) | ❌     |
-| old_delegated_stake | [Amount](#amount) | ❌     |
 | new_self_stake      | [Amount](#amount) | ❌     |
+
+### Stake Delegated Balance Changed
+| data                | type              | keyed |
+| ------------------- | ----------------- | ----- |
+| staker_address      | address           | ✅     |
+| token_address       | address           | ✅     |
+| old_delegated_stake | [Amount](#amount) | ❌     |
 | new_delegated_stake | [Amount](#amount) | ❌     |
 
 ### New Delegation Pool
@@ -1570,7 +1578,7 @@ fn enter_delegation_pool(
 #### description <!-- omit from toc -->
 Add a new pool member to the delegation pool.
 #### emits <!-- omit from toc -->
-1. [Stake Balance Changed](#stake-balance-changed)
+1. [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
 2. [New Pool Member](#new-pool-member)
 3. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
@@ -1607,7 +1615,7 @@ fn add_to_delegation_pool(
 Increase the funds for an existing pool member.
 Return the updated total amount.
 #### emits <!-- omit from toc -->
-1. [Stake Balance Changed](#stake-balance-changed)
+1. [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
 2. [Delegation Pool Member Balance Changed](#delegation-pool-member-balance-changed)
 #### errors <!-- omit from toc -->
 1. [STAKER\_INACTIVE](#staker_inactive)
@@ -1639,7 +1647,7 @@ fn exit_delegation_pool_intent(
 Inform of the intent to exit the stake. This will deduct the specified amount of funds from the stake. Rewards collection for the specified amount will be paused. This will also start the exit window timeout.
 #### emits <!-- omit from toc -->
 1. If staker is active: [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
-2. If staker is active: [Stake Balance Changed](#stake-balance-changed)
+2. If staker is active: [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
 3. [Pool Member Exit Intent](#pool-member-exit-intent)
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
