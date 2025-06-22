@@ -60,11 +60,12 @@ Before:
    ```
 After:
    ```rust
-   fn set_open_for_delegation(ref self: TContractState) -> ContractAddress;
+   fn set_open_for_delegation(ref self: TContractState, token_address: ContractAddress) -> ContractAddress;
    ```
 Changes:
 1. Remove `commission` parameter - must initialize commission with `set_commission` before open a pool.
 Note: If staker already has a commission from the prev version (of the STRK pool), he shouldnt reinitialize it. The same commission applies to all pools per staker.
+2. Add `token_address` parameter - open a pool for a specific supported token.
 
 #### get_pool_exit_intent
 Before:
