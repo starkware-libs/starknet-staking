@@ -462,25 +462,24 @@ pub mod Staking {
                 );
         }
 
-        fn set_open_for_delegation(ref self: ContractState) -> ContractAddress {
+        fn set_open_for_delegation(
+            ref self: ContractState, token_address: ContractAddress,
+        ) -> ContractAddress {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let staker_info = self.internal_staker_info(:staker_address);
             let staker_pool_info_mut = self.internal_staker_pool_info_mut(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+            assert!(self.does_token_exist(:token_address), "{}", Error::TOKEN_NOT_EXISTS);
             assert!(
-                staker_pool_info_mut
-                    .get_strk_pool(strk_token_address: self.strk_token_address())
-                    .is_none(),
+                !staker_pool_info_mut.has_pool_for_token(:token_address),
                 "{}",
                 Error::STAKER_ALREADY_HAS_POOL,
             );
             let commission = staker_pool_info_mut.commission();
 
             // Deploy delegation pool contract.
-            // TODO: delete this once we get token_address in the function arguments.
-            let token_address = self.token_dispatcher.read().contract_address;
             let pool_contract = self
                 .deploy_delegation_pool_from_staking_contract(
                     :staker_address,
@@ -490,6 +489,11 @@ pub mod Staking {
                 );
             // Update pool to storage.
             staker_pool_info_mut.write_new_pool(:pool_contract, :token_address);
+            // Initialize the delegated balance trace.
+            // STRK delegated balance trace already initialized in stake.
+            if token_address != self.strk_token_address() {
+                self.initialize_staker_delegated_balance_trace(:staker_address, :token_address);
+            }
             pool_contract
         }
 
@@ -1687,6 +1691,22 @@ pub mod Staking {
                 .insert(key: self.get_next_epoch(), value: delegated_balance);
         }
 
+        /// Initializes the delegated balance trace for the given `token_address`.
+        ///
+        /// The trace is initialized with the current epoch since the staker might attest
+        /// in the same epoch after the pool created.
+        fn initialize_staker_delegated_balance_trace(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            token_address: ContractAddress,
+        ) {
+            self
+                .staker_delegated_balance_trace
+                .entry(staker_address)
+                .entry(token_address)
+                .insert(key: self.get_current_epoch(), value: Zero::zero());
+        }
+
         /// Return the latest own balance recorded in the `staker_own_balance_trace`.
         fn get_own_balance(self: @ContractState, staker_address: ContractAddress) -> Amount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
@@ -1805,6 +1825,11 @@ pub mod Staking {
                 "{}",
                 Error::STAKER_ADDRESS_ALREADY_USED,
             );
+        }
+
+        fn does_token_exist(self: @ContractState, token_address: ContractAddress) -> bool {
+            token_address == self.strk_token_address()
+                || self.btc_tokens.read(token_address).is_some()
         }
 
         // TODO: Refactor tests to use the actual STRK token address and use const

@@ -938,7 +938,7 @@ fn test_add_stake_from_pool_assertions() {
     );
     let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
     staking_dispatcher.set_commission(:commission);
-    staking_dispatcher.set_open_for_delegation();
+    staking_dispatcher.set_open_for_delegation(:token_address);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
     assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
 }
@@ -1133,7 +1133,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
         span: CheatSpan::TargetCalls(2),
     );
     staking_dispatcher.set_commission(:commission);
-    let pool_contract = staking_dispatcher.set_open_for_delegation();
+    let pool_contract = staking_dispatcher.set_open_for_delegation(:token_address);
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
     assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
@@ -2009,7 +2009,7 @@ fn test_set_commission_initialize_commission() {
     assert!(staker_pool_info.commission == Option::Some(commission));
     // Assert commission in staker_info_v1 after openning a strk pool.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.set_open_for_delegation();
+    staking_dispatcher.set_open_for_delegation(:token_address);
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info.get_pool_info().commission == commission);
     // TODO: Test event.
@@ -2149,7 +2149,7 @@ fn test_set_commission_commitment_assertions() {
         span: CheatSpan::TargetCalls(2),
     );
     staking_dispatcher.set_commission(:commission);
-    staking_dispatcher.set_open_for_delegation();
+    staking_dispatcher.set_open_for_delegation(:token_address);
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let max_commission = staker_info.get_pool_info().commission - 1;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -2219,7 +2219,7 @@ fn test_set_open_for_delegation() {
         span: CheatSpan::TargetCalls(2),
     );
     staking_dispatcher.set_commission(:commission);
-    let pool_contract = staking_dispatcher.set_open_for_delegation();
+    let pool_contract = staking_dispatcher.set_open_for_delegation(:token_address);
     let pool_info = staking_dispatcher.staker_info_v1(:staker_address).get_pool_info();
     let mut expected_pool_info = StakerPoolInfoV1 {
         pool_contract, amount: Zero::zero(), commission,
@@ -2231,6 +2231,98 @@ fn test_set_open_for_delegation() {
     assert_new_delegation_pool_event(
         spied_event: events[0], :staker_address, pool_contract: pool_contract, :commission,
     );
+}
+
+#[test]
+fn test_set_open_for_delegation_with_btc_token() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
+    );
+    let btc_token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
+    let mut spy = snforge_std::spy_events();
+    // Open pool for the btc token.
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_dispatcher.set_commission(:commission);
+    let pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+    // Test.
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info.pool_info.is_none());
+    let staker_pool_info = staking_dispatcher.staker_pool_info(:staker_address);
+    assert!(staker_pool_info.pools.len() == 1);
+    let expected_pool_info = PoolInfo {
+        pool_contract, token_address: btc_token_address, amount: Zero::zero(),
+    };
+    assert!(*staker_pool_info.pools[0] == expected_pool_info);
+    // Test event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_open_for_delegation");
+    assert_new_delegation_pool_event(
+        spied_event: events[0], :staker_address, :pool_contract, :commission,
+    );
+}
+
+#[test]
+fn test_set_open_for_delegation_with_disabled_btc_token() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
+    );
+    let btc_token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
+    let disabled_btc_token_address = BTC_TOKEN_ADDRESS();
+    // Only add the token but not enable it.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    let staking_token_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    staking_token_dispatcher.add_token(token_address: disabled_btc_token_address);
+    // Open pool for the token.
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_dispatcher.set_commission(:commission);
+    let pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: disabled_btc_token_address);
+    // Test.
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info.pool_info.is_none());
+    let staker_pool_info = staking_dispatcher.staker_pool_info(:staker_address);
+    assert!(staker_pool_info.pools.len() == 1);
+    let expected_pool_info = PoolInfo {
+        pool_contract, token_address: disabled_btc_token_address, amount: Zero::zero(),
+    };
+    assert!(*staker_pool_info.pools[0] == expected_pool_info);
 }
 
 #[test]
@@ -2253,7 +2345,7 @@ fn test_set_open_for_delegation_commission_not_set() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
-    staking_dispatcher.set_open_for_delegation();
+    staking_dispatcher.set_open_for_delegation(:token_address);
 }
 
 #[test]
@@ -2277,7 +2369,7 @@ fn test_set_open_for_delegation_unstake_in_progress() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.set_open_for_delegation();
+    staking_dispatcher.set_open_for_delegation(:token_address);
 }
 
 #[test]
@@ -2298,12 +2390,12 @@ fn test_set_open_for_delegation_staker_not_exist() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
-    staking_dispatcher.set_open_for_delegation();
+    staking_dispatcher.set_open_for_delegation(:token_address);
 }
 
 #[test]
 #[should_panic(expected: "Staker already has a pool")]
-fn test_set_open_for_delegation_staker_has_pool() {
+fn test_set_open_for_delegation_strk_token_staker_has_pool() {
     let cfg: StakingInitConfig = Default::default();
     let token_address = deploy_mock_erc20_contract(
         initial_supply: cfg.test_info.initial_supply,
@@ -2321,7 +2413,57 @@ fn test_set_open_for_delegation_staker_has_pool() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
-    staking_dispatcher.set_open_for_delegation();
+    staking_dispatcher.set_open_for_delegation(:token_address);
+}
+
+#[test]
+#[should_panic(expected: "Staker already has a pool")]
+fn test_set_open_for_delegation_btc_token_staker_has_pool() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
+    );
+    let btc_token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
+    );
+    staking_dispatcher.set_open_for_delegation(token_address: btc_token_address);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
+    );
+    staking_dispatcher.set_open_for_delegation(token_address: btc_token_address);
+}
+
+#[test]
+#[should_panic(expected: "Token does not exist")]
+fn test_set_open_for_delegation_token_does_not_exist() {
+    let cfg: StakingInitConfig = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: STRK_TOKEN_NAME(),
+    );
+    let btc_token_address = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+    );
+    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
+    );
+    staking_dispatcher.set_open_for_delegation(token_address: DUMMY_ADDRESS());
 }
 
 #[test]

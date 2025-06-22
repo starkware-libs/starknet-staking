@@ -563,7 +563,7 @@ pub(crate) fn stake_for_testing_using_dispatcher(
             .set_commission(
                 commission: cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
             );
-        staking_dispatcher.set_open_for_delegation();
+        staking_dispatcher.set_open_for_delegation(:token_address);
     }
 }
 

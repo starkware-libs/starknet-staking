@@ -1124,10 +1124,11 @@ pub(crate) impl SystemStakerImpl<
             self.staking.dispatcher_v0_for_tests().set_open_for_delegation(:commission)
         } else {
             self.set_commission(:staker, :commission);
+            let token_address = self.staking.dispatcher().contract_parameters_v1().token_address;
             cheat_caller_address_once(
                 contract_address: self.staking.address, caller_address: staker.staker.address,
             );
-            self.staking.dispatcher().set_open_for_delegation()
+            self.staking.dispatcher().set_open_for_delegation(:token_address)
         }
     }
 

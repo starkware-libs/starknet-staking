@@ -841,11 +841,12 @@ Only staker address.
 ### set_open_for_delegation
 ```rust
 fn set_open_for_delegation(
-  ref self: ContractState
+  ref self: ContractState, 
+  token_address: ContractAddress,
 ) -> ContractAddress
 ```
 #### description <!-- omit from toc -->
-Creates a staking delegation pool for a staker that doesn't have one.
+Creates a staking delegation pool of the given token address for a staker that doesn't have one.
 Return the pool address.
 #### emits <!-- omit from toc -->
 1. [New Delegation Pool](#new-delegation-pool)
@@ -855,12 +856,14 @@ Return the pool address.
 3. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 4. [COMMISSION\_NOT\_SET](#commission_not_set)
 5. [STAKER\_ALREADY\_HAS\_POOL](#staker_already_has_pool)
+6. [TOKEN\_NOT\_EXISTS](#token_not_exists)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) exist in the contract.
 3. Staker is not in an exit window.
 4. Commission is set for the staker.
-5. Staker has no pool.
+5. Staker has no pool for the given token address.
+6. Token address exists.
 #### access control <!-- omit from toc -->
 Only staker address.
 #### logic <!-- omit from toc -->

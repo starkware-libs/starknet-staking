@@ -514,17 +514,15 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
         self.pools.len() > 0
     }
 
-    // TODO: as_non_mut.
-    // TODO: Remove strk_token_address param once use strk token in tests.
-    fn get_strk_pool(
-        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, strk_token_address: ContractAddress,
-    ) -> Option<ContractAddress> {
-        for (pool_contract, token_address) in self.pools {
-            if token_address == strk_token_address {
-                return Option::Some(pool_contract);
+    fn has_pool_for_token(
+        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, token_address: ContractAddress,
+    ) -> bool {
+        for (_, pool_token_address) in self.pools {
+            if pool_token_address == token_address {
+                return true;
             }
         }
-        Option::None
+        false
     }
 
     fn write_new_pool(
