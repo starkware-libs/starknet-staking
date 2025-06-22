@@ -833,14 +833,12 @@ pub mod Staking {
                 .get_pool_token(:pool_contract)
                 .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
 
-            let old_delegated_stake = self.get_delegated_balance(:staker_address, :token_address);
-
             // Update the delegated stake according to the new intent.
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let old_intent_amount = self.get_pool_exit_intent(:undelegate_intent_key).amount;
             let new_intent_amount = amount;
             // After this call, the staker balance will be updated.
-            let new_delegated_stake = self
+            let (old_delegated_stake, new_delegated_stake) = self
                 .update_delegated_stake(
                     :staker_address,
                     :token_address,
@@ -1508,7 +1506,7 @@ pub mod Staking {
 
         /// Updates the delegated stake amount in the given `staker_balance` according to changes
         /// in the intent amount. Also updates the total stake accordingly.
-        /// Returns the new delegated stake amount.
+        /// Returns the tuple of (old delegated stake amount, new delegated stake amount).
         fn update_delegated_stake(
             ref self: ContractState,
             staker_address: ContractAddress,
@@ -1516,7 +1514,7 @@ pub mod Staking {
             staker_info: InternalStakerInfoLatest,
             old_intent_amount: Amount,
             new_intent_amount: Amount,
-        ) -> Amount {
+        ) -> (Amount, Amount) {
             let old_delegated_stake = self.get_delegated_balance(:staker_address, :token_address);
             let new_delegated_stake = compute_new_delegated_stake(
                 :old_delegated_stake, :old_intent_amount, :new_intent_amount,
@@ -1536,7 +1534,7 @@ pub mod Staking {
                 .insert_staker_delegated_balance(
                     :staker_address, :token_address, delegated_balance: new_delegated_stake,
                 );
-            new_delegated_stake
+            (old_delegated_stake, new_delegated_stake)
         }
 
         /// Updates undelegate intent value with the given `new_intent_amount` and an updated unpool
