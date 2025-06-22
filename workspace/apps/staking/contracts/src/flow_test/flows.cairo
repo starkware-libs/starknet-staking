@@ -2324,9 +2324,6 @@ pub(crate) impl StakerMigrationFlowImpl<
 // TODO: Test staker_migration with 2 entries in the trace.
 // TODO: Test staker_migration with staker in intent.
 
-// TODO: Test pool migration - including pool_unclaimed_rewards and staker_index, including errors
-// from convert_internal_staker_info
-
 /// Test claim_rewards with multiple delegators.
 #[derive(Drop, Copy)]
 pub(crate) struct ClaimRewardsMultipleDelegatorsFlow {}
