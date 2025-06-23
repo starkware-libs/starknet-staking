@@ -363,7 +363,9 @@ fn test_increase_stake_from_staker_address() {
     let mut spy = snforge_std::spy_events();
     // Increase stake from the same staker address.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
-    staking_dispatcher.increase_stake(:staker_address, amount: increase_amount);
+    let new_self_stake = staking_dispatcher
+        .increase_stake(:staker_address, amount: increase_amount);
+    assert!(new_self_stake == expected_staker_info.amount_own);
 
     let updated_staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(expected_staker_info == updated_staker_info);
@@ -410,7 +412,9 @@ fn test_increase_stake_from_reward_address() {
     let caller_address = cfg.staker_info.reward_address;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
-    staking_dispatcher.increase_stake(:staker_address, amount: increase_amount);
+    let new_self_stake = staking_dispatcher
+        .increase_stake(:staker_address, amount: increase_amount);
+    assert!(new_self_stake == expected_staker_info.amount_own);
     let updated_staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(expected_staker_info == updated_staker_info);
     assert!(staking_dispatcher.get_total_stake() == expected_staker_info.amount_own);
