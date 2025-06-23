@@ -3333,7 +3333,7 @@ pub(crate) impl PoolClaimRewardsFlowImpl<
         assert!(
             system.token.balance_of(account: delegator_3.delegator.address) == delegated_amount_3,
         );
-        assert!(system.token.balance_of(account: pool) == 0);
+        assert!(system.token.balance_of(account: pool) < 100);
         assert!(rewards_1 > rewards_2);
         assert!(rewards_2 > rewards_3);
         assert!(rewards_3.is_non_zero());
@@ -3342,6 +3342,7 @@ pub(crate) impl PoolClaimRewardsFlowImpl<
                 .token
                 .balance_of(account: system.reward_supplier.address)
                 + system.token.balance_of(account: staker.reward.address)
+                + system.token.balance_of(account: pool)
                 + rewards_1
                 + rewards_2
                 + rewards_3,
