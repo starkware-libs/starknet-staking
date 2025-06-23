@@ -14,8 +14,10 @@ use snforge_std::{
     start_cheat_block_timestamp_global,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::MIN_ATTESTATION_WINDOW;
-use staking::minting_curve::interface::IMintingCurveDispatcher;
+use staking::constants::{DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
+use staking::minting_curve::interface::{
+    IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
+};
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
     IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfoV1, PoolMemberInfoV1,
@@ -50,7 +52,8 @@ use staking::test_utils::{
     declare_staking_eic_contract_v0_v1, declare_staking_eic_contract_v1_v2,
 };
 use staking::types::{
-    Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
+    Amount, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
+    InternalStakerInfoLatest,
 };
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait, get_block_number};
@@ -485,6 +488,10 @@ impl MintingCurveImpl of MintingCurveTrait {
         IMintingCurveDispatcher { contract_address: self.address }
     }
 
+    fn config_dispatcher(self: MintingCurveState) -> IMintingCurveConfigDispatcher nopanic {
+        IMintingCurveConfigDispatcher { contract_address: self.address }
+    }
+
     fn set_roles(self: MintingCurveState) {
         set_account_as_upgrade_governor(
             contract: self.address,
@@ -501,6 +508,13 @@ impl MintingCurveImpl of MintingCurveTrait {
             account: self.roles.token_admin,
             app_role_admin: self.roles.app_role_admin,
         );
+    }
+
+    fn set_c_num(self: MintingCurveState, c_num: Inflation) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.token_admin,
+        );
+        self.config_dispatcher().set_c_num(:c_num);
     }
 }
 
@@ -1571,6 +1585,7 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         if let Option::Some(staker_address) = self.staker_address {
             self.staker_migration(staker_address);
         }
+        self.minting_curve.set_c_num(DEFAULT_C_NUM);
     }
 
     /// Upgrades the staking contract in the system state with a local implementation.
