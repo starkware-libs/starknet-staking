@@ -3180,9 +3180,8 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl<
         system.staker_migration(staker_address: staker2.staker.address);
         // Test total stake after upgrade
         assert!(system.staking.get_total_stake() == self.total_stake.unwrap());
-        assert!(
-            system.staking.get_current_total_staking_power() == self.current_total_stake.unwrap(),
-        );
+        let (strk_current_total_stake, _) = system.staking.get_current_total_staking_power_v2();
+        assert!(strk_current_total_stake == self.current_total_stake.unwrap());
     }
 }
 

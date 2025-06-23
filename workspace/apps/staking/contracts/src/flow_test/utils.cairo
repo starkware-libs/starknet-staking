@@ -36,6 +36,9 @@ use staking::staking::interface_v0::{
     IStakingV0Dispatcher, IStakingV0DispatcherTrait, IStakingV0ForTestsDispatcher,
     IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
+use staking::staking::interface_v1::{
+    IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
+};
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
     BTC_TOKEN_NAME, DUMMY_ADDRESS, DUMMY_BTC_TOKEN_ADDRESS, EPOCH_DURATION, EPOCH_LENGTH,
@@ -238,6 +241,10 @@ pub(crate) impl StakingImpl of StakingTrait {
         IStakingV0ForTestsDispatcher { contract_address: self.address }
     }
 
+    fn dispatcher_v1_for_tests(self: StakingState) -> IStakingV1ForTestsDispatcher nopanic {
+        IStakingV1ForTestsDispatcher { contract_address: self.address }
+    }
+
     fn migration_dispatcher(self: StakingState) -> IStakingMigrationDispatcher nopanic {
         IStakingMigrationDispatcher { contract_address: self.address }
     }
@@ -324,6 +331,10 @@ pub(crate) impl StakingImpl of StakingTrait {
     }
 
     fn get_current_total_staking_power(self: StakingState) -> Amount {
+        self.dispatcher_v1_for_tests().get_current_total_staking_power()
+    }
+
+    fn get_current_total_staking_power_v2(self: StakingState) -> (Amount, Amount) {
         self.dispatcher().get_current_total_staking_power()
     }
 

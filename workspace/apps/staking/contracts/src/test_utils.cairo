@@ -1101,10 +1101,9 @@ pub(crate) fn calculate_staker_total_rewards(
 ) -> Amount {
     let epoch_rewards = calculate_current_epoch_rewards(:staking_contract, :minting_curve_contract);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let (strk_curr_total_stake, _) = staking_dispatcher.get_current_total_staking_power();
     mul_wide_and_div(
-        lhs: epoch_rewards,
-        rhs: get_total_amount(:staker_info),
-        div: staking_dispatcher.get_current_total_staking_power(),
+        lhs: epoch_rewards, rhs: get_total_amount(:staker_info), div: strk_curr_total_stake,
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
@@ -1188,10 +1187,9 @@ pub(crate) fn calculate_pool_rewards_with_pool_balance(
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let total_amount = staker_balance + pool_balance;
+    let (strk_curr_total_stake, _) = staking_dispatcher.get_current_total_staking_power();
     let total_rewards = mul_wide_and_div(
-        lhs: epoch_rewards,
-        rhs: total_amount,
-        div: staking_dispatcher.get_current_total_staking_power(),
+        lhs: epoch_rewards, rhs: total_amount, div: strk_curr_total_stake,
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     // Calculate staker own rewards.

@@ -4073,8 +4073,6 @@ fn test_staking_eic_token_address_invalid_address() {
     );
 }
 
-// TODO: Test get_current_total_staking_power assertions.
-
 #[test]
 fn test_get_current_total_staking_power() {
     let mut cfg: StakingInitConfig = Default::default();
@@ -4084,12 +4082,44 @@ fn test_get_current_total_staking_power() {
     let token_address = cfg.staking_contract_info.token_address;
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
     let staker_address = cfg.test_info.staker_address;
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_dispatcher.set_commission(commission: Zero::zero());
+    let pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+    enter_delegation_pool_for_testing_using_dispatcher(
+        :pool_contract, :cfg, token_address: btc_token_address,
+    );
+    let strk_total_stake = staking_dispatcher.staker_info_v1(:staker_address).amount_own;
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    let pool_member = cfg.test_info.pool_member_address;
+    let btc_total_stake = pool_dispatcher.pool_member_info_v1(:pool_member).amount;
     advance_epoch_global();
     assert!(
-        staking_dispatcher
-            .get_current_total_staking_power() == staking_dispatcher
-            .staker_info_v1(:staker_address)
-            .amount_own,
+        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),
+    );
+
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
+    );
+    let staking_token_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    staking_token_dispatcher.disable_token(token_address: btc_token_address);
+    assert!(
+        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, Zero::zero()),
+    );
+
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    staking_token_dispatcher.enable_token(token_address: btc_token_address);
+    assert!(
+        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),
     );
 }
 
