@@ -568,9 +568,20 @@ pub mod Staking {
             self._get_total_stake(token_address: self.strk_token_address())
         }
 
-        fn get_current_total_staking_power(self: @ContractState) -> Amount {
-            let total_stake_trace = self.tokens_total_stake_trace.entry(self.strk_token_address());
-            self.balance_at_curr_epoch(trace: total_stake_trace)
+        fn get_current_total_staking_power(self: @ContractState) -> (Amount, Amount) {
+            let strk_total_stake_trace = self
+                .tokens_total_stake_trace
+                .entry(self.strk_token_address());
+            let strk_curr_total_stake = self.balance_at_curr_epoch(trace: strk_total_stake_trace);
+            let mut btc_curr_total_stake = Zero::zero();
+            for (token_address, is_active) in self.btc_tokens {
+                if is_active {
+                    let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
+                    btc_curr_total_stake += self
+                        .balance_at_curr_epoch(trace: btc_total_stake_trace);
+                }
+            }
+            (strk_curr_total_stake, btc_curr_total_stake)
         }
 
         fn get_pool_exit_intent(
@@ -1557,10 +1568,11 @@ pub mod Staking {
                 .reward_supplier_dispatcher
                 .read()
                 .calculate_current_epoch_rewards();
+            let (strk_curr_total_stake, _) = self.get_current_total_staking_power();
             mul_wide_and_div(
                 lhs: epoch_rewards,
                 rhs: self.get_staker_total_strk_balance_curr_epoch(:staker_address),
-                div: self.get_current_total_staking_power(),
+                div: strk_curr_total_stake,
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }

@@ -1114,10 +1114,10 @@ Any address can execute.
 
 ### get_current_total_staking_power
 ```rust
-get_current_total_staking_power(self: @ContractState) -> Amount
+get_current_total_staking_power(self: @ContractState) -> (Amount, Amount)
 ```
 #### description <!-- omit from toc -->
-Return the total stake amount at the current epoch.
+Return the total STRK stake amount and the total active BTC stake amount at the current epoch.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->

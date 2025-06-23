@@ -9,6 +9,7 @@
     - [set_open_for_delegation](#set_open_for_delegation)
     - [get_pool_exit_intent](#get_pool_exit_intent)
     - [increase_stake](#increase_stake)
+    - [get_current_total_staking_power](#get_current_total_staking_power)
   - [Events](#events)
     - [CommissionChanged](#commissionchanged)
     - [DeleteStaker](#deletestaker)
@@ -110,6 +111,18 @@ fn increase_stake(ref self: TContractState, staker_address: ContractAddress, amo
 ```
 Changes:
 1. Change return value - in the previous version, the return value was the new total stake amount (self + delegated) of the staker. Now, the return value is the new self stake amount.
+
+#### get_current_total_staking_power
+Before:
+```rust
+fn get_current_total_staking_power(self: @TContractState) -> Amount;
+```
+After:
+```rust
+fn get_current_total_staking_power(self: @TContractState) -> (Amount, Amount);
+```
+Changes:
+1. Change return type to tuple of (Amount, Amount) - first amount is the total staking power of the STRK token (same as before), second amount is the total staking power of the BTC active tokens.
 
 ### Events
 #### CommissionChanged
