@@ -185,6 +185,18 @@ pub(crate) fn assert_commission_changed_event(
     );
 }
 
+pub(crate) fn assert_commission_initialized_event(
+    spied_event: @(ContractAddress, Event), staker_address: ContractAddress, commission: Commission,
+) {
+    let expected_event = StakingEvents::CommissionInitialized { staker_address, commission };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("CommissionInitialized"),
+        expected_event_name: "CommissionInitialized",
+    );
+}
+
 pub(crate) fn assert_new_delegation_pool_event(
     mut spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,

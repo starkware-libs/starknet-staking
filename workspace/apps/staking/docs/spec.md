@@ -61,6 +61,7 @@
     - [Staker Exit intent](#staker-exit-intent)
     - [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
     - [Commission Changed](#commission-changed)
+    - [Commission Initialized](#commission-initialized)
     - [Change Delegation Pool Intent](#change-delegation-pool-intent)
     - [Delete Staker](#delete-staker)
     - [Staker Reward Claimed](#staker-reward-claimed)
@@ -880,7 +881,8 @@ fn set_commission(
 Initialize or update the commission.
 Note: `commission` should be between 0 and 10000. for example 1000 is 10%.
 #### emits <!-- omit from toc -->
-[Commission Changed](#commission-changed)
+1. [Commission Changed](#commission-changed) - If commission is already initialized.
+2. [Commission Initialized](#commission-initialized) - If commission is not initialized.
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -1453,6 +1455,12 @@ Any address.
 | staker_address | address                   | ✅     |
 | new_commission | [Commission](#commission) | ❌     |
 | old_commission | [Commission](#commission) | ❌     |
+
+### Commission Initialized
+| data           | type                      | keyed |
+| -------------- | ------------------------- | ----- |
+| staker_address | address                   | ✅     |
+| commission     | [Commission](#commission) | ❌     |
 
 ### Change Delegation Pool Intent
 | data              | type              | keyed |

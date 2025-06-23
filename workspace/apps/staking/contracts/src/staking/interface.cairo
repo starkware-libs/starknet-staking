@@ -248,6 +248,13 @@ pub mod Events {
     }
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct CommissionInitialized {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub commission: Commission,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct CommissionChanged {
         #[key]
         pub staker_address: ContractAddress,
