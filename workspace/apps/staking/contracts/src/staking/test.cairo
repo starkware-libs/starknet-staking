@@ -2727,6 +2727,47 @@ fn test_staker_pool_info() {
 }
 
 #[test]
+fn test_staker_pool_info_with_multiple_pools() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let strk_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let strk_delegated_amount = cfg.pool_member_info._deprecated_amount;
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: strk_pool_contract, :cfg, :token_address,
+    );
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let btc_pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+    let btc_delegated_amount = strk_delegated_amount * 2;
+    cfg.pool_member_info._deprecated_amount = btc_delegated_amount;
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: btc_pool_contract, :cfg, token_address: btc_token_address,
+    );
+
+    let expected_strk_pool_info = PoolInfo {
+        pool_contract: strk_pool_contract, token_address, amount: strk_delegated_amount,
+    };
+    let expected_btc_pool_info = PoolInfo {
+        pool_contract: btc_pool_contract,
+        token_address: btc_token_address,
+        amount: btc_delegated_amount,
+    };
+    let expected_staker_pool_info = StakerPoolInfoV2 {
+        commission: Option::Some(
+            cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
+        ),
+        pools: [expected_strk_pool_info, expected_btc_pool_info].span(),
+    };
+    let staker_pool_info = staking_dispatcher.staker_pool_info(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+}
+
+#[test]
 #[should_panic(expected: "Staker does not exist")]
 fn test_staker_pool_info_staker_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
