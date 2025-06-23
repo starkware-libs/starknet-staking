@@ -852,6 +852,114 @@ fn test_unstake_action() {
 }
 
 #[test]
+fn test_unstake_action_multiple_pools() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+
+    // Stake and open STRK pool.
+    let strk_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    // Open BTC pool.
+    let staker_address = cfg.test_info.staker_address;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let btc_pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+    // Enter STRK pool.
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: strk_pool_contract, :cfg, :token_address,
+    );
+    // Enter BTC pool.
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: btc_pool_contract, :cfg, token_address: btc_token_address,
+    );
+    // Set commission commitment.
+    let staker_address = cfg.test_info.staker_address;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
+    let max_commission = staker_info.get_pool_info().commission;
+    let expiration_epoch = staking_dispatcher.get_current_epoch() + 1;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_commission_commitment(:max_commission, :expiration_epoch);
+
+    // Unstake intent.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let unstake_time = staking_dispatcher.unstake_intent();
+    // Advance time to enable unstake_action.
+    start_cheat_block_timestamp_global(
+        block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into(),
+    );
+    let unclaimed_rewards_own = staking_dispatcher
+        .staker_info_v1(:staker_address)
+        .unclaimed_rewards_own;
+    let caller_address = NON_STAKER_ADDRESS();
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
+    let mut spy = snforge_std::spy_events();
+
+    // Current balance of pools is zero.
+    let strk_token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let btc_token_dispatcher = IERC20Dispatcher { contract_address: btc_token_address };
+    assert!(strk_token_dispatcher.balance_of(strk_pool_contract) == Zero::zero());
+    assert!(btc_token_dispatcher.balance_of(btc_pool_contract) == Zero::zero());
+    // No rewards transferred to pool.
+    assert!(strk_token_dispatcher.balance_of(btc_pool_contract) == Zero::zero());
+
+    let staker_balance_before = strk_token_dispatcher.balance_of(staker_address);
+    let staker_reward_balance_before = strk_token_dispatcher
+        .balance_of(cfg.staker_info.reward_address);
+    // Unstake action.
+    let staker_amount = staking_dispatcher.unstake_action(:staker_address);
+    assert!(staker_amount == cfg.test_info.stake_amount);
+    let actual_staker_info = staking_dispatcher.get_staker_info_v1(:staker_address);
+    assert!(actual_staker_info.is_none());
+    // Assert stake amount transferred to staker.
+    assert!(
+        strk_token_dispatcher.balance_of(staker_address) == staker_balance_before
+            + cfg.test_info.stake_amount.into(),
+    );
+    // Assert rewards transferred to staker.
+    assert!(
+        strk_token_dispatcher
+            .balance_of(cfg.staker_info.reward_address) == staker_reward_balance_before
+            + unclaimed_rewards_own.into(),
+    );
+    // Assert delegated balance transferred to both pools.
+    let expected_delegated_balance = cfg.pool_member_info._deprecated_amount;
+    assert!(
+        strk_token_dispatcher.balance_of(strk_pool_contract) == expected_delegated_balance.into(),
+    );
+    assert!(
+        btc_token_dispatcher.balance_of(btc_pool_contract) == expected_delegated_balance.into(),
+    );
+    // Assert staker removed in both pools.
+    let strk_pool_dispatcher = IPoolDispatcher { contract_address: strk_pool_contract };
+    let btc_pool_dispatcher = IPoolDispatcher { contract_address: btc_pool_contract };
+    assert!(strk_pool_dispatcher.contract_parameters_v1().staker_removed);
+    assert!(btc_pool_dispatcher.contract_parameters_v1().staker_removed);
+
+    // Validate events.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_action");
+    // Validate StakerRewardClaimed event.
+    assert_staker_reward_claimed_event(
+        spied_event: events[0],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        amount: unclaimed_rewards_own,
+    );
+    // Validate DeleteStaker event.
+    assert_delete_staker_event(
+        spied_event: events[1],
+        :staker_address,
+        reward_address: cfg.staker_info.reward_address,
+        operational_address: cfg.staker_info.operational_address,
+        pool_contracts: [strk_pool_contract, btc_pool_contract].span(),
+    );
+}
+
+#[test]
 #[feature("safe_dispatcher")]
 fn test_unstake_action_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
