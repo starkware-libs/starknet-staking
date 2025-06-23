@@ -11,10 +11,11 @@ use core::option::OptionTrait;
 use event_test_utils::{
     assert_change_delegation_pool_intent_event, assert_change_operational_address_event,
     assert_commission_changed_event, assert_commission_commitment_set_event,
-    assert_declare_operational_address_event, assert_delete_staker_event,
-    assert_epoch_info_changed_event, assert_exit_wait_window_changed_event,
-    assert_minimum_stake_changed_event, assert_new_delegation_pool_event, assert_new_staker_event,
-    assert_number_of_events, assert_remove_from_delegation_pool_action_event,
+    assert_commission_initialized_event, assert_declare_operational_address_event,
+    assert_delete_staker_event, assert_epoch_info_changed_event,
+    assert_exit_wait_window_changed_event, assert_minimum_stake_changed_event,
+    assert_new_delegation_pool_event, assert_new_staker_event, assert_number_of_events,
+    assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
     assert_rewards_supplied_to_delegation_pool_event, assert_stake_delegated_balance_changed_event,
     assert_stake_own_balance_changed_event, assert_staker_exit_intent_event,
@@ -2189,15 +2190,19 @@ fn test_set_commission_initialize_commission() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
+    let mut spy = snforge_std::spy_events();
     staking_dispatcher.set_commission(:commission);
     let staker_pool_info = staking_dispatcher.staker_pool_info(:staker_address);
     assert!(staker_pool_info.commission == Option::Some(commission));
+    // Assert event.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_commission");
+    assert_commission_initialized_event(spied_event: events[0], :staker_address, :commission);
     // Assert commission in staker_info_v1 after openning a strk pool.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.set_open_for_delegation(:token_address);
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info.get_pool_info().commission == commission);
-    // TODO: Test event.
 }
 
 #[test]
@@ -2397,13 +2402,13 @@ fn test_set_open_for_delegation() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
-    let mut spy = snforge_std::spy_events();
     cheat_caller_address(
         contract_address: staking_contract,
         caller_address: staker_address,
         span: CheatSpan::TargetCalls(2),
     );
     staking_dispatcher.set_commission(:commission);
+    let mut spy = snforge_std::spy_events();
     let pool_contract = staking_dispatcher.set_open_for_delegation(:token_address);
     let pool_info = staking_dispatcher.staker_info_v1(:staker_address).get_pool_info();
     let mut expected_pool_info = StakerPoolInfoV1 {
@@ -2436,7 +2441,6 @@ fn test_set_open_for_delegation_with_btc_token() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
-    let mut spy = snforge_std::spy_events();
     // Open pool for the btc token.
     cheat_caller_address(
         contract_address: staking_contract,
@@ -2444,6 +2448,7 @@ fn test_set_open_for_delegation_with_btc_token() {
         span: CheatSpan::TargetCalls(2),
     );
     staking_dispatcher.set_commission(:commission);
+    let mut spy = snforge_std::spy_events();
     let pool_contract = staking_dispatcher
         .set_open_for_delegation(token_address: btc_token_address);
     // Test.

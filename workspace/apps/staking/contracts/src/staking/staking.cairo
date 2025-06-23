@@ -165,6 +165,7 @@ pub mod Staking {
         OperationalAddressChanged: Events::OperationalAddressChanged,
         NewStaker: Events::NewStaker,
         CommissionChanged: Events::CommissionChanged,
+        CommissionInitialized: Events::CommissionInitialized,
         StakerRewardClaimed: Events::StakerRewardClaimed,
         DeleteStaker: Events::DeleteStaker,
         RewardsSuppliedToDelegationPool: Events::RewardsSuppliedToDelegationPool,
@@ -658,8 +659,8 @@ pub mod Staking {
                         :staker_address, :staker_pool_info_mut, :old_commission, :commission,
                     );
             } else {
-                staker_pool_info_mut.write_commission(:commission)
-                // TODO: emit event.
+                staker_pool_info_mut.write_commission(:commission);
+                self.emit(Events::CommissionInitialized { staker_address, commission });
             }
         }
 
