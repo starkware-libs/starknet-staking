@@ -653,19 +653,105 @@ fn test_unstake_intent() {
     assert!(staking_dispatcher.get_total_stake() == Zero::zero());
     // Validate StakerExitIntent and StakeBalanceChanged events.
     let events = spy.get_events().emitted_by(staking_contract).events;
-    assert_number_of_events(actual: events.len(), expected: 3, message: "unstake_intent");
+    assert_number_of_events(actual: events.len(), expected: 2, message: "unstake_intent");
     assert_staker_exit_intent_event(
         spied_event: events[0], :staker_address, exit_timestamp: expected_time,
     );
-    assert_stake_delegated_balance_changed_event(
+    assert_stake_own_balance_changed_event(
         spied_event: events[1],
+        :staker_address,
+        old_self_stake: cfg.test_info.stake_amount,
+        new_self_stake: 0,
+    );
+}
+
+#[test]
+fn test_unstake_intent_with_pool() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let mut spy = snforge_std::spy_events();
+    let unstake_time = staking_dispatcher.unstake_intent();
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
+    let expected_time = Time::now()
+        .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
+    assert!(staker_info.unstake_time.unwrap() == unstake_time);
+    assert!(unstake_time == expected_time);
+    assert!(staking_dispatcher.get_total_stake() == Zero::zero());
+    // Validate StakerExitIntent and StakeBalanceChanged events.
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 3, message: "unstake_intent");
+    assert_stake_delegated_balance_changed_event(
+        spied_event: events[0],
         :staker_address,
         :token_address,
         old_delegated_stake: 0,
         new_delegated_stake: 0,
     );
+    assert_staker_exit_intent_event(
+        spied_event: events[1], :staker_address, exit_timestamp: expected_time,
+    );
     assert_stake_own_balance_changed_event(
         spied_event: events[2],
+        :staker_address,
+        old_self_stake: cfg.test_info.stake_amount,
+        new_self_stake: 0,
+    );
+}
+
+#[test]
+fn test_unstake_intent_with_multiple_pools() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    // Open STRK pool with delegated balance.
+    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    let strk_delegated_balance = cfg.pool_member_info._deprecated_amount;
+    // Open BTC pool.
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_open_for_delegation(token_address: btc_token_address);
+    // Unstake intent.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let mut spy = snforge_std::spy_events();
+    let unstake_time = staking_dispatcher.unstake_intent();
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
+    let expected_time = Time::now()
+        .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
+    assert!(staker_info.unstake_time.unwrap() == unstake_time);
+    assert!(unstake_time == expected_time);
+    assert!(staking_dispatcher.get_total_stake() == Zero::zero());
+    // Validate StakerExitIntent and StakeBalanceChanged events.
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 4, message: "unstake_intent");
+    assert_stake_delegated_balance_changed_event(
+        spied_event: events[0],
+        :staker_address,
+        :token_address,
+        old_delegated_stake: strk_delegated_balance,
+        new_delegated_stake: 0,
+    );
+    assert_stake_delegated_balance_changed_event(
+        spied_event: events[1],
+        :staker_address,
+        token_address: btc_token_address,
+        old_delegated_stake: 0,
+        new_delegated_stake: 0,
+    );
+    assert_staker_exit_intent_event(
+        spied_event: events[2], :staker_address, exit_timestamp: expected_time,
+    );
+    assert_stake_own_balance_changed_event(
+        spied_event: events[3],
         :staker_address,
         old_self_stake: cfg.test_info.stake_amount,
         new_self_stake: 0,

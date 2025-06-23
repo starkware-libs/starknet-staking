@@ -376,28 +376,29 @@ pub mod Staking {
             staker_info.unstake_time = Option::Some(unstake_time);
             self.write_staker_info(:staker_address, :staker_info);
 
-            // Write off the staker's stake and delegated stake from the total stake.
+            // Write off the delegated stake from the total stake.
+            for (_, token_address) in self.internal_staker_pool_info(:staker_address).pools() {
+                let amount = self.get_delegated_balance(:staker_address, :token_address);
+                self.remove_from_total_stake(:token_address, :amount);
+                self
+                    .emit(
+                        Events::StakeDelegatedBalanceChanged {
+                            staker_address,
+                            token_address,
+                            old_delegated_stake: amount,
+                            new_delegated_stake: Zero::zero(),
+                        },
+                    );
+            }
+            // Write off the self stake from the total stake.
             let old_self_stake = self.get_own_balance(:staker_address);
-            let old_delegated_stake = self
-                .get_delegated_balance(:staker_address, token_address: self.strk_token_address());
-            let total_amount = old_self_stake + old_delegated_stake;
             self
                 .remove_from_total_stake(
-                    token_address: self.strk_token_address(), amount: total_amount,
+                    token_address: self.strk_token_address(), amount: old_self_stake,
                 );
 
             // Emit events.
             self.emit(Events::StakerExitIntent { staker_address, exit_timestamp: unstake_time });
-            // TODO: Emit this event only for existing pools.
-            self
-                .emit(
-                    Events::StakeDelegatedBalanceChanged {
-                        staker_address,
-                        token_address: self.strk_token_address(),
-                        old_delegated_stake,
-                        new_delegated_stake: Zero::zero(),
-                    },
-                );
             self
                 .emit(
                     Events::StakeOwnBalanceChanged {
