@@ -426,7 +426,7 @@ pub mod Staking {
             let staker_amount = self.get_own_balance(:staker_address);
             token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
-            // Return delegated stake to pools.
+            // Return delegated stake to pools and zero their balances.
             let staker_pool_info = self.internal_staker_pool_info(:staker_address);
             self.transfer_to_pools_when_unstake(:staker_address, :staker_pool_info);
             // Remove staker.
@@ -1392,6 +1392,10 @@ pub mod Staking {
                     .checked_transfer(recipient: pool_contract, amount: pool_balance.into());
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
                 pool_dispatcher.set_staker_removed();
+                self
+                    .insert_staker_delegated_balance(
+                        :staker_address, :token_address, delegated_balance: Zero::zero(),
+                    );
             }
         }
 
@@ -1402,12 +1406,6 @@ pub mod Staking {
             staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
         ) {
             self.insert_staker_own_balance(:staker_address, own_balance: Zero::zero());
-            self
-                .insert_staker_delegated_balance(
-                    :staker_address,
-                    token_address: self.strk_token_address(),
-                    delegated_balance: Zero::zero(),
-                );
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
             let operational_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(operational_address, Zero::zero());
