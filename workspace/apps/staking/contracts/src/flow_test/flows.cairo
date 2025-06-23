@@ -4141,16 +4141,6 @@ pub(crate) struct PoolCalculateRewardsTwiceFlow {}
 pub(crate) impl PoolCalculateRewardsTwiceFlowImpl<
     TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
 > of FlowTrait<PoolCalculateRewardsTwiceFlow, TTokenState> {
-    fn get_pool_address(self: PoolCalculateRewardsTwiceFlow) -> Option<ContractAddress> {
-        Option::None
-    }
-
-    fn get_staker_address(self: PoolCalculateRewardsTwiceFlow) -> Option<ContractAddress> {
-        Option::None
-    }
-
-    fn setup(ref self: PoolCalculateRewardsTwiceFlow, ref system: SystemState<TTokenState>) {}
-
     fn test(
         self: PoolCalculateRewardsTwiceFlow,
         ref system: SystemState<TTokenState>,
