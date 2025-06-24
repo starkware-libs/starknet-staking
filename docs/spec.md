@@ -1958,17 +1958,19 @@ Only staking contract can execute.
 ## Functions
 ### calculate_current_epoch_rewards
 ```rust
-fn calculate_current_epoch_rewards(self: @TContractState) -> Amount
+fn calculate_current_epoch_rewards(self: @TContractState) -> (Amount, Amount)
 ```
 #### description <!-- omit from toc -->
-Return the amount of rewards for the current epoch.
+Return the amount of rewards for the current epoch (for STRK and BTC).
 #### return <!-- omit from toc -->
-rewards: [Amount](#amount) - the rewards for the current epoch, in FRI.
+rewards: ([Amount](#amount), [Amount](#amount)) - the rewards for the current epoch, in FRI, for STRK and BTC (respectively).
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### logic <!-- omit from toc -->
 1. Invoke the Minting Curve's [yearly_mint](#yearly-mint) to receive the theoretic yearly amount of rewards.
 2. Divide the yearly mint by the number of epochs in a year.
+3. Calculate the fraction of the rewards dedicated to BTC pools.
+4. Subtract the BTC rewards from the total to get the STRK rewards.
 
 #### access control <!-- omit from toc -->
 Any address can execute.

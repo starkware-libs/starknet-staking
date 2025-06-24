@@ -632,7 +632,7 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
         self.dispatcher().contract_parameters_v1().try_into().unwrap().unclaimed_rewards
     }
 
-    fn calculate_current_epoch_rewards(self: RewardSupplierState) -> Amount {
+    fn calculate_current_epoch_rewards(self: RewardSupplierState) -> (Amount, Amount) {
         self.dispatcher().calculate_current_epoch_rewards()
     }
 }

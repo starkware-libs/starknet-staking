@@ -23,9 +23,12 @@ pub mod RewardSupplier {
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::errors::OptionAuxTrait;
     use starkware_utils::interfaces::identity::Identity;
-    use starkware_utils::math::utils::ceil_of_division;
+    use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '2.0.0';
+    // TODO: Add a get_alpha view function.
+    pub const ALPHA: u128 = 25;
+    pub const ALPHA_DENOMINATOR: u128 = 100;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -119,7 +122,7 @@ pub mod RewardSupplier {
 
     #[abi(embed_v0)]
     impl RewardSupplierImpl of IRewardSupplier<ContractState> {
-        fn calculate_current_epoch_rewards(self: @ContractState) -> Amount {
+        fn calculate_current_epoch_rewards(self: @ContractState) -> (Amount, Amount) {
             let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
             let staking_dispatcher = IStakingDispatcher {
                 contract_address: self.staking_contract.read(),
@@ -127,7 +130,11 @@ pub mod RewardSupplier {
 
             let yearly_mint = minting_curve_dispatcher.yearly_mint();
             let epochs_in_year = staking_dispatcher.get_epoch_info().epochs_in_year();
-            yearly_mint / epochs_in_year.into()
+            let total_rewards = yearly_mint / epochs_in_year.into();
+            let btc_rewards = self.calculate_btc_rewards(:total_rewards);
+            let strk_rewards = total_rewards - btc_rewards;
+
+            (strk_rewards, btc_rewards)
         }
 
         fn update_unclaimed_rewards_from_staking_contract(
@@ -246,6 +253,11 @@ pub mod RewardSupplier {
             let payload: Span<felt252> = array![self.base_mint_amount.read().into()].span();
             let to_address = self.l1_reward_supplier.read();
             send_message_to_l1_syscall(:to_address, :payload).unwrap_syscall();
+        }
+
+        fn calculate_btc_rewards(self: @ContractState, total_rewards: Amount) -> Amount {
+            mul_wide_and_div(lhs: total_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR)
+                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
     }
 }

@@ -1094,23 +1094,25 @@ pub(crate) fn advance_epoch_global() {
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
 }
 
-pub(crate) fn calculate_staker_total_rewards(
+pub(crate) fn calculate_staker_strk_rewards(
     staker_info: StakerInfoV1,
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> Amount {
-    let epoch_rewards = calculate_current_epoch_rewards(:staking_contract, :minting_curve_contract);
+    let (strk_epoch_rewards, _) = calculate_current_epoch_rewards(
+        :staking_contract, :minting_curve_contract,
+    );
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let (strk_curr_total_stake, _) = staking_dispatcher.get_current_total_staking_power();
     mul_wide_and_div(
-        lhs: epoch_rewards, rhs: get_total_amount(:staker_info), div: strk_curr_total_stake,
+        lhs: strk_epoch_rewards, rhs: get_total_amount(:staker_info), div: strk_curr_total_stake,
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
 fn calculate_current_epoch_rewards(
     staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
-) -> Amount {
+) -> (Amount, Amount) {
     let minting_curve_dispatcher = IMintingCurveDispatcher {
         contract_address: minting_curve_contract,
     };
@@ -1118,7 +1120,18 @@ fn calculate_current_epoch_rewards(
 
     let yearly_mint = minting_curve_dispatcher.yearly_mint();
     let epochs_in_year = staking_dispatcher.get_epoch_info().epochs_in_year();
-    yearly_mint / epochs_in_year.into()
+    let total_rewards = yearly_mint / epochs_in_year.into();
+    let btc_rewards = calculate_btc_rewards(:total_rewards);
+    let strk_rewards = total_rewards - btc_rewards;
+
+    (strk_rewards, btc_rewards)
+}
+
+fn calculate_btc_rewards(total_rewards: Amount) -> Amount {
+    mul_wide_and_div(
+        lhs: total_rewards, rhs: RewardSupplier::ALPHA, div: RewardSupplier::ALPHA_DENOMINATOR,
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
 pub(crate) fn calculate_staker_own_rewards_including_commission(
@@ -1163,18 +1176,18 @@ pub(crate) fn calculate_pool_rewards(
 ) -> Amount {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
-    let total_rewards = calculate_staker_total_rewards(
+    let strk_rewards = calculate_staker_strk_rewards(
         :staker_info, :staking_contract, :minting_curve_contract,
     );
     let staker_rewards = calculate_staker_own_rewards_including_commission(
-        :staker_info, :total_rewards,
+        :staker_info, total_rewards: strk_rewards,
     );
-    let pool_rewards = total_rewards - staker_rewards;
+    let pool_rewards = strk_rewards - staker_rewards;
     pool_rewards
 }
 
-/// Calculate pool rewards for one epoch for the given pool balance and staker balance.
-pub(crate) fn calculate_pool_rewards_with_pool_balance(
+/// Calculate pool strk rewards for one epoch for the given pool balance and staker balance.
+pub(crate) fn calculate_pool_strk_rewards_with_pool_balance(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
@@ -1182,14 +1195,16 @@ pub(crate) fn calculate_pool_rewards_with_pool_balance(
     staker_balance: Amount,
 ) -> Amount {
     // Get epoch rewards.
-    let epoch_rewards = calculate_current_epoch_rewards(:staking_contract, :minting_curve_contract);
+    let (strk_epoch_rewards, _) = calculate_current_epoch_rewards(
+        :staking_contract, :minting_curve_contract,
+    );
     // Calculate staker total rewards.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let total_amount = staker_balance + pool_balance;
     let (strk_curr_total_stake, _) = staking_dispatcher.get_current_total_staking_power();
     let total_rewards = mul_wide_and_div(
-        lhs: epoch_rewards, rhs: total_amount, div: strk_curr_total_stake,
+        lhs: strk_epoch_rewards, rhs: total_amount, div: strk_curr_total_stake,
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     // Calculate staker own rewards.

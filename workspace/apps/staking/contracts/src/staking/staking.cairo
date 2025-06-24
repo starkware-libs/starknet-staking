@@ -1130,7 +1130,7 @@ pub mod Staking {
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
             // Calculate and update rewards.
-            let total_rewards = self.calculate_staker_total_rewards(:staker_address);
+            let total_rewards = self.calculate_staker_strk_rewards(:staker_address);
             self.update_reward_supplier(rewards: total_rewards);
             let staker_pool_info = self.internal_staker_pool_info(:staker_address);
             let staker_rewards = self
@@ -1562,13 +1562,13 @@ pub mod Staking {
             self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
         }
 
-        fn calculate_staker_total_rewards(
+        fn calculate_staker_strk_rewards(
             ref self: ContractState, staker_address: ContractAddress,
         ) -> Amount {
-            let epoch_rewards = self.get_current_epoch_rewards();
+            let (strk_epoch_rewards, _) = self.get_current_epoch_rewards();
             let (strk_curr_total_stake, _) = self.get_current_total_staking_power();
             mul_wide_and_div(
-                lhs: epoch_rewards,
+                lhs: strk_epoch_rewards,
                 rhs: self.get_staker_total_strk_balance_curr_epoch(:staker_address),
                 div: strk_curr_total_stake,
             )
@@ -1615,7 +1615,7 @@ pub mod Staking {
             }
         }
 
-        fn get_current_epoch_rewards(self: @ContractState) -> Amount {
+        fn get_current_epoch_rewards(self: @ContractState) -> (Amount, Amount) {
             self.reward_supplier_dispatcher.read().calculate_current_epoch_rewards()
         }
 
