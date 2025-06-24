@@ -542,7 +542,6 @@ pub mod Pool {
                             staking_rewards: rewards, total_stake: pool_balance,
                         ),
                 );
-            // TODO: emit event.
         }
     }
 
@@ -699,7 +698,6 @@ pub mod Pool {
                 cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length(),
             );
             trace.insert(key: self.get_next_epoch(), value: pool_member_balance);
-            // TODO: Emit event?
         }
 
         /// Increase the next epoch balance of the pool member by the given `amount`.
@@ -710,7 +708,6 @@ pub mod Pool {
             let current_balance = self.get_latest_member_balance(:pool_member);
             self.set_next_epoch_balance(:pool_member, amount: current_balance + amount);
             current_balance
-            // TODO: Emit event?
         }
 
         /// Returns the member's balance at the current epoch.
