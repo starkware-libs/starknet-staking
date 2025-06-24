@@ -1565,10 +1565,7 @@ pub mod Staking {
         fn calculate_staker_total_rewards(
             ref self: ContractState, staker_address: ContractAddress,
         ) -> Amount {
-            let epoch_rewards = self
-                .reward_supplier_dispatcher
-                .read()
-                .calculate_current_epoch_rewards();
+            let epoch_rewards = self.get_current_epoch_rewards();
             let (strk_curr_total_stake, _) = self.get_current_total_staking_power();
             mul_wide_and_div(
                 lhs: epoch_rewards,
@@ -1616,6 +1613,10 @@ pub mod Staking {
                         );
                 }
             }
+        }
+
+        fn get_current_epoch_rewards(self: @ContractState) -> Amount {
+            self.reward_supplier_dispatcher.read().calculate_current_epoch_rewards()
         }
 
         fn update_reward_supplier(ref self: ContractState, rewards: Amount) {
