@@ -33,7 +33,7 @@ use staking::types::Amount;
 use staking::utils::compute_threshold;
 use starknet::Store;
 use starkware_utils::errors::Describable;
-use starkware_utils::math::utils::ceil_of_division;
+use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
 use starkware_utils::types::time::time::Time;
 use starkware_utils_testing::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
@@ -186,8 +186,8 @@ fn test_on_receive() {
     cheat_caller_address_once(
         contract_address: reward_supplier_contract, caller_address: staking_contract,
     );
-    let rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards()
-        * epochs_in_year.into();
+    let (strk_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
+    let rewards = strk_rewards * epochs_in_year.into();
     cheat_caller_address_once(
         contract_address: reward_supplier_contract, caller_address: staking_contract,
     );
@@ -342,12 +342,18 @@ fn test_calculate_current_epoch_rewards() {
         contract_address: cfg.reward_supplier.minting_curve_contract,
     };
     let yearly_mint = minting_curve_dispatcher.yearly_mint();
-    let rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards();
+    let (strk_rewards, btc_rewards) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
 
     // Expected rewards are computed by dividing the yearly mint by the number of epochs in a year.
     let epochs_in_year = cfg.staking_contract_info.epoch_info.epochs_in_year();
     let expected_rewards = yearly_mint / epochs_in_year.into();
-    assert!(rewards == expected_rewards);
+    let expected_btc_rewards = mul_wide_and_div(
+        lhs: expected_rewards, rhs: RewardSupplier::ALPHA, div: RewardSupplier::ALPHA_DENOMINATOR,
+    )
+        .unwrap();
+    let expected_strk_rewards = expected_rewards - expected_btc_rewards;
+    assert!(strk_rewards == expected_strk_rewards);
+    assert!(btc_rewards == expected_btc_rewards);
 }
 
 #[test]

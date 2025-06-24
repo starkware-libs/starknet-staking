@@ -61,7 +61,7 @@ use starkware_utils_testing::test_utils::{
 use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
     advance_block_into_attestation_window, advance_epoch_global, approve, calculate_pool_rewards,
-    calculate_staker_own_rewards_including_commission, calculate_staker_total_rewards,
+    calculate_staker_own_rewards_including_commission, calculate_staker_strk_rewards,
     cheat_target_attestation_block_hash, claim_rewards_for_pool_member, constants,
     declare_pool_contract, declare_pool_eic_contract, deploy_mock_erc20_contract,
     deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
@@ -519,15 +519,15 @@ fn test_claim_rewards() {
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
 
     // Compute expected rewards.
-    let total_rewards = calculate_staker_total_rewards(
+    let total_rewards = calculate_staker_strk_rewards(
         staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
     );
     let staker_rewards = calculate_staker_own_rewards_including_commission(
         staker_info: staker_info_before, :total_rewards,
     );
-    let epoch_rewards = reward_supplier_dispatcher
+    let (strk_epoch_rewards, _) = reward_supplier_dispatcher
         .calculate_current_epoch_rewards(); // epoch_rewards are the total staker rewards in that case since there is only one staker.
-    let expected_pool_rewards = epoch_rewards
+    let expected_pool_rewards = strk_epoch_rewards
         - staker_rewards; // pool_rewards = total staker rewards - staker own rewards include commission.
 
     // Fund pool_contract.
@@ -675,10 +675,14 @@ fn test_claim_rewards_with_balance_changes() {
     let pool_member_info = pool_dispatcher.pool_member_info_v1(:pool_member);
     let rewards = claim_rewards_for_pool_member(:pool_contract, :pool_member);
     assert!(pool_member_info.unclaimed_rewards == rewards);
-    assert!(rewards == pool_rewards_for_epoch);
+    assert!(
+        pool_rewards_for_epoch == rewards
+            + token_dispatcher.balance_of(pool_contract).try_into().unwrap(),
+    );
+    assert!(token_dispatcher.balance_of(pool_contract) < 100);
     assert!(
         token_dispatcher.balance_of(cfg.pool_member_info.reward_address) == balance_before_claim
-            + pool_rewards_for_epoch.into(),
+            + rewards.into(),
     );
 }
 

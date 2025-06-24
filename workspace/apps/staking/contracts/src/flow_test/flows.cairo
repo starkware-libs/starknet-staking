@@ -19,7 +19,7 @@ use staking::staking::objects::{EpochInfoTrait, StakerInfoIntoInternalStakerInfo
 use staking::test_utils::constants::{EPOCH_DURATION, UPGRADE_GOVERNOR};
 use staking::test_utils::{
     calculate_block_offset, calculate_pool_member_rewards, calculate_pool_rewards,
-    calculate_pool_rewards_with_pool_balance, declare_pool_contract, declare_pool_eic_contract,
+    calculate_pool_strk_rewards_with_pool_balance, declare_pool_contract, declare_pool_eic_contract,
     deserialize_option, load_from_iterable_map, load_from_trace, load_trace_length,
     pool_update_rewards, staker_update_old_rewards,
 };
@@ -2637,7 +2637,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
 
         system.attest(:staker);
-        let pool_rewards = calculate_pool_rewards_with_pool_balance(
+        let pool_rewards = calculate_pool_strk_rewards_with_pool_balance(
             :staker_address,
             :staking_contract,
             :minting_curve_contract,
@@ -4053,8 +4053,11 @@ pub(crate) impl SetEpochInfoFlowImpl<
             .get_current_epoch_target_attestation_block(
                 operational_address: staker.operational.address,
             );
-        let epoch_rewards_before_set = system.reward_supplier.calculate_current_epoch_rewards();
-        assert!(epoch_rewards_before_set.is_non_zero());
+        let (strk_epoch_rewards_before_set, btc_epoch_rewards_before_set) = system
+            .reward_supplier
+            .calculate_current_epoch_rewards();
+        assert!(strk_epoch_rewards_before_set.is_non_zero());
+        assert!(btc_epoch_rewards_before_set.is_non_zero());
 
         // Set new epoch info.
         let new_epoch_duration = EPOCH_DURATION * 15;
@@ -4071,21 +4074,27 @@ pub(crate) impl SetEpochInfoFlowImpl<
             );
         assert!(target_block_after_set == target_block_before_set);
 
-        let epoch_rewards_after_set = system.reward_supplier.calculate_current_epoch_rewards();
-        assert!(epoch_rewards_after_set == epoch_rewards_before_set);
+        let (strk_epoch_rewards_after_set, btc_epoch_rewards_after_set) = system
+            .reward_supplier
+            .calculate_current_epoch_rewards();
+        assert!(strk_epoch_rewards_after_set == strk_epoch_rewards_before_set);
+        assert!(btc_epoch_rewards_after_set == btc_epoch_rewards_before_set);
 
         // Advance block into attestation window and attest.
         start_cheat_block_number_global(
             block_number: MIN_ATTESTATION_WINDOW.into() + target_block_after_set,
         );
         system.attest(:staker);
-        assert!(epoch_rewards_after_set == system.staker_info_v1(:staker).unclaimed_rewards_own);
+        assert!(
+            strk_epoch_rewards_after_set == system.staker_info_v1(:staker).unclaimed_rewards_own,
+        );
 
         system.advance_epoch();
-        let epoch_rewards_after_advance_epoch = system
+        let (strk_epoch_rewards_after_advance_epoch, btc_epoch_rewards_after_advance_epoch) = system
             .reward_supplier
             .calculate_current_epoch_rewards();
-        assert!(epoch_rewards_after_advance_epoch > epoch_rewards_before_set);
+        assert!(strk_epoch_rewards_after_advance_epoch > strk_epoch_rewards_before_set);
+        assert!(btc_epoch_rewards_after_advance_epoch > btc_epoch_rewards_before_set);
     }
 }
 

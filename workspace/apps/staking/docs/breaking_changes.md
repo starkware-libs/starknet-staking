@@ -16,6 +16,10 @@
     - [StakerRewardsUpdated](#stakerrewardsupdated)
     - [StakerExitIntent](#stakerexitintent)
     - [StakeBalanceChanged](#stakebalancechanged)
+- [Reward Supplier Contract](#reward-supplier-contract)
+  - [Functions](#functions-1)
+    - [calculate_current_epoch_rewards](#calculate_current_epoch_rewards)
+
 </details>
 
 ## Staking Contract
@@ -252,3 +256,17 @@ Changes:
 1. Split `StakeBalanceChanged` event to `StakeOwnBalanceChanged` (staker self stake) and `StakeDelegatedBalanceChanged` (staker delegated stake - per token).
 2. `StakeOwnBalanceChanged` holds `old_self_stake` and `new_self_stake` but not `old_delegated_stake` and `new_delegated_stake`.
 3. `StakeDelegatedBalanceChanged` holds `token_address`, and `old_delegated_stake` and `new_delegated_stake` for the specific token.
+
+## Reward Supplier Contract
+### Functions
+#### calculate_current_epoch_rewards
+Before:
+```rust
+fn calculate_current_epoch_rewards(self: @TContractState) -> Amount;
+```
+After:
+```rust
+fn calculate_current_epoch_rewards(self: @TContractState) -> (Amount, Amount);
+```
+Changes:
+1. Return a tuple with the `strk_rewards` and the `btc_rewards` respectively.

@@ -90,7 +90,7 @@ use starkware_utils_testing::test_utils::{
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
     approve, calculate_pool_member_rewards, calculate_staker_own_rewards_including_commission,
-    calculate_staker_total_rewards, cheat_reward_for_reward_supplier,
+    calculate_staker_strk_rewards, cheat_reward_for_reward_supplier,
     cheat_target_attestation_block_hash, constants, declare_pool_contract,
     declare_staking_eic_contract_v0_v1, declare_staking_eic_contract_v1_v2,
     deploy_mock_erc20_contract, deploy_reward_supplier_contract, deploy_staking_contract,
@@ -562,7 +562,7 @@ fn test_claim_rewards() {
 
     // Calculate the expected staker rewards.
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
-    let total_rewards = calculate_staker_total_rewards(
+    let total_rewards = calculate_staker_strk_rewards(
         :staker_info, :staking_contract, :minting_curve_contract,
     );
     let expected_staker_rewards = calculate_staker_own_rewards_including_commission(
@@ -3090,9 +3090,9 @@ fn test_update_rewards_from_attestation_contract_only_staker() {
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
-    let epoch_rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards();
+    let (strk_epoch_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
     let staker_info_expected = StakerInfoV1 {
-        unclaimed_rewards_own: epoch_rewards, ..staker_info_before,
+        unclaimed_rewards_own: strk_epoch_rewards, ..staker_info_before,
     };
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: attestation_contract,
@@ -3128,14 +3128,14 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let pool_member = cfg.test_info.pool_member_address;
 
     // Calculate rewards.
-    let total_rewards = calculate_staker_total_rewards(
+    let total_rewards = calculate_staker_strk_rewards(
         staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
     );
     let expected_staker_rewards = calculate_staker_own_rewards_including_commission(
         staker_info: staker_info_before, :total_rewards,
     );
-    let epoch_rewards = reward_supplier_dispatcher.calculate_current_epoch_rewards();
-    let expected_pool_rewards = epoch_rewards - expected_staker_rewards;
+    let (strk_epoch_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
+    let expected_pool_rewards = strk_epoch_rewards - expected_staker_rewards;
 
     // Assert staker rewards, delegator rewards, and pool balance before update.
     assert!(staker_info_before.unclaimed_rewards_own.is_zero());
