@@ -1530,9 +1530,7 @@ pub mod Staking {
             if staker_info.unstake_time.is_none() {
                 self
                     .update_total_stake_according_to_delegated_stake_changes(
-                        token_address: self.strk_token_address(),
-                        :old_delegated_stake,
-                        :new_delegated_stake,
+                        :token_address, :old_delegated_stake, :new_delegated_stake,
                     )
             }
             self
