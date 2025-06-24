@@ -488,6 +488,17 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
         }
         Option::None
     }
+
+    fn has_pool_for_token(
+        self: StoragePath<InternalStakerPoolInfoV2>, token_address: ContractAddress,
+    ) -> bool {
+        for (_, pool_token_address) in self.pools {
+            if pool_token_address == token_address {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 #[generate_trait]
@@ -514,6 +525,7 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
         self.pools.len() > 0
     }
 
+    // TODO: as_non_mut.
     fn has_pool_for_token(
         self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, token_address: ContractAddress,
     ) -> bool {
