@@ -90,7 +90,6 @@ fn test_attest_assertions() {
     );
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
 
-    // TODO: Catch ATTEST_STARTING_EPOCH - attest in epoch 0.
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
     // advance just before the attestation window.
