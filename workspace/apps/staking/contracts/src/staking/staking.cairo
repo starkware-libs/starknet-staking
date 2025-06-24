@@ -1822,6 +1822,11 @@ pub mod Staking {
                 || self.btc_tokens.read(token_address).is_some()
         }
 
+        fn is_active_token(self: @ContractState, token_address: ContractAddress) -> bool {
+            token_address == self.strk_token_address()
+                || self.btc_tokens.read(token_address) == Option::Some(true)
+        }
+
         // TODO: Refactor tests to use the actual STRK token address and use const
         // STRK_TOKEN_ADDRESS instead?
         fn strk_token_address(self: @ContractState) -> ContractAddress {
