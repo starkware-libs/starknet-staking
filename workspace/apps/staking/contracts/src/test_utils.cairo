@@ -1186,8 +1186,8 @@ pub(crate) fn calculate_pool_rewards(
     pool_rewards
 }
 
-/// Calculate pool strk rewards for one epoch for the given pool balance and staker balance.
-pub(crate) fn calculate_pool_strk_rewards_with_pool_balance(
+/// Calculate strk pool rewards for one epoch for the given pool balance and staker balance.
+pub(crate) fn calculate_strk_pool_rewards_with_pool_balance(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
