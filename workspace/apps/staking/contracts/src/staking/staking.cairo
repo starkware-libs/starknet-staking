@@ -1124,11 +1124,7 @@ pub mod Staking {
         ) {
             // Prerequisites and asserts.
             self.general_prerequisites();
-            assert!(
-                get_caller_address() == self.attestation_contract.read(),
-                "{}",
-                Error::CALLER_IS_NOT_ATTESTATION_CONTRACT,
-            );
+            self.assert_caller_is_attestation_contract();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
@@ -1796,6 +1792,14 @@ pub mod Staking {
                 self.staker_own_balance_trace.entry(key: staker_address).is_empty(),
                 "{}",
                 Error::STAKER_ADDRESS_ALREADY_USED,
+            );
+        }
+
+        fn assert_caller_is_attestation_contract(self: @ContractState) {
+            assert!(
+                get_caller_address() == self.attestation_contract.read(),
+                "{}",
+                Error::CALLER_IS_NOT_ATTESTATION_CONTRACT,
             );
         }
 
