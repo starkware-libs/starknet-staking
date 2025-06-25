@@ -62,7 +62,7 @@ use starkware_utils::components::replaceability::interface::{
 };
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::constants::SYMBOL;
-use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
+use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     Deployable, TokenConfig, TokenState, TokenTrait, advance_block_number_global,
     cheat_caller_address_once, set_account_as_app_governor, set_account_as_app_role_admin,

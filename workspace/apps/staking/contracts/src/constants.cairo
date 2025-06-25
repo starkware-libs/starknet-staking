@@ -1,7 +1,7 @@
 use staking::types::{Amount, Epoch, Index, Inflation, Version};
 use starknet::ContractAddress;
 use starkware_utils::constants::WEEK;
-use starkware_utils::types::time::time::TimeDelta;
+use starkware_utils::time::time::TimeDelta;
 
 pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 3 * WEEK };
 pub(crate) const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };

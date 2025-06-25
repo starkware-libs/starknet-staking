@@ -52,7 +52,7 @@ use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::mul_wide_and_div;
-use starkware_utils::types::time::time::{TimeDelta, Timestamp};
+use starkware_utils::time::time::{TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
     set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
@@ -66,7 +66,7 @@ pub(crate) mod constants {
     use staking::types::{Amount, Commission, Index};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
-    use starkware_utils::types::time::time::Timestamp;
+    use starkware_utils::time::time::Timestamp;
 
     pub const STAKER_INITIAL_BALANCE: Amount = 1000000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000 * STRK_IN_FRIS;

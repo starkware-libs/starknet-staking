@@ -34,7 +34,7 @@ use staking::utils::compute_threshold;
 use starknet::Store;
 use starkware_utils::errors::Describable;
 use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
-use starkware_utils::types::time::time::Time;
+use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
 };

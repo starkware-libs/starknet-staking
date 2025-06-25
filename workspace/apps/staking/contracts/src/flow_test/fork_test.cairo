@@ -6,7 +6,7 @@ use staking::flow_test::utils::{
 };
 use staking::staking::errors::Error;
 use starkware_utils::errors::Describable;
-use starkware_utils::types::time::time::Time;
+use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{TokenTrait, assert_panic_with_error};
 
 #[test]

@@ -10,11 +10,11 @@ use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest}
 use starknet::storage::{Mutable, PendingStoragePath, StoragePath};
 use starknet::{ClassHash, ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
-use starkware_utils::iterable_map::{
+use starkware_utils::storage::iterable_map::{
     IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapTrait,
     IterableMapWriteAccessImpl,
 };
-use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
+use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
 

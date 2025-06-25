@@ -3,7 +3,7 @@ use staking::staking::interface::{StakerInfoV1, StakerPoolInfoV1};
 use staking::types::{Amount, Commission, Index};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
-use starkware_utils::types::time::time::{TimeDelta, Timestamp};
+use starkware_utils::time::time::{TimeDelta, Timestamp};
 
 /// Staking V0 interface.
 /// Used for migration purposes.

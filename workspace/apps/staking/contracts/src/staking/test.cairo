@@ -79,11 +79,11 @@ use starkware_utils::components::replaceability::interface::{EICData, Implementa
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::constants::DAY;
 use starkware_utils::errors::Describable;
-use starkware_utils::iterable_map::{
+use starkware_utils::storage::iterable_map::{
     IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
 };
+use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
-use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };

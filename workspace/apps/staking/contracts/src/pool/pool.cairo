@@ -41,8 +41,8 @@ pub mod Pool {
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::errors::{Describable, OptionAuxTrait};
     use starkware_utils::interfaces::identity::Identity;
+    use starkware_utils::time::time::{Time, Timestamp};
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
-    use starkware_utils::types::time::time::{Time, Timestamp};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
     pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
