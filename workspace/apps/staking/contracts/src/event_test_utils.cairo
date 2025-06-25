@@ -387,12 +387,13 @@ pub(crate) fn assert_switch_delegation_pool_event(
 pub(crate) fn assert_change_delegation_pool_intent_event(
     spied_event: @(ContractAddress, Event),
     pool_contract: ContractAddress,
+    token_address: ContractAddress,
     identifier: felt252,
     old_intent_amount: Amount,
     new_intent_amount: Amount,
 ) {
     let expected_event = StakingEvents::ChangeDelegationPoolIntent {
-        pool_contract, identifier, old_intent_amount, new_intent_amount,
+        pool_contract, token_address, identifier, old_intent_amount, new_intent_amount,
     };
     assert_expected_event_emitted(
         :spied_event,

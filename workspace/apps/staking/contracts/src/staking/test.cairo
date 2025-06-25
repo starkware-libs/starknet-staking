@@ -1586,6 +1586,7 @@ fn test_switch_staking_delegation_pool() {
     assert_change_delegation_pool_intent_event(
         spied_event: events[1],
         pool_contract: from_pool_contract,
+        :token_address,
         identifier: pool_member.into(),
         old_intent_amount: cfg.pool_member_info._deprecated_amount,
         new_intent_amount: cfg.pool_member_info._deprecated_amount - switched_amount,
@@ -1600,6 +1601,7 @@ fn test_switch_staking_delegation_pool() {
     assert_change_delegation_pool_intent_event(
         spied_event: events[3],
         pool_contract: from_pool_contract,
+        :token_address,
         identifier: pool_member.into(),
         old_intent_amount: cfg.pool_member_info._deprecated_amount - switched_amount,
         new_intent_amount: Zero::zero(),

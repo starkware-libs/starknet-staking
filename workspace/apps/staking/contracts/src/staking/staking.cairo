@@ -997,6 +997,7 @@ pub mod Staking {
                 .emit(
                     Events::ChangeDelegationPoolIntent {
                         pool_contract: from_pool,
+                        token_address,
                         identifier,
                         old_intent_amount,
                         new_intent_amount: undelegate_intent_value.amount,
