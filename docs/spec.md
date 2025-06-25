@@ -1511,6 +1511,7 @@ Any address.
 | ----------------- | ----------------- | ----- |
 | staker_address    | address           | ✅     |
 | pool_contract     | address           | ✅     |
+| token_address     | address           | ✅     |
 | identifier        | felt252           | ✅     |
 | old_intent_amount | [Amount](#amount) | ❌     |
 | new_intent_amount | [Amount](#amount) | ❌     |
