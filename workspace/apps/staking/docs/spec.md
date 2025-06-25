@@ -53,6 +53,7 @@
     - [enable\_token](#enable_token)
     - [disable\_token](#disable_token)
     - [get\_active\_tokens](#get_active_tokens)
+    - [get\_total\_stake\_for\_token](#get_total_stake_for_token)
   - [Events](#events)
     - [Stake Own Balance Changed](#stake-own-balance-changed)
     - [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
@@ -305,6 +306,7 @@ classDiagram
     enable_token()
     disable_token()
     get_active_tokens()
+    get_total_stake_for_token()
   }
   class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
@@ -1402,6 +1404,20 @@ fn get_active_tokens(self: @ContractState) -> Span<ContractAddress>
 Get all active tokens.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address.
+#### logic <!-- omit from toc -->
+
+### get_total_stake_for_token
+```rust
+fn get_total_stake_for_token(self: @ContractState, token_address: ContractAddress) -> Amount
+```
+#### description <!-- omit from toc -->
+Returns the total stake for the given token. Panic if the token is not active or does not exist.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Any address.
