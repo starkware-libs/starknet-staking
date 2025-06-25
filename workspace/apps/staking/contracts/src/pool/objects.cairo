@@ -7,7 +7,7 @@ use staking::pool::pool_member_balance_trace::trace::{
 };
 use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest, VecIndex};
 use starknet::{ClassHash, ContractAddress};
-use starkware_utils::types::time::time::Timestamp;
+use starkware_utils::time::time::Timestamp;
 
 #[derive(Debug, Drop, Serde, Copy)]
 pub struct SwitchPoolData {

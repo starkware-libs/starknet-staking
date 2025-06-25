@@ -6,7 +6,7 @@ use staking::staking::objects::{
 use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
-use starkware_utils::types::time::time::{TimeDelta, Timestamp};
+use starkware_utils::time::time::{TimeDelta, Timestamp};
 
 /// Public interface for the staking contract.
 #[starknet::interface]
@@ -210,7 +210,7 @@ pub trait IStakingAttestation<TContractState> {
 pub mod Events {
     use staking::types::{Amount, Commission, Epoch};
     use starknet::ContractAddress;
-    use starkware_utils::types::time::time::Timestamp;
+    use starkware_utils::time::time::Timestamp;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakeOwnBalanceChanged {
         #[key]
@@ -391,7 +391,7 @@ pub mod PauseEvents {
 pub mod ConfigEvents {
     use staking::types::Amount;
     use starknet::ContractAddress;
-    use starkware_utils::types::time::time::TimeDelta;
+    use starkware_utils::time::time::TimeDelta;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct MinimumStakeChanged {
         pub old_min_stake: Amount,
@@ -414,6 +414,15 @@ pub mod ConfigEvents {
     pub struct EpochInfoChanged {
         pub epoch_duration: u32,
         pub epoch_length: u32,
+    }
+}
+
+pub mod TokenManagerEvents {
+    use starknet::ContractAddress;
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct TokenAdded {
+        #[key]
+        pub token_address: ContractAddress,
     }
 }
 

@@ -1,6 +1,6 @@
 use staking::types::{Amount, Commission, InternalPoolMemberInfoLatest};
 use starknet::ContractAddress;
-use starkware_utils::types::time::time::Timestamp;
+use starkware_utils::time::time::Timestamp;
 
 #[starknet::interface]
 pub trait IPool<TContractState> {
@@ -95,7 +95,7 @@ pub trait IPoolMigration<TContractState> {
 pub mod Events {
     use staking::types::Amount;
     use starknet::ContractAddress;
-    use starkware_utils::types::time::time::Timestamp;
+    use starkware_utils::time::time::Timestamp;
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct PoolMemberExitIntent {

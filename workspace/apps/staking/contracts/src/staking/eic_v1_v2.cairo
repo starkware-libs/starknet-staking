@@ -13,7 +13,7 @@ mod StakingEICV1toV2 {
     use starknet::class_hash::ClassHash;
     use starknet::storage::{Map, Mutable, StorageBase, StoragePathEntry, StoragePointerReadAccess};
     use starkware_utils::components::replaceability::interface::IEICInitializable;
-    use starkware_utils::iterable_map::{
+    use starkware_utils::storage::iterable_map::{
         IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
     };
     use starkware_utils::trace::errors::TraceErrors;

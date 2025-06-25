@@ -155,7 +155,7 @@ pub struct CommissionChanged {
    }
 ```
 Changes:
-1. Remove `pool_comtract` (key) - commission can be set even before a staker opens a pool.
+1. Remove `pool_contract` (key) - commission can be set even before a staker opens a pool.
 
 #### DeleteStaker
 Before:

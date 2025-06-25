@@ -4,7 +4,7 @@ use staking::pool::objects::InternalPoolMemberInfoV1;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::types::{Amount, Commission, Index};
 use starknet::ContractAddress;
-use starkware_utils::types::time::time::Timestamp;
+use starkware_utils::time::time::Timestamp;
 
 /// Pool V0 interface.
 #[starknet::interface]

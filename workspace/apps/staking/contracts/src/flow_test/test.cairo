@@ -9,7 +9,7 @@ use staking::staking::errors::Error;
 use staking::test_utils::StakingInitConfig;
 use starkware_utils::errors::Describable;
 use starkware_utils::math::abs::wide_abs_diff;
-use starkware_utils::types::time::time::Time;
+use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{TokenTrait, assert_panic_with_error};
 
 #[test]

@@ -78,6 +78,7 @@
     - [Epoch Info Changed](#epoch-info-changed)
     - [Staker Rewards Updated](#staker-rewards-updated)
     - [Commission Commitment Set](#commission-commitment-set)
+    - [Token Added](#token-added)
 - [Pool contract](#pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -1350,6 +1351,7 @@ fn add_token(ref self: ContractState, token_address: ContractAddress)
 #### description <!-- omit from toc -->
 Add a new token to the staking contract.
 #### emits <!-- omit from toc -->
+1. [Token Added](#token-added)
 #### errors <!-- omit from toc -->
 1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
 2. [ZERO\_ADDRESS](#zero_address)
@@ -1572,6 +1574,11 @@ Any address.
 | staker_address | address                   | ✅    |
 | max_commission | [Commission](#commission) | ❌    |
 | expiration_epoch | [Epoch](#epoch)         | ❌    |
+
+### Token Added
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| token_address  | address           | ✅    |
 
 
 # Pool contract

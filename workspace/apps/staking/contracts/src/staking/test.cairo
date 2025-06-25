@@ -20,7 +20,7 @@ use event_test_utils::{
     assert_rewards_supplied_to_delegation_pool_event, assert_stake_delegated_balance_changed_event,
     assert_stake_own_balance_changed_event, assert_staker_exit_intent_event,
     assert_staker_reward_address_change_event, assert_staker_reward_claimed_event,
-    assert_staker_rewards_updated_event,
+    assert_staker_rewards_updated_event, assert_token_added_event,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
@@ -79,11 +79,11 @@ use starkware_utils::components::replaceability::interface::{EICData, Implementa
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::constants::DAY;
 use starkware_utils::errors::Describable;
-use starkware_utils::iterable_map::{
+use starkware_utils::storage::iterable_map::{
     IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
 };
+use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
-use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };
@@ -4231,6 +4231,7 @@ fn test_add_token() {
     };
     let btc_token_address = BTC_TOKEN_ADDRESS();
     // Add the BTC token.
+    let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
     );
@@ -4242,6 +4243,10 @@ fn test_add_token() {
     assert!(active_tokens.len() == 2);
     assert!(*active_tokens[0] == cfg.staking_contract_info.token_address);
     assert!(*active_tokens[1] == cfg.staking_contract_info.btc_token_address);
+    // Assert the event was emitted.
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "add_token");
+    assert_token_added_event(spied_event: events[0], token_address: btc_token_address);
 }
 
 #[test]

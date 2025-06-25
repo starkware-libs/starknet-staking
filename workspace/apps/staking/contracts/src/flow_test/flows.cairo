@@ -29,7 +29,7 @@ use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
-use starkware_utils::types::time::time::Time;
+use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{
     TokenTrait, assert_panic_with_error, cheat_caller_address_once, set_account_as_upgrade_governor,
 };

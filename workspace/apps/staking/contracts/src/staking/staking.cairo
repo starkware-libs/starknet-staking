@@ -21,7 +21,7 @@ pub mod Staking {
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
         IStakingMigration, IStakingPause, IStakingPool, IStakingTokenManager, PauseEvents, PoolInfo,
-        StakerInfoV1, StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1,
+        StakerInfoV1, StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1, TokenManagerEvents,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
@@ -54,13 +54,13 @@ pub mod Staking {
     use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
     use starkware_utils::errors::{Describable, OptionAuxTrait};
     use starkware_utils::interfaces::identity::Identity;
-    use starkware_utils::iterable_map::{
+    use starkware_utils::math::utils::mul_wide_and_div;
+    use starkware_utils::storage::iterable_map::{
         IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapTrait,
         IterableMapWriteAccessImpl,
     };
-    use starkware_utils::math::utils::mul_wide_and_div;
+    use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
-    use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
@@ -181,6 +181,7 @@ pub mod Staking {
         ChangeDelegationPoolIntent: Events::ChangeDelegationPoolIntent,
         CommissionCommitmentSet: Events::CommissionCommitmentSet,
         StakerRewardsUpdated: Events::StakerRewardsUpdated,
+        TokenAdded: TokenManagerEvents::TokenAdded,
     }
 
     #[constructor]
@@ -1090,7 +1091,7 @@ pub mod Staking {
                 .tokens_total_stake_trace
                 .entry(token_address)
                 .insert(key: self.get_current_epoch(), value: Zero::zero());
-            // TODO: emit event
+            self.emit(TokenManagerEvents::TokenAdded { token_address });
         }
 
         fn enable_token(ref self: ContractState, token_address: ContractAddress) {

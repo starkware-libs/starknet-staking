@@ -5,10 +5,11 @@ use staking::pool::interface::Events as PoolEvents;
 use staking::reward_supplier::interface::Events as RewardSupplierEvents;
 use staking::staking::interface::{
     ConfigEvents as StakingConfigEvents, Events as StakingEvents, PauseEvents as StakingPauseEvents,
+    TokenManagerEvents as StakingTokenManagerEvents,
 };
 use staking::types::{Amount, Commission, Epoch, Inflation};
 use starknet::ContractAddress;
-use starkware_utils::types::time::time::{TimeDelta, Timestamp};
+use starkware_utils::time::time::{TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::assert_expected_event_emitted;
 
 pub(crate) fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
@@ -597,5 +598,17 @@ pub(crate) fn assert_staker_rewards_updated_event(
         :expected_event,
         expected_event_selector: @selector!("StakerRewardsUpdated"),
         expected_event_name: "StakerRewardsUpdated",
+    );
+}
+
+pub(crate) fn assert_token_added_event(
+    spied_event: @(ContractAddress, Event), token_address: ContractAddress,
+) {
+    let expected_event = StakingTokenManagerEvents::TokenAdded { token_address };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("TokenAdded"),
+        expected_event_name: "TokenAdded",
     );
 }

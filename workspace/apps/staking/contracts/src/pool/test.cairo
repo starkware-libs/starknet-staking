@@ -53,7 +53,7 @@ use staking::types::InternalPoolMemberInfoLatest;
 use staking::{event_test_utils, test_utils};
 use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::Describable;
-use starkware_utils::types::time::time::Time;
+use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
     set_account_as_upgrade_governor,
