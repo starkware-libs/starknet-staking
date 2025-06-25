@@ -1520,6 +1520,7 @@ Any address.
 | data          | type              | keyed |
 | ------------- | ----------------- | ----- |
 | pool_contract | address           | ✅     |
+| token_address | address           | ✅     |
 | identifier    | felt252           | ✅     |
 | amount        | [Amount](#amount) | ❌     |
 

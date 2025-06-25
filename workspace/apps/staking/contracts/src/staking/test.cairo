@@ -1421,6 +1421,7 @@ fn test_remove_from_delegation_pool_action() {
     assert_remove_from_delegation_pool_action_event(
         spied_event: events[0],
         :pool_contract,
+        :token_address,
         identifier: cfg.test_info.pool_member_address.into(),
         amount: cfg.pool_member_info._deprecated_amount,
     );

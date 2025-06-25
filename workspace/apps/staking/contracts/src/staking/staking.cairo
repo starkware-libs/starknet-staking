@@ -908,7 +908,7 @@ pub mod Staking {
             self
                 .emit(
                     Events::RemoveFromDelegationPoolAction {
-                        pool_contract, identifier, amount: undelegate_intent.amount,
+                        pool_contract, token_address, identifier, amount: undelegate_intent.amount,
                     },
                 );
         }
