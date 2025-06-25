@@ -183,6 +183,7 @@ pub mod Staking {
         StakerRewardsUpdated: Events::StakerRewardsUpdated,
         TokenAdded: TokenManagerEvents::TokenAdded,
         TokenEnabled: TokenManagerEvents::TokenEnabled,
+        TokenDisabled: TokenManagerEvents::TokenDisabled,
     }
 
     #[constructor]
@@ -1117,7 +1118,7 @@ pub mod Staking {
             assert!(is_active_opt.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
             assert!(is_active_opt.unwrap(), "{}", Error::TOKEN_ALREADY_DISABLED);
             self.btc_tokens.write(token_address, false);
-            // TODO: emit event
+            self.emit(TokenManagerEvents::TokenDisabled { token_address });
         }
     }
 
