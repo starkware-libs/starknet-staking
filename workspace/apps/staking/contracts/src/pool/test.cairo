@@ -46,7 +46,7 @@ use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
 use staking::staking::objects::{
-    InternalStakerInfoLatestTrait, UndelegateIntentKey, UndelegateIntentValue,
+    InternalStakerInfoLatestTestTrait, UndelegateIntentKey, UndelegateIntentValue,
     UndelegateIntentValueZero,
 };
 use staking::types::InternalPoolMemberInfoLatest;

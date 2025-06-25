@@ -38,7 +38,7 @@ use staking::staking::interface::{
     IStakingPauseDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::interface_v0::{StakerInfo, StakerPoolInfo};
-use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait};
+use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
 use staking::staking::staking::Staking;
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,

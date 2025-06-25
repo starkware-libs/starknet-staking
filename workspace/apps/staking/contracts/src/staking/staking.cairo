@@ -1333,31 +1333,6 @@ pub mod Staking {
 
             self.emit(Events::StakerRewardClaimed { staker_address, reward_address, amount });
         }
-        /// Sends the rewards to `staker_address`'s pool contract.
-        /// Important note:
-        /// After calling this function, one must write the updated staker_info to the storage.
-        /// This function is deprecated and should not be used (only use in migration), use
-        /// `send_rewards_to_delegation_pool` instead.
-        fn _deprecated_send_rewards_to_delegation_pool_V0(
-            ref self: ContractState,
-            staker_address: ContractAddress,
-            staker_info: InternalStakerInfoLatest,
-            pool_unclaimed_rewards: Amount,
-            token_dispatcher: IERC20Dispatcher,
-        ) {
-            let pool_info = staker_info._deprecated_get_pool_info();
-            let pool_address = pool_info._deprecated_pool_contract;
-            let amount = pool_unclaimed_rewards;
-
-            self.send_rewards(reward_address: pool_address, :amount, :token_dispatcher);
-
-            self
-                .emit(
-                    Events::RewardsSuppliedToDelegationPool {
-                        staker_address, pool_address, amount,
-                    },
-                );
-        }
 
         /// Sends the rewards to `staker_address`'s pool contract.
         fn send_rewards_to_delegation_pool(
