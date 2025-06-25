@@ -1426,6 +1426,7 @@ Any address.
 | -------------- | ------------------------- | ----- |
 | staker_address | address                   | ✅     |
 | pool_contract  | address                   | ✅     |
+| token_address  | address                   | ✅     |
 | commission     | [Commission](#commission) | ❌     |
 
 ### New Staker

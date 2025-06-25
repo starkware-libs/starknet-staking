@@ -244,6 +244,8 @@ pub mod Events {
         pub staker_address: ContractAddress,
         #[key]
         pub pool_contract: ContractAddress,
+        #[key]
+        pub token_address: ContractAddress,
         pub commission: Commission,
     }
 

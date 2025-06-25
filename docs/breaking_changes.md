@@ -16,6 +16,7 @@
     - [StakerRewardsUpdated](#stakerrewardsupdated)
     - [StakerExitIntent](#stakerexitintent)
     - [StakeBalanceChanged](#stakebalancechanged)
+    - [NewDelegationPool](#newdelegationpool)
 - [Reward Supplier Contract](#reward-supplier-contract)
   - [Functions](#functions-1)
     - [calculate_current_epoch_rewards](#calculate_current_epoch_rewards)
@@ -256,6 +257,32 @@ Changes:
 1. Split `StakeBalanceChanged` event to `StakeOwnBalanceChanged` (staker self stake) and `StakeDelegatedBalanceChanged` (staker delegated stake - per token).
 2. `StakeOwnBalanceChanged` holds `old_self_stake` and `new_self_stake` but not `old_delegated_stake` and `new_delegated_stake`.
 3. `StakeDelegatedBalanceChanged` holds `token_address`, and `old_delegated_stake` and `new_delegated_stake` for the specific token.
+
+#### NewDelegationPool
+Before:
+```rust
+pub struct NewDelegationPool {
+   #[key]
+   pub staker_address: ContractAddress,
+   #[key]
+   pub pool_contract: ContractAddress,
+   pub commission: Commission,
+}
+```
+After:
+```rust
+pub struct NewDelegationPool {
+   #[key]
+   pub staker_address: ContractAddress,
+   #[key]
+   pub pool_contract: ContractAddress,
+   #[key]
+   pub token_address: ContractAddress,
+   pub commission: Commission,
+}
+```
+Changes:
+1. Add `token_address` keyed field - the token address of the pool.
 
 ## Reward Supplier Contract
 ### Functions

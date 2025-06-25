@@ -201,10 +201,11 @@ pub(crate) fn assert_new_delegation_pool_event(
     mut spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,
     pool_contract: ContractAddress,
+    token_address: ContractAddress,
     commission: Commission,
 ) {
     let expected_event = StakingEvents::NewDelegationPool {
-        staker_address, pool_contract, commission,
+        staker_address, pool_contract, token_address, commission,
     };
     assert_expected_event_emitted(
         :spied_event,
