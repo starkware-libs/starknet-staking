@@ -678,7 +678,11 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
         }
         Time::now().add(delta: exit_wait_window)
     }
+}
 
+#[cfg(test)]
+#[generate_trait]
+pub(crate) impl InternalStakerInfoLatestTestImpl of InternalStakerInfoLatestTestTrait {
     fn _deprecated_get_pool_info(self: @InternalStakerInfoLatest) -> InternalStakerPoolInfoV1 {
         (*self._deprecated_pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
     }

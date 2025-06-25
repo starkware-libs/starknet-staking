@@ -59,11 +59,11 @@ use staking::staking::interface::{
 };
 use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{
-    AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTrait,
-    InternalStakerInfoTestTrait, InternalStakerInfoTrait, InternalStakerInfoV1,
-    InternalStakerPoolInfoV1, StakerInfoIntoInternalStakerInfoV1ITrait, UndelegateIntentKey,
-    UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
-    VersionedInternalStakerInfo, VersionedInternalStakerInfoTestTrait,
+    AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait,
+    InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait, InternalStakerInfoTrait,
+    InternalStakerInfoV1, InternalStakerPoolInfoV1, StakerInfoIntoInternalStakerInfoV1ITrait,
+    UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
+    UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTestTrait,
     VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
