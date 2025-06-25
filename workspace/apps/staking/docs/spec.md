@@ -81,6 +81,7 @@
     - [Commission Commitment Set](#commission-commitment-set)
     - [Token Added](#token-added)
     - [Token Enabled](#token-enabled)
+    - [Token Disabled](#token-disabled)
 - [Pool contract](#pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -1389,6 +1390,7 @@ fn disable_token(ref self: ContractState, token_address: ContractAddress)
 #### description <!-- omit from toc -->
 Disable a token for getting rewards.
 #### emits <!-- omit from toc -->
+1. [Token Disabled](#token-disabled)
 #### errors <!-- omit from toc -->
 1. [ONLY\_SECURITY\_AGENT](#only_security_agent)
 2. [TOKEN\_NOT\_EXISTS](#token_not_exists)
@@ -1599,6 +1601,11 @@ Any address.
 | token_address  | address           | ✅    |
 
 ### Token Enabled
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| token_address  | address           | ✅    |
+
+### Token Disabled
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
 | token_address  | address           | ✅    |
