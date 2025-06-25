@@ -36,14 +36,12 @@ mod StakingEICV0toV1 {
         pool_contract_admin: ContractAddress,
     }
 
-    // TODO: Test all if's.
     // Expected data : [prev_class_hash, epoch_duration, epoch_length, starting_offset,
     // pool_contract_class_hash, attestation_contract]
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
             assert(eic_init_data.len() == 7, 'EXPECTED_DATA_LENGTH_7');
-            // TODO: Can prev_class_hash be hard coded?
             let prev_class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             let epoch_duration: u32 = (*eic_init_data[1]).try_into().unwrap();
             let epoch_length: u32 = (*eic_init_data[2]).try_into().unwrap();
@@ -68,8 +66,6 @@ mod StakingEICV0toV1 {
             let total_stake = self.total_stake.read();
             // If trace is not empty we assume it's already set correctly.
             // in this case, we must not replace it.
-            // TODO: Check that trace is empty, we can't check it now, because eic test deploy
-            // the new contract and trace is initialized in new constructor.
             self.total_stake_trace.insert(key: STARTING_EPOCH, value: total_stake);
 
             // 4. Replace pool contract class hash (if supplied).
