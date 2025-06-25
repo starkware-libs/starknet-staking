@@ -724,6 +724,13 @@ pub mod Staking {
             }
             active_tokens.span()
         }
+
+        fn get_total_stake_for_token(
+            self: @ContractState, token_address: ContractAddress,
+        ) -> Amount {
+            assert!(self.is_active_token(:token_address), "{}", Error::INVALID_TOKEN_ADDRESS);
+            self._get_total_stake(:token_address)
+        }
     }
 
     #[abi(embed_v0)]

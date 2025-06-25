@@ -52,6 +52,7 @@ pub trait IStaking<TContractState> {
     );
     fn is_paused(self: @TContractState) -> bool;
     fn get_active_tokens(self: @TContractState) -> Span<ContractAddress>;
+    fn get_total_stake_for_token(self: @TContractState, token_address: ContractAddress) -> Amount;
 }
 
 // **Note**: This trait must be reimplemented in the next version of the contract.

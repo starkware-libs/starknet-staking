@@ -4389,3 +4389,65 @@ fn test_disable_token_assertions() {
         .disable_token(token_address: BTC_TOKEN_ADDRESS());
     assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_DISABLED.describe());
 }
+
+#[test]
+fn test_get_total_stake_for_token() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.staking_contract_info.token_address;
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    // Test when zero stake.
+    let total_strk_stake = staking_dispatcher.get_total_stake_for_token(:token_address);
+    let total_btc_stake = staking_dispatcher
+        .get_total_stake_for_token(token_address: btc_token_address);
+    assert!(total_strk_stake.is_zero());
+    assert!(total_btc_stake.is_zero());
+    // Test when non-zero stake.
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: cfg.test_info.staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_dispatcher.set_commission(commission: Zero::zero());
+    let btc_pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: btc_pool_contract, :cfg, token_address: btc_token_address,
+    );
+    let total_strk_stake = staking_dispatcher.get_total_stake_for_token(:token_address);
+    let total_btc_stake = staking_dispatcher
+        .get_total_stake_for_token(token_address: btc_token_address);
+    assert!(total_strk_stake == cfg.test_info.stake_amount);
+    assert!(total_btc_stake == cfg.pool_member_info._deprecated_amount);
+}
+
+#[test]
+#[should_panic(expected: "Invalid token address")]
+fn test_get_total_stake_for_token_not_exists() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher.get_total_stake_for_token(token_address: DUMMY_ADDRESS());
+}
+
+#[test]
+#[should_panic(expected: "Invalid token address")]
+fn test_get_total_stake_for_token_not_active() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
+    );
+    let staking_token_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    staking_token_dispatcher.disable_token(token_address: btc_token_address);
+    staking_dispatcher.get_total_stake_for_token(token_address: btc_token_address);
+}
