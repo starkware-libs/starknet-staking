@@ -858,6 +858,7 @@ pub mod Staking {
                     Events::RemoveFromDelegationPoolIntent {
                         staker_address,
                         pool_contract,
+                        token_address,
                         identifier,
                         old_intent_amount,
                         new_intent_amount,
