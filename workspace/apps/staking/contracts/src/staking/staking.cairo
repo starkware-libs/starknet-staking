@@ -182,6 +182,7 @@ pub mod Staking {
         CommissionCommitmentSet: Events::CommissionCommitmentSet,
         StakerRewardsUpdated: Events::StakerRewardsUpdated,
         TokenAdded: TokenManagerEvents::TokenAdded,
+        TokenEnabled: TokenManagerEvents::TokenEnabled,
     }
 
     #[constructor]
@@ -1107,7 +1108,7 @@ pub mod Staking {
             assert!(is_active_opt.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
             assert!(!is_active_opt.unwrap(), "{}", Error::TOKEN_ALREADY_ENABLED);
             self.btc_tokens.write(token_address, true);
-            // TODO: emit event
+            self.emit(TokenManagerEvents::TokenEnabled { token_address });
         }
 
         fn disable_token(ref self: ContractState, token_address: ContractAddress) {
