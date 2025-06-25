@@ -1,7 +1,7 @@
 // An External Initializer Contract to upgrade a pool contract.
 #[cfg(test)]
 #[starknet::contract]
-mod PoolEIC {
+mod PoolEICV0toV1 {
     use core::num::traits::Zero;
     use staking::constants::V1_PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;

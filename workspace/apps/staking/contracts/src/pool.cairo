@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod eic;
+mod eic_v0_v1;
 pub(crate) mod errors;
 pub mod interface;
 pub(crate) mod interface_v0;
