@@ -2419,7 +2419,7 @@ fn test_set_open_for_delegation() {
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_open_for_delegation");
     assert_new_delegation_pool_event(
-        spied_event: events[0], :staker_address, pool_contract: pool_contract, :commission,
+        spied_event: events[0], :staker_address, :pool_contract, :token_address, :commission,
     );
 }
 
@@ -2464,7 +2464,11 @@ fn test_set_open_for_delegation_with_btc_token() {
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_open_for_delegation");
     assert_new_delegation_pool_event(
-        spied_event: events[0], :staker_address, :pool_contract, :commission,
+        spied_event: events[0],
+        :staker_address,
+        :pool_contract,
+        token_address: btc_token_address,
+        :commission,
     );
 }
 
