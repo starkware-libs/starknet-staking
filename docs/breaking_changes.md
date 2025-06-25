@@ -19,6 +19,7 @@
     - [NewDelegationPool](#newdelegationpool)
     - [RemoveFromDelegationPoolIntent](#removefromdelegationpoolintent)
     - [RemoveFromDelegationPoolAction](#removefromdelegationpoolaction)
+    - [ChangeDelegationPoolIntent](#changedelegationpoolintent)
 - [Reward Supplier Contract](#reward-supplier-contract)
   - [Functions](#functions-1)
     - [calculate_current_epoch_rewards](#calculate_current_epoch_rewards)
@@ -339,6 +340,34 @@ pub struct RemoveFromDelegationPoolAction {
    #[key]
    pub identifier: felt252,
    pub amount: Amount,
+}
+```
+Changes:
+1. Add `token_address` keyed field - the token address of the pool.
+
+#### ChangeDelegationPoolIntent
+Before:
+```rust
+pub struct ChangeDelegationPoolIntent {
+   #[key]
+   pub pool_contract: ContractAddress,
+   #[key]
+   pub identifier: felt252,
+   pub old_intent_amount: Amount,
+   pub new_intent_amount: Amount,
+}
+```
+After:
+```rust
+pub struct ChangeDelegationPoolIntent {
+   #[key]
+   pub pool_contract: ContractAddress,
+   #[key]
+   pub token_address: ContractAddress,
+   #[key]
+   pub identifier: felt252,
+   pub old_intent_amount: Amount,
+   pub new_intent_amount: Amount,
 }
 ```
 Changes:

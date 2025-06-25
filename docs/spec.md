@@ -1467,6 +1467,7 @@ Any address.
 | data              | type              | keyed |
 | ----------------- | ----------------- | ----- |
 | pool_contract     | address           | ✅     |
+| token_address     | address           | ✅     |
 | identifier        | felt252           | ✅     |
 | old_intent_amount | [Amount](#amount) | ❌     |
 | new_intent_amount | [Amount](#amount) | ❌     |
