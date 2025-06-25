@@ -348,6 +348,8 @@ pub mod Events {
         #[key]
         pub pool_contract: ContractAddress,
         #[key]
+        pub token_address: ContractAddress,
+        #[key]
         pub identifier: felt252,
         pub amount: Amount,
     }

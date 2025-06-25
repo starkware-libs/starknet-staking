@@ -243,11 +243,12 @@ pub(crate) fn assert_remove_from_delegation_pool_intent_event(
 pub(crate) fn assert_remove_from_delegation_pool_action_event(
     spied_event: @(ContractAddress, Event),
     pool_contract: ContractAddress,
+    token_address: ContractAddress,
     identifier: felt252,
     amount: Amount,
 ) {
     let expected_event = StakingEvents::RemoveFromDelegationPoolAction {
-        pool_contract, identifier, amount,
+        pool_contract, token_address, identifier, amount,
     };
     assert_expected_event_emitted(
         :spied_event,
