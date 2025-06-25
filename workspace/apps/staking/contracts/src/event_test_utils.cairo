@@ -612,3 +612,15 @@ pub(crate) fn assert_token_added_event(
         expected_event_name: "TokenAdded",
     );
 }
+
+pub(crate) fn assert_token_enabled_event(
+    spied_event: @(ContractAddress, Event), token_address: ContractAddress,
+) {
+    let expected_event = StakingTokenManagerEvents::TokenEnabled { token_address };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("TokenEnabled"),
+        expected_event_name: "TokenEnabled",
+    );
+}

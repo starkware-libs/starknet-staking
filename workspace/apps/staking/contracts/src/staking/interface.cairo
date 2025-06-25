@@ -425,6 +425,12 @@ pub mod TokenManagerEvents {
         #[key]
         pub token_address: ContractAddress,
     }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct TokenEnabled {
+        #[key]
+        pub token_address: ContractAddress,
+    }
 }
 
 /// `StakingContractInfo` struct used in V1.

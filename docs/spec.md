@@ -80,6 +80,7 @@
     - [Staker Rewards Updated](#staker-rewards-updated)
     - [Commission Commitment Set](#commission-commitment-set)
     - [Token Added](#token-added)
+    - [Token Enabled](#token-enabled)
 - [Pool contract](#pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -1371,6 +1372,7 @@ fn enable_token(ref self: ContractState, token_address: ContractAddress)
 #### description <!-- omit from toc -->
 Enable a token for getting rewards.
 #### emits <!-- omit from toc -->
+1. [Token Enabled](#token-enabled)
 #### errors <!-- omit from toc -->
 1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
 2. [TOKEN\_NOT\_EXISTS](#token_not_exists)
@@ -1596,6 +1598,10 @@ Any address.
 | -------------- | ----------------- | ----- |
 | token_address  | address           | ✅    |
 
+### Token Enabled
+| data           | type              | keyed |
+| -------------- | ----------------- | ----- |
+| token_address  | address           | ✅    |
 
 # Pool contract
 ## Functions
