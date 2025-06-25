@@ -21,7 +21,7 @@ pub mod Staking {
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
         IStakingMigration, IStakingPause, IStakingPool, IStakingTokenManager, PauseEvents, PoolInfo,
-        StakerInfoV1, StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1,
+        StakerInfoV1, StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1, TokenManagerEvents,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
@@ -181,6 +181,7 @@ pub mod Staking {
         ChangeDelegationPoolIntent: Events::ChangeDelegationPoolIntent,
         CommissionCommitmentSet: Events::CommissionCommitmentSet,
         StakerRewardsUpdated: Events::StakerRewardsUpdated,
+        TokenAdded: TokenManagerEvents::TokenAdded,
     }
 
     #[constructor]
@@ -1090,7 +1091,7 @@ pub mod Staking {
                 .tokens_total_stake_trace
                 .entry(token_address)
                 .insert(key: self.get_current_epoch(), value: Zero::zero());
-            // TODO: emit event
+            self.emit(TokenManagerEvents::TokenAdded { token_address });
         }
 
         fn enable_token(ref self: ContractState, token_address: ContractAddress) {

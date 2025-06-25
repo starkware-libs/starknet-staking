@@ -417,6 +417,15 @@ pub mod ConfigEvents {
     }
 }
 
+pub mod TokenManagerEvents {
+    use starknet::ContractAddress;
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct TokenAdded {
+        #[key]
+        pub token_address: ContractAddress,
+    }
+}
+
 /// `StakingContractInfo` struct used in V1.
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfoV1 {
