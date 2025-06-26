@@ -24,7 +24,7 @@ pub mod Pool {
     };
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
-        IStakingPoolDispatcherTrait, StakerInfoV1Trait,
+        IStakingPoolDispatcherTrait,
     };
     use staking::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,

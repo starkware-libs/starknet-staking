@@ -9,7 +9,7 @@ pub mod Staking {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::constants::{
         DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
-        STARTING_EPOCH, STRK_TOKEN_ADDRESS,
+        STARTING_EPOCH,
     };
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
@@ -25,26 +25,22 @@ pub mod Staking {
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
-        InternalStakerInfoConvertTrait, InternalStakerInfoLatestTrait, InternalStakerInfoTrait,
-        InternalStakerPoolInfoV2, InternalStakerPoolInfoV2MutTrait, InternalStakerPoolInfoV2Trait,
-        UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
-        UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
+        InternalStakerInfoLatestTrait, InternalStakerPoolInfoV2, InternalStakerPoolInfoV2MutTrait,
+        InternalStakerPoolInfoV2Trait, UndelegateIntentKey, UndelegateIntentValue,
+        UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
+        VersionedInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
-        MutableStakerBalanceTraceTrait, StakerBalance, StakerBalanceTrace, StakerBalanceTraceTrait,
-        StakerBalanceTrait,
+        MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTrait,
     };
-    use staking::types::{
-        Amount, Commission, Epoch, Index, InternalStakerInfoLatest, InternalStakerPoolInfoLatest,
-        Version,
-    };
+    use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, Version};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
         compute_new_delegated_stake, deploy_delegation_pool_contract,
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::{
-        Map, Mutable, PendingStoragePath, StoragePath, StoragePathEntry, StoragePointerReadAccess,
+        Map, Mutable, StoragePath, StoragePathEntry, StoragePointerReadAccess,
         StoragePointerWriteAccess,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
@@ -56,8 +52,7 @@ pub mod Staking {
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::mul_wide_and_div;
     use starkware_utils::storage::iterable_map::{
-        IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapTrait,
-        IterableMapWriteAccessImpl,
+        IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
     };
     use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};

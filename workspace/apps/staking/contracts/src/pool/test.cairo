@@ -5,7 +5,7 @@ use Pool::{
 use constants::{
     BTC_TOKEN_NAME, DUMMY_ADDRESS, NON_POOL_MEMBER_ADDRESS, NOT_STAKING_CONTRACT_ADDRESS,
     OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS, OTHER_STAKER_ADDRESS, POOL_MEMBER_ADDRESS,
-    POOL_MEMBER_UNCLAIMED_REWARDS, STRK_TOKEN_NAME,
+    STRK_TOKEN_NAME,
 };
 use core::num::traits::zero::Zero;
 use core::option::OptionTrait;
@@ -23,7 +23,6 @@ use snforge_std::{
     CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, test_address,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::BASE_VALUE;
 use staking::errors::GenericError;
 use staking::flow_test::utils::upgrade_implementation;
 use staking::pool::errors::Error;
@@ -56,7 +55,6 @@ use starkware_utils::errors::Describable;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
-    set_account_as_upgrade_governor,
 };
 use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
