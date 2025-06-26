@@ -1,4 +1,3 @@
-use Staking::ContractState;
 use constants::{
     APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BTC_TOKEN_ADDRESS,
     BTC_TOKEN_NAME, BUFFER, COMMISSION, DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH,
@@ -34,7 +33,7 @@ use staking::pool::pool::Pool;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
-    IStaking, IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
+    IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::interface_v0::{StakerInfo, StakerPoolInfo};

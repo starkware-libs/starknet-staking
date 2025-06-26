@@ -9,9 +9,8 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address,
-    start_cheat_block_hash_global, start_cheat_block_number_global,
-    start_cheat_block_timestamp_global,
+    ContractClassTrait, DeclareResultTrait, start_cheat_block_hash_global,
+    start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
@@ -30,9 +29,8 @@ use staking::staking::interface::{
     CommissionCommitment, IStakingConfigDispatcher, IStakingConfigDispatcherTrait,
     IStakingDispatcher, IStakingDispatcherTrait, IStakingMigrationDispatcher,
     IStakingMigrationDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
-    IStakingPoolDispatcher, IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher,
-    IStakingPoolSafeDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
-    StakerInfoV1, StakerInfoV1Trait,
+    IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
+    IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::interface_v0::{
     IStakingV0Dispatcher, IStakingV0DispatcherTrait, IStakingV0ForTestsDispatcher,

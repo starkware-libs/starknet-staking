@@ -1,10 +1,10 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
     BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER,
-    EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS,
-    NON_APP_GOVERNOR, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
-    OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
-    STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS, STARTING_BLOCK_OFFSET, STRK_TOKEN_NAME, UNPOOL_TIME,
+    EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, NON_APP_GOVERNOR, NON_STAKER_ADDRESS,
+    NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
+    OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, STAKER_ADDRESS,
+    STAKER_UNCLAIMED_REWARDS, STRK_TOKEN_NAME, UNPOOL_TIME,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -31,8 +31,8 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    BASE_VALUE, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
-    STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
+    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
+    V1_PREV_CONTRACT_VERSION,
 };
 use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::{
@@ -60,7 +60,7 @@ use staking::staking::interface::{
 };
 use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{
-    AttestationInfoTrait, EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait,
+    AttestationInfoTrait, EpochInfoTrait, InternalStakerInfoLatestTestTrait,
     InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait, InternalStakerInfoTrait,
     InternalStakerInfoV1, InternalStakerPoolInfoV1, StakerInfoIntoInternalStakerInfoV1ITrait,
     UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
@@ -84,17 +84,15 @@ use starkware_utils::storage::iterable_map::{
     IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
 };
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
-use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
-    approve, calculate_pool_member_rewards, calculate_staker_own_rewards_including_commission,
-    calculate_staker_strk_rewards, cheat_reward_for_reward_supplier,
-    cheat_target_attestation_block_hash, constants, declare_pool_contract,
-    declare_staking_eic_contract_v0_v1, declare_staking_eic_contract_v1_v2,
-    deploy_mock_erc20_contract, deploy_reward_supplier_contract, deploy_staking_contract,
+    approve, calculate_staker_own_rewards_including_commission, calculate_staker_strk_rewards,
+    cheat_reward_for_reward_supplier, cheat_target_attestation_block_hash, constants,
+    declare_pool_contract, declare_staking_eic_contract_v1_v2, deploy_mock_erc20_contract,
+    deploy_reward_supplier_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     initialize_staking_state_from_cfg, load_from_simple_map, load_from_trace, load_trace_length,
     stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,

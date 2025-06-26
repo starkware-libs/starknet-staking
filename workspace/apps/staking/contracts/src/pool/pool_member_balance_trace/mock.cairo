@@ -1,5 +1,5 @@
 use staking::pool::pool_member_balance_trace::trace::{PoolMemberBalance, PoolMemberCheckpoint};
-use staking::types::{Epoch, VecIndex};
+use staking::types::Epoch;
 
 #[starknet::interface]
 pub trait IMockTrace<TContractState> {
@@ -21,7 +21,7 @@ pub mod MockTrace {
     use staking::pool::pool_member_balance_trace::trace::{
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
     };
-    use super::{Epoch, PoolMemberBalance, PoolMemberCheckpoint, VecIndex};
+    use super::{Epoch, PoolMemberBalance, PoolMemberCheckpoint};
 
     #[storage]
     struct Storage {

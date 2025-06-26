@@ -1,6 +1,5 @@
 use core::num::traits::Zero;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use snforge_std::start_cheat_block_hash_global;
 use staking::attestation::attestation::Attestation;
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{

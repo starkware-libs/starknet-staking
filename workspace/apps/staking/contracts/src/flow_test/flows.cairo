@@ -1,37 +1,32 @@
 use core::num::traits::Zero;
 use snforge_std::start_cheat_block_number_global;
-use staking::constants::{MIN_ATTESTATION_WINDOW, STRK_IN_FRIS, V1_PREV_CONTRACT_VERSION};
+use staking::constants::{MIN_ATTESTATION_WINDOW, STRK_IN_FRIS};
 use staking::errors::GenericError;
-use staking::flow_test::utils::MainnetClassHashes::MAINNET_POOL_CLASS_HASH_V0;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
     SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait, SystemType,
-    upgrade_implementation,
 };
 use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
-use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerInfoV1Trait};
 use staking::staking::interface_v0::{StakerInfo, StakerInfoTrait};
 use staking::staking::objects::{EpochInfoTrait, StakerInfoIntoInternalStakerInfoV1ITrait};
-use staking::test_utils::constants::{EPOCH_DURATION, UPGRADE_GOVERNOR};
+use staking::test_utils::constants::EPOCH_DURATION;
 use staking::test_utils::{
-    calculate_block_offset, calculate_pool_member_rewards, calculate_pool_rewards,
-    calculate_strk_pool_rewards_with_pool_balance, declare_pool_contract, declare_pool_eic_contract,
-    deserialize_option, load_from_iterable_map, load_from_trace, load_trace_length,
-    pool_update_rewards, staker_update_old_rewards,
+    calculate_pool_member_rewards, calculate_pool_rewards,
+    calculate_strk_pool_rewards_with_pool_balance, deserialize_option, load_from_iterable_map,
+    load_from_trace, load_trace_length, pool_update_rewards, staker_update_old_rewards,
 };
-use staking::types::{Amount, Commission, Index, InternalStakerInfoLatest};
+use staking::types::{Amount, Commission, InternalStakerInfoLatest};
 use staking::utils::{compute_rewards_per_strk, compute_rewards_rounded_down};
-use starknet::{ClassHash, ContractAddress, Store};
-use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
+use starknet::{ContractAddress, Store};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{
-    TokenTrait, assert_panic_with_error, cheat_caller_address_once, set_account_as_upgrade_governor,
+    TokenTrait, assert_panic_with_error, cheat_caller_address_once,
 };
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
