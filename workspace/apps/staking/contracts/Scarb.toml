@@ -17,6 +17,7 @@ starkware_utils_testing.workspace = true
 unstable-add-statements-code-locations-debug-info = true
 unstable-add-statements-functions-debug-info = true
 inlining-strategy = "avoid"
+panic-backtrace = true
 
 [scripts]
 test = "SNFORGE_BACKTRACE=1 snforge test"

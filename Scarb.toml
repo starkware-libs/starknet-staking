@@ -2,11 +2,11 @@
 members = ["workspace/apps/staking/contracts"]
 
 [workspace.dependencies]
-starknet = "2.11.0"
-assert_macros = "2.11.0"
+starknet = "2.11.4"
+assert_macros = "2.11.4"
 openzeppelin = "1.0.0"
-openzeppelin_testing = "3.0.0"
-snforge_std = "0.41.0"
+openzeppelin_testing = "4.2.0"
+snforge_std = "0.45.0"
 starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", branch = "main" }
 starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", branch = "main" }
 
