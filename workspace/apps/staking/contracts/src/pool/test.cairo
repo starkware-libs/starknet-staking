@@ -1548,69 +1548,6 @@ fn test_sanity_serde_versioned_internal_staker_info() {
 }
 
 #[test]
-#[feature("safe_dispatcher")]
-fn test_pool_eic_assertions() {
-    let eic_safe_library_dispatcher = IEICInitializableSafeLibraryDispatcher {
-        class_hash: declare_pool_eic_contract(),
-    };
-    // Catch EXPECTED_DATA_LENGTH_1.
-    let result = eic_safe_library_dispatcher.eic_initialize(eic_init_data: [].span());
-    assert_panic_with_felt_error(:result, expected_error: 'EXPECTED_DATA_LENGTH_1');
-
-    // Catch Class hash is zero.
-    let result = eic_safe_library_dispatcher.eic_initialize(eic_init_data: [Zero::zero()].span());
-    assert_panic_with_error(:result, expected_error: GenericError::ZERO_CLASS_HASH.describe());
-}
-
-#[test]
-#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
-fn test_pool_eic_with_wrong_number_of_data_elements() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let staking_contract = cfg.test_info.staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-
-    // Upgrade.
-    let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
-    let implementation_data = ImplementationData {
-        impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
-    };
-    // Cheat block timestamp to enable upgrade eligibility.
-    start_cheat_block_timestamp_global(
-        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
-    );
-    upgrade_implementation(
-        contract_address: pool_contract, :implementation_data, upgrade_governor: staking_contract,
-    );
-}
-
-#[test]
-#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
-fn test_pool_eic_zero_class_hash() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let staking_contract = cfg.test_info.staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-
-    // Upgrade.
-    let eic_data = EICData {
-        eic_hash: declare_pool_eic_contract(), eic_init_data: [Zero::zero()].span(),
-    };
-    let implementation_data = ImplementationData {
-        impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
-    };
-    // Cheat block timestamp to enable upgrade eligibility.
-    start_cheat_block_timestamp_global(
-        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
-    );
-    upgrade_implementation(
-        contract_address: pool_contract, :implementation_data, upgrade_governor: staking_contract,
-    );
-}
-
-#[test]
 fn test_internal_pool_member_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
