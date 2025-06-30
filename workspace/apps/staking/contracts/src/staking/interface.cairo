@@ -1,8 +1,6 @@
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
-use staking::staking::objects::{
-    AttestationInfo, EpochInfo, UndelegateIntentKey, UndelegateIntentValue,
-};
+use staking::staking::objects::{AttestationInfo, EpochInfo};
 use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
@@ -40,10 +38,6 @@ pub trait IStaking<TContractState> {
     fn contract_parameters_v1(self: @TContractState) -> StakingContractInfoV1;
     fn get_total_stake(self: @TContractState) -> Amount;
     fn get_current_total_staking_power(self: @TContractState) -> (Amount, Amount);
-    // TODO: Make this function internal?
-    fn get_pool_exit_intent(
-        self: @TContractState, undelegate_intent_key: UndelegateIntentKey,
-    ) -> UndelegateIntentValue;
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
     fn set_commission(ref self: TContractState, commission: Commission);

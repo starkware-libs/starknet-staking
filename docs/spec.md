@@ -37,7 +37,6 @@
     - [contract\_parameters\_v1](#contract_parameters_v1)
     - [get\_total\_stake](#get_total_stake)
     - [get\_current\_total\_staking\_power](#get_current_total_staking_power)
-    - [get\_pool\_exit\_intent](#get_pool_exit_intent)
     - [declare\_operational\_address](#declare_operational_address)
     - [change\_operational\_address](#change_operational_address)
     - [is\_paused](#is_paused)
@@ -287,7 +286,6 @@ classDiagram
     contract_parameters_v1()
     get_total_stake()
     get_current_total_staking_power()
-    get_pool_exit_intent()
     set_min_stake()
     set_exit_wait_window()
     set_reward_supplier()
@@ -1127,23 +1125,6 @@ get_current_total_staking_power(self: @ContractState) -> (Amount, Amount)
 Return the total STRK stake amount and the total active BTC stake amount at the current epoch.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
-#### pre-condition <!-- omit from toc -->
-#### access control <!-- omit from toc -->
-Any address can execute.
-#### logic <!-- omit from toc -->
-
-### get_pool_exit_intent
-```rust
-fn get_pool_exit_intent(
-    self: @TContractState,
-    undelegate_intent_key: UndelegateIntentKey
-    ) -> UndelegateIntentValue
-```
-#### description <!-- omit from toc -->
-Return the [UndelegateIntentValue](#undelegateintentvalue).
-#### emits <!-- omit from toc -->
-#### errors <!-- omit from toc -->
-1. [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Any address can execute.
