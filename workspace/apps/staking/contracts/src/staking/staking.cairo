@@ -583,15 +583,6 @@ pub mod Staking {
             (strk_curr_total_stake, btc_curr_total_stake)
         }
 
-        fn get_pool_exit_intent(
-            self: @ContractState, undelegate_intent_key: UndelegateIntentKey,
-        ) -> UndelegateIntentValue {
-            let undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
-            // The following assertion serves as a sanity check.
-            undelegate_intent_value.assert_valid();
-            undelegate_intent_value
-        }
-
         fn change_operational_address(
             ref self: ContractState, operational_address: ContractAddress,
         ) {
@@ -1541,6 +1532,15 @@ pub mod Staking {
                 UndelegateIntentValue { amount: new_intent_amount, unpool_time, staker_address }
             };
             self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
+        }
+
+        fn get_pool_exit_intent(
+            self: @ContractState, undelegate_intent_key: UndelegateIntentKey,
+        ) -> UndelegateIntentValue {
+            let undelegate_intent_value = self.pool_exit_intents.read(undelegate_intent_key);
+            // The following assertion serves as a sanity check.
+            undelegate_intent_value.assert_valid();
+            undelegate_intent_value
         }
 
         fn calculate_staker_strk_rewards(

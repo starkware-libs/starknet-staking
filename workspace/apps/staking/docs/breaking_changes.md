@@ -92,21 +92,8 @@ pub(crate) struct UndelegateIntentValue {
    pub amount: Amount,
 }
 ```
-After:
-```rust
-fn get_pool_exit_intent(
-       self: @TContractState, undelegate_intent_key: UndelegateIntentKey,
-   ) -> UndelegateIntentValue;
-```
-```rust
-pub(crate) struct UndelegateIntentValue {
-   pub unpool_time: Timestamp,
-   pub amount: Amount,
-   pub staker_address: ContractAddress,
-}
-```
 Changes:
-1. Add `staker_address` to `UndelegateIntentValue`.
+1. Delete `get_pool_exit_intent` function.
 
 #### increase_stake
 Before:
