@@ -130,17 +130,6 @@ source = "registry+https://scarbs.xyz/"
 checksum = "sha256:fd348b31c4a4407add33adc3c2b8f26dca71dbd7431faaf726168f37a91db0c1"
 
 [[package]]
-name = "perpetuals"
-version = "0.1.0"
-dependencies = [
- "openzeppelin",
- "openzeppelin_testing",
- "snforge_std",
- "starkware_utils",
- "starkware_utils_testing",
-]
-
-[[package]]
 name = "snforge_scarb_plugin"
 version = "0.45.0"
 source = "registry+https://scarbs.xyz/"
