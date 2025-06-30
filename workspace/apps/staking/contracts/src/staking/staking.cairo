@@ -571,13 +571,15 @@ pub mod Staking {
             let strk_total_stake_trace = self
                 .tokens_total_stake_trace
                 .entry(self.strk_token_address());
-            let strk_curr_total_stake = self.balance_at_curr_epoch(trace: strk_total_stake_trace);
+            let curr_epoch = self.get_current_epoch();
+            let strk_curr_total_stake = self
+                .balance_at_curr_epoch(trace: strk_total_stake_trace, :curr_epoch);
             let mut btc_curr_total_stake = Zero::zero();
             for (token_address, is_active) in self.btc_tokens {
                 if is_active {
                     let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
                     btc_curr_total_stake += self
-                        .balance_at_curr_epoch(trace: btc_total_stake_trace);
+                        .balance_at_curr_epoch(trace: btc_total_stake_trace, :curr_epoch);
                 }
             }
             (strk_curr_total_stake, btc_curr_total_stake)
@@ -1729,7 +1731,7 @@ pub mod Staking {
             self: @ContractState, staker_address: ContractAddress,
         ) -> Amount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
-            self.balance_at_curr_epoch(:trace)
+            self.balance_at_curr_epoch(:trace, curr_epoch: self.get_current_epoch())
         }
 
         fn get_staker_delegated_balance_curr_epoch(
@@ -1739,12 +1741,13 @@ pub mod Staking {
                 .staker_delegated_balance_trace
                 .entry(key: staker_address)
                 .entry(key: token_address);
-            self.balance_at_curr_epoch(:trace)
+            self.balance_at_curr_epoch(:trace, curr_epoch: self.get_current_epoch())
         }
 
-        fn balance_at_curr_epoch(self: @ContractState, trace: StoragePath<Trace>) -> Amount {
+        fn balance_at_curr_epoch(
+            self: @ContractState, trace: StoragePath<Trace>, curr_epoch: Epoch,
+        ) -> Amount {
             let (epoch, balance) = trace.latest().unwrap_or_else(|err| panic!("{err}"));
-            let curr_epoch = self.get_current_epoch();
             if epoch <= curr_epoch {
                 balance
             } else {
