@@ -40,8 +40,8 @@ pub mod Staking {
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::{
-        Map, Mutable, StoragePath, StoragePathEntry, StoragePointerReadAccess,
-        StoragePointerWriteAccess,
+        Map, Mutable, MutableVecTrait, StoragePath, StoragePathEntry, StoragePointerReadAccess,
+        StoragePointerWriteAccess, Vec,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
@@ -139,6 +139,8 @@ pub mod Staking {
         staker_pool_info: Map<ContractAddress, InternalStakerPoolInfoV2>,
         // Map token address to whether it's active.
         btc_tokens: IterableMap<ContractAddress, bool>,
+        // Vector of staker addresses.
+        stakers: Vec<ContractAddress>,
     }
 
     #[event]
@@ -286,6 +288,9 @@ pub mod Staking {
 
             // Update total stake.
             self.add_to_total_stake(token_address: self.strk_token_address(), :amount);
+
+            // Add staker address to the stakers vector.
+            self.stakers.push(staker_address);
 
             // Emit events.
             self
@@ -774,6 +779,8 @@ pub mod Staking {
             } else {
                 self.migrate_staker_balance_trace(:staker_address, n: trace_len);
             }
+            // Add staker address to the stakers vector.
+            self.stakers.push(staker_address);
         }
     }
 

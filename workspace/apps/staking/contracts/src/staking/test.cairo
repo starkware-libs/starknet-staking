@@ -68,7 +68,7 @@ use staking::staking::objects::{
     VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
 };
 use staking::staking::staking::Staking;
-use staking::types::{Amount, InternalStakerInfoLatest};
+use staking::types::{Amount, InternalStakerInfoLatest, VecIndex};
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_rewards_rounded_down,
     compute_rewards_rounded_up,
@@ -193,7 +193,33 @@ fn test_stake() {
         old_self_stake: Zero::zero(),
         new_self_stake: cfg.test_info.stake_amount,
     );
+
+    // Test staker in stakers vector.
+    let vec_storage = selector!("stakers");
+    let vec_len: VecIndex = (*snforge_std::load(
+        target: staking_contract,
+        storage_address: vec_storage,
+        size: Store::<VecIndex>::size().into(),
+    )
+        .at(0))
+        .try_into()
+        .unwrap();
+    assert!(vec_len == 1);
+    let staker_vec_storage = snforge_std::map_entry_address(
+        map_selector: vec_storage, keys: [0.into()].span(),
+    );
+    let staker_in_vec: ContractAddress = (*snforge_std::load(
+        target: staking_contract,
+        storage_address: staker_vec_storage,
+        size: Store::<ContractAddress>::size().into(),
+    )
+        .at(0))
+        .try_into()
+        .unwrap();
+    assert!(staker_in_vec == staker_address);
 }
+
+// TODO: Test staker vec after stake with more than one staker.
 
 #[test]
 fn test_send_rewards_to_staker() {
