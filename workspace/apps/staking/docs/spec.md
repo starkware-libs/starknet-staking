@@ -185,7 +185,6 @@
     - [COMMISSION\_COMMITMENT\_NOT\_SET](#commission_commitment_not_set)
     - [CALLER\_IS\_ZERO\_ADDRESS](#caller_is_zero_address)
     - [UNAUTHORIZED\_MESSAGE\_SENDER](#unauthorized_message_sender)
-    - [TOTAL\_SUPPLY\_NOT\_AMOUNT\_TYPE](#total_supply_not_amount_type)
     - [C\_NUM\_OUT\_OF\_RANGE](#c_num_out_of_range)
     - [EPOCH\_INFO\_ALREADY\_UPDATED](#epoch_info_already_updated)
     - [EPOCH\_INFO\_UPDATED\_IN\_FIRST\_EPOCH](#epoch_info_updated_in_first_epoch)
@@ -195,8 +194,6 @@
     - [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
     - [INSUFFICIENT\_BALANCE](#insufficient_balance)
     - [REWARD\_ADDRESS\_MISMATCH](#reward_address_mismatch)
-    - [INVALID\_ENTRY\_TO\_CLAIM\_FROM](#invalid_entry_to_claim_from)
-    - [INSUFFICIENT\_POOL\_BALANCE](#insufficient_pool_balance)
     - [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
     - [ATTEST\_IS\_DONE](#attest_is_done)
     - [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
@@ -2409,9 +2406,6 @@ Only token admin.
 ### UNAUTHORIZED_MESSAGE_SENDER
 "Unauthorized message sender"
 
-### TOTAL_SUPPLY_NOT_AMOUNT_TYPE
-"Total supply does not fit in u128"
-
 ### C_NUM_OUT_OF_RANGE
 "C Numerator out of range (0-500)"
 
@@ -2438,12 +2432,6 @@ Only token admin.
 
 ### REWARD_ADDRESS_MISMATCH
 "Reward address mismatch"
-
-### INVALID_ENTRY_TO_CLAIM_FROM
-"Invalid entry to claim from"
-
-### INSUFFICIENT_POOL_BALANCE
-"Insufficient pool balance"
 
 ### ILLEGAL_EXIT_DURATION
 "ILLEGAL_EXIT_DURATION"
