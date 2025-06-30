@@ -98,9 +98,9 @@ checksum = "sha256:1deb811a239c4f9cc28fc302039e2ffcb19911698a8c612487207448d70d2
 
 [[package]]
 name = "openzeppelin_testing"
-version = "3.0.0"
+version = "4.2.0"
 source = "registry+https://scarbs.xyz/"
-checksum = "sha256:fef2baa73bc86044edcc63eec7a8345c652a7f90420b987d811251736f7eb317"
+checksum = "sha256:c7a722ea85150147a7daeface39b9328d7d73ba1e73c065c5c7d92e845a240cc"
 dependencies = [
  "snforge_std",
 ]
@@ -142,15 +142,15 @@ dependencies = [
 
 [[package]]
 name = "snforge_scarb_plugin"
-version = "0.41.0"
+version = "0.45.0"
 source = "registry+https://scarbs.xyz/"
-checksum = "sha256:7228a3ea74d8decfb2294cee9251b537bbd58b3e243e9327f55e72a99ab5fb53"
+checksum = "sha256:568482e8c40e7018d9ea729d6df3d5ec22b665cfff1e89181d8ad31bacca11cc"
 
 [[package]]
 name = "snforge_std"
-version = "0.41.0"
+version = "0.45.0"
 source = "registry+https://scarbs.xyz/"
-checksum = "sha256:edf116cbf62cbe2487f188cf28ceb9f42b08cfa14e197524281c3ce932f4a5e6"
+checksum = "sha256:c08b359c266e45c4e71b71baa3c4af8dae7fc5416fc8168f0983e5c9a2ac0abe"
 dependencies = [
  "snforge_scarb_plugin",
 ]
@@ -168,7 +168,7 @@ dependencies = [
 [[package]]
 name = "starkware_utils"
 version = "1.0.0"
-source = "git+https://github.com/starkware-libs/starkware-starknet-utils?branch=main#afdb9e35e324d30f1deba8c18310c107f02bfc44"
+source = "git+https://github.com/starkware-libs/starkware-starknet-utils?branch=main#611a67045314a48a1623a1b4695578a4ad2f3dcf"
 dependencies = [
  "openzeppelin",
 ]
@@ -176,7 +176,7 @@ dependencies = [
 [[package]]
 name = "starkware_utils_testing"
 version = "1.0.0"
-source = "git+https://github.com/starkware-libs/starkware-starknet-utils?branch=main#afdb9e35e324d30f1deba8c18310c107f02bfc44"
+source = "git+https://github.com/starkware-libs/starkware-starknet-utils?branch=main#611a67045314a48a1623a1b4695578a4ad2f3dcf"
 dependencies = [
  "openzeppelin",
  "openzeppelin_testing",

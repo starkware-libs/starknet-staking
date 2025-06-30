@@ -76,7 +76,10 @@ use staking::utils::{
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
-use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
+use starkware_utils::components::replaceability::interface::{
+    EICData, IEICInitializableSafeDispatcherTrait, IEICInitializableSafeLibraryDispatcher,
+    ImplementationData,
+};
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::constants::DAY;
 use starkware_utils::errors::Describable;
@@ -85,7 +88,8 @@ use starkware_utils::storage::iterable_map::{
 };
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
-    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
+    advance_block_number_global, assert_panic_with_error, assert_panic_with_felt_error,
+    cheat_caller_address_once,
 };
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
@@ -3929,7 +3933,51 @@ fn test_staking_eic() {
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_3')]
+#[feature("safe_dispatcher")]
+fn test_staking_eic_assertions() {
+    let eic_library_safe_dispatcher = IEICInitializableSafeLibraryDispatcher {
+        class_hash: declare_staking_eic_contract_v1_v2(),
+    };
+    // Catch EXPECTED_DATA_LENGTH_3.
+    let result = eic_library_safe_dispatcher.eic_initialize(eic_init_data: [].span());
+    assert_panic_with_felt_error(:result, expected_error: 'EXPECTED_DATA_LENGTH_3');
+
+    // Catch Class hash is zero - prev class hash.
+    let result = eic_library_safe_dispatcher
+        .eic_initialize(
+            eic_init_data: [
+                Zero::zero(), declare_pool_contract().into(), BTC_TOKEN_ADDRESS().into(),
+            ]
+                .span(),
+        );
+    assert_panic_with_error(:result, expected_error: GenericError::ZERO_CLASS_HASH.describe());
+
+    // Catch Class hash is zero - pool contract class hash.
+    let result = eic_library_safe_dispatcher
+        .eic_initialize(
+            eic_init_data: [
+                MAINNET_STAKING_CLASS_HASH_V1().into(), Zero::zero(), BTC_TOKEN_ADDRESS().into(),
+            ]
+                .span(),
+        );
+    assert_panic_with_error(:result, expected_error: GenericError::ZERO_CLASS_HASH.describe());
+
+    // Catch address is zero.
+    let result = eic_library_safe_dispatcher
+        .eic_initialize(
+            eic_init_data: [
+                MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
+                Zero::zero(),
+            ]
+                .span(),
+        );
+    assert_panic_with_error(:result, expected_error: GenericError::ZERO_ADDRESS.describe());
+    // TODO: Catch invalid token address.
+// TODO: Catch empty trace.
+}
+
+#[test]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
 fn test_staking_eic_with_wrong_number_of_data_elemnts() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -3952,7 +4000,7 @@ fn test_staking_eic_with_wrong_number_of_data_elemnts() {
 }
 
 #[test]
-#[should_panic(expected: "Empty trace")]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
 fn test_staking_eic_total_stake_trace_empty() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -3979,7 +4027,7 @@ fn test_staking_eic_total_stake_trace_empty() {
 }
 
 #[test]
-#[should_panic(expected: "Class hash is zero")]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
 fn test_staking_eic_prev_class_hash_zero_class_hash() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -4004,7 +4052,7 @@ fn test_staking_eic_prev_class_hash_zero_class_hash() {
 }
 
 #[test]
-#[should_panic(expected: "Class hash is zero")]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
 fn test_staking_eic_pool_contract_zero_class_hash() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -4031,7 +4079,7 @@ fn test_staking_eic_pool_contract_zero_class_hash() {
 }
 
 #[test]
-#[should_panic(expected: "Address is zero")]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
 fn test_staking_eic_token_address_zero_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -4058,7 +4106,7 @@ fn test_staking_eic_token_address_zero_address() {
 }
 
 #[test]
-#[should_panic(expected: "Invalid token address")]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
 fn test_staking_eic_token_address_invalid_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

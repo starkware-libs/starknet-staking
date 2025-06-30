@@ -50,11 +50,15 @@ use staking::staking::objects::{
 };
 use staking::types::InternalPoolMemberInfoLatest;
 use staking::{event_test_utils, test_utils};
-use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
+use starkware_utils::components::replaceability::interface::{
+    EICData, IEICInitializableSafeDispatcherTrait, IEICInitializableSafeLibraryDispatcher,
+    ImplementationData,
+};
 use starkware_utils::errors::Describable;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{
-    assert_panic_with_error, cheat_caller_address_once, check_identity,
+    assert_panic_with_error, assert_panic_with_felt_error, cheat_caller_address_once,
+    check_identity,
 };
 use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
@@ -1544,7 +1548,22 @@ fn test_sanity_serde_versioned_internal_staker_info() {
 }
 
 #[test]
-#[should_panic(expected: 'EXPECTED_DATA_LENGTH_1')]
+#[feature("safe_dispatcher")]
+fn test_pool_eic_assertions() {
+    let eic_safe_library_dispatcher = IEICInitializableSafeLibraryDispatcher {
+        class_hash: declare_pool_eic_contract(),
+    };
+    // Catch EXPECTED_DATA_LENGTH_1.
+    let result = eic_safe_library_dispatcher.eic_initialize(eic_init_data: [].span());
+    assert_panic_with_felt_error(:result, expected_error: 'EXPECTED_DATA_LENGTH_1');
+
+    // Catch Class hash is zero.
+    let result = eic_safe_library_dispatcher.eic_initialize(eic_init_data: [Zero::zero()].span());
+    assert_panic_with_error(:result, expected_error: GenericError::ZERO_CLASS_HASH.describe());
+}
+
+#[test]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
 fn test_pool_eic_with_wrong_number_of_data_elements() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -1567,7 +1586,7 @@ fn test_pool_eic_with_wrong_number_of_data_elements() {
 }
 
 #[test]
-#[should_panic(expected: "Class hash is zero")]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
 fn test_pool_eic_zero_class_hash() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
