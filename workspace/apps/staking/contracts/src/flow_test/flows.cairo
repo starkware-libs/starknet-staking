@@ -19,7 +19,7 @@ use staking::test_utils::{
     calculate_strk_pool_rewards_with_pool_balance, deserialize_option, load_from_iterable_map,
     load_from_trace, load_trace_length, pool_update_rewards, staker_update_old_rewards,
 };
-use staking::types::{Amount, Commission, InternalStakerInfoLatest};
+use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
 use staking::utils::{compute_rewards_per_strk, compute_rewards_rounded_down};
 use starknet::{ContractAddress, Store};
 use starkware_utils::errors::{Describable, ErrorDisplay};
@@ -2310,6 +2310,29 @@ pub(crate) impl StakerMigrationFlowImpl<
         assert!(delegated_key == 1);
         assert!(own_value == stake_amount);
         assert!(delegated_value == Zero::zero());
+        // Test staker in stakers vector.
+        let vec_storage = selector!("stakers");
+        let vec_len: VecIndex = (*snforge_std::load(
+            target: system.staking.address,
+            storage_address: vec_storage,
+            size: Store::<VecIndex>::size().into(),
+        )
+            .at(0))
+            .try_into()
+            .unwrap();
+        assert!(vec_len == 1);
+        let staker_vec_storage = snforge_std::map_entry_address(
+            map_selector: vec_storage, keys: [0.into()].span(),
+        );
+        let staker_in_vec: ContractAddress = (*snforge_std::load(
+            target: system.staking.address,
+            storage_address: staker_vec_storage,
+            size: Store::<ContractAddress>::size().into(),
+        )
+            .at(0))
+            .try_into()
+            .unwrap();
+        assert!(staker_in_vec == staker_address);
     }
 }
 
@@ -2318,6 +2341,8 @@ pub(crate) impl StakerMigrationFlowImpl<
 // TODO: Test staker_migration with one entry in the trace.
 // TODO: Test staker_migration with 2 entries in the trace.
 // TODO: Test staker_migration with staker in intent.
+// TODO: Test staker vec after migration with more than one staker.
+// TODO: Test staker vec after migration + new stake.
 
 // Test staker_migration called twice.
 #[derive(Drop, Copy)]
