@@ -36,7 +36,7 @@ use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
-use staking::staking::interface_v0::{StakerInfo, StakerPoolInfo};
+use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
 use staking::staking::staking::Staking;
 use staking::types::{
@@ -45,7 +45,7 @@ use staking::types::{
 };
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_commission_amount_rounded_up,
-    compute_rewards_rounded_down, compute_rewards_rounded_up,
+    compute_rewards_rounded_down,
 };
 use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::constants::SYMBOL;
@@ -1036,37 +1036,6 @@ pub struct StakingContractInfoCfg {
     pub prev_staking_contract_class_hash: ClassHash,
     pub epoch_info: EpochInfo,
     pub btc_token_address: ContractAddress,
-}
-
-/// Update rewards for staker and pool.
-/// **Note**: The index of the returned staker info is set to zero.
-pub(crate) fn staker_update_old_rewards(
-    staker_info: StakerInfo, global_index: Index,
-) -> StakerInfo {
-    let interest: Index = global_index - staker_info.index;
-    let mut staker_rewards = compute_rewards_rounded_down(
-        amount: staker_info.amount_own, :interest,
-    );
-    let mut staker_pool_info: Option<StakerPoolInfo> = Option::None;
-    if let Option::Some(mut pool_info) = staker_info.pool_info {
-        let pool_rewards_including_commission = compute_rewards_rounded_up(
-            amount: pool_info.amount, :interest,
-        );
-        let commission_amount = compute_commission_amount_rounded_down(
-            rewards_including_commission: pool_rewards_including_commission,
-            commission: pool_info.commission,
-        );
-        staker_rewards += commission_amount;
-        let pool_rewards = pool_rewards_including_commission - commission_amount;
-        pool_info.unclaimed_rewards += pool_rewards;
-        staker_pool_info = Option::Some(pool_info);
-    }
-    StakerInfo {
-        index: Zero::zero(),
-        unclaimed_rewards_own: staker_info.unclaimed_rewards_own + staker_rewards,
-        pool_info: staker_pool_info,
-        ..staker_info,
-    }
 }
 
 /// Update rewards for pool.
