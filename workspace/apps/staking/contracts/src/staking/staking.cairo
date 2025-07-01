@@ -55,6 +55,7 @@ pub mod Staking {
         IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
     };
     use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
+    use starkware_utils::trace::errors::TraceErrors;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '2.0.0';
@@ -772,7 +773,7 @@ pub mod Staking {
             }
             // Migrate staker balance trace.
             let trace_len = self.staker_balance_trace.entry(staker_address).length();
-            assert!(trace_len > 0, "{}", Error::STAKER_BALANCE_NOT_INITIALIZED);
+            assert!(trace_len > 0, "{}", TraceErrors::EMPTY_TRACE);
             let n = 3;
             if trace_len >= n {
                 self.migrate_staker_balance_trace(:staker_address, :n);
@@ -1722,13 +1723,8 @@ pub mod Staking {
         /// Return the latest own balance recorded in the `staker_own_balance_trace`.
         fn get_own_balance(self: @ContractState, staker_address: ContractAddress) -> Amount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
-            let (_, own_balance) = trace
-                .latest()
-                .unwrap_or_else(
-                    |
-                        _err,
-                    | panic_with_byte_array(err: @Error::STAKER_BALANCE_NOT_INITIALIZED.describe()),
-                );
+            // Unwrap is safe since the trace must already be initialized.
+            let (_, own_balance) = trace.latest().unwrap();
             own_balance
         }
 
@@ -1741,15 +1737,8 @@ pub mod Staking {
                 .staker_delegated_balance_trace
                 .entry(key: staker_address)
                 .entry(key: token_address);
-            // TODO: Consider replace the error with delegated balance not initialized? or with the
-            // generic one from the result?
-            let (_, delegated_balance) = trace
-                .latest()
-                .unwrap_or_else(
-                    |
-                        _err,
-                    | panic_with_byte_array(err: @Error::STAKER_BALANCE_NOT_INITIALIZED.describe()),
-                );
+            // Unwrap is safe since the trace must already be initialized.
+            let (_, delegated_balance) = trace.latest().unwrap();
             delegated_balance
         }
 
