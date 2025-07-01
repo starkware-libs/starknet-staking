@@ -3,7 +3,8 @@ use MintingCurve::{
 };
 use Pool::{CONTRACT_IDENTITY as pool_identity, CONTRACT_VERSION as pool_version};
 use RewardSupplier::{
-    CONTRACT_IDENTITY as reward_supplier_identity, CONTRACT_VERSION as reward_supplier_version,
+    ALPHA, CONTRACT_IDENTITY as reward_supplier_identity,
+    CONTRACT_VERSION as reward_supplier_version,
 };
 use Staking::{CONTRACT_IDENTITY as staking_identity, CONTRACT_VERSION as staking_version};
 use core::num::traits::Zero;
@@ -406,4 +407,15 @@ fn test_update_unclaimed_rewards_from_staking_contract_caller_not_staking() {
     );
     reward_supplier_dispatcher
         .update_unclaimed_rewards_from_staking_contract(rewards: STRK_IN_FRIS);
+}
+
+#[test]
+fn test_get_alpha() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    assert!(ALPHA == reward_supplier_dispatcher.get_alpha());
 }

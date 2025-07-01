@@ -17,6 +17,8 @@ pub trait IRewardSupplier<TContractState> {
         message: Span<felt252>,
     ) -> bool;
     fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfoV1;
+    // Returns the alpha parameter, as percentage, used when computing BTC rewards.
+    fn get_alpha(self: @TContractState) -> u128;
 }
 
 pub mod Events {
