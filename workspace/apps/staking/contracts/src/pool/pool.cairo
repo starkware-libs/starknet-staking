@@ -71,9 +71,10 @@ pub mod Pool {
         staker_address: ContractAddress,
         // Map pool member to their pool member info.
         pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
-        // Stores the final global index of staking contract if the staker was active during the
-        // upgrade to V1. If the staker was removed in V0, it retains the final staker index.
-        final_staker_index: Option<Index>,
+        // Deprecated field from V0. Stores the final global index of staking contract if the staker
+        // was active during the upgrade to V1. If the staker was removed in V0, it retains the
+        // final staker index.
+        // final_staker_index: Option<Index>,
         // Dispatcher for the staking contract's pool functions.
         staking_pool_dispatcher: IStakingPoolDispatcher,
         // Dispatcher for the token contract.
