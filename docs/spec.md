@@ -309,7 +309,6 @@ classDiagram
   class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
     staker_address
-    final_staker_index
     map < ContractAddress, Option < PoolMemberInfo >>
     commission
     enter_delegation_pool()
