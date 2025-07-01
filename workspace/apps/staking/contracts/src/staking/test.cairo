@@ -3,8 +3,8 @@ use constants::{
     BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER,
     EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, NON_APP_GOVERNOR, NON_STAKER_ADDRESS,
     NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
-    OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, STAKER_ADDRESS,
-    STAKER_UNCLAIMED_REWARDS, STRK_TOKEN_NAME, UNPOOL_TIME,
+    OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
+    STRK_TOKEN_NAME, UNPOOL_TIME,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -58,14 +58,12 @@ use staking::staking::interface::{
     IStakingTokenManagerSafeDispatcherTrait, PoolInfo, StakerInfoV1, StakerInfoV1Trait,
     StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1,
 };
-use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{
     AttestationInfoTrait, EpochInfoTrait, InternalStakerInfoLatestTestTrait,
-    InternalStakerInfoLatestTrait, InternalStakerInfoTestTrait, InternalStakerInfoTrait,
-    InternalStakerInfoV1, InternalStakerPoolInfoV1, StakerInfoIntoInternalStakerInfoV1ITrait,
-    UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
-    UndelegateIntentValueZero, VersionedInternalStakerInfo, VersionedInternalStakerInfoTestTrait,
-    VersionedInternalStakerInfoTrait, VersionedStorageContractTest,
+    InternalStakerInfoLatestTrait, InternalStakerInfoV1, InternalStakerPoolInfoV1,
+    StakerInfoIntoInternalStakerInfoV1ITrait, UndelegateIntentKey, UndelegateIntentValue,
+    UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
+    VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
 use staking::types::{Amount, InternalStakerInfoLatest, VecIndex};
@@ -3507,42 +3505,6 @@ fn test_internal_staker_info_latest_into_staker_info() {
 }
 
 #[test]
-fn test_sanity_storage_versioned_internal_staker_info() {
-    let mut state = VersionedStorageContractTest::contract_state_for_testing();
-    state
-        .staker_info
-        .write(
-            STAKER_ADDRESS(),
-            Option::Some(
-                InternalStakerInfoTestTrait::new(
-                    reward_address: Zero::zero(),
-                    operational_address: Zero::zero(),
-                    unstake_time: Option::None,
-                    amount_own: Zero::zero(),
-                    index: Zero::zero(),
-                    unclaimed_rewards_own: Zero::zero(),
-                    pool_info: Option::None,
-                ),
-            ),
-        );
-    assert!(
-        state
-            .new_staker_info
-            .read(
-                STAKER_ADDRESS(),
-            ) == VersionedInternalStakerInfoTestTrait::new_v0(
-                reward_address: Zero::zero(),
-                operational_address: Zero::zero(),
-                unstake_time: Option::None,
-                amount_own: Zero::zero(),
-                index: Zero::zero(),
-                unclaimed_rewards_own: Zero::zero(),
-                pool_info: Option::None,
-            ),
-    );
-}
-
-#[test]
 fn test_staker_info_into_internal_staker_info_v1() {
     let staker_info = StakerInfoV1 {
         reward_address: Zero::zero(),
@@ -4163,36 +4125,6 @@ fn test_get_current_total_staking_power() {
     assert!(
         staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),
     );
-}
-
-#[test]
-fn test_internal_staker_info_pool_info() {
-    let internal_staker_info = InternalStakerInfoTestTrait::new(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    let staker_pool_info = StakerPoolInfo {
-        pool_contract: Zero::zero(),
-        amount: Zero::zero(),
-        commission: Zero::zero(),
-        unclaimed_rewards: Zero::zero(),
-    };
-    let internal_staker_info_with_pool = InternalStakerInfoTestTrait::new(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::Some(staker_pool_info),
-    );
-    assert!(internal_staker_info.pool_info() == Option::None);
-    assert!(internal_staker_info_with_pool.pool_info() == Option::Some(staker_pool_info));
 }
 
 #[test]

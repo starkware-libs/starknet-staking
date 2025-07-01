@@ -3,12 +3,10 @@ use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
-use staking::staking::interface_v0::{
-    IStakingV0DispatcherTrait, IStakingV0LibraryDispatcher, StakerInfo, StakerPoolInfo,
-};
+use staking::staking::interface_v0::StakerPoolInfo;
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::storage::{Mutable, PendingStoragePath, StoragePath};
-use starknet::{ClassHash, ContractAddress, get_block_number};
+use starknet::{ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::storage::iterable_map::{
     IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapTrait,
@@ -591,47 +589,6 @@ pub(crate) enum VersionedInternalStakerInfo {
     V1: InternalStakerInfoV1,
 }
 
-// **Note**: This trait must be reimplemented in the next version of Internal Staker Info.
-#[generate_trait]
-pub(crate) impl InternalStakerInfoConvert of InternalStakerInfoConvertTrait {
-    fn convert(
-        self: InternalStakerInfo, prev_class_hash: ClassHash, staker_address: ContractAddress,
-    ) -> (InternalStakerInfoV1, Amount, Index, Amount, Amount) {
-        let library_dispatcher = IStakingV0LibraryDispatcher { class_hash: prev_class_hash };
-        let staker_info: StakerInfo = library_dispatcher.staker_info(:staker_address);
-        let internal_staker_info_v1 = InternalStakerInfoV1 {
-            reward_address: staker_info.reward_address,
-            operational_address: staker_info.operational_address,
-            unstake_time: staker_info.unstake_time,
-            unclaimed_rewards_own: staker_info.unclaimed_rewards_own,
-            _deprecated_pool_info: match staker_info.pool_info {
-                Option::Some(pool_info) => Option::Some(
-                    InternalStakerPoolInfoV1 {
-                        _deprecated_pool_contract: pool_info.pool_contract,
-                        _deprecated_commission: pool_info.commission,
-                    },
-                ),
-                Option::None => Option::None,
-            },
-            // This assumes that the function is called only during migration. in a different
-            // context, the commission commitment will be lost.
-            _deprecated_commission_commitment: Option::None,
-        };
-        let (pool_unclaimed_rewards, pool_amount) = match staker_info.pool_info {
-            Option::Some(pool_info) => (pool_info.unclaimed_rewards, pool_info.amount),
-            Option::None => (Zero::zero(), Zero::zero()),
-        };
-        (
-            internal_staker_info_v1,
-            staker_info.amount_own,
-            staker_info.index,
-            pool_unclaimed_rewards,
-            pool_amount,
-        )
-    }
-}
-
-// **Note**: This trait must be reimplemented in the next version of Internal Staker Info.
 #[generate_trait]
 pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTrait {
     fn wrap_latest(value: InternalStakerInfoV1) -> VersionedInternalStakerInfo nopanic {
@@ -658,13 +615,6 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
             VersionedInternalStakerInfo::None => true,
             _ => false,
         }
-    }
-}
-
-#[generate_trait]
-pub(crate) impl InternalStakerInfoImpl of InternalStakerInfoTrait {
-    fn pool_info(self: @InternalStakerInfo) -> Option<StakerPoolInfo> {
-        *self.pool_info
     }
 }
 
@@ -758,51 +708,6 @@ pub(crate) impl VersionedInternalStakerInfoTestImpl of VersionedInternalStakerIn
                 pool_info,
             },
         )
-    }
-}
-
-#[cfg(test)]
-#[generate_trait]
-pub(crate) impl InternalStakerInfoTestImpl of InternalStakerInfoTestTrait {
-    fn new(
-        reward_address: ContractAddress,
-        operational_address: ContractAddress,
-        unstake_time: Option<Timestamp>,
-        amount_own: Amount,
-        index: Index,
-        unclaimed_rewards_own: Amount,
-        pool_info: Option<StakerPoolInfo>,
-    ) -> InternalStakerInfo {
-        InternalStakerInfo {
-            reward_address,
-            operational_address,
-            unstake_time,
-            amount_own,
-            index,
-            unclaimed_rewards_own,
-            pool_info,
-        }
-    }
-}
-
-/// This module is used in tests to verify that changing the storage type from
-/// `Option<InternalStakerInfo>` to `VersionedInternalStakerInfo` retains the same `StoragePath`
-/// and `StoragePtr`.
-///
-/// The `#[rename("staker_info")]` attribute ensures the variable name remains consistent,
-/// as it is part of the storage path calculation.
-#[cfg(test)]
-#[starknet::contract]
-pub mod VersionedStorageContractTest {
-    use starknet::storage::Map;
-    use super::{ContractAddress, InternalStakerInfo, VersionedInternalStakerInfo};
-
-    #[storage]
-    pub struct Storage {
-        #[allow(starknet::colliding_storage_paths)]
-        pub staker_info: Map<ContractAddress, Option<InternalStakerInfo>>,
-        #[rename("staker_info")]
-        pub new_staker_info: Map<ContractAddress, VersionedInternalStakerInfo>,
     }
 }
 
