@@ -1779,7 +1779,6 @@ pub mod Staking {
                 balance
             } else {
                 let (epoch, balance) = trace.penultimate().unwrap_or_else(|err| panic!("{err}"));
-                // TODO: Catch this assert in tests.
                 assert!(epoch <= curr_epoch, "{}", GenericError::INVALID_PENULTIMATE);
                 balance
             }

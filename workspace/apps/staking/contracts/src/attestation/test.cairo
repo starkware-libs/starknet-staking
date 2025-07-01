@@ -7,6 +7,7 @@ use staking::attestation::interface::{
     IAttestationSafeDispatcherTrait,
 };
 use staking::constants::MIN_ATTESTATION_WINDOW;
+use staking::errors::GenericError;
 use staking::event_test_utils::{
     assert_attestation_window_changed_event, assert_number_of_events,
     assert_staker_attestation_successful_event,
@@ -20,12 +21,13 @@ use starkware_utils::components::replaceability::interface::{
 };
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::errors::Describable;
+use starkware_utils::trace::errors::TraceErrors;
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };
 use test_utils::constants::DUMMY_ADDRESS;
 use test_utils::{
-    StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global,
+    StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
     calculate_block_offset, cheat_target_attestation_block_hash, general_contract_system_deployment,
     stake_for_testing_using_dispatcher,
 };
@@ -89,6 +91,14 @@ fn test_attest_assertions() {
     );
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
 
+    // Catch PENULTIMATE_NOT_EXIST.
+    let block_hash = Zero::zero();
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: operational_address,
+    );
+    let result = attestation_safe_dispatcher.attest(:block_hash);
+    assert_panic_with_error(:result, expected_error: TraceErrors::PENULTIMATE_NOT_EXIST.describe());
+
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
     // advance just before the attestation window.
@@ -102,7 +112,6 @@ fn test_attest_assertions() {
     advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into() - 1);
 
     // catch ATTEST_OUT_OF_WINDOW - attest before the attestation window.
-    let block_hash = Zero::zero();
     cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
@@ -165,6 +174,34 @@ fn test_attest_assertions() {
     );
     let result = attestation_safe_dispatcher.attest(:block_hash);
     assert_panic_with_error(:result, expected_error: Error::ATTEST_IS_DONE.describe());
+
+    // Catch INVALID_PENULTIMATE.
+    // Append two checkpoints whose epochs are greater than the current epoch so that both
+    // `latest` and `penultimate` exceed `curr_epoch`.
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let curr_epoch = staking_dispatcher.get_current_epoch();
+    let trace_address = snforge_std::map_entry_address(
+        map_selector: selector!("staker_own_balance_trace"),
+        keys: [cfg.test_info.staker_address.into()].span(),
+    );
+    append_to_trace(
+        contract_address: staking_contract,
+        :trace_address,
+        key: curr_epoch + 1,
+        value: cfg.test_info.stake_amount,
+    );
+    append_to_trace(
+        contract_address: staking_contract,
+        :trace_address,
+        key: curr_epoch + 2,
+        value: cfg.test_info.stake_amount,
+    );
+
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: operational_address,
+    );
+    let result = attestation_safe_dispatcher.attest(:block_hash);
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_PENULTIMATE.describe());
 }
 
 #[test]
