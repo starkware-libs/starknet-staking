@@ -234,7 +234,9 @@ pub(crate) mod constants {
     pub fn BTC_TOKEN_NAME() -> ByteArray {
         "BTC_TOKEN_NAME"
     }
-
+    pub fn BTC_TOKEN_NAME_2() -> ByteArray {
+        "BTC_TOKEN_NAME_2"
+    }
     pub fn DUMMY_BTC_TOKEN_ADDRESS() -> ContractAddress {
         'DUMMY_BTC_TOKEN_ADDRESS'.try_into().unwrap()
     }
@@ -1099,6 +1101,34 @@ pub(crate) fn calculate_staker_strk_rewards(
         }
     };
     (staker_rewards, pool_rewards)
+}
+
+/// Return staker commission rewards and BTC pool rewards for the specified `pool_balance` and
+/// `commission`.
+///
+/// Precondition: `pool_balance` and `btc_curr_total_stake` are not zero.
+pub(crate) fn calculate_staker_btc_pool_rewards(
+    pool_balance: Amount,
+    commission: Commission,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+) -> (Amount, Amount) {
+    let (_, btc_epoch_rewards) = calculate_current_epoch_rewards(
+        :staking_contract, :minting_curve_contract,
+    );
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let (_, btc_curr_total_stake) = staking_dispatcher.get_current_total_staking_power();
+    // Calculate pool rewards including commission.
+    let pool_rewards_including_commission = mul_wide_and_div(
+        lhs: btc_epoch_rewards, rhs: pool_balance, div: btc_curr_total_stake,
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    // Split rewards into commission and pool rewards.
+    let commission_rewards = compute_commission_amount_rounded_down(
+        rewards_including_commission: pool_rewards_including_commission, :commission,
+    );
+    let pool_rewards = pool_rewards_including_commission - commission_rewards;
+    (commission_rewards, pool_rewards)
 }
 
 fn calculate_current_epoch_rewards(

@@ -1,8 +1,8 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
-    BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, CALLER_ADDRESS, DUMMY_ADDRESS, DUMMY_IDENTIFIER,
-    EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, NON_APP_GOVERNOR, NON_STAKER_ADDRESS,
-    NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
+    BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, CALLER_ADDRESS, DUMMY_ADDRESS,
+    DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, NON_APP_GOVERNOR,
+    NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
     OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
     STRK_TOKEN_NAME, UNPOOL_TIME,
 };
@@ -91,13 +91,14 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
-    approve, calculate_staker_strk_rewards, cheat_reward_for_reward_supplier,
-    cheat_target_attestation_block_hash, constants, declare_pool_contract,
-    declare_staking_eic_contract_v1_v2, deploy_mock_erc20_contract, deploy_reward_supplier_contract,
-    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
-    general_contract_system_deployment, initialize_staking_state_from_cfg, load_from_simple_map,
-    load_from_trace, load_trace_length, stake_for_testing_using_dispatcher, stake_from_zero_address,
-    stake_with_pool_enabled, store_internal_staker_info_v0_to_map, store_to_simple_map,
+    approve, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
+    cheat_reward_for_reward_supplier, cheat_target_attestation_block_hash, constants,
+    declare_pool_contract, declare_staking_eic_contract_v1_v2, deploy_mock_erc20_contract,
+    deploy_reward_supplier_contract, deploy_staking_contract,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    initialize_staking_state_from_cfg, load_from_simple_map, load_from_trace, load_trace_length,
+    stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,
+    store_internal_staker_info_v0_to_map, store_to_simple_map,
 };
 
 #[test]
@@ -3168,6 +3169,172 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
         :staker_address,
         pool_address: pool_contract,
         amount: expected_pool_rewards,
+    );
+}
+
+#[test]
+fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_attestation_dispatcher = IStakingAttestationDispatcher {
+        contract_address: staking_contract,
+    };
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+    let token_address = cfg.staking_contract_info.token_address;
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    // Stake and open pool for STRK.
+    let strk_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let staker_address = cfg.test_info.staker_address;
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
+    // Open pool for BTC.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let btc_pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+    // Add another BTC token.
+    let btc_token_address_2 = deploy_mock_erc20_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME_2(),
+    );
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: cfg.test_info.security_admin,
+        span: CheatSpan::TargetCalls(2),
+    );
+    let staking_token_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    staking_token_dispatcher.add_token(token_address: btc_token_address_2);
+    staking_token_dispatcher.enable_token(token_address: btc_token_address_2);
+    // Open pool for the second BTC token.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let btc_pool_contract_2 = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address_2);
+    // Enter pools.
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: strk_pool_contract, :cfg, :token_address,
+    );
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: btc_pool_contract, :cfg, token_address: btc_token_address,
+    );
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: btc_pool_contract_2, :cfg, token_address: btc_token_address_2,
+    );
+    advance_epoch_global();
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
+    let pool_member = cfg.test_info.pool_member_address;
+    let strk_pool_dispatcher = IPoolDispatcher { contract_address: strk_pool_contract };
+    let btc_pool_dispatcher = IPoolDispatcher { contract_address: btc_pool_contract };
+    let btc_pool_dispatcher_2 = IPoolDispatcher { contract_address: btc_pool_contract_2 };
+    // Calculate rewards.
+    let (expected_staker_strk_rewards, expected_strk_pool_rewards) = calculate_staker_strk_rewards(
+        staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
+    );
+    // Same calculation for both BTC pools.
+    let (expected_staker_btc_rewards_for_pool, expected_btc_pool_rewards) =
+        calculate_staker_btc_pool_rewards(
+        pool_balance: cfg.pool_member_info._deprecated_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    // Assert staker rewards, delegator rewards, and pool balance before update.
+    assert!(staker_info_before.unclaimed_rewards_own.is_zero());
+    assert!(token_dispatcher.balance_of(strk_pool_contract).is_zero());
+    assert!(token_dispatcher.balance_of(btc_pool_contract).is_zero());
+    assert!(token_dispatcher.balance_of(btc_pool_contract_2).is_zero());
+    assert!(strk_pool_dispatcher.pool_member_info_v1(:pool_member).unclaimed_rewards.is_zero());
+    assert!(btc_pool_dispatcher.pool_member_info_v1(:pool_member).unclaimed_rewards.is_zero());
+    assert!(btc_pool_dispatcher_2.pool_member_info_v1(:pool_member).unclaimed_rewards.is_zero());
+
+    // Fund reward supplier.
+    // Staker gets rewards from the both BTC pools.
+    let expected_staker_total_rewards = expected_staker_strk_rewards
+        + 2 * expected_staker_btc_rewards_for_pool;
+    // Total rewards are the sum of staker rewards and pool rewards: 1 STRK pool and 2 BTC pools.
+    let total_rewards = expected_staker_total_rewards
+        + expected_strk_pool_rewards
+        + 2 * expected_btc_pool_rewards;
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: reward_supplier,
+        amount: total_rewards,
+        :token_address,
+    );
+    let staker_info_expected = StakerInfoV1 {
+        unclaimed_rewards_own: expected_staker_total_rewards, ..staker_info_before,
+    };
+    let mut spy = snforge_std::spy_events();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: attestation_contract,
+    );
+    staking_attestation_dispatcher.update_rewards_from_attestation_contract(:staker_address);
+    advance_epoch_global();
+
+    // Assert staker rewards update.
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_expected);
+
+    // Assert pool and delegator rewards.
+    assert!(token_dispatcher.balance_of(strk_pool_contract) == expected_strk_pool_rewards.into());
+    assert!(token_dispatcher.balance_of(btc_pool_contract) == expected_btc_pool_rewards.into());
+    assert!(token_dispatcher.balance_of(btc_pool_contract_2) == expected_btc_pool_rewards.into());
+    // Since there is only one delegator, pool rewards should be the same as the delegator
+    // rewards.
+    assert!(
+        strk_pool_dispatcher
+            .pool_member_info_v1(:pool_member)
+            .unclaimed_rewards == expected_strk_pool_rewards,
+    );
+    assert!(
+        btc_pool_dispatcher
+            .pool_member_info_v1(:pool_member)
+            .unclaimed_rewards == expected_btc_pool_rewards,
+    );
+    assert!(
+        btc_pool_dispatcher_2
+            .pool_member_info_v1(:pool_member)
+            .unclaimed_rewards == expected_btc_pool_rewards,
+    );
+
+    // Validate RewardsSuppliedToDelegationPool and StakerRewardsUpdated events.
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 4, message: "update_rewards_from_attestation_contract",
+    );
+    assert_staker_rewards_updated_event(
+        spied_event: events[0],
+        :staker_address,
+        staker_rewards: expected_staker_total_rewards,
+        pool_rewards: [
+            (strk_pool_contract, expected_strk_pool_rewards),
+            (btc_pool_contract, expected_btc_pool_rewards),
+            (btc_pool_contract_2, expected_btc_pool_rewards),
+        ]
+            .span(),
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[1],
+        :staker_address,
+        pool_address: strk_pool_contract,
+        amount: expected_strk_pool_rewards,
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[2],
+        :staker_address,
+        pool_address: btc_pool_contract,
+        amount: expected_btc_pool_rewards,
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[3],
+        :staker_address,
+        pool_address: btc_pool_contract_2,
+        amount: expected_btc_pool_rewards,
     );
 }
 

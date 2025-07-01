@@ -1134,8 +1134,8 @@ pub mod Staking {
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
             // Get current epoch data.
-            let (strk_epoch_rewards, _) = self.get_current_epoch_rewards();
-            let (strk_total_stake, _) = self.get_current_total_staking_power();
+            let (strk_epoch_rewards, btc_epoch_rewards) = self.get_current_epoch_rewards();
+            let (strk_total_stake, btc_total_stake) = self.get_current_total_staking_power();
 
             // Calculate self rewards.
             let staker_own_rewards = self
@@ -1149,7 +1149,12 @@ pub mod Staking {
                 .has_pool() {
                 self
                     .calculate_staker_pools_rewards(
-                        :staker_address, :staker_pool_info, :strk_epoch_rewards, :strk_total_stake,
+                        :staker_address,
+                        :staker_pool_info,
+                        :strk_epoch_rewards,
+                        :strk_total_stake,
+                        :btc_epoch_rewards,
+                        :btc_total_stake,
                     )
             } else {
                 (Zero::zero(), Zero::zero(), array![])
@@ -1658,6 +1663,8 @@ pub mod Staking {
             staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
             strk_epoch_rewards: Amount,
             strk_total_stake: Amount,
+            btc_epoch_rewards: Amount,
+            btc_total_stake: Amount,
         ) -> (Amount, Amount, Array<(ContractAddress, Amount, Amount)>) {
             // Array for rewards data needed to update pools.
             // Contains tuples of (pool_contract, pool_balance, pool_rewards).
@@ -1666,28 +1673,28 @@ pub mod Staking {
             let mut total_pools_rewards: Amount = Zero::zero();
             let commission = staker_pool_info.commission();
             for (pool_contract, token_address) in staker_pool_info.pools() {
-                // TODO: Remove this if once calculate rewards for btc pools.
-                if token_address == self.strk_token_address() {
-                    let pool_balance_curr_epoch = self
-                        .get_staker_delegated_balance_curr_epoch(:staker_address, :token_address);
-                    // Calculate rewards for this pool.
-                    let pool_rewards_including_commission = mul_wide_and_div(
-                        lhs: strk_epoch_rewards,
-                        rhs: pool_balance_curr_epoch,
-                        div: strk_total_stake,
-                    )
-                        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
-                    let (commission_rewards, pool_rewards) = self
-                        .split_rewards_with_commission(
-                            rewards_including_commission: pool_rewards_including_commission,
-                            :commission,
-                        );
-                    total_commission_rewards += commission_rewards;
-                    total_pools_rewards += pool_rewards;
-                    if pool_rewards.is_non_zero() {
-                        pool_rewards_array
-                            .append((pool_contract, pool_balance_curr_epoch, pool_rewards));
-                    }
+                let pool_balance_curr_epoch = self
+                    .get_staker_delegated_balance_curr_epoch(:staker_address, :token_address);
+                let (epoch_rewards, total_stake) = if token_address == self.strk_token_address() {
+                    (strk_epoch_rewards, strk_total_stake)
+                } else {
+                    (btc_epoch_rewards, btc_total_stake)
+                };
+                // Calculate rewards for this pool.
+                let pool_rewards_including_commission = mul_wide_and_div(
+                    lhs: epoch_rewards, rhs: pool_balance_curr_epoch, div: total_stake,
+                )
+                    .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+                let (commission_rewards, pool_rewards) = self
+                    .split_rewards_with_commission(
+                        rewards_including_commission: pool_rewards_including_commission,
+                        :commission,
+                    );
+                total_commission_rewards += commission_rewards;
+                total_pools_rewards += pool_rewards;
+                if pool_rewards.is_non_zero() {
+                    pool_rewards_array
+                        .append((pool_contract, pool_balance_curr_epoch, pool_rewards));
                 }
             }
             (total_commission_rewards, total_pools_rewards, pool_rewards_array)
