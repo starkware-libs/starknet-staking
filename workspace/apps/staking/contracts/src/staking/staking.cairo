@@ -1132,33 +1132,50 @@ pub mod Staking {
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
-            // Calculate and update rewards.
-            let total_rewards = self.calculate_staker_strk_rewards(:staker_address);
-            self.update_reward_supplier(rewards: total_rewards);
-            let staker_pool_info = self.internal_staker_pool_info(:staker_address);
-            let staker_rewards = self
-                .calculate_staker_own_rewards_including_commission(
-                    :total_rewards, :staker_address, :staker_pool_info,
+            // Get current epoch data.
+            let (strk_epoch_rewards, _) = self.get_current_epoch_rewards();
+            let (strk_total_stake, _) = self.get_current_total_staking_power();
+
+            // Calculate self rewards.
+            let staker_own_rewards = self
+                .calculate_staker_own_rewards(
+                    :staker_address, :strk_epoch_rewards, :strk_total_stake,
                 );
-            staker_info.unclaimed_rewards_own += staker_rewards;
-            let pool_rewards = total_rewards - staker_rewards;
-            // TODO: change the pool_rewards_list once update rewards to all pools is implemented.
-            let strk_pool_contract = staker_pool_info
-                .get_strk_pool(strk_token_address: self.strk_token_address());
-            let pool_rewards_list = {
-                if strk_pool_contract.is_some() && pool_rewards > 0 {
-                    [(strk_pool_contract.unwrap(), pool_rewards)].span()
-                } else {
-                    [].span()
-                }
+            // Calculate pools rewards.
+            let staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            // TODO: Consider optimize the additional call of has_pool.
+            let (commission_rewards, total_pools_rewards, pools_rewards_data) = if staker_pool_info
+                .has_pool() {
+                self
+                    .calculate_staker_pools_rewards(
+                        :staker_address, :staker_pool_info, :strk_epoch_rewards, :strk_total_stake,
+                    )
+            } else {
+                (Zero::zero(), Zero::zero(), array![])
             };
+            // Update reward supplier.
+            let staker_rewards = staker_own_rewards + commission_rewards;
+            self.update_reward_supplier(rewards: staker_rewards + total_pools_rewards);
+
+            // Update staker rewards.
+            staker_info.unclaimed_rewards_own += staker_rewards;
+
+            // Emit event.
+            // TODO: build the array for events in calculate_staker_pools_rewards while building the
+            // pools_rewards_data array.
+            let mut pool_rewards_list = array![];
+            for (pool_contract, _pool_balance, pool_rewards) in pools_rewards_data.span() {
+                pool_rewards_list.append((*pool_contract, *pool_rewards));
+            }
             self
                 .emit(
                     Events::StakerRewardsUpdated {
-                        staker_address, staker_rewards, pool_rewards: pool_rewards_list,
+                        staker_address, staker_rewards, pool_rewards: pool_rewards_list.span(),
                     },
                 );
-            self.update_pool_rewards(:staker_address, :staker_pool_info, :pool_rewards);
+            // Update pools rewards.
+            self.update_pool_rewards(:staker_address, :pools_rewards_data);
+            // Write staker rewards to storage.
             self.write_staker_info(:staker_address, :staker_info);
         }
 
@@ -1552,56 +1569,26 @@ pub mod Staking {
             undelegate_intent_value
         }
 
-        fn calculate_staker_strk_rewards(
-            ref self: ContractState, staker_address: ContractAddress,
-        ) -> Amount {
-            let (strk_epoch_rewards, _) = self.get_current_epoch_rewards();
-            let (strk_curr_total_stake, _) = self.get_current_total_staking_power();
-            mul_wide_and_div(
-                lhs: strk_epoch_rewards,
-                rhs: self.get_staker_total_strk_balance_curr_epoch(:staker_address),
-                div: strk_curr_total_stake,
-            )
-                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
-        }
-
-        fn calculate_staker_own_rewards_including_commission(
-            ref self: ContractState,
-            total_rewards: Amount,
-            staker_address: ContractAddress,
-            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
-        ) -> Amount {
-            let own_rewards = self.staker_own_rewards(:staker_address, :total_rewards);
-            let commission_rewards = self
-                .get_staker_commission_rewards(
-                    :staker_pool_info, pool_rewards: total_rewards - own_rewards,
-                );
-            own_rewards + commission_rewards
-        }
-
+        /// Get array of tuples with (pool_contract, pool_balance, pool_rewards) and update the pool
+        /// rewards.
         fn update_pool_rewards(
             ref self: ContractState,
             staker_address: ContractAddress,
-            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
-            pool_rewards: Amount,
+            pools_rewards_data: Array<(ContractAddress, Amount, Amount)>,
         ) {
-            for (pool_contract, token_address) in staker_pool_info.pools() {
-                // TODO: remove that if once there are rewards for BTC
-                if token_address == self.strk_token_address() {
-                    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-                    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-                    let pool_balance = self
-                        .get_staker_delegated_balance_curr_epoch(:staker_address, :token_address);
-                    pool_dispatcher
-                        .update_rewards_from_staking_contract(rewards: pool_rewards, :pool_balance);
-                    self
-                        .send_rewards_to_delegation_pool(
-                            :staker_address,
-                            pool_address: pool_contract,
-                            amount: pool_rewards,
-                            :token_dispatcher,
-                        );
-                }
+            let strk_token_dispatcher = self.token_dispatcher.read();
+            for (pool_contract, pool_balance, pool_rewards) in pools_rewards_data {
+                let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+                pool_dispatcher
+                    .update_rewards_from_staking_contract(rewards: pool_rewards, :pool_balance);
+                // Rewards are always in STRK.
+                self
+                    .send_rewards_to_delegation_pool(
+                        :staker_address,
+                        pool_address: pool_contract,
+                        amount: pool_rewards,
+                        token_dispatcher: strk_token_dispatcher,
+                    );
             }
         }
 
@@ -1614,37 +1601,81 @@ pub mod Staking {
             reward_supplier_dispatcher.update_unclaimed_rewards_from_staking_contract(:rewards);
         }
 
-        fn staker_own_rewards(
-            ref self: ContractState, staker_address: ContractAddress, total_rewards: Amount,
+        /// Calculate and return the rewards for the own balance of the staker.
+        fn calculate_staker_own_rewards(
+            self: @ContractState,
+            staker_address: ContractAddress,
+            strk_epoch_rewards: Amount,
+            strk_total_stake: Amount,
         ) -> Amount {
             let own_balance_curr_epoch = self.get_staker_own_balance_curr_epoch(:staker_address);
-            let delegated_balance_curr_epoch = self
-                .get_staker_delegated_balance_curr_epoch(
-                    :staker_address, token_address: self.strk_token_address(),
-                );
-            let own_rewards = mul_wide_and_div(
-                lhs: total_rewards,
-                rhs: own_balance_curr_epoch,
-                div: own_balance_curr_epoch + delegated_balance_curr_epoch,
+            mul_wide_and_div(
+                lhs: strk_epoch_rewards, rhs: own_balance_curr_epoch, div: strk_total_stake,
             )
-                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
-            own_rewards
+                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
 
-        fn get_staker_commission_rewards(
+        // TODO: Pass also BTC rewards & total stake to calculate the rewards for BTC pools.
+        // TODO: Is it better to return span of the array?
+        /// This function calculates the rewards for the staker's pools.
+        /// The rewards will be updated and sent to pools later in `update_pools_rewards`.
+        ///
+        /// Return: total commission rewards, total pools rewards, and a list of tuples with
+        /// (pool_contract, pool_balance, pool_rewards) for each pool that gets rewards.
+        ///
+        /// Precondition: Staker has at least one pool.
+        fn calculate_staker_pools_rewards(
             self: @ContractState,
+            staker_address: ContractAddress,
             staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
-            pool_rewards: Amount,
-        ) -> Amount {
-            if staker_pool_info.has_pool() {
-                let commission = staker_pool_info.commission();
-                return compute_commission_amount_rounded_down(
-                    rewards_including_commission: pool_rewards, :commission,
-                );
+            strk_epoch_rewards: Amount,
+            strk_total_stake: Amount,
+        ) -> (Amount, Amount, Array<(ContractAddress, Amount, Amount)>) {
+            // Array for rewards data needed to update pools.
+            // Contains tuples of (pool_contract, pool_balance, pool_rewards).
+            let mut pool_rewards_array = array![];
+            let mut total_commission_rewards: Amount = Zero::zero();
+            let mut total_pools_rewards: Amount = Zero::zero();
+            let commission = staker_pool_info.commission();
+            for (pool_contract, token_address) in staker_pool_info.pools() {
+                // TODO: Remove this if once calculate rewards for btc pools.
+                if token_address == self.strk_token_address() {
+                    let pool_balance_curr_epoch = self
+                        .get_staker_delegated_balance_curr_epoch(:staker_address, :token_address);
+                    // Calculate rewards for this pool.
+                    let pool_rewards_including_commission = mul_wide_and_div(
+                        lhs: strk_epoch_rewards,
+                        rhs: pool_balance_curr_epoch,
+                        div: strk_total_stake,
+                    )
+                        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+                    let (commission_rewards, pool_rewards) = self
+                        .split_rewards_with_commission(
+                            rewards_including_commission: pool_rewards_including_commission,
+                            :commission,
+                        );
+                    total_commission_rewards += commission_rewards;
+                    total_pools_rewards += pool_rewards;
+                    if pool_rewards.is_non_zero() {
+                        pool_rewards_array
+                            .append((pool_contract, pool_balance_curr_epoch, pool_rewards));
+                    }
+                }
             }
-            Zero::zero()
+            (total_commission_rewards, total_pools_rewards, pool_rewards_array)
         }
 
+        /// Split rewards into pool's rewards and commission rewards.
+        /// Return a tuple of (commission_rewards, pool_rewards).
+        fn split_rewards_with_commission(
+            self: @ContractState, rewards_including_commission: Amount, commission: Commission,
+        ) -> (Amount, Amount) {
+            let commission_rewards = compute_commission_amount_rounded_down(
+                :rewards_including_commission, :commission,
+            );
+            let pool_rewards = rewards_including_commission - commission_rewards;
+            (commission_rewards, pool_rewards)
+        }
 
         fn get_next_epoch(self: @ContractState) -> Epoch {
             self.get_current_epoch() + 1
