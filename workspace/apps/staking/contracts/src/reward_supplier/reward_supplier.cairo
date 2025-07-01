@@ -26,7 +26,6 @@ pub mod RewardSupplier {
     use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '2.0.0';
-    // TODO: Add a get_alpha view function.
     pub const ALPHA: u128 = 25;
     pub const ALPHA_DENOMINATOR: u128 = 100;
 
@@ -211,6 +210,10 @@ pub mod RewardSupplier {
                 unclaimed_rewards: self.unclaimed_rewards.read(),
                 l1_pending_requested_amount: self.l1_pending_requested_amount.read(),
             }
+        }
+
+        fn get_alpha(self: @ContractState) -> u128 {
+            ALPHA
         }
     }
 

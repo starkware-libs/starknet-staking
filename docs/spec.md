@@ -112,6 +112,7 @@
     - [claim\_rewards](#claim_rewards-2)
     - [contract\_parameters\_v1](#contract_parameters_v1-2)
     - [on\_receive](#on_receive)
+    - [get\_alpha](#get_alpha)
   - [Events](#events-2)
     - [Mint Request](#mint-request)
 - [Minting Curve Contract](#minting-curve-contract)
@@ -2070,6 +2071,19 @@ variable is set to 0.
 
 #### access control <!-- omit from toc -->
 Only StarkGate can call on_receive.
+
+### get_alpha
+```rust
+fn get_alpha(self: @TContractState) -> u128
+```
+#### description <!-- omit from toc -->
+Returns the alpha parameter, as percentage, used when computing BTC rewards.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
 
 ## Events
 ### Mint Request
