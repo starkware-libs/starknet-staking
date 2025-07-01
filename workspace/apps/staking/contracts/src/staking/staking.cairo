@@ -1133,8 +1133,10 @@ pub mod Staking {
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
+            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             // Get current epoch data.
-            let (strk_epoch_rewards, btc_epoch_rewards) = self.get_current_epoch_rewards();
+            let (strk_epoch_rewards, btc_epoch_rewards) = reward_supplier_dispatcher
+                .calculate_current_epoch_rewards();
             let (strk_total_stake, btc_total_stake) = self.get_current_total_staking_power();
 
             // Calculate self rewards.
@@ -1161,7 +1163,10 @@ pub mod Staking {
             };
             // Update reward supplier.
             let staker_rewards = staker_own_rewards + commission_rewards;
-            self.update_and_claim_reward_supplier(:staker_rewards, :total_pools_rewards);
+            self
+                .update_and_claim_reward_supplier(
+                    :reward_supplier_dispatcher, :staker_rewards, :total_pools_rewards,
+                );
             // Update staker rewards.
             staker_info.unclaimed_rewards_own += staker_rewards;
 
@@ -1612,14 +1617,12 @@ pub mod Staking {
             }
         }
 
-        fn get_current_epoch_rewards(self: @ContractState) -> (Amount, Amount) {
-            self.reward_supplier_dispatcher.read().calculate_current_epoch_rewards()
-        }
-
         fn update_and_claim_reward_supplier(
-            ref self: ContractState, staker_rewards: Amount, total_pools_rewards: Amount,
+            ref self: ContractState,
+            reward_supplier_dispatcher: IRewardSupplierDispatcher,
+            staker_rewards: Amount,
+            total_pools_rewards: Amount,
         ) {
-            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             // Update total rewards.
             reward_supplier_dispatcher
                 .update_unclaimed_rewards_from_staking_contract(
