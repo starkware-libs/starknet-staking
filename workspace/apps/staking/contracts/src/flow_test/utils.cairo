@@ -33,8 +33,7 @@ use staking::staking::interface::{
     IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::interface_v0::{
-    IStakingV0Dispatcher, IStakingV0DispatcherTrait, IStakingV0ForTestsDispatcher,
-    IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
+    IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
 use staking::staking::interface_v1::{
     IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
@@ -234,10 +233,6 @@ pub(crate) impl StakingImpl of StakingTrait {
         IStakingSafeDispatcher { contract_address: self.address }
     }
 
-    fn dispatcher_v0(self: StakingState) -> IStakingV0Dispatcher nopanic {
-        IStakingV0Dispatcher { contract_address: self.address }
-    }
-
     fn dispatcher_v0_for_tests(self: StakingState) -> IStakingV0ForTestsDispatcher nopanic {
         IStakingV0ForTestsDispatcher { contract_address: self.address }
     }
@@ -298,7 +293,7 @@ pub(crate) impl StakingImpl of StakingTrait {
     fn get_pool(self: StakingState, staker: Staker) -> ContractAddress {
         if self.is_v0() {
             self
-                .dispatcher_v0()
+                .dispatcher_v0_for_tests()
                 .staker_info(staker_address: staker.staker.address)
                 .get_pool_info()
                 .pool_contract
@@ -1190,7 +1185,7 @@ pub(crate) impl SystemStakerImpl<
     }
 
     fn staker_info(self: SystemState<TTokenState>, staker: Staker) -> StakerInfo {
-        self.staking.dispatcher_v0().staker_info(staker_address: staker.staker.address)
+        self.staking.dispatcher_v0_for_tests().staker_info(staker_address: staker.staker.address)
     }
 
     fn get_staker_info(self: SystemState<TTokenState>, staker: Staker) -> Option<StakerInfoV1> {

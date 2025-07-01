@@ -6,13 +6,6 @@ use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
 
 /// Staking V0 interface.
-/// Used for migration purposes.
-#[starknet::interface]
-pub trait IStakingV0<TContractState> {
-    fn staker_info(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
-}
-
-/// Staking V0 interface.
 /// Used for testing purposes.
 #[cfg(test)]
 #[starknet::interface]
@@ -29,6 +22,7 @@ pub trait IStakingV0ForTests<TContractState> {
     );
     fn set_open_for_delegation(self: @TContractState, commission: Commission) -> ContractAddress;
     fn update_commission(ref self: TContractState, commission: Commission);
+    fn staker_info(self: @TContractState, staker_address: ContractAddress) -> StakerInfo;
 }
 
 /// StakerInfo struct used in V0.
