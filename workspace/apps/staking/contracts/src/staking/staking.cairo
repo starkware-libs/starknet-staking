@@ -1156,8 +1156,7 @@ pub mod Staking {
             };
             // Update reward supplier.
             let staker_rewards = staker_own_rewards + commission_rewards;
-            self.update_reward_supplier(rewards: staker_rewards + total_pools_rewards);
-
+            self.update_and_claim_reward_supplier(:staker_rewards, :total_pools_rewards);
             // Update staker rewards.
             staker_info.unclaimed_rewards_own += staker_rewards;
 
@@ -1318,13 +1317,12 @@ pub mod Staking {
                 );
         }
 
-        fn send_rewards(
+        fn claim_from_reward_supplier(
             self: @ContractState,
-            reward_address: ContractAddress,
+            reward_supplier_dispatcher: IRewardSupplierDispatcher,
             amount: Amount,
             token_dispatcher: IERC20Dispatcher,
         ) {
-            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             let staking_contract = get_contract_address();
             let balance_before = token_dispatcher.balance_of(account: staking_contract);
             reward_supplier_dispatcher.claim_rewards(:amount);
@@ -1332,6 +1330,19 @@ pub mod Staking {
             assert!(
                 balance_after - balance_before == amount.into(), "{}", Error::UNEXPECTED_BALANCE,
             );
+        }
+
+        fn send_rewards(
+            self: @ContractState,
+            reward_address: ContractAddress,
+            amount: Amount,
+            token_dispatcher: IERC20Dispatcher,
+        ) {
+            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
+            self
+                .claim_from_reward_supplier(
+                    :reward_supplier_dispatcher, :amount, :token_dispatcher,
+                );
             token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
         }
 
@@ -1353,7 +1364,10 @@ pub mod Staking {
             self.emit(Events::StakerRewardClaimed { staker_address, reward_address, amount });
         }
 
-        /// Sends the rewards to `staker_address`'s pool contract.
+        /// Sends the rewards to `pool_address`.
+        ///
+        /// This function assumes the rewards are already in the staking contract. It doesnt claim
+        /// rewards from rewards supplier contract.
         fn send_rewards_to_delegation_pool(
             ref self: ContractState,
             staker_address: ContractAddress,
@@ -1361,7 +1375,7 @@ pub mod Staking {
             amount: Amount,
             token_dispatcher: IERC20Dispatcher,
         ) {
-            self.send_rewards(reward_address: pool_address, :amount, :token_dispatcher);
+            token_dispatcher.checked_transfer(recipient: pool_address, amount: amount.into());
             self
                 .emit(
                     Events::RewardsSuppliedToDelegationPool {
@@ -1597,9 +1611,22 @@ pub mod Staking {
             self.reward_supplier_dispatcher.read().calculate_current_epoch_rewards()
         }
 
-        fn update_reward_supplier(ref self: ContractState, rewards: Amount) {
+        fn update_and_claim_reward_supplier(
+            ref self: ContractState, staker_rewards: Amount, total_pools_rewards: Amount,
+        ) {
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
-            reward_supplier_dispatcher.update_unclaimed_rewards_from_staking_contract(:rewards);
+            // Update total rewards.
+            reward_supplier_dispatcher
+                .update_unclaimed_rewards_from_staking_contract(
+                    rewards: staker_rewards + total_pools_rewards,
+                );
+            // Claim pools rewards.
+            self
+                .claim_from_reward_supplier(
+                    :reward_supplier_dispatcher,
+                    amount: total_pools_rewards,
+                    token_dispatcher: self.token_dispatcher.read(),
+                );
         }
 
         /// Calculate and return the rewards for the own balance of the staker.
