@@ -37,9 +37,6 @@ use staking::pool::objects::{
     VStorageContractTest,
 };
 use staking::pool::pool::Pool;
-use staking::reward_supplier::interface::{
-    IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
-};
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
@@ -56,10 +53,9 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
-    advance_block_into_attestation_window, advance_epoch_global, approve, calculate_pool_rewards,
-    calculate_staker_own_rewards_including_commission, calculate_staker_strk_rewards,
-    cheat_target_attestation_block_hash, claim_rewards_for_pool_member, constants,
-    deploy_mock_erc20_contract, deploy_staking_contract,
+    advance_block_into_attestation_window, advance_epoch_global, approve,
+    calculate_strk_pool_rewards, cheat_target_attestation_block_hash, claim_rewards_for_pool_member,
+    constants, deploy_mock_erc20_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     initialize_pool_state, load_from_simple_map, stake_with_pool_enabled,
     update_rewards_from_staking_contract_for_testing,
@@ -493,11 +489,6 @@ fn test_claim_rewards() {
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let reward_supplier = cfg.staking_contract_info.reward_supplier;
-    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
-        contract_address: reward_supplier,
-    };
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
 
     let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
@@ -512,19 +503,11 @@ fn test_claim_rewards() {
 
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
-    let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
 
     // Compute expected rewards.
-    let total_rewards = calculate_staker_strk_rewards(
-        staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
+    let expected_pool_rewards = calculate_strk_pool_rewards(
+        :staker_address, :staking_contract, :minting_curve_contract,
     );
-    let staker_rewards = calculate_staker_own_rewards_including_commission(
-        staker_info: staker_info_before, :total_rewards,
-    );
-    let (strk_epoch_rewards, _) = reward_supplier_dispatcher
-        .calculate_current_epoch_rewards(); // epoch_rewards are the total staker rewards in that case since there is only one staker.
-    let expected_pool_rewards = strk_epoch_rewards
-        - staker_rewards; // pool_rewards = total staker rewards - staker own rewards include commission.
 
     // Fund pool_contract.
     fund(
@@ -606,7 +589,7 @@ fn test_claim_rewards_with_balance_changes() {
 
     // Pool update rewards.
     let mut pool_balance = delegate_amount;
-    let pool_rewards_for_epoch = calculate_pool_rewards(
+    let pool_rewards_for_epoch = calculate_strk_pool_rewards(
         :staker_address, :staking_contract, :minting_curve_contract,
     );
     update_rewards_from_staking_contract_for_testing(
@@ -631,7 +614,7 @@ fn test_claim_rewards_with_balance_changes() {
 
     // Balance changes after current epoch and there is no balance change at current epoch.
     advance_epoch_global();
-    let pool_rewards_for_epoch = calculate_pool_rewards(
+    let pool_rewards_for_epoch = calculate_strk_pool_rewards(
         :staker_address, :staking_contract, :minting_curve_contract,
     );
     update_rewards_from_staking_contract_for_testing(
@@ -654,7 +637,7 @@ fn test_claim_rewards_with_balance_changes() {
     // Balance changes at current epoch & after current epoch.
     advance_epoch_global();
     pool_balance += delegate_amount;
-    let pool_rewards_for_epoch = calculate_pool_rewards(
+    let pool_rewards_for_epoch = calculate_strk_pool_rewards(
         :staker_address, :staking_contract, :minting_curve_contract,
     );
     update_rewards_from_staking_contract_for_testing(

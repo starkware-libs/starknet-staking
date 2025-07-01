@@ -14,7 +14,7 @@ use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerInfo
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils::constants::EPOCH_DURATION;
 use staking::test_utils::{
-    calculate_pool_member_rewards, calculate_pool_rewards,
+    calculate_pool_member_rewards, calculate_strk_pool_rewards,
     calculate_strk_pool_rewards_with_pool_balance, deserialize_option, load_from_iterable_map,
     load_from_trace, load_trace_length, pool_update_rewards,
 };
@@ -1048,7 +1048,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl<
         system.delegate(:delegator, :pool, amount: delegated_amount);
         system.advance_epoch_and_attest(:staker);
         // Calculate pool rewards.
-        let pool_rewards_epoch = calculate_pool_rewards(
+        let pool_rewards_epoch = calculate_strk_pool_rewards(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
         system.advance_epoch_and_attest(:staker);
@@ -1174,7 +1174,7 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl<
         system.delegate(:delegator, pool: pool1, amount: delegated_amount);
         system.advance_epoch_and_attest(staker: staker1);
         // Calculate pool rewards.
-        let pool_rewards_epoch = calculate_pool_rewards(
+        let pool_rewards_epoch = calculate_strk_pool_rewards(
             staker_address: staker1.staker.address, :staking_contract, :minting_curve_contract,
         );
         system.advance_epoch_and_attest(staker: staker1);
@@ -2066,7 +2066,7 @@ pub(crate) impl ClaimRewardsMultipleDelegatorsFlowImpl<
         system.advance_epoch_and_attest(:staker);
 
         // Compute pool rewards.
-        let pool_rewards = calculate_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards(
             staker_address: staker.staker.address,
             staking_contract: system.staking.address,
             minting_curve_contract: system.minting_curve.address,
@@ -2283,7 +2283,9 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         // Delelgator 1 is the only delegator in the pool.
         pool_balance += delegated_amount_1;
         delegator_1_rewards +=
-            calculate_pool_rewards(:staker_address, :staking_contract, :minting_curve_contract);
+            calculate_strk_pool_rewards(
+                :staker_address, :staking_contract, :minting_curve_contract,
+            );
 
         let delegated_amount_2 = delegated_amount_1;
         let delegator_2 = system.new_delegator(amount: delegated_amount_2);
@@ -2291,7 +2293,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
 
         system.advance_epoch_and_attest(:staker);
         pool_balance += delegated_amount_2;
-        let pool_rewards = calculate_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         delegator_1_rewards +=
@@ -2312,11 +2314,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
 
         system.attest(:staker);
         let pool_rewards = calculate_strk_pool_rewards_with_pool_balance(
-            :staker_address,
-            :staking_contract,
-            :minting_curve_contract,
-            :pool_balance,
-            staker_balance: stake_amount,
+            :staker_address, :staking_contract, :minting_curve_contract, :pool_balance,
         );
         delegator_1_rewards +=
             calculate_pool_member_rewards(
@@ -2335,7 +2333,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         pool_balance += stake_amount / 4;
 
         system.advance_epoch_and_attest(:staker);
-        let pool_rewards = calculate_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         delegator_1_rewards +=
@@ -2353,7 +2351,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         delegated_amount_1 = 0;
         pool_balance -= stake_amount;
 
-        let pool_rewards = calculate_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
@@ -2368,7 +2366,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         delegated_amount_1 += 3 * stake_amount / 4;
         pool_balance += 3 * stake_amount / 4;
 
-        let pool_rewards = calculate_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         let from_sigma = sigma;
@@ -2387,7 +2385,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         delegated_amount_1 += stake_amount / 4;
         pool_balance += stake_amount / 4;
 
-        let pool_rewards = calculate_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         delegator_1_rewards +=
@@ -2497,7 +2495,7 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl<
         let minting_curve_contract = system.minting_curve.address;
 
         // Calculate pool rewards
-        let pool_rewards_one_epoch = calculate_pool_rewards(
+        let pool_rewards_one_epoch = calculate_strk_pool_rewards(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
         let pool_total_rewards = pool_rewards_one_epoch * 3;
@@ -2586,7 +2584,7 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl<
         system.advance_epoch_and_attest(:staker);
 
         // Calculate pool rewards
-        let pool_rewards_first_epoch = calculate_pool_rewards(
+        let pool_rewards_first_epoch = calculate_strk_pool_rewards(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
         assert!(pool_rewards_first_epoch.is_non_zero());
@@ -2597,7 +2595,7 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl<
         system.advance_epoch_and_attest(:staker);
 
         // Calculate pool rewards
-        let pool_rewards_second_epoch = calculate_pool_rewards(
+        let pool_rewards_second_epoch = calculate_strk_pool_rewards(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
         assert!(pool_rewards_second_epoch > pool_rewards_first_epoch);
@@ -3847,7 +3845,7 @@ pub(crate) impl PoolCalculateRewardsTwiceFlowImpl<
         system.advance_epoch_and_attest(:staker);
         system.advance_epoch_and_attest(:staker);
 
-        let pool_rewards_one_epoch = calculate_pool_rewards(
+        let pool_rewards_one_epoch = calculate_strk_pool_rewards(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
 
