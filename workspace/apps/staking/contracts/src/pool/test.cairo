@@ -24,7 +24,6 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::errors::GenericError;
-use staking::flow_test::utils::upgrade_implementation;
 use staking::pool::errors::Error;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher,
@@ -50,25 +49,20 @@ use staking::staking::objects::{
 };
 use staking::types::InternalPoolMemberInfoLatest;
 use staking::{event_test_utils, test_utils};
-use starkware_utils::components::replaceability::interface::{
-    EICData, IEICInitializableSafeDispatcherTrait, IEICInitializableSafeLibraryDispatcher,
-    ImplementationData,
-};
 use starkware_utils::errors::Describable;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{
-    assert_panic_with_error, assert_panic_with_felt_error, cheat_caller_address_once,
-    check_identity,
+    assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
 use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
     advance_block_into_attestation_window, advance_epoch_global, approve, calculate_pool_rewards,
     calculate_staker_own_rewards_including_commission, calculate_staker_strk_rewards,
     cheat_target_attestation_block_hash, claim_rewards_for_pool_member, constants,
-    declare_pool_contract, declare_pool_eic_contract, deploy_mock_erc20_contract,
-    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
-    general_contract_system_deployment, initialize_pool_state, load_from_simple_map,
-    stake_with_pool_enabled, update_rewards_from_staking_contract_for_testing,
+    deploy_mock_erc20_contract, deploy_staking_contract,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    initialize_pool_state, load_from_simple_map, stake_with_pool_enabled,
+    update_rewards_from_staking_contract_for_testing,
 };
 
 #[test]
