@@ -330,7 +330,7 @@ fn test_assert_staker_is_active() {
         token_address: cfg.staking_contract_info.token_address,
         governance_admin: cfg.test_info.pool_contract_admin,
     );
-    assert!(state.staker_removed.read() == false);
+    assert!(!state.staker_removed.read());
     state.assert_staker_is_active();
 }
 
@@ -364,7 +364,7 @@ fn test_set_staker_removed() {
     );
     let mut spy = snforge_std::spy_events();
     state.set_staker_removed();
-    assert!(state.staker_removed.read() == true);
+    assert!(state.staker_removed.read());
     // Validate the single StakerRemoved event.
     let events = spy.get_events().emitted_by(contract_address: test_address()).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_staker_removed");

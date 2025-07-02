@@ -155,11 +155,11 @@ fn test_cumulative_rewards_trace_idx() {
 #[test]
 fn test_is_non_empty() {
     let mut mock_trace = CONTRACT_STATE();
-    assert!(mock_trace.is_non_empty() == false);
+    assert!(!mock_trace.is_non_empty());
 
     mock_trace
         .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
-    assert!(mock_trace.is_non_empty() == true);
+    assert!(mock_trace.is_non_empty());
 }
 
 fn test_is_non_empty_mutable() {
