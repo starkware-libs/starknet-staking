@@ -1572,12 +1572,13 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
     /// Upgrades the contracts in the system state with local
     /// implementations.
     fn upgrade_contracts_implementation_v2(self: SystemState<STRKTokenState>) {
-        // TODO: add pause?
+        self.staking.pause();
         self.upgrade_staking_implementation_v2();
         self.upgrade_reward_supplier_implementation_v2();
         if let Option::Some(staker_address) = self.staker_address {
             self.staker_migration(staker_address);
         }
+        self.staking.unpause();
         self.minting_curve.set_c_num(DEFAULT_C_NUM);
     }
 
