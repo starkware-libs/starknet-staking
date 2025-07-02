@@ -1,10 +1,10 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
-    BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, CALLER_ADDRESS, DUMMY_ADDRESS,
-    DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, NON_APP_GOVERNOR,
-    NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
-    OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
-    STRK_TOKEN_NAME, UNPOOL_TIME,
+    BTC_STAKER_ADDRESS, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, CALLER_ADDRESS,
+    DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
+    NON_APP_GOVERNOR, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
+    OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
+    STAKER_UNCLAIMED_REWARDS, STRK_TOKEN_NAME, UNPOOL_TIME,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -1643,6 +1643,7 @@ fn test_switch_staking_delegation_pool_assertions() {
     let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
         contract_address: staking_contract,
     };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let switched_amount = 1;
 
     // Initialize from_staker.
@@ -1708,6 +1709,60 @@ fn test_switch_staking_delegation_pool_assertions() {
             identifier: pool_member.into(),
         );
     assert_panic_with_error(:result, expected_error: Error::SELF_SWITCH_NOT_ALLOWED.describe());
+
+    // Catch UNSTAKE_IN_PROGRESS.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: to_staker);
+    staking_dispatcher.unstake_intent();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: from_pool);
+    let result = staking_pool_safe_dispatcher
+        .switch_staking_delegation_pool(
+            :to_staker,
+            :to_pool,
+            :switched_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into(),
+        );
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
+
+    // Initialize a staker.
+    let btc_staker = BTC_STAKER_ADDRESS();
+    cfg.test_info.staker_address = btc_staker;
+    cfg.staker_info.operational_address = DUMMY_ADDRESS();
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+
+    // Catch DELEGATION_POOL_MISMATCH.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: from_pool);
+    let result = staking_pool_safe_dispatcher
+        .switch_staking_delegation_pool(
+            to_staker: btc_staker,
+            to_pool: DUMMY_ADDRESS(),
+            :switched_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into(),
+        );
+    assert_panic_with_error(:result, expected_error: Error::DELEGATION_POOL_MISMATCH.describe());
+
+    // Open a BTC pool.
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: btc_staker);
+    staking_dispatcher.set_commission(:commission);
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: btc_staker);
+    let btc_pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+
+    // Catch TOKEN_MISMATCH.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: from_pool);
+    let result = staking_pool_safe_dispatcher
+        .switch_staking_delegation_pool(
+            to_staker: btc_staker,
+            to_pool: btc_pool_contract,
+            :switched_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into(),
+        );
+    assert_panic_with_error(:result, expected_error: Error::TOKEN_MISMATCH.describe());
 }
 
 #[test]

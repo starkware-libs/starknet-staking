@@ -113,6 +113,9 @@ pub(crate) mod constants {
     pub fn OTHER_STAKER_ADDRESS() -> ContractAddress {
         'OTHER_STAKER_ADDRESS'.try_into().unwrap()
     }
+    pub fn BTC_STAKER_ADDRESS() -> ContractAddress {
+        'BTC_STAKER_ADDRESS'.try_into().unwrap()
+    }
     pub fn OPERATIONAL_ADDRESS() -> ContractAddress {
         'OPERATIONAL_ADDRESS'.try_into().unwrap()
     }

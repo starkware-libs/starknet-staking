@@ -957,7 +957,6 @@ pub mod Staking {
 
             // More asserts.
             assert!(to_staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-            // TODO: Catch this error in tests.
             let to_token_address = self
                 .internal_staker_pool_info(staker_address: to_staker)
                 .get_pool_token(pool_contract: to_pool)
