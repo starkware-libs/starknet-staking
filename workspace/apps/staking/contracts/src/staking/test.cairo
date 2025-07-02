@@ -3213,17 +3213,17 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     assert_number_of_events(
         actual: events.len(), expected: 2, message: "update_rewards_from_attestation_contract",
     );
-    assert_staker_rewards_updated_event(
-        spied_event: events[0],
-        :staker_address,
-        staker_rewards: expected_staker_rewards,
-        pool_rewards: [(pool_contract, expected_pool_rewards)].span(),
-    );
     assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[1],
+        spied_event: events[0],
         :staker_address,
         pool_address: pool_contract,
         amount: expected_pool_rewards,
+    );
+    assert_staker_rewards_updated_event(
+        spied_event: events[1],
+        :staker_address,
+        staker_rewards: expected_staker_rewards,
+        pool_rewards: [(pool_contract, expected_pool_rewards)].span(),
     );
 }
 
@@ -3362,8 +3362,26 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     assert_number_of_events(
         actual: events.len(), expected: 4, message: "update_rewards_from_attestation_contract",
     );
-    assert_staker_rewards_updated_event(
+    assert_rewards_supplied_to_delegation_pool_event(
         spied_event: events[0],
+        :staker_address,
+        pool_address: strk_pool_contract,
+        amount: expected_strk_pool_rewards,
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[1],
+        :staker_address,
+        pool_address: btc_pool_contract,
+        amount: expected_btc_pool_rewards,
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[2],
+        :staker_address,
+        pool_address: btc_pool_contract_2,
+        amount: expected_btc_pool_rewards,
+    );
+    assert_staker_rewards_updated_event(
+        spied_event: events[3],
         :staker_address,
         staker_rewards: expected_staker_total_rewards,
         pool_rewards: [
@@ -3372,24 +3390,6 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
             (btc_pool_contract_2, expected_btc_pool_rewards),
         ]
             .span(),
-    );
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[1],
-        :staker_address,
-        pool_address: strk_pool_contract,
-        amount: expected_strk_pool_rewards,
-    );
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[2],
-        :staker_address,
-        pool_address: btc_pool_contract,
-        amount: expected_btc_pool_rewards,
-    );
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[3],
-        :staker_address,
-        pool_address: btc_pool_contract_2,
-        amount: expected_btc_pool_rewards,
     );
 }
 

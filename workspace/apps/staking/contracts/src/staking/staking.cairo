@@ -1169,21 +1169,15 @@ pub mod Staking {
             // Update staker rewards.
             staker_info.unclaimed_rewards_own += staker_rewards;
 
+            // Update pools rewards.
+            let pool_rewards_list = self.update_pool_rewards(:staker_address, :pools_rewards_data);
             // Emit event.
-            // TODO: build the array for events in calculate_staker_pools_rewards while building the
-            // pools_rewards_data array.
-            let mut pool_rewards_list = array![];
-            for (pool_contract, _pool_balance, pool_rewards) in pools_rewards_data.span() {
-                pool_rewards_list.append((*pool_contract, *pool_rewards));
-            }
             self
                 .emit(
                     Events::StakerRewardsUpdated {
                         staker_address, staker_rewards, pool_rewards: pool_rewards_list.span(),
                     },
                 );
-            // Update pools rewards.
-            self.update_pool_rewards(:staker_address, :pools_rewards_data);
             // Write staker rewards to storage.
             self.write_staker_info(:staker_address, :staker_info);
         }
@@ -1595,11 +1589,14 @@ pub mod Staking {
 
         /// Get array of tuples with (pool_contract, pool_balance, pool_rewards) and update the pool
         /// rewards.
+        ///
+        /// Return array of tuples (pool_contract, pool_rewards) for the StakerRewardsUpdated event.
         fn update_pool_rewards(
             ref self: ContractState,
             staker_address: ContractAddress,
             pools_rewards_data: Array<(ContractAddress, Amount, Amount)>,
-        ) {
+        ) -> Array<(ContractAddress, Amount)> {
+            let mut pool_rewards_list = array![];
             let strk_token_dispatcher = self.token_dispatcher.read();
             for (pool_contract, pool_balance, pool_rewards) in pools_rewards_data {
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
@@ -1613,7 +1610,9 @@ pub mod Staking {
                         amount: pool_rewards,
                         token_dispatcher: strk_token_dispatcher,
                     );
+                pool_rewards_list.append((pool_contract, pool_rewards));
             }
+            pool_rewards_list
         }
 
         fn update_and_claim_reward_supplier(
