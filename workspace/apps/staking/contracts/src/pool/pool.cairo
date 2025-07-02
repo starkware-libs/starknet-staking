@@ -27,7 +27,7 @@ pub mod Pool {
         IStakingPoolDispatcherTrait,
     };
     use staking::types::{
-        Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
+        Amount, Commission, Epoch, InternalPoolMemberInfoLatest, VecIndex, Version,
     };
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_rewards_per_strk, compute_rewards_rounded_down,
