@@ -3697,4 +3697,10 @@ pub(crate) impl PoolCalculateRewardsTwiceFlowImpl<
 // Upgrade
 // Attest at STARTING_EPOCH (should fail)
 
+// TODO: Add test:
+// Stake without pool
+// Change balance in some epochs (trace length should be > 1)
+// Upgrade
+// Open strk pool
+
 

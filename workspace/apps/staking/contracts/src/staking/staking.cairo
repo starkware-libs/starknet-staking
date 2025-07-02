@@ -266,13 +266,6 @@ pub mod Staking {
                 );
 
             self.insert_staker_own_balance(:staker_address, own_balance: amount);
-            // TODO: Consider initialize delegated trace in set_open_for_delegation instead of here.
-            self
-                .insert_staker_delegated_balance(
-                    :staker_address,
-                    token_address: self.strk_token_address(),
-                    delegated_balance: Zero::zero(),
-                );
 
             // Create the record for the staker.
             self
@@ -487,10 +480,7 @@ pub mod Staking {
             // Update pool to storage.
             staker_pool_info_mut.write_new_pool(:pool_contract, :token_address);
             // Initialize the delegated balance trace.
-            // STRK delegated balance trace already initialized in stake.
-            if token_address != self.strk_token_address() {
-                self.initialize_staker_delegated_balance_trace(:staker_address, :token_address);
-            }
+            self.initialize_staker_delegated_balance_trace(:staker_address, :token_address);
             pool_contract
         }
 
@@ -759,7 +749,9 @@ pub mod Staking {
             // Migrate staker pool info.
             let internal_staker_info = self.internal_staker_info(:staker_address);
             let staker_pool_info_mut = self.internal_staker_pool_info_mut(:staker_address);
+            let mut has_pool = false;
             if let Option::Some(pool_info) = internal_staker_info._deprecated_pool_info {
+                has_pool = true;
                 let token_address = self.strk_token_address();
                 let pool_contract = pool_info._deprecated_pool_contract;
                 staker_pool_info_mut.write_new_pool(:pool_contract, :token_address);
@@ -776,9 +768,9 @@ pub mod Staking {
             assert!(trace_len > 0, "{}", TraceErrors::EMPTY_TRACE);
             let n = 3;
             if trace_len >= n {
-                self.migrate_staker_balance_trace(:staker_address, :n);
+                self.migrate_staker_balance_trace(:staker_address, :n, :has_pool);
             } else {
-                self.migrate_staker_balance_trace(:staker_address, n: trace_len);
+                self.migrate_staker_balance_trace(:staker_address, n: trace_len, :has_pool);
             }
             // Add staker address to the stakers vector.
             self.stakers.push(staker_address);
@@ -1225,7 +1217,7 @@ pub mod Staking {
         /// Migrate the n latest checkpoints of the staker balance trace.
         /// n can be only 1, 2 or 3.
         fn migrate_staker_balance_trace(
-            ref self: ContractState, staker_address: ContractAddress, n: u64,
+            ref self: ContractState, staker_address: ContractAddress, n: u64, has_pool: bool,
         ) {
             let deprecated_trace = self.staker_balance_trace.entry(staker_address);
             let len = deprecated_trace.length();
@@ -1237,9 +1229,11 @@ pub mod Staking {
             for i in len - n..len {
                 let (epoch, staker_balance) = deprecated_trace.at(i);
                 let own_balance = staker_balance.amount_own();
-                let delegated_balance = staker_balance.pool_amount();
                 own_balance_trace.insert(key: epoch, value: own_balance);
-                delegated_balance_trace.insert(key: epoch, value: delegated_balance);
+                if has_pool {
+                    let delegated_balance = staker_balance.pool_amount();
+                    delegated_balance_trace.insert(key: epoch, value: delegated_balance);
+                }
             }
         }
 
@@ -1780,10 +1774,17 @@ pub mod Staking {
             self: @ContractState, staker_address: ContractAddress,
         ) -> Amount {
             let curr_own_balance = self.get_staker_own_balance_curr_epoch(:staker_address);
-            let curr_delegated_balance = self
-                .get_staker_delegated_balance_curr_epoch(
-                    :staker_address, token_address: self.strk_token_address(),
-                );
+            let strk_token_address = self.strk_token_address();
+            let curr_delegated_balance = if self
+                .internal_staker_pool_info(:staker_address)
+                .has_pool_for_token(token_address: strk_token_address) {
+                self
+                    .get_staker_delegated_balance_curr_epoch(
+                        :staker_address, token_address: strk_token_address,
+                    )
+            } else {
+                Zero::zero()
+            };
             curr_own_balance + curr_delegated_balance
         }
 
