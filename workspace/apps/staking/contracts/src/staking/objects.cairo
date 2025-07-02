@@ -27,7 +27,6 @@ pub(crate) struct UndelegateIntentKey {
 pub(crate) struct UndelegateIntentValue {
     pub unpool_time: Timestamp,
     pub amount: Amount,
-    // TODO: Consider change to token_address.
     pub staker_address: ContractAddress,
 }
 
