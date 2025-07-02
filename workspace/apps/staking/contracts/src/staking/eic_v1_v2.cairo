@@ -46,7 +46,6 @@ mod StakingEICV1toV2 {
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
             assert(eic_init_data.len() == 3, 'EXPECTED_DATA_LENGTH_3');
-            // TODO: Can prev_class_hash be hard coded?
             let prev_class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             let pool_contract_class_hash: ClassHash = (*eic_init_data[1]).try_into().unwrap();
             let token_address: ContractAddress = (*eic_init_data[2]).try_into().unwrap();
