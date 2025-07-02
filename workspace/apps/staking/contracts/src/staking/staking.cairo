@@ -1650,8 +1650,6 @@ pub mod Staking {
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
 
-        // TODO: Pass also BTC rewards & total stake to calculate the rewards for BTC pools.
-        // TODO: Is it better to return span of the array?
         /// This function calculates the rewards for the staker's pools.
         /// The rewards will be updated and sent to pools later in `update_pools_rewards`.
         ///
