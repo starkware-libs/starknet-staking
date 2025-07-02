@@ -1657,12 +1657,6 @@ pub(crate) impl SystemFactoryImpl of SystemFactoryTrait {
     }
 }
 
-#[derive(Drop, Copy)]
-pub(crate) enum SystemType {
-    Local,
-    Mainnet,
-}
-
 pub(crate) trait FlowTrait<
     TFlow,
     TTokenState,
@@ -1679,14 +1673,14 @@ pub(crate) trait FlowTrait<
     }
     fn setup(ref self: TFlow, ref system: SystemState<TTokenState>) {}
     fn setup_v1(ref self: TFlow, ref system: SystemState<TTokenState>) {}
-    fn test(self: TFlow, ref system: SystemState<TTokenState>, system_type: SystemType);
+    fn test(self: TFlow, ref system: SystemState<TTokenState>);
 }
 
 pub(crate) fn test_flow_local<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow, TokenState>>(
     flow: TFlow,
 ) {
     let mut system = SystemFactoryTrait::local_system();
-    flow.test(ref :system, system_type: SystemType::Local);
+    flow.test(ref :system);
 }
 
 pub(crate) fn test_flow_mainnet<
@@ -1709,7 +1703,7 @@ pub(crate) fn test_flow_mainnet<
         system.set_staker_for_migration(staker_address);
     }
     system.upgrade_contracts_implementation_v2();
-    flow.test(ref :system, system_type: SystemType::Mainnet);
+    flow.test(ref :system);
 }
 
 #[test]
