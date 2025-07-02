@@ -1137,7 +1137,6 @@ pub mod Staking {
                 );
             // Calculate pools rewards.
             let staker_pool_info = self.internal_staker_pool_info(:staker_address);
-            // TODO: Consider optimize the additional call of has_pool.
             let (commission_rewards, total_pools_rewards, pools_rewards_data) = if staker_pool_info
                 .has_pool() {
                 self
