@@ -36,7 +36,6 @@ use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
-use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
 use staking::staking::staking::Staking;
 use staking::types::{
@@ -731,6 +730,7 @@ pub(crate) fn load_option_from_simple_map<
     }
 }
 
+// Store internal staker info v0 with pool_info = None.
 pub(crate) fn store_internal_staker_info_v0_to_map(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
@@ -740,7 +740,6 @@ pub(crate) fn store_internal_staker_info_v0_to_map(
     amount_own: Amount,
     index: Index,
     unclaimed_rewards_own: Amount,
-    pool_info: Option<StakerPoolInfo>,
 ) {
     // Serialize the versioned internal staker info.
     let mut serialized_enum: Array<felt252> = array![];
@@ -760,14 +759,9 @@ pub(crate) fn store_internal_staker_info_v0_to_map(
     amount_own.serialize(ref serialized_enum);
     index.serialize(ref serialized_enum);
     unclaimed_rewards_own.serialize(ref serialized_enum);
-    if let Option::Some(info) = pool_info {
-        let idx = 1;
-        idx.serialize(ref serialized_enum);
-        info.serialize(ref serialized_enum);
-    } else {
-        let idx = 0;
-        idx.serialize(ref serialized_enum);
-    }
+    // Serialize the pool info = None.
+    let idx = 0;
+    idx.serialize(ref serialized_enum);
     let mut keys = array![];
     staker_address.serialize(ref keys);
     let storage_address = snforge_std::map_entry_address(

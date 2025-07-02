@@ -3,7 +3,6 @@ use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
-use staking::staking::interface_v0::StakerPoolInfo;
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::storage::{Mutable, PendingStoragePath, StoragePath};
 use starknet::{ContractAddress, get_block_number};
@@ -567,6 +566,16 @@ struct InternalStakerInfo {
     index: Index,
     unclaimed_rewards_own: Amount,
     pool_info: Option<StakerPoolInfo>,
+}
+
+/// This struct was used in V0 for both InternalStakerInfo and StakerInfo.
+/// Should not be in used except for migration purpose.
+#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+pub(crate) struct StakerPoolInfo {
+    pub pool_contract: ContractAddress,
+    pub amount: Amount,
+    pub unclaimed_rewards: Amount,
+    pub commission: Commission,
 }
 
 // **Note**: This struct should be made private in the next version of Internal Staker Info.

@@ -3595,7 +3595,6 @@ fn test_internal_staker_info_outdated_version() {
         amount_own: cfg.test_info.stake_amount,
         index: cfg.test_info.global_index,
         unclaimed_rewards_own: cfg.staker_info.unclaimed_rewards_own,
-        pool_info: Option::None,
     );
     staking_dispatcher.internal_staker_info(:staker_address);
 }

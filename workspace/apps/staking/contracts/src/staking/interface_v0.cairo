@@ -1,5 +1,6 @@
 use staking::staking::errors::Error;
 use staking::staking::interface::{StakerInfoV1, StakerPoolInfoV1};
+use staking::staking::objects::StakerPoolInfo;
 use staking::types::{Amount, Commission, Index};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
@@ -64,16 +65,6 @@ pub impl StakerInfoImpl of StakerInfoTrait {
             },
         }
     }
-}
-
-/// This struct was used in V0 for both InternalStakerInfo and StakerInfo.
-/// Should not be in used except for migration purpose.
-#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-pub struct StakerPoolInfo {
-    pub pool_contract: ContractAddress,
-    pub amount: Amount,
-    pub unclaimed_rewards: Amount,
-    pub commission: Commission,
 }
 
 /// `StakingContractInfo` struct used in V0.
