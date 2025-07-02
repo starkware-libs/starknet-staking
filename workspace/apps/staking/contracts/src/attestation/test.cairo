@@ -63,7 +63,7 @@ fn test_attest() {
 
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
-    assert!(is_attestation_done == true);
+    assert!(is_attestation_done);
     let events = spy.get_events().emitted_by(contract_address: attestation_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "attest");
     let epoch = staking_dispatcher.get_current_epoch();
@@ -228,7 +228,7 @@ fn test_is_attestation_done_in_curr_epoch() {
     attestation_dispatcher.attest(:block_hash);
     let is_attestation_done = attestation_dispatcher
         .is_attestation_done_in_curr_epoch(:staker_address);
-    assert!(is_attestation_done == true);
+    assert!(is_attestation_done);
 }
 
 #[test]
