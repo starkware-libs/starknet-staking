@@ -20,7 +20,8 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
+    BTC_DECIMALS, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW,
+    STARTING_EPOCH,
 };
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
@@ -250,8 +251,8 @@ pub(crate) fn initialize_staking_state_from_cfg(
         cfg.test_info.initial_supply, cfg.test_info.owner_address, STRK_TOKEN_NAME(),
     );
     cfg.staking_contract_info.token_address = token_address;
-    let btc_token_address = deploy_mock_erc20_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address, BTC_TOKEN_NAME(),
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
+        cfg.test_info.initial_supply, cfg.test_info.owner_address, BTC_TOKEN_NAME(), BTC_DECIMALS,
     );
     cfg.staking_contract_info.btc_token_address = btc_token_address;
     initialize_staking_state(
@@ -369,6 +370,20 @@ pub(crate) fn deploy_mock_erc20_contract(
     initial_supply.serialize(ref calldata);
     owner_address.serialize(ref calldata);
     let erc20_contract = snforge_std::declare("DualCaseERC20Mock").unwrap().contract_class();
+    let (token_address, _) = erc20_contract.deploy(@calldata).unwrap();
+    token_address
+}
+
+pub(crate) fn deploy_mock_erc20_decimals_contract(
+    initial_supply: u256, owner_address: ContractAddress, name: ByteArray, decimals: u8,
+) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    name.serialize(ref calldata);
+    SYMBOL().serialize(ref calldata);
+    decimals.serialize(ref calldata);
+    initial_supply.serialize(ref calldata);
+    owner_address.serialize(ref calldata);
+    let erc20_contract = snforge_std::declare("ERC20DecimalsMock").unwrap().contract_class();
     let (token_address, _) = erc20_contract.deploy(@calldata).unwrap();
     token_address
 }
@@ -784,10 +799,11 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         name: STRK_TOKEN_NAME(),
     );
     cfg.staking_contract_info.token_address = token_address;
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     cfg.staking_contract_info.btc_token_address = btc_token_address;
     // Deploy the minting_curve, with faked staking_address.

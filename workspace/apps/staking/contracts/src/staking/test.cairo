@@ -31,7 +31,7 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
+    BTC_DECIMALS, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
     V1_PREV_CONTRACT_VERSION,
 };
 use staking::errors::GenericError;
@@ -94,7 +94,7 @@ use test_utils::{
     approve, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
     cheat_reward_for_reward_supplier, cheat_target_attestation_block_hash, constants,
     declare_pool_contract, declare_staking_eic_contract_v1_v2, deploy_mock_erc20_contract,
-    deploy_reward_supplier_contract, deploy_staking_contract,
+    deploy_mock_erc20_decimals_contract, deploy_reward_supplier_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     initialize_staking_state_from_cfg, load_from_simple_map, load_from_trace, load_trace_length,
     stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,
@@ -1463,10 +1463,11 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     // Deploy staking contract.
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
@@ -1774,10 +1775,11 @@ fn test_pool_contract_roles() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     // Deploy the staking contract and stake with pool enabled.
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
@@ -1900,10 +1902,11 @@ fn test_change_operational_address() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -1946,10 +1949,11 @@ fn test_change_operational_address_staker_doesnt_exist() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2012,10 +2016,11 @@ fn test_set_commission() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2083,10 +2088,11 @@ fn test_set_commission_with_commitment() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2132,10 +2138,11 @@ fn test_set_commission_assertions_with_commitment() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2189,10 +2196,11 @@ fn test_set_commission_caller_not_staker() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2213,10 +2221,11 @@ fn test_set_commission_with_higher_commission() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
@@ -2239,10 +2248,11 @@ fn test_set_commission_with_same_commission() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
@@ -2264,10 +2274,11 @@ fn test_set_commission_initialize_commission() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -2299,10 +2310,11 @@ fn test_set_commission_staker_in_exit_window() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -2329,10 +2341,11 @@ fn test_set_commission_commission_out_of_range() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -2477,10 +2490,11 @@ fn test_set_open_for_delegation() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -2516,10 +2530,11 @@ fn test_set_open_for_delegation_with_btc_token() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -2565,10 +2580,11 @@ fn test_set_open_for_delegation_with_disabled_btc_token() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
@@ -2613,10 +2629,11 @@ fn test_set_open_for_delegation_commission_not_set() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2636,10 +2653,11 @@ fn test_set_open_for_delegation_unstake_in_progress() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2660,10 +2678,11 @@ fn test_set_open_for_delegation_staker_not_exist() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2681,10 +2700,11 @@ fn test_set_open_for_delegation_strk_token_staker_has_pool() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2704,10 +2724,11 @@ fn test_set_open_for_delegation_btc_token_staker_has_pool() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2731,10 +2752,11 @@ fn test_set_open_for_delegation_token_does_not_exist() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_contract(
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
     );
     let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -3250,10 +3272,11 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     let btc_pool_contract = staking_dispatcher
         .set_open_for_delegation(token_address: btc_token_address);
     // Add another BTC token.
-    let btc_token_address_2 = deploy_mock_erc20_contract(
+    let btc_token_address_2 = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME_2(),
+        decimals: BTC_DECIMALS,
     );
     cheat_caller_address(
         contract_address: staking_contract,

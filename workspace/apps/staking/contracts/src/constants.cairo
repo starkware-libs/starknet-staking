@@ -7,6 +7,7 @@ pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 3 * 
 pub(crate) const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };
 pub(crate) const BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
 pub(crate) const STRK_IN_FRIS: Amount = 1_000_000_000_000_000_000; // 10**18
+pub(crate) const BTC_DECIMALS: u8 = 8;
 // === Reward Distribution - Important Note ===
 //
 // Previous version:
