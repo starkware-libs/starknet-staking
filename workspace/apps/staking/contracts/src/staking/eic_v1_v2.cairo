@@ -3,10 +3,8 @@
 #[starknet::contract]
 mod StakingEICV1toV2 {
     use core::num::traits::Zero;
-    use openzeppelin::token::erc20::interface::{
-        IERC20Dispatcher, IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait,
-    };
-    use staking::constants::{BTC_DECIMALS, STAKING_V2_PREV_CONTRACT_VERSION};
+    use openzeppelin::token::erc20::interface::IERC20Dispatcher;
+    use staking::constants::STAKING_V2_PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
     use staking::types::Version;
     use starknet::ContractAddress;

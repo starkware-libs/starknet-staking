@@ -22,7 +22,6 @@ use snforge_std::{
     CheatSpan, cheat_caller_address, start_cheat_block_timestamp_global, test_address,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::BTC_DECIMALS;
 use staking::errors::GenericError;
 use staking::pool::errors::Error;
 use staking::pool::interface::{
@@ -55,10 +54,10 @@ use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
     advance_block_into_attestation_window, advance_epoch_global, approve,
     calculate_strk_pool_rewards, cheat_target_attestation_block_hash, claim_rewards_for_pool_member,
-    constants, deploy_mock_erc20_contract, deploy_mock_erc20_decimals_contract,
-    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
-    general_contract_system_deployment, initialize_pool_state, load_from_simple_map,
-    stake_with_pool_enabled, update_rewards_from_staking_contract_for_testing,
+    constants, deploy_mock_erc20_contract, deploy_staking_contract,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    initialize_pool_state, load_from_simple_map, stake_with_pool_enabled,
+    update_rewards_from_staking_contract_for_testing,
 };
 
 #[test]
