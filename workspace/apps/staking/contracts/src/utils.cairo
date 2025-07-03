@@ -85,14 +85,6 @@ pub(crate) fn compute_rewards_rounded_down(amount: Amount, interest: Index) -> A
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
-// Compute the rewards from the amount and interest.
-//
-// $$ rewards = ceil_of_division(amount * interest, BASE_VALUE) $$
-pub(crate) fn compute_rewards_rounded_up(amount: Amount, interest: Index) -> Amount {
-    mul_wide_and_ceil_div(lhs: amount, rhs: interest, div: BASE_VALUE)
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
-}
-
 // Compute the threshold for requesting funds from L1 Reward Supplier.
 pub(crate) fn compute_threshold(base_mint_amount: Amount) -> Amount {
     base_mint_amount / 2

@@ -67,10 +67,7 @@ use staking::staking::objects::{
 };
 use staking::staking::staking::Staking;
 use staking::types::{Amount, InternalStakerInfoLatest, VecIndex};
-use staking::utils::{
-    compute_commission_amount_rounded_down, compute_rewards_rounded_down,
-    compute_rewards_rounded_up,
-};
+use staking::utils::{compute_commission_amount_rounded_down, compute_rewards_rounded_down};
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
@@ -92,8 +89,9 @@ use starkware_utils_testing::test_utils::{
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
     approve, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
-    cheat_reward_for_reward_supplier, cheat_target_attestation_block_hash, constants,
-    declare_pool_contract, declare_staking_eic_contract_v1_v2, deploy_mock_erc20_contract,
+    cheat_reward_for_reward_supplier, cheat_target_attestation_block_hash,
+    compute_rewards_rounded_up, constants, declare_pool_contract,
+    declare_staking_eic_contract_v1_v2, deploy_mock_erc20_contract,
     deploy_mock_erc20_decimals_contract, deploy_reward_supplier_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     initialize_staking_state_from_cfg, load_from_simple_map, load_from_trace, load_trace_length,
