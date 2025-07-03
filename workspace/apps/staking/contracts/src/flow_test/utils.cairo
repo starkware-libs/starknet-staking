@@ -9,8 +9,9 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, start_cheat_block_hash_global,
-    start_cheat_block_number_global, start_cheat_block_timestamp_global,
+    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address,
+    start_cheat_block_hash_global, start_cheat_block_number_global,
+    start_cheat_block_timestamp_global,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{BTC_DECIMALS, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
@@ -30,7 +31,8 @@ use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingMigrationDispatcher,
     IStakingMigrationDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
+    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::interface_v0::{
     IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
@@ -166,7 +168,7 @@ pub(crate) struct StakingState {
 
 #[generate_trait]
 pub(crate) impl StakingImpl of StakingTrait {
-    fn deploy(self: StakingConfig, token: TokenState, btc_token: TokenState) -> StakingState {
+    fn deploy(self: StakingConfig, token: TokenState) -> StakingState {
         let mut calldata = ArrayTrait::new();
         token.address.serialize(ref calldata);
         self.min_stake.serialize(ref calldata);
@@ -177,7 +179,6 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.prev_staking_contract_class_hash.serialize(ref calldata);
         self.epoch_info.serialize(ref calldata);
         self.attestation_contract.serialize(ref calldata);
-        btc_token.address.serialize(ref calldata);
         let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
         let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
         let staking = StakingState {
@@ -218,6 +219,10 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn dispatcher(self: StakingState) -> IStakingDispatcher nopanic {
         IStakingDispatcher { contract_address: self.address }
+    }
+
+    fn token_manager_dispatcher(self: StakingState) -> IStakingTokenManagerDispatcher nopanic {
+        IStakingTokenManagerDispatcher { contract_address: self.address }
     }
 
     fn is_v0(self: StakingState) -> bool {
@@ -854,7 +859,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
     fn deploy(self: SystemConfig) -> SystemState<TokenState> {
         let token = self.token.deploy();
         let btc_token = self.btc_token.deploy_btc_token();
-        let staking = self.staking.deploy(:token, :btc_token);
+        let staking = self.staking.deploy(:token);
         let minting_curve = self.minting_curve.deploy(:staking);
         let reward_supplier = self.reward_supplier.deploy(:minting_curve, :staking, :token);
         let attestation = self.attestation.deploy(:staking);
@@ -885,6 +890,14 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             staker_address: Option::None,
         };
         system_state.advance_epoch();
+        // Add BTC token to the staking contract.
+        cheat_caller_address(
+            contract_address: staking.address,
+            caller_address: self.staking.roles.security_admin,
+            span: CheatSpan::TargetCalls(2),
+        );
+        staking.token_manager_dispatcher().add_token(token_address: btc_token.address);
+        staking.token_manager_dispatcher().enable_token(token_address: btc_token.address);
         system_state
     }
 
@@ -1592,6 +1605,14 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         }
         self.staking.unpause();
         self.minting_curve.set_c_num(DEFAULT_C_NUM);
+        // Add BTC token to the staking contract.
+        cheat_caller_address(
+            contract_address: self.staking.address,
+            caller_address: self.staking.roles.security_admin,
+            span: CheatSpan::TargetCalls(2),
+        );
+        self.staking.token_manager_dispatcher().add_token(token_address: self.btc_token.address);
+        self.staking.token_manager_dispatcher().enable_token(token_address: self.btc_token.address);
     }
 
     /// Upgrades the staking contract in the system state with a local implementation.
@@ -1599,9 +1620,7 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v1_v2(),
             eic_init_data: array![
-                MAINNET_STAKING_CLASS_HASH_V1().into(),
-                declare_pool_contract().into(),
-                self.btc_token.address.into(),
+                MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
             ]
                 .span(),
         };

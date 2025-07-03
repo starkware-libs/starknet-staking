@@ -28,7 +28,7 @@ use staking::staking::objects::EpochInfoTrait;
 use staking::staking::staking::Staking;
 use staking::test_utils;
 use staking::test_utils::constants::{
-    BTC_TOKEN_NAME, NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS, STRK_TOKEN_NAME,
+    NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS, STRK_TOKEN_NAME,
 };
 use staking::types::Amount;
 use staking::utils::compute_threshold;
@@ -82,14 +82,8 @@ fn test_reward_supplier_constructor() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_decimals_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-        decimals: BTC_DECIMALS,
-    );
     // Deploy the staking contract, stake, and enter delegation pool.
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
     let state = @initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
@@ -117,14 +111,8 @@ fn test_claim_rewards() {
         owner_address: cfg.test_info.owner_address,
         name: STRK_TOKEN_NAME(),
     );
-    let btc_token_address = deploy_mock_erc20_decimals_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-        decimals: BTC_DECIMALS,
-    );
     // Deploy the staking contract and stake.
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
     let amount = (cfg.test_info.initial_supply / 2).try_into().expect('amount does not fit in');
     cfg.test_info.staker_initial_balance = amount;

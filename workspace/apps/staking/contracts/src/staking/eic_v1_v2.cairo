@@ -8,8 +8,6 @@ mod StakingEICV1toV2 {
     };
     use staking::constants::{BTC_DECIMALS, STAKING_V2_PREV_CONTRACT_VERSION};
     use staking::errors::GenericError;
-    use staking::staking::errors::Error;
-    use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::Version;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
@@ -39,18 +37,15 @@ mod StakingEICV1toV2 {
         total_stake_trace: Trace,
         /// A dispatcher of the token contract.
         token_dispatcher: IERC20Dispatcher,
-        // Epoch info.
-        epoch_info: EpochInfo,
     }
 
-    /// Expected data : [prev_class_hash, pool_contract_class_hash, token_address]
+    /// Expected data : [prev_class_hash, pool_contract_class_hash]
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
-            assert(eic_init_data.len() == 3, 'EXPECTED_DATA_LENGTH_3');
+            assert(eic_init_data.len() == 2, 'EXPECTED_DATA_LENGTH_2');
             let prev_class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             let pool_contract_class_hash: ClassHash = (*eic_init_data[1]).try_into().unwrap();
-            let token_address: ContractAddress = (*eic_init_data[2]).try_into().unwrap();
 
             // 1. Set previous class hash.
             assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
@@ -60,25 +55,7 @@ mod StakingEICV1toV2 {
             assert!(pool_contract_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
             self.pool_contract_class_hash.write(pool_contract_class_hash);
 
-            // 3. Add new token.
-            // Note: The given `token_address` added in enabled mode.
-            assert!(token_address.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
-            let strk_token_address = self.token_dispatcher.read().contract_address;
-            assert!(token_address != strk_token_address, "{}", Error::INVALID_TOKEN_ADDRESS);
-            // Assert token decimals.
-            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
-            assert!(
-                token_dispatcher.decimals() == BTC_DECIMALS, "{}", Error::INVALID_TOKEN_ADDRESS,
-            );
-            self.btc_tokens.write(token_address, true);
-            // Initialize the token total stake trace.
-            let current_epoch = self.epoch_info.read().current_epoch();
-            self
-                .tokens_total_stake_trace
-                .entry(token_address)
-                .insert(key: current_epoch, value: Zero::zero());
-
-            // 4. Migrate total_stake_trace.
+            // 3. Migrate total_stake_trace.
             self.migrate_total_stake_trace();
         }
     }

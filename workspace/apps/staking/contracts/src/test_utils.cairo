@@ -35,7 +35,8 @@ use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
-    IStakingPauseDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingPauseDispatcherTrait, IStakingTokenManagerDispatcher,
+    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
 use staking::staking::staking::Staking;
@@ -251,10 +252,6 @@ pub(crate) fn initialize_staking_state_from_cfg(
         cfg.test_info.initial_supply, cfg.test_info.owner_address, STRK_TOKEN_NAME(),
     );
     cfg.staking_contract_info.token_address = token_address;
-    let btc_token_address = deploy_mock_erc20_decimals_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address, BTC_TOKEN_NAME(), BTC_DECIMALS,
-    );
-    cfg.staking_contract_info.btc_token_address = btc_token_address;
     initialize_staking_state(
         :token_address,
         min_stake: cfg.staking_contract_info.min_stake,
@@ -265,7 +262,6 @@ pub(crate) fn initialize_staking_state_from_cfg(
         prev_class_hash: cfg.staking_contract_info.prev_staking_contract_class_hash,
         epoch_info: cfg.staking_contract_info.epoch_info,
         attestation_contract: cfg.test_info.attestation_contract,
-        :btc_token_address,
     )
 }
 pub(crate) fn initialize_staking_state(
@@ -278,7 +274,6 @@ pub(crate) fn initialize_staking_state(
     prev_class_hash: ClassHash,
     epoch_info: EpochInfo,
     attestation_contract: ContractAddress,
-    btc_token_address: ContractAddress,
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
@@ -293,7 +288,6 @@ pub(crate) fn initialize_staking_state(
         :prev_class_hash,
         :epoch_info,
         :attestation_contract,
-        :btc_token_address,
     );
     state
 }
@@ -389,7 +383,7 @@ pub(crate) fn deploy_mock_erc20_decimals_contract(
 }
 
 pub(crate) fn deploy_staking_contract(
-    token_address: ContractAddress, btc_token_address: ContractAddress, cfg: StakingInitConfig,
+    token_address: ContractAddress, cfg: StakingInitConfig,
 ) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     token_address.serialize(ref calldata);
@@ -401,7 +395,6 @@ pub(crate) fn deploy_staking_contract(
     cfg.staking_contract_info.prev_staking_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.epoch_info.serialize(ref calldata);
     cfg.test_info.attestation_contract.serialize(ref calldata);
-    btc_token_address.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     set_default_roles(staking_contract: staking_contract_address, :cfg);
@@ -799,13 +792,6 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         name: STRK_TOKEN_NAME(),
     );
     cfg.staking_contract_info.token_address = token_address;
-    let btc_token_address = deploy_mock_erc20_decimals_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-        decimals: BTC_DECIMALS,
-    );
-    cfg.staking_contract_info.btc_token_address = btc_token_address;
     // Deploy the minting_curve, with faked staking_address.
     let minting_curve = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve;
@@ -813,7 +799,7 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     let reward_supplier = deploy_reward_supplier_contract(:cfg);
     cfg.staking_contract_info.reward_supplier = reward_supplier;
     // Deploy the staking contract.
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
     // Deploy the attestation contract.
     let attestation_contract = deploy_attestation_contract(:cfg);
@@ -834,6 +820,9 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         storage_address: selector!("attestation_contract"),
         serialized_value: array![attestation_contract.into()].span(),
     );
+    // Deploy the BTC token, add it to the staking contract, and enable it.
+    let btc_token_address = setup_btc_token(:cfg, name: BTC_TOKEN_NAME());
+    cfg.staking_contract_info.btc_token_address = btc_token_address;
 }
 
 pub(crate) fn cheat_reward_for_reward_supplier(
@@ -1344,4 +1333,23 @@ pub(crate) fn load_from_iterable_map<
         map_selector: map_address, keys: [selector!("_inner_map")].span(),
     );
     load_option_from_simple_map(map_selector: map_storage_address, :key, contract: contract_address)
+}
+
+pub(crate) fn setup_btc_token(cfg: StakingInitConfig, name: ByteArray) -> ContractAddress {
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        :name,
+        decimals: BTC_DECIMALS,
+    );
+    let staking_contract = cfg.test_info.staking_contract;
+    let token_manager = IStakingTokenManagerDispatcher { contract_address: staking_contract };
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: cfg.test_info.security_admin,
+        span: CheatSpan::TargetCalls(2),
+    );
+    token_manager.add_token(token_address: btc_token_address);
+    token_manager.enable_token(token_address: btc_token_address);
+    btc_token_address
 }
