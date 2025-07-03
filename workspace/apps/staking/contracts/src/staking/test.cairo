@@ -2676,7 +2676,7 @@ fn test_set_min_stake() {
     );
     staking_config_dispatcher.set_min_stake(min_stake: new_min_stake);
     assert!(new_min_stake == staking_dispatcher.contract_parameters_v1().min_stake);
-    // Validate the single MinimumStakeChanged event.
+    // Validate MinimumStakeChanged event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_min_stake");
     assert_minimum_stake_changed_event(spied_event: events[0], :old_min_stake, :new_min_stake);
