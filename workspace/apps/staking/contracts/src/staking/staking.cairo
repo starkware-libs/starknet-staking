@@ -6,10 +6,13 @@ pub mod Staking {
     use core::panics::panic_with_byte_array;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use openzeppelin::token::erc20::interface::{
+        IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
+        IERC20MetadataDispatcherTrait,
+    };
     use staking::constants::{
-        DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
-        STARTING_EPOCH,
+        BTC_DECIMALS, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW,
+        STAKING_V2_PREV_CONTRACT_VERSION, STARTING_EPOCH,
     };
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
@@ -1081,6 +1084,7 @@ pub mod Staking {
             assert!(
                 self.btc_tokens.read(token_address).is_none(), "{}", Error::TOKEN_ALREADY_EXISTS,
             );
+            self.assert_btc_token_decimals(:token_address);
             self.btc_tokens.write(token_address, false);
             // Initialize the token total stake trace.
             self
@@ -1866,6 +1870,13 @@ pub mod Staking {
                 get_caller_address() == self.attestation_contract.read(),
                 "{}",
                 Error::CALLER_IS_NOT_ATTESTATION_CONTRACT,
+            );
+        }
+
+        fn assert_btc_token_decimals(self: @ContractState, token_address: ContractAddress) {
+            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+            assert!(
+                token_dispatcher.decimals() == BTC_DECIMALS, "{}", Error::INVALID_TOKEN_ADDRESS,
             );
         }
 

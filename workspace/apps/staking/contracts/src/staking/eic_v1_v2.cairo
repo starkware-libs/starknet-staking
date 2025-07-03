@@ -3,8 +3,10 @@
 #[starknet::contract]
 mod StakingEICV1toV2 {
     use core::num::traits::Zero;
-    use openzeppelin::token::erc20::interface::IERC20Dispatcher;
-    use staking::constants::STAKING_V2_PREV_CONTRACT_VERSION;
+    use openzeppelin::token::erc20::interface::{
+        IERC20Dispatcher, IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait,
+    };
+    use staking::constants::{BTC_DECIMALS, STAKING_V2_PREV_CONTRACT_VERSION};
     use staking::errors::GenericError;
     use staking::staking::errors::Error;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
@@ -63,6 +65,11 @@ mod StakingEICV1toV2 {
             assert!(token_address.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
             let strk_token_address = self.token_dispatcher.read().contract_address;
             assert!(token_address != strk_token_address, "{}", Error::INVALID_TOKEN_ADDRESS);
+            // Assert token decimals.
+            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+            assert!(
+                token_dispatcher.decimals() == BTC_DECIMALS, "{}", Error::INVALID_TOKEN_ADDRESS,
+            );
             self.btc_tokens.write(token_address, true);
             // Initialize the token total stake trace.
             let current_epoch = self.epoch_info.read().current_epoch();

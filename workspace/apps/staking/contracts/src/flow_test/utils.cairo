@@ -13,7 +13,7 @@ use snforge_std::{
     start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
+use staking::constants::{BTC_DECIMALS, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
 };
@@ -40,13 +40,14 @@ use staking::staking::interface_v1::{
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
-    BTC_TOKEN_NAME, DUMMY_ADDRESS, DUMMY_BTC_TOKEN_ADDRESS, EPOCH_DURATION, EPOCH_LENGTH,
-    EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS, STARTING_BLOCK_OFFSET,
-    STRK_TOKEN_ADDRESS, STRK_TOKEN_NAME, UPGRADE_GOVERNOR,
+    BTC_TOKEN_NAME, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
+    MAINNET_SECURITY_COUNSEL_ADDRESS, STARTING_BLOCK_OFFSET, STRK_TOKEN_ADDRESS, STRK_TOKEN_NAME,
+    UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
     declare_staking_eic_contract_v0_v1, declare_staking_eic_contract_v1_v2,
+    deploy_mock_erc20_decimals_contract,
 };
 use staking::types::{
     Amount, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
@@ -838,10 +839,21 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         SystemConfig { token, btc_token, staking, minting_curve, reward_supplier, attestation }
     }
 
+    /// Deploys a BTC token with the given configuration and 8 decimals and returns the token state.
+    fn deploy_btc_token(self: TokenConfig) -> TokenState {
+        let btc_token_address = deploy_mock_erc20_decimals_contract(
+            initial_supply: self.initial_supply,
+            owner_address: self.owner,
+            name: self.name,
+            decimals: BTC_DECIMALS,
+        );
+        TokenState { address: btc_token_address, owner: self.owner }
+    }
+
     /// Deploys the system configuration and returns the system state.
     fn deploy(self: SystemConfig) -> SystemState<TokenState> {
         let token = self.token.deploy();
-        let btc_token = self.btc_token.deploy();
+        let btc_token = self.btc_token.deploy_btc_token();
         let staking = self.staking.deploy(:token, :btc_token);
         let minting_curve = self.minting_curve.deploy(:staking);
         let reward_supplier = self.reward_supplier.deploy(:minting_curve, :staking, :token);
@@ -881,8 +893,8 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
     fn deploy_mainnet_contracts_v0(self: SystemConfig) -> SystemState<STRKTokenState> {
         let token_address = STRK_TOKEN_ADDRESS();
         let token = STRKTokenState { address: token_address };
-        // TODO: Change this once we have the BTC token address.
-        let btc_token = TokenState { address: DUMMY_BTC_TOKEN_ADDRESS(), owner: DUMMY_ADDRESS() };
+        // TODO: Change this once we have the BTC token address?
+        let btc_token = self.btc_token.deploy_btc_token();
         let staking = self.staking.deploy_mainnet_contract_v0(:token_address);
         let minting_curve = self.minting_curve.deploy_mainnet_contract_v0(:staking);
         let reward_supplier = self

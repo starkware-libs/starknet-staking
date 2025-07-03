@@ -172,11 +172,14 @@ pub trait IStakingConfig<TContractState> {
 pub trait IStakingTokenManager<TContractState> {
     /// Add a new token to the staking contract.
     ///
-    /// **Important note:** This function should be called only a limited number of times.
+    /// **Important notes:**
+    /// 1. This function should be called only a limited number of times.
     /// Adding too many tokens can lead to unbounded complexity and potential performance issues.
     /// The token set is intended to remain fixed and small, ensuring all loops over it are safely
     /// bounded.
     /// It is the security admin's responsibility to enforce this token limit.
+    /// 2. Token decimals are validated once upon addition (expected to be 8).
+    /// Subsequent changes to the token's decimals are not supported and may lead to issues.
     fn add_token(ref self: TContractState, token_address: ContractAddress);
     /// Enable token for getting rewards.
     ///
