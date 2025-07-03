@@ -20,8 +20,8 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    BASE_VALUE, BTC_DECIMALS, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW,
-    MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
+    BTC_DECIMALS, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW,
+    STARTING_EPOCH,
 };
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
@@ -51,7 +51,7 @@ use staking::utils::{
 use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::OptionAuxTrait;
-use starkware_utils::math::utils::{mul_wide_and_ceil_div, mul_wide_and_div};
+use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
@@ -1202,14 +1202,6 @@ pub(crate) fn calculate_pool_member_rewards(
     pool_rewards: Amount, pool_member_balance: Amount, pool_balance: Amount,
 ) -> Amount {
     mul_wide_and_div(lhs: pool_member_balance, rhs: pool_rewards, div: pool_balance)
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
-}
-
-// Compute the rewards from the amount and interest.
-//
-// $$ rewards = ceil_of_division(amount * interest, BASE_VALUE) $$
-pub(crate) fn compute_rewards_rounded_up(amount: Amount, interest: Index) -> Amount {
-    mul_wide_and_ceil_div(lhs: amount, rhs: interest, div: BASE_VALUE)
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
