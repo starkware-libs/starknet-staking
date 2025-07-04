@@ -842,8 +842,6 @@ fn test_unstake_action() {
     let unclaimed_rewards_own = staking_dispatcher
         .staker_info_v1(:staker_address)
         .unclaimed_rewards_own;
-    let caller_address = NON_STAKER_ADDRESS();
-    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
     assert!(staker_amount == cfg.test_info.stake_amount);
@@ -913,8 +911,6 @@ fn test_unstake_action_multiple_pools() {
     let unclaimed_rewards_own = staking_dispatcher
         .staker_info_v1(:staker_address)
         .unclaimed_rewards_own;
-    let caller_address = NON_STAKER_ADDRESS();
-    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     let mut spy = snforge_std::spy_events();
 
     // Current balance of pools is zero.
