@@ -1,6 +1,6 @@
 use core::num::traits::Zero;
 use snforge_std::start_cheat_block_number_global;
-use staking::constants::{MIN_ATTESTATION_WINDOW, STRK_IN_FRIS};
+use staking::constants::{MIN_ATTESTATION_WINDOW, STRK_BASE_VALUE, STRK_DECIMALS, STRK_IN_FRIS};
 use staking::errors::GenericError;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
@@ -15,11 +15,11 @@ use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils::constants::EPOCH_DURATION;
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_strk_pool_rewards,
-    calculate_strk_pool_rewards_with_pool_balance, deserialize_option, load_from_iterable_map,
-    load_from_trace, load_trace_length, pool_update_rewards,
+    calculate_strk_pool_rewards_with_pool_balance, compute_rewards_for_trace, deserialize_option,
+    load_from_iterable_map, load_from_trace, load_trace_length, strk_pool_update_rewards,
 };
 use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
-use staking::utils::{compute_rewards_per_strk, compute_rewards_rounded_down};
+use staking::utils::compute_rewards_rounded_down;
 use starknet::{ContractAddress, Store};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
@@ -776,7 +776,7 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl<
             .internal_pool_member_info(:delegator, :pool);
         let get_internal_pool_member_info_after_upgrade = system
             .get_internal_pool_member_info(:delegator, :pool);
-        let expected_pool_member_info = pool_update_rewards(
+        let expected_pool_member_info = strk_pool_update_rewards(
             pool_member_info: self.delegator_info.unwrap(),
             updated_index: system.staking.get_global_index(),
         );
@@ -1947,6 +1947,8 @@ pub(crate) impl StakerMigrationCalledTwiceFlowImpl<
     }
 }
 
+// TODO: Test all claim_rewards/calculate rewards of pools with BTC.
+
 /// Test claim_rewards with multiple delegators.
 #[derive(Drop, Copy)]
 pub(crate) struct ClaimRewardsMultipleDelegatorsFlow {}
@@ -2166,6 +2168,8 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         let commission = 200;
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
+        let decimals = STRK_DECIMALS;
+        let base_value = STRK_BASE_VALUE;
 
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
@@ -2201,7 +2205,10 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             calculate_pool_member_rewards(
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
-        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma +=
+            compute_rewards_for_trace(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            );
 
         system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
 
@@ -2221,7 +2228,10 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             calculate_pool_member_rewards(
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
-        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma +=
+            compute_rewards_for_trace(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            );
 
         system.advance_epoch();
         delegated_amount_1 += stake_amount / 4;
@@ -2241,7 +2251,10 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             calculate_pool_member_rewards(
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
-        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma +=
+            compute_rewards_for_trace(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            );
 
         system
             .delegator_exit_intent(
@@ -2255,7 +2268,10 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
         let pool_rewards = calculate_strk_pool_rewards(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
-        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma +=
+            compute_rewards_for_trace(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            );
 
         system
             .delegator_exit_intent(
@@ -2271,12 +2287,20 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         let from_sigma = sigma;
-        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma +=
+            compute_rewards_for_trace(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            );
 
         system.advance_epoch_and_attest(:staker);
-        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma +=
+            compute_rewards_for_trace(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            );
         delegator_1_rewards +=
-            compute_rewards_rounded_down(amount: delegated_amount_1, interest: sigma - from_sigma);
+            compute_rewards_rounded_down(
+                amount: delegated_amount_1, interest: sigma - from_sigma, :base_value,
+            );
 
         system.advance_exit_wait_window();
         system.delegator_exit_action(delegator: delegator_1, :pool);
@@ -2293,12 +2317,15 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl<
             calculate_pool_member_rewards(
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
-        sigma += compute_rewards_per_strk(staking_rewards: pool_rewards, total_stake: pool_balance);
+        sigma +=
+            compute_rewards_for_trace(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            );
 
         system.advance_epoch();
 
         delegator_2_rewards =
-            compute_rewards_rounded_down(amount: delegated_amount_2, interest: sigma);
+            compute_rewards_rounded_down(amount: delegated_amount_2, interest: sigma, :base_value);
 
         let calculated_rewards_1 = system
             .pool_member_info_v1(delegator: delegator_1, :pool)

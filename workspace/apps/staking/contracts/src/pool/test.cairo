@@ -53,11 +53,12 @@ use starkware_utils_testing::test_utils::{
 use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
     advance_block_into_attestation_window, advance_epoch_global, approve,
-    calculate_strk_pool_rewards, cheat_target_attestation_block_hash, claim_rewards_for_pool_member,
-    constants, deploy_mock_erc20_contract, deploy_staking_contract,
+    calculate_staker_btc_pool_rewards, calculate_strk_pool_rewards,
+    cheat_target_attestation_block_hash, claim_rewards_for_pool_member, constants,
+    deploy_mock_erc20_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    initialize_pool_state, load_from_simple_map, stake_with_pool_enabled,
-    update_rewards_from_staking_contract_for_testing,
+    initialize_pool_state, load_from_simple_map, stake_for_testing_using_dispatcher,
+    stake_with_pool_enabled, update_rewards_from_staking_contract_for_testing,
 };
 
 #[test]
@@ -463,7 +464,7 @@ fn test_change_reward_address_pool_member_not_exist() {
 }
 
 #[test]
-fn test_claim_rewards() {
+fn test_claim_rewards_strk_pool() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
@@ -524,6 +525,83 @@ fn test_claim_rewards() {
 }
 
 #[test]
+fn test_claim_rewards_btc_pool() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let staking_contract = cfg.test_info.staking_contract;
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let staker_address = cfg.test_info.staker_address;
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher.set_commission(:commission);
+    let pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+    // TODO: Use enter_btc pool function.
+    cfg.pool_member_info._deprecated_amount = cfg.test_info.pool_member_btc_amount;
+    enter_delegation_pool_for_testing_using_dispatcher(
+        :pool_contract, :cfg, token_address: btc_token_address,
+    );
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    // Check that the pool member info was updated correctly.
+    let mut expected_pool_member_info: PoolMemberInfoV1 = cfg.pool_member_info.to_external();
+    assert!(
+        pool_dispatcher
+            .pool_member_info_v1(cfg.test_info.pool_member_address) == expected_pool_member_info,
+    );
+
+    advance_epoch_global();
+
+    // Compute expected rewards.
+    let pool_balance = cfg.pool_member_info._deprecated_amount;
+    let (expected_commission_rewards, expected_pool_rewards) = calculate_staker_btc_pool_rewards(
+        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+    );
+    assert!(expected_commission_rewards.is_non_zero());
+
+    // Fund pool_contract.
+    fund(
+        sender: cfg.test_info.owner_address,
+        recipient: pool_contract,
+        amount: expected_pool_rewards,
+        :token_address,
+    );
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: staking_contract);
+    pool_dispatcher
+        .update_rewards_from_staking_contract(rewards: expected_pool_rewards, :pool_balance);
+    advance_epoch_global();
+
+    // Claim rewards, and validate the results.
+    cheat_caller_address_once(
+        contract_address: pool_contract, caller_address: cfg.test_info.pool_member_address,
+    );
+    let mut spy = snforge_std::spy_events();
+    let actual_reward = pool_dispatcher
+        .claim_rewards(pool_member: cfg.test_info.pool_member_address);
+    assert!(actual_reward == expected_pool_rewards);
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let balance = token_dispatcher.balance_of(cfg.pool_member_info.reward_address);
+    assert!(balance == actual_reward.into());
+    // Validate the single PoolMemberRewardClaimed event.
+    let events = spy.get_events().emitted_by(pool_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "claim_rewards");
+    assert_pool_member_reward_claimed_event(
+        spied_event: events[0],
+        pool_member: cfg.test_info.pool_member_address,
+        reward_address: cfg.pool_member_info.reward_address,
+        amount: actual_reward,
+    );
+}
+
+#[test]
 fn test_claim_rewards_no_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -549,7 +627,7 @@ fn test_claim_rewards_no_rewards() {
 }
 
 #[test]
-fn test_claim_rewards_with_balance_changes() {
+fn test_claim_rewards_with_balance_changes_strk_pool() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token_address = cfg.staking_contract_info.token_address;
@@ -628,6 +706,120 @@ fn test_claim_rewards_with_balance_changes() {
     advance_epoch_global();
     add_to_delegation_pool_with_pool_member(
         :pool_contract, :pool_member, amount: delegate_amount, :token_address,
+    );
+    let balance_before_claim = token_dispatcher.balance_of(cfg.pool_member_info.reward_address);
+    let pool_member_info = pool_dispatcher.pool_member_info_v1(:pool_member);
+    let rewards = claim_rewards_for_pool_member(:pool_contract, :pool_member);
+    assert!(pool_member_info.unclaimed_rewards == rewards);
+    assert!(
+        pool_rewards_for_epoch == rewards
+            + token_dispatcher.balance_of(pool_contract).try_into().unwrap(),
+    );
+    assert!(token_dispatcher.balance_of(pool_contract) < 100);
+    assert!(
+        token_dispatcher.balance_of(cfg.pool_member_info.reward_address) == balance_before_claim
+            + rewards.into(),
+    );
+}
+
+#[test]
+fn test_claim_rewards_with_balance_changes_btc_pool() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.staking_contract_info.token_address;
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_contract = cfg.test_info.staking_contract;
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+
+    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
+    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let staker_address = cfg.test_info.staker_address;
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher.set_commission(:commission);
+    let pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+    // TODO: Use enter_btc pool function.
+    cfg.pool_member_info._deprecated_amount = cfg.test_info.pool_member_btc_amount;
+    enter_delegation_pool_for_testing_using_dispatcher(
+        :pool_contract, :cfg, token_address: btc_token_address,
+    );
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    let pool_member = cfg.test_info.pool_member_address;
+    let delegate_amount = cfg.pool_member_info._deprecated_amount;
+
+    advance_epoch_global();
+
+    // Pool update rewards.
+    let mut pool_balance = delegate_amount;
+    let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
+        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+    );
+    assert!(commission_rewards.is_non_zero());
+    update_rewards_from_staking_contract_for_testing(
+        :cfg, :pool_contract, rewards: pool_rewards_for_epoch, :pool_balance,
+    );
+
+    // Balance changes at current epoch.
+    add_to_delegation_pool_with_pool_member(
+        :pool_contract, :pool_member, amount: delegate_amount, token_address: btc_token_address,
+    );
+    advance_epoch_global();
+    pool_balance += delegate_amount;
+    let pool_member_info = pool_dispatcher.pool_member_info_v1(:pool_member);
+    let rewards = claim_rewards_for_pool_member(:pool_contract, :pool_member);
+    assert!(pool_member_info.unclaimed_rewards == rewards);
+    assert!(rewards == pool_rewards_for_epoch);
+    assert!(
+        token_dispatcher
+            .balance_of(cfg.pool_member_info.reward_address) == pool_rewards_for_epoch
+            .into(),
+    );
+
+    // Balance changes after current epoch and there is no balance change at current epoch.
+    advance_epoch_global();
+    let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
+        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+    );
+    assert!(commission_rewards.is_non_zero());
+    update_rewards_from_staking_contract_for_testing(
+        :cfg, :pool_contract, rewards: pool_rewards_for_epoch, :pool_balance,
+    );
+    advance_epoch_global();
+    add_to_delegation_pool_with_pool_member(
+        :pool_contract, :pool_member, amount: delegate_amount, token_address: btc_token_address,
+    );
+    let balance_before_claim = token_dispatcher.balance_of(cfg.pool_member_info.reward_address);
+    let pool_member_info = pool_dispatcher.pool_member_info_v1(:pool_member);
+    let rewards = claim_rewards_for_pool_member(:pool_contract, :pool_member);
+    assert!(pool_member_info.unclaimed_rewards == rewards);
+    assert!(rewards == pool_rewards_for_epoch);
+    assert!(
+        token_dispatcher.balance_of(cfg.pool_member_info.reward_address) == balance_before_claim
+            + pool_rewards_for_epoch.into(),
+    );
+
+    // Balance changes at current epoch & after current epoch.
+    advance_epoch_global();
+    pool_balance += delegate_amount;
+    let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
+        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+    );
+    assert!(commission_rewards.is_non_zero());
+    update_rewards_from_staking_contract_for_testing(
+        :cfg, :pool_contract, rewards: pool_rewards_for_epoch, :pool_balance,
+    );
+    add_to_delegation_pool_with_pool_member(
+        :pool_contract, :pool_member, amount: delegate_amount, token_address: btc_token_address,
+    );
+    advance_epoch_global();
+    add_to_delegation_pool_with_pool_member(
+        :pool_contract, :pool_member, amount: delegate_amount, token_address: btc_token_address,
     );
     let balance_before_claim = token_dispatcher.balance_of(cfg.pool_member_info.reward_address);
     let pool_member_info = pool_dispatcher.pool_member_info_v1(:pool_member);

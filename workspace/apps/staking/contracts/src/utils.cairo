@@ -1,8 +1,5 @@
-use core::num::traits::zero::Zero;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use staking::constants::{BASE_VALUE, STRK_IN_FRIS};
 use staking::errors::{Erc20Error, GenericError};
-use staking::staking::errors::Error as StakingError;
 use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use staking::types::{Amount, Commission, Index};
 use starknet::syscalls::deploy_syscall;
@@ -68,20 +65,13 @@ pub(crate) fn compute_commission_amount_rounded_up(
         .expect_with_err(err: GenericError::COMMISSION_ISNT_AMOUNT_TYPE)
 }
 
-pub(crate) fn compute_rewards_per_strk(staking_rewards: Amount, total_stake: Amount) -> Index {
-    // Return zero if the total stake is too small, to avoid overflow below.
-    if total_stake < STRK_IN_FRIS {
-        return Zero::zero();
-    }
-    mul_wide_and_div(lhs: staking_rewards, rhs: BASE_VALUE, div: total_stake)
-        .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
-}
-
-// Compute the rewards from the amount and interest.
-//
-// $$ rewards = amount * interest / BASE_VALUE $$
-pub(crate) fn compute_rewards_rounded_down(amount: Amount, interest: Index) -> Amount {
-    mul_wide_and_div(lhs: amount, rhs: interest, div: BASE_VALUE)
+/// Compute the rewards from the amount and interest.
+///
+/// $$ rewards = amount * interest / base_value $$
+pub(crate) fn compute_rewards_rounded_down(
+    amount: Amount, interest: Index, base_value: Index,
+) -> Amount {
+    mul_wide_and_div(lhs: amount, rhs: interest, div: base_value)
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
@@ -111,18 +101,6 @@ pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
             Erc20Error::INSUFFICIENT_BALANCE,
         );
         self.transfer(:recipient, :amount)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use core::num::traits::zero::Zero;
-    use super::{BASE_VALUE, STRK_IN_FRIS, compute_rewards_per_strk};
-
-    #[test]
-    fn test_compute_rewards_per_strk() {
-        assert!(compute_rewards_per_strk(STRK_IN_FRIS, STRK_IN_FRIS) == BASE_VALUE);
-        assert!(compute_rewards_per_strk(STRK_IN_FRIS, STRK_IN_FRIS - 1) == Zero::zero());
     }
 }
 

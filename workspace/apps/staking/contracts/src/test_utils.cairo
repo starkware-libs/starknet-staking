@@ -1,16 +1,17 @@
 use constants::{
-    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BTC_TOKEN_ADDRESS,
-    BTC_TOKEN_NAME, BUFFER, COMMISSION, DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH,
-    EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER,
-    MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS,
-    POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
-    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS,
-    SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS,
-    STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_TOKEN_NAME, TOKEN_ADDRESS,
-    TOKEN_ADMIN, UPGRADE_GOVERNOR,
+    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT,
+    BTC_POOL_MEMBER_STAKE_AMOUNT, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION,
+    DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN,
+    INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS,
+    OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS,
+    POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
+    REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
+    STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
+    STARKGATE_ADDRESS, STRK_TOKEN_NAME, TOKEN_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
 use core::num::traits::zero::Zero;
+use core::panics::panic_with_byte_array;
 use core::poseidon::PoseidonTrait;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -20,8 +21,9 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    BTC_DECIMALS, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW,
-    STARTING_EPOCH,
+    BTC_BASE_VALUE, BTC_DECIMALS, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW,
+    MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS, STARTING_EPOCH, STRK_BASE_VALUE, STRK_DECIMALS,
+    STRK_IN_FRIS,
 };
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
@@ -33,6 +35,7 @@ use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, IStakingTokenManagerDispatcher,
@@ -61,7 +64,7 @@ use starkware_utils_testing::test_utils::{
 
 pub(crate) mod constants {
     use core::cmp::max;
-    use staking::constants::STRK_IN_FRIS;
+    use staking::constants::{MIN_BTC_FOR_REWARDS, STRK_IN_FRIS};
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Commission, Index};
     use starknet::class_hash::ClassHash;
@@ -74,6 +77,7 @@ pub(crate) mod constants {
     pub const MIN_STAKE: Amount = 20000 * STRK_IN_FRIS;
     pub const STAKE_AMOUNT: Amount = 100000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * STRK_IN_FRIS;
+    pub const BTC_POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * MIN_BTC_FOR_REWARDS;
     pub const COMMISSION: Commission = 500;
     pub const STAKER_FINAL_INDEX: Index = 10;
     pub const BASE_MINT_AMOUNT: Amount = 1_300_000 * STRK_IN_FRIS;
@@ -845,9 +849,11 @@ pub(crate) fn cheat_reward_for_reward_supplier(
 }
 
 fn compute_unclaimed_rewards_member(
-    amount: Amount, interest: Index, commission: Commission,
+    amount: Amount, interest: Index, commission: Commission, base_value: Index,
 ) -> Amount {
-    let rewards_including_commission = compute_rewards_rounded_down(:amount, :interest);
+    let rewards_including_commission = compute_rewards_rounded_down(
+        :amount, :interest, :base_value,
+    );
     let commission_amount = compute_commission_amount_rounded_up(
         :rewards_including_commission, :commission,
     );
@@ -911,6 +917,7 @@ pub(crate) struct TestInfo {
     pub initial_supply: u256,
     pub staker_initial_balance: Amount,
     pub pool_member_initial_balance: Amount,
+    pub pool_member_btc_amount: Amount,
     pub strk_pool_enabled: bool,
     pub stake_amount: Amount,
     pub staking_contract: ContractAddress,
@@ -997,6 +1004,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             initial_supply: INITIAL_SUPPLY.into(),
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
+            pool_member_btc_amount: BTC_POOL_MEMBER_STAKE_AMOUNT,
             strk_pool_enabled: false,
             stake_amount: STAKE_AMOUNT,
             staking_contract: STAKING_CONTRACT_ADDRESS(),
@@ -1042,13 +1050,13 @@ pub struct StakingContractInfoCfg {
     pub btc_token_address: ContractAddress,
 }
 
-/// Update rewards for pool.
-pub(crate) fn pool_update_rewards(
+/// Update rewards for STRK pool.
+pub(crate) fn strk_pool_update_rewards(
     pool_member_info: PoolMemberInfo, updated_index: Index,
 ) -> PoolMemberInfo {
     let interest: Index = updated_index - pool_member_info.index;
     let rewards_including_commission = compute_rewards_rounded_down(
-        amount: pool_member_info.amount, :interest,
+        amount: pool_member_info.amount, :interest, base_value: STRK_BASE_VALUE,
     );
     let commission_amount = compute_commission_amount_rounded_up(
         :rewards_including_commission, commission: pool_member_info.commission,
@@ -1203,6 +1211,62 @@ pub(crate) fn calculate_pool_member_rewards(
 ) -> Amount {
     mul_wide_and_div(lhs: pool_member_balance, rhs: pool_rewards, div: pool_balance)
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+}
+
+/// Compute the rewards for the pool trace.
+///
+/// Precondition: decimals` must be either `STRK_DECIMALS` or `BTC_DECIMALS`.
+pub(crate) fn compute_rewards_for_trace(
+    staking_rewards: Amount, total_stake: Amount, decimals: u8,
+) -> Index {
+    let base_value = if decimals == STRK_DECIMALS {
+        // Return zero if the total stake is too small, to avoid overflow below.
+        if total_stake < STRK_IN_FRIS {
+            return Zero::zero();
+        }
+        STRK_BASE_VALUE
+    } else if decimals == BTC_DECIMALS {
+        // Return zero if the total stake is too small, to avoid overflow below.
+        if total_stake < MIN_BTC_FOR_REWARDS {
+            return Zero::zero();
+        }
+        BTC_BASE_VALUE
+    } else {
+        panic_with_byte_array(@"Invalid decimals")
+    };
+    mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
+        .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
+}
+
+#[cfg(test)]
+mod tests {
+    use core::num::traits::zero::Zero;
+    use super::{
+        BTC_BASE_VALUE, BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS,
+        STRK_IN_FRIS, compute_rewards_for_trace,
+    };
+
+    #[test]
+    fn test_compute_rewards_for_trace() {
+        assert!(
+            compute_rewards_for_trace(STRK_IN_FRIS, STRK_IN_FRIS, STRK_DECIMALS) == STRK_BASE_VALUE,
+        );
+        assert!(
+            compute_rewards_for_trace(
+                STRK_IN_FRIS, STRK_IN_FRIS - 1, STRK_DECIMALS,
+            ) == Zero::zero(),
+        );
+        assert!(
+            compute_rewards_for_trace(
+                MIN_BTC_FOR_REWARDS, MIN_BTC_FOR_REWARDS, BTC_DECIMALS,
+            ) == BTC_BASE_VALUE,
+        );
+        assert!(
+            compute_rewards_for_trace(
+                MIN_BTC_FOR_REWARDS, MIN_BTC_FOR_REWARDS - 1, BTC_DECIMALS,
+            ) == Zero::zero(),
+        );
+    }
 }
 
 /// Calculates the block offset required to advance from the starting block into the attestation

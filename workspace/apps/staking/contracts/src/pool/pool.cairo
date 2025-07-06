@@ -7,8 +7,14 @@ pub mod Pool {
     use core::serde::Serde;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::V1_PREV_CONTRACT_VERSION;
+    use openzeppelin::token::erc20::interface::{
+        IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
+        IERC20MetadataDispatcherTrait,
+    };
+    use staking::constants::{
+        BTC_BASE_VALUE, BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS,
+        STRK_IN_FRIS, V1_PREV_CONTRACT_VERSION,
+    };
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{
@@ -22,16 +28,15 @@ pub mod Pool {
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
         PoolMemberBalanceTrait, PoolMemberCheckpoint, PoolMemberCheckpointTrait,
     };
+    use staking::staking::errors::Error as StakingError;
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
         IStakingPoolDispatcherTrait,
     };
     use staking::types::{
-        Amount, Commission, Epoch, InternalPoolMemberInfoLatest, VecIndex, Version,
+        Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
     };
-    use staking::utils::{
-        CheckedIERC20DispatcherTrait, compute_rewards_per_strk, compute_rewards_rounded_down,
-    };
+    use staking::utils::{CheckedIERC20DispatcherTrait, compute_rewards_rounded_down};
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
     use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
@@ -41,6 +46,7 @@ pub mod Pool {
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::errors::{Describable, OptionAuxTrait};
     use starkware_utils::interfaces::identity::Identity;
+    use starkware_utils::math::utils::mul_wide_and_div;
     use starkware_utils::time::time::{Time, Timestamp};
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
@@ -539,9 +545,10 @@ pub mod Pool {
                 .insert(
                     key: self.get_current_epoch(),
                     value: latest
-                        + compute_rewards_per_strk(
-                            staking_rewards: rewards, total_stake: pool_balance,
-                        ),
+                        + self
+                            .compute_rewards_for_trace(
+                                staking_rewards: rewards, total_stake: pool_balance,
+                            ),
                 );
         }
     }
@@ -792,6 +799,8 @@ pub mod Pool {
             let mut from_sigma = self.find_sigma(from_checkpoint);
             let mut from_balance = from_checkpoint.balance();
 
+            let base_value = self.base_value_for_rewards();
+
             while entry_to_claim_from < pool_member_trace_length {
                 let pool_member_checkpoint = pool_member_trace.at(entry_to_claim_from);
                 // If the balance change is after `until_epoch` (and therefore does not affect
@@ -805,7 +814,7 @@ pub mod Pool {
                 let to_sigma = self.find_sigma(pool_member_checkpoint);
                 rewards +=
                     compute_rewards_rounded_down(
-                        amount: from_balance, interest: to_sigma - from_sigma,
+                        amount: from_balance, interest: to_sigma - from_sigma, :base_value,
                     );
                 from_sigma = to_sigma;
                 from_balance = pool_member_checkpoint.balance();
@@ -816,7 +825,9 @@ pub mod Pool {
             // `pool_member_trace` (or from `from_checkpoint`) to (exclusive) `until_checkpoint`.
             let to_sigma = self.find_sigma(until_checkpoint);
             rewards +=
-                compute_rewards_rounded_down(amount: from_balance, interest: to_sigma - from_sigma);
+                compute_rewards_rounded_down(
+                    amount: from_balance, interest: to_sigma - from_sigma, :base_value,
+                );
 
             (rewards, entry_to_claim_from)
         }
@@ -890,6 +901,48 @@ pub mod Pool {
             self
                 .pool_member_info
                 .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
+        }
+
+        fn token_decimals(self: @ContractState) -> u8 {
+            let token_metadata_dispatcher = IERC20MetadataDispatcher {
+                contract_address: self.token_dispatcher.read().contract_address,
+            };
+            token_metadata_dispatcher.decimals()
+        }
+
+        fn base_value_for_rewards(self: @ContractState) -> Index {
+            let decimals = self.token_decimals();
+            if decimals == STRK_DECIMALS {
+                STRK_BASE_VALUE
+            } else if decimals == BTC_DECIMALS {
+                BTC_BASE_VALUE
+            } else {
+                panic_with_byte_array(@"Invalid decimals")
+            }
+        }
+
+        /// Compute the rewards for the pool trace.
+        fn compute_rewards_for_trace(
+            self: @ContractState, staking_rewards: Amount, total_stake: Amount,
+        ) -> Index {
+            let decimals = self.token_decimals();
+            let base_value = if decimals == STRK_DECIMALS {
+                // Return zero if the total stake is too small, to avoid overflow below.
+                if total_stake < STRK_IN_FRIS {
+                    return Zero::zero();
+                }
+                STRK_BASE_VALUE
+            } else if decimals == BTC_DECIMALS {
+                // Return zero if the total stake is too small, to avoid overflow below.
+                if total_stake < MIN_BTC_FOR_REWARDS {
+                    return Zero::zero();
+                }
+                BTC_BASE_VALUE
+            } else {
+                panic_with_byte_array(@"Invalid decimals")
+            };
+            mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
+                .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
         }
 
         // TODO: Refactor tests to use the actual STRK token address and remove this function, just

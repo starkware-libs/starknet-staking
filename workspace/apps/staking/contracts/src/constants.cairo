@@ -5,8 +5,12 @@ use starkware_utils::time::time::TimeDelta;
 
 pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 3 * WEEK };
 pub(crate) const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };
-pub(crate) const BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
+pub(crate) const STRK_BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
+pub(crate) const BTC_BASE_VALUE: Index = 10_000_000_000_000; // 10**13
+/// Min STRK for rewards.
 pub(crate) const STRK_IN_FRIS: Amount = 1_000_000_000_000_000_000; // 10**18
+pub(crate) const MIN_BTC_FOR_REWARDS: Amount = 1_000; // 10**3
+pub(crate) const STRK_DECIMALS: u8 = 18;
 pub(crate) const BTC_DECIMALS: u8 = 8;
 // === Reward Distribution - Important Note ===
 //

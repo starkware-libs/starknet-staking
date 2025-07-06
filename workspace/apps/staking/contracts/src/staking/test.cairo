@@ -3185,6 +3185,9 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     enter_delegation_pool_for_testing_using_dispatcher(
         pool_contract: strk_pool_contract, :cfg, :token_address,
     );
+    // Set delegated amount for BTC pools.
+    // TODO: Use enter_btc pool function.
+    cfg.pool_member_info._deprecated_amount = cfg.test_info.pool_member_btc_amount;
     enter_delegation_pool_for_testing_using_dispatcher(
         pool_contract: btc_pool_contract, :cfg, token_address: btc_token_address,
     );
