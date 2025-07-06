@@ -75,7 +75,7 @@ fn test_reward_supplier_constructor() {
     let mut cfg: StakingInitConfig = Default::default();
     let token_address = cfg.test_info.strk_token.contract_address();
     // Deploy the staking contract, stake, and enter delegation pool.
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
     let state = @initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
@@ -100,12 +100,12 @@ fn test_claim_rewards() {
     let token = cfg.test_info.strk_token;
     let token_address = token.contract_address();
     // Deploy the staking contract and stake.
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
     let amount = (cfg.test_info.initial_supply / 2).try_into().expect('amount does not fit in');
     cfg.test_info.staker_initial_balance = amount;
     cfg.test_info.stake_amount = amount;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     // Deploy the minting curve contract.
     let minting_curve_contract = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve_contract;
@@ -152,7 +152,7 @@ fn test_on_receive() {
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
         contract_address: reward_supplier_contract,
     };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let balance = Zero::zero();
     let credit = balance
         + reward_supplier_dispatcher.contract_parameters_v1().l1_pending_requested_amount;

@@ -129,9 +129,7 @@ fn test_stake_when_paused() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     pause_staking_contract(:cfg);
-    let token_address = cfg.test_info.strk_token.contract_address();
-    let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 }
 
 #[test]

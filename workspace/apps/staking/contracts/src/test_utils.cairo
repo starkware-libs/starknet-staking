@@ -383,11 +383,9 @@ pub(crate) fn deploy_mock_erc20_decimals_contract(
     token_address
 }
 
-pub(crate) fn deploy_staking_contract(
-    token_address: ContractAddress, cfg: StakingInitConfig,
-) -> ContractAddress {
+pub(crate) fn deploy_staking_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
-    token_address.serialize(ref calldata);
+    cfg.test_info.strk_token.contract_address().serialize(ref calldata);
     cfg.staking_contract_info.min_stake.serialize(ref calldata);
     cfg.staking_contract_info.pool_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
@@ -545,9 +543,9 @@ pub(crate) fn fund_and_approve_for_stake(
     );
 }
 
-pub(crate) fn stake_for_testing_using_dispatcher(
-    cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress,
-) {
+pub(crate) fn stake_for_testing_using_dispatcher(cfg: StakingInitConfig) {
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let staking_contract = cfg.test_info.staking_contract;
     fund_and_approve_for_stake(:cfg, :staking_contract, :token_address);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
@@ -573,9 +571,8 @@ pub(crate) fn stake_for_testing_using_dispatcher(
     }
 }
 
-pub(crate) fn stake_from_zero_address(
-    cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress,
-) {
+pub(crate) fn stake_from_zero_address(cfg: StakingInitConfig) {
+    let staking_contract = cfg.test_info.staking_contract;
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
@@ -588,12 +585,12 @@ pub(crate) fn stake_from_zero_address(
         );
 }
 
-pub(crate) fn stake_with_pool_enabled(
-    mut cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress,
-) -> ContractAddress {
+pub(crate) fn stake_with_pool_enabled(mut cfg: StakingInitConfig) -> ContractAddress {
     cfg.test_info.strk_pool_enabled = true;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_for_testing_using_dispatcher(:cfg);
+    let staking_dispatcher = IStakingDispatcher {
+        contract_address: cfg.test_info.staking_contract,
+    };
     let pool_contract = staking_dispatcher
         .staker_info_v1(cfg.test_info.staker_address)
         .get_pool_info()
@@ -774,7 +771,6 @@ pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -
 
 pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     // Deploy contracts: MintingCurve, RewardSupplier, Staking.
-    let token_address = cfg.test_info.strk_token.contract_address();
     // Deploy the minting_curve, with faked staking_address.
     let minting_curve = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve;
@@ -782,7 +778,7 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     let reward_supplier = deploy_reward_supplier_contract(:cfg);
     cfg.staking_contract_info.reward_supplier = reward_supplier;
     // Deploy the staking contract.
-    let staking_contract = deploy_staking_contract(:token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
     // Deploy the attestation contract.
     let attestation_contract = deploy_attestation_contract(:cfg);

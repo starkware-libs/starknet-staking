@@ -1,5 +1,4 @@
 use core::num::traits::{Sqrt, WideMul};
-use snforge_std::TokenTrait;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::constants::MAX_C_NUM;
 use staking::event_test_utils::{assert_minting_cap_changed_event, assert_number_of_events};
@@ -18,13 +17,11 @@ use starkware_utils_testing::test_utils::cheat_caller_address_once;
 fn test_yearly_mint() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.test_info.strk_token.contract_address();
-    let staking_contract = cfg.test_info.staking_contract;
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let minting_curve_dispatcher = IMintingCurveDispatcher {
         contract_address: minting_curve_contract,
     };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let total_stake = cfg.test_info.stake_amount;
     let total_supply: Amount = cfg
         .test_info
