@@ -426,8 +426,6 @@ pub(crate) struct InternalStakerPoolInfoV2 {
     pub(crate) commission_commitment: Option<CommissionCommitment>,
 }
 
-// TODO: Move traits to seperate file.
-// TODO: Test.
 #[generate_trait]
 pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
     fn pools(
@@ -496,29 +494,24 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
 
 #[generate_trait]
 pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTrait {
-    // TODO: as_non_mut.
     fn commission_opt(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Option<Commission> {
         self.commission.read()
     }
 
-    // TODO: as_non_mut.
     fn commission(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Commission {
         self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
     }
 
-    // TODO: as_non_mut.
     fn commission_commitment_opt(
         self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
     ) -> Option<CommissionCommitment> {
         self.commission_commitment.read()
     }
 
-    // TODO: as_non_mut.
     fn has_pool(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> bool {
         self.pools.len() > 0
     }
 
-    // TODO: as_non_mut.
     fn has_pool_for_token(
         self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, token_address: ContractAddress,
     ) -> bool {
