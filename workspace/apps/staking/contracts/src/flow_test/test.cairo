@@ -3,12 +3,11 @@ use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows;
 use staking::flow_test::utils::{
     RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemStakerTrait,
-    SystemTrait, test_flow_local,
+    SystemTrait, TokenHelperTrait, test_flow_local,
 };
 use staking::test_utils::StakingInitConfig;
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::time::time::Time;
-use starkware_utils_testing::test_utils::TokenTrait;
 
 #[test]
 fn basic_stake_flow_test() {
