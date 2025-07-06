@@ -13,7 +13,7 @@ pub mod Pool {
     };
     use staking::constants::{
         BTC_BASE_VALUE, BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS,
-        STRK_IN_FRIS, V1_PREV_CONTRACT_VERSION,
+        STRK_IN_FRIS, STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
     };
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
@@ -333,7 +333,7 @@ pub mod Pool {
             self.write_pool_member_info(:pool_member, :pool_member_info);
 
             // Transfer rewards to the pool member.
-            let reward_token = IERC20Dispatcher { contract_address: self.strk_token_address() };
+            let reward_token = IERC20Dispatcher { contract_address: STRK_TOKEN_ADDRESS };
             reward_token.checked_transfer(recipient: reward_address, amount: rewards.into());
 
             // Emit event.
@@ -943,15 +943,6 @@ pub mod Pool {
             };
             mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
                 .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
-        }
-
-        // TODO: Refactor tests to use the actual STRK token address and remove this function, just
-        // use the STRK_TOKEN_ADDRESS constant.
-        fn strk_token_address(self: @ContractState) -> ContractAddress {
-            let staking_dispatcher = IStakingDispatcher {
-                contract_address: self.staking_pool_dispatcher.read().contract_address,
-            };
-            staking_dispatcher.contract_parameters_v1().token_address
         }
     }
 }

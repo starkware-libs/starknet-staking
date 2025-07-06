@@ -1,6 +1,6 @@
 use core::cmp::max;
 use core::num::traits::Zero;
-use staking::constants::STARTING_EPOCH;
+use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
@@ -473,12 +473,9 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
         self.pools.len() > 0
     }
 
-    // TODO: Remove strk_token_address param once use strk token in tests.
-    fn get_strk_pool(
-        self: StoragePath<InternalStakerPoolInfoV2>, strk_token_address: ContractAddress,
-    ) -> Option<ContractAddress> {
+    fn get_strk_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> Option<ContractAddress> {
         for (pool_contract, token_address) in self.pools {
-            if token_address == strk_token_address {
+            if token_address == STRK_TOKEN_ADDRESS {
                 return Option::Some(pool_contract);
             }
         }
