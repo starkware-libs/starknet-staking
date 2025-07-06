@@ -11,7 +11,7 @@ use core::num::traits::Zero;
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use snforge_std::{start_cheat_block_timestamp_global, test_address};
+use snforge_std::{TokenTrait, start_cheat_block_timestamp_global, test_address};
 use staking::constants::STRK_IN_FRIS;
 use staking::errors::GenericError;
 use staking::event_test_utils::assert_number_of_events;
@@ -27,9 +27,7 @@ use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
 use staking::staking::staking::Staking;
 use staking::test_utils;
-use staking::test_utils::constants::{
-    NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS, STRK_TOKEN_NAME,
-};
+use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use staking::types::Amount;
 use staking::utils::compute_threshold;
 use starknet::Store;
@@ -40,9 +38,9 @@ use starkware_utils_testing::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
 use test_utils::{
-    StakingInitConfig, advance_epoch_global, deploy_minting_curve_contract,
-    deploy_mock_erc20_contract, deploy_staking_contract, fund, general_contract_system_deployment,
-    initialize_reward_supplier_state_from_cfg, stake_for_testing_using_dispatcher,
+    StakingInitConfig, advance_epoch_global, deploy_minting_curve_contract, deploy_staking_contract,
+    fund, general_contract_system_deployment, initialize_reward_supplier_state_from_cfg,
+    stake_for_testing_using_dispatcher,
 };
 
 
@@ -75,12 +73,7 @@ fn test_identity() {
 #[test]
 fn test_reward_supplier_constructor() {
     let mut cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
+    let token_address = cfg.test_info.strk_token.contract_address();
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
@@ -104,12 +97,8 @@ fn test_reward_supplier_constructor() {
 #[test]
 fn test_claim_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     // Deploy the staking contract and stake.
     let staking_contract = deploy_staking_contract(:token_address, :cfg);
     cfg.test_info.staking_contract = staking_contract;
@@ -123,7 +112,7 @@ fn test_claim_rewards() {
     // Use the reward supplier contract state to claim rewards.
     let mut state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
     // Fund the the reward supplier contract.
-    fund(sender: cfg.test_info.owner_address, recipient: test_address(), :amount, :token_address);
+    fund(target: test_address(), :amount, :token);
     // Update the unclaimed rewards for testing purposes.
     state.unclaimed_rewards.write(amount);
     // Claim the rewards from the reward supplier contract.
@@ -141,12 +130,7 @@ fn test_claim_rewards() {
 #[test]
 fn test_contract_parameters_v1() {
     let mut cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
+    let token_address = cfg.test_info.strk_token.contract_address();
     // Change the block_timestamp so the contract_parameters_v1() won't return zero for all fields.
     let block_timestamp = Time::now().add(delta: Time::seconds(count: 1));
     start_cheat_block_timestamp_global(block_timestamp: block_timestamp.into());
@@ -161,7 +145,7 @@ fn test_contract_parameters_v1() {
 fn test_on_receive() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token_address = cfg.test_info.strk_token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let reward_supplier_contract = cfg.staking_contract_info.reward_supplier;
@@ -260,7 +244,7 @@ fn test_on_receive_caller_not_starkgate() {
     );
     reward_supplier_dispatcher
         .on_receive(
-            l2_token: cfg.staking_contract_info.token_address,
+            l2_token: cfg.test_info.strk_token.contract_address(),
             amount: cfg.reward_supplier.base_mint_amount.into(),
             depositor: cfg.reward_supplier.l1_reward_supplier.try_into().expect('not EthAddress'),
             message: array![].span(),
