@@ -238,7 +238,7 @@ fn test_send_rewards_to_staker() {
     let mut expected_staker_info = cfg.staker_info.clone();
     expected_staker_info.unclaimed_rewards_own = Zero::zero();
     cheat_reward_for_reward_supplier(
-        :cfg, :reward_supplier, expected_reward: unclaimed_rewards_own, :token,
+        :reward_supplier, expected_reward: unclaimed_rewards_own, :token,
     );
     let staker_balance_before_rewards = token_dispatcher
         .balance_of(account: cfg.staker_info.reward_address);

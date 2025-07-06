@@ -805,7 +805,7 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
 }
 
 pub(crate) fn cheat_reward_for_reward_supplier(
-    cfg: StakingInitConfig, reward_supplier: ContractAddress, expected_reward: Amount, token: Token,
+    reward_supplier: ContractAddress, expected_reward: Amount, token: Token,
 ) {
     fund(target: reward_supplier, amount: expected_reward, :token);
     snforge_std::store(
@@ -838,7 +838,7 @@ pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
 }
 
 pub(crate) fn add_reward_for_reward_supplier(
-    cfg: StakingInitConfig, reward_supplier: ContractAddress, reward: Amount, token: Token,
+    reward_supplier: ContractAddress, reward: Amount, token: Token,
 ) {
     fund(target: reward_supplier, amount: reward, :token);
     let current_unclaimed_rewards = *snforge_std::load(
