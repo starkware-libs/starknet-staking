@@ -51,7 +51,7 @@ use staking::test_utils::{
 };
 use staking::types::{
     Amount, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
-    InternalStakerInfoLatest,
+    InternalStakerInfoLatest, VecIndex,
 };
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait, get_block_number};
@@ -397,6 +397,34 @@ pub(crate) impl StakingImpl of StakingTrait {
             contract_address: self.address, caller_address: self.roles.security_admin,
         );
         self.pause_dispatcher().unpause()
+    }
+
+    fn get_stakers(self: StakingState) -> Span<ContractAddress> {
+        let mut stakers = ArrayTrait::new();
+        let vec_storage = selector!("stakers");
+        let vec_len: VecIndex = (*snforge_std::load(
+            target: self.address,
+            storage_address: vec_storage,
+            size: Store::<VecIndex>::size().into(),
+        )
+            .at(0))
+            .try_into()
+            .unwrap();
+        for i in 0..vec_len {
+            let staker_vec_storage = snforge_std::map_entry_address(
+                map_selector: vec_storage, keys: [i.into()].span(),
+            );
+            let staker: ContractAddress = (*snforge_std::load(
+                target: self.address,
+                storage_address: staker_vec_storage,
+                size: Store::<ContractAddress>::size().into(),
+            )
+                .at(0))
+                .try_into()
+                .unwrap();
+            stakers.append(staker);
+        }
+        stakers.span()
     }
 }
 

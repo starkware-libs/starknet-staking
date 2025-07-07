@@ -142,6 +142,12 @@ fn attest_after_delegator_intent_flow_test() {
     test_flow_local(:flow);
 }
 
+#[test]
+fn diverse_staker_vec_flow_test() {
+    let flow = flows::DiverseStakerVecFlow {};
+    test_flow_local(:flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

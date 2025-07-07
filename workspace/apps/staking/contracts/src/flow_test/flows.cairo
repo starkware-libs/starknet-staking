@@ -3649,6 +3649,55 @@ pub(crate) impl PoolCalculateRewardsTwiceFlowImpl of FlowTrait<PoolCalculateRewa
         assert!(pool_member_info.unclaimed_rewards == 3 * pool_rewards_one_epoch);
     }
 }
+
+/// Test diverse staker vector
+/// (staker with pool, staker without pool, staker in intent, staker in action)
+/// Flow:
+/// Staker1 stake with pool
+/// Staker2 stake
+/// Staker3 stake with pool
+/// Staker4 stake with pool
+/// Staker4 exit intent
+/// Advance time
+/// Staker4 exit action
+/// Staker3 exit intent
+#[derive(Drop, Copy)]
+pub(crate) struct DiverseStakerVecFlow {}
+pub(crate) impl DiverseStakerVecFlowImpl of FlowTrait<DiverseStakerVecFlow> {
+    fn test(self: DiverseStakerVecFlow, ref system: SystemState) {
+        let stake_amount = system.staking.get_min_stake();
+        let commission = 200;
+
+        let staker_with_pool = system.new_staker(amount: stake_amount);
+        let staker_without_pool = system.new_staker(amount: stake_amount);
+        let staker_in_intent = system.new_staker(amount: stake_amount);
+        let staker_in_action = system.new_staker(amount: stake_amount);
+
+        system
+            .stake(staker: staker_with_pool, amount: stake_amount, pool_enabled: true, :commission);
+        system
+            .stake(
+                staker: staker_without_pool, amount: stake_amount, pool_enabled: false, :commission,
+            );
+        system
+            .stake(staker: staker_in_intent, amount: stake_amount, pool_enabled: true, :commission);
+        system
+            .stake(staker: staker_in_action, amount: stake_amount, pool_enabled: true, :commission);
+
+        system.staker_exit_intent(staker: staker_in_action);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.staker_exit_action(staker: staker_in_action);
+
+        system.staker_exit_intent(staker: staker_in_intent);
+
+        let actual_stakers = system.staking.get_stakers();
+        assert!(actual_stakers.len() == 4);
+        assert!(actual_stakers.at(index: 0) == @staker_with_pool.staker.address);
+        assert!(actual_stakers.at(index: 1) == @staker_without_pool.staker.address);
+        assert!(actual_stakers.at(index: 2) == @staker_in_intent.staker.address);
+        assert!(actual_stakers.at(index: 3) == @staker_in_action.staker.address);
+    }
+}
 // TODO: Implement this flow test.
 // Stake
 // Upgrade
