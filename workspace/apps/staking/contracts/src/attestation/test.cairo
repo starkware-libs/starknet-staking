@@ -42,8 +42,7 @@ fn test_attest() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let operational_address = cfg.staker_info.operational_address;
@@ -76,8 +75,7 @@ fn test_attest_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let attestation_safe_dispatcher = IAttestationSafeDispatcher {
@@ -208,9 +206,7 @@ fn test_attest_assertions() {
 fn test_is_attestation_done_in_curr_epoch() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
@@ -245,9 +241,7 @@ fn test_is_attestation_done_in_curr_epoch_zero_epoch() {
 fn test_get_last_epoch_attestation_done() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
@@ -325,8 +319,7 @@ fn test_get_current_epoch_target_attestation_block() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };

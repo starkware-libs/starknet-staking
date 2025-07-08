@@ -1,9 +1,8 @@
 use core::cmp::max;
 use core::num::traits::Zero;
-use staking::constants::STARTING_EPOCH;
+use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
-use staking::staking::interface_v0::StakerPoolInfo;
 use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
 use starknet::storage::{Mutable, PendingStoragePath, StoragePath};
 use starknet::{ContractAddress, get_block_number};
@@ -28,7 +27,6 @@ pub(crate) struct UndelegateIntentKey {
 pub(crate) struct UndelegateIntentValue {
     pub unpool_time: Timestamp,
     pub amount: Amount,
-    // TODO: Consider change to token_address.
     pub staker_address: ContractAddress,
 }
 
@@ -428,8 +426,6 @@ pub(crate) struct InternalStakerPoolInfoV2 {
     pub(crate) commission_commitment: Option<CommissionCommitment>,
 }
 
-// TODO: Move traits to seperate file.
-// TODO: Test.
 #[generate_trait]
 pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
     fn pools(
@@ -475,12 +471,9 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
         self.pools.len() > 0
     }
 
-    // TODO: Remove strk_token_address param once use strk token in tests.
-    fn get_strk_pool(
-        self: StoragePath<InternalStakerPoolInfoV2>, strk_token_address: ContractAddress,
-    ) -> Option<ContractAddress> {
+    fn get_strk_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> Option<ContractAddress> {
         for (pool_contract, token_address) in self.pools {
-            if token_address == strk_token_address {
+            if token_address == STRK_TOKEN_ADDRESS {
                 return Option::Some(pool_contract);
             }
         }
@@ -501,29 +494,24 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
 
 #[generate_trait]
 pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTrait {
-    // TODO: as_non_mut.
     fn commission_opt(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Option<Commission> {
         self.commission.read()
     }
 
-    // TODO: as_non_mut.
     fn commission(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Commission {
         self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
     }
 
-    // TODO: as_non_mut.
     fn commission_commitment_opt(
         self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
     ) -> Option<CommissionCommitment> {
         self.commission_commitment.read()
     }
 
-    // TODO: as_non_mut.
     fn has_pool(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> bool {
         self.pools.len() > 0
     }
 
-    // TODO: as_non_mut.
     fn has_pool_for_token(
         self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, token_address: ContractAddress,
     ) -> bool {
@@ -567,6 +555,16 @@ struct InternalStakerInfo {
     index: Index,
     unclaimed_rewards_own: Amount,
     pool_info: Option<StakerPoolInfo>,
+}
+
+/// This struct was used in V0 for both InternalStakerInfo and StakerInfo.
+/// Should not be in used except for migration purpose.
+#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+pub(crate) struct StakerPoolInfo {
+    pub pool_contract: ContractAddress,
+    pub amount: Amount,
+    pub unclaimed_rewards: Amount,
+    pub commission: Commission,
 }
 
 // **Note**: This struct should be made private in the next version of Internal Staker Info.

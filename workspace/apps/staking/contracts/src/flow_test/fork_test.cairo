@@ -244,6 +244,15 @@ fn staker_migration_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn staker_with_pool_without_commission_commitment_migration_flow_test() {
+    let mut flow = flows::StakerWithPoolWithoutCommissionCommitmentMigrationFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 #[should_panic(expected: "Staker Info is already up-to-date")]
 fn staker_migration_called_twice_regression_test() {
     let mut flow = flows::StakerMigrationCalledTwiceFlow { staker: Option::None };
@@ -289,6 +298,24 @@ fn claim_rewards_with_non_upgraded_pool_flow_test() {
         second_delegator_info: Option::None,
         third_delegator: Option::None,
         third_delegator_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_with_pool_in_intent_migration_flow_test() {
+    let mut flow = flows::StakerWithPoolInIntentMigrationFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_without_pool_in_intent_migration_flow_test() {
+    let mut flow = flows::StakerWithoutPoolInIntentMigrationFlow {
+        staker: Option::None, staker_info: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
@@ -343,5 +370,33 @@ fn delegator_exit_with_non_upgraded_pool_regression_test() {
         third_delegator: Option::None,
         third_delegator_info: Option::None,
     };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn multiple_stakers_migration_vec_flow_test() {
+    let mut flow = flows::MultipleStakersMigrationVecFlow { old_stakers: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_in_intent_migration_vec_flow_test() {
+    let mut flow = flows::StakerInIntentMigrationVecFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_with_pool_migration_set_commission_regression_test() {
+    let mut flow = flows::StakerWithPoolMigrationSetCommissionFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_exit_regression_test() {
+    let mut flow = flows::StakerExitFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }

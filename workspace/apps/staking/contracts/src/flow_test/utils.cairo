@@ -1,4 +1,3 @@
-use MainnetAddresses::MAINNET_L2_BRIDGE_ADDRESS;
 use MainnetClassHashes::{
     MAINNET_ATTESTATION_CLASS_HASH_V1, MAINNET_MINTING_CURVE_CLASS_HASH_V0,
     MAINNET_POOL_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V1, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0,
@@ -9,11 +8,12 @@ use core::num::traits::zero::Zero;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, start_cheat_block_hash_global,
-    start_cheat_block_number_global, start_cheat_block_timestamp_global,
+    CheatSpan, ContractClassTrait, DeclareResultTrait, Token, TokenImpl, TokenTrait,
+    cheat_caller_address, start_cheat_block_hash_global, start_cheat_block_number_global,
+    start_cheat_block_timestamp_global,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
+use staking::constants::{BTC_DECIMALS, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
 };
@@ -30,7 +30,8 @@ use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingMigrationDispatcher,
     IStakingMigrationDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
+    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::interface_v0::{
     IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
@@ -40,17 +41,17 @@ use staking::staking::interface_v1::{
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
-    BTC_TOKEN_NAME, DUMMY_ADDRESS, DUMMY_BTC_TOKEN_ADDRESS, EPOCH_DURATION, EPOCH_LENGTH,
-    EPOCH_STARTING_BLOCK, MAINNET_SECURITY_COUNSEL_ADDRESS, STARTING_BLOCK_OFFSET,
-    STRK_TOKEN_ADDRESS, STRK_TOKEN_NAME, UPGRADE_GOVERNOR,
+    BTC_TOKEN_NAME, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
+    MAINNET_SECURITY_COUNSEL_ADDRESS, STARTING_BLOCK_OFFSET, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
-    StakingInitConfig, calculate_block_offset, declare_pool_contract, declare_pool_eic_contract,
-    declare_staking_eic_contract_v0_v1, declare_staking_eic_contract_v1_v2,
+    StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
+    declare_pool_contract, declare_pool_eic_contract, declare_staking_eic_contract_v0_v1,
+    declare_staking_eic_contract_v1_v2, deploy_mock_erc20_decimals_contract, fund,
 };
 use staking::types::{
     Amount, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
-    InternalStakerInfoLatest,
+    InternalStakerInfoLatest, VecIndex,
 };
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait, get_block_number};
@@ -61,10 +62,9 @@ use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDisp
 use starkware_utils::constants::SYMBOL;
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
-    Deployable, TokenConfig, TokenState, TokenTrait, advance_block_number_global,
-    cheat_caller_address_once, set_account_as_app_governor, set_account_as_app_role_admin,
-    set_account_as_security_admin, set_account_as_security_agent, set_account_as_token_admin,
-    set_account_as_upgrade_governor,
+    TokenConfig, advance_block_number_global, cheat_caller_address_once,
+    set_account_as_app_governor, set_account_as_app_role_admin, set_account_as_security_admin,
+    set_account_as_security_agent, set_account_as_token_admin, set_account_as_upgrade_governor,
 };
 
 mod MainnetAddresses {
@@ -165,9 +165,9 @@ pub(crate) struct StakingState {
 
 #[generate_trait]
 pub(crate) impl StakingImpl of StakingTrait {
-    fn deploy(self: StakingConfig, token: TokenState, btc_token: TokenState) -> StakingState {
+    fn deploy(self: StakingConfig, token: Token) -> StakingState {
         let mut calldata = ArrayTrait::new();
-        token.address.serialize(ref calldata);
+        token.contract_address().serialize(ref calldata);
         self.min_stake.serialize(ref calldata);
         self.pool_contract_class_hash.serialize(ref calldata);
         self.reward_supplier.serialize(ref calldata);
@@ -176,7 +176,6 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.prev_staking_contract_class_hash.serialize(ref calldata);
         self.epoch_info.serialize(ref calldata);
         self.attestation_contract.serialize(ref calldata);
-        btc_token.address.serialize(ref calldata);
         let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
         let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
         let staking = StakingState {
@@ -217,6 +216,10 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn dispatcher(self: StakingState) -> IStakingDispatcher nopanic {
         IStakingDispatcher { contract_address: self.address }
+    }
+
+    fn token_manager_dispatcher(self: StakingState) -> IStakingTokenManagerDispatcher nopanic {
+        IStakingTokenManagerDispatcher { contract_address: self.address }
     }
 
     fn is_v0(self: StakingState) -> bool {
@@ -395,6 +398,34 @@ pub(crate) impl StakingImpl of StakingTrait {
         );
         self.pause_dispatcher().unpause()
     }
+
+    fn get_stakers(self: StakingState) -> Span<ContractAddress> {
+        let mut stakers = ArrayTrait::new();
+        let vec_storage = selector!("stakers");
+        let vec_len: VecIndex = (*snforge_std::load(
+            target: self.address,
+            storage_address: vec_storage,
+            size: Store::<VecIndex>::size().into(),
+        )
+            .at(0))
+            .try_into()
+            .unwrap();
+        for i in 0..vec_len {
+            let staker_vec_storage = snforge_std::map_entry_address(
+                map_selector: vec_storage, keys: [i.into()].span(),
+            );
+            let staker: ContractAddress = (*snforge_std::load(
+                target: self.address,
+                storage_address: staker_vec_storage,
+                size: Store::<ContractAddress>::size().into(),
+            )
+                .at(0))
+                .try_into()
+                .unwrap();
+            stakers.append(staker);
+        }
+        stakers.span()
+    }
 }
 
 /// The `MintingCurveRoles` struct represents the various roles involved in the minting curve
@@ -553,13 +584,13 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
         self: RewardSupplierConfig,
         minting_curve: MintingCurveState,
         staking: StakingState,
-        token: TokenState,
+        token: Token,
     ) -> RewardSupplierState {
         let mut calldata = ArrayTrait::new();
         self.base_mint_amount.serialize(ref calldata);
         minting_curve.address.serialize(ref calldata);
         staking.address.serialize(ref calldata);
-        token.address.serialize(ref calldata);
+        token.contract_address().serialize(ref calldata);
         self.l1_reward_supplier.serialize(ref calldata);
         self.starkgate_address.serialize(ref calldata);
         self.governance_admin.serialize(ref calldata);
@@ -748,7 +779,6 @@ pub(crate) impl AttestationImpl of AttestationTrait {
 /// It includes configurations for the token, staking, minting curve, and reward supplier contracts.
 #[derive(Drop)]
 struct SystemConfig {
-    token: TokenConfig,
     btc_token: TokenConfig,
     staking: StakingConfig,
     minting_curve: MintingCurveConfig,
@@ -760,9 +790,9 @@ struct SystemConfig {
 /// It includes the state for the token, staking, minting curve, and reward supplier contracts,
 /// as well as a base account identifier.
 #[derive(Drop, Copy)]
-pub(crate) struct SystemState<TTokenState> {
-    pub token: TTokenState,
-    pub btc_token: TokenState,
+pub(crate) struct SystemState {
+    pub token: Token,
+    pub btc_token: Token,
     pub staking: StakingState,
     pub minting_curve: MintingCurveState,
     pub reward_supplier: RewardSupplierState,
@@ -778,12 +808,6 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
     /// Configures the basic staking flow by initializing the system configuration with the
     /// provided staking initialization configuration.
     fn basic_stake_flow_cfg(cfg: StakingInitConfig) -> SystemConfig {
-        let token = TokenConfig {
-            name: STRK_TOKEN_NAME(),
-            symbol: SYMBOL(),
-            initial_supply: cfg.test_info.initial_supply,
-            owner: cfg.test_info.owner_address,
-        };
         let btc_token = TokenConfig {
             name: BTC_TOKEN_NAME(),
             symbol: SYMBOL(),
@@ -835,14 +859,25 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
                 app_governor: cfg.test_info.app_governor,
             },
         };
-        SystemConfig { token, btc_token, staking, minting_curve, reward_supplier, attestation }
+        SystemConfig { btc_token, staking, minting_curve, reward_supplier, attestation }
+    }
+
+    /// Deploys a BTC token with the given configuration and 8 decimals and returns the token state.
+    fn deploy_btc_token(self: TokenConfig) -> Token {
+        let btc_token_address = deploy_mock_erc20_decimals_contract(
+            initial_supply: self.initial_supply,
+            owner_address: self.owner,
+            name: self.name,
+            decimals: BTC_DECIMALS,
+        );
+        custom_decimals_token(token_address: btc_token_address)
     }
 
     /// Deploys the system configuration and returns the system state.
-    fn deploy(self: SystemConfig) -> SystemState<TokenState> {
-        let token = self.token.deploy();
-        let btc_token = self.btc_token.deploy();
-        let staking = self.staking.deploy(:token, :btc_token);
+    fn deploy(self: SystemConfig) -> SystemState {
+        let token = Token::STRK;
+        let btc_token = self.btc_token.deploy_btc_token();
+        let staking = self.staking.deploy(:token);
         let minting_curve = self.minting_curve.deploy(:staking);
         let reward_supplier = self.reward_supplier.deploy(:minting_curve, :staking, :token);
         let attestation = self.attestation.deploy(:staking);
@@ -852,10 +887,11 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             serialized_value: array![attestation.address.into()].span(),
         );
         // Fund reward supplier
-        token
-            .fund(
-                recipient: reward_supplier.address, amount: self.minting_curve.initial_supply / 10,
-            );
+        fund(
+            target: reward_supplier.address,
+            amount: (self.minting_curve.initial_supply / 10).into(),
+            :token,
+        );
         // Set reward_supplier in staking
         let contract_address = staking.address;
         let staking_config_dispatcher = IStakingConfigDispatcher { contract_address };
@@ -873,26 +909,37 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             staker_address: Option::None,
         };
         system_state.advance_epoch();
+        // Add BTC token to the staking contract.
+        cheat_caller_address(
+            contract_address: staking.address,
+            caller_address: self.staking.roles.security_admin,
+            span: CheatSpan::TargetCalls(2),
+        );
+        staking.token_manager_dispatcher().add_token(token_address: btc_token.contract_address());
+        staking
+            .token_manager_dispatcher()
+            .enable_token(token_address: btc_token.contract_address());
         system_state
     }
 
     /// Deploys the system configuration with the implementation of the deployed contracts
     /// on Starknet mainnet. Returns the system state.
-    fn deploy_mainnet_contracts_v0(self: SystemConfig) -> SystemState<STRKTokenState> {
-        let token_address = STRK_TOKEN_ADDRESS();
-        let token = STRKTokenState { address: token_address };
-        // TODO: Change this once we have the BTC token address.
-        let btc_token = TokenState { address: DUMMY_BTC_TOKEN_ADDRESS(), owner: DUMMY_ADDRESS() };
+    fn deploy_mainnet_contracts_v0(self: SystemConfig) -> SystemState {
+        let token = Token::STRK;
+        let token_address = token.contract_address();
+        // TODO: Change this once we have the BTC token address?
+        let btc_token = self.btc_token.deploy_btc_token();
         let staking = self.staking.deploy_mainnet_contract_v0(:token_address);
         let minting_curve = self.minting_curve.deploy_mainnet_contract_v0(:staking);
         let reward_supplier = self
             .reward_supplier
             .deploy_mainnet_contract_v0(:minting_curve, :staking, :token_address);
         // Fund reward supplier
-        token
-            .fund(
-                recipient: reward_supplier.address, amount: self.minting_curve.initial_supply / 10,
-            );
+        fund(
+            target: reward_supplier.address,
+            amount: (self.minting_curve.initial_supply / 10).into(),
+            :token,
+        );
         // Set reward_supplier in staking
         let staking_config_dispatcher = IStakingConfigDispatcher {
             contract_address: staking.address,
@@ -917,19 +964,17 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
 }
 
 #[generate_trait]
-pub(crate) impl SystemImpl<
-    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
-> of SystemTrait<TTokenState> {
+pub(crate) impl SystemImpl of SystemTrait {
     /// Creates a new account with the specified amount.
-    fn new_account(ref self: SystemState<TTokenState>, amount: Amount) -> Account {
+    fn new_account(ref self: SystemState, amount: Amount) -> Account {
         self.base_account += 1;
         let account = AccountTrait::new(address: self.base_account, amount: amount);
-        self.token.fund(recipient: account.address, :amount);
+        fund(target: account.address, :amount, token: self.token);
         account
     }
 
     /// Creates a new staker with the specified amount.
-    fn new_staker(ref self: SystemState<TTokenState>, amount: Amount) -> Staker {
+    fn new_staker(ref self: SystemState, amount: Amount) -> Staker {
         let staker = self.new_account(:amount);
         let reward = self.new_account(amount: Zero::zero());
         let operational = self.new_account(amount: Zero::zero());
@@ -937,19 +982,19 @@ pub(crate) impl SystemImpl<
     }
 
     /// Creates a new delegator with the specified amount.
-    fn new_delegator(ref self: SystemState<TTokenState>, amount: Amount) -> Delegator {
+    fn new_delegator(ref self: SystemState, amount: Amount) -> Delegator {
         let delegator = self.new_account(:amount);
         let reward = self.new_account(amount: Zero::zero());
         DelegatorTrait::new(:delegator, :reward)
     }
 
     /// Advances the block timestamp by the specified amount of time.
-    fn advance_time(ref self: SystemState<TTokenState>, time: TimeDelta) {
+    fn advance_time(ref self: SystemState, time: TimeDelta) {
         start_cheat_block_timestamp_global(block_timestamp: Time::now().add(delta: time).into())
     }
 
     /// Advances the block number to the next epoch starting block.
-    fn advance_epoch(self: SystemState<TTokenState>) {
+    fn advance_epoch(self: SystemState) {
         let current_block = get_block_number();
         if current_block < EPOCH_STARTING_BLOCK {
             advance_block_number_global(blocks: EPOCH_STARTING_BLOCK - current_block);
@@ -966,12 +1011,12 @@ pub(crate) impl SystemImpl<
     /// Advances the block timestamp by the exit wait window and advance epoch.
     ///
     /// Note: This function is built on the assumption that exit window > k epochs
-    fn advance_exit_wait_window(ref self: SystemState<TTokenState>) {
+    fn advance_exit_wait_window(ref self: SystemState) {
         self.advance_time(time: self.staking.get_exit_wait_window());
         self.advance_epoch();
     }
 
-    fn set_pool_for_upgrade(ref self: SystemState<TTokenState>, pool_address: ContractAddress) {
+    fn set_pool_for_upgrade(ref self: SystemState, pool_address: ContractAddress) {
         let pool_contract_admin = self.staking.get_pool_contract_admin();
         let upgrade_governor = UPGRADE_GOVERNOR();
         set_account_as_upgrade_governor(
@@ -990,16 +1035,14 @@ pub(crate) impl SystemImpl<
                 );
     }
 
-    fn set_staker_for_migration(
-        ref self: SystemState<TTokenState>, staker_address: ContractAddress,
-    ) {
+    fn set_staker_for_migration(ref self: SystemState, staker_address: ContractAddress) {
         self.staker_address = Option::Some(staker_address);
     }
 
     /// Advances the required block number into the attestation window.
     /// **Note**: This function assumes that the current block is the starting block of the
     /// current epoch.
-    fn advance_block_into_attestation_window(self: SystemState<TTokenState>, staker: Staker) {
+    fn advance_block_into_attestation_window(self: SystemState, staker: Staker) {
         let block_offset = calculate_block_offset(
             stake: self.staker_total_amount(:staker).into(),
             epoch_id: self.staking.get_epoch_info().current_epoch().into(),
@@ -1012,12 +1055,8 @@ pub(crate) impl SystemImpl<
 }
 
 #[generate_trait]
-impl InternalSystemImpl<
-    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
-> of InternalSystemTrait<TTokenState> {
-    fn cheat_target_attestation_block_hash(
-        self: SystemState<TTokenState>, staker: Staker, block_hash: felt252,
-    ) {
+impl InternalSystemImpl of InternalSystemTrait {
+    fn cheat_target_attestation_block_hash(self: SystemState, staker: Staker, block_hash: felt252) {
         let target_attestation_block = self
             .attestation
             .unwrap()
@@ -1060,11 +1099,9 @@ impl StakerImpl of StakerTrait {
 }
 
 #[generate_trait]
-pub(crate) impl SystemStakerImpl<
-    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
-> of SystemStakerTrait<TTokenState> {
+pub(crate) impl SystemStakerImpl of SystemStakerTrait {
     fn stake(
-        self: SystemState<TTokenState>,
+        self: SystemState,
         staker: Staker,
         amount: Amount,
         pool_enabled: bool,
@@ -1100,7 +1137,7 @@ pub(crate) impl SystemStakerImpl<
         }
     }
 
-    fn increase_stake(self: SystemState<TTokenState>, staker: Staker, amount: Amount) -> Amount {
+    fn increase_stake(self: SystemState, staker: Staker, amount: Amount) -> Amount {
         self.token.approve(owner: staker.staker.address, spender: self.staking.address, :amount);
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
@@ -1108,14 +1145,14 @@ pub(crate) impl SystemStakerImpl<
         self.staking.dispatcher().increase_stake(staker_address: staker.staker.address, :amount)
     }
 
-    fn staker_exit_intent(self: SystemState<TTokenState>, staker: Staker) -> Timestamp {
+    fn staker_exit_intent(self: SystemState, staker: Staker) -> Timestamp {
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
         self.staking.dispatcher().unstake_intent()
     }
 
-    fn staker_exit_action(self: SystemState<TTokenState>, staker: Staker) -> Amount {
+    fn staker_exit_action(self: SystemState, staker: Staker) -> Amount {
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
@@ -1124,7 +1161,7 @@ pub(crate) impl SystemStakerImpl<
 
     #[feature("safe_dispatcher")]
     fn safe_staker_exit_action(
-        self: SystemState<TTokenState>, staker: Staker,
+        self: SystemState, staker: Staker,
     ) -> Result<Amount, Array<felt252>> {
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
@@ -1133,7 +1170,7 @@ pub(crate) impl SystemStakerImpl<
     }
 
     fn set_open_for_strk_delegation(
-        self: SystemState<TTokenState>, staker: Staker, commission: Commission,
+        self: SystemState, staker: Staker, commission: Commission,
     ) -> ContractAddress {
         if self.staking.is_v0() || self.staking.is_v1() {
             cheat_caller_address_once(
@@ -1150,14 +1187,14 @@ pub(crate) impl SystemStakerImpl<
         }
     }
 
-    fn staker_claim_rewards(self: SystemState<TTokenState>, staker: Staker) -> Amount {
+    fn staker_claim_rewards(self: SystemState, staker: Staker) -> Amount {
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
         self.staking.dispatcher().claim_rewards(staker_address: staker.staker.address)
     }
 
-    fn set_commission(self: SystemState<TTokenState>, staker: Staker, commission: Commission) {
+    fn set_commission(self: SystemState, staker: Staker, commission: Commission) {
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
@@ -1169,10 +1206,7 @@ pub(crate) impl SystemStakerImpl<
     }
 
     fn set_commission_commitment(
-        self: SystemState<TTokenState>,
-        staker: Staker,
-        max_commission: Commission,
-        expiration_epoch: Epoch,
+        self: SystemState, staker: Staker, max_commission: Commission, expiration_epoch: Epoch,
     ) {
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
@@ -1180,41 +1214,51 @@ pub(crate) impl SystemStakerImpl<
         self.staking.dispatcher().set_commission_commitment(:max_commission, :expiration_epoch)
     }
 
-    fn staker_info_v1(self: SystemState<TTokenState>, staker: Staker) -> StakerInfoV1 {
+    fn staker_info_v1(self: SystemState, staker: Staker) -> StakerInfoV1 {
         self.staking.dispatcher().staker_info_v1(staker_address: staker.staker.address)
     }
 
-    fn staker_info(self: SystemState<TTokenState>, staker: Staker) -> StakerInfo {
+    fn staker_info(self: SystemState, staker: Staker) -> StakerInfo {
         self.staking.dispatcher_v0_for_tests().staker_info(staker_address: staker.staker.address)
     }
 
-    fn get_staker_info(self: SystemState<TTokenState>, staker: Staker) -> Option<StakerInfoV1> {
+    fn staker_pool_info(self: SystemState, staker: Staker) -> StakerPoolInfoV2 {
+        self.staking.dispatcher().staker_pool_info(staker_address: staker.staker.address)
+    }
+
+    fn get_staker_info(self: SystemState, staker: Staker) -> Option<StakerInfoV1> {
         self.staking.dispatcher().get_staker_info_v1(staker_address: staker.staker.address)
     }
 
-    fn get_staker_commission_commitment(
-        self: SystemState<TTokenState>, staker: Staker,
-    ) -> CommissionCommitment {
+    fn get_staker_commission_commitment(self: SystemState, staker: Staker) -> CommissionCommitment {
         self
             .staking
             .dispatcher()
             .get_staker_commission_commitment(staker_address: staker.staker.address)
     }
 
-    fn internal_staker_info(
-        self: SystemState<TTokenState>, staker: Staker,
-    ) -> InternalStakerInfoLatest {
+    #[feature("safe_dispatcher")]
+    fn safe_get_staker_commission_commitment(
+        self: SystemState, staker: Staker,
+    ) -> Result<CommissionCommitment, Array<felt252>> {
+        self
+            .staking
+            .safe_dispatcher()
+            .get_staker_commission_commitment(staker_address: staker.staker.address)
+    }
+
+    fn internal_staker_info(self: SystemState, staker: Staker) -> InternalStakerInfoLatest {
         self
             .staking
             .migration_dispatcher()
             .internal_staker_info(staker_address: staker.staker.address)
     }
 
-    fn staker_migration(self: SystemState<TTokenState>, staker_address: ContractAddress) {
+    fn staker_migration(self: SystemState, staker_address: ContractAddress) {
         self.staking.migration_dispatcher().staker_migration(:staker_address)
     }
 
-    fn attest(self: SystemState<TTokenState>, staker: Staker) {
+    fn attest(self: SystemState, staker: Staker) {
         let block_hash = Zero::zero();
         self.cheat_target_attestation_block_hash(:staker, :block_hash);
         cheat_caller_address_once(
@@ -1224,13 +1268,13 @@ pub(crate) impl SystemStakerImpl<
         self.attestation.unwrap().dispatcher().attest(:block_hash);
     }
 
-    fn advance_epoch_and_attest(self: SystemState<TTokenState>, staker: Staker) {
+    fn advance_epoch_and_attest(self: SystemState, staker: Staker) {
         self.advance_epoch();
         self.advance_block_into_attestation_window(:staker);
         self.attest(:staker);
     }
 
-    fn staker_total_amount(self: SystemState<TTokenState>, staker: Staker) -> Amount {
+    fn staker_total_amount(self: SystemState, staker: Staker) -> Amount {
         let staker_info = self.staker_info_v1(:staker);
         let mut total = staker_info.amount_own;
         if let Option::Some(pool_info) = staker_info.pool_info {
@@ -1239,9 +1283,7 @@ pub(crate) impl SystemStakerImpl<
         total
     }
 
-    fn change_reward_address(
-        self: SystemState<TTokenState>, staker: Staker, reward_address: ContractAddress,
-    ) {
+    fn change_reward_address(self: SystemState, staker: Staker, reward_address: ContractAddress) {
         cheat_caller_address_once(
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
@@ -1265,12 +1307,8 @@ impl DelegatorImpl of DelegatorTrait {
 }
 
 #[generate_trait]
-pub(crate) impl SystemDelegatorImpl<
-    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
-> of SystemDelegatorTrait<TTokenState> {
-    fn delegate(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
-    ) {
+pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
+    fn delegate(self: SystemState, delegator: Delegator, pool: ContractAddress, amount: Amount) {
         self.token.approve(owner: delegator.delegator.address, spender: pool, :amount);
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
@@ -1280,7 +1318,7 @@ pub(crate) impl SystemDelegatorImpl<
     }
 
     fn increase_delegate(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
+        self: SystemState, delegator: Delegator, pool: ContractAddress, amount: Amount,
     ) -> Amount {
         self.token.approve(owner: delegator.delegator.address, spender: pool, :amount);
         cheat_caller_address_once(
@@ -1291,7 +1329,7 @@ pub(crate) impl SystemDelegatorImpl<
     }
 
     fn delegator_exit_intent(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
+        self: SystemState, delegator: Delegator, pool: ContractAddress, amount: Amount,
     ) {
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
@@ -1302,14 +1340,14 @@ pub(crate) impl SystemDelegatorImpl<
 
     #[feature("safe_dispatcher")]
     fn safe_delegator_exit_intent(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
+        self: SystemState, delegator: Delegator, pool: ContractAddress, amount: Amount,
     ) -> Result<(), Array<felt252>> {
         let safe_pool_dispatcher = IPoolSafeDispatcher { contract_address: pool };
         safe_pool_dispatcher.exit_delegation_pool_intent(:amount)
     }
 
     fn delegator_exit_action(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+        self: SystemState, delegator: Delegator, pool: ContractAddress,
     ) -> Amount {
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
@@ -1320,14 +1358,14 @@ pub(crate) impl SystemDelegatorImpl<
 
     #[feature("safe_dispatcher")]
     fn safe_delegator_exit_action(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+        self: SystemState, delegator: Delegator, pool: ContractAddress,
     ) -> Result<Amount, Array<felt252>> {
         let safe_pool_dispatcher = IPoolSafeDispatcher { contract_address: pool };
         safe_pool_dispatcher.exit_delegation_pool_action(pool_member: delegator.delegator.address)
     }
 
     fn switch_delegation_pool(
-        self: SystemState<TTokenState>,
+        self: SystemState,
         delegator: Delegator,
         from_pool: ContractAddress,
         to_staker: ContractAddress,
@@ -1342,7 +1380,7 @@ pub(crate) impl SystemDelegatorImpl<
     }
 
     fn delegator_claim_rewards(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+        self: SystemState, delegator: Delegator, pool: ContractAddress,
     ) -> Amount {
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
@@ -1352,7 +1390,7 @@ pub(crate) impl SystemDelegatorImpl<
     }
 
     fn delegator_change_reward_address(
-        self: SystemState<TTokenState>,
+        self: SystemState,
         delegator: Delegator,
         pool: ContractAddress,
         reward_address: ContractAddress,
@@ -1365,7 +1403,7 @@ pub(crate) impl SystemDelegatorImpl<
     }
 
     fn add_to_delegation_pool(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress, amount: Amount,
+        self: SystemState, delegator: Delegator, pool: ContractAddress, amount: Amount,
     ) -> Amount {
         self.token.approve(owner: delegator.delegator.address, spender: pool, :amount);
         cheat_caller_address_once(
@@ -1376,28 +1414,28 @@ pub(crate) impl SystemDelegatorImpl<
     }
 
     fn pool_member_info(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+        self: SystemState, delegator: Delegator, pool: ContractAddress,
     ) -> PoolMemberInfo {
         let pool_dispatcher = IPoolV0Dispatcher { contract_address: pool };
         pool_dispatcher.pool_member_info(pool_member: delegator.delegator.address)
     }
 
     fn get_pool_member_info(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+        self: SystemState, delegator: Delegator, pool: ContractAddress,
     ) -> Option<PoolMemberInfo> {
         let pool_dispatcher = IPoolV0Dispatcher { contract_address: pool };
         pool_dispatcher.get_pool_member_info(pool_member: delegator.delegator.address)
     }
 
     fn pool_member_info_v1(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+        self: SystemState, delegator: Delegator, pool: ContractAddress,
     ) -> PoolMemberInfoV1 {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.pool_member_info_v1(pool_member: delegator.delegator.address)
     }
 
     fn internal_pool_member_info(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+        self: SystemState, delegator: Delegator, pool: ContractAddress,
     ) -> InternalPoolMemberInfoLatest {
         let pool_migration_dispatcher = IPoolMigrationDispatcher { contract_address: pool };
         pool_migration_dispatcher
@@ -1405,7 +1443,7 @@ pub(crate) impl SystemDelegatorImpl<
     }
 
     fn get_internal_pool_member_info(
-        self: SystemState<TTokenState>, delegator: Delegator, pool: ContractAddress,
+        self: SystemState, delegator: Delegator, pool: ContractAddress,
     ) -> Option<InternalPoolMemberInfoLatest> {
         let pool_migration_dispatcher = IPoolMigrationDispatcher { contract_address: pool };
         pool_migration_dispatcher
@@ -1414,12 +1452,8 @@ pub(crate) impl SystemDelegatorImpl<
 }
 
 #[generate_trait]
-pub(crate) impl SystemPoolImpl<
-    TTokenState, +TokenTrait<TTokenState>, +Drop<TTokenState>, +Copy<TTokenState>,
-> of SystemPoolTrait<TTokenState> {
-    fn contract_parameters_v1(
-        self: SystemState<TTokenState>, pool: ContractAddress,
-    ) -> PoolContractInfoV1 {
+pub(crate) impl SystemPoolImpl of SystemPoolTrait {
+    fn contract_parameters_v1(self: SystemState, pool: ContractAddress) -> PoolContractInfoV1 {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.contract_parameters_v1()
     }
@@ -1432,33 +1466,14 @@ trait IMintableToken<TContractState> {
     fn permissioned_burn(ref self: TContractState, account: ContractAddress, amount: u256);
 }
 
-/// The `STRKTokenState` struct represents the state of the `STRK` token contract.
-/// It includes the `STRK` token address.
-#[derive(Drop, Copy)]
-pub(crate) struct STRKTokenState {
-    pub(crate) address: ContractAddress,
-}
-
-impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
-    fn fund(self: STRKTokenState, recipient: ContractAddress, amount: u128) {
-        let mintable_token_dispatcher = IMintableTokenDispatcher { contract_address: self.address };
-        cheat_caller_address_once(
-            contract_address: self.address, caller_address: MAINNET_L2_BRIDGE_ADDRESS(),
-        );
-        mintable_token_dispatcher.permissioned_mint(account: recipient, amount: amount.into());
+#[generate_trait]
+pub(crate) impl TokenHelperImpl of TokenHelperTrait {
+    fn approve(self: @Token, owner: ContractAddress, spender: ContractAddress, amount: Amount) {
+        approve(:owner, :spender, :amount, token_address: self.contract_address());
     }
-
-    fn approve(
-        self: STRKTokenState, owner: ContractAddress, spender: ContractAddress, amount: u128,
-    ) {
-        let erc20_dispatcher = IERC20Dispatcher { contract_address: self.address };
-        cheat_caller_address_once(contract_address: self.address, caller_address: owner);
-        erc20_dispatcher.approve(spender: spender, amount: amount.into());
-    }
-
-    fn balance_of(self: STRKTokenState, account: ContractAddress) -> u128 {
-        let erc20_dispatcher = IERC20Dispatcher { contract_address: self.address };
-        erc20_dispatcher.balance_of(account: account).try_into().unwrap()
+    fn balance_of(self: @Token, account: ContractAddress) -> Amount {
+        let token_dispatcher = IERC20Dispatcher { contract_address: self.contract_address() };
+        token_dispatcher.balance_of(account).try_into().unwrap()
     }
 }
 
@@ -1469,15 +1484,13 @@ impl STRKTTokenImpl of TokenTrait<STRKTokenState> {
 pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     /// Deploy attestation contract and upgrades the contracts in the system state with V1
     /// implementations.
-    fn deploy_attestation_and_upgrade_contracts_implementation_v1(
-        ref self: SystemState<STRKTokenState>,
-    ) {
+    fn deploy_attestation_and_upgrade_contracts_implementation_v1(ref self: SystemState) {
         self.deploy_attestation_v1();
         self.upgrade_contracts_implementation_v1();
     }
 
     /// Deploy attestation contract.
-    fn deploy_attestation_v1(ref self: SystemState<STRKTokenState>) {
+    fn deploy_attestation_v1(ref self: SystemState) {
         let cfg: StakingInitConfig = Default::default();
         let attestation_config = AttestationConfig {
             governance_admin: cfg.test_info.governance_admin,
@@ -1493,7 +1506,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     }
 
     /// Upgrades the contracts in the system state with V1 implementations.
-    fn upgrade_contracts_implementation_v1(self: SystemState<STRKTokenState>) {
+    fn upgrade_contracts_implementation_v1(self: SystemState) {
         self.staking.pause();
         self.upgrade_staking_implementation_v1();
         self.upgrade_reward_supplier_implementation_v1();
@@ -1507,7 +1520,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     }
 
     /// Upgrades the staking contract in the system state with V1 implementation.
-    fn upgrade_staking_implementation_v1(self: SystemState<STRKTokenState>) {
+    fn upgrade_staking_implementation_v1(self: SystemState) {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v0_v1(),
             eic_init_data: array![
@@ -1534,7 +1547,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     }
 
     /// Upgrades the reward supplier contract in the system state with V1 implementation.
-    fn upgrade_reward_supplier_implementation_v1(self: SystemState<STRKTokenState>) {
+    fn upgrade_reward_supplier_implementation_v1(self: SystemState) {
         let implementation_data = ImplementationData {
             impl_hash: MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1(),
             eic_data: Option::None,
@@ -1548,7 +1561,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     }
 
     /// Upgrades the pool contract in the system state with V1 implementation.
-    fn upgrade_pool_implementation_v1(self: SystemState<STRKTokenState>, pool: PoolState) {
+    fn upgrade_pool_implementation_v1(self: SystemState, pool: PoolState) {
         let eic_data = EICData {
             eic_hash: declare_pool_eic_contract(),
             eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into()].span(),
@@ -1571,7 +1584,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
 pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
     /// Upgrades the contracts in the system state with local
     /// implementations.
-    fn upgrade_contracts_implementation_v2(self: SystemState<STRKTokenState>) {
+    fn upgrade_contracts_implementation_v2(self: SystemState) {
         self.staking.pause();
         self.upgrade_staking_implementation_v2();
         self.upgrade_reward_supplier_implementation_v2();
@@ -1580,16 +1593,28 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         }
         self.staking.unpause();
         self.minting_curve.set_c_num(DEFAULT_C_NUM);
+        // Add BTC token to the staking contract.
+        cheat_caller_address(
+            contract_address: self.staking.address,
+            caller_address: self.staking.roles.security_admin,
+            span: CheatSpan::TargetCalls(2),
+        );
+        self
+            .staking
+            .token_manager_dispatcher()
+            .add_token(token_address: self.btc_token.contract_address());
+        self
+            .staking
+            .token_manager_dispatcher()
+            .enable_token(token_address: self.btc_token.contract_address());
     }
 
     /// Upgrades the staking contract in the system state with a local implementation.
-    fn upgrade_staking_implementation_v2(self: SystemState<STRKTokenState>) {
+    fn upgrade_staking_implementation_v2(self: SystemState) {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v1_v2(),
             eic_init_data: array![
-                MAINNET_STAKING_CLASS_HASH_V1().into(),
-                declare_pool_contract().into(),
-                self.btc_token.address.into(),
+                MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
             ]
                 .span(),
         };
@@ -1604,7 +1629,7 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
     }
 
     /// Upgrades the reward supplier contract in the system state with a local implementation.
-    fn upgrade_reward_supplier_implementation_v2(self: SystemState<STRKTokenState>) {
+    fn upgrade_reward_supplier_implementation_v2(self: SystemState) {
         let implementation_data = ImplementationData {
             impl_hash: declare_reward_supplier_contract(), eic_data: Option::None, final: false,
         };
@@ -1645,48 +1670,37 @@ pub(crate) fn upgrade_implementation(
 /// System factory for creating system states used in flow and regression tests.
 pub(crate) impl SystemFactoryImpl of SystemFactoryTrait {
     // System state used for flow tests.
-    fn local_system() -> SystemState<TokenState> {
+    fn local_system() -> SystemState {
         let cfg: StakingInitConfig = Default::default();
         SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy()
     }
 
     // System state used for regression tests.
-    fn mainnet_system() -> SystemState<STRKTokenState> {
+    fn mainnet_system() -> SystemState {
         let mut cfg: StakingInitConfig = Default::default();
         cfg.staking_contract_info.pool_contract_class_hash = MAINNET_POOL_CLASS_HASH_V0();
         SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy_mainnet_contracts_v0()
     }
 }
 
-pub(crate) trait FlowTrait<
-    TFlow,
-    TTokenState,
-    +Drop<TFlow>,
-    +TokenTrait<TTokenState>,
-    +Drop<TTokenState>,
-    +Copy<TTokenState>,
-> {
+pub(crate) trait FlowTrait<TFlow, +Drop<TFlow>> {
     fn get_pool_address(self: TFlow) -> Option<ContractAddress> {
         Option::None
     }
     fn get_staker_address(self: TFlow) -> Option<ContractAddress> {
         Option::None
     }
-    fn setup(ref self: TFlow, ref system: SystemState<TTokenState>) {}
-    fn setup_v1(ref self: TFlow, ref system: SystemState<TTokenState>) {}
-    fn test(self: TFlow, ref system: SystemState<TTokenState>);
+    fn setup(ref self: TFlow, ref system: SystemState) {}
+    fn setup_v1(ref self: TFlow, ref system: SystemState) {}
+    fn test(self: TFlow, ref system: SystemState);
 }
 
-pub(crate) fn test_flow_local<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow, TokenState>>(
-    flow: TFlow,
-) {
+pub(crate) fn test_flow_local<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow>>(flow: TFlow) {
     let mut system = SystemFactoryTrait::local_system();
     flow.test(ref :system);
 }
 
-pub(crate) fn test_flow_mainnet<
-    TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow, STRKTokenState>,
->(
+pub(crate) fn test_flow_mainnet<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow>>(
     ref flow: TFlow,
 ) {
     let mut system = SystemFactoryTrait::mainnet_system();

@@ -4,6 +4,7 @@ settings:
   excludeLinksFromLockfile: false
 overrides:
   ethereumjs-abi: https://registry.npmjs.org/ethereumjs-abi/-/ethereumjs-abi-0.6.8.tgz
+packageExtensionsChecksum: f06fa64103f21806fb4783055c1282fe
 patchedDependencies: {}
 importers:
   .:
@@ -579,9 +580,9 @@ packages:
   cross-spawn@5.1.0:
     resolution:
       integrity: sha512-pTgQJ5KC0d2hcY8eyL1IzlBPYjTkyH72XRZPnLyKus2mBfNjQs3klqbJU2VILqZryAZUt9JOb3h/mWMy23/f5A==
-  cross-spawn@7.0.3:
+  cross-spawn@7.0.6:
     resolution:
-      integrity: sha512-iRDPJKUPVEND7dHPO8rkbOnPpyDygcDFtWjpeWNCgy8WP2rXcxXL8TskReQl6OrB2G7+UJrags1q15Fudc7G6w==
+      integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==
     engines:
       node: '>= 8'
   csv-generate@3.4.3:
@@ -772,9 +773,9 @@ packages:
       integrity: sha512-6E4xmrTw5wtxnLA5wYL3WDfhZ/1bUBGOXV0zQvVRDOtrR8D0p6W7fs3JweNYhwRYeGvd/1CKX2se0/2s7Q/nJA==
     engines:
       node: ^18.18.0 || ^20.9.0 || >=21.1.0
-  eslint-visitor-keys@3.4.1:
+  eslint-visitor-keys@3.4.3:
     resolution:
-      integrity: sha512-pZnmmLwYzf+kWaM/Qgrvpen51upAktaaiI01nsJD/Yr3lMOdNtq0cxkrrg16w64VtisN6okbs7Q8AfGqj4c9fA==
+      integrity: sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag==
     engines:
       node: ^12.22.0 || ^14.17.0 || >=16.0.0
   eslint-visitor-keys@4.0.0:
@@ -2301,7 +2302,7 @@ snapshots:
   '@eslint-community/eslint-utils@4.4.0(eslint@9.8.0)':
     dependencies:
       eslint: 9.8.0
-      eslint-visitor-keys: 3.4.1
+      eslint-visitor-keys: 3.4.3
   '@eslint-community/regexpp@4.11.0': {}
   '@eslint/config-array@0.17.1':
     dependencies:
@@ -2562,7 +2563,7 @@ snapshots:
       lru-cache: 4.1.5
       shebang-command: 1.2.0
       which: 1.3.1
-  cross-spawn@7.0.3:
+  cross-spawn@7.0.6:
     dependencies:
       path-key: 3.1.1
       shebang-command: 2.0.0
@@ -2706,7 +2707,7 @@ snapshots:
     dependencies:
       esrecurse: 4.3.0
       estraverse: 5.3.0
-  eslint-visitor-keys@3.4.1: {}
+  eslint-visitor-keys@3.4.3: {}
   eslint-visitor-keys@4.0.0: {}
   eslint@9.8.0:
     dependencies:
@@ -2720,7 +2721,7 @@ snapshots:
       '@nodelib/fs.walk': 1.2.8
       ajv: 6.12.6
       chalk: 4.1.2
-      cross-spawn: 7.0.3
+      cross-spawn: 7.0.6
       debug: 4.3.6(supports-color@5.5.0)
       escape-string-regexp: 4.0.0
       eslint-scope: 8.0.2
@@ -2732,7 +2733,7 @@ snapshots:
       file-entry-cache: 8.0.0
       find-up: 5.0.0
       glob-parent: 6.0.2
-      ignore: 5.2.4
+      ignore: 5.3.1
       imurmurhash: 0.1.4
       is-glob: 4.0.3
       is-path-inside: 3.0.3

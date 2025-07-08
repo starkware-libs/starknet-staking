@@ -29,6 +29,13 @@
     "patchedDependencies": {},
     "overrides": {
       "ethereumjs-abi": "https://registry.npmjs.org/ethereumjs-abi/-/ethereumjs-abi-0.6.8.tgz"
+    },
+    "packageExtensions": {
+      "@hyperlane-xyz/core": {
+        "dependencies": {
+          "ethers": "^5.8.0"
+        }
+      }
     }
   },
   "engines": {

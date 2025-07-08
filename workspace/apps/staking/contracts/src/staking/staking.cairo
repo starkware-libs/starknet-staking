@@ -6,10 +6,13 @@ pub mod Staking {
     use core::panics::panic_with_byte_array;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use openzeppelin::token::erc20::interface::{
+        IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
+        IERC20MetadataDispatcherTrait,
+    };
     use staking::constants::{
-        DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
-        STARTING_EPOCH,
+        BTC_DECIMALS, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW,
+        STAKING_V2_PREV_CONTRACT_VERSION, STARTING_EPOCH, STRK_TOKEN_ADDRESS,
     };
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
@@ -196,7 +199,6 @@ pub mod Staking {
         prev_class_hash: ClassHash,
         epoch_info: EpochInfo,
         attestation_contract: ContractAddress,
-        btc_token_address: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
@@ -215,12 +217,6 @@ pub mod Staking {
         self
             .tokens_total_stake_trace
             .entry(token_address)
-            .insert(key: STARTING_EPOCH, value: Zero::zero());
-        assert!(btc_token_address != token_address, "{}", Error::INVALID_TOKEN_ADDRESS);
-        self.btc_tokens.write(btc_token_address, true);
-        self
-            .tokens_total_stake_trace
-            .entry(btc_token_address)
             .insert(key: STARTING_EPOCH, value: Zero::zero());
     }
 
@@ -266,13 +262,6 @@ pub mod Staking {
                 );
 
             self.insert_staker_own_balance(:staker_address, own_balance: amount);
-            // TODO: Consider initialize delegated trace in set_open_for_delegation instead of here.
-            self
-                .insert_staker_delegated_balance(
-                    :staker_address,
-                    token_address: self.strk_token_address(),
-                    delegated_balance: Zero::zero(),
-                );
 
             // Create the record for the staker.
             self
@@ -288,7 +277,7 @@ pub mod Staking {
             self.operational_address_to_staker_address.write(operational_address, staker_address);
 
             // Update total stake.
-            self.add_to_total_stake(token_address: self.strk_token_address(), :amount);
+            self.add_to_total_stake(token_address: STRK_TOKEN_ADDRESS, :amount);
 
             // Add staker address to the stakers vector.
             self.stakers.push(staker_address);
@@ -397,10 +386,7 @@ pub mod Staking {
             }
             // Write off the self stake from the total stake.
             let old_self_stake = self.get_own_balance(:staker_address);
-            self
-                .remove_from_total_stake(
-                    token_address: self.strk_token_address(), amount: old_self_stake,
-                );
+            self.remove_from_total_stake(token_address: STRK_TOKEN_ADDRESS, amount: old_self_stake);
 
             // Emit events.
             self.emit(Events::StakerExitIntent { staker_address, exit_timestamp: unstake_time });
@@ -487,10 +473,7 @@ pub mod Staking {
             // Update pool to storage.
             staker_pool_info_mut.write_new_pool(:pool_contract, :token_address);
             // Initialize the delegated balance trace.
-            // STRK delegated balance trace already initialized in stake.
-            if token_address != self.strk_token_address() {
-                self.initialize_staker_delegated_balance_trace(:staker_address, :token_address);
-            }
+            self.initialize_staker_delegated_balance_trace(:staker_address, :token_address);
             pool_contract
         }
 
@@ -506,12 +489,9 @@ pub mod Staking {
             // Set staker amount and pool amount from staker balance trace.
             staker_info.amount_own = self.get_own_balance(:staker_address);
             let staker_pool_info = self.internal_staker_pool_info(:staker_address);
-            if let Option::Some(pool_contract) = staker_pool_info
-                .get_strk_pool(strk_token_address: self.strk_token_address()) {
+            if let Option::Some(pool_contract) = staker_pool_info.get_strk_pool() {
                 let pool_amount = self
-                    .get_delegated_balance(
-                        :staker_address, token_address: self.strk_token_address(),
-                    );
+                    .get_delegated_balance(:staker_address, token_address: STRK_TOKEN_ADDRESS);
                 // Commission must be set since staker has a pool.
                 let commission = staker_pool_info.commission();
                 staker_info
@@ -570,13 +550,11 @@ pub mod Staking {
         }
 
         fn get_total_stake(self: @ContractState) -> Amount {
-            self._get_total_stake(token_address: self.strk_token_address())
+            self._get_total_stake(token_address: STRK_TOKEN_ADDRESS)
         }
 
         fn get_current_total_staking_power(self: @ContractState) -> (Amount, Amount) {
-            let strk_total_stake_trace = self
-                .tokens_total_stake_trace
-                .entry(self.strk_token_address());
+            let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
             let curr_epoch = self.get_current_epoch();
             let strk_curr_total_stake = self
                 .balance_at_curr_epoch(trace: strk_total_stake_trace, :curr_epoch);
@@ -712,7 +690,7 @@ pub mod Staking {
         }
 
         fn get_active_tokens(self: @ContractState) -> Span<ContractAddress> {
-            let mut active_tokens: Array<ContractAddress> = array![self.strk_token_address()];
+            let mut active_tokens: Array<ContractAddress> = array![STRK_TOKEN_ADDRESS];
             for (token_address, is_active) in self.btc_tokens {
                 if is_active {
                     active_tokens.append(token_address);
@@ -759,8 +737,10 @@ pub mod Staking {
             // Migrate staker pool info.
             let internal_staker_info = self.internal_staker_info(:staker_address);
             let staker_pool_info_mut = self.internal_staker_pool_info_mut(:staker_address);
+            let mut has_pool = false;
             if let Option::Some(pool_info) = internal_staker_info._deprecated_pool_info {
-                let token_address = self.strk_token_address();
+                has_pool = true;
+                let token_address = STRK_TOKEN_ADDRESS;
                 let pool_contract = pool_info._deprecated_pool_contract;
                 staker_pool_info_mut.write_new_pool(:pool_contract, :token_address);
                 let commission = pool_info._deprecated_commission;
@@ -776,9 +756,9 @@ pub mod Staking {
             assert!(trace_len > 0, "{}", TraceErrors::EMPTY_TRACE);
             let n = 3;
             if trace_len >= n {
-                self.migrate_staker_balance_trace(:staker_address, :n);
+                self.migrate_staker_balance_trace(:staker_address, :n, :has_pool);
             } else {
-                self.migrate_staker_balance_trace(:staker_address, n: trace_len);
+                self.migrate_staker_balance_trace(:staker_address, n: trace_len, :has_pool);
             }
             // Add staker address to the stakers vector.
             self.stakers.push(staker_address);
@@ -957,7 +937,6 @@ pub mod Staking {
 
             // More asserts.
             assert!(to_staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-            // TODO: Catch this error in tests.
             let to_token_address = self
                 .internal_staker_pool_info(staker_address: to_staker)
                 .get_pool_token(pool_contract: to_pool)
@@ -1086,10 +1065,11 @@ pub mod Staking {
         fn add_token(ref self: ContractState, token_address: ContractAddress) {
             self.roles.only_security_admin();
             assert!(token_address.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
-            assert!(token_address != self.strk_token_address(), "{}", Error::INVALID_TOKEN_ADDRESS);
+            assert!(token_address != STRK_TOKEN_ADDRESS, "{}", Error::INVALID_TOKEN_ADDRESS);
             assert!(
                 self.btc_tokens.read(token_address).is_none(), "{}", Error::TOKEN_ALREADY_EXISTS,
             );
+            self.assert_btc_token_decimals(:token_address);
             self.btc_tokens.write(token_address, false);
             // Initialize the token total stake trace.
             self
@@ -1146,7 +1126,6 @@ pub mod Staking {
                 );
             // Calculate pools rewards.
             let staker_pool_info = self.internal_staker_pool_info(:staker_address);
-            // TODO: Consider optimize the additional call of has_pool.
             let (commission_rewards, total_pools_rewards, pools_rewards_data) = if staker_pool_info
                 .has_pool() {
                 self
@@ -1170,21 +1149,15 @@ pub mod Staking {
             // Update staker rewards.
             staker_info.unclaimed_rewards_own += staker_rewards;
 
+            // Update pools rewards.
+            let pool_rewards_list = self.update_pool_rewards(:staker_address, :pools_rewards_data);
             // Emit event.
-            // TODO: build the array for events in calculate_staker_pools_rewards while building the
-            // pools_rewards_data array.
-            let mut pool_rewards_list = array![];
-            for (pool_contract, _pool_balance, pool_rewards) in pools_rewards_data.span() {
-                pool_rewards_list.append((*pool_contract, *pool_rewards));
-            }
             self
                 .emit(
                     Events::StakerRewardsUpdated {
                         staker_address, staker_rewards, pool_rewards: pool_rewards_list.span(),
                     },
                 );
-            // Update pools rewards.
-            self.update_pool_rewards(:staker_address, :pools_rewards_data);
             // Write staker rewards to storage.
             self.write_staker_info(:staker_address, :staker_info);
         }
@@ -1232,7 +1205,7 @@ pub mod Staking {
         /// Migrate the n latest checkpoints of the staker balance trace.
         /// n can be only 1, 2 or 3.
         fn migrate_staker_balance_trace(
-            ref self: ContractState, staker_address: ContractAddress, n: u64,
+            ref self: ContractState, staker_address: ContractAddress, n: u64, has_pool: bool,
         ) {
             let deprecated_trace = self.staker_balance_trace.entry(staker_address);
             let len = deprecated_trace.length();
@@ -1240,13 +1213,15 @@ pub mod Staking {
             let delegated_balance_trace = self
                 .staker_delegated_balance_trace
                 .entry(staker_address)
-                .entry(self.strk_token_address());
+                .entry(STRK_TOKEN_ADDRESS);
             for i in len - n..len {
                 let (epoch, staker_balance) = deprecated_trace.at(i);
                 let own_balance = staker_balance.amount_own();
-                let delegated_balance = staker_balance.pool_amount();
                 own_balance_trace.insert(key: epoch, value: own_balance);
-                delegated_balance_trace.insert(key: epoch, value: delegated_balance);
+                if has_pool {
+                    let delegated_balance = staker_balance.pool_amount();
+                    delegated_balance_trace.insert(key: epoch, value: delegated_balance);
+                }
             }
         }
 
@@ -1277,7 +1252,7 @@ pub mod Staking {
             // If undelegate_intent.staker_address is zero, it means the intent is for the STRK
             // token (it was created before the BTC version).
             if undelegate_intent.staker_address.is_zero() {
-                self.strk_token_address()
+                STRK_TOKEN_ADDRESS
             } else {
                 self
                     .internal_staker_pool_info(staker_address: undelegate_intent.staker_address)
@@ -1596,11 +1571,14 @@ pub mod Staking {
 
         /// Get array of tuples with (pool_contract, pool_balance, pool_rewards) and update the pool
         /// rewards.
+        ///
+        /// Return array of tuples (pool_contract, pool_rewards) for the StakerRewardsUpdated event.
         fn update_pool_rewards(
             ref self: ContractState,
             staker_address: ContractAddress,
             pools_rewards_data: Array<(ContractAddress, Amount, Amount)>,
-        ) {
+        ) -> Array<(ContractAddress, Amount)> {
+            let mut pool_rewards_list = array![];
             let strk_token_dispatcher = self.token_dispatcher.read();
             for (pool_contract, pool_balance, pool_rewards) in pools_rewards_data {
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
@@ -1614,7 +1592,9 @@ pub mod Staking {
                         amount: pool_rewards,
                         token_dispatcher: strk_token_dispatcher,
                     );
+                pool_rewards_list.append((pool_contract, pool_rewards));
             }
+            pool_rewards_list
         }
 
         fn update_and_claim_reward_supplier(
@@ -1651,8 +1631,6 @@ pub mod Staking {
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
 
-        // TODO: Pass also BTC rewards & total stake to calculate the rewards for BTC pools.
-        // TODO: Is it better to return span of the array?
         /// This function calculates the rewards for the staker's pools.
         /// The rewards will be updated and sent to pools later in `update_pools_rewards`.
         ///
@@ -1678,7 +1656,7 @@ pub mod Staking {
             for (pool_contract, token_address) in staker_pool_info.pools() {
                 let pool_balance_curr_epoch = self
                     .get_staker_delegated_balance_curr_epoch(:staker_address, :token_address);
-                let (epoch_rewards, total_stake) = if token_address == self.strk_token_address() {
+                let (epoch_rewards, total_stake) = if token_address == STRK_TOKEN_ADDRESS {
                     (strk_epoch_rewards, strk_total_stake)
                 } else {
                     (btc_epoch_rewards, btc_total_stake)
@@ -1784,10 +1762,17 @@ pub mod Staking {
             self: @ContractState, staker_address: ContractAddress,
         ) -> Amount {
             let curr_own_balance = self.get_staker_own_balance_curr_epoch(:staker_address);
-            let curr_delegated_balance = self
-                .get_staker_delegated_balance_curr_epoch(
-                    :staker_address, token_address: self.strk_token_address(),
-                );
+            let strk_token_address = STRK_TOKEN_ADDRESS;
+            let curr_delegated_balance = if self
+                .internal_staker_pool_info(:staker_address)
+                .has_pool_for_token(token_address: strk_token_address) {
+                self
+                    .get_staker_delegated_balance_curr_epoch(
+                        :staker_address, token_address: strk_token_address,
+                    )
+            } else {
+                Zero::zero()
+            };
             curr_own_balance + curr_delegated_balance
         }
 
@@ -1827,7 +1812,7 @@ pub mod Staking {
             let old_own_balance = self.get_own_balance(:staker_address);
             let new_own_balance = old_own_balance + amount;
             self.insert_staker_own_balance(:staker_address, own_balance: new_own_balance);
-            self.add_to_total_stake(token_address: self.strk_token_address(), :amount);
+            self.add_to_total_stake(token_address: STRK_TOKEN_ADDRESS, :amount);
             (old_own_balance, new_own_balance)
         }
 
@@ -1873,20 +1858,20 @@ pub mod Staking {
             );
         }
 
+        fn assert_btc_token_decimals(self: @ContractState, token_address: ContractAddress) {
+            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+            assert!(
+                token_dispatcher.decimals() == BTC_DECIMALS, "{}", Error::INVALID_TOKEN_ADDRESS,
+            );
+        }
+
         fn does_token_exist(self: @ContractState, token_address: ContractAddress) -> bool {
-            token_address == self.strk_token_address()
-                || self.btc_tokens.read(token_address).is_some()
+            token_address == STRK_TOKEN_ADDRESS || self.btc_tokens.read(token_address).is_some()
         }
 
         fn is_active_token(self: @ContractState, token_address: ContractAddress) -> bool {
-            token_address == self.strk_token_address()
+            token_address == STRK_TOKEN_ADDRESS
                 || self.btc_tokens.read(token_address) == Option::Some(true)
-        }
-
-        // TODO: Refactor tests to use the actual STRK token address and use const
-        // STRK_TOKEN_ADDRESS instead?
-        fn strk_token_address(self: @ContractState) -> ContractAddress {
-            self.token_dispatcher.read().contract_address
         }
     }
 }

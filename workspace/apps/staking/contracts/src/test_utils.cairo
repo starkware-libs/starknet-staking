@@ -1,26 +1,30 @@
 use constants::{
-    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BTC_TOKEN_ADDRESS,
-    BTC_TOKEN_NAME, BUFFER, COMMISSION, DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH,
-    EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER,
-    MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS,
-    POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
-    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS,
-    SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS,
-    STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_TOKEN_NAME, TOKEN_ADDRESS,
-    TOKEN_ADMIN, UPGRADE_GOVERNOR,
+    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT,
+    BTC_POOL_MEMBER_STAKE_AMOUNT, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION,
+    DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN,
+    INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS,
+    OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS,
+    POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
+    REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
+    STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
+    STARKGATE_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
 use core::num::traits::zero::Zero;
+use core::panics::panic_with_byte_array;
 use core::poseidon::PoseidonTrait;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address,
-    start_cheat_block_hash_global, start_cheat_block_number_global, test_address,
+    CheatSpan, ContractClassTrait, CustomToken, DeclareResultTrait, Token, TokenImpl, TokenTrait,
+    cheat_caller_address, set_balance, start_cheat_block_hash_global,
+    start_cheat_block_number_global, test_address,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
+    BTC_BASE_VALUE, BTC_DECIMALS, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW,
+    MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS, STARTING_EPOCH, STRK_BASE_VALUE, STRK_DECIMALS,
+    STRK_IN_FRIS,
 };
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
@@ -32,11 +36,12 @@ use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
-    IStakingPauseDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingPauseDispatcherTrait, IStakingTokenManagerDispatcher,
+    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
-use staking::staking::interface_v0::StakerPoolInfo;
 use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
 use staking::staking::staking::Staking;
 use staking::types::{
@@ -60,7 +65,7 @@ use starkware_utils_testing::test_utils::{
 
 pub(crate) mod constants {
     use core::cmp::max;
-    use staking::constants::STRK_IN_FRIS;
+    use staking::constants::{MIN_BTC_FOR_REWARDS, STRK_IN_FRIS};
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Commission, Index};
     use starknet::class_hash::ClassHash;
@@ -73,6 +78,7 @@ pub(crate) mod constants {
     pub const MIN_STAKE: Amount = 20000 * STRK_IN_FRIS;
     pub const STAKE_AMOUNT: Amount = 100000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * STRK_IN_FRIS;
+    pub const BTC_POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * MIN_BTC_FOR_REWARDS;
     pub const COMMISSION: Commission = 500;
     pub const STAKER_FINAL_INDEX: Index = 10;
     pub const BASE_MINT_AMOUNT: Amount = 1_300_000 * STRK_IN_FRIS;
@@ -112,6 +118,9 @@ pub(crate) mod constants {
     }
     pub fn OTHER_STAKER_ADDRESS() -> ContractAddress {
         'OTHER_STAKER_ADDRESS'.try_into().unwrap()
+    }
+    pub fn BTC_STAKER_ADDRESS() -> ContractAddress {
+        'BTC_STAKER_ADDRESS'.try_into().unwrap()
     }
     pub fn OPERATIONAL_ADDRESS() -> ContractAddress {
         'OPERATIONAL_ADDRESS'.try_into().unwrap()
@@ -244,16 +253,8 @@ pub(crate) mod constants {
 pub(crate) fn initialize_staking_state_from_cfg(
     ref cfg: StakingInitConfig,
 ) -> Staking::ContractState {
-    let token_address = deploy_mock_erc20_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address, STRK_TOKEN_NAME(),
-    );
-    cfg.staking_contract_info.token_address = token_address;
-    let btc_token_address = deploy_mock_erc20_contract(
-        cfg.test_info.initial_supply, cfg.test_info.owner_address, BTC_TOKEN_NAME(),
-    );
-    cfg.staking_contract_info.btc_token_address = btc_token_address;
     initialize_staking_state(
-        :token_address,
+        token_address: cfg.test_info.strk_token.contract_address(),
         min_stake: cfg.staking_contract_info.min_stake,
         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
@@ -262,7 +263,6 @@ pub(crate) fn initialize_staking_state_from_cfg(
         prev_class_hash: cfg.staking_contract_info.prev_staking_contract_class_hash,
         epoch_info: cfg.staking_contract_info.epoch_info,
         attestation_contract: cfg.test_info.attestation_contract,
-        :btc_token_address,
     )
 }
 pub(crate) fn initialize_staking_state(
@@ -275,7 +275,6 @@ pub(crate) fn initialize_staking_state(
     prev_class_hash: ClassHash,
     epoch_info: EpochInfo,
     attestation_contract: ContractAddress,
-    btc_token_address: ContractAddress,
 ) -> Staking::ContractState {
     let mut state = Staking::contract_state_for_testing();
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
@@ -290,7 +289,6 @@ pub(crate) fn initialize_staking_state(
         :prev_class_hash,
         :epoch_info,
         :attestation_contract,
-        :btc_token_address,
     );
     state
 }
@@ -371,11 +369,23 @@ pub(crate) fn deploy_mock_erc20_contract(
     token_address
 }
 
-pub(crate) fn deploy_staking_contract(
-    token_address: ContractAddress, btc_token_address: ContractAddress, cfg: StakingInitConfig,
+pub(crate) fn deploy_mock_erc20_decimals_contract(
+    initial_supply: u256, owner_address: ContractAddress, name: ByteArray, decimals: u8,
 ) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
-    token_address.serialize(ref calldata);
+    name.serialize(ref calldata);
+    SYMBOL().serialize(ref calldata);
+    decimals.serialize(ref calldata);
+    initial_supply.serialize(ref calldata);
+    owner_address.serialize(ref calldata);
+    let erc20_contract = snforge_std::declare("ERC20DecimalsMock").unwrap().contract_class();
+    let (token_address, _) = erc20_contract.deploy(@calldata).unwrap();
+    token_address
+}
+
+pub(crate) fn deploy_staking_contract(cfg: StakingInitConfig) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    cfg.test_info.strk_token.contract_address().serialize(ref calldata);
     cfg.staking_contract_info.min_stake.serialize(ref calldata);
     cfg.staking_contract_info.pool_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
@@ -384,7 +394,6 @@ pub(crate) fn deploy_staking_contract(
     cfg.staking_contract_info.prev_staking_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.epoch_info.serialize(ref calldata);
     cfg.test_info.attestation_contract.serialize(ref calldata);
-    btc_token_address.serialize(ref calldata);
     let staking_contract = snforge_std::declare("Staking").unwrap().contract_class();
     let (staking_contract_address, _) = staking_contract.deploy(@calldata).unwrap();
     set_default_roles(staking_contract: staking_contract_address, :cfg);
@@ -456,7 +465,7 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     cfg.reward_supplier.base_mint_amount.serialize(ref calldata);
     cfg.reward_supplier.minting_curve_contract.serialize(ref calldata);
     cfg.test_info.staking_contract.serialize(ref calldata);
-    cfg.staking_contract_info.token_address.serialize(ref calldata);
+    cfg.test_info.strk_token.contract_address().serialize(ref calldata);
     cfg.reward_supplier.l1_reward_supplier.serialize(ref calldata);
     cfg.reward_supplier.starkgate_address.serialize(ref calldata);
     cfg.test_info.governance_admin.serialize(ref calldata);
@@ -501,15 +510,10 @@ pub(crate) fn declare_pool_eic_contract() -> ClassHash {
     *snforge_std::declare("PoolEICV0toV1").unwrap().contract_class().class_hash
 }
 
-pub(crate) fn fund(
-    sender: ContractAddress,
-    recipient: ContractAddress,
-    amount: Amount,
-    token_address: ContractAddress,
-) {
-    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    cheat_caller_address_once(contract_address: token_address, caller_address: sender);
-    token_dispatcher.transfer(:recipient, amount: amount.into());
+pub(crate) fn fund(target: ContractAddress, amount: Amount, token: Token) {
+    let token_dispatcher = IERC20Dispatcher { contract_address: token.contract_address() };
+    let curr_balance = token_dispatcher.balance_of(account: target);
+    set_balance(:target, new_balance: curr_balance + amount.into(), :token);
 }
 
 pub(crate) fn approve(
@@ -527,10 +531,9 @@ pub(crate) fn fund_and_approve_for_stake(
     cfg: StakingInitConfig, staking_contract: ContractAddress, token_address: ContractAddress,
 ) {
     fund(
-        sender: cfg.test_info.owner_address,
-        recipient: cfg.test_info.staker_address,
+        target: cfg.test_info.staker_address,
         amount: cfg.test_info.staker_initial_balance,
-        :token_address,
+        token: cfg.test_info.strk_token,
     );
     approve(
         owner: cfg.test_info.staker_address,
@@ -540,9 +543,9 @@ pub(crate) fn fund_and_approve_for_stake(
     );
 }
 
-pub(crate) fn stake_for_testing_using_dispatcher(
-    cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress,
-) {
+pub(crate) fn stake_for_testing_using_dispatcher(cfg: StakingInitConfig) {
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let staking_contract = cfg.test_info.staking_contract;
     fund_and_approve_for_stake(:cfg, :staking_contract, :token_address);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
@@ -568,9 +571,8 @@ pub(crate) fn stake_for_testing_using_dispatcher(
     }
 }
 
-pub(crate) fn stake_from_zero_address(
-    cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress,
-) {
+pub(crate) fn stake_from_zero_address(cfg: StakingInitConfig) {
+    let staking_contract = cfg.test_info.staking_contract;
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
@@ -583,12 +585,12 @@ pub(crate) fn stake_from_zero_address(
         );
 }
 
-pub(crate) fn stake_with_pool_enabled(
-    mut cfg: StakingInitConfig, token_address: ContractAddress, staking_contract: ContractAddress,
-) -> ContractAddress {
+pub(crate) fn stake_with_pool_enabled(mut cfg: StakingInitConfig) -> ContractAddress {
     cfg.test_info.strk_pool_enabled = true;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    stake_for_testing_using_dispatcher(:cfg);
+    let staking_dispatcher = IStakingDispatcher {
+        contract_address: cfg.test_info.staking_contract,
+    };
     let pool_contract = staking_dispatcher
         .staker_info_v1(cfg.test_info.staker_address)
         .get_pool_info()
@@ -597,14 +599,13 @@ pub(crate) fn stake_with_pool_enabled(
 }
 
 pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
-    pool_contract: ContractAddress, cfg: StakingInitConfig, token_address: ContractAddress,
+    pool_contract: ContractAddress, cfg: StakingInitConfig, token: Token,
 ) {
     // Transfer the stake amount to the pool member.
     fund(
-        sender: cfg.test_info.owner_address,
-        recipient: cfg.test_info.pool_member_address,
+        target: cfg.test_info.pool_member_address,
         amount: cfg.test_info.pool_member_initial_balance,
-        :token_address,
+        :token,
     );
 
     // Approve the pool contract to transfer the pool member's funds.
@@ -612,7 +613,7 @@ pub(crate) fn enter_delegation_pool_for_testing_using_dispatcher(
         owner: cfg.test_info.pool_member_address,
         spender: pool_contract,
         amount: cfg.pool_member_info._deprecated_amount,
-        :token_address,
+        token_address: token.contract_address(),
     );
 
     // Enter the delegation pool.
@@ -650,13 +651,7 @@ pub(crate) fn claim_rewards_for_pool_member(
 pub(crate) fn update_rewards_from_staking_contract_for_testing(
     cfg: StakingInitConfig, pool_contract: ContractAddress, rewards: Amount, pool_balance: Amount,
 ) {
-    let token_address = cfg.staking_contract_info.token_address;
-    fund(
-        sender: cfg.test_info.owner_address,
-        recipient: pool_contract,
-        amount: rewards,
-        :token_address,
-    );
+    fund(target: pool_contract, amount: rewards, token: cfg.test_info.strk_token);
     cheat_caller_address_once(
         contract_address: pool_contract, caller_address: cfg.test_info.staking_contract,
     );
@@ -728,6 +723,7 @@ pub(crate) fn load_option_from_simple_map<
     }
 }
 
+// Store internal staker info v0 with pool_info = None.
 pub(crate) fn store_internal_staker_info_v0_to_map(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
@@ -737,7 +733,6 @@ pub(crate) fn store_internal_staker_info_v0_to_map(
     amount_own: Amount,
     index: Index,
     unclaimed_rewards_own: Amount,
-    pool_info: Option<StakerPoolInfo>,
 ) {
     // Serialize the versioned internal staker info.
     let mut serialized_enum: Array<felt252> = array![];
@@ -757,14 +752,9 @@ pub(crate) fn store_internal_staker_info_v0_to_map(
     amount_own.serialize(ref serialized_enum);
     index.serialize(ref serialized_enum);
     unclaimed_rewards_own.serialize(ref serialized_enum);
-    if let Option::Some(info) = pool_info {
-        let idx = 1;
-        idx.serialize(ref serialized_enum);
-        info.serialize(ref serialized_enum);
-    } else {
-        let idx = 0;
-        idx.serialize(ref serialized_enum);
-    }
+    // Serialize the pool info = None.
+    let idx = 0;
+    idx.serialize(ref serialized_enum);
     let mut keys = array![];
     staker_address.serialize(ref keys);
     let storage_address = snforge_std::map_entry_address(
@@ -780,19 +770,7 @@ pub(crate) fn load_one_felt(target: ContractAddress, storage_address: felt252) -
 }
 
 pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
-    // Deploy contracts: ERC20, MintingCurve, RewardSupplier, Staking.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    cfg.staking_contract_info.token_address = token_address;
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    cfg.staking_contract_info.btc_token_address = btc_token_address;
+    // Deploy contracts: MintingCurve, RewardSupplier, Staking.
     // Deploy the minting_curve, with faked staking_address.
     let minting_curve = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve;
@@ -800,7 +778,7 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     let reward_supplier = deploy_reward_supplier_contract(:cfg);
     cfg.staking_contract_info.reward_supplier = reward_supplier;
     // Deploy the staking contract.
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
     // Deploy the attestation contract.
     let attestation_contract = deploy_attestation_contract(:cfg);
@@ -821,20 +799,15 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
         storage_address: selector!("attestation_contract"),
         serialized_value: array![attestation_contract.into()].span(),
     );
+    // Deploy the BTC token, add it to the staking contract, and enable it.
+    let btc_token_address = setup_btc_token(:cfg, name: BTC_TOKEN_NAME());
+    cfg.test_info.btc_token = custom_decimals_token(token_address: btc_token_address);
 }
 
 pub(crate) fn cheat_reward_for_reward_supplier(
-    cfg: StakingInitConfig,
-    reward_supplier: ContractAddress,
-    expected_reward: Amount,
-    token_address: ContractAddress,
+    reward_supplier: ContractAddress, expected_reward: Amount, token: Token,
 ) {
-    fund(
-        sender: cfg.test_info.owner_address,
-        recipient: reward_supplier,
-        amount: expected_reward,
-        :token_address,
-    );
+    fund(target: reward_supplier, amount: expected_reward, :token);
     snforge_std::store(
         target: reward_supplier,
         storage_address: selector!("unclaimed_rewards"),
@@ -843,9 +816,11 @@ pub(crate) fn cheat_reward_for_reward_supplier(
 }
 
 fn compute_unclaimed_rewards_member(
-    amount: Amount, interest: Index, commission: Commission,
+    amount: Amount, interest: Index, commission: Commission, base_value: Index,
 ) -> Amount {
-    let rewards_including_commission = compute_rewards_rounded_down(:amount, :interest);
+    let rewards_including_commission = compute_rewards_rounded_down(
+        :amount, :interest, :base_value,
+    );
     let commission_amount = compute_commission_amount_rounded_up(
         :rewards_including_commission, :commission,
     );
@@ -863,17 +838,9 @@ pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
 }
 
 pub(crate) fn add_reward_for_reward_supplier(
-    cfg: StakingInitConfig,
-    reward_supplier: ContractAddress,
-    reward: Amount,
-    token_address: ContractAddress,
+    reward_supplier: ContractAddress, reward: Amount, token: Token,
 ) {
-    fund(
-        sender: cfg.test_info.owner_address,
-        recipient: reward_supplier,
-        amount: reward,
-        :token_address,
-    );
+    fund(target: reward_supplier, amount: reward, :token);
     let current_unclaimed_rewards = *snforge_std::load(
         target: reward_supplier,
         storage_address: selector!("unclaimed_rewards"),
@@ -909,6 +876,7 @@ pub(crate) struct TestInfo {
     pub initial_supply: u256,
     pub staker_initial_balance: Amount,
     pub pool_member_initial_balance: Amount,
+    pub pool_member_btc_amount: Amount,
     pub strk_pool_enabled: bool,
     pub stake_amount: Amount,
     pub staking_contract: ContractAddress,
@@ -922,6 +890,8 @@ pub(crate) struct TestInfo {
     pub attestation_window: u16,
     pub app_governor: ContractAddress,
     pub global_index: Index,
+    pub strk_token: Token,
+    pub btc_token: Token,
 }
 
 #[derive(Drop, Copy)]
@@ -975,14 +945,12 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         };
         let staking_contract_info = StakingContractInfoCfg {
             min_stake: MIN_STAKE,
-            token_address: TOKEN_ADDRESS(),
             attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
             pool_contract_class_hash: declare_pool_contract(),
             reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW,
             prev_staking_contract_class_hash: DUMMY_CLASS_HASH(),
             epoch_info: DEFAULT_EPOCH_INFO(),
-            btc_token_address: BTC_TOKEN_ADDRESS(),
         };
         let minting_curve_contract_info = MintingCurveContractInfo {
             c_num: DEFAULT_C_NUM, c_denom: C_DENOM,
@@ -995,6 +963,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             initial_supply: INITIAL_SUPPLY.into(),
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
+            pool_member_btc_amount: BTC_POOL_MEMBER_STAKE_AMOUNT,
             strk_pool_enabled: false,
             stake_amount: STAKE_AMOUNT,
             staking_contract: STAKING_CONTRACT_ADDRESS(),
@@ -1008,6 +977,8 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             attestation_window: MIN_ATTESTATION_WINDOW,
             app_governor: APP_GOVERNOR(),
             global_index: Zero::zero(),
+            strk_token: Token::STRK,
+            btc_token: custom_decimals_token(token_address: BTC_TOKEN_ADDRESS()),
         };
         let reward_supplier = RewardSupplierInfoV1 {
             base_mint_amount: BASE_MINT_AMOUNT,
@@ -1030,23 +1001,21 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfoCfg {
     pub min_stake: Amount,
-    pub token_address: ContractAddress,
     pub attestation_contract: ContractAddress,
     pub pool_contract_class_hash: ClassHash,
     pub reward_supplier: ContractAddress,
     pub exit_wait_window: TimeDelta,
     pub prev_staking_contract_class_hash: ClassHash,
     pub epoch_info: EpochInfo,
-    pub btc_token_address: ContractAddress,
 }
 
-/// Update rewards for pool.
-pub(crate) fn pool_update_rewards(
+/// Update rewards for STRK pool.
+pub(crate) fn strk_pool_update_rewards(
     pool_member_info: PoolMemberInfo, updated_index: Index,
 ) -> PoolMemberInfo {
     let interest: Index = updated_index - pool_member_info.index;
     let rewards_including_commission = compute_rewards_rounded_down(
-        amount: pool_member_info.amount, :interest,
+        amount: pool_member_info.amount, :interest, base_value: STRK_BASE_VALUE,
     );
     let commission_amount = compute_commission_amount_rounded_up(
         :rewards_including_commission, commission: pool_member_info.commission,
@@ -1203,6 +1172,62 @@ pub(crate) fn calculate_pool_member_rewards(
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
+/// Compute the rewards for the pool trace.
+///
+/// Precondition: decimals` must be either `STRK_DECIMALS` or `BTC_DECIMALS`.
+pub(crate) fn compute_rewards_for_trace(
+    staking_rewards: Amount, total_stake: Amount, decimals: u8,
+) -> Index {
+    let base_value = if decimals == STRK_DECIMALS {
+        // Return zero if the total stake is too small, to avoid overflow below.
+        if total_stake < STRK_IN_FRIS {
+            return Zero::zero();
+        }
+        STRK_BASE_VALUE
+    } else if decimals == BTC_DECIMALS {
+        // Return zero if the total stake is too small, to avoid overflow below.
+        if total_stake < MIN_BTC_FOR_REWARDS {
+            return Zero::zero();
+        }
+        BTC_BASE_VALUE
+    } else {
+        panic_with_byte_array(@"Invalid decimals")
+    };
+    mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
+        .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
+}
+
+#[cfg(test)]
+mod tests {
+    use core::num::traits::zero::Zero;
+    use super::{
+        BTC_BASE_VALUE, BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS,
+        STRK_IN_FRIS, compute_rewards_for_trace,
+    };
+
+    #[test]
+    fn test_compute_rewards_for_trace() {
+        assert!(
+            compute_rewards_for_trace(STRK_IN_FRIS, STRK_IN_FRIS, STRK_DECIMALS) == STRK_BASE_VALUE,
+        );
+        assert!(
+            compute_rewards_for_trace(
+                STRK_IN_FRIS, STRK_IN_FRIS - 1, STRK_DECIMALS,
+            ) == Zero::zero(),
+        );
+        assert!(
+            compute_rewards_for_trace(
+                MIN_BTC_FOR_REWARDS, MIN_BTC_FOR_REWARDS, BTC_DECIMALS,
+            ) == BTC_BASE_VALUE,
+        );
+        assert!(
+            compute_rewards_for_trace(
+                MIN_BTC_FOR_REWARDS, MIN_BTC_FOR_REWARDS - 1, BTC_DECIMALS,
+            ) == Zero::zero(),
+        );
+    }
+}
+
 /// Calculates the block offset required to advance from the starting block into the attestation
 /// window.
 pub(crate) fn calculate_block_offset(
@@ -1323,4 +1348,32 @@ pub(crate) fn load_from_iterable_map<
         map_selector: map_address, keys: [selector!("_inner_map")].span(),
     );
     load_option_from_simple_map(map_selector: map_storage_address, :key, contract: contract_address)
+}
+
+pub(crate) fn setup_btc_token(cfg: StakingInitConfig, name: ByteArray) -> ContractAddress {
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        :name,
+        decimals: BTC_DECIMALS,
+    );
+    let staking_contract = cfg.test_info.staking_contract;
+    let token_manager = IStakingTokenManagerDispatcher { contract_address: staking_contract };
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: cfg.test_info.security_admin,
+        span: CheatSpan::TargetCalls(2),
+    );
+    token_manager.add_token(token_address: btc_token_address);
+    token_manager.enable_token(token_address: btc_token_address);
+    btc_token_address
+}
+
+pub(crate) fn custom_decimals_token(token_address: ContractAddress) -> Token {
+    Token::Custom(
+        CustomToken {
+            contract_address: token_address,
+            balances_variable_selector: selector!("ERC20_balances"),
+        },
+    )
 }

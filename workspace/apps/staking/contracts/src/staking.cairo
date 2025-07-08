@@ -6,6 +6,7 @@ mod eic_v0_v1;
 mod eic_v1_v2;
 pub(crate) mod errors;
 pub mod interface;
+#[cfg(test)]
 pub(crate) mod interface_v0;
 #[cfg(test)]
 pub(crate) mod interface_v1;

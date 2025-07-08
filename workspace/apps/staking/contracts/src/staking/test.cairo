@@ -1,10 +1,10 @@
 use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
 use constants::{
-    BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, CALLER_ADDRESS, DUMMY_ADDRESS,
-    DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, NON_APP_GOVERNOR,
-    NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_REWARD_ADDRESS,
-    OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, STAKER_UNCLAIMED_REWARDS,
-    STRK_TOKEN_NAME, UNPOOL_TIME,
+    BTC_STAKER_ADDRESS, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, CALLER_ADDRESS,
+    DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
+    NON_APP_GOVERNOR, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
+    OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
+    STAKER_UNCLAIMED_REWARDS, UNPOOL_TIME,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -26,12 +26,12 @@ use event_test_utils::{
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{
-    CheatSpan, cheat_account_contract_address, cheat_caller_address,
+    CheatSpan, TokenTrait, cheat_account_contract_address, cheat_caller_address,
     start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
+    BTC_DECIMALS, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
     V1_PREV_CONTRACT_VERSION,
 };
 use staking::errors::GenericError;
@@ -67,10 +67,6 @@ use staking::staking::objects::{
 };
 use staking::staking::staking::Staking;
 use staking::types::{Amount, InternalStakerInfoLatest, VecIndex};
-use staking::utils::{
-    compute_commission_amount_rounded_down, compute_rewards_rounded_down,
-    compute_rewards_rounded_up,
-};
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
@@ -93,12 +89,12 @@ use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
     approve, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
     cheat_reward_for_reward_supplier, cheat_target_attestation_block_hash, constants,
-    declare_pool_contract, declare_staking_eic_contract_v1_v2, deploy_mock_erc20_contract,
-    deploy_reward_supplier_contract, deploy_staking_contract,
+    custom_decimals_token, declare_pool_contract, declare_staking_eic_contract_v1_v2,
+    deploy_mock_erc20_decimals_contract, deploy_reward_supplier_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     initialize_staking_state_from_cfg, load_from_simple_map, load_from_trace, load_trace_length,
-    stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_pool_enabled,
-    store_internal_staker_info_v0_to_map, store_to_simple_map,
+    setup_btc_token, stake_for_testing_using_dispatcher, stake_from_zero_address,
+    stake_with_pool_enabled, store_internal_staker_info_v0_to_map, store_to_simple_map,
 };
 
 #[test]
@@ -107,7 +103,13 @@ fn test_constructor() {
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     assert!(state.min_stake.read() == cfg.staking_contract_info.min_stake);
     assert!(
-        state.token_dispatcher.read().contract_address == cfg.staking_contract_info.token_address,
+        state
+            .token_dispatcher
+            .read()
+            .contract_address == cfg
+            .test_info
+            .strk_token
+            .contract_address(),
     );
     let staker_address = state
         .operational_address_to_staker_address
@@ -134,20 +136,17 @@ fn test_constructor() {
             .staking_contract_info
             .prev_staking_contract_class_hash,
     );
-    assert!(
-        state.btc_tokens.read(cfg.staking_contract_info.btc_token_address) == Option::Some(true),
-    );
 }
 
 #[test]
 fn test_stake() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token_address = cfg.test_info.strk_token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let mut spy = snforge_std::spy_events();
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 
     let staker_address = cfg.test_info.staker_address;
     // Check that the staker info was updated correctly.
@@ -225,10 +224,8 @@ fn test_send_rewards_to_staker() {
     let mut cfg: StakingInitConfig = Default::default();
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     cfg.test_info.staking_contract = snforge_std::test_address();
-    let token_address = cfg.staking_contract_info.token_address;
-    let token_dispatcher = IERC20Dispatcher {
-        contract_address: cfg.staking_contract_info.token_address,
-    };
+    let token = cfg.test_info.strk_token;
+    let token_dispatcher = IERC20Dispatcher { contract_address: token.contract_address() };
     // Deploy reward supplier contract.
     let reward_supplier = deploy_reward_supplier_contract(:cfg);
     cfg.staking_contract_info.reward_supplier = reward_supplier;
@@ -241,7 +238,7 @@ fn test_send_rewards_to_staker() {
     let mut expected_staker_info = cfg.staker_info.clone();
     expected_staker_info.unclaimed_rewards_own = Zero::zero();
     cheat_reward_for_reward_supplier(
-        :cfg, :reward_supplier, expected_reward: unclaimed_rewards_own, :token_address,
+        :reward_supplier, expected_reward: unclaimed_rewards_own, :token,
     );
     let staker_balance_before_rewards = token_dispatcher
         .balance_of(account: cfg.staker_info.reward_address);
@@ -267,10 +264,9 @@ fn test_send_rewards_to_staker() {
 fn test_stake_from_same_staker_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 
     // Second stake from cfg.test_info.staker_address.
     cheat_caller_address_once(
@@ -289,10 +285,9 @@ fn test_stake_from_same_staker_address() {
 fn test_stake_with_same_operational_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 
     let caller_address = OTHER_STAKER_ADDRESS();
     assert!(cfg.test_info.staker_address != caller_address);
@@ -313,9 +308,7 @@ fn test_stake_with_less_than_min_stake() {
     let mut cfg: StakingInitConfig = Default::default();
     cfg.test_info.stake_amount = cfg.staking_contract_info.min_stake - 1;
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 }
 
 #[test]
@@ -323,11 +316,10 @@ fn test_stake_with_less_than_min_stake() {
 fn test_stake_with_staker_address_already_used() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 
     // Exit intent.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -356,14 +348,13 @@ fn test_stake_with_staker_address_already_used() {
 fn test_contract_parameters_v1() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 
     let expected_staking_contract_info = StakingContractInfoV1 {
         min_stake: cfg.staking_contract_info.min_stake,
-        token_address: cfg.staking_contract_info.token_address,
+        token_address: cfg.test_info.strk_token.contract_address(),
         attestation_contract: cfg.test_info.attestation_contract,
         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
@@ -376,10 +367,9 @@ fn test_contract_parameters_v1() {
 fn test_increase_stake_from_staker_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_address = cfg.test_info.staker_address;
     // Set the same staker address.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -413,17 +403,17 @@ fn test_increase_stake_from_staker_address() {
 fn test_increase_stake_from_reward_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 
-    // Transfer amount from initial_owner to reward_address.
+    // Transfer amount to reward_address.
     fund(
-        sender: cfg.test_info.owner_address,
-        recipient: cfg.staker_info.reward_address,
+        target: cfg.staker_info.reward_address,
         amount: cfg.test_info.staker_initial_balance,
-        :token_address,
+        :token,
     );
     // Approve the Staking contract to spend the reward's tokens.
     approve(
@@ -462,9 +452,8 @@ fn test_increase_stake_from_reward_address() {
 fn test_increase_stake_staker_address_not_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher
         .increase_stake(staker_address: NON_STAKER_ADDRESS(), amount: cfg.test_info.stake_amount);
@@ -475,10 +464,9 @@ fn test_increase_stake_staker_address_not_exist() {
 fn test_increase_stake_unstake_in_progress() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
@@ -491,9 +479,8 @@ fn test_increase_stake_unstake_in_progress() {
 fn test_increase_stake_amount_is_zero() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -505,9 +492,8 @@ fn test_increase_stake_amount_is_zero() {
 fn test_increase_stake_caller_cannot_increase() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
@@ -521,9 +507,8 @@ fn test_increase_stake_caller_cannot_increase() {
 fn test_change_reward_address() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before_change = staking_dispatcher.staker_info_v1(:staker_address);
@@ -555,9 +540,8 @@ fn test_change_reward_address() {
 fn test_change_reward_address_staker_not_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
@@ -569,7 +553,8 @@ fn test_change_reward_address_staker_not_exist() {
 fn test_claim_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -580,7 +565,7 @@ fn test_claim_rewards() {
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
 
     // Stake.
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 
     // Advance the epoch to ensure the total stake in the current epoch is nonzero, preventing a
     // division by zero when calculating rewards.
@@ -595,12 +580,7 @@ fn test_claim_rewards() {
     assert!(expected_pool_rewards.is_zero());
 
     // Funds reward supplier.
-    fund(
-        sender: cfg.test_info.owner_address,
-        recipient: reward_supplier,
-        amount: expected_staker_rewards,
-        :token_address,
-    );
+    fund(target: reward_supplier, amount: expected_staker_rewards, :token);
 
     let block_hash = Zero::zero();
     cheat_target_attestation_block_hash(:cfg, :block_hash);
@@ -637,9 +617,8 @@ fn test_claim_rewards() {
 fn test_claim_rewards_panic_unauthorized() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = DUMMY_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
@@ -652,9 +631,8 @@ fn test_claim_rewards_panic_unauthorized() {
 fn test_claim_rewards_panic_staker_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher.claim_rewards(staker_address: DUMMY_ADDRESS());
 }
@@ -663,9 +641,8 @@ fn test_claim_rewards_panic_staker_doesnt_exist() {
 fn test_unstake_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -695,9 +672,9 @@ fn test_unstake_intent() {
 fn test_unstake_intent_with_pool() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token_address = cfg.test_info.strk_token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -734,14 +711,15 @@ fn test_unstake_intent_with_pool() {
 fn test_unstake_intent_with_multiple_pools() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     // Open STRK pool with delegated balance.
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    let pool_contract = stake_with_pool_enabled(:cfg);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let strk_delegated_balance = cfg.pool_member_info._deprecated_amount;
     // Open BTC pool.
-    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let btc_token_address = cfg.test_info.btc_token.contract_address();
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -789,9 +767,8 @@ fn test_unstake_intent_with_multiple_pools() {
 fn test_unstake_intent_staker_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
@@ -803,9 +780,8 @@ fn test_unstake_intent_staker_doesnt_exist() {
 fn test_unstake_intent_unstake_in_progress() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     cheat_caller_address(
         contract_address: staking_contract,
@@ -825,11 +801,10 @@ fn test_unstake_intent_unstake_in_progress() {
 fn test_unstake_action() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
 
     // Stake.
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pool_enabled(:cfg);
 
     // Set commission commitment.
     let staker_address = cfg.test_info.staker_address;
@@ -849,8 +824,6 @@ fn test_unstake_action() {
     let unclaimed_rewards_own = staking_dispatcher
         .staker_info_v1(:staker_address)
         .unclaimed_rewards_own;
-    let caller_address = NON_STAKER_ADDRESS();
-    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     let mut spy = snforge_std::spy_events();
     let staker_amount = staking_dispatcher.unstake_action(:staker_address);
     assert!(staker_amount == cfg.test_info.stake_amount);
@@ -881,25 +854,27 @@ fn test_unstake_action() {
 fn test_unstake_action_multiple_pools() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
 
     // Stake and open STRK pool.
-    let strk_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let strk_pool_contract = stake_with_pool_enabled(:cfg);
     // Open BTC pool.
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let btc_token = cfg.test_info.btc_token;
+    let btc_token_address = btc_token.contract_address();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let btc_pool_contract = staking_dispatcher
         .set_open_for_delegation(token_address: btc_token_address);
     // Enter STRK pool.
     enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: strk_pool_contract, :cfg, :token_address,
+        pool_contract: strk_pool_contract, :cfg, :token,
     );
     // Enter BTC pool.
     enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: btc_pool_contract, :cfg, token_address: btc_token_address,
+        pool_contract: btc_pool_contract, :cfg, token: btc_token,
     );
     // Set commission commitment.
     let staker_address = cfg.test_info.staker_address;
@@ -920,8 +895,6 @@ fn test_unstake_action_multiple_pools() {
     let unclaimed_rewards_own = staking_dispatcher
         .staker_info_v1(:staker_address)
         .unclaimed_rewards_own;
-    let caller_address = NON_STAKER_ADDRESS();
-    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     let mut spy = snforge_std::spy_events();
 
     // Current balance of pools is zero.
@@ -990,7 +963,6 @@ fn test_unstake_action_multiple_pools() {
 fn test_unstake_action_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -999,7 +971,7 @@ fn test_unstake_action_assertions() {
     // Catch STAKER_NOT_EXISTS.
     let result = staking_safe_dispatcher.unstake_action(:staker_address);
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg);
 
     // Catch MISSING_UNSTAKE_INTENT.
     let result = staking_safe_dispatcher.unstake_action(:staker_address);
@@ -1019,12 +991,11 @@ fn test_unstake_action_assertions() {
 fn test_get_total_stake() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     assert!(staking_dispatcher.get_current_epoch() == Zero::zero());
     assert!(staking_dispatcher.get_total_stake() == Zero::zero());
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     assert!(staking_dispatcher.get_total_stake() == cfg.test_info.stake_amount);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     // Set the same staker address.
@@ -1044,21 +1015,17 @@ fn test_get_total_stake() {
 fn test_add_stake_from_pool() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     let staker_address = cfg.test_info.staker_address;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
 
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pool_enabled(:cfg);
     let pool_amount = cfg.test_info.staker_initial_balance;
     // Fund pool contract.
-    fund(
-        sender: cfg.test_info.owner_address,
-        recipient: pool_contract,
-        amount: pool_amount,
-        :token_address,
-    );
+    fund(target: pool_contract, amount: pool_amount, :token);
     // Approve the Staking contract to spend the pool's tokens.
     approve(owner: pool_contract, spender: staking_contract, amount: pool_amount, :token_address);
 
@@ -1125,8 +1092,8 @@ fn test_add_stake_from_pool_assertions() {
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 
     // Should catch UNSTAKE_IN_PROGRESS.
-    let token_address = cfg.staking_contract_info.token_address;
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let pool_contract = stake_with_pool_enabled(:cfg);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let unstake_time = staking_dispatcher.unstake_intent();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
@@ -1141,7 +1108,7 @@ fn test_add_stake_from_pool_assertions() {
     staking_dispatcher.unstake_action(:staker_address);
     cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
     let staker_address = cfg.test_info.staker_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
     assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
@@ -1163,12 +1130,13 @@ fn test_add_stake_from_pool_assertions() {
 fn test_remove_from_delegation_pool_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
 
     // Stake and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    let pool_contract = stake_with_pool_enabled(:cfg);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
 
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let initial_delegated_stake = cfg.pool_member_info._deprecated_amount;
@@ -1334,8 +1302,8 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 
     // Should catch CALLER_IS_NOT_POOL_CONTRACT.
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let token_address = cfg.test_info.strk_token.contract_address();
+    stake_for_testing_using_dispatcher(:cfg);
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
     assert_panic_with_error(:result, expected_error: Error::CALLER_IS_NOT_POOL_CONTRACT.describe());
@@ -1394,15 +1362,16 @@ fn test_remove_from_delegation_pool_intent_assertions() {
 fn test_remove_from_delegation_pool_action() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
 
     // Stake and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pool_enabled(:cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     // Remove from delegation pool intent, and then check that the intent was added correctly.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     staking_pool_dispatcher
@@ -1457,19 +1426,9 @@ fn test_remove_from_delegation_pool_action() {
 #[test]
 fn test_remove_from_delegation_pool_action_intent_not_exist() {
     let cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
+    let token_address = cfg.test_info.strk_token.contract_address();
     // Deploy staking contract.
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     let caller_address = CALLER_ADDRESS();
@@ -1486,13 +1445,13 @@ fn test_remove_from_delegation_pool_action_intent_not_exist() {
 fn test_remove_from_delegation_pool_action_intent_not_finished() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
     let staking_contract = cfg.test_info.staking_contract;
 
     // Stake and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pool_enabled(:cfg);
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
-    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     // Intent.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: pool_contract);
     staking_pool_dispatcher
@@ -1511,22 +1470,23 @@ fn test_remove_from_delegation_pool_action_intent_not_finished() {
 fn test_switch_staking_delegation_pool() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
 
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_pool_dispatcher = IStakingPoolDispatcher { contract_address: staking_contract };
     // Initialize from_staker.
-    let from_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let from_pool_contract = stake_with_pool_enabled(:cfg);
     let from_pool_dispatcher = IPoolDispatcher { contract_address: from_pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: from_pool_contract, :cfg, :token_address,
+        pool_contract: from_pool_contract, :cfg, :token,
     );
     // Initialize to_staker.
     let to_staker = OTHER_STAKER_ADDRESS();
     cfg.test_info.staker_address = to_staker;
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
-    let to_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let to_pool_contract = stake_with_pool_enabled(:cfg);
     let to_pool_dispatcher = IPoolDispatcher { contract_address: to_pool_contract };
     let to_staker_info = staking_dispatcher.staker_info_v1(staker_address: to_staker);
     // Pool member remove_from_delegation_pool_intent.
@@ -1638,25 +1598,24 @@ fn test_switch_staking_delegation_pool() {
 fn test_switch_staking_delegation_pool_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_pool_safe_dispatcher = IStakingPoolSafeDispatcher {
         contract_address: staking_contract,
     };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let switched_amount = 1;
 
     // Initialize from_staker.
-    let from_pool = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let from_pool = stake_with_pool_enabled(:cfg);
     let from_pool_dispatcher = IPoolDispatcher { contract_address: from_pool };
-    enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: from_pool, :cfg, :token_address,
-    );
+    enter_delegation_pool_for_testing_using_dispatcher(pool_contract: from_pool, :cfg, :token);
 
     // Initialize to_staker.
     let to_staker = OTHER_STAKER_ADDRESS();
     cfg.test_info.staker_address = to_staker;
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
-    let to_pool = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let to_pool = stake_with_pool_enabled(:cfg);
 
     // Initialize SwitchPoolData.
     let pool_member = cfg.test_info.pool_member_address;
@@ -1708,25 +1667,69 @@ fn test_switch_staking_delegation_pool_assertions() {
             identifier: pool_member.into(),
         );
     assert_panic_with_error(:result, expected_error: Error::SELF_SWITCH_NOT_ALLOWED.describe());
+
+    // Catch UNSTAKE_IN_PROGRESS.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: to_staker);
+    staking_dispatcher.unstake_intent();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: from_pool);
+    let result = staking_pool_safe_dispatcher
+        .switch_staking_delegation_pool(
+            :to_staker,
+            :to_pool,
+            :switched_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into(),
+        );
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
+
+    // Initialize a staker.
+    let btc_staker = BTC_STAKER_ADDRESS();
+    cfg.test_info.staker_address = btc_staker;
+    cfg.staker_info.operational_address = DUMMY_ADDRESS();
+    stake_for_testing_using_dispatcher(:cfg);
+
+    // Catch DELEGATION_POOL_MISMATCH.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: from_pool);
+    let result = staking_pool_safe_dispatcher
+        .switch_staking_delegation_pool(
+            to_staker: btc_staker,
+            to_pool: DUMMY_ADDRESS(),
+            :switched_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into(),
+        );
+    assert_panic_with_error(:result, expected_error: Error::DELEGATION_POOL_MISMATCH.describe());
+
+    // Open a BTC pool.
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: btc_staker);
+    staking_dispatcher.set_commission(:commission);
+    let btc_token_address = cfg.test_info.btc_token.contract_address();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: btc_staker);
+    let btc_pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+
+    // Catch TOKEN_MISMATCH.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: from_pool);
+    let result = staking_pool_safe_dispatcher
+        .switch_staking_delegation_pool(
+            to_staker: btc_staker,
+            to_pool: btc_pool_contract,
+            :switched_amount,
+            data: serialized_data.span(),
+            identifier: pool_member.into(),
+        );
+    assert_panic_with_error(:result, expected_error: Error::TOKEN_MISMATCH.describe());
 }
 
 #[test]
 fn test_pool_contract_roles() {
-    let cfg: StakingInitConfig = Default::default();
-    // Deploy the token contract.
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
+    let mut cfg: StakingInitConfig = Default::default();
     // Deploy the staking contract and stake with pool enabled.
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    let pool_contract = stake_with_pool_enabled(:cfg);
     // Assert the correct governance admins are set.
     let pool_contract_roles_dispatcher = IRolesDispatcher { contract_address: pool_contract };
     assert!(
@@ -1744,8 +1747,7 @@ fn test_declare_operational_address() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_address = cfg.test_info.staker_address;
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
     // Check map is empty before declare.
@@ -1828,8 +1830,7 @@ fn test_declare_operational_address_operational_address_exists() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let operational_address = cfg.staker_info.operational_address;
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: operational_address,
@@ -1839,19 +1840,10 @@ fn test_declare_operational_address_operational_address_exists() {
 
 #[test]
 fn test_change_operational_address() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
@@ -1886,17 +1878,7 @@ fn test_change_operational_address() {
 #[should_panic(expected: "Staker does not exist")]
 fn test_change_operational_address_staker_doesnt_exist() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let staking_contract = deploy_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
     staking_dispatcher.change_operational_address(:operational_address);
@@ -1909,8 +1891,7 @@ fn test_change_operational_address_operational_address_exists() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -1924,8 +1905,7 @@ fn test_change_operational_address_unstake_in_progress() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_address = cfg.test_info.staker_address;
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -1941,8 +1921,7 @@ fn test_change_operational_address_is_not_eligible() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_address = cfg.test_info.staker_address;
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -1951,21 +1930,18 @@ fn test_change_operational_address_is_not_eligible() {
 
 #[test]
 fn test_set_commission() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
-    let interest = 0;
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let pool_contract = stake_with_pool_enabled(:cfg);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before_update = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(
@@ -1984,26 +1960,11 @@ fn test_set_commission() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.set_commission(:commission);
 
-    // Assert rewards is updated.
+    // Assert commission is updated.
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
-    let staker_rewards = compute_rewards_rounded_down(amount: staker_info.amount_own, :interest);
-    let pool_info = staker_info.get_pool_info();
-    let pool_rewards_including_commission = compute_rewards_rounded_up(
-        amount: pool_info.amount, :interest,
-    );
-    let commission_amount = compute_commission_amount_rounded_down(
-        rewards_including_commission: pool_rewards_including_commission,
-        commission: pool_info.commission,
-    );
-    let unclaimed_rewards_own = staker_rewards + commission_amount;
-
-    // Assert rewards and commission are updated in the staker info.
-    let mut expected_pool_info = staker_info.get_pool_info();
-    expected_pool_info.commission = commission;
-    let expected_staker_info = StakerInfoV1 {
-        unclaimed_rewards_own, pool_info: Option::Some(expected_pool_info), ..staker_info,
-    };
-    assert!(staker_info == expected_staker_info);
+    assert!(staker_info.get_pool_info().commission == commission);
+    let staker_pool_info = staking_dispatcher.staker_pool_info(:staker_address);
+    assert!(staker_pool_info.commission == Option::Some(commission));
 
     // Assert commission is updated in the pool contract.
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
@@ -2018,24 +1979,47 @@ fn test_set_commission() {
     assert_commission_changed_event(
         spied_event: events[0], :staker_address, new_commission: commission, :old_commission,
     );
+
+    // Assert rewards is calculated correctly.
+    let pool_balance_before = token_dispatcher.balance_of(account: pool_contract);
+    advance_epoch_global();
+    advance_block_into_attestation_window(
+        :cfg, stake: cfg.test_info.stake_amount + cfg.pool_member_info._deprecated_amount,
+    );
+    // Calculate rewards.
+    let (expected_staker_rewards, expected_pool_rewards) = calculate_staker_strk_rewards(
+        :staker_info,
+        :staking_contract,
+        minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
+    );
+    assert!(expected_staker_rewards.is_non_zero());
+    assert!(expected_pool_rewards.is_non_zero());
+    // Funds reward supplier.
+    fund(target: reward_supplier, amount: expected_staker_rewards + expected_pool_rewards, :token);
+    // Attest and get rewards.
+    let block_hash = Zero::zero();
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: cfg.staker_info.operational_address,
+    );
+    attestation_dispatcher.attest(:block_hash);
+    // Test staker rewards.
+    let expected_staker_info = StakerInfoV1 {
+        unclaimed_rewards_own: expected_staker_rewards, ..staker_info,
+    };
+    assert!(staking_dispatcher.staker_info_v1(:staker_address) == expected_staker_info);
+    // Test pool rewards.
+    let pool_balance_after = token_dispatcher.balance_of(account: pool_contract);
+    assert!(pool_balance_after == pool_balance_before + expected_pool_rewards.into());
 }
 
 #[test]
 fn test_set_commission_with_commitment() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg);
 
     // Set commitment.
     let staker_address = cfg.test_info.staker_address;
@@ -2071,21 +2055,12 @@ fn test_set_commission_with_commitment() {
 #[test]
 #[feature("safe_dispatcher")]
 fn test_set_commission_assertions_with_commitment() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg);
 
     // Set commitment.
     let staker_address = cfg.test_info.staker_address;
@@ -2128,18 +2103,9 @@ fn test_set_commission_assertions_with_commitment() {
 #[test]
 #[should_panic(expected: "Staker does not exist")]
 fn test_set_commission_caller_not_staker() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
@@ -2152,19 +2118,10 @@ fn test_set_commission_caller_not_staker() {
 #[test]
 #[should_panic(expected: "Commission can only be decreased")]
 fn test_set_commission_with_higher_commission() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    stake_with_pool_enabled(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
@@ -2178,19 +2135,10 @@ fn test_set_commission_with_higher_commission() {
 #[test]
 #[should_panic(expected: "Commission can only be decreased")]
 fn test_set_commission_with_same_commission() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    stake_with_pool_enabled(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
@@ -2203,19 +2151,11 @@ fn test_set_commission_with_same_commission() {
 
 #[test]
 fn test_set_commission_initialize_commission() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2238,19 +2178,10 @@ fn test_set_commission_initialize_commission() {
 #[test]
 #[should_panic(expected: "Unstake is in progress, staker is in an exit window")]
 fn test_set_commission_staker_in_exit_window() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
@@ -2268,19 +2199,10 @@ fn test_set_commission_staker_in_exit_window() {
 #[test]
 #[should_panic(expected: "Commission is out of range, expected to be 0-10000")]
 fn test_set_commission_commission_out_of_range() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let commission = COMMISSION_DENOMINATOR + 1;
     cheat_caller_address_once(
@@ -2295,8 +2217,7 @@ fn test_set_commission_commitment() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg);
     let staker_address = cfg.test_info.staker_address;
     let max_commission = COMMISSION_DENOMINATOR;
     let mut spy = snforge_std::spy_events();
@@ -2324,8 +2245,7 @@ fn test_get_staker_commission_commitment_no_commitment() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg);
     let staker_address = cfg.test_info.staker_address;
     staking_dispatcher.get_staker_commission_commitment(:staker_address);
 }
@@ -2335,7 +2255,7 @@ fn test_get_staker_commission_commitment_no_commitment() {
 fn test_set_commission_commitment_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token_address = cfg.test_info.strk_token.contract_address();
     let staker_address = cfg.test_info.staker_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -2355,7 +2275,7 @@ fn test_set_commission_commitment_assertions() {
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 
     // Should catch MISSING_POOL_CONTRACT.
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_safe_dispatcher
         .set_commission_commitment(max_commission: Zero::zero(), expiration_epoch: Zero::zero());
@@ -2416,19 +2336,11 @@ fn test_set_commission_commitment_assertions() {
 
 #[test]
 fn test_set_open_for_delegation() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
@@ -2455,19 +2367,11 @@ fn test_set_open_for_delegation() {
 
 #[test]
 fn test_set_open_for_delegation_with_btc_token() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    let btc_token_address = setup_btc_token(:cfg, name: BTC_TOKEN_NAME());
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
@@ -2504,23 +2408,19 @@ fn test_set_open_for_delegation_with_btc_token() {
 
 #[test]
 fn test_set_open_for_delegation_with_disabled_btc_token() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
-    let disabled_btc_token_address = BTC_TOKEN_ADDRESS();
+    let disabled_btc_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME_2(),
+        decimals: BTC_DECIMALS,
+    );
     // Only add the token but not enable it.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
@@ -2552,20 +2452,12 @@ fn test_set_open_for_delegation_with_disabled_btc_token() {
 #[test]
 #[should_panic(expected: "Commission is not set")]
 fn test_set_open_for_delegation_commission_not_set() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
@@ -2575,20 +2467,12 @@ fn test_set_open_for_delegation_commission_not_set() {
 #[test]
 #[should_panic(expected: "Unstake is in progress, staker is in an exit window")]
 fn test_set_open_for_delegation_unstake_in_progress() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
@@ -2600,17 +2484,8 @@ fn test_set_open_for_delegation_unstake_in_progress() {
 #[should_panic(expected: "Staker does not exist")]
 fn test_set_open_for_delegation_staker_not_exist() {
     let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let staking_contract = deploy_staking_contract(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let caller_address = NON_STAKER_ADDRESS();
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
@@ -2620,20 +2495,12 @@ fn test_set_open_for_delegation_staker_not_exist() {
 #[test]
 #[should_panic(expected: "Staker already has a pool")]
 fn test_set_open_for_delegation_strk_token_staker_has_pool() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
@@ -2643,20 +2510,12 @@ fn test_set_open_for_delegation_strk_token_staker_has_pool() {
 #[test]
 #[should_panic(expected: "Staker already has a pool")]
 fn test_set_open_for_delegation_btc_token_staker_has_pool() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
+    let btc_token_address = setup_btc_token(:cfg, name: BTC_TOKEN_NAME());
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
@@ -2670,20 +2529,11 @@ fn test_set_open_for_delegation_btc_token_staker_has_pool() {
 #[test]
 #[should_panic(expected: "Token does not exist")]
 fn test_set_open_for_delegation_token_does_not_exist() {
-    let cfg: StakingInitConfig = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: STRK_TOKEN_NAME(),
-    );
-    let btc_token_address = deploy_mock_erc20_contract(
-        initial_supply: cfg.test_info.initial_supply,
-        owner_address: cfg.test_info.owner_address,
-        name: BTC_TOKEN_NAME(),
-    );
-    let staking_contract = deploy_staking_contract(:token_address, :btc_token_address, :cfg);
+    let mut cfg: StakingInitConfig = Default::default();
+    let staking_contract = deploy_staking_contract(:cfg);
+    cfg.test_info.staking_contract = staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    stake_with_pool_enabled(:cfg);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.staker_address,
     );
@@ -2706,7 +2556,7 @@ fn test_set_min_stake() {
     );
     staking_config_dispatcher.set_min_stake(min_stake: new_min_stake);
     assert!(new_min_stake == staking_dispatcher.contract_parameters_v1().min_stake);
-    // Validate the single MinimumStakeChanged event.
+    // Validate MinimumStakeChanged event.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_min_stake");
     assert_minimum_stake_changed_event(spied_event: events[0], :old_min_stake, :new_min_stake);
@@ -2831,14 +2681,13 @@ fn test_set_reward_supplier_not_token_admin() {
 fn test_staker_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let mut expected_staker_info: StakerInfoV1 = cfg.staker_info.into();
     expected_staker_info.pool_info = Option::None;
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info == expected_staker_info);
 }
@@ -2857,11 +2706,11 @@ fn test_staker_info_staker_doesnt_exist() {
 fn test_staker_pool_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token_address = cfg.test_info.strk_token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pool_enabled(:cfg);
     let expected_pool_info = PoolInfo { pool_contract, token_address, amount: Zero::zero() };
     let expected_staker_pool_info = StakerPoolInfoV2 {
         commission: Option::Some(
@@ -2877,14 +2726,16 @@ fn test_staker_pool_info() {
 fn test_staker_pool_info_with_multiple_pools() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
-    let strk_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let strk_pool_contract = stake_with_pool_enabled(:cfg);
     let strk_delegated_amount = cfg.pool_member_info._deprecated_amount;
     enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: strk_pool_contract, :cfg, :token_address,
+        pool_contract: strk_pool_contract, :cfg, :token,
     );
-    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let btc_token = cfg.test_info.btc_token;
+    let btc_token_address = btc_token.contract_address();
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -2893,7 +2744,7 @@ fn test_staker_pool_info_with_multiple_pools() {
     let btc_delegated_amount = strk_delegated_amount * 2;
     cfg.pool_member_info._deprecated_amount = btc_delegated_amount;
     enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: btc_pool_contract, :cfg, token_address: btc_token_address,
+        pool_contract: btc_pool_contract, :cfg, token: btc_token,
     );
 
     let expected_strk_pool_info = PoolInfo {
@@ -2928,7 +2779,6 @@ fn test_staker_pool_info_staker_doesnt_exist() {
 fn test_get_staker_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
@@ -2939,7 +2789,7 @@ fn test_get_staker_info() {
     let mut expected_staker_info: StakerInfoV1 = cfg.staker_info.into();
     expected_staker_info.pool_info = Option::None;
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let option_staker_info = staking_dispatcher.get_staker_info_v1(:staker_address);
     assert!(option_staker_info == Option::Some(expected_staker_info));
 }
@@ -2950,10 +2800,8 @@ fn test_get_staker_info() {
 fn test_assert_caller_is_not_zero() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
-    let staking_contract = cfg.test_info.staking_contract;
     cfg.test_info.staker_address = Zero::zero();
-    stake_from_zero_address(:cfg, :token_address, :staking_contract);
+    stake_from_zero_address(:cfg);
 }
 
 #[test]
@@ -2961,12 +2809,11 @@ fn test_assert_caller_is_not_zero() {
 fn test_get_attestation_info_by_operational_address_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_safe_dispatcher = IStakingAttestationSafeDispatcher {
         contract_address: staking_contract,
     };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 
     // Catch STAKER_NOT_EXISTS.
     let operational_address = DUMMY_ADDRESS();
@@ -2981,8 +2828,7 @@ fn test_get_attestation_info_by_operational_address() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingAttestationDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
     let operational_address = cfg.staker_info.operational_address;
     let mut attestation_info = staking_dispatcher
@@ -3073,8 +2919,7 @@ fn test_update_rewards_from_attestation_contract_only_staker() {
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
         contract_address: reward_supplier,
     };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
@@ -3102,11 +2947,12 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     };
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
-    let token_address = cfg.staking_contract_info.token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let pool_contract = stake_with_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token_address);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
@@ -3123,12 +2969,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     assert!(pool_dispatcher.pool_member_info_v1(:pool_member).unclaimed_rewards.is_zero());
 
     // Fund reward supplier.
-    fund(
-        sender: cfg.test_info.owner_address,
-        recipient: reward_supplier,
-        amount: expected_staker_rewards + expected_pool_rewards,
-        :token_address,
-    );
+    fund(target: reward_supplier, amount: expected_staker_rewards + expected_pool_rewards, :token);
     let staker_info_expected = StakerInfoV1 {
         unclaimed_rewards_own: expected_staker_rewards, ..staker_info_before,
     };
@@ -3158,17 +2999,17 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     assert_number_of_events(
         actual: events.len(), expected: 2, message: "update_rewards_from_attestation_contract",
     );
-    assert_staker_rewards_updated_event(
-        spied_event: events[0],
-        :staker_address,
-        staker_rewards: expected_staker_rewards,
-        pool_rewards: [(pool_contract, expected_pool_rewards)].span(),
-    );
     assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[1],
+        spied_event: events[0],
         :staker_address,
         pool_address: pool_contract,
         amount: expected_pool_rewards,
+    );
+    assert_staker_rewards_updated_event(
+        spied_event: events[1],
+        :staker_address,
+        staker_rewards: expected_staker_rewards,
+        pool_rewards: [(pool_contract, expected_pool_rewards)].span(),
     );
 }
 
@@ -3183,11 +3024,13 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     };
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
-    let token_address = cfg.staking_contract_info.token_address;
-    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
+    let btc_token = cfg.test_info.btc_token;
+    let btc_token_address = btc_token.contract_address();
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     // Stake and open pool for STRK.
-    let strk_pool_contract = stake_with_pool_enabled(:cfg, :token_address, :staking_contract);
+    let strk_pool_contract = stake_with_pool_enabled(:cfg);
     let staker_address = cfg.test_info.staker_address;
     let commission = cfg.staker_info._deprecated_get_pool_info()._deprecated_commission;
     // Open pool for BTC.
@@ -3195,11 +3038,13 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     let btc_pool_contract = staking_dispatcher
         .set_open_for_delegation(token_address: btc_token_address);
     // Add another BTC token.
-    let btc_token_address_2 = deploy_mock_erc20_contract(
+    let btc_token_address_2 = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME_2(),
+        decimals: BTC_DECIMALS,
     );
+    let btc_token_2 = custom_decimals_token(token_address: btc_token_address_2);
     cheat_caller_address(
         contract_address: staking_contract,
         caller_address: cfg.test_info.security_admin,
@@ -3216,13 +3061,19 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
         .set_open_for_delegation(token_address: btc_token_address_2);
     // Enter pools.
     enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: strk_pool_contract, :cfg, :token_address,
+        pool_contract: strk_pool_contract, :cfg, :token,
     );
+    // Set delegated amount for BTC pools.
+    // TODO: Use enter_btc pool function.
+    cfg.pool_member_info._deprecated_amount = cfg.test_info.pool_member_btc_amount;
     enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: btc_pool_contract, :cfg, token_address: btc_token_address,
+        pool_contract: btc_pool_contract, :cfg, token: btc_token,
     );
+    // Set delegated amount for BTC pools.
+    // TODO: Use enter_btc pool function.
+    cfg.pool_member_info._deprecated_amount = cfg.test_info.pool_member_btc_amount;
     enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: btc_pool_contract_2, :cfg, token_address: btc_token_address_2,
+        pool_contract: btc_pool_contract_2, :cfg, token: btc_token_2,
     );
     advance_epoch_global();
     let attestation_contract = cfg.test_info.attestation_contract;
@@ -3260,12 +3111,7 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     let total_rewards = expected_staker_total_rewards
         + expected_strk_pool_rewards
         + 2 * expected_btc_pool_rewards;
-    fund(
-        sender: cfg.test_info.owner_address,
-        recipient: reward_supplier,
-        amount: total_rewards,
-        :token_address,
-    );
+    fund(target: reward_supplier, amount: total_rewards, :token);
     let staker_info_expected = StakerInfoV1 {
         unclaimed_rewards_own: expected_staker_total_rewards, ..staker_info_before,
     };
@@ -3307,8 +3153,26 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     assert_number_of_events(
         actual: events.len(), expected: 4, message: "update_rewards_from_attestation_contract",
     );
-    assert_staker_rewards_updated_event(
+    assert_rewards_supplied_to_delegation_pool_event(
         spied_event: events[0],
+        :staker_address,
+        pool_address: strk_pool_contract,
+        amount: expected_strk_pool_rewards,
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[1],
+        :staker_address,
+        pool_address: btc_pool_contract,
+        amount: expected_btc_pool_rewards,
+    );
+    assert_rewards_supplied_to_delegation_pool_event(
+        spied_event: events[2],
+        :staker_address,
+        pool_address: btc_pool_contract_2,
+        amount: expected_btc_pool_rewards,
+    );
+    assert_staker_rewards_updated_event(
+        spied_event: events[3],
         :staker_address,
         staker_rewards: expected_staker_total_rewards,
         pool_rewards: [
@@ -3318,24 +3182,6 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
         ]
             .span(),
     );
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[1],
-        :staker_address,
-        pool_address: strk_pool_contract,
-        amount: expected_strk_pool_rewards,
-    );
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[2],
-        :staker_address,
-        pool_address: btc_pool_contract,
-        amount: expected_btc_pool_rewards,
-    );
-    assert_rewards_supplied_to_delegation_pool_event(
-        spied_event: events[3],
-        :staker_address,
-        pool_address: btc_pool_contract_2,
-        amount: expected_btc_pool_rewards,
-    );
 }
 
 #[test]
@@ -3343,7 +3189,6 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
 fn test_update_rewards_from_attestation_contract_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_safe_dispatcher = IStakingAttestationSafeDispatcher {
         contract_address: staking_contract,
@@ -3351,7 +3196,7 @@ fn test_update_rewards_from_attestation_contract_assertions() {
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
 
     // Catch CALLER_IS_NOT_ATTESTATION_CONTRACT.
     let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
@@ -3500,13 +3345,12 @@ fn test_versioned_internal_staker_info_is_none() {
 fn test_internal_staker_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
     let mut expected_internal_staker_info = cfg.staker_info;
     expected_internal_staker_info._deprecated_pool_info = Option::None;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let internal_staker_info = staking_dispatcher.internal_staker_info(:staker_address);
     assert!(internal_staker_info == expected_internal_staker_info);
 }
@@ -3526,11 +3370,10 @@ fn test_internal_staker_info_staker_not_exist() {
 fn test_internal_staker_info_outdated_version() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let token_address = cfg.staking_contract_info.token_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     store_internal_staker_info_v0_to_map(
         :staker_address,
         :staking_contract,
@@ -3540,7 +3383,6 @@ fn test_internal_staker_info_outdated_version() {
         amount_own: cfg.test_info.stake_amount,
         index: cfg.test_info.global_index,
         unclaimed_rewards_own: cfg.staker_info.unclaimed_rewards_own,
-        pool_info: Option::None,
     );
     staking_dispatcher.internal_staker_info(:staker_address);
 }
@@ -3561,8 +3403,7 @@ fn test_staker_migration_up_to_date_new_staker() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingMigrationDispatcher { contract_address: staking_contract };
     staking_dispatcher.staker_migration(staker_address: cfg.test_info.staker_address);
 }
@@ -3938,13 +3779,9 @@ fn test_staking_eic() {
 
     // Upgrade.
     let new_pool_contract_class_hash = declare_pool_contract();
-    let token_address = BTC_TOKEN_ADDRESS();
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract_v1_v2(),
-        eic_init_data: [
-            MAINNET_STAKING_CLASS_HASH_V1().into(), new_pool_contract_class_hash.into(),
-            token_address.into(),
-        ]
+        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), new_pool_contract_class_hash.into()]
             .span(),
     };
     let implementation_data = ImplementationData {
@@ -3985,7 +3822,7 @@ fn test_staking_eic() {
         .at(0);
     assert!(pool_contract_class_hash.try_into().unwrap() == new_pool_contract_class_hash);
     // Test total stake trace.
-    let strk_token_address = cfg.staking_contract_info.token_address;
+    let strk_token_address = cfg.test_info.strk_token.contract_address();
     let trace_address = snforge_std::map_entry_address(
         map_selector: selector!("tokens_total_stake_trace"),
         keys: [strk_token_address.into()].span(),
@@ -4007,27 +3844,6 @@ fn test_staking_eic() {
     );
     assert!(key_2 == 2);
     assert!(value_2 == total_stake_2);
-    // Test token address is active.
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let active_tokens = staking_dispatcher.get_active_tokens();
-    // Strk token and BTC token are active.
-    assert!(active_tokens.len() == 3);
-    assert!(*active_tokens[0] == strk_token_address);
-    assert!(*active_tokens[1] == cfg.staking_contract_info.btc_token_address);
-    assert!(*active_tokens[2] == token_address);
-    // Test token total stake trace is initialized.
-    let trace_address = snforge_std::map_entry_address(
-        map_selector: selector!("tokens_total_stake_trace"), keys: [token_address.into()].span(),
-    );
-    let trace_length = load_trace_length(contract_address: staking_contract, :trace_address);
-    assert!(trace_length == 1);
-    let (key, value) = load_from_trace(
-        contract_address: staking_contract, :trace_address, index: 0,
-    );
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let current_epoch = staking_dispatcher.get_current_epoch();
-    assert!(key == current_epoch);
-    assert!(value == Zero::zero());
 }
 
 #[test]
@@ -4036,42 +3852,22 @@ fn test_staking_eic_assertions() {
     let eic_library_safe_dispatcher = IEICInitializableSafeLibraryDispatcher {
         class_hash: declare_staking_eic_contract_v1_v2(),
     };
-    // Catch EXPECTED_DATA_LENGTH_3.
+    // Catch EXPECTED_DATA_LENGTH_2.
     let result = eic_library_safe_dispatcher.eic_initialize(eic_init_data: [].span());
-    assert_panic_with_felt_error(:result, expected_error: 'EXPECTED_DATA_LENGTH_3');
+    assert_panic_with_felt_error(:result, expected_error: 'EXPECTED_DATA_LENGTH_2');
 
     // Catch Class hash is zero - prev class hash.
     let result = eic_library_safe_dispatcher
-        .eic_initialize(
-            eic_init_data: [
-                Zero::zero(), declare_pool_contract().into(), BTC_TOKEN_ADDRESS().into(),
-            ]
-                .span(),
-        );
+        .eic_initialize(eic_init_data: [Zero::zero(), declare_pool_contract().into()].span());
     assert_panic_with_error(:result, expected_error: GenericError::ZERO_CLASS_HASH.describe());
 
     // Catch Class hash is zero - pool contract class hash.
     let result = eic_library_safe_dispatcher
         .eic_initialize(
-            eic_init_data: [
-                MAINNET_STAKING_CLASS_HASH_V1().into(), Zero::zero(), BTC_TOKEN_ADDRESS().into(),
-            ]
-                .span(),
+            eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), Zero::zero()].span(),
         );
     assert_panic_with_error(:result, expected_error: GenericError::ZERO_CLASS_HASH.describe());
-
-    // Catch address is zero.
-    let result = eic_library_safe_dispatcher
-        .eic_initialize(
-            eic_init_data: [
-                MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
-                Zero::zero(),
-            ]
-                .span(),
-        );
-    assert_panic_with_error(:result, expected_error: GenericError::ZERO_ADDRESS.describe());
-    // TODO: Catch invalid token address.
-// TODO: Catch empty trace.
+    // TODO: Catch empty trace.
 }
 
 #[test]
@@ -4107,10 +3903,7 @@ fn test_staking_eic_total_stake_trace_empty() {
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract_v1_v2(),
-        eic_init_data: [
-            MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
-            BTC_TOKEN_ADDRESS().into(),
-        ]
+        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into()]
             .span(),
     };
     let implementation_data = ImplementationData {
@@ -4134,8 +3927,7 @@ fn test_staking_eic_prev_class_hash_zero_class_hash() {
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract_v1_v2(),
-        eic_init_data: [Zero::zero(), declare_pool_contract().into(), BTC_TOKEN_ADDRESS().into()]
-            .span(),
+        eic_init_data: [Zero::zero(), declare_pool_contract().into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -4159,66 +3951,7 @@ fn test_staking_eic_pool_contract_zero_class_hash() {
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract_v1_v2(),
-        eic_init_data: [
-            MAINNET_STAKING_CLASS_HASH_V1().into(), Zero::zero(), BTC_TOKEN_ADDRESS().into(),
-        ]
-            .span(),
-    };
-    let implementation_data = ImplementationData {
-        impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
-    };
-    // Cheat block timestamp to enable upgrade eligibility.
-    start_cheat_block_timestamp_global(
-        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
-    );
-    upgrade_implementation(
-        contract_address: staking_contract, :implementation_data, :upgrade_governor,
-    );
-}
-
-#[test]
-#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
-fn test_staking_eic_token_address_zero_address() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let upgrade_governor = cfg.test_info.upgrade_governor;
-    // Upgrade.
-    let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract_v1_v2(),
-        eic_init_data: [
-            MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(), Zero::zero(),
-        ]
-            .span(),
-    };
-    let implementation_data = ImplementationData {
-        impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
-    };
-    // Cheat block timestamp to enable upgrade eligibility.
-    start_cheat_block_timestamp_global(
-        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
-    );
-    upgrade_implementation(
-        contract_address: staking_contract, :implementation_data, :upgrade_governor,
-    );
-}
-
-#[test]
-#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
-fn test_staking_eic_token_address_invalid_address() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let upgrade_governor = cfg.test_info.upgrade_governor;
-    // Upgrade.
-    let strk_token_address = cfg.staking_contract_info.token_address;
-    let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract_v1_v2(),
-        eic_init_data: [
-            MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
-            strk_token_address.into(),
-        ]
-            .span(),
+        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), Zero::zero()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -4238,10 +3971,10 @@ fn test_get_current_total_staking_power() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     let staker_address = cfg.test_info.staker_address;
-    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let btc_token = cfg.test_info.btc_token;
+    let btc_token_address = btc_token.contract_address();
     cheat_caller_address(
         contract_address: staking_contract,
         caller_address: staker_address,
@@ -4250,9 +3983,7 @@ fn test_get_current_total_staking_power() {
     staking_dispatcher.set_commission(commission: Zero::zero());
     let pool_contract = staking_dispatcher
         .set_open_for_delegation(token_address: btc_token_address);
-    enter_delegation_pool_for_testing_using_dispatcher(
-        :pool_contract, :cfg, token_address: btc_token_address,
-    );
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, token: btc_token);
     let strk_total_stake = staking_dispatcher.staker_info_v1(:staker_address).amount_own;
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
@@ -4303,24 +4034,34 @@ fn test_add_token_assertions() {
     let result = staking_token_manager_safe_dispatcher.add_token(token_address: Zero::zero());
     assert_panic_with_error(:result, expected_error: GenericError::ZERO_ADDRESS.describe());
 
-    // Catch INVALID_TOKEN_ADDRESS.
+    // Catch INVALID_TOKEN_ADDRESS - STRK token.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
     );
     let result = staking_token_manager_safe_dispatcher
-        .add_token(token_address: cfg.staking_contract_info.token_address);
+        .add_token(token_address: cfg.test_info.strk_token.contract_address());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_TOKEN_ADDRESS.describe());
+
+    // Catch INVALID_TOKEN_ADDRESS - decimals.
+    let invalid_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS + 1,
+    );
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    let result = staking_token_manager_safe_dispatcher
+        .add_token(token_address: invalid_token_address);
     assert_panic_with_error(:result, expected_error: Error::INVALID_TOKEN_ADDRESS.describe());
 
     // Catch TOKEN_ALREADY_EXISTS.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
     );
-    let _ = staking_token_manager_safe_dispatcher.add_token(token_address: BTC_TOKEN_ADDRESS());
-    cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
-    );
     let result = staking_token_manager_safe_dispatcher
-        .add_token(token_address: BTC_TOKEN_ADDRESS());
+        .add_token(token_address: cfg.test_info.btc_token.contract_address());
     assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_EXISTS.describe());
 }
 
@@ -4332,8 +4073,8 @@ fn test_get_active_tokens() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let active_tokens = staking_dispatcher.get_active_tokens();
     assert!(active_tokens.len() == 2);
-    assert!(*active_tokens[0] == cfg.staking_contract_info.token_address);
-    assert!(*active_tokens[1] == cfg.staking_contract_info.btc_token_address);
+    assert!(*active_tokens[0] == cfg.test_info.strk_token.contract_address());
+    assert!(*active_tokens[1] == cfg.test_info.btc_token.contract_address());
 }
 
 #[test]
@@ -4344,7 +4085,12 @@ fn test_add_token() {
     let staking_token_dispatcher = IStakingTokenManagerDispatcher {
         contract_address: staking_contract,
     };
-    let btc_token_address = BTC_TOKEN_ADDRESS();
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
+    );
     // Add the BTC token.
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
@@ -4356,8 +4102,8 @@ fn test_add_token() {
     // The STRK token is always active.
     // The BTC token is not active yet.
     assert!(active_tokens.len() == 2);
-    assert!(*active_tokens[0] == cfg.staking_contract_info.token_address);
-    assert!(*active_tokens[1] == cfg.staking_contract_info.btc_token_address);
+    assert!(*active_tokens[0] == cfg.test_info.strk_token.contract_address());
+    assert!(*active_tokens[1] == cfg.test_info.btc_token.contract_address());
     // Assert the event was emitted.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "add_token");
@@ -4372,7 +4118,12 @@ fn test_enable_token() {
     let staking_token_dispatcher = IStakingTokenManagerDispatcher {
         contract_address: staking_contract,
     };
-    let btc_token_address = BTC_TOKEN_ADDRESS();
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
+    );
     // Add and enable the BTC token.
     cheat_caller_address(
         contract_address: staking_contract,
@@ -4385,8 +4136,8 @@ fn test_enable_token() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let active_tokens = staking_dispatcher.get_active_tokens();
     assert!(active_tokens.len() == 3);
-    assert!(*active_tokens[0] == cfg.staking_contract_info.token_address);
-    assert!(*active_tokens[1] == cfg.staking_contract_info.btc_token_address);
+    assert!(*active_tokens[0] == cfg.test_info.strk_token.contract_address());
+    assert!(*active_tokens[1] == cfg.test_info.btc_token.contract_address());
     assert!(*active_tokens[2] == btc_token_address);
     // Assert the event was emitted.
     let events = spy.get_events().emitted_by(staking_contract).events;
@@ -4402,7 +4153,12 @@ fn test_disable_token() {
     let staking_token_dispatcher = IStakingTokenManagerDispatcher {
         contract_address: staking_contract,
     };
-    let btc_token_address = BTC_TOKEN_ADDRESS();
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
+    );
     // Add and enable the BTC token.
     cheat_caller_address(
         contract_address: staking_contract,
@@ -4423,8 +4179,8 @@ fn test_disable_token() {
     let active_tokens = staking_dispatcher.get_active_tokens();
     // Only the STRK token is active.
     assert!(active_tokens.len() == 2);
-    assert!(*active_tokens[0] == cfg.staking_contract_info.token_address);
-    assert!(*active_tokens[1] == cfg.staking_contract_info.btc_token_address);
+    assert!(*active_tokens[0] == cfg.test_info.strk_token.contract_address());
+    assert!(*active_tokens[1] == cfg.test_info.btc_token.contract_address());
     // Assert the event was emitted.
     let events = spy.get_events().emitted_by(staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "disable_token");
@@ -4459,10 +4215,16 @@ fn test_enable_token_assertions() {
         caller_address: cfg.test_info.security_admin,
         span: CheatSpan::TargetCalls(3),
     );
-    let _ = staking_token_manager_safe_dispatcher.add_token(token_address: BTC_TOKEN_ADDRESS());
-    let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: BTC_TOKEN_ADDRESS());
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
+    );
+    let _ = staking_token_manager_safe_dispatcher.add_token(token_address: btc_token_address);
+    let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: btc_token_address);
     let result = staking_token_manager_safe_dispatcher
-        .enable_token(token_address: BTC_TOKEN_ADDRESS());
+        .enable_token(token_address: btc_token_address);
     assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_ENABLED.describe());
 }
 
@@ -4489,29 +4251,35 @@ fn test_disable_token_assertions() {
     assert_panic_with_error(:result, expected_error: Error::TOKEN_NOT_EXISTS.describe());
 
     // Catch TOKEN_ALREADY_DISABLED.
+    let btc_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+        decimals: BTC_DECIMALS,
+    );
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
     );
-    let _ = staking_token_manager_safe_dispatcher.add_token(token_address: BTC_TOKEN_ADDRESS());
+    let _ = staking_token_manager_safe_dispatcher.add_token(token_address: btc_token_address);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
     let result = staking_token_manager_safe_dispatcher
-        .disable_token(token_address: BTC_TOKEN_ADDRESS());
+        .disable_token(token_address: btc_token_address);
     assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_DISABLED.describe());
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
     );
-    let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: BTC_TOKEN_ADDRESS());
+    let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: btc_token_address);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
-    let _ = staking_token_manager_safe_dispatcher.disable_token(token_address: BTC_TOKEN_ADDRESS());
+    let _ = staking_token_manager_safe_dispatcher.disable_token(token_address: btc_token_address);
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
     let result = staking_token_manager_safe_dispatcher
-        .disable_token(token_address: BTC_TOKEN_ADDRESS());
+        .disable_token(token_address: btc_token_address);
     assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_DISABLED.describe());
 }
 
@@ -4521,8 +4289,9 @@ fn test_get_total_stake_for_token() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let token_address = cfg.staking_contract_info.token_address;
-    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let btc_token = cfg.test_info.btc_token;
+    let btc_token_address = btc_token.contract_address();
     // Test when zero stake.
     let total_strk_stake = staking_dispatcher.get_total_stake_for_token(:token_address);
     let total_btc_stake = staking_dispatcher
@@ -4530,7 +4299,7 @@ fn test_get_total_stake_for_token() {
     assert!(total_strk_stake.is_zero());
     assert!(total_btc_stake.is_zero());
     // Test when non-zero stake.
-    stake_for_testing_using_dispatcher(:cfg, :token_address, :staking_contract);
+    stake_for_testing_using_dispatcher(:cfg);
     cheat_caller_address(
         contract_address: staking_contract,
         caller_address: cfg.test_info.staker_address,
@@ -4540,7 +4309,7 @@ fn test_get_total_stake_for_token() {
     let btc_pool_contract = staking_dispatcher
         .set_open_for_delegation(token_address: btc_token_address);
     enter_delegation_pool_for_testing_using_dispatcher(
-        pool_contract: btc_pool_contract, :cfg, token_address: btc_token_address,
+        pool_contract: btc_pool_contract, :cfg, token: btc_token,
     );
     let total_strk_stake = staking_dispatcher.get_total_stake_for_token(:token_address);
     let total_btc_stake = staking_dispatcher
@@ -4566,7 +4335,7 @@ fn test_get_total_stake_for_token_not_active() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let btc_token_address = cfg.staking_contract_info.btc_token_address;
+    let btc_token_address = cfg.test_info.btc_token.contract_address();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
