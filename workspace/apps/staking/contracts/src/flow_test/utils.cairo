@@ -1187,11 +1187,27 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
         } else {
             self.set_commission(:staker, :commission);
             let token_address = self.staking.dispatcher().contract_parameters_v1().token_address;
-            cheat_caller_address_once(
-                contract_address: self.staking.address, caller_address: staker.staker.address,
-            );
-            self.staking.dispatcher().set_open_for_delegation(:token_address)
+            self.set_open_for_delegation(:staker, :token_address)
         }
+    }
+
+    fn set_open_for_delegation(
+        self: SystemState, staker: Staker, token_address: ContractAddress,
+    ) -> ContractAddress {
+        cheat_caller_address_once(
+            contract_address: self.staking.address, caller_address: staker.staker.address,
+        );
+        self.staking.dispatcher().set_open_for_delegation(:token_address)
+    }
+
+    #[feature("safe_dispatcher")]
+    fn safe_set_open_for_delegation(
+        self: SystemState, staker: Staker, token_address: ContractAddress,
+    ) -> Result<ContractAddress, Array<felt252>> {
+        cheat_caller_address_once(
+            contract_address: self.staking.address, caller_address: staker.staker.address,
+        );
+        self.staking.safe_dispatcher().set_open_for_delegation(:token_address)
     }
 
     fn staker_claim_rewards(self: SystemState, staker: Staker) -> Amount {
