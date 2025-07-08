@@ -3894,6 +3894,37 @@ pub(crate) impl StakerInIntentMigrationVecFlowImpl of FlowTrait<StakerInIntentMi
 }
 
 /// Flow:
+/// Staker stake with pool
+/// Upgrade
+/// Staker migration
+/// Staker set commission
+/// Test staker pool info commission is set
+#[derive(Drop, Copy)]
+pub(crate) struct StakerWithPoolMigrationSetCommissionFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerWithPoolMigrationSetCommissionFlowImpl of FlowTrait<
+    StakerWithPoolMigrationSetCommissionFlow,
+> {
+    fn setup_v1(ref self: StakerWithPoolMigrationSetCommissionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        self.staker = Option::Some(staker);
+    }
+    fn test(self: StakerWithPoolMigrationSetCommissionFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        system.staker_migration(:staker_address);
+
+        system.set_commission(:staker, commission: 100);
+        let staker_pool_info = system.staker_pool_info(:staker);
+        assert!(staker_pool_info.commission == Option::Some(100));
+    }
+}
+
+/// Flow:
 /// Staker stake
 /// Staker exit intent
 /// Upgrade

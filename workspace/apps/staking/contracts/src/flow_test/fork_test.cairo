@@ -380,6 +380,13 @@ fn staker_in_intent_migration_vec_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn staker_with_pool_migration_set_commission_regression_test() {
+    let mut flow = flows::StakerWithPoolMigrationSetCommissionFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn staker_exit_regression_test() {
     let mut flow = flows::StakerExitFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
