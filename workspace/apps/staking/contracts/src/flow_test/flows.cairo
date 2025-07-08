@@ -3911,6 +3911,71 @@ pub(crate) impl MultipleStakersMigrationVecFlowImpl of FlowTrait<MultipleStakers
     }
 }
 
+/// Test staker without pool migration open pools
+/// Flow:
+/// Staker stake
+/// Upgrade
+/// Staker migration
+/// Staker open btc pool
+/// Staker open strk pool
+/// Staker open btc pool with the same token (should fail)
+/// Test staker_pool_info
+#[derive(Drop, Copy)]
+pub(crate) struct StakerWithoutPoolMigrationOpenPoolsFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerWithoutPoolMigrationOpenPoolsFlowImpl of FlowTrait<
+    StakerWithoutPoolMigrationOpenPoolsFlow,
+> {
+    fn setup_v1(ref self: StakerWithoutPoolMigrationOpenPoolsFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        self.staker = Option::Some(staker);
+    }
+    fn test(self: StakerWithoutPoolMigrationOpenPoolsFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        let commission = 100;
+        system.staker_migration(:staker_address);
+        system.set_commission(:staker, :commission);
+
+        // Open pools.
+        let btc_pool_contract = system
+            .set_open_for_delegation(:staker, token_address: system.btc_token.contract_address());
+        let strk_pool_contract = system
+            .set_open_for_delegation(:staker, token_address: system.token.contract_address());
+
+        // Try to open a second btc pool with the same token.
+        let res = system
+            .safe_set_open_for_delegation(
+                staker: staker, token_address: system.btc_token.contract_address(),
+            );
+        assert_panic_with_error(res, StakingError::STAKER_ALREADY_HAS_POOL.describe());
+
+        // Assert pool info.
+        let expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::Some(commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract: btc_pool_contract,
+                    token_address: system.btc_token.contract_address(),
+                    amount: 0,
+                },
+                PoolInfo {
+                    pool_contract: strk_pool_contract,
+                    token_address: system.token.contract_address(),
+                    amount: 0,
+                },
+            ]
+                .span(),
+        };
+        let staker_pool_info = system.staker_pool_info(:staker);
+        assert!(staker_pool_info == expected_pool_info);
+    }
+}
+
 /// Test staker vector with staker in intent
 /// Flow:
 /// Staker stake
