@@ -1059,6 +1059,30 @@ pub(crate) impl SystemImpl of SystemTrait {
         );
         advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
     }
+
+    fn add_token(self: SystemState, token_address: ContractAddress) {
+        cheat_caller_address_once(
+            contract_address: self.staking.address,
+            caller_address: self.staking.roles.security_admin,
+        );
+        self.staking.token_manager_dispatcher().add_token(:token_address);
+    }
+
+    fn enable_token(self: SystemState, token_address: ContractAddress) {
+        cheat_caller_address_once(
+            contract_address: self.staking.address,
+            caller_address: self.staking.roles.security_admin,
+        );
+        self.staking.token_manager_dispatcher().enable_token(:token_address);
+    }
+
+    fn disable_token(self: SystemState, token_address: ContractAddress) {
+        cheat_caller_address_once(
+            contract_address: self.staking.address,
+            caller_address: self.staking.roles.security_agent,
+        );
+        self.staking.token_manager_dispatcher().disable_token(:token_address);
+    }
 }
 
 #[generate_trait]

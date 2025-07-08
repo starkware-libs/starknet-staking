@@ -4,8 +4,8 @@ use staking::constants::{MIN_ATTESTATION_WINDOW, STRK_BASE_VALUE, STRK_DECIMALS,
 use staking::errors::GenericError;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
-    SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait,
-    TokenHelperTrait,
+    SystemConfigTrait, SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState,
+    SystemTrait, TokenHelperTrait,
 };
 use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
@@ -13,8 +13,8 @@ use staking::pool::interface_v0::{
 };
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
-    CommissionCommitment, IStakingSafeDispatcherTrait, PoolInfo, StakerInfoV1, StakerInfoV1Trait,
-    StakerPoolInfoV2,
+    CommissionCommitment, IStakingDispatcherTrait, IStakingSafeDispatcherTrait, PoolInfo,
+    StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils::constants::EPOCH_DURATION;
@@ -26,10 +26,13 @@ use staking::test_utils::{
 use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
 use staking::utils::compute_rewards_rounded_down;
 use starknet::{ContractAddress, Store};
+use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::time::time::Time;
-use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
+use starkware_utils_testing::test_utils::{
+    TokenConfig, assert_panic_with_error, cheat_caller_address_once,
+};
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
 /// Staker increase_stake - cover if pool amount = 0 in calc_rew
@@ -4108,6 +4111,36 @@ pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
         system.advance_block_into_attestation_window(:staker);
         let res = system.safe_attest(:staker);
         assert_panic_with_error(res, StakingError::UNSTAKE_IN_PROGRESS.describe());
+    }
+}
+
+/// Flow:
+/// Create btc token
+/// Enable btc token
+/// Disable btc token
+/// Test btc token is disabled
+#[derive(Drop, Copy)]
+pub(crate) struct EnableDisableBtcTokenSameEpochFlow {}
+pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
+    EnableDisableBtcTokenSameEpochFlow,
+> {
+    fn test(self: EnableDisableBtcTokenSameEpochFlow, ref system: SystemState) {
+        let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
+
+        let btc_token = TokenConfig {
+            name: "DUMMY_BTC_TOKEN",
+            symbol: SYMBOL(),
+            initial_supply: 0,
+            owner: 'DUMMY_OWNER'.try_into().unwrap(),
+        }
+            .deploy_btc_token();
+        let token_address = btc_token.contract_address();
+        system.add_token(:token_address);
+        system.enable_token(:token_address);
+        system.disable_token(:token_address);
+
+        let active_tokens = system.staking.dispatcher().get_active_tokens();
+        assert!(active_tokens == expected_active_tokens);
     }
 }
 // TODO: Implement this flow test.
