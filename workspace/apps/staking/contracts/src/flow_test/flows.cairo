@@ -4009,6 +4009,42 @@ pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
         assert_panic_with_error(res, GenericError::STAKER_NOT_EXISTS.describe());
     }
 }
+
+/// Flow:
+/// Staker stake
+/// Staker exit intent
+/// Upgrade
+/// Staker migration
+/// Test staker attestation fails
+#[derive(Drop, Copy)]
+pub(crate) struct StakerExitIntentAttestAfterMigrationFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
+    StakerExitIntentAttestAfterMigrationFlow,
+> {
+    fn setup_v1(ref self: StakerExitIntentAttestAfterMigrationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.advance_epoch();
+        system.staker_exit_intent(:staker);
+
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: StakerExitIntentAttestAfterMigrationFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        system.staker_migration(:staker_address);
+
+        system.advance_block_into_attestation_window(:staker);
+        let res = system.safe_attest(:staker);
+        assert_panic_with_error(res, StakingError::UNSTAKE_IN_PROGRESS.describe());
+    }
+}
 // TODO: Implement this flow test.
 // Stake
 // Upgrade

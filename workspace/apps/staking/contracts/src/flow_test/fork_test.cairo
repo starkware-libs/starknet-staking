@@ -400,3 +400,10 @@ fn staker_exit_regression_test() {
     let mut flow = flows::StakerExitFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_exit_intent_attest_after_migration_flow_test() {
+    let mut flow = flows::StakerExitIntentAttestAfterMigrationFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}

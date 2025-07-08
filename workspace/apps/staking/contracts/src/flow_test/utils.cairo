@@ -12,7 +12,10 @@ use snforge_std::{
     cheat_caller_address, start_cheat_block_hash_global, start_cheat_block_number_global,
     start_cheat_block_timestamp_global,
 };
-use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
+use staking::attestation::interface::{
+    IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
+    IAttestationSafeDispatcherTrait,
+};
 use staking::constants::{BTC_DECIMALS, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
@@ -744,6 +747,10 @@ pub(crate) impl AttestationImpl of AttestationTrait {
         IAttestationDispatcher { contract_address: self.address }
     }
 
+    fn safe_dispatcher(self: AttestationState) -> IAttestationSafeDispatcher nopanic {
+        IAttestationSafeDispatcher { contract_address: self.address }
+    }
+
     fn set_roles(self: AttestationState) {
         set_account_as_upgrade_governor(
             contract: self.address,
@@ -1266,6 +1273,17 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
             caller_address: staker.operational.address,
         );
         self.attestation.unwrap().dispatcher().attest(:block_hash);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn safe_attest(self: SystemState, staker: Staker) -> Result<(), Array<felt252>> {
+        let block_hash = Zero::zero();
+        self.cheat_target_attestation_block_hash(:staker, :block_hash);
+        cheat_caller_address_once(
+            contract_address: self.attestation.unwrap().address,
+            caller_address: staker.operational.address,
+        );
+        self.attestation.unwrap().safe_dispatcher().attest(:block_hash)
     }
 
     fn advance_epoch_and_attest(self: SystemState, staker: Staker) {
