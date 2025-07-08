@@ -11,6 +11,7 @@ use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
+use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     CommissionCommitment, PoolInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
@@ -1910,6 +1911,67 @@ pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
 
         assert!(new_pool_info == expected_pool_info);
         assert!(new_staker_info == old_staker_info);
+    }
+}
+
+/// Flow
+/// Staker stake with pool
+/// Upgrade
+/// Staker migration
+/// Test staker_info did not change
+/// Test staker_pool_info
+/// Test commission commitment not set
+#[derive(Drop, Copy)]
+pub(crate) struct StakerWithPoolWithoutCommissionCommitmentMigrationFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) staker_info: Option<StakerInfoV1>,
+}
+pub(crate) impl StakerWithPoolWithoutCommissionCommitmentMigrationFlowImpl of FlowTrait<
+    StakerWithPoolWithoutCommissionCommitmentMigrationFlow,
+> {
+    fn setup_v1(
+        ref self: StakerWithPoolWithoutCommissionCommitmentMigrationFlow, ref system: SystemState,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        self.staker = Option::Some(staker);
+        self.staker_info = Option::Some(system.staker_info_v1(:staker));
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: StakerWithPoolWithoutCommissionCommitmentMigrationFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        system.staker_migration(:staker_address);
+
+        // Test staker_info did not change.
+        let old_staker_info = system.staker_info_v1(:staker);
+        assert!(old_staker_info == self.staker_info.unwrap());
+
+        // Test staker_pool_info
+        let old_pool_info = old_staker_info.get_pool_info();
+        let expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::Some(old_pool_info.commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract: old_pool_info.pool_contract,
+                    amount: old_pool_info.amount,
+                    token_address: system.staking.get_token_address(),
+                },
+            ]
+                .span(),
+        };
+        let staker_pool_info = system.staker_pool_info(:staker);
+        assert!(staker_pool_info == expected_pool_info);
+
+        // Test commission commitment not set.
+        let commission_commitment = system.safe_get_staker_commission_commitment(:staker);
+        assert_panic_with_error(
+            commission_commitment, StakingError::COMMISSION_COMMITMENT_NOT_SET.describe(),
+        );
     }
 }
 

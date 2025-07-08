@@ -1237,6 +1237,16 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
             .get_staker_commission_commitment(staker_address: staker.staker.address)
     }
 
+    #[feature("safe_dispatcher")]
+    fn safe_get_staker_commission_commitment(
+        self: SystemState, staker: Staker,
+    ) -> Result<CommissionCommitment, Array<felt252>> {
+        self
+            .staking
+            .safe_dispatcher()
+            .get_staker_commission_commitment(staker_address: staker.staker.address)
+    }
+
     fn internal_staker_info(self: SystemState, staker: Staker) -> InternalStakerInfoLatest {
         self
             .staking

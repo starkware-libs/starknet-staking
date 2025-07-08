@@ -244,6 +244,15 @@ fn staker_migration_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn staker_with_pool_without_commission_commitment_migration_flow_test() {
+    let mut flow = flows::StakerWithPoolWithoutCommissionCommitmentMigrationFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 #[should_panic(expected: "Staker Info is already up-to-date")]
 fn staker_migration_called_twice_regression_test() {
     let mut flow = flows::StakerMigrationCalledTwiceFlow { staker: Option::None };
