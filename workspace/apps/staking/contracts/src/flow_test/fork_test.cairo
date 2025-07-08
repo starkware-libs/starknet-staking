@@ -313,6 +313,15 @@ fn staker_with_pool_in_intent_migration_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn staker_without_pool_in_intent_migration_flow_test() {
+    let mut flow = flows::StakerWithoutPoolInIntentMigrationFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn delegator_action_with_non_upgraded_pool_regression_test() {
     let mut flow = flows::DelegatorActionWithNonUpgradedPoolFlow {
         staker: Option::None,

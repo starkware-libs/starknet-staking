@@ -1869,7 +1869,10 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
 /// Flow:
 /// Staker stake with pool
 /// Staker exit intent
+/// Upgrade
 /// Staker migration
+/// Test staker_pool_info
+/// Test staker_info did not change
 #[derive(Drop, Copy)]
 pub(crate) struct StakerWithPoolInIntentMigrationFlow {
     pub(crate) staker: Option<Staker>,
@@ -1973,6 +1976,51 @@ pub(crate) impl StakerWithPoolWithoutCommissionCommitmentMigrationFlowImpl of Fl
         assert_panic_with_error(
             commission_commitment, StakingError::COMMISSION_COMMITMENT_NOT_SET.describe(),
         );
+    }
+}
+
+/// Test staker_migration - without pool, in intent.
+/// Flow:
+/// Staker stake
+/// Staker exit intent
+/// Upgrade
+/// Staker migration
+/// Test staker_pool_info
+/// Test staker_info did not change
+#[derive(Drop, Copy)]
+pub(crate) struct StakerWithoutPoolInIntentMigrationFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) staker_info: Option<StakerInfoV1>,
+}
+pub(crate) impl StakerWithoutPoolInIntentMigrationFlowImpl of FlowTrait<
+    StakerWithoutPoolInIntentMigrationFlow,
+> {
+    fn setup_v1(ref self: StakerWithoutPoolInIntentMigrationFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let amount = min_stake * 2;
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.staker_exit_intent(:staker);
+
+        self.staker = Option::Some(staker);
+        self.staker_info = Option::Some(system.staker_info_v1(:staker));
+    }
+
+    fn test(self: StakerWithoutPoolInIntentMigrationFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        let old_staker_info = self.staker_info.unwrap();
+        let expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::None, pools: array![].span(),
+        };
+
+        system.staker_migration(:staker_address);
+        let new_staker_info = system.staker_info_v1(:staker);
+        let new_pool_info = system.staker_pool_info(:staker);
+
+        assert!(new_pool_info == expected_pool_info);
+        assert!(new_staker_info == old_staker_info);
     }
 }
 
