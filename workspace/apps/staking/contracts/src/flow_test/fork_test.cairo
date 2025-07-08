@@ -370,3 +370,10 @@ fn multiple_stakers_migration_vec_flow_test() {
     let mut flow = flows::MultipleStakersMigrationVecFlow { old_stakers: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_in_intent_migration_vec_flow_test() {
+    let mut flow = flows::StakerInIntentMigrationVecFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}

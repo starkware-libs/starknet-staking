@@ -3861,6 +3861,36 @@ pub(crate) impl MultipleStakersMigrationVecFlowImpl of FlowTrait<MultipleStakers
         );
     }
 }
+
+/// Test staker vector with staker in intent
+/// Flow:
+/// Staker stake
+/// Staker exit intent
+/// Upgrade
+/// Staker migration
+/// Test staker in staker vector
+#[derive(Drop, Copy)]
+pub(crate) struct StakerInIntentMigrationVecFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerInIntentMigrationVecFlowImpl of FlowTrait<StakerInIntentMigrationVecFlow> {
+    fn setup_v1(ref self: StakerInIntentMigrationVecFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.staker_exit_intent(staker: staker);
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(self: StakerInIntentMigrationVecFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        system.staker_migration(staker_address: staker.staker.address);
+
+        let actual_stakers = system.staking.get_stakers();
+        assert!(actual_stakers == array![staker.staker.address].span());
+    }
+}
 // TODO: Implement this flow test.
 // Stake
 // Upgrade
