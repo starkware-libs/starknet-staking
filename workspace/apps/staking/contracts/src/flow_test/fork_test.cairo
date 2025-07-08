@@ -354,3 +354,10 @@ fn delegator_exit_with_non_upgraded_pool_regression_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn multiple_stakers_migration_vec_flow_test() {
+    let mut flow = flows::MultipleStakersMigrationVecFlow { old_stakers: Option::None };
+    test_flow_mainnet(ref :flow);
+}

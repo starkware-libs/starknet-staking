@@ -3750,6 +3750,55 @@ pub(crate) impl DiverseStakerVecFlowImpl of FlowTrait<DiverseStakerVecFlow> {
         assert!(actual_stakers.at(index: 3) == @staker_in_action.staker.address);
     }
 }
+
+/// Test multiple stakers migration
+/// Flow:
+/// Staker1 stake
+/// Staker2 stake
+/// Upgrade
+/// Migrate stakers
+/// Test stakers in stakers vector
+/// Staker3 stake
+/// Test stakers in stakers vector
+#[derive(Drop, Copy)]
+pub(crate) struct MultipleStakersMigrationVecFlow {
+    pub(crate) old_stakers: Option<(Staker, Staker)>,
+}
+pub(crate) impl MultipleStakersMigrationVecFlowImpl of FlowTrait<MultipleStakersMigrationVecFlow> {
+    fn setup_v1(ref self: MultipleStakersMigrationVecFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker1 = system.new_staker(:amount);
+        let staker2 = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(staker: staker1, :amount, pool_enabled: false, :commission);
+        system.stake(staker: staker2, :amount, pool_enabled: false, :commission);
+        self.old_stakers = Option::Some((staker1, staker2));
+    }
+
+    fn test(self: MultipleStakersMigrationVecFlow, ref system: SystemState) {
+        let old_stakers = self.old_stakers.unwrap();
+        let (staker1, staker2) = old_stakers;
+
+        system.staker_migration(staker_address: staker1.staker.address);
+        system.staker_migration(staker_address: staker2.staker.address);
+
+        let actual_stakers = system.staking.get_stakers();
+        assert!(actual_stakers == array![staker1.staker.address, staker2.staker.address].span());
+
+        let amount = system.staking.get_min_stake();
+        let staker3 = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(staker: staker3, :amount, pool_enabled: false, :commission);
+
+        let actual_stakers = system.staking.get_stakers();
+        assert!(
+            actual_stakers == array![
+                staker1.staker.address, staker2.staker.address, staker3.staker.address,
+            ]
+                .span(),
+        );
+    }
+}
 // TODO: Implement this flow test.
 // Stake
 // Upgrade
