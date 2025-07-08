@@ -13,7 +13,8 @@ use staking::pool::interface_v0::{
 };
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
-    CommissionCommitment, PoolInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+    CommissionCommitment, IStakingSafeDispatcherTrait, PoolInfo, StakerInfoV1, StakerInfoV1Trait,
+    StakerPoolInfoV2,
 };
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils::constants::EPOCH_DURATION;
@@ -3889,6 +3890,44 @@ pub(crate) impl StakerInIntentMigrationVecFlowImpl of FlowTrait<StakerInIntentMi
 
         let actual_stakers = system.staking.get_stakers();
         assert!(actual_stakers == array![staker.staker.address].span());
+    }
+}
+
+/// Flow:
+/// Staker stake
+/// Staker exit intent
+/// Upgrade
+/// Staker migration
+/// Advance time
+/// Staker exit action
+/// Test staker does not exist
+#[derive(Drop, Copy)]
+pub(crate) struct StakerExitFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
+    fn setup_v1(ref self: StakerExitFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.staker_exit_intent(:staker);
+
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: StakerExitFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        system.staker_migration(staker_address: staker.staker.address);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.staker_exit_action(:staker);
+
+        let res = system
+            .staking
+            .safe_dispatcher()
+            .staker_info_v1(staker_address: staker.staker.address);
+        assert_panic_with_error(res, GenericError::STAKER_NOT_EXISTS.describe());
     }
 }
 // TODO: Implement this flow test.
