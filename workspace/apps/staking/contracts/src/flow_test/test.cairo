@@ -148,6 +148,12 @@ fn diverse_staker_vec_flow_test() {
     test_flow_local(:flow);
 }
 
+#[test]
+fn enable_disable_btc_token_same_epoch_flow_test() {
+    let flow = flows::EnableDisableBtcTokenSameEpochFlow {};
+    test_flow_local(flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
