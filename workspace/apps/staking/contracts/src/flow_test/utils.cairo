@@ -31,7 +31,7 @@ use staking::staking::interface::{
     IStakingMigrationDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
     IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
-    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::interface_v0::{
     IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
@@ -1220,6 +1220,10 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
 
     fn staker_info(self: SystemState, staker: Staker) -> StakerInfo {
         self.staking.dispatcher_v0_for_tests().staker_info(staker_address: staker.staker.address)
+    }
+
+    fn staker_pool_info(self: SystemState, staker: Staker) -> StakerPoolInfoV2 {
+        self.staking.dispatcher().staker_pool_info(staker_address: staker.staker.address)
     }
 
     fn get_staker_info(self: SystemState, staker: Staker) -> Option<StakerInfoV1> {

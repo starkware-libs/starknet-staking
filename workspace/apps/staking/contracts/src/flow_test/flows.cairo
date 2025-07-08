@@ -11,7 +11,9 @@ use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
-use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerInfoV1Trait};
+use staking::staking::interface::{
+    CommissionCommitment, PoolInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+};
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils::constants::EPOCH_DURATION;
 use staking::test_utils::{
@@ -1858,6 +1860,56 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
             .try_into()
             .unwrap();
         assert!(staker_in_vec == staker_address);
+    }
+}
+
+/// Test staker_migration - with pool, with intent.
+/// Flow:
+/// Staker stake with pool
+/// Staker exit intent
+/// Staker migration
+#[derive(Drop, Copy)]
+pub(crate) struct StakerWithPoolInIntentMigrationFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) staker_info: Option<StakerInfoV1>,
+}
+pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
+    StakerWithPoolInIntentMigrationFlow,
+> {
+    fn setup_v1(ref self: StakerWithPoolInIntentMigrationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        system.staker_exit_intent(:staker);
+
+        self.staker = Option::Some(staker);
+        self.staker_info = Option::Some(system.staker_info_v1(:staker));
+    }
+
+    fn test(self: StakerWithPoolInIntentMigrationFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        let old_staker_info = self.staker_info.unwrap();
+        let old_pool_info = old_staker_info.get_pool_info();
+        let expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::Some(old_pool_info.commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract: old_pool_info.pool_contract,
+                    amount: old_pool_info.amount,
+                    token_address: system.staking.get_token_address(),
+                },
+            ]
+                .span(),
+        };
+
+        system.staker_migration(:staker_address);
+        let new_staker_info = system.staker_info_v1(:staker);
+        let new_pool_info = system.staker_pool_info(:staker);
+
+        assert!(new_pool_info == expected_pool_info);
+        assert!(new_staker_info == old_staker_info);
     }
 }
 
