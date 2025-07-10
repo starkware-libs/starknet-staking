@@ -2032,7 +2032,7 @@ pub(crate) impl StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlowImpl of Fl
         ref self: StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow, ref system: SystemState,
     ) {
         let amount = system.staking.get_min_stake();
-        let staker = system.new_staker(:amount);
+        let staker = system.new_staker(amount: amount * 2);
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: false, :commission);
         system.advance_epoch();
