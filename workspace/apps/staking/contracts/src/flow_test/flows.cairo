@@ -1989,6 +1989,55 @@ pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
     }
 }
 
+/// Flow:
+/// Staker stake
+/// Advance epoch
+/// Upgrade
+/// Staker migration
+/// Open strk pool
+/// Test staker pool info
+#[derive(Drop, Copy)]
+pub(crate) struct StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlowImpl of FlowTrait<
+    StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow,
+> {
+    fn setup_v1(
+        ref self: StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow, ref system: SystemState,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.advance_epoch();
+        system.increase_stake(:staker, :amount);
+
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(self: StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        let commission = 200;
+        system.staker_migration(:staker_address);
+
+        let pool_contract = system.set_open_for_strk_delegation(:staker, :commission);
+
+        let expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::Some(commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract, amount: 0, token_address: system.staking.get_token_address(),
+                },
+            ]
+                .span(),
+        };
+        let staker_pool_info = system.staker_pool_info(:staker);
+        assert!(staker_pool_info == expected_pool_info);
+    }
+}
+
 /// Flow
 /// Staker stake with pool
 /// Upgrade
