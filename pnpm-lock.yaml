@@ -1882,12 +1882,9 @@ packages:
       integrity: sha512-c1PTsA3tYrIsLGkJkzHF+w9F2EyxfXGo4UyJc4pFL++FMjnq0HJS69T3M7d//gKrFKwy429bouPescbjecU+Zw==
     engines:
       node: '>=8'
-  tslib@2.5.0:
+  tslib@2.8.1:
     resolution:
-      integrity: sha512-336iVw3rtn2BUK7ORdIAHTyxHGRIHVReokCR3XjbckJMK7ms8FysBfhLR8IXnAgy7T0PTPNBWKiH514FOW/WSg==
-  tslib@2.6.3:
-    resolution:
-      integrity: sha512-xNvxJEOUiWPGhUuUdQgAJPKOOJfGnIyKySOc09XkKsgdUV/3E2zvwZYdejjmRgPCgcym1juLH3226yA7sEFJKQ==
+      integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==
   tty-table@4.1.6:
     resolution:
       integrity: sha512-kRj5CBzOrakV4VRRY5kUWbNYvo/FpOsz65DzI5op9P+cHov3+IqPbo1JE1ZnQGkHdZgNFDsrEjrfqqy/Ply9fw==
@@ -3267,7 +3264,7 @@ snapshots:
       queue-microtask: 1.2.3
   rxjs@7.8.0:
     dependencies:
-      tslib: 2.5.0
+      tslib: 2.8.1
   safe-regex-test@1.0.0:
     dependencies:
       call-bind: 1.0.7
@@ -3388,7 +3385,7 @@ snapshots:
   synckit@0.9.1:
     dependencies:
       '@pkgr/core': 0.1.1
-      tslib: 2.6.3
+      tslib: 2.8.1
   term-size@2.2.1: {}
   text-table@0.2.0: {}
   tiny-each-async@2.0.3: {}
@@ -3400,8 +3397,7 @@ snapshots:
     dependencies:
       is-number: 7.0.0
   trim-newlines@3.0.1: {}
-  tslib@2.5.0: {}
-  tslib@2.6.3: {}
+  tslib@2.8.1: {}
   tty-table@4.1.6:
     dependencies:
       chalk: 4.1.2

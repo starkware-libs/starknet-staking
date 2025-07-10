@@ -396,6 +396,15 @@ fn staker_in_intent_migration_vec_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn staker_without_pool_migration_balance_traces_flow_test() {
+    let mut flow = flows::StakerWithoutPoolMigrationBalanceTracesFlow {
+        staker: Option::None, staker_info: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn staker_with_pool_migration_set_commission_regression_test() {
     let mut flow = flows::StakerWithPoolMigrationSetCommissionFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);

@@ -1868,6 +1868,74 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
     }
 }
 
+/// Flow:
+/// Staker stake
+/// Upgrade
+/// Staker migration
+/// Test staker_pool_info
+/// Test staker_info did not change
+/// Test staker balance trace is empty
+/// Test staker pool trace is empty
+#[derive(Drop, Copy)]
+pub(crate) struct StakerWithoutPoolMigrationBalanceTracesFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) staker_info: Option<StakerInfoV1>,
+}
+pub(crate) impl StakerWithoutPoolMigrationBalanceTracesFlowImpl of FlowTrait<
+    StakerWithoutPoolMigrationBalanceTracesFlow,
+> {
+    fn setup_v1(ref self: StakerWithoutPoolMigrationBalanceTracesFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+
+        self.staker = Option::Some(staker);
+        self.staker_info = Option::Some(system.staker_info_v1(:staker));
+    }
+
+    fn test(self: StakerWithoutPoolMigrationBalanceTracesFlow, ref system: SystemState) {
+        // Migrate staker
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        let strk_token_address = system.staking.get_token_address();
+        system.staker_migration(:staker_address);
+
+        // Test staker_pool_info
+        let expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::None, pools: array![].span(),
+        };
+        let staker_pool_info = system.staker_pool_info(:staker);
+        assert!(staker_pool_info == expected_pool_info);
+
+        // Test staker_info did not change.
+        let staker_info = system.staker_info_v1(:staker);
+        assert!(staker_info == self.staker_info.unwrap());
+
+        // Test trace
+        let own_trace_storage = snforge_std::map_entry_address(
+            map_selector: selector!("staker_own_balance_trace"),
+            keys: [staker_address.into()].span(),
+        );
+        let delegated_trace_storage = snforge_std::map_entry_address(
+            map_selector: selector!("staker_delegated_balance_trace"),
+            keys: [staker_address.into(), strk_token_address.into()].span(),
+        );
+        let own_trace_length = load_trace_length(
+            contract_address: system.staking.address, trace_address: own_trace_storage,
+        );
+        let (_, own_value) = load_from_trace(
+            contract_address: system.staking.address, trace_address: own_trace_storage, index: 0,
+        );
+        let delegated_trace_length = load_trace_length(
+            contract_address: system.staking.address, trace_address: delegated_trace_storage,
+        );
+        assert!(own_trace_length == 1);
+        assert!(own_value == staker_info.amount_own);
+        assert!(delegated_trace_length == 0);
+    }
+}
+
 /// Test staker_migration - with pool, with intent.
 /// Flow:
 /// Staker stake with pool
