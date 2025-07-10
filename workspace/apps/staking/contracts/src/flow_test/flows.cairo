@@ -2038,7 +2038,7 @@ pub(crate) impl StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlowImpl of Fl
     }
 }
 
-/// Flow
+/// Flow:
 /// Staker stake with pool
 /// Upgrade
 /// Staker migration
