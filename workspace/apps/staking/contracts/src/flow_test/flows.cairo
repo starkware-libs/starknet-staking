@@ -4,8 +4,8 @@ use staking::constants::{MIN_ATTESTATION_WINDOW, STRK_BASE_VALUE, STRK_DECIMALS,
 use staking::errors::GenericError;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
-    SystemConfigTrait, SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState,
-    SystemTrait, TokenHelperTrait,
+    SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait,
+    TokenHelperTrait,
 };
 use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
@@ -26,13 +26,10 @@ use staking::test_utils::{
 use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
 use staking::utils::compute_rewards_rounded_down;
 use starknet::{ContractAddress, Store};
-use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::time::time::Time;
-use starkware_utils_testing::test_utils::{
-    TokenConfig, assert_panic_with_error, cheat_caller_address_once,
-};
+use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
 /// Staker increase_stake - cover if pool amount = 0 in calc_rew
@@ -4244,17 +4241,10 @@ pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
     fn test(self: EnableDisableBtcTokenSameEpochFlow, ref system: SystemState) {
         let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
 
-        let btc_token = TokenConfig {
-            name: "DUMMY_BTC_TOKEN",
-            symbol: SYMBOL(),
-            initial_supply: 0,
-            owner: 'DUMMY_OWNER'.try_into().unwrap(),
-        }
-            .deploy_btc_token();
-        let token_address = btc_token.contract_address();
-        system.add_token(:token_address);
-        system.enable_token(:token_address);
-        system.disable_token(:token_address);
+        let token_address = system.deploy_second_btc_token().contract_address();
+        system.staking.add_token(:token_address);
+        system.staking.enable_token(:token_address);
+        system.staking.disable_token(:token_address);
 
         let active_tokens = system.staking.dispatcher().get_active_tokens();
         assert!(active_tokens == expected_active_tokens);

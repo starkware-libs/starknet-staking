@@ -44,8 +44,9 @@ use staking::staking::interface_v1::{
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait};
 use staking::test_utils::constants::{
-    BTC_TOKEN_NAME, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
-    MAINNET_SECURITY_COUNSEL_ADDRESS, STARTING_BLOCK_OFFSET, UPGRADE_GOVERNOR,
+    BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
+    INITIAL_SUPPLY, MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS, STARTING_BLOCK_OFFSET,
+    UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
@@ -428,6 +429,27 @@ pub(crate) impl StakingImpl of StakingTrait {
             stakers.append(staker);
         }
         stakers.span()
+    }
+
+    fn add_token(self: StakingState, token_address: ContractAddress) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.security_admin,
+        );
+        self.token_manager_dispatcher().add_token(:token_address);
+    }
+
+    fn enable_token(self: StakingState, token_address: ContractAddress) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.security_admin,
+        );
+        self.token_manager_dispatcher().enable_token(:token_address);
+    }
+
+    fn disable_token(self: StakingState, token_address: ContractAddress) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.security_agent,
+        );
+        self.token_manager_dispatcher().disable_token(:token_address);
     }
 }
 
@@ -1060,28 +1082,15 @@ pub(crate) impl SystemImpl of SystemTrait {
         advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
     }
 
-    fn add_token(self: SystemState, token_address: ContractAddress) {
-        cheat_caller_address_once(
-            contract_address: self.staking.address,
-            caller_address: self.staking.roles.security_admin,
-        );
-        self.staking.token_manager_dispatcher().add_token(:token_address);
-    }
-
-    fn enable_token(self: SystemState, token_address: ContractAddress) {
-        cheat_caller_address_once(
-            contract_address: self.staking.address,
-            caller_address: self.staking.roles.security_admin,
-        );
-        self.staking.token_manager_dispatcher().enable_token(:token_address);
-    }
-
-    fn disable_token(self: SystemState, token_address: ContractAddress) {
-        cheat_caller_address_once(
-            contract_address: self.staking.address,
-            caller_address: self.staking.roles.security_agent,
-        );
-        self.staking.token_manager_dispatcher().disable_token(:token_address);
+    fn deploy_second_btc_token(self: SystemState) -> Token {
+        let btc_token = TokenConfig {
+            name: BTC_TOKEN_NAME_2(),
+            symbol: SYMBOL(),
+            initial_supply: INITIAL_SUPPLY.into(),
+            owner: OWNER_ADDRESS(),
+        }
+            .deploy_btc_token();
+        btc_token
     }
 }
 
