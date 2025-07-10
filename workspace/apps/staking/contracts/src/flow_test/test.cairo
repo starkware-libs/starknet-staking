@@ -154,6 +154,12 @@ fn enable_disable_btc_token_same_epoch_flow_test() {
     test_flow_local(flow);
 }
 
+#[test]
+fn disable_enable_btc_token_same_epoch_flow_test() {
+    let flow = flows::DisableEnableBtcTokenSameEpochFlow {};
+    test_flow_local(flow);
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate

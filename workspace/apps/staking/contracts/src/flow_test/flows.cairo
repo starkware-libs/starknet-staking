@@ -4250,6 +4250,26 @@ pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
         assert!(active_tokens == expected_active_tokens);
     }
 }
+
+/// Flow:
+/// Disable btc token
+/// Enable btc token
+/// Test btc token is enabled
+#[derive(Drop, Copy)]
+pub(crate) struct DisableEnableBtcTokenSameEpochFlow {}
+pub(crate) impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
+    DisableEnableBtcTokenSameEpochFlow,
+> {
+    fn test(self: DisableEnableBtcTokenSameEpochFlow, ref system: SystemState) {
+        let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
+        let token_address = system.btc_token.contract_address();
+        system.staking.disable_token(:token_address);
+        system.staking.enable_token(:token_address);
+
+        let active_tokens = system.staking.dispatcher().get_active_tokens();
+        assert!(active_tokens == expected_active_tokens);
+    }
+}
 // TODO: Implement this flow test.
 // Stake
 // Upgrade
