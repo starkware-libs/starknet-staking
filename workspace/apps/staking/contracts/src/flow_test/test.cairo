@@ -137,6 +137,12 @@ fn set_epoch_info_flow_test() {
 }
 
 #[test]
+fn disable_btc_token_same_and_next_epoch_flow_test() {
+    let flow = flows::DisableBtcTokenSameAndNextEpochFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn attest_after_delegator_intent_flow_test() {
     let flow = flows::AttestAfterDelegatorIntentFlow {};
     test_flow_local(:flow);

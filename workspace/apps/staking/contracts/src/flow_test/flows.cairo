@@ -1608,6 +1608,34 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
     }
 }
 
+/// Flow
+/// Disable btc token
+/// Test btc token is disabled
+/// Advance epoch
+/// Test btc token is disabled
+#[derive(Drop, Copy)]
+pub(crate) struct DisableBtcTokenSameAndNextEpochFlow {}
+pub(crate) impl DisableBtcTokenSameAndNextEpochFlowImpl of FlowTrait<
+    DisableBtcTokenSameAndNextEpochFlow,
+> {
+    fn test(self: DisableBtcTokenSameAndNextEpochFlow, ref system: SystemState) {
+        let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
+        let token_address = system.deploy_second_btc_token().contract_address();
+        system.staking.add_token(:token_address);
+        system.staking.enable_token(:token_address);
+
+        system.advance_epoch();
+        system.staking.disable_token(:token_address);
+
+        let active_tokens = system.staking.dispatcher().get_active_tokens();
+        assert!(active_tokens == expected_active_tokens);
+
+        system.advance_epoch();
+        let active_tokens = system.staking.dispatcher().get_active_tokens();
+        assert!(active_tokens == expected_active_tokens);
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// Delegator delegate
