@@ -64,6 +64,12 @@ fn pool_claim_rewards_flow_test() {
 }
 
 #[test]
+fn pool_claim_rewards_flow_btc_test() {
+    let flow = flows::PoolClaimRewardsFlowBtc {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn pool_calculate_rewards_twice_flow_test() {
     let flow = flows::PoolCalculateRewardsTwiceFlow {};
     test_flow_local(:flow);
