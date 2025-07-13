@@ -444,6 +444,21 @@ fn staker_without_pool_migration_balance_traces_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn intent_delegator_upgrade_action_regression_test() {
+    let mut flow = flows::IntentDelegatorUpgradeActionFlow {
+        staker: Option::None,
+        pool_address: Option::None,
+        delegator_full_intent: Option::None,
+        delegator_half_intent: Option::None,
+        delegator_zero_intent: Option::None,
+        amount: Option::None,
+        commission: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn staker_with_pool_migration_set_commission_regression_test() {
     let mut flow = flows::StakerWithPoolMigrationSetCommissionFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
