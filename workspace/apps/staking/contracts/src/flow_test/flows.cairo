@@ -2029,6 +2029,151 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
 }
 
 /// Flow:
+/// Staker stake with pool
+/// 3 delegators delegate
+/// Delegator full intent
+/// Delegator half intent
+/// Delegator zero intent
+/// Upgrade
+/// Staker migration
+/// Staker2 stake with pool
+/// Delegators switch
+/// Test staker_pool_infos
+/// Test delegators infos
+#[derive(Drop, Copy)]
+pub(crate) struct IntentDelegatorUpgradeSwitchFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) delegator_full_intent: Option<Delegator>,
+    pub(crate) delegator_half_intent: Option<Delegator>,
+    pub(crate) delegator_zero_intent: Option<Delegator>,
+    pub(crate) amount: Option<Amount>,
+    pub(crate) commission: Option<Commission>,
+}
+pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
+    IntentDelegatorUpgradeSwitchFlow,
+> {
+    fn setup_v1(ref self: IntentDelegatorUpgradeSwitchFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+
+        let delegator_full_intent = system.new_delegator(:amount);
+        let delegator_half_intent = system.new_delegator(:amount);
+        let delegator_zero_intent = system.new_delegator(:amount);
+
+        system.delegate(delegator: delegator_full_intent, :pool, :amount);
+        system.delegate(delegator: delegator_half_intent, :pool, :amount);
+        system.delegate(delegator: delegator_zero_intent, :pool, :amount);
+
+        system.delegator_exit_intent(delegator: delegator_full_intent, :pool, :amount);
+        system.delegator_exit_intent(delegator: delegator_half_intent, :pool, amount: amount / 2);
+        system.delegator_exit_intent(delegator: delegator_zero_intent, :pool, amount: Zero::zero());
+
+        system.advance_exit_wait_window();
+
+        self.staker = Option::Some(staker);
+        self.pool_address = Option::Some(pool);
+        self.delegator_full_intent = Option::Some(delegator_full_intent);
+        self.delegator_half_intent = Option::Some(delegator_half_intent);
+        self.delegator_zero_intent = Option::Some(delegator_zero_intent);
+        self.amount = Option::Some(amount);
+        self.commission = Option::Some(commission);
+    }
+
+    fn test(self: IntentDelegatorUpgradeSwitchFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        system.staker_migration(:staker_address);
+        let pool = self.pool_address.unwrap();
+        let delegator_full_intent = self.delegator_full_intent.unwrap();
+        let delegator_half_intent = self.delegator_half_intent.unwrap();
+        let delegator_zero_intent = self.delegator_zero_intent.unwrap();
+        let amount = self.amount.unwrap();
+        let commission = self.commission.unwrap();
+
+        // Staker2 stake with pool.
+        let staker2 = system.new_staker(:amount);
+        system.stake(staker: staker2, :amount, pool_enabled: true, :commission);
+        let pool2 = system.staking.get_pool(staker: staker2);
+
+        // Delegators switch.
+        system
+            .switch_delegation_pool(
+                delegator: delegator_full_intent,
+                from_pool: pool,
+                to_staker: staker2.staker.address,
+                to_pool: pool2,
+                :amount,
+            );
+        system
+            .switch_delegation_pool(
+                delegator: delegator_half_intent,
+                from_pool: pool,
+                to_staker: staker2.staker.address,
+                to_pool: pool2,
+                amount: amount / 2,
+            );
+        let res = system
+            .safe_switch_delegation_pool(
+                delegator: delegator_zero_intent,
+                from_pool: pool,
+                to_staker: staker2.staker.address,
+                to_pool: pool2,
+                amount: Zero::zero(),
+            );
+        assert_panic_with_error(res, GenericError::AMOUNT_IS_ZERO.describe());
+
+        // Test pools.
+        let first_staker_expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::Some(commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract: pool,
+                    amount: amount * 3 / 2,
+                    token_address: system.staking.get_token_address(),
+                },
+            ]
+                .span(),
+        };
+        let second_staker_expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::Some(commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract: pool2,
+                    amount: amount * 3 / 2,
+                    token_address: system.staking.get_token_address(),
+                },
+            ]
+                .span(),
+        };
+        let first_staker_pool_info = system.staker_pool_info(:staker);
+        let second_staker_pool_info = system.staker_pool_info(staker: staker2);
+        assert!(first_staker_pool_info == first_staker_expected_pool_info);
+        assert!(second_staker_pool_info == second_staker_expected_pool_info);
+
+        // Test delegators infos.
+        let delegator_full_intent_info_1 = system
+            .pool_member_info_v1(delegator: delegator_full_intent, :pool);
+        let delegator_half_intent_info_1 = system
+            .pool_member_info_v1(delegator: delegator_half_intent, :pool);
+        let delegator_zero_intent_info_1 = system
+            .pool_member_info_v1(delegator: delegator_zero_intent, :pool);
+        let delegator_full_intent_info_2 = system
+            .pool_member_info_v1(delegator: delegator_full_intent, pool: pool2);
+        let delegator_half_intent_info_2 = system
+            .pool_member_info_v1(delegator: delegator_half_intent, pool: pool2);
+        assert!(delegator_full_intent_info_1.amount == Zero::zero());
+        assert!(delegator_half_intent_info_1.amount == amount / 2);
+        assert!(delegator_zero_intent_info_1.amount == amount);
+        assert!(delegator_full_intent_info_2.amount == amount);
+        assert!(delegator_half_intent_info_2.amount == amount / 2);
+    }
+}
+
+/// Flow:
 /// Staker stake
 /// Upgrade
 /// Staker migration

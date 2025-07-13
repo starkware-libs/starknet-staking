@@ -85,6 +85,21 @@ fn pool_claim_rewards_after_upgrade_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn intent_delegator_upgrade_switch_regression_test() {
+    let mut flow = flows::IntentDelegatorUpgradeSwitchFlow {
+        staker: Option::None,
+        pool_address: Option::None,
+        delegator_full_intent: Option::None,
+        delegator_half_intent: Option::None,
+        delegator_zero_intent: Option::None,
+        amount: Option::None,
+        commission: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn pool_member_info_after_upgrade_regression_test() {
     let mut flow = flows::PoolMemberInfoAfterUpgradeFlow {
         pool_address: Option::None,
