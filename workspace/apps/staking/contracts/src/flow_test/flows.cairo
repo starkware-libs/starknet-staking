@@ -227,6 +227,141 @@ pub(crate) impl SetOpenForDelegationFlowImpl of FlowTrait<SetOpenForDelegationFl
 }
 
 /// Flow:
+/// Staker1 stake with pool
+/// Staker2 stake with pool
+/// Staker1 add btc pool
+/// Staker2 add btc pool
+/// Strk delegator delegate to staker1
+/// Btc delegator delegate to staker1
+/// Delegators exit intent
+/// Delegators change intent
+/// Test delegators exit actions before exit window
+/// Delegators exit actions after exit window
+/// Delegators switch delegation pool
+/// Test pools
+#[derive(Drop, Copy)]
+pub(crate) struct MultiplePoolsDelegatorIntentActionSwitchFlow {}
+pub(crate) impl MultiplePoolsDelegatorIntentActionSwitchFlowImpl of FlowTrait<
+    MultiplePoolsDelegatorIntentActionSwitchFlow,
+> {
+    fn test(self: MultiplePoolsDelegatorIntentActionSwitchFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let first_staker = system.new_staker(:amount);
+        let second_staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(staker: first_staker, :amount, pool_enabled: true, :commission);
+        system.stake(staker: second_staker, :amount, pool_enabled: true, :commission);
+
+        // Set up pools.
+        let first_strk_pool = system.staking.get_pool(staker: first_staker);
+        let first_btc_pool = system
+            .set_open_for_delegation(
+                staker: first_staker, token_address: system.btc_token.contract_address(),
+            );
+        let second_strk_pool = system.staking.get_pool(staker: second_staker);
+        let second_btc_pool = system
+            .set_open_for_delegation(
+                staker: second_staker, token_address: system.btc_token.contract_address(),
+            );
+
+        // Delegators delegate.
+        let strk_delegator = system.new_delegator(:amount);
+        let btc_delegator = system.new_btc_delegator(:amount, token: system.btc_token);
+        system.delegate(delegator: strk_delegator, pool: first_strk_pool, :amount);
+        system
+            .delegate_btc(
+                delegator: btc_delegator, pool: first_btc_pool, :amount, token: system.btc_token,
+            );
+
+        // Delegators exit intents.
+        system.delegator_exit_intent(delegator: strk_delegator, pool: first_strk_pool, :amount);
+        system.delegator_exit_intent(delegator: btc_delegator, pool: first_btc_pool, :amount);
+
+        // Delegators change intent.
+        let amount = amount / 2;
+        system.delegator_exit_intent(delegator: strk_delegator, pool: first_strk_pool, :amount);
+        system.delegator_exit_intent(delegator: btc_delegator, pool: first_btc_pool, :amount);
+
+        // Delegators exit actions before exit window.
+        cheat_caller_address_once(
+            contract_address: first_strk_pool, caller_address: strk_delegator.delegator.address,
+        );
+        let res = system
+            .safe_delegator_exit_action(delegator: strk_delegator, pool: first_strk_pool);
+        assert_panic_with_error(res, GenericError::INTENT_WINDOW_NOT_FINISHED.describe());
+        cheat_caller_address_once(
+            contract_address: first_btc_pool, caller_address: btc_delegator.delegator.address,
+        );
+        let res = system.safe_delegator_exit_action(delegator: btc_delegator, pool: first_btc_pool);
+        assert_panic_with_error(res, GenericError::INTENT_WINDOW_NOT_FINISHED.describe());
+
+        // Delegators exit actions after exit window.
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.delegator_exit_action(delegator: strk_delegator, pool: first_strk_pool);
+        system.delegator_exit_action(delegator: btc_delegator, pool: first_btc_pool);
+
+        // Delegators switch delegation pool.
+        system.delegator_exit_intent(delegator: strk_delegator, pool: first_strk_pool, :amount);
+        system.delegator_exit_intent(delegator: btc_delegator, pool: first_btc_pool, :amount);
+        system
+            .switch_delegation_pool(
+                delegator: strk_delegator,
+                from_pool: first_strk_pool,
+                to_staker: second_staker.staker.address,
+                to_pool: second_strk_pool,
+                amount: amount,
+            );
+        system
+            .switch_delegation_pool(
+                delegator: btc_delegator,
+                from_pool: first_btc_pool,
+                to_staker: second_staker.staker.address,
+                to_pool: second_btc_pool,
+                amount: amount,
+            );
+
+        // Test pools.
+        let first_staker_expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::Some(commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract: first_strk_pool,
+                    amount: Zero::zero(),
+                    token_address: system.staking.get_token_address(),
+                },
+                PoolInfo {
+                    pool_contract: first_btc_pool,
+                    amount: Zero::zero(),
+                    token_address: system.btc_token.contract_address(),
+                },
+            ]
+                .span(),
+        };
+        let first_staker_pool_info = system.staker_pool_info(staker: first_staker);
+        assert!(first_staker_pool_info == first_staker_expected_pool_info);
+
+        let second_staker_expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::Some(commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract: second_strk_pool,
+                    amount,
+                    token_address: system.staking.get_token_address(),
+                },
+                PoolInfo {
+                    pool_contract: second_btc_pool,
+                    amount,
+                    token_address: system.btc_token.contract_address(),
+                },
+            ]
+                .span(),
+        };
+        let second_staker_pool_info = system.staker_pool_info(staker: second_staker);
+        assert!(second_staker_pool_info == second_staker_expected_pool_info);
+    }
+}
+
+/// Flow:
 /// Staker Stake
 /// Delegator delegate
 /// Delegator exit_intent partial amount

@@ -81,6 +81,11 @@ fn delegator_exit_and_enter_again_with_switch_flow_test() {
     test_flow_local(:flow);
 }
 
+#[test]
+fn multiple_pools_delegator_intent_action_switch_flow_test() {
+    let flow = flows::MultiplePoolsDelegatorIntentActionSwitchFlow {};
+    test_flow_local(:flow);
+}
 
 #[test]
 fn claim_rewards_multiple_delegators_flow_test() {
