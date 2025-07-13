@@ -1002,6 +1002,13 @@ pub(crate) impl SystemImpl of SystemTrait {
         account
     }
 
+    fn new_btc_account(ref self: SystemState, amount: Amount, token: Token) -> Account {
+        self.base_account += 1;
+        let account = AccountTrait::new(address: self.base_account, :amount);
+        fund(target: account.address, :amount, :token);
+        account
+    }
+
     /// Creates a new staker with the specified amount.
     fn new_staker(ref self: SystemState, amount: Amount) -> Staker {
         let staker = self.new_account(:amount);
@@ -1013,6 +1020,12 @@ pub(crate) impl SystemImpl of SystemTrait {
     /// Creates a new delegator with the specified amount.
     fn new_delegator(ref self: SystemState, amount: Amount) -> Delegator {
         let delegator = self.new_account(:amount);
+        let reward = self.new_account(amount: Zero::zero());
+        DelegatorTrait::new(:delegator, :reward)
+    }
+
+    fn new_btc_delegator(ref self: SystemState, amount: Amount, token: Token) -> Delegator {
+        let delegator = self.new_btc_account(:amount, :token);
         let reward = self.new_account(amount: Zero::zero());
         DelegatorTrait::new(:delegator, :reward)
     }
@@ -1377,6 +1390,21 @@ impl DelegatorImpl of DelegatorTrait {
 pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
     fn delegate(self: SystemState, delegator: Delegator, pool: ContractAddress, amount: Amount) {
         self.token.approve(owner: delegator.delegator.address, spender: pool, :amount);
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
+    }
+
+    fn delegate_btc(
+        self: SystemState,
+        delegator: Delegator,
+        pool: ContractAddress,
+        amount: Amount,
+        token: Token,
+    ) {
+        token.approve(owner: delegator.delegator.address, spender: pool, :amount);
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
         );
