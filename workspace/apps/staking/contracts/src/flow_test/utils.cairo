@@ -1474,6 +1474,19 @@ pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
         pool_dispatcher.switch_delegation_pool(:to_staker, :to_pool, :amount)
     }
 
+    #[feature("safe_dispatcher")]
+    fn safe_switch_delegation_pool(
+        self: SystemState,
+        delegator: Delegator,
+        from_pool: ContractAddress,
+        to_staker: ContractAddress,
+        to_pool: ContractAddress,
+        amount: Amount,
+    ) -> Result<Amount, Array<felt252>> {
+        let safe_pool_dispatcher = IPoolSafeDispatcher { contract_address: from_pool };
+        safe_pool_dispatcher.switch_delegation_pool(:to_staker, :to_pool, :amount)
+    }
+
     fn delegator_claim_rewards(
         self: SystemState, delegator: Delegator, pool: ContractAddress,
     ) -> Amount {
