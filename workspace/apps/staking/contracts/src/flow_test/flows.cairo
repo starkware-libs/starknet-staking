@@ -2241,6 +2241,119 @@ pub(crate) impl StakerWithoutPoolMigrationBalanceTracesFlowImpl of FlowTrait<
     }
 }
 
+/// Flow:
+/// Staker stake with pool
+/// 3 delegators delegate
+/// Delegator full intent
+/// Delegator half intent
+/// Delegator zero intent
+/// Upgrade
+/// Staker migration
+/// Delegators exit action
+/// Test staker_pool_info
+/// Test delegators infos
+/// Test delegators balances
+#[derive(Drop, Copy)]
+pub(crate) struct IntentDelegatorUpgradeActionFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) delegator_full_intent: Option<Delegator>,
+    pub(crate) delegator_half_intent: Option<Delegator>,
+    pub(crate) delegator_zero_intent: Option<Delegator>,
+    pub(crate) amount: Option<Amount>,
+    pub(crate) commission: Option<Commission>,
+}
+pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
+    IntentDelegatorUpgradeActionFlow,
+> {
+    fn setup_v1(ref self: IntentDelegatorUpgradeActionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+
+        let delegator_full_intent = system.new_delegator(:amount);
+        let delegator_half_intent = system.new_delegator(:amount);
+        let delegator_zero_intent = system.new_delegator(:amount);
+
+        system.delegate(delegator: delegator_full_intent, :pool, :amount);
+        system.delegate(delegator: delegator_half_intent, :pool, :amount);
+        system.delegate(delegator: delegator_zero_intent, :pool, :amount);
+
+        system.delegator_exit_intent(delegator: delegator_full_intent, :pool, :amount);
+        system.delegator_exit_intent(delegator: delegator_half_intent, :pool, amount: amount / 2);
+        system.delegator_exit_intent(delegator: delegator_zero_intent, :pool, amount: Zero::zero());
+
+        system.advance_exit_wait_window();
+
+        self.staker = Option::Some(staker);
+        self.pool_address = Option::Some(pool);
+        self.delegator_full_intent = Option::Some(delegator_full_intent);
+        self.delegator_half_intent = Option::Some(delegator_half_intent);
+        self.delegator_zero_intent = Option::Some(delegator_zero_intent);
+        self.amount = Option::Some(amount);
+        self.commission = Option::Some(commission);
+    }
+
+    fn test(self: IntentDelegatorUpgradeActionFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        system.staker_migration(:staker_address);
+        let pool = self.pool_address.unwrap();
+        let delegator_full_intent = self.delegator_full_intent.unwrap();
+        let delegator_half_intent = self.delegator_half_intent.unwrap();
+        let delegator_zero_intent = self.delegator_zero_intent.unwrap();
+        let amount = self.amount.unwrap();
+        let commission = self.commission.unwrap();
+
+        // Delegators exit action.
+        system.delegator_exit_action(delegator: delegator_full_intent, :pool);
+        system.delegator_exit_action(delegator: delegator_half_intent, :pool);
+        let res = system.safe_delegator_exit_action(delegator: delegator_zero_intent, :pool);
+        assert_panic_with_error(res, PoolError::MISSING_UNDELEGATE_INTENT.describe());
+
+        // Test pool.
+        let expected_pool_info = StakerPoolInfoV2 {
+            commission: Option::Some(commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract: pool,
+                    amount: amount * 3 / 2,
+                    token_address: system.staking.get_token_address(),
+                },
+            ]
+                .span(),
+        };
+        let staker_pool_info = system.staker_pool_info(:staker);
+        assert!(staker_pool_info == expected_pool_info);
+
+        // Test delegators infos.
+        let delegator_full_intent_info = system
+            .pool_member_info_v1(delegator: delegator_full_intent, :pool);
+        let delegator_half_intent_info = system
+            .pool_member_info_v1(delegator: delegator_half_intent, :pool);
+        let delegator_zero_intent_info = system
+            .pool_member_info_v1(delegator: delegator_zero_intent, :pool);
+        assert!(delegator_full_intent_info.amount == Zero::zero());
+        assert!(delegator_half_intent_info.amount == amount / 2);
+        assert!(delegator_zero_intent_info.amount == amount);
+
+        // Test delegators balances.
+        assert!(
+            system.token.balance_of(account: delegator_full_intent.delegator.address) == amount,
+        );
+        assert!(
+            system.token.balance_of(account: delegator_half_intent.delegator.address) == amount / 2,
+        );
+        assert!(
+            system
+                .token
+                .balance_of(account: delegator_zero_intent.delegator.address) == Zero::zero(),
+        );
+    }
+}
+
 /// Test staker_migration - with pool, with intent.
 /// Flow:
 /// Staker stake with pool
