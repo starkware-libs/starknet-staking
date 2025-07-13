@@ -151,6 +151,21 @@ fn delegator_partial_intent_after_upgrade_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn intent_delegator_upgrade_intent_flow_test() {
+    let mut flow = flows::IntentDelegatorUpgradeIntentFlow {
+        staker: Option::None,
+        pool_address: Option::None,
+        delegator_full_intent: Option::None,
+        delegator_half_intent: Option::None,
+        delegator_zero_intent: Option::None,
+        amount: Option::None,
+        commission: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn increase_stake_after_upgrade_regression_test() {
     let mut flow = flows::IncreaseStakeAfterUpgradeFlow {
         staker: Option::None, stake_amount: Option::None, pool_address: Option::None,
