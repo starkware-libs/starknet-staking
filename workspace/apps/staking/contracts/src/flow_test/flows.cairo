@@ -1,6 +1,8 @@
 use core::num::traits::Zero;
 use snforge_std::{TokenImpl, start_cheat_block_number_global};
-use staking::constants::{MIN_ATTESTATION_WINDOW, STRK_BASE_VALUE, STRK_DECIMALS, STRK_IN_FRIS};
+use staking::constants::{
+    MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS, STRK_IN_FRIS,
+};
 use staking::errors::GenericError;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
@@ -19,7 +21,7 @@ use staking::staking::interface::{
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils::constants::EPOCH_DURATION;
 use staking::test_utils::{
-    calculate_pool_member_rewards, calculate_strk_pool_rewards,
+    calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_strk_pool_rewards,
     calculate_strk_pool_rewards_with_pool_balance, compute_rewards_for_trace, deserialize_option,
     load_from_iterable_map, load_from_trace, load_trace_length, strk_pool_update_rewards,
 };
@@ -2781,6 +2783,122 @@ pub(crate) impl ClaimRewardsMultipleDelegatorsFlowImpl of FlowTrait<
         assert!(calculates_rewards_1 == expected_rewards_1);
         assert!(calculates_rewards_2 == expected_rewards_2);
         assert!(calculates_rewards_3 == expected_rewards_3);
+
+        assert!(actual_reward_1 == expected_rewards_1);
+        assert!(actual_reward_2 == expected_rewards_2);
+        assert!(actual_reward_3 == expected_rewards_3);
+
+        assert!(
+            system
+                .token
+                .balance_of(account: delegator_1.reward.address) == expected_rewards_1
+                .into(),
+        );
+        assert!(
+            system
+                .token
+                .balance_of(account: delegator_2.reward.address) == expected_rewards_2
+                .into(),
+        );
+        assert!(
+            system
+                .token
+                .balance_of(account: delegator_3.reward.address) == expected_rewards_3
+                .into(),
+        );
+    }
+}
+
+/// Test claim_rewards with multiple delegators.
+#[derive(Drop, Copy)]
+pub(crate) struct ClaimRewardsMultipleDelegatorsBtcFlow {}
+pub(crate) impl ClaimRewardsMultipleDelegatorsBtcFlowImpl of FlowTrait<
+    ClaimRewardsMultipleDelegatorsBtcFlow,
+> {
+    fn test(self: ClaimRewardsMultipleDelegatorsBtcFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount);
+        let commission = 200;
+        let btc_token = system.btc_token;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+        let pool = system
+            .set_open_for_delegation(:staker, token_address: btc_token.contract_address());
+
+        let delegated_amount = MIN_BTC_FOR_REWARDS * 16;
+        let delegator_1 = system.new_btc_delegator(amount: delegated_amount, token: btc_token);
+        let delegator_2 = system.new_btc_delegator(amount: delegated_amount, token: btc_token);
+        let delegator_3 = system.new_btc_delegator(amount: delegated_amount, token: btc_token);
+
+        system
+            .delegate_btc(
+                delegator: delegator_1, :pool, amount: delegated_amount, token: btc_token,
+            );
+        system
+            .delegate_btc(
+                delegator: delegator_2, :pool, amount: delegated_amount / 2, token: btc_token,
+            );
+        system
+            .delegate_btc(
+                delegator: delegator_3, :pool, amount: delegated_amount / 4, token: btc_token,
+            );
+
+        let pool_balance = delegated_amount + delegated_amount / 2 + delegated_amount / 4;
+
+        system.advance_epoch_and_attest(:staker);
+
+        // Compute pool rewards.
+        let (_, pool_rewards) = calculate_staker_btc_pool_rewards(
+            :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+        );
+
+        system.advance_epoch();
+
+        // Compute expected rewards for each pool member.
+        let expected_rewards_1 = calculate_pool_member_rewards(
+            :pool_rewards, pool_member_balance: delegated_amount, :pool_balance,
+        );
+        let expected_rewards_2 = calculate_pool_member_rewards(
+            :pool_rewards, pool_member_balance: delegated_amount / 2, :pool_balance,
+        );
+        let expected_rewards_3 = calculate_pool_member_rewards(
+            :pool_rewards, pool_member_balance: delegated_amount / 4, :pool_balance,
+        );
+        let expected_staker_pool_info = StakerPoolInfoV2 {
+            commission: Some(commission),
+            pools: array![
+                PoolInfo {
+                    pool_contract: pool,
+                    token_address: btc_token.contract_address(),
+                    amount: pool_balance,
+                },
+            ]
+                .span(),
+        };
+
+        // Claim rewards, and validate the results.
+        let calculated_rewards_1 = system
+            .pool_member_info_v1(delegator: delegator_1, :pool)
+            .unclaimed_rewards;
+        let calculated_rewards_2 = system
+            .pool_member_info_v1(delegator: delegator_2, :pool)
+            .unclaimed_rewards;
+        let calculated_rewards_3 = system
+            .pool_member_info_v1(delegator: delegator_3, :pool)
+            .unclaimed_rewards;
+
+        let actual_reward_1 = system.delegator_claim_rewards(delegator: delegator_1, :pool);
+        let actual_reward_2 = system.delegator_claim_rewards(delegator: delegator_2, :pool);
+        let actual_reward_3 = system.delegator_claim_rewards(delegator: delegator_3, :pool);
+
+        assert!(system.staker_pool_info(:staker) == expected_staker_pool_info);
+
+        assert!(calculated_rewards_1 == expected_rewards_1);
+        assert!(calculated_rewards_2 == expected_rewards_2);
+        assert!(calculated_rewards_3 == expected_rewards_3);
 
         assert!(actual_reward_1 == expected_rewards_1);
         assert!(actual_reward_2 == expected_rewards_2);
