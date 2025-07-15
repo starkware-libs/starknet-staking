@@ -82,6 +82,12 @@ fn delegator_exit_and_enter_again_flow_test() {
 }
 
 #[test]
+fn staker_multiple_pools_attest_flow_test() {
+    let flow = flows::StakerMultiplePoolsAttestFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn delegator_exit_and_enter_again_with_switch_flow_test() {
     let flow = flows::DelegatorExitAndEnterAgainWithSwitchFlow {};
     test_flow_local(:flow);
