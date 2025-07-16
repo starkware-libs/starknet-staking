@@ -343,6 +343,17 @@ fn staker_with_pool_in_intent_migration_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn pool_upgrade_basic_flow_regression_test() {
+    let mut flow = flows::PoolUpgradeBasicFlow {
+        staker: Option::None,
+        stake_amount: Option::None,
+        initial_reward_supplier_balance: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn staker_without_pool_in_intent_migration_flow_test() {
     let mut flow = flows::StakerWithoutPoolInIntentMigrationFlow {
         staker: Option::None, staker_info: Option::None,
