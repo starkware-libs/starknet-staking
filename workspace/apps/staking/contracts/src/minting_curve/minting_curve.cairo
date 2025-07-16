@@ -125,6 +125,9 @@ pub mod MintingCurve {
         ///
         /// If C, S and M are given as a fractions (instead of percentages), we get:
         ///   M = C * sqrt(S).
+        // **Note**: `total_stake` should be the current epoch total stake.
+        // Reward is unfairly distributed to stakers because staking power is based on latest
+        // epoch total stake. This will be fixed once we will update this contract.
         fn yearly_mint(self: @ContractState) -> Amount {
             let total_supply = self.total_supply.read();
             let staking_dispatcher = self.staking_dispatcher.read();

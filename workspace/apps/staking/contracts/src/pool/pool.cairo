@@ -801,6 +801,8 @@ pub mod Pool {
 
             let base_value = self.base_value_for_rewards();
 
+            // **Note**: The loop iterates over the balance changes in the pool member's balance
+            // trace. This loop is unbounded but unlikely to exceed gas limits.
             while entry_to_claim_from < pool_member_trace_length {
                 let pool_member_checkpoint = pool_member_trace.at(entry_to_claim_from);
                 // If the balance change is after `until_epoch` (and therefore does not affect
@@ -922,6 +924,9 @@ pub mod Pool {
         }
 
         /// Compute the rewards for the pool trace.
+        // **Note**: Delegation rewards lost when pool balance is less than `MIN_BTC_FOR_REWARDS`
+        // or `STRK_IN_FRIS`. the staking contract continues to forward `pool_rewards` to the pool
+        // contract even in this case.
         fn compute_rewards_for_trace(
             self: @ContractState, staking_rewards: Amount, total_stake: Amount,
         ) -> Index {
