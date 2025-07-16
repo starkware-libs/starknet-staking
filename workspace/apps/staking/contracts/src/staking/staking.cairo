@@ -639,6 +639,9 @@ pub mod Staking {
             }
         }
 
+        // **Note**: Current commission increase safeguards still allow for sudden commission
+        // changes.
+        // **Note**: Updating epoch info can impact the commission commitment expiration date.
         fn set_commission_commitment(
             ref self: ContractState, max_commission: Commission, expiration_epoch: Epoch,
         ) {
@@ -1014,6 +1017,9 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingConfigImpl of IStakingConfig<ContractState> {
+        // **Note**: If the min stake threshold is increased, already existing validators can
+        // continue to attest with a stake which is below the minimum threshold as well as increase
+        // already existing stake and still result in the total one being under the threshold.
         fn set_min_stake(ref self: ContractState, min_stake: Amount) {
             self.roles.only_token_admin();
             let old_min_stake = self.min_stake.read();
@@ -1104,6 +1110,7 @@ pub mod Staking {
         /// Send pool rewards to the pool.
         /// This is called after the attestation contract validate that the staker has attested
         /// correctly.
+        // **Note**: Staker unable to attest block in epoch where they initiated unstake intent.
         fn update_rewards_from_attestation_contract(
             ref self: ContractState, staker_address: ContractAddress,
         ) {

@@ -68,6 +68,10 @@ pub(crate) fn compute_commission_amount_rounded_up(
 /// Compute the rewards from the amount and interest.
 ///
 /// $$ rewards = amount * interest / base_value $$
+// **Note**: The Pool contract’s reward calculation logic uses integer division, discarding
+// small rounding remainders (dust) without tracking or redistributing them.
+// This results in negligible reward losses for delegators, as the total distributed rewards
+// are slightly less than the allocated amount.
 pub(crate) fn compute_rewards_rounded_down(
     amount: Amount, interest: Index, base_value: Index,
 ) -> Amount {
