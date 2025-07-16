@@ -1423,6 +1423,21 @@ pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
         pool_dispatcher.add_to_delegation_pool(pool_member: delegator.delegator.address, :amount)
     }
 
+    fn increase_delegate_btc(
+        self: SystemState,
+        delegator: Delegator,
+        pool: ContractAddress,
+        amount: Amount,
+        token: Token,
+    ) -> Amount {
+        token.approve(owner: delegator.delegator.address, spender: pool, :amount);
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.add_to_delegation_pool(pool_member: delegator.delegator.address, :amount)
+    }
+
     fn delegator_exit_intent(
         self: SystemState, delegator: Delegator, pool: ContractAddress, amount: Amount,
     ) {

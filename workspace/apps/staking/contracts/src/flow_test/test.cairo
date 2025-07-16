@@ -46,6 +46,12 @@ fn delegator_didnt_update_after_staker_update_commission_flow_test() {
 }
 
 #[test]
+fn pool_with_min_btc_flow_test() {
+    let flow = flows::PoolWithMinBtcFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn delegator_updated_after_staker_update_commission_flow_test() {
     let flow = flows::DelegatorUpdatedAfterStakerUpdateCommissionFlow {};
     test_flow_local(:flow);

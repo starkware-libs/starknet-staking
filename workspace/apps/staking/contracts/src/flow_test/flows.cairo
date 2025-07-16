@@ -13,6 +13,7 @@ use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
+use staking::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     CommissionCommitment, IStakingDispatcherTrait, IStakingSafeDispatcherTrait, PoolInfo,
@@ -31,6 +32,7 @@ use staking::utils::compute_rewards_rounded_down;
 use starknet::{ContractAddress, Store};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
+use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 /// Flow - Basic Stake:
@@ -3415,6 +3417,68 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
         assert!(expected_pool_rewards == actual_pool_rewards);
         assert!(
             expected_pool_rewards == system.token.balance_of(account: delegator.reward.address),
+        );
+    }
+}
+
+/// Pool with min btc
+/// Flow:
+/// Staker stake
+/// Staker open for btc delegation
+/// Delegator delegate
+/// Staker attest
+/// Delegator claim rewards
+/// Test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct PoolWithMinBtcFlow {}
+pub(crate) impl PoolWithMinBtcFlowImpl of FlowTrait<PoolWithMinBtcFlow> {
+    fn test(self: PoolWithMinBtcFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+
+        let token = system.btc_token;
+        let token_address = token.contract_address();
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+
+        let delegate_amount = MIN_BTC_FOR_REWARDS;
+        let delegator = system.new_btc_delegator(amount: delegate_amount, :token);
+        system.delegate_btc(:delegator, :pool, amount: delegate_amount - 1, :token);
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(pool_rewards.is_zero());
+        assert!(staker_rewards.is_non_zero());
+
+        system.increase_delegate_btc(:delegator, :pool, amount: 1, :token);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let (expected_commission_rewards, expected_pool_rewards) =
+            calculate_staker_btc_pool_rewards(
+            pool_balance: delegate_amount, :commission, :staking_contract, :minting_curve_contract,
+        );
+        let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(pool_rewards == expected_pool_rewards);
+        assert!(staker_rewards > expected_commission_rewards);
+        assert!(
+            wide_abs_diff(
+                mul_wide_and_div(
+                    lhs: pool_rewards + expected_commission_rewards,
+                    rhs: ALPHA_DENOMINATOR - ALPHA,
+                    div: ALPHA,
+                )
+                    .unwrap(),
+                staker_rewards - expected_commission_rewards,
+            ) < 100,
         );
     }
 }
