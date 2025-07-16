@@ -1435,6 +1435,57 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl of FlowTrait<
     }
 }
 
+/// Test new token delegation
+/// Flow:
+/// Staker stake
+/// Add new btc token
+/// Staker open delegation pool for new token
+/// Delegator delegate
+/// Test staking power
+/// Advance epoch
+/// Test staking power
+#[derive(Drop, Copy)]
+pub(crate) struct NewTokenDelegationFlow {}
+pub(crate) impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> {
+    fn test(self: NewTokenDelegationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let delegated_amount = MIN_BTC_FOR_REWARDS;
+
+        // Stake and set commission.
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+
+        // Deploy, add, and enable token.
+        let token = system.deploy_second_btc_token();
+        let token_address = token.contract_address();
+        system.staking.add_token(token_address: token_address);
+        system.staking.enable_token(token_address: token_address);
+
+        // Set open for delegation and delegate.
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+        let delegator = system.new_btc_delegator(amount: delegated_amount, :token);
+        system.delegate_btc(:delegator, :pool, amount: delegated_amount, :token);
+
+        // Test new token staking power.
+        let new_token_staking_power = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(:token_address);
+        assert!(new_token_staking_power == delegated_amount);
+
+        // Test total staking power.
+        let total_staking_power = system.staking.get_current_total_staking_power_v2();
+        assert!(total_staking_power == (0, 0));
+
+        // Test total staking power after epoch.
+        system.advance_epoch();
+        let total_staking_power = system.staking.get_current_total_staking_power_v2();
+        assert!(total_staking_power == (amount, delegated_amount));
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// Delegator delegate
