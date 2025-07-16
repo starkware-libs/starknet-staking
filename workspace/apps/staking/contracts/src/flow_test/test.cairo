@@ -190,6 +190,12 @@ fn attest_after_delegator_intent_flow_test() {
 }
 
 #[test]
+fn multi_pool_exit_intent_flow_test() {
+    let flow = flows::MultiPoolExitIntentFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn diverse_staker_vec_flow_test() {
     let flow = flows::DiverseStakerVecFlow {};
     test_flow_local(:flow);
