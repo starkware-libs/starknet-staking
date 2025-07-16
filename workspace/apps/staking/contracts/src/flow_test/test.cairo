@@ -124,6 +124,12 @@ fn claim_rewards_multiple_delegators_btc_flow_test() {
 }
 
 #[test]
+fn pool_with_lots_of_btc_flow_test() {
+    let flow = flows::PoolWithLotsOfBtcFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn pool_claim_after_claim_flow_test() {
     let flow = flows::PoolClaimAfterClaimFlow {};
     test_flow_local(:flow);

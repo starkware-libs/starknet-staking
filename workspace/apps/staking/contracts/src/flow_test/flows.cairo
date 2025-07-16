@@ -1,4 +1,5 @@
 use core::num::traits::Zero;
+use core::num::traits::ops::pow::Pow;
 use snforge_std::{TokenImpl, start_cheat_block_number_global};
 use staking::constants::{
     MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS, STRK_IN_FRIS,
@@ -20,7 +21,7 @@ use staking::staking::interface::{
     StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::EpochInfoTrait;
-use staking::test_utils::constants::EPOCH_DURATION;
+use staking::test_utils::constants::{EPOCH_DURATION, ONE_BTC};
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
     calculate_strk_pool_rewards, calculate_strk_pool_rewards_with_pool_balance,
@@ -3650,6 +3651,62 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
         assert!(expected_pool_rewards == actual_pool_rewards);
         assert!(
             expected_pool_rewards == system.token.balance_of(account: delegator.reward.address),
+        );
+    }
+}
+
+/// Pool with lots of btc
+/// Flow:
+/// Staker stake
+/// Staker open for btc delegation
+/// Delegator delegate
+/// Staker attest
+/// Delegator claim rewards
+/// Test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct PoolWithLotsOfBtcFlow {}
+pub(crate) impl PoolWithLotsOfBtcFlowImpl of FlowTrait<PoolWithLotsOfBtcFlow> {
+    fn test(self: PoolWithLotsOfBtcFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+
+        let token = system.btc_token;
+        let token_address = token.contract_address();
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+
+        // ~ 5 times as much as total supply of btc.
+        let delegate_amount = 10_u128.pow(8) * ONE_BTC;
+        let delegator = system.new_btc_delegator(amount: delegate_amount, :token);
+        system.delegate_btc(:delegator, :pool, amount: delegate_amount, :token);
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let (expected_commission_rewards, expected_pool_rewards) =
+            calculate_staker_btc_pool_rewards(
+            pool_balance: delegate_amount, :commission, :staking_contract, :minting_curve_contract,
+        );
+        let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(wide_abs_diff(pool_rewards, expected_pool_rewards) < 100);
+        assert!(staker_rewards > expected_commission_rewards);
+        assert!(
+            wide_abs_diff(
+                mul_wide_and_div(
+                    lhs: pool_rewards
+                        + expected_commission_rewards
+                        + system.token.balance_of(account: pool),
+                    rhs: ALPHA_DENOMINATOR - ALPHA,
+                    div: ALPHA,
+                )
+                    .unwrap(),
+                staker_rewards - expected_commission_rewards,
+            ) < 100,
         );
     }
 }

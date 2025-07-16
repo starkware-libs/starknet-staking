@@ -65,7 +65,8 @@ use starkware_utils_testing::test_utils::{
 
 pub(crate) mod constants {
     use core::cmp::max;
-    use staking::constants::{MIN_BTC_FOR_REWARDS, STRK_IN_FRIS};
+    use core::num::traits::ops::pow::Pow;
+    use staking::constants::{BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_IN_FRIS};
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Commission, Index};
     use starknet::class_hash::ClassHash;
@@ -94,6 +95,8 @@ pub(crate) mod constants {
     pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
     pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
+    pub(crate) const ONE_BTC: Amount = 10_u128.pow(BTC_DECIMALS.into()); // 10**8
+
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         'CALLER_ADDRESS'.try_into().unwrap()
