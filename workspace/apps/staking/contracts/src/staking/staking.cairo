@@ -882,11 +882,12 @@ pub mod Staking {
                 GenericError::INTENT_WINDOW_NOT_FINISHED,
             );
 
-            // Clear the intent, and transfer the intent amount to the pool contract.
+            // Clear the intent.
             self.clear_undelegate_intent(:undelegate_intent_key);
             // Extract the token address of the pool contract.
             let token_address = self
                 .get_undelegate_intent_token(:undelegate_intent, :pool_contract);
+            // Transfer the intent amount to the pool contract.
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             token_dispatcher
                 .checked_transfer(
