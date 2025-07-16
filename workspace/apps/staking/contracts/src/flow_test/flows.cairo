@@ -95,6 +95,107 @@ pub(crate) impl BasicStakeFlowImpl of FlowTrait<BasicStakeFlow> {
     }
 }
 
+/// Pool upgrade regression flow.
+/// Staker stake with pool
+/// Upgrade
+/// BasicStakeFlow
+/// Staker2 stake with pool
+/// Delegator switch
+/// Test switch
+#[derive(Drop, Copy)]
+pub(crate) struct PoolUpgradeBasicFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) stake_amount: Option<Amount>,
+    pub(crate) initial_reward_supplier_balance: Option<Amount>,
+}
+pub(crate) impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
+    fn setup_v1(ref self: PoolUpgradeBasicFlow, ref system: SystemState) {
+        let initial_reward_supplier_balance = system
+            .token
+            .balance_of(account: system.reward_supplier.address);
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 2);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        self.staker = Option::Some(staker);
+        self.stake_amount = Option::Some(amount);
+        self.initial_reward_supplier_balance = Option::Some(initial_reward_supplier_balance);
+    }
+
+    fn test(self: PoolUpgradeBasicFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        system.staker_migration(:staker_address);
+        let stake_amount = self.stake_amount.unwrap();
+        let initial_reward_supplier_balance = self.initial_reward_supplier_balance.unwrap();
+
+        // BasicStakeFlow
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_stake(:staker, amount: stake_amount / 2);
+        system.advance_epoch_and_attest(:staker);
+
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: stake_amount);
+        system.delegate(:delegator, :pool, amount: stake_amount / 2);
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_stake(:staker, amount: stake_amount / 4);
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_delegate(:delegator, :pool, amount: stake_amount / 4);
+        system.advance_epoch_and_attest(:staker);
+
+        let switch_amount = stake_amount * 3 / 4;
+        system.delegator_exit_intent(:delegator, :pool, amount: switch_amount);
+        system.advance_epoch_and_attest(:staker);
+
+        system.staker_exit_intent(:staker);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+        system.staker_exit_action(:staker);
+        system.delegator_claim_rewards(:delegator, :pool);
+
+        // Staker2 stake with pool
+        let staker2 = system.new_staker(amount: stake_amount);
+        system.stake(staker: staker2, amount: stake_amount, pool_enabled: true, commission: 100);
+        let pool2 = system.staking.get_pool(staker: staker2);
+
+        // Delegator switch
+        system
+            .switch_delegation_pool(
+                :delegator,
+                from_pool: pool,
+                to_staker: staker2.staker.address,
+                to_pool: pool2,
+                amount: switch_amount,
+            );
+
+        // Test balances
+        assert!(
+            system.token.balance_of(account: system.staking.address) == switch_amount
+                + stake_amount,
+        );
+        assert!(system.token.balance_of(account: pool) < 100);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
+        assert!(
+            system.token.balance_of(account: delegator.delegator.address) == stake_amount
+                - switch_amount,
+        );
+        assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+        assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
+        assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
+                + system.token.balance_of(account: staker.reward.address)
+                + system.token.balance_of(account: delegator.reward.address)
+                + system.token.balance_of(account: pool),
+        );
+    }
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
