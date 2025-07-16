@@ -2135,6 +2135,105 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
     }
 }
 
+/// Test multi pool exit intent.
+/// Flow:
+/// Staker stake with pool
+/// Staker open 2 BTC pools
+/// Delegators delegate to both pools
+/// Staker attest
+/// Staker exit intent
+/// Test total_stake
+/// Staker exit action
+/// Test delegations and rewards transferred to pools
+
+#[derive(Drop, Copy)]
+pub(crate) struct MultiPoolExitIntentFlow {}
+pub(crate) impl MultiPoolExitIntentFlowImpl of FlowTrait<MultiPoolExitIntentFlow> {
+    fn test(self: MultiPoolExitIntentFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let strk_delegator_amount = amount * 2;
+        let first_btc_amount = MIN_BTC_FOR_REWARDS * 3;
+        let second_btc_amount = MIN_BTC_FOR_REWARDS * 4;
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        // Setup tokens and pools.
+        let strk_token = system.token;
+        let first_btc_token = system.btc_token;
+        let second_btc_token = system.deploy_second_btc_token();
+        system.staking.add_token(token_address: second_btc_token.contract_address());
+        system.staking.enable_token(token_address: second_btc_token.contract_address());
+        let strk_pool = system.staking.get_pool(:staker);
+        let first_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: first_btc_token.contract_address());
+        let second_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: second_btc_token.contract_address());
+
+        // Setup delegations.
+        let strk_delegator = system.new_delegator(amount: strk_delegator_amount);
+        let first_btc_delegator = system
+            .new_btc_delegator(amount: first_btc_amount, token: first_btc_token);
+        let second_btc_delegator = system
+            .new_btc_delegator(amount: second_btc_amount, token: second_btc_token);
+        system.delegate(delegator: strk_delegator, pool: strk_pool, amount: strk_delegator_amount);
+        system
+            .delegate_btc(
+                delegator: first_btc_delegator,
+                pool: first_btc_pool,
+                amount: first_btc_amount,
+                token: first_btc_token,
+            );
+        system
+            .delegate_btc(
+                delegator: second_btc_delegator,
+                pool: second_btc_pool,
+                amount: second_btc_amount,
+                token: second_btc_token,
+            );
+
+        // Attest.
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        // Exit intent.
+        system.staker_exit_intent(:staker);
+
+        // Test total_stake.
+        let strk_total_stake = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(token_address: strk_token.contract_address());
+        let first_btc_total_stake = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(token_address: first_btc_token.contract_address());
+        let second_btc_total_stake = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(token_address: second_btc_token.contract_address());
+        assert!(strk_total_stake == 0);
+        assert!(first_btc_total_stake == 0);
+        assert!(second_btc_total_stake == 0);
+
+        // Exit action.
+        system.advance_exit_wait_window();
+        system.staker_exit_action(:staker);
+
+        // Test delegations and rewards.
+        let strk_pool_balance = strk_token.balance_of(account: strk_pool);
+        let first_btc_pool_strk_balance = strk_token.balance_of(account: first_btc_pool);
+        let second_btc_pool_strk_balance = strk_token.balance_of(account: second_btc_pool);
+        let first_btc_pool_btc_balance = first_btc_token.balance_of(account: first_btc_pool);
+        let second_btc_pool_btc_balance = second_btc_token.balance_of(account: second_btc_pool);
+        assert!(strk_pool_balance > strk_delegator_amount);
+        assert!(first_btc_pool_btc_balance == first_btc_amount);
+        assert!(second_btc_pool_btc_balance == second_btc_amount);
+        assert!(first_btc_pool_strk_balance > 0);
+        assert!(second_btc_pool_strk_balance > first_btc_pool_strk_balance);
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// 3 delegators delegate
