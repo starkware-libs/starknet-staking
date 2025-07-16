@@ -1,11 +1,14 @@
 use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
+#[cfg(test)]
 use staking::pool::interface::PoolMemberInfoV1;
 use staking::pool::interface_v0::{IPoolV0DispatcherTrait, IPoolV0LibraryDispatcher, PoolMemberInfo};
 use staking::pool::pool_member_balance_trace::trace::{
     PoolMemberCheckpoint, PoolMemberCheckpointTrait,
 };
-use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest, VecIndex};
+#[cfg(test)]
+use staking::types::InternalPoolMemberInfoLatest;
+use staking::types::{Amount, Commission, Index, VecIndex};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::time::time::Timestamp;
 

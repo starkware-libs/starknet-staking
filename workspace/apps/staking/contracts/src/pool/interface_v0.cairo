@@ -1,6 +1,9 @@
+#[cfg(test)]
 use core::num::traits::Zero;
 use staking::pool::interface::PoolMemberInfoV1;
+#[cfg(test)]
 use staking::pool::objects::InternalPoolMemberInfoV1;
+#[cfg(test)]
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::types::{Amount, Commission, Index};
 use starknet::ContractAddress;
