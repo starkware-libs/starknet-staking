@@ -40,6 +40,12 @@ fn operations_after_dead_staker_flow_test() {
 }
 
 #[test]
+fn set_commission_multiple_pools_flow_test() {
+    let flow = flows::SetCommissionMultiplePoolsFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn delegator_didnt_update_after_staker_update_commission_flow_test() {
     let flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
     test_flow_local(:flow);
