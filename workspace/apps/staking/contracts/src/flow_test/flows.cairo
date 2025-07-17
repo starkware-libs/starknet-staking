@@ -1723,6 +1723,78 @@ pub(crate) impl StakerAttestAfterIntentFlowImpl of FlowTrait<StakerAttestAfterIn
     }
 }
 
+/// Test total stake trace before and after upgrade
+/// Flow:
+/// Staker stake with pool
+/// Staker increase stake
+/// Delegator delegate
+/// Upgrade
+/// Test total stake trace
+/// Test total stake view
+#[derive(Drop, Copy)]
+pub(crate) struct TotalStakeTraceAfterUpgradeFlow {
+    pub(crate) amount: Option<Amount>,
+}
+pub(crate) impl TotalStakeTraceAfterUpgradeFlowImpl of FlowTrait<TotalStakeTraceAfterUpgradeFlow> {
+    fn setup_v1(ref self: TotalStakeTraceAfterUpgradeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 2);
+        let commission = 200;
+        system.stake(:staker, amount: amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+
+        system.advance_epoch();
+        system.increase_stake(:staker, :amount);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+
+        self.amount = Option::Some(amount);
+    }
+
+    fn test(self: TotalStakeTraceAfterUpgradeFlow, ref system: SystemState) {
+        let amount = self.amount.unwrap();
+        let token_address = system.token.contract_address();
+
+        // Test total stake trace.
+        let total_stake_trace_storage = snforge_std::map_entry_address(
+            map_selector: selector!("tokens_total_stake_trace"),
+            keys: [token_address.into()].span(),
+        );
+        let (key, value) = load_from_trace(
+            contract_address: system.staking.address,
+            trace_address: total_stake_trace_storage,
+            index: 0,
+        );
+        assert!(key == 0);
+        assert!(value == 0);
+        let (key, value) = load_from_trace(
+            contract_address: system.staking.address,
+            trace_address: total_stake_trace_storage,
+            index: 1,
+        );
+        assert!(key == 1);
+        assert!(value == amount);
+        let (key, value) = load_from_trace(
+            contract_address: system.staking.address,
+            trace_address: total_stake_trace_storage,
+            index: 2,
+        );
+        assert!(key == 2);
+        assert!(value == amount * 3);
+
+        // Test total stake view.
+        let current_staking_power = system.staking.get_current_total_staking_power_v2();
+        let total_stake = system.staking.get_total_stake();
+        let strk_total_stake = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(:token_address);
+        assert!(total_stake == amount * 3);
+        assert!(strk_total_stake == total_stake);
+        assert!(current_staking_power == (amount, 0));
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// Delegator delegate
