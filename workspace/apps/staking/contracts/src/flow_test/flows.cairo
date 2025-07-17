@@ -4072,6 +4072,88 @@ pub(crate) impl IncreaseStakeIntentSameEpochFlowImpl of FlowTrait<
 }
 
 /// Flow:
+/// Staker stake
+/// Delegator delegate
+/// Staker attest
+/// Delegator claim rewards
+/// Staker claim rewards
+/// Upgrade
+/// Staker attest
+/// Test pool rewards
+/// Test staker rewards
+/// Staker open BTC pool
+/// BTC Delegator delegate
+/// Staker attest
+/// Test pool rewards
+/// Test staker rewards
+#[derive(Drop, Copy)]
+pub(crate) struct PoolAttestFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) pool_rewards: Option<Amount>,
+    pub(crate) staker_rewards: Option<Amount>,
+}
+pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
+    fn setup_v1(ref self: PoolAttestFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        self.staker = Option::Some(staker);
+        self.delegator = Option::Some(delegator);
+        self.pool_rewards = Option::Some(pool_rewards);
+        self.staker_rewards = Option::Some(staker_rewards);
+    }
+
+    fn test(self: PoolAttestFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        system.staker_migration(staker_address: staker.staker.address);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = self.delegator.unwrap();
+        let pool_rewards = self.pool_rewards.unwrap();
+        let staker_rewards = self.staker_rewards.unwrap();
+        let token = system.btc_token;
+        let btc_amount = MIN_BTC_FOR_REWARDS;
+
+        // Attest.
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        // Test pool rewards.
+        let mid_pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let mid_staker_rewards = system.staker_claim_rewards(:staker);
+        // Allow 1% difference.
+        // TODO: new rewards are lower , change C.
+        assert!(pool_rewards - mid_pool_rewards < (pool_rewards / 100).into());
+        assert!(staker_rewards - mid_staker_rewards < (staker_rewards / 100).into());
+
+        // Open BTC pool.
+        let btc_pool = system
+            .set_open_for_delegation(:staker, token_address: token.contract_address());
+        let btc_delegator = system.new_btc_delegator(amount: btc_amount, :token);
+        system.delegate_btc(delegator: btc_delegator, pool: btc_pool, amount: btc_amount, :token);
+
+        // Attest.
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        // Test pool rewards.
+        let new_pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let new_staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(new_pool_rewards == mid_pool_rewards);
+        assert!(new_staker_rewards == mid_staker_rewards);
+    }
+}
+
+/// Flow:
 /// First staker stake with pool
 /// First delegator delegate
 /// Second staker stake with pool
