@@ -4423,6 +4423,7 @@ pub(crate) struct PoolAttestFlow {
     pub(crate) delegator: Option<Delegator>,
     pub(crate) pool_rewards: Option<Amount>,
     pub(crate) staker_rewards: Option<Amount>,
+    pub(crate) commission: Option<u16>,
 }
 pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
     fn setup_v1(ref self: PoolAttestFlow, ref system: SystemState) {
@@ -4442,6 +4443,7 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
         self.delegator = Option::Some(delegator);
         self.pool_rewards = Option::Some(pool_rewards);
         self.staker_rewards = Option::Some(staker_rewards);
+        self.commission = Option::Some(commission);
     }
 
     fn test(self: PoolAttestFlow, ref system: SystemState) {
@@ -4451,6 +4453,7 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
         let delegator = self.delegator.unwrap();
         let pool_rewards = self.pool_rewards.unwrap();
         let staker_rewards = self.staker_rewards.unwrap();
+        let commission = self.commission.unwrap();
         let token = system.btc_token;
         let btc_amount = MIN_BTC_FOR_REWARDS;
 
@@ -4477,10 +4480,15 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
         system.advance_epoch();
 
         // Test pool rewards.
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let (btc_commission_rewards, _) = calculate_staker_btc_pool_rewards(
+            pool_balance: btc_amount, :commission, :staking_contract, :minting_curve_contract,
+        );
         let new_pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
         let new_staker_rewards = system.staker_claim_rewards(:staker);
         assert!(new_pool_rewards == mid_pool_rewards);
-        assert!(new_staker_rewards == mid_staker_rewards);
+        assert!(new_staker_rewards == mid_staker_rewards + btc_commission_rewards);
     }
 }
 

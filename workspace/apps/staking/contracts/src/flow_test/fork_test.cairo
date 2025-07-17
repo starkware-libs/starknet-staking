@@ -137,6 +137,7 @@ fn pool_attest_regression_test() {
         delegator: Option::None,
         pool_rewards: Option::None,
         staker_rewards: Option::None,
+        commission: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
