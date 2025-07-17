@@ -4018,6 +4018,8 @@ fn test_get_current_total_staking_power() {
 fn test_add_token_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
+    stake_for_testing_using_dispatcher(:cfg);
+    let staker_address = cfg.test_info.staker_address;
     let staking_contract = cfg.test_info.staking_contract;
     let staking_token_manager_safe_dispatcher = IStakingTokenManagerSafeDispatcher {
         contract_address: staking_contract,
@@ -4033,6 +4035,13 @@ fn test_add_token_assertions() {
     );
     let result = staking_token_manager_safe_dispatcher.add_token(token_address: Zero::zero());
     assert_panic_with_error(:result, expected_error: GenericError::ZERO_ADDRESS.describe());
+
+    // Catch TOKEN_IS_STAKER.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    let result = staking_token_manager_safe_dispatcher.add_token(token_address: staker_address);
+    assert_panic_with_error(:result, expected_error: Error::TOKEN_IS_STAKER.describe());
 
     // Catch INVALID_TOKEN_ADDRESS - STRK token.
     cheat_caller_address_once(
