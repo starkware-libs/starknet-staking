@@ -3977,6 +3977,81 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
     }
 }
 
+/// Test delegator intent in v0 action in v2
+/// Flow:
+/// Staker stake with pool
+/// Delegators delegate
+/// Delegators exit intent (full, half, none)
+/// Upgrade
+/// Upgrade
+/// Delegators exit action
+/// Test balances
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorIntentInV0ActionInV2Flow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) delegators: Option<(Delegator, Delegator, Delegator)>,
+    pub(crate) amount: Option<Amount>,
+    pub(crate) pool_address: Option<ContractAddress>,
+}
+pub(crate) impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
+    DelegatorIntentInV0ActionInV2Flow,
+> {
+    fn get_staker_address(self: DelegatorIntentInV0ActionInV2Flow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
+    fn get_pool_address(self: DelegatorIntentInV0ActionInV2Flow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: DelegatorIntentInV0ActionInV2Flow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator1 = system.new_delegator(:amount);
+        let delegator2 = system.new_delegator(:amount);
+        let delegator3 = system.new_delegator(:amount);
+
+        system.delegate(delegator: delegator1, :pool, :amount);
+        system.delegate(delegator: delegator2, :pool, :amount);
+        system.delegate(delegator: delegator3, :pool, :amount);
+        system.delegator_exit_intent(delegator: delegator1, :pool, :amount);
+        system.delegator_exit_intent(delegator: delegator2, :pool, amount: amount / 2);
+        system.delegator_exit_intent(delegator: delegator3, :pool, amount: 0);
+        system.advance_exit_wait_window();
+
+        self.staker = Option::Some(staker);
+        self.pool_address = Option::Some(pool);
+        self.delegators = Option::Some((delegator1, delegator2, delegator3));
+        self.amount = Option::Some(amount);
+    }
+
+    fn test(self: DelegatorIntentInV0ActionInV2Flow, ref system: SystemState) {
+        let pool = self.pool_address.unwrap();
+        let (delegator1, delegator2, delegator3) = self.delegators.unwrap();
+        let amount = self.amount.unwrap();
+
+        system.delegator_exit_action(delegator: delegator1, :pool);
+        system.delegator_exit_action(delegator: delegator2, :pool);
+        let result = system.safe_delegator_exit_action(delegator: delegator3, :pool);
+        assert_panic_with_error(
+            :result, expected_error: PoolError::MISSING_UNDELEGATE_INTENT.describe(),
+        );
+
+        let delegator1_balance = system.token.balance_of(account: delegator1.delegator.address);
+        let delegator2_balance = system.token.balance_of(account: delegator2.delegator.address);
+        let delegator3_balance = system.token.balance_of(account: delegator3.delegator.address);
+        let staking_balance = system.token.balance_of(account: system.staking.address);
+        assert!(delegator1_balance == amount);
+        assert!(delegator2_balance == amount / 2);
+        assert!(delegator3_balance == 0);
+        assert!(staking_balance == amount * 5 / 2);
+    }
+}
+
 /// Pool with lots of btc
 /// Flow:
 /// Staker stake
