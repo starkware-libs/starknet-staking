@@ -163,6 +163,7 @@ pub mod Pool {
                 self.pool_member_info.read(pool_member).is_none(), "{}", Error::POOL_MEMBER_EXISTS,
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
+            self.assert_caller_is_not_token(:pool_member);
 
             // Create the pool member record.
             self
@@ -948,6 +949,14 @@ pub mod Pool {
             };
             mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
                 .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
+        }
+
+        fn assert_caller_is_not_token(self: @ContractState, pool_member: ContractAddress) {
+            assert!(
+                self.token_dispatcher.read().contract_address != pool_member,
+                "{}",
+                Error::CALLER_IS_TOKEN,
+            );
         }
     }
 }

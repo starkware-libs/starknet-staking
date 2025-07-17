@@ -172,6 +172,12 @@ fn test_enter_delegation_pool_assertions() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, :amount);
     assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_EXISTS.describe());
+
+    // Catch CALLER_IS_TOKEN.
+    let token_address = token.contract_address();
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: token_address);
+    let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, :amount);
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_TOKEN.describe());
 }
 
 #[test]

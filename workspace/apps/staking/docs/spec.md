@@ -182,6 +182,7 @@
     - [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
     - [ATTEST\_EPOCH\_ZERO](#attest_epoch_zero)
     - [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
+    - [CALLER\_IS\_TOKEN](#caller_is_token)
     - [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
     - [COMMISSION\_COMMITMENT\_NOT\_SET](#commission_commitment_not_set)
     - [CALLER\_IS\_ZERO\_ADDRESS](#caller_is_zero_address)
@@ -1612,10 +1613,11 @@ Add a new pool member to the delegation pool.
 1. [STAKER\_INACTIVE](#staker_inactive)
 2. [POOL\_MEMBER\_EXISTS](#pool_member_exists)
 3. [AMOUNT\_IS\_ZERO](#amount_is_zero)
-4. [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
-5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-6. [INSUFFICIENT\_BALANCE](#insufficient_balance)
-7. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+4. [CALLER\_IS\_TOKEN](#caller_is_token)
+5. [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
+6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+7. [INSUFFICIENT\_BALANCE](#insufficient_balance)
+8. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 #### pre-condition <!-- omit from toc -->
 1. Staker is active and not in an exit window.
 2. `caller_address` is not listed in the contract as a pool member.
@@ -2410,6 +2412,9 @@ Only token admin.
 
 ### ATTEST_WRONG_BLOCK_HASH
 "Attestation with wrong block hash"
+
+### CALLER_IS_TOKEN
+"Caller is a token address"
 
 ### COMMISSION_COMMITMENT_EXPIRED
 "Commission commitment has expired, can only decrease or set a new commitment"
