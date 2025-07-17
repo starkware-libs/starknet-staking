@@ -96,7 +96,7 @@ pub mod RewardSupplier {
         self.roles.initialize(:governance_admin);
         self.staking_contract.write(staking_contract);
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
-        // Initialize unclaimed_rewards with 1 STRK to make up for round ups of pool rewards.
+        // Initialize unclaimed_rewards with 1 STRK to make up for round ups of pool rewards
         // calculation in the staking contract.
         self.unclaimed_rewards.write(STRK_IN_FRIS);
         self.l1_pending_requested_amount.write(Zero::zero());
