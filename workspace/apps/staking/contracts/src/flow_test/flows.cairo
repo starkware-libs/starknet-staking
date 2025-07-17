@@ -5064,6 +5064,48 @@ pub(crate) impl DelegatorExitWithNonUpgradedPoolFlowImpl of FlowTrait<
     }
 }
 
+/// Test add token without enable
+/// Flow:
+/// Staker stake
+/// Add token
+/// Staker open pool with new token
+/// Delegator delegate
+/// Staker attest
+/// Test no pool rewards
+#[derive(Drop, Copy)]
+pub(crate) struct AddTokenWithoutEnableFlow {}
+pub(crate) impl AddTokenWithoutEnableFlowImpl of FlowTrait<AddTokenWithoutEnableFlow> {
+    fn test(self: AddTokenWithoutEnableFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        system.stake(:staker, amount: amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+        let token = system.deploy_second_btc_token();
+        system.staking.add_token(token_address: token.contract_address());
+
+        let pool = system.set_open_for_delegation(:staker, token_address: token.contract_address());
+
+        let delegator = system.new_btc_delegator(:amount, :token);
+        system.delegate_btc(:delegator, :pool, :amount, :token);
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let delegator_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let unclaimed_rewards = system.reward_supplier.get_unclaimed_rewards();
+        let staker_info = system.staker_info_v1(:staker);
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards(
+            :staker_info, :staking_contract, :minting_curve_contract,
+        );
+        assert!(delegator_rewards == Zero::zero());
+        assert!(wide_abs_diff(unclaimed_rewards, expected_staker_rewards) == STRK_IN_FRIS.into());
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// Delegator delegate

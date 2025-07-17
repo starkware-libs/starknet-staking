@@ -46,6 +46,12 @@ fn delegator_intent_flow_test() {
 }
 
 #[test]
+fn add_token_without_enable_flow_test() {
+    let flow = flows::AddTokenWithoutEnableFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn operations_after_dead_staker_flow_test() {
     let flow = flows::OperationsAfterDeadStakerFlow {};
     test_flow_local(:flow);
