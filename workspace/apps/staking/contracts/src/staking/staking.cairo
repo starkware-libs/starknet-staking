@@ -1397,14 +1397,14 @@ pub mod Staking {
             for (pool_contract, token_address) in staker_pool_info.pools() {
                 let pool_balance = self.get_delegated_balance(:staker_address, :token_address);
                 let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-                token_dispatcher
-                    .checked_transfer(recipient: pool_contract, amount: pool_balance.into());
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
                 pool_dispatcher.set_staker_removed();
                 self
                     .insert_staker_delegated_balance(
                         :staker_address, :token_address, delegated_balance: Zero::zero(),
                     );
+                token_dispatcher
+                    .checked_transfer(recipient: pool_contract, amount: pool_balance.into());
             }
         }
 
