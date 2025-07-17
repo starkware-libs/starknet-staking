@@ -1672,10 +1672,14 @@ pub mod Staking {
                     (btc_epoch_rewards, btc_total_stake)
                 };
                 // Calculate rewards for this pool.
-                let pool_rewards_including_commission = mul_wide_and_div(
-                    lhs: epoch_rewards, rhs: pool_balance_curr_epoch, div: total_stake,
-                )
-                    .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+                let pool_rewards_including_commission = if total_stake.is_non_zero() {
+                    mul_wide_and_div(
+                        lhs: epoch_rewards, rhs: pool_balance_curr_epoch, div: total_stake,
+                    )
+                        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+                } else {
+                    Zero::zero()
+                };
                 let (commission_rewards, pool_rewards) = self
                     .split_rewards_with_commission(
                         rewards_including_commission: pool_rewards_including_commission,

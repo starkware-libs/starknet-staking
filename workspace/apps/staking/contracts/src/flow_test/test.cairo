@@ -28,6 +28,12 @@ fn set_open_for_delegation_flow_test() {
 }
 
 #[test]
+fn attest_with_zero_total_btc_stake_flow_test() {
+    let flow = flows::AttestWithZeroTotalBtcStakeFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn delegator_intent_after_staker_action_flow_test() {
     let flow = flows::DelegatorIntentAfterStakerActionFlow {};
     test_flow_local(:flow);
