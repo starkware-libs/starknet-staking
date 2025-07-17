@@ -433,14 +433,14 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn add_token(self: StakingState, token_address: ContractAddress) {
         cheat_caller_address_once(
-            contract_address: self.address, caller_address: self.roles.security_admin,
+            contract_address: self.address, caller_address: self.roles.token_admin,
         );
         self.token_manager_dispatcher().add_token(:token_address);
     }
 
     fn enable_token(self: StakingState, token_address: ContractAddress) {
         cheat_caller_address_once(
-            contract_address: self.address, caller_address: self.roles.security_admin,
+            contract_address: self.address, caller_address: self.roles.token_admin,
         );
         self.token_manager_dispatcher().enable_token(:token_address);
     }
@@ -941,7 +941,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         // Add BTC token to the staking contract.
         cheat_caller_address(
             contract_address: staking.address,
-            caller_address: self.staking.roles.security_admin,
+            caller_address: self.staking.roles.token_admin,
             span: CheatSpan::TargetCalls(2),
         );
         staking.token_manager_dispatcher().add_token(token_address: btc_token.contract_address());
@@ -1731,7 +1731,7 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         // Add BTC token to the staking contract.
         cheat_caller_address(
             contract_address: self.staking.address,
-            caller_address: self.staking.roles.security_admin,
+            caller_address: self.staking.roles.token_admin,
             span: CheatSpan::TargetCalls(2),
         );
         self

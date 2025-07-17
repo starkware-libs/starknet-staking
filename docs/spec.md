@@ -1339,7 +1339,7 @@ Add a new token to the staking contract.
 #### emits <!-- omit from toc -->
 1. [Token Added](#token-added)
 #### errors <!-- omit from toc -->
-1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 2. [ZERO\_ADDRESS](#zero_address)
 3. [TOKEN\_IS\_STAKER](#token_is_staker)
 4. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
@@ -1358,7 +1358,7 @@ Enable a token for getting rewards.
 #### emits <!-- omit from toc -->
 1. [Token Enabled](#token-enabled)
 #### errors <!-- omit from toc -->
-1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 2. [TOKEN\_NOT\_EXISTS](#token_not_exists)
 3. [TOKEN\_ALREADY\_ENABLED](#token_already_enabled)
 #### pre-condition <!-- omit from toc -->

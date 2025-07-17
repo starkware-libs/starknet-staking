@@ -1364,7 +1364,7 @@ pub(crate) fn setup_btc_token(cfg: StakingInitConfig, name: ByteArray) -> Contra
     let token_manager = IStakingTokenManagerDispatcher { contract_address: staking_contract };
     cheat_caller_address(
         contract_address: staking_contract,
-        caller_address: cfg.test_info.security_admin,
+        caller_address: cfg.test_info.token_admin,
         span: CheatSpan::TargetCalls(2),
     );
     token_manager.add_token(token_address: btc_token_address);
