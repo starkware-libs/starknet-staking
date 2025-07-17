@@ -1055,7 +1055,9 @@ pub(crate) impl SystemImpl of SystemTrait {
     /// Note: This function is built on the assumption that exit window > k epochs
     fn advance_exit_wait_window(ref self: SystemState) {
         self.advance_time(time: self.staking.get_exit_wait_window());
-        self.advance_epoch();
+        if !self.staking.is_v0() {
+            self.advance_epoch();
+        }
     }
 
     fn set_pool_for_upgrade(ref self: SystemState, pool_address: ContractAddress) {
@@ -1393,8 +1395,13 @@ pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
         );
-        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
+        if self.staking.is_v0() {
+            let pool_dispatcher = IPoolV0Dispatcher { contract_address: pool };
+            pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
+        } else {
+            let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+            pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
+        }
     }
 
     fn delegate_btc(
@@ -1444,8 +1451,13 @@ pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
         );
-        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.exit_delegation_pool_intent(:amount)
+        if self.staking.is_v0() {
+            let pool_dispatcher = IPoolV0Dispatcher { contract_address: pool };
+            pool_dispatcher.exit_delegation_pool_intent(:amount)
+        } else {
+            let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+            pool_dispatcher.exit_delegation_pool_intent(:amount)
+        }
     }
 
     #[feature("safe_dispatcher")]
