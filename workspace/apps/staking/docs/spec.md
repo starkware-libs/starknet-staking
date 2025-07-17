@@ -201,6 +201,7 @@
     - [STAKER\_INFO\_ALREADY\_UPDATED](#staker_info_already_updated)
     - [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
     - [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
+    - [TOKEN\_IS\_STAKER](#token_is_staker)
     - [TOKEN\_NOT\_EXISTS](#token_not_exists)
     - [TOKEN\_ALREADY\_ENABLED](#token_already_enabled)
     - [TOKEN\_ALREADY\_DISABLED](#token_already_disabled)
@@ -1337,8 +1338,9 @@ Add a new token to the staking contract.
 #### errors <!-- omit from toc -->
 1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
 2. [ZERO\_ADDRESS](#zero_address)
-3. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
-4. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
+3. [TOKEN\_IS\_STAKER](#token_is_staker)
+4. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
+5. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only security admin.
@@ -2475,6 +2477,9 @@ Only token admin.
 
 ### TOKEN_ALREADY_EXISTS
 "Token already exists"
+
+### TOKEN_IS_STAKER
+"Token is a staker address"
 
 ### TOKEN_MISMATCH
 "Token mismatch"

@@ -1072,6 +1072,7 @@ pub mod Staking {
         fn add_token(ref self: ContractState, token_address: ContractAddress) {
             self.roles.only_security_admin();
             assert!(token_address.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
+            assert!(self.staker_info.read(token_address).is_none(), "{}", Error::TOKEN_IS_STAKER);
             assert!(token_address != STRK_TOKEN_ADDRESS, "{}", Error::INVALID_TOKEN_ADDRESS);
             assert!(
                 self.btc_tokens.read(token_address).is_none(), "{}", Error::TOKEN_ALREADY_EXISTS,
