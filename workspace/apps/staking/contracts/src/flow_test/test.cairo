@@ -40,6 +40,12 @@ fn delegator_intent_after_staker_action_flow_test() {
 }
 
 #[test]
+fn basic_stake_btc_flow_test() {
+    let flow = flows::BasicStakeBTCFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn delegator_intent_flow_test() {
     let flow = flows::DelegatorIntentFlow {};
     test_flow_local(:flow);

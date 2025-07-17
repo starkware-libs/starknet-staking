@@ -200,6 +200,105 @@ pub(crate) impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
     }
 }
 
+/// Flow - Basic Stake with BTC:
+/// Staker stake
+/// Staker open BTC pool
+/// Staker increase_stake - cover if pool amount = 0 in calc_rew
+/// Delegator delegate (and create) to Staker
+/// Staker increase_stake - cover pool amount > 0 in calc_rew
+/// Delegator increase_delegate
+/// Delegator exit intent
+/// Staker exit intent and action
+/// Staker2 stake
+/// Staker2 open BTC pool
+/// Delegator switch
+/// Test balances
+#[derive(Drop, Copy)]
+pub(crate) struct BasicStakeBTCFlow {}
+pub(crate) impl BasicStakeBTCFlowImpl of FlowTrait<BasicStakeBTCFlow> {
+    fn test(self: BasicStakeBTCFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let delegate_amount = MIN_BTC_FOR_REWARDS * 16;
+        let initial_reward_supplier_balance = system
+            .token
+            .balance_of(account: system.reward_supplier.address);
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+
+        // Staker open BTC pool
+        system.set_commission(:staker, :commission);
+        let token = system.btc_token;
+        let token_address = token.contract_address();
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_stake(:staker, amount: stake_amount / 2);
+        system.advance_epoch_and_attest(:staker);
+
+        let delegator = system.new_btc_delegator(amount: delegate_amount, :token);
+        system.delegate_btc(:delegator, :pool, amount: delegate_amount / 2, :token);
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_stake(:staker, amount: stake_amount / 4);
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_delegate_btc(:delegator, :pool, amount: delegate_amount / 4, :token);
+        system.advance_epoch_and_attest(:staker);
+
+        let switch_amount = delegate_amount * 3 / 4;
+        system.delegator_exit_intent(:delegator, :pool, amount: switch_amount);
+        system.advance_epoch_and_attest(:staker);
+
+        system.staker_exit_intent(:staker);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+
+        system.delegator_claim_rewards(:delegator, :pool);
+        system.staker_exit_action(:staker);
+
+        let staker2 = system.new_staker(amount: stake_amount);
+        system
+            .stake(
+                staker: staker2,
+                amount: stake_amount,
+                pool_enabled: false,
+                commission: commission / 2,
+            );
+        system.set_commission(staker: staker2, commission: commission / 2);
+        let pool2 = system.set_open_for_delegation(staker: staker2, :token_address);
+        system
+            .switch_delegation_pool(
+                :delegator,
+                from_pool: pool,
+                to_staker: staker2.staker.address,
+                to_pool: pool2,
+                amount: switch_amount,
+            );
+
+        assert!(system.token.balance_of(account: system.staking.address) == stake_amount);
+        assert!(system.btc_token.balance_of(account: system.staking.address) == switch_amount);
+        assert!(system.token.balance_of(account: pool) < 100);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
+        assert!(
+            system.btc_token.balance_of(account: delegator.delegator.address) == delegate_amount
+                - switch_amount,
+        );
+        assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+        assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
+        assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
+                + system.token.balance_of(account: staker.reward.address)
+                + system.token.balance_of(account: delegator.reward.address)
+                + system.token.balance_of(account: pool),
+        );
+    }
+}
+
 /// Flow:
 /// Staker Stake
 /// Delegator delegate
