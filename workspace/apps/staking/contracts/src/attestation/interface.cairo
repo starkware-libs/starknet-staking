@@ -1,4 +1,4 @@
-use staking::types::Epoch;
+use staking_test::types::Epoch;
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -18,7 +18,7 @@ pub trait IAttestation<TContractState> {
 }
 
 pub mod Events {
-    use staking::types::Epoch;
+    use staking_test::types::Epoch;
     use starknet::ContractAddress;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct StakerAttestationSuccessful {

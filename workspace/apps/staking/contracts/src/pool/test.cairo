@@ -21,30 +21,30 @@ use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{
     CheatSpan, TokenTrait, cheat_caller_address, start_cheat_block_timestamp_global, test_address,
 };
-use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::errors::GenericError;
-use staking::pool::errors::Error;
-use staking::pool::interface::{
+use staking_test::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
+use staking_test::errors::GenericError;
+use staking_test::pool::errors::Error;
+use staking_test::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher,
     IPoolMigrationDispatcherTrait, IPoolSafeDispatcher, IPoolSafeDispatcherTrait,
     PoolContractInfoV1, PoolMemberInfoV1,
 };
-use staking::pool::objects::{
+use staking_test::pool::objects::{
     InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Trait, InternalPoolMemberInfoTestTrait,
     InternalPoolMemberInfoV1, PoolMemberInfoV1IntoInternalPoolMemberInfoV1Trait, SwitchPoolData,
     VInternalPoolMemberInfo, VInternalPoolMemberInfoTestTrait, VInternalPoolMemberInfoTrait,
     VStorageContractTest,
 };
-use staking::pool::pool::Pool;
-use staking::staking::interface::{
+use staking_test::pool::pool::Pool;
+use staking_test::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
-use staking::staking::objects::{
+use staking_test::staking::objects::{
     InternalStakerInfoLatestTestTrait, UndelegateIntentKey, UndelegateIntentValue,
     UndelegateIntentValueZero,
 };
-use staking::types::InternalPoolMemberInfoLatest;
-use staking::{event_test_utils, test_utils};
+use staking_test::types::InternalPoolMemberInfoLatest;
+use staking_test::{event_test_utils, test_utils};
 use starkware_utils::errors::Describable;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{

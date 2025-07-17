@@ -1,20 +1,20 @@
 use core::num::traits::Zero;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use staking::attestation::attestation::Attestation;
-use staking::attestation::errors::Error;
-use staking::attestation::interface::{
+use staking_test::attestation::attestation::Attestation;
+use staking_test::attestation::errors::Error;
+use staking_test::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
-use staking::constants::MIN_ATTESTATION_WINDOW;
-use staking::errors::GenericError;
-use staking::event_test_utils::{
+use staking_test::constants::MIN_ATTESTATION_WINDOW;
+use staking_test::errors::GenericError;
+use staking_test::event_test_utils::{
     assert_attestation_window_changed_event, assert_number_of_events,
     assert_staker_attestation_successful_event,
 };
-use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
-use staking::staking::objects::EpochInfoTrait;
-use staking::test_utils;
+use staking_test::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+use staking_test::staking::objects::EpochInfoTrait;
+use staking_test::test_utils;
 use starknet::get_block_number;
 use starkware_utils::components::replaceability::interface::{
     IReplaceableDispatcher, IReplaceableDispatcherTrait,

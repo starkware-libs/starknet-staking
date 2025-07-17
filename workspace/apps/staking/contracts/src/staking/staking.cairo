@@ -10,34 +10,34 @@ pub mod Staking {
         IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
         IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::{
+    use staking_test::constants::{
         BTC_DECIMALS, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW,
         STAKING_V2_PREV_CONTRACT_VERSION, STARTING_EPOCH, STRK_TOKEN_ADDRESS,
     };
-    use staking::errors::GenericError;
-    use staking::pool::errors::Error as PoolError;
-    use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
-    use staking::reward_supplier::interface::{
+    use staking_test::errors::GenericError;
+    use staking_test::pool::errors::Error as PoolError;
+    use staking_test::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
+    use staking_test::reward_supplier::interface::{
         IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     };
-    use staking::staking::errors::Error;
-    use staking::staking::interface::{
+    use staking_test::staking::errors::Error;
+    use staking_test::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
         IStakingMigration, IStakingPause, IStakingPool, IStakingTokenManager, PauseEvents, PoolInfo,
         StakerInfoV1, StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1, TokenManagerEvents,
     };
-    use staking::staking::objects::{
+    use staking_test::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
         InternalStakerInfoLatestTrait, InternalStakerPoolInfoV2, InternalStakerPoolInfoV2MutTrait,
         InternalStakerPoolInfoV2Trait, UndelegateIntentKey, UndelegateIntentValue,
         UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
         VersionedInternalStakerInfoTrait,
     };
-    use staking::staking::staker_balance_trace::trace::{
+    use staking_test::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTrait,
     };
-    use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, Version};
-    use staking::utils::{
+    use staking_test::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, Version};
+    use staking_test::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
         compute_new_delegated_stake, deploy_delegation_pool_contract,
     };
@@ -1183,7 +1183,7 @@ pub mod Staking {
     }
 
     #[generate_trait]
-    pub(crate) impl InternalStakingMigration of IStakingMigrationInternal {
+    pub impl InternalStakingMigration of IStakingMigrationInternal {
         /// Returns the class hash of the previous contract version.
         ///
         /// **Note**: This function must be reimplemented in the next version of the contract.
@@ -1193,7 +1193,7 @@ pub mod Staking {
     }
 
     #[generate_trait]
-    pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+    pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         fn _get_total_stake(self: @ContractState, token_address: ContractAddress) -> Amount {
             let total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
             // Trace is initialized with a zero stake at the first valid epoch, so it is safe to

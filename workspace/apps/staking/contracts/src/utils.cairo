@@ -1,7 +1,7 @@
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use staking::errors::{Erc20Error, GenericError};
-use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
-use staking::types::{Amount, Commission, Index};
+use staking_test::errors::{Erc20Error, GenericError};
+use staking_test::staking::staking::Staking::COMMISSION_DENOMINATOR;
+use staking_test::types::{Amount, Commission, Index};
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_contract_address};
 use starkware_utils::errors::OptionAuxTrait;

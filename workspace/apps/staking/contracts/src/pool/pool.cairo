@@ -11,32 +11,32 @@ pub mod Pool {
         IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
         IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::{
+    use staking_test::constants::{
         BTC_BASE_VALUE, BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS,
         STRK_IN_FRIS, STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
     };
-    use staking::errors::GenericError;
-    use staking::pool::errors::Error;
-    use staking::pool::interface::{
+    use staking_test::errors::GenericError;
+    use staking_test::pool::errors::Error;
+    use staking_test::pool::interface::{
         Events, IPool, IPoolMigration, PoolContractInfoV1, PoolMemberInfoV1,
     };
-    use staking::pool::objects::{
+    use staking_test::pool::objects::{
         InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
         VInternalPoolMemberInfoTrait,
     };
-    use staking::pool::pool_member_balance_trace::trace::{
+    use staking_test::pool::pool_member_balance_trace::trace::{
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
         PoolMemberBalanceTrait, PoolMemberCheckpoint, PoolMemberCheckpointTrait,
     };
-    use staking::staking::errors::Error as StakingError;
-    use staking::staking::interface::{
+    use staking_test::staking::errors::Error as StakingError;
+    use staking_test::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
         IStakingPoolDispatcherTrait,
     };
-    use staking::types::{
+    use staking_test::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
     };
-    use staking::utils::{CheckedIERC20DispatcherTrait, compute_rewards_rounded_down};
+    use staking_test::utils::{CheckedIERC20DispatcherTrait, compute_rewards_rounded_down};
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
     use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
@@ -581,7 +581,7 @@ pub mod Pool {
     }
 
     #[generate_trait]
-    pub(crate) impl InternalPoolMigration of IPoolMigrationInternal {
+    pub impl InternalPoolMigration of IPoolMigrationInternal {
         /// Returns the class hash of the previous contract version.
         ///
         /// **Note**: This function must be reimplemented in the next version of the contract.
@@ -591,7 +591,7 @@ pub mod Pool {
     }
 
     #[generate_trait]
-    pub(crate) impl InternalPoolFunctions of InternalPoolFunctionsTrait {
+    pub impl InternalPoolFunctions of InternalPoolFunctionsTrait {
         fn assert_staker_is_active(self: @ContractState) {
             assert!(self.is_staker_active(), "{}", Error::STAKER_INACTIVE);
         }

@@ -1,7 +1,7 @@
-use staking::staking::errors::Error;
-use staking::staking::interface::{StakerInfoV1, StakerPoolInfoV1};
-use staking::staking::objects::StakerPoolInfo;
-use staking::types::{Amount, Commission, Index};
+use staking_test::staking::errors::Error;
+use staking_test::staking::interface::{StakerInfoV1, StakerPoolInfoV1};
+use staking_test::staking::objects::StakerPoolInfo;
+use staking_test::types::{Amount, Commission, Index};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::time::time::{TimeDelta, Timestamp};

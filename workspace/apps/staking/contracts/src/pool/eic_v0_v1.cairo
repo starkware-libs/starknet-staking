@@ -3,12 +3,12 @@
 #[starknet::contract]
 mod PoolEICV0toV1 {
     use core::num::traits::Zero;
-    use staking::constants::V1_PREV_CONTRACT_VERSION;
-    use staking::errors::GenericError;
-    use staking::staking::interface_v1::{
+    use staking_test::constants::V1_PREV_CONTRACT_VERSION;
+    use staking_test::errors::GenericError;
+    use staking_test::staking::interface_v1::{
         IStakingPoolV1ForTestsDispatcher, IStakingPoolV1ForTestsDispatcherTrait,
     };
-    use staking::types::{Index, Version};
+    use staking_test::types::{Index, Version};
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
     use starknet::storage::Map;

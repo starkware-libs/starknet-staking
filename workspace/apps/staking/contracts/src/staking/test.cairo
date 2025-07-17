@@ -29,24 +29,24 @@ use snforge_std::{
     CheatSpan, TokenTrait, cheat_account_contract_address, cheat_caller_address,
     start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
-use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{
+use staking_test::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
+use staking_test::constants::{
     BTC_DECIMALS, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
     V1_PREV_CONTRACT_VERSION,
 };
-use staking::errors::GenericError;
-use staking::flow_test::utils::MainnetClassHashes::{
+use staking_test::errors::GenericError;
+use staking_test::flow_test::utils::MainnetClassHashes::{
     MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1,
 };
-use staking::flow_test::utils::{declare_staking_contract, upgrade_implementation};
-use staking::pool::errors::Error as PoolError;
-use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfoV1};
-use staking::pool::objects::SwitchPoolData;
-use staking::reward_supplier::interface::{
+use staking_test::flow_test::utils::{declare_staking_contract, upgrade_implementation};
+use staking_test::pool::errors::Error as PoolError;
+use staking_test::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfoV1};
+use staking_test::pool::objects::SwitchPoolData;
+use staking_test::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
-use staking::staking::errors::Error;
-use staking::staking::interface::{
+use staking_test::staking::errors::Error;
+use staking_test::staking::interface::{
     CommissionCommitment, IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
     IStakingAttestationSafeDispatcher, IStakingAttestationSafeDispatcherTrait,
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingConfigSafeDispatcher,
@@ -58,16 +58,16 @@ use staking::staking::interface::{
     IStakingTokenManagerSafeDispatcherTrait, PoolInfo, StakerInfoV1, StakerInfoV1Trait,
     StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1,
 };
-use staking::staking::objects::{
+use staking_test::staking::objects::{
     AttestationInfoTrait, EpochInfoTrait, InternalStakerInfoLatestTestTrait,
     InternalStakerInfoLatestTrait, InternalStakerInfoV1, InternalStakerPoolInfoV1,
     StakerInfoIntoInternalStakerInfoV1ITrait, UndelegateIntentKey, UndelegateIntentValue,
     UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
     VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
 };
-use staking::staking::staking::Staking;
-use staking::types::{Amount, InternalStakerInfoLatest, VecIndex};
-use staking::{event_test_utils, test_utils};
+use staking_test::staking::staking::Staking;
+use staking_test::types::{Amount, InternalStakerInfoLatest, VecIndex};
+use staking_test::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
 use starkware_utils::components::replaceability::interface::{

@@ -1,11 +1,11 @@
 use core::num::traits::Zero;
-use staking::constants::STARTING_EPOCH;
-use staking::pool::interface::PoolMemberInfoV1;
-use staking::pool::interface_v0::{IPoolV0DispatcherTrait, IPoolV0LibraryDispatcher, PoolMemberInfo};
-use staking::pool::pool_member_balance_trace::trace::{
+use staking_test::constants::STARTING_EPOCH;
+use staking_test::pool::interface::PoolMemberInfoV1;
+use staking_test::pool::interface_v0::{IPoolV0DispatcherTrait, IPoolV0LibraryDispatcher, PoolMemberInfo};
+use staking_test::pool::pool_member_balance_trace::trace::{
     PoolMemberCheckpoint, PoolMemberCheckpointTrait,
 };
-use staking::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest, VecIndex};
+use staking_test::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest, VecIndex};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::time::time::Timestamp;
 
@@ -37,38 +37,38 @@ struct InternalPoolMemberInfo {
 
 // **Note**: This struct should be made private in the next version of Internal Pool Member Info.
 #[derive(Drop, PartialEq, Serde, Copy, starknet::Store, Debug)]
-pub(crate) struct InternalPoolMemberInfoV1 {
+pub struct InternalPoolMemberInfoV1 {
     /// Address to send the member's rewards to.
-    pub(crate) reward_address: ContractAddress,
+    pub reward_address: ContractAddress,
     /// **Note**: This field was used in V0 and is replaced by `pool_member_epoch_balance` in V1.
-    pub(crate) _deprecated_amount: Amount,
+    pub _deprecated_amount: Amount,
     /// **Note**: This field was used in V0, in V1, rewards are calculated based on epochs.
-    pub(crate) _deprecated_index: Index,
+    pub _deprecated_index: Index,
     /// **Note**: This field was used in V0,
     /// in V1 it only holds unclaimed rewards from before the upgrade.
-    pub(crate) _unclaimed_rewards_from_v0: Amount,
+    pub _unclaimed_rewards_from_v0: Amount,
     /// **Note**: This field was used in V0 for rewards calculation.
     /// In V1, rewards are transferred to the pool after commission deduction.
-    pub(crate) _deprecated_commission: Commission,
+    pub _deprecated_commission: Commission,
     /// Amount of funds pending to be removed from the pool.
-    pub(crate) unpool_amount: Amount,
+    pub unpool_amount: Amount,
     /// If the member has declared an intent to unpool,
     /// this field holds the timestamp when he's allowed to do so.
     /// Else, it's None.
-    pub(crate) unpool_time: Option<Timestamp>,
+    pub unpool_time: Option<Timestamp>,
     /// The index of the first entry in the member balance trace for which:
     ///   `epoch >= reward_checkpoint.epoch`,
     /// (where `epoch = pool_member_epoch_balance[entry_to_claim_from]`),
     /// or the length of the trace if none exists.
-    pub(crate) entry_to_claim_from: VecIndex,
+    pub entry_to_claim_from: VecIndex,
     /// The checkpoint to start claiming rewards from.
     /// In particular, rewards for `reward_checkpoint.epoch` were not paid yet.
-    pub(crate) reward_checkpoint: PoolMemberCheckpoint,
+    pub reward_checkpoint: PoolMemberCheckpoint,
 }
 
 // **Note**: This struct should be updated in the next version of Internal Pool Member Info.
 #[derive(Debug, PartialEq, Serde, Drop, Copy, starknet::Store)]
-pub(crate) enum VInternalPoolMemberInfo {
+pub enum VInternalPoolMemberInfo {
     V0: InternalPoolMemberInfo,
     #[default]
     None,
@@ -77,7 +77,7 @@ pub(crate) enum VInternalPoolMemberInfo {
 
 // **Note**: This trait must be reimplemented in the next version of Internal Pool Member Info.
 #[generate_trait]
-pub(crate) impl InternalPoolMemberInfoConvert of InternalPoolMemberInfoConvertTrait {
+pub impl InternalPoolMemberInfoConvert of InternalPoolMemberInfoConvertTrait {
     fn convert(
         self: InternalPoolMemberInfo, prev_class_hash: ClassHash, pool_member: ContractAddress,
     ) -> InternalPoolMemberInfoV1 {
@@ -103,7 +103,7 @@ pub(crate) impl InternalPoolMemberInfoConvert of InternalPoolMemberInfoConvertTr
 
 // **Note**: This trait must be reimplemented in the next version of Internal Pool Member Info.
 #[generate_trait]
-pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
+pub impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
     fn wrap_latest(value: InternalPoolMemberInfoV1) -> VInternalPoolMemberInfo nopanic {
         VInternalPoolMemberInfo::V1(value)
     }
@@ -143,7 +143,7 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
 
 #[cfg(test)]
 #[generate_trait]
-pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Impl of InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Trait {
+pub impl InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Impl of InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Trait {
     fn to_external(self: InternalPoolMemberInfoLatest) -> PoolMemberInfoV1 {
         PoolMemberInfoV1 {
             reward_address: self.reward_address,
@@ -158,7 +158,7 @@ pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Impl of Internal
 
 #[cfg(test)]
 #[generate_trait]
-pub(crate) impl PoolMemberInfoV1IntoInternalPoolMemberInfoV1Impl of PoolMemberInfoV1IntoInternalPoolMemberInfoV1Trait {
+pub impl PoolMemberInfoV1IntoInternalPoolMemberInfoV1Impl of PoolMemberInfoV1IntoInternalPoolMemberInfoV1Trait {
     fn to_internal(self: PoolMemberInfoV1) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address: self.reward_address,
@@ -180,7 +180,7 @@ pub(crate) impl PoolMemberInfoV1IntoInternalPoolMemberInfoV1Impl of PoolMemberIn
 
 #[cfg(test)]
 #[generate_trait]
-pub(crate) impl VInternalPoolMemberInfoTestImpl of VInternalPoolMemberInfoTestTrait {
+pub impl VInternalPoolMemberInfoTestImpl of VInternalPoolMemberInfoTestTrait {
     fn new_v0(
         reward_address: ContractAddress,
         amount: Amount,
@@ -212,7 +212,7 @@ pub(crate) impl VInternalPoolMemberInfoTestImpl of VInternalPoolMemberInfoTestTr
 
 #[cfg(test)]
 #[generate_trait]
-pub(crate) impl InternalPoolMemberInfoTestImpl of InternalPoolMemberInfoTestTrait {
+pub impl InternalPoolMemberInfoTestImpl of InternalPoolMemberInfoTestTrait {
     fn new(
         reward_address: ContractAddress,
         amount: Amount,

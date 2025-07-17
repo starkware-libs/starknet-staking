@@ -12,23 +12,23 @@ use snforge_std::{
     cheat_caller_address, start_cheat_block_hash_global, start_cheat_block_number_global,
     start_cheat_block_timestamp_global,
 };
-use staking::attestation::interface::{
+use staking_test::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
-use staking::constants::{BTC_DECIMALS, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
-use staking::minting_curve::interface::{
+use staking_test::constants::{BTC_DECIMALS, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
+use staking_test::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
 };
-use staking::pool::interface::{
+use staking_test::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
     IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfoV1, PoolMemberInfoV1,
 };
-use staking::pool::interface_v0::{IPoolV0Dispatcher, IPoolV0DispatcherTrait, PoolMemberInfo};
-use staking::reward_supplier::interface::{
+use staking_test::pool::interface_v0::{IPoolV0Dispatcher, IPoolV0DispatcherTrait, PoolMemberInfo};
+use staking_test::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
-use staking::staking::interface::{
+use staking_test::staking::interface::{
     CommissionCommitment, IStakingConfigDispatcher, IStakingConfigDispatcherTrait,
     IStakingDispatcher, IStakingDispatcherTrait, IStakingMigrationDispatcher,
     IStakingMigrationDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
@@ -36,24 +36,24 @@ use staking::staking::interface::{
     IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
     IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
-use staking::staking::interface_v0::{
+use staking_test::staking::interface_v0::{
     IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
-use staking::staking::interface_v1::{
+use staking_test::staking::interface_v1::{
     IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
 };
-use staking::staking::objects::{EpochInfo, EpochInfoTrait};
-use staking::test_utils::constants::{
+use staking_test::staking::objects::{EpochInfo, EpochInfoTrait};
+use staking_test::test_utils::constants::{
     BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
     INITIAL_SUPPLY, MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS, STARTING_BLOCK_OFFSET,
     UPGRADE_GOVERNOR,
 };
-use staking::test_utils::{
+use staking_test::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
     declare_pool_contract, declare_pool_eic_contract, declare_staking_eic_contract_v0_v1,
     declare_staking_eic_contract_v1_v2, deploy_mock_erc20_decimals_contract, fund,
 };
-use staking::types::{
+use staking_test::types::{
     Amount, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
     InternalStakerInfoLatest, VecIndex,
 };
@@ -74,52 +74,52 @@ use starkware_utils_testing::test_utils::{
 mod MainnetAddresses {
     use starknet::ContractAddress;
 
-    pub(crate) fn MAINNET_L2_BRIDGE_ADDRESS() -> ContractAddress {
+    pub fn MAINNET_L2_BRIDGE_ADDRESS() -> ContractAddress {
         0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d.try_into().unwrap()
     }
 }
 
 /// Contains class hashes of mainnet contracts.
-pub(crate) mod MainnetClassHashes {
+pub mod MainnetClassHashes {
     use starknet::class_hash::ClassHash;
 
     /// Class hash of the first staking contract deployed on mainnet.
-    pub(crate) fn MAINNET_STAKING_CLASS_HASH_V0() -> ClassHash {
+    pub fn MAINNET_STAKING_CLASS_HASH_V0() -> ClassHash {
         0x31578ba8535c5be427c03412d596fe17d3cecfc2b4a3040b841c009fe4ac5f5.try_into().unwrap()
     }
 
     /// Class hash of the second staking contract deployed on mainnet (upgraded in V1).
-    pub(crate) fn MAINNET_STAKING_CLASS_HASH_V1() -> ClassHash {
+    pub fn MAINNET_STAKING_CLASS_HASH_V1() -> ClassHash {
         0x03f85b23fd3c13e55134f583f22f3046d0e2cc2e6a6c61431137cee9d55deaf7.try_into().unwrap()
     }
 
     /// Class hash of the first reward supplier contract deployed on mainnet.
-    pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash {
+    pub fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash {
         0x7cbbebcdbbce7bd45611d8b679e524b63586429adee0f858b7f0994d709d648.try_into().unwrap()
     }
 
     /// Class hash of the second reward supplier contract deployed on mainnet (upgraded in V1).
-    pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1() -> ClassHash {
+    pub fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1() -> ClassHash {
         0x7dbce96b61d0195129103eca514936992f290062bcb95c7528f7383b062cde7.try_into().unwrap()
     }
 
     /// Class hash of the first minting curve contract deployed on mainnet.
-    pub(crate) fn MAINNET_MINTING_CURVE_CLASS_HASH_V0() -> ClassHash {
+    pub fn MAINNET_MINTING_CURVE_CLASS_HASH_V0() -> ClassHash {
         0xb00a4f0a3ba3f266837da66c0c3053c4676046a2d621e80d1f822fe9c9b5f6.try_into().unwrap()
     }
 
     /// Class hash of the first pool contract deployed on mainnet.
-    pub(crate) fn MAINNET_POOL_CLASS_HASH_V0() -> ClassHash {
+    pub fn MAINNET_POOL_CLASS_HASH_V0() -> ClassHash {
         0x072ddc6cc22fb26453334e9cf1cbb92f12d2946d058e2b2b571c65d0f23d6516.try_into().unwrap()
     }
 
     /// Class hash of the second pool contract deployed on mainnet (upgraded in V1).
-    pub(crate) fn MAINNET_POOL_CLASS_HASH_V1() -> ClassHash {
+    pub fn MAINNET_POOL_CLASS_HASH_V1() -> ClassHash {
         0x05f6abc83b23af3af179388e1e2bf93096047ba6d8c480360d3c88f7d175bdef.try_into().unwrap()
     }
 
     /// Class hash of the first attestation contract deployed on mainnet (deployed in V1).
-    pub(crate) fn MAINNET_ATTESTATION_CLASS_HASH_V1() -> ClassHash {
+    pub fn MAINNET_ATTESTATION_CLASS_HASH_V1() -> ClassHash {
         0x06f9f82c74ee893a56f12480fac55ff89855e38cd132ee50ac11cb51f83623d3.try_into().unwrap()
     }
 }
@@ -127,7 +127,7 @@ pub(crate) mod MainnetClassHashes {
 /// The `StakingRoles` struct represents the various roles involved in the staking contract.
 /// It includes addresses for different administrative and security roles.
 #[derive(Drop, Copy)]
-pub(crate) struct StakingRoles {
+pub struct StakingRoles {
     pub upgrade_governor: ContractAddress,
     pub security_admin: ContractAddress,
     pub security_agent: ContractAddress,
@@ -146,7 +146,7 @@ pub(crate) struct StakingRoles {
 /// - `pool_contract_admin` (ContractAddress): The address of the pool contract administrator.
 /// - `governance_admin` (ContractAddress): The address of the governance administrator.
 #[derive(Drop, Copy)]
-pub(crate) struct StakingConfig {
+pub struct StakingConfig {
     pub min_stake: Amount,
     pub pool_contract_class_hash: ClassHash,
     pub reward_supplier: ContractAddress,
@@ -161,14 +161,14 @@ pub(crate) struct StakingConfig {
 /// The `StakingState` struct represents the state of the staking contract.
 /// It includes the contract address, governance administrator, and roles.
 #[derive(Drop, Copy)]
-pub(crate) struct StakingState {
+pub struct StakingState {
     pub address: ContractAddress,
     pub governance_admin: ContractAddress,
     pub roles: StakingRoles,
 }
 
 #[generate_trait]
-pub(crate) impl StakingImpl of StakingTrait {
+pub impl StakingImpl of StakingTrait {
     fn deploy(self: StakingConfig, token: Token) -> StakingState {
         let mut calldata = ArrayTrait::new();
         token.contract_address().serialize(ref calldata);
@@ -457,7 +457,7 @@ pub(crate) impl StakingImpl of StakingTrait {
 /// contract.
 /// It includes addresses for different administrative roles.
 #[derive(Drop, Copy)]
-pub(crate) struct MintingCurveRoles {
+pub struct MintingCurveRoles {
     pub upgrade_governor: ContractAddress,
     pub app_role_admin: ContractAddress,
     pub token_admin: ContractAddress,
@@ -473,7 +473,7 @@ pub(crate) struct MintingCurveRoles {
 /// - `l1_reward_supplier` (felt252).
 /// - `roles` (MintingCurveRoles).
 #[derive(Drop, Copy)]
-pub(crate) struct MintingCurveConfig {
+pub struct MintingCurveConfig {
     pub initial_supply: Amount,
     pub governance_admin: ContractAddress,
     pub l1_reward_supplier: felt252,
@@ -483,7 +483,7 @@ pub(crate) struct MintingCurveConfig {
 /// The `MintingCurveState` struct represents the state of the minting curve contract.
 /// It includes the contract address, governance administrator, and roles.
 #[derive(Drop, Copy)]
-pub(crate) struct MintingCurveState {
+pub struct MintingCurveState {
     pub address: ContractAddress,
     pub governance_admin: ContractAddress,
     pub roles: MintingCurveRoles,
@@ -571,7 +571,7 @@ impl MintingCurveImpl of MintingCurveTrait {
 /// contract.
 /// It includes the address for the upgrade governor role.
 #[derive(Drop, Copy)]
-pub(crate) struct RewardSupplierRoles {
+pub struct RewardSupplierRoles {
     pub upgrade_governor: ContractAddress,
 }
 
@@ -586,7 +586,7 @@ pub(crate) struct RewardSupplierRoles {
 /// - `governance_admin` (ContractAddress): The address of the governance administrator.
 /// - `roles` (RewardSupplierRoles): The roles involved in the reward supplier contract.
 #[derive(Drop, Copy)]
-pub(crate) struct RewardSupplierConfig {
+pub struct RewardSupplierConfig {
     pub base_mint_amount: Amount,
     pub l1_reward_supplier: felt252,
     pub starkgate_address: ContractAddress,
@@ -597,14 +597,14 @@ pub(crate) struct RewardSupplierConfig {
 /// The `RewardSupplierState` struct represents the state of the reward supplier contract.
 /// It includes the contract address, governance administrator, and roles.
 #[derive(Drop, Copy)]
-pub(crate) struct RewardSupplierState {
+pub struct RewardSupplierState {
     pub address: ContractAddress,
     pub governance_admin: ContractAddress,
     pub roles: RewardSupplierRoles,
 }
 
 #[generate_trait]
-pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
+pub impl RewardSupplierImpl of RewardSupplierTrait {
     fn deploy(
         self: RewardSupplierConfig,
         minting_curve: MintingCurveState,
@@ -689,21 +689,21 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
 /// The `PoolRoles` struct represents the various roles involved in the pool contract.
 /// It includes the address for the upgrade governor role.
 #[derive(Drop, Copy)]
-pub(crate) struct PoolRoles {
+pub struct PoolRoles {
     pub upgrade_governor: ContractAddress,
 }
 
 /// The `PoolState` struct represents the state of the pool contract.
 /// It includes the contract address and roles.
 #[derive(Drop, Copy)]
-pub(crate) struct PoolState {
+pub struct PoolState {
     pub address: ContractAddress,
     pub governance_admin: ContractAddress,
     pub roles: PoolRoles,
 }
 
 #[derive(Drop, Copy)]
-pub(crate) struct AttestationRoles {
+pub struct AttestationRoles {
     pub upgrade_governor: ContractAddress,
     pub app_governor: ContractAddress,
 }
@@ -723,7 +723,7 @@ struct AttestationState {
 }
 
 #[generate_trait]
-pub(crate) impl AttestationImpl of AttestationTrait {
+pub impl AttestationImpl of AttestationTrait {
     fn deploy(self: AttestationConfig, staking: StakingState) -> AttestationState {
         let mut calldata = ArrayTrait::new();
         staking.address.serialize(ref calldata);
@@ -819,20 +819,20 @@ struct SystemConfig {
 /// It includes the state for the token, staking, minting curve, and reward supplier contracts,
 /// as well as a base account identifier.
 #[derive(Drop, Copy)]
-pub(crate) struct SystemState {
+pub struct SystemState {
     pub token: Token,
     pub btc_token: Token,
     pub staking: StakingState,
     pub minting_curve: MintingCurveState,
     pub reward_supplier: RewardSupplierState,
     pub pool: Option<PoolState>,
-    pub(crate) attestation: Option<AttestationState>,
+    pub attestation: Option<AttestationState>,
     pub base_account: felt252,
     staker_address: Option<ContractAddress>,
 }
 
 #[generate_trait]
-pub(crate) impl SystemConfigImpl of SystemConfigTrait {
+pub impl SystemConfigImpl of SystemConfigTrait {
     // TODO: new cfg - split to basic cfg and specific flow cfg.
     /// Configures the basic staking flow by initializing the system configuration with the
     /// provided staking initialization configuration.
@@ -993,7 +993,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
 }
 
 #[generate_trait]
-pub(crate) impl SystemImpl of SystemTrait {
+pub impl SystemImpl of SystemTrait {
     /// Creates a new account with the specified amount.
     fn new_account(ref self: SystemState, amount: Amount) -> Account {
         self.base_account += 1;
@@ -1123,13 +1123,13 @@ impl InternalSystemImpl of InternalSystemTrait {
 /// The `Account` struct represents an account in the staking system.
 /// It includes the account's address, amount of tokens, token state, and staking state.
 #[derive(Drop, Copy)]
-pub(crate) struct Account {
+pub struct Account {
     pub address: ContractAddress,
     pub amount: Amount,
 }
 
 #[generate_trait]
-pub(crate) impl AccountImpl of AccountTrait {
+pub impl AccountImpl of AccountTrait {
     fn new(address: felt252, amount: Amount) -> Account {
         Account { address: address.try_into().unwrap(), amount }
     }
@@ -1138,7 +1138,7 @@ pub(crate) impl AccountImpl of AccountTrait {
 /// The `Staker` struct represents a staker in the staking system.
 /// It includes the staker's account, reward account, and operational account.
 #[derive(Drop, Copy)]
-pub(crate) struct Staker {
+pub struct Staker {
     pub staker: Account,
     pub reward: Account,
     pub operational: Account,
@@ -1152,7 +1152,7 @@ impl StakerImpl of StakerTrait {
 }
 
 #[generate_trait]
-pub(crate) impl SystemStakerImpl of SystemStakerTrait {
+pub impl SystemStakerImpl of SystemStakerTrait {
     fn stake(
         self: SystemState,
         staker: Staker,
@@ -1374,7 +1374,7 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
 /// The `Delegator` struct represents a delegator in the staking system.
 /// It includes the delegator's account and reward account.
 #[derive(Drop, Copy)]
-pub(crate) struct Delegator {
+pub struct Delegator {
     pub delegator: Account,
     pub reward: Account,
 }
@@ -1387,7 +1387,7 @@ impl DelegatorImpl of DelegatorTrait {
 }
 
 #[generate_trait]
-pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
+pub impl SystemDelegatorImpl of SystemDelegatorTrait {
     fn delegate(self: SystemState, delegator: Delegator, pool: ContractAddress, amount: Amount) {
         self.token.approve(owner: delegator.delegator.address, spender: pool, :amount);
         cheat_caller_address_once(
@@ -1560,7 +1560,7 @@ pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
 }
 
 #[generate_trait]
-pub(crate) impl SystemPoolImpl of SystemPoolTrait {
+pub impl SystemPoolImpl of SystemPoolTrait {
     fn contract_parameters_v1(self: SystemState, pool: ContractAddress) -> PoolContractInfoV1 {
         let pool_dispatcher = IPoolDispatcher { contract_address: pool };
         pool_dispatcher.contract_parameters_v1()
@@ -1575,7 +1575,7 @@ trait IMintableToken<TContractState> {
 }
 
 #[generate_trait]
-pub(crate) impl TokenHelperImpl of TokenHelperTrait {
+pub impl TokenHelperImpl of TokenHelperTrait {
     fn approve(self: @Token, owner: ContractAddress, spender: ContractAddress, amount: Amount) {
         approve(:owner, :spender, :amount, token_address: self.contract_address());
     }
@@ -1589,7 +1589,7 @@ pub(crate) impl TokenHelperImpl of TokenHelperTrait {
 /// Replaceability utils for internal use of the system. Meant to be used before running a
 /// regression test.
 /// This trait is used for the upgrade from V0 to V1 implementation.
-pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
+pub impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     /// Deploy attestation contract and upgrades the contracts in the system state with V1
     /// implementations.
     fn deploy_attestation_and_upgrade_contracts_implementation_v1(ref self: SystemState) {
@@ -1689,7 +1689,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
 /// Replaceability utils for internal use of the system. Meant to be used before running a
 /// regression test.
 /// This trait is used for the upgrade from V1 to V2 implementation.
-pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
+pub impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
     /// Upgrades the contracts in the system state with local
     /// implementations.
     fn upgrade_contracts_implementation_v2(self: SystemState) {
@@ -1749,7 +1749,7 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
     }
 }
 
-pub(crate) fn declare_staking_contract() -> ClassHash {
+pub fn declare_staking_contract() -> ClassHash {
     *snforge_std::declare("Staking").unwrap().contract_class().class_hash
 }
 
@@ -1762,7 +1762,7 @@ fn declare_minting_curve_contract() -> ClassHash {
 }
 
 /// Upgrades implementation of the given contract.
-pub(crate) fn upgrade_implementation(
+pub fn upgrade_implementation(
     contract_address: ContractAddress,
     implementation_data: ImplementationData,
     upgrade_governor: ContractAddress,
@@ -1776,7 +1776,7 @@ pub(crate) fn upgrade_implementation(
 
 #[generate_trait]
 /// System factory for creating system states used in flow and regression tests.
-pub(crate) impl SystemFactoryImpl of SystemFactoryTrait {
+pub impl SystemFactoryImpl of SystemFactoryTrait {
     // System state used for flow tests.
     fn local_system() -> SystemState {
         let cfg: StakingInitConfig = Default::default();
@@ -1791,7 +1791,7 @@ pub(crate) impl SystemFactoryImpl of SystemFactoryTrait {
     }
 }
 
-pub(crate) trait FlowTrait<TFlow, +Drop<TFlow>> {
+pub trait FlowTrait<TFlow, +Drop<TFlow>> {
     fn get_pool_address(self: TFlow) -> Option<ContractAddress> {
         Option::None
     }
@@ -1803,12 +1803,12 @@ pub(crate) trait FlowTrait<TFlow, +Drop<TFlow>> {
     fn test(self: TFlow, ref system: SystemState);
 }
 
-pub(crate) fn test_flow_local<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow>>(flow: TFlow) {
+pub fn test_flow_local<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow>>(flow: TFlow) {
     let mut system = SystemFactoryTrait::local_system();
     flow.test(ref :system);
 }
 
-pub(crate) fn test_flow_mainnet<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow>>(
+pub fn test_flow_mainnet<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow>>(
     ref flow: TFlow,
 ) {
     let mut system = SystemFactoryTrait::mainnet_system();

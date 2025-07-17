@@ -1,6 +1,6 @@
 use core::num::traits::Zero;
-use staking::flow_test::flows;
-use staking::flow_test::utils::test_flow_mainnet;
+use staking_test::flow_test::flows;
+use staking_test::flow_test::utils::test_flow_mainnet;
 
 #[test]
 #[fork("MAINNET_LATEST")]

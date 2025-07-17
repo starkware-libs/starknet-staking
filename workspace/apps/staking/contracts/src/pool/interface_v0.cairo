@@ -1,8 +1,8 @@
 use core::num::traits::Zero;
-use staking::pool::interface::PoolMemberInfoV1;
-use staking::pool::objects::InternalPoolMemberInfoV1;
-use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
-use staking::types::{Amount, Commission, Index};
+use staking_test::pool::interface::PoolMemberInfoV1;
+use staking_test::pool::objects::InternalPoolMemberInfoV1;
+use staking_test::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
+use staking_test::types::{Amount, Commission, Index};
 use starknet::ContractAddress;
 use starkware_utils::time::time::Timestamp;
 
@@ -39,7 +39,7 @@ pub struct PoolMemberInfo {
 }
 
 #[generate_trait]
-pub(crate) impl PoolMemberInfoImpl of PoolMemberInfoTrait {
+pub impl PoolMemberInfoImpl of PoolMemberInfoTrait {
     fn to_v1(self: PoolMemberInfo) -> PoolMemberInfoV1 {
         PoolMemberInfoV1 {
             reward_address: self.reward_address,
@@ -54,7 +54,7 @@ pub(crate) impl PoolMemberInfoImpl of PoolMemberInfoTrait {
 
 #[cfg(test)]
 #[generate_trait]
-pub(crate) impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfoIntoInternalPoolMemberInfoV1Trait {
+pub impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfoIntoInternalPoolMemberInfoV1Trait {
     fn to_internal(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
         InternalPoolMemberInfoV1 {
             reward_address: self.reward_address,

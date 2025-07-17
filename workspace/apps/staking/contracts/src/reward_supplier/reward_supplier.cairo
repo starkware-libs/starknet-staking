@@ -6,15 +6,15 @@ pub mod RewardSupplier {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::STRK_IN_FRIS;
-    use staking::errors::GenericError;
-    use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
-    use staking::reward_supplier::errors::Error;
-    use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfoV1};
-    use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
-    use staking::staking::objects::EpochInfoTrait;
-    use staking::types::Amount;
-    use staking::utils::{CheckedIERC20DispatcherTrait, compute_threshold};
+    use staking_test::constants::STRK_IN_FRIS;
+    use staking_test::errors::GenericError;
+    use staking_test::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
+    use staking_test::reward_supplier::errors::Error;
+    use staking_test::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfoV1};
+    use staking_test::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+    use staking_test::staking::objects::EpochInfoTrait;
+    use staking_test::types::Amount;
+    use staking_test::utils::{CheckedIERC20DispatcherTrait, compute_threshold};
     use starknet::syscalls::send_message_to_l1_syscall;
     use starknet::{
         ContractAddress, EthAddress, SyscallResultTrait, get_caller_address, get_contract_address,

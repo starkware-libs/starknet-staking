@@ -1,33 +1,33 @@
 use core::num::traits::Zero;
 use snforge_std::{TokenImpl, start_cheat_block_number_global};
-use staking::constants::{
+use staking_test::constants::{
     MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS, STRK_IN_FRIS,
 };
-use staking::errors::GenericError;
-use staking::flow_test::utils::{
+use staking_test::errors::GenericError;
+use staking_test::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
     SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait,
     TokenHelperTrait,
 };
-use staking::pool::errors::Error as PoolError;
-use staking::pool::interface_v0::{
+use staking_test::pool::errors::Error as PoolError;
+use staking_test::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
-use staking::staking::errors::Error as StakingError;
-use staking::staking::interface::{
+use staking_test::staking::errors::Error as StakingError;
+use staking_test::staking::interface::{
     CommissionCommitment, IStakingDispatcherTrait, IStakingSafeDispatcherTrait, PoolInfo,
     StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
-use staking::staking::objects::EpochInfoTrait;
-use staking::test_utils::constants::EPOCH_DURATION;
-use staking::test_utils::{
+use staking_test::staking::objects::EpochInfoTrait;
+use staking_test::test_utils::constants::EPOCH_DURATION;
+use staking_test::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
     calculate_strk_pool_rewards, calculate_strk_pool_rewards_with_pool_balance,
     compute_rewards_for_trace, deserialize_option, load_from_iterable_map, load_from_trace,
     load_trace_length, strk_pool_update_rewards,
 };
-use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
-use staking::utils::compute_rewards_rounded_down;
+use staking_test::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
+use staking_test::utils::compute_rewards_rounded_down;
 use starknet::{ContractAddress, Store};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;

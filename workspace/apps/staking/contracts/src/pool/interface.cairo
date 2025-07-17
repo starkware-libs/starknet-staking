@@ -1,4 +1,4 @@
-use staking::types::{Amount, Commission, InternalPoolMemberInfoLatest};
+use staking_test::types::{Amount, Commission, InternalPoolMemberInfoLatest};
 use starknet::ContractAddress;
 use starkware_utils::time::time::Timestamp;
 
@@ -93,7 +93,7 @@ pub trait IPoolMigration<TContractState> {
 }
 
 pub mod Events {
-    use staking::types::Amount;
+    use staking_test::types::Amount;
     use starknet::ContractAddress;
     use starkware_utils::time::time::Timestamp;
 

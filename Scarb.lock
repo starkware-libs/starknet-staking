@@ -144,7 +144,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "staking"
+name = "staking_test"
 version = "1.14.5"
 dependencies = [
  "openzeppelin",
@@ -156,7 +156,7 @@ dependencies = [
 [[package]]
 name = "starkware_utils"
 version = "1.0.0"
-source = "git+https://github.com/starkware-libs/starkware-starknet-utils?branch=main#1fe679e9d7f5c19db08559db7b52cfb305b5c69b"
+source = "git+https://github.com/starkware-libs/starkware-starknet-utils?rev=1fe679e9d7f5c19db08559db7b52cfb305b5c69b#1fe679e9d7f5c19db08559db7b52cfb305b5c69b"
 dependencies = [
  "openzeppelin",
 ]
@@ -164,7 +164,7 @@ dependencies = [
 [[package]]
 name = "starkware_utils_testing"
 version = "1.0.0"
-source = "git+https://github.com/starkware-libs/starkware-starknet-utils?branch=main#1fe679e9d7f5c19db08559db7b52cfb305b5c69b"
+source = "git+https://github.com/starkware-libs/starkware-starknet-utils?rev=1fe679e9d7f5c19db08559db7b52cfb305b5c69b#1fe679e9d7f5c19db08559db7b52cfb305b5c69b"
 dependencies = [
  "openzeppelin",
  "openzeppelin_testing",

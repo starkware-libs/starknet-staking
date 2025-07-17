@@ -6,17 +6,17 @@ pub mod Attestation {
     use core::poseidon::PoseidonTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use staking::attestation::errors::Error;
-    use staking::attestation::interface::{Events, IAttestation};
-    use staking::constants::{MIN_ATTESTATION_WINDOW, STARTING_EPOCH};
-    use staking::staking::interface::{
+    use staking_test::attestation::errors::Error;
+    use staking_test::attestation::interface::{Events, IAttestation};
+    use staking_test::constants::{MIN_ATTESTATION_WINDOW, STARTING_EPOCH};
+    use staking_test::staking::interface::{
         IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
         IStakingDispatcherTrait,
     };
-    use staking::staking::objects::{
+    use staking_test::staking::objects::{
         AttestationInfo as StakingAttestationInfo, AttestationInfoTrait,
     };
-    use staking::types::Epoch;
+    use staking_test::types::Epoch;
     use starknet::storage::Map;
     use starknet::syscalls::get_block_hash_syscall;
     use starknet::{ContractAddress, get_block_number, get_caller_address};

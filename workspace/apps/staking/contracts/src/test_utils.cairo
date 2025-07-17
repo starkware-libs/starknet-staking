@@ -20,35 +20,35 @@ use snforge_std::{
     cheat_caller_address, set_balance, start_cheat_block_hash_global,
     start_cheat_block_number_global, test_address,
 };
-use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{
+use staking_test::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
+use staking_test::constants::{
     BTC_BASE_VALUE, BTC_DECIMALS, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW,
     MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS, STARTING_EPOCH, STRK_BASE_VALUE, STRK_DECIMALS,
     STRK_IN_FRIS,
 };
-use staking::errors::GenericError;
-use staking::minting_curve::interface::{
+use staking_test::errors::GenericError;
+use staking_test::minting_curve::interface::{
     IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
 };
-use staking::minting_curve::minting_curve::MintingCurve;
-use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
-use staking::pool::interface_v0::PoolMemberInfo;
-use staking::pool::pool::Pool;
-use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
-use staking::reward_supplier::reward_supplier::RewardSupplier;
-use staking::staking::errors::Error as StakingError;
-use staking::staking::interface::{
+use staking_test::minting_curve::minting_curve::MintingCurve;
+use staking_test::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
+use staking_test::pool::interface_v0::PoolMemberInfo;
+use staking_test::pool::pool::Pool;
+use staking_test::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
+use staking_test::reward_supplier::reward_supplier::RewardSupplier;
+use staking_test::staking::errors::Error as StakingError;
+use staking_test::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, IStakingTokenManagerDispatcher,
     IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
 };
-use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
-use staking::staking::staking::Staking;
-use staking::types::{
+use staking_test::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
+use staking_test::staking::staking::Staking;
+use staking_test::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
     InternalStakerPoolInfoLatest,
 };
-use staking::utils::{
+use staking_test::utils::{
     compute_commission_amount_rounded_down, compute_commission_amount_rounded_up,
     compute_rewards_rounded_down,
 };
@@ -65,9 +65,9 @@ use starkware_utils_testing::test_utils::{
 
 pub mod constants {
     use core::cmp::max;
-    use staking::constants::{MIN_BTC_FOR_REWARDS, STRK_IN_FRIS};
-    use staking::staking::objects::{EpochInfo, EpochInfoTrait};
-    use staking::types::{Amount, Commission, Index};
+    use staking_test::constants::{MIN_BTC_FOR_REWARDS, STRK_IN_FRIS};
+    use staking_test::staking::objects::{EpochInfo, EpochInfoTrait};
+    use staking_test::types::{Amount, Commission, Index};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::time::time::Timestamp;
@@ -1197,7 +1197,7 @@ pub fn compute_rewards_for_trace(
         .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
 }
 
-/// #[cfg(test)]
+#[cfg(test)]
 mod tests {
     use core::num::traits::zero::Zero;
     use super::{

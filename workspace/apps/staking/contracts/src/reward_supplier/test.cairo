@@ -12,24 +12,24 @@ use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{TokenTrait, start_cheat_block_timestamp_global, test_address};
-use staking::constants::STRK_IN_FRIS;
-use staking::errors::GenericError;
-use staking::event_test_utils::assert_number_of_events;
-use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
-use staking::minting_curve::minting_curve::MintingCurve;
-use staking::pool::pool::Pool;
-use staking::reward_supplier::interface::{
+use staking_test::constants::STRK_IN_FRIS;
+use staking_test::errors::GenericError;
+use staking_test::event_test_utils::assert_number_of_events;
+use staking_test::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
+use staking_test::minting_curve::minting_curve::MintingCurve;
+use staking_test::pool::pool::Pool;
+use staking_test::reward_supplier::interface::{
     IRewardSupplier, IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfoV1,
 };
-use staking::reward_supplier::reward_supplier::RewardSupplier;
-use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
-use staking::staking::objects::EpochInfoTrait;
-use staking::staking::staking::Staking;
-use staking::test_utils;
-use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
-use staking::types::Amount;
-use staking::utils::compute_threshold;
+use staking_test::reward_supplier::reward_supplier::RewardSupplier;
+use staking_test::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+use staking_test::staking::objects::EpochInfoTrait;
+use staking_test::staking::staking::Staking;
+use staking_test::test_utils;
+use staking_test::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
+use staking_test::types::Amount;
+use staking_test::utils::compute_threshold;
 use starknet::Store;
 use starkware_utils::errors::Describable;
 use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};

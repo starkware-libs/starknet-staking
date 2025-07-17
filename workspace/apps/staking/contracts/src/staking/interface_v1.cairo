@@ -1,4 +1,4 @@
-use staking::types::{Amount, Index};
+use staking_test::types::{Amount, Index};
 use starknet::ContractAddress;
 
 /// Staking V1 interface.

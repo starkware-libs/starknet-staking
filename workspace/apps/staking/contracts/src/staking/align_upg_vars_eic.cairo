@@ -1,7 +1,7 @@
 // An External Initializer Contract
 // Migrating ERC20_dipatcher to token_dispatcher & replacing pool contract parameters.
 #[starknet::contract]
-pub(crate) mod AlignUpgVars {
+pub mod AlignUpgVars {
     use core::num::traits::Zero;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;

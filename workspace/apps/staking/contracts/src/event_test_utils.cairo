@@ -1,13 +1,13 @@
 use snforge_std::cheatcodes::events::{Event, EventSpy, EventSpyTrait};
-use staking::attestation::interface::Events as AttestationEvents;
-use staking::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
-use staking::pool::interface::Events as PoolEvents;
-use staking::reward_supplier::interface::Events as RewardSupplierEvents;
-use staking::staking::interface::{
+use staking_test::attestation::interface::Events as AttestationEvents;
+use staking_test::minting_curve::interface::ConfigEvents as MintingCurveConfigEvents;
+use staking_test::pool::interface::Events as PoolEvents;
+use staking_test::reward_supplier::interface::Events as RewardSupplierEvents;
+use staking_test::staking::interface::{
     ConfigEvents as StakingConfigEvents, Events as StakingEvents, PauseEvents as StakingPauseEvents,
     TokenManagerEvents as StakingTokenManagerEvents,
 };
-use staking::types::{Amount, Commission, Epoch, Inflation};
+use staking_test::types::{Amount, Commission, Epoch, Inflation};
 use starknet::ContractAddress;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::assert_expected_event_emitted;

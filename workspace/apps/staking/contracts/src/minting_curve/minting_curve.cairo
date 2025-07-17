@@ -4,13 +4,13 @@ pub mod MintingCurve {
     use core::num::traits::{Sqrt, WideMul};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use staking::constants::{C_DENOM, DEFAULT_C_NUM, MAX_C_NUM};
-    use staking::minting_curve::errors::Error;
-    use staking::minting_curve::interface::{
+    use staking_test::constants::{C_DENOM, DEFAULT_C_NUM, MAX_C_NUM};
+    use staking_test::minting_curve::errors::Error;
+    use staking_test::minting_curve::interface::{
         ConfigEvents, Events, IMintingCurve, IMintingCurveConfig, MintingCurveContractInfo,
     };
-    use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
-    use staking::types::{Amount, Inflation};
+    use staking_test::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+    use staking_test::types::{Amount, Inflation};
     use starknet::ContractAddress;
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::roles::RolesComponent;

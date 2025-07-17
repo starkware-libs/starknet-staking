@@ -1,11 +1,11 @@
-use staking::minting_curve::errors::Error as MintingError;
-use staking::pool::errors::Error as PoolError;
-use staking::reward_supplier::errors::Error as RewardsSupplierError;
-use staking::staking::errors::Error as StakingError;
+use staking_test::minting_curve::errors::Error as MintingError;
+use staking_test::pool::errors::Error as PoolError;
+use staking_test::reward_supplier::errors::Error as RewardsSupplierError;
+use staking_test::staking::errors::Error as StakingError;
 use starkware_utils::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]
-pub(crate) enum GenericError {
+pub enum GenericError {
     Erc20Error: Erc20Error,
     StakingError: StakingError,
     PoolError: PoolError,
@@ -63,7 +63,7 @@ impl DescribableGenericError of Describable<GenericError> {
 }
 
 #[derive(Drop)]
-pub(crate) enum Erc20Error {
+pub enum Erc20Error {
     INSUFFICIENT_BALANCE,
     INSUFFICIENT_ALLOWANCE,
 }

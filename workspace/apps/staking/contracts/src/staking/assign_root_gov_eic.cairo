@@ -2,7 +2,7 @@
 // This EIC allows migrating between old ane new format of Roles storage.
 // It sets critical role ownership in both format during the upgrade.
 #[starknet::contract]
-pub(crate) mod AssignRootGovernanceEIC {
+pub mod AssignRootGovernanceEIC {
     use RolesInterface::{
         APP_GOVERNOR, APP_ROLE_ADMIN, GOVERNANCE_ADMIN, OPERATOR, RoleId, SECURITY_ADMIN,
         SECURITY_AGENT, TOKEN_ADMIN, UPGRADE_GOVERNOR,
