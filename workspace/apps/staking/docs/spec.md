@@ -207,6 +207,7 @@
     - [TOKEN\_ALREADY\_DISABLED](#token_already_disabled)
     - [COMMISSION\_NOT\_SET](#commission_not_set)
     - [TOKEN\_MISMATCH](#token_mismatch)
+    - [STAKER\_IS\_TOKEN](#staker_is_token)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -553,7 +554,8 @@ Add a new staker to the stake.
 2. [STAKER\_EXISTS](#staker_exists)
 3. [OPERATIONAL\_EXISTS](#operational_exists)
 4. [STAKER\_ADDRESS\_ALREADY\_USED](#staker_address_already_used)
-5. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
+5. [STAKER\_IS\_TOKEN](#staker_is_token)
+6. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) is not listed in the contract.
@@ -2483,6 +2485,9 @@ Only token admin.
 
 ### TOKEN_MISMATCH
 "Token mismatch"
+
+### STAKER_IS_TOKEN
+"Staker address is a token address"
 
 # Structs
 ### StakerPoolInfoV1

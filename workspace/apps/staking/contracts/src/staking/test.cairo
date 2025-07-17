@@ -281,6 +281,40 @@ fn test_stake_from_same_staker_address() {
 }
 
 #[test]
+#[should_panic(expected: "Staker address is a token address")]
+fn test_stake_with_token_address() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+
+    // Only add the token but not enable it.
+    let disabled_btc_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME_2(),
+        decimals: BTC_DECIMALS,
+    );
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+    );
+    let staking_token_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    staking_token_dispatcher.add_token(token_address: disabled_btc_token_address);
+
+    // Stake from the token address.
+    let caller_address = disabled_btc_token_address;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
+    staking_dispatcher
+        .stake(
+            reward_address: DUMMY_ADDRESS(),
+            operational_address: DUMMY_ADDRESS(),
+            amount: cfg.test_info.stake_amount,
+        );
+}
+
+#[test]
 #[should_panic(expected: "Operational address already exists")]
 fn test_stake_with_same_operational_address() {
     let mut cfg: StakingInitConfig = Default::default();
