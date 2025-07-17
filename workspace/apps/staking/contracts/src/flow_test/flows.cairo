@@ -4905,6 +4905,31 @@ pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl of FlowTrait<
     }
 }
 
+/// Test attest with total_btc_stake = 0
+/// Flow:
+/// Staker stake
+/// Staker open btc pool
+/// Staker attest
+/// Test no rewards for btc pool
+#[derive(Drop, Copy)]
+pub(crate) struct AttestWithZeroTotalBtcStakeFlow {}
+pub(crate) impl AttestWithZeroTotalBtcStakeFlowImpl of FlowTrait<AttestWithZeroTotalBtcStakeFlow> {
+    fn test(self: AttestWithZeroTotalBtcStakeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+        let token_address = system.btc_token.contract_address();
+
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+        system.advance_epoch_and_attest(:staker);
+
+        let pool_balance = system.token.balance_of(account: pool);
+        assert!(pool_balance == 0);
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// First delegator delegate
