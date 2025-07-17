@@ -784,14 +784,6 @@ pub mod Staking {
                 .get_pool_token(:pool_contract)
                 .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
 
-            // Transfer funds from the pool contract to the staking contract.
-            // Sufficient approval is a pre-condition.
-            let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-            token_dispatcher
-                .checked_transfer_from(
-                    sender: pool_contract, recipient: get_contract_address(), amount: amount.into(),
-                );
-
             // Update the staker's staked amount, and add to total_stake.
             let old_delegated_stake = self.get_delegated_balance(:staker_address, :token_address);
             let new_delegated_stake = old_delegated_stake + amount;
@@ -800,6 +792,14 @@ pub mod Staking {
                     :staker_address, :token_address, delegated_balance: new_delegated_stake,
                 );
             self.add_to_total_stake(:token_address, :amount);
+
+            // Transfer funds from the pool contract to the staking contract.
+            // Sufficient approval is a pre-condition.
+            let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+            token_dispatcher
+                .checked_transfer_from(
+                    sender: pool_contract, recipient: get_contract_address(), amount: amount.into(),
+                );
 
             // Emit event.
             self
