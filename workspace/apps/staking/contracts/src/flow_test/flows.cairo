@@ -36,6 +36,7 @@ use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
+
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
 /// Staker increase_stake - cover if pool amount = 0 in calc_rew
