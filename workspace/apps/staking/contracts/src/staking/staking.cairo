@@ -1071,7 +1071,7 @@ pub mod Staking {
     #[abi(embed_v0)]
     impl StakingTokenManagerImpl of IStakingTokenManager<ContractState> {
         fn add_token(ref self: ContractState, token_address: ContractAddress) {
-            self.roles.only_security_admin();
+            self.roles.only_token_admin();
             assert!(token_address.is_non_zero(), "{}", GenericError::ZERO_ADDRESS);
             assert!(self.staker_info.read(token_address).is_none(), "{}", Error::TOKEN_IS_STAKER);
             assert!(token_address != STRK_TOKEN_ADDRESS, "{}", Error::INVALID_TOKEN_ADDRESS);
@@ -1089,7 +1089,7 @@ pub mod Staking {
         }
 
         fn enable_token(ref self: ContractState, token_address: ContractAddress) {
-            self.roles.only_security_admin();
+            self.roles.only_token_admin();
             let is_active_opt: Option<bool> = self.btc_tokens.read(token_address);
             assert!(is_active_opt.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
             assert!(!is_active_opt.unwrap(), "{}", Error::TOKEN_ALREADY_ENABLED);

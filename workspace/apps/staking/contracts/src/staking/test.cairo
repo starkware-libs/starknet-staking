@@ -295,7 +295,7 @@ fn test_stake_with_token_address() {
         decimals: BTC_DECIMALS,
     );
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let staking_token_dispatcher = IStakingTokenManagerDispatcher {
         contract_address: staking_contract,
@@ -2457,7 +2457,7 @@ fn test_set_open_for_delegation_with_disabled_btc_token() {
     );
     // Only add the token but not enable it.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let staking_token_dispatcher = IStakingTokenManagerDispatcher {
         contract_address: staking_contract,
@@ -3081,7 +3081,7 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     let btc_token_2 = custom_decimals_token(token_address: btc_token_address_2);
     cheat_caller_address(
         contract_address: staking_contract,
-        caller_address: cfg.test_info.security_admin,
+        caller_address: cfg.test_info.token_admin,
         span: CheatSpan::TargetCalls(2),
     );
     let staking_token_dispatcher = IStakingTokenManagerDispatcher {
@@ -4039,7 +4039,7 @@ fn test_get_current_total_staking_power() {
     );
 
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     staking_token_dispatcher.enable_token(token_address: btc_token_address);
     assert!(
@@ -4061,25 +4061,25 @@ fn test_add_token_assertions() {
     // Catch ONLY_SECURITY_ADMIN.
     let result = staking_token_manager_safe_dispatcher
         .add_token(token_address: BTC_TOKEN_ADDRESS());
-    assert_panic_with_error(:result, expected_error: "ONLY_SECURITY_ADMIN");
+    assert_panic_with_error(:result, expected_error: "ONLY_TOKEN_ADMIN");
 
     // Catch ZERO_ADDRESS.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let result = staking_token_manager_safe_dispatcher.add_token(token_address: Zero::zero());
     assert_panic_with_error(:result, expected_error: GenericError::ZERO_ADDRESS.describe());
 
     // Catch TOKEN_IS_STAKER.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let result = staking_token_manager_safe_dispatcher.add_token(token_address: staker_address);
     assert_panic_with_error(:result, expected_error: Error::TOKEN_IS_STAKER.describe());
 
     // Catch INVALID_TOKEN_ADDRESS - STRK token.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let result = staking_token_manager_safe_dispatcher
         .add_token(token_address: cfg.test_info.strk_token.contract_address());
@@ -4093,7 +4093,7 @@ fn test_add_token_assertions() {
         decimals: BTC_DECIMALS + 1,
     );
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let result = staking_token_manager_safe_dispatcher
         .add_token(token_address: invalid_token_address);
@@ -4101,7 +4101,7 @@ fn test_add_token_assertions() {
 
     // Catch TOKEN_ALREADY_EXISTS.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let result = staking_token_manager_safe_dispatcher
         .add_token(token_address: cfg.test_info.btc_token.contract_address());
@@ -4137,7 +4137,7 @@ fn test_add_token() {
     // Add the BTC token.
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     staking_token_dispatcher.add_token(token_address: btc_token_address);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -4170,7 +4170,7 @@ fn test_enable_token() {
     // Add and enable the BTC token.
     cheat_caller_address(
         contract_address: staking_contract,
-        caller_address: cfg.test_info.security_admin,
+        caller_address: cfg.test_info.token_admin,
         span: CheatSpan::TargetCalls(2),
     );
     staking_token_dispatcher.add_token(token_address: btc_token_address);
@@ -4205,7 +4205,7 @@ fn test_disable_token() {
     // Add and enable the BTC token.
     cheat_caller_address(
         contract_address: staking_contract,
-        caller_address: cfg.test_info.security_admin,
+        caller_address: cfg.test_info.token_admin,
         span: CheatSpan::TargetCalls(2),
     );
     staking_token_dispatcher.add_token(token_address: btc_token_address);
@@ -4239,14 +4239,14 @@ fn test_enable_token_assertions() {
     let staking_token_manager_safe_dispatcher = IStakingTokenManagerSafeDispatcher {
         contract_address: staking_contract,
     };
-    // Catch ONLY_SECURITY_ADMIN.
+    // Catch ONLY_TOKEN_ADMIN.
     let result = staking_token_manager_safe_dispatcher
         .enable_token(token_address: BTC_TOKEN_ADDRESS());
-    assert_panic_with_error(:result, expected_error: "ONLY_SECURITY_ADMIN");
+    assert_panic_with_error(:result, expected_error: "ONLY_TOKEN_ADMIN");
 
     // Catch TOKEN_NOT_EXISTS.
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let result = staking_token_manager_safe_dispatcher
         .enable_token(token_address: BTC_TOKEN_ADDRESS());
@@ -4255,7 +4255,7 @@ fn test_enable_token_assertions() {
     // Catch TOKEN_ALREADY_ENABLED.
     cheat_caller_address(
         contract_address: staking_contract,
-        caller_address: cfg.test_info.security_admin,
+        caller_address: cfg.test_info.token_admin,
         span: CheatSpan::TargetCalls(3),
     );
     let btc_token_address = deploy_mock_erc20_decimals_contract(
@@ -4301,7 +4301,7 @@ fn test_disable_token_assertions() {
         decimals: BTC_DECIMALS,
     );
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let _ = staking_token_manager_safe_dispatcher.add_token(token_address: btc_token_address);
     cheat_caller_address_once(
@@ -4311,7 +4311,7 @@ fn test_disable_token_assertions() {
         .disable_token(token_address: btc_token_address);
     assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_DISABLED.describe());
     cheat_caller_address_once(
-        contract_address: staking_contract, caller_address: cfg.test_info.security_admin,
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: btc_token_address);
     cheat_caller_address_once(
