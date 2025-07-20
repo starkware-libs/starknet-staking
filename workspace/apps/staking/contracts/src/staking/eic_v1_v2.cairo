@@ -13,6 +13,7 @@ mod StakingEICV1toV2 {
     use starkware_utils::components::replaceability::interface::IEICInitializable;
     use starkware_utils::trace::errors::TraceErrors;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
+    const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3;
 
     #[storage]
     struct Storage {
@@ -59,14 +60,14 @@ mod StakingEICV1toV2 {
     #[generate_trait]
     impl EICHelper of IEICHelper {
         /// Migrate the deprecated total stake trace to tokens_total_stake_trace.
-        /// Migrate up to 3 latest checkpoints.
+        /// Migrate up to MAX_MIGRATION_TRACE_ENTRIES latest checkpoints.
         fn migrate_total_stake_trace(ref self: ContractState) {
             let deprecated_trace = self.total_stake_trace;
             assert!(!deprecated_trace.is_empty(), "{}", TraceErrors::EMPTY_TRACE);
             let len = deprecated_trace.length();
             let n = {
-                if len >= 3 {
-                    3
+                if len >= MAX_MIGRATION_TRACE_ENTRIES {
+                    MAX_MIGRATION_TRACE_ENTRIES
                 } else {
                     len
                 }
