@@ -1525,6 +1525,79 @@ pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
     }
 }
 
+/// Test disabled token delegation.
+/// Flow:
+/// Staker stake
+/// Open 2 BTC pools
+/// Delegators delegate
+/// Disable 1 BTC token
+/// Attest
+/// Test pool rewards and balance
+#[derive(Drop, Copy)]
+pub(crate) struct DisabledTokenDelegationFlow {}
+pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelegationFlow> {
+    fn test(self: DisabledTokenDelegationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let delegated_amount = MIN_BTC_FOR_REWARDS;
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+
+        // Setup tokens.
+        let token = system.btc_token;
+        let token_address = token.contract_address();
+        let second_token = system.deploy_second_btc_token();
+        let second_token_address = second_token.contract_address();
+        system.staking.add_token(token_address: second_token_address);
+        system.staking.enable_token(token_address: second_token_address);
+
+        // Stake.
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+
+        // Open pools.
+        system.set_commission(:staker, :commission);
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+        let second_pool = system
+            .set_open_for_delegation(:staker, token_address: second_token_address);
+
+        // Delegate.
+        let delegator = system.new_btc_delegator(amount: delegated_amount, token: token);
+        let second_delegator = system
+            .new_btc_delegator(amount: delegated_amount, token: second_token);
+        system.delegate_btc(:delegator, :pool, amount: delegated_amount, :token);
+        system
+            .delegate_btc(
+                delegator: second_delegator,
+                pool: second_pool,
+                amount: delegated_amount,
+                token: second_token,
+            );
+
+        // Advance epoch so that attesting will be possible and the delegation will take effect.
+        system.advance_epoch();
+
+        // Disable token and attest.
+        system.staking.disable_token(:token_address);
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+        system.advance_epoch();
+
+        // Test rewards.
+        let (_, expected_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: delegated_amount,
+            :commission,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        let rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let second_delegator_rewards = system
+            .delegator_claim_rewards(delegator: second_delegator, pool: second_pool);
+        let pool_balance = system.token.balance_of(account: pool);
+        assert!(rewards == 0);
+        assert!(second_delegator_rewards == expected_rewards);
+        assert!(pool_balance == 0);
+    }
+}
+
 /// Test delegator exit pool and enter again with switch.
 /// Flow:
 /// Staker1 stake with pool1
