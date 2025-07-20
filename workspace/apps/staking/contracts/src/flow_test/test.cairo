@@ -16,6 +16,12 @@ fn basic_stake_flow_test() {
 }
 
 #[test]
+fn multiple_tokens_delegation_flow_test() {
+    let flow = flows::MultipleTokensDelegationFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn new_token_delegation_flow_test() {
     let flow = flows::NewTokenDelegationFlow {};
     test_flow_local(:flow);
