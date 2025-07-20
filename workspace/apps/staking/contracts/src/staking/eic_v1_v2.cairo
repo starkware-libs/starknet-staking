@@ -11,9 +11,6 @@ mod StakingEICV1toV2 {
     use starknet::class_hash::ClassHash;
     use starknet::storage::{Map, StoragePathEntry, StoragePointerReadAccess};
     use starkware_utils::components::replaceability::interface::IEICInitializable;
-    use starkware_utils::storage::iterable_map::{
-        IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
-    };
     use starkware_utils::trace::errors::TraceErrors;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 
@@ -24,8 +21,6 @@ mod StakingEICV1toV2 {
         /// checkpoint mapping an epoch to the updated stake. Stakers that performed unstake_intent
         /// are not included.
         tokens_total_stake_trace: Map<ContractAddress, Trace>,
-        // Map token address to whether it's active.
-        btc_tokens: IterableMap<ContractAddress, bool>,
         // --- Existing fields ---
         /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
