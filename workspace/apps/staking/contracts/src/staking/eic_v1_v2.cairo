@@ -35,12 +35,15 @@ mod StakingEICV1toV2 {
         total_stake_trace: Trace,
         /// A dispatcher of the token contract.
         token_dispatcher: IERC20Dispatcher,
+        /// Storage of the `pause` flag state.
+        is_paused: bool,
     }
 
     /// Expected data : [prev_class_hash, pool_contract_class_hash]
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
+            assert(self.is_paused.read(), 'CONTRACT_IS_NOT_PAUSED');
             assert(eic_init_data.len() == 2, 'EXPECTED_DATA_LENGTH_2');
             let prev_class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             let pool_contract_class_hash: ClassHash = (*eic_init_data[1]).try_into().unwrap();

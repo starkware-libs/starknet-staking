@@ -1788,6 +1788,14 @@ fn declare_minting_curve_contract() -> ClassHash {
     *snforge_std::declare("MintingCurve").unwrap().contract_class().class_hash
 }
 
+pub(crate) fn pause_staking_contract(
+    staking_contract: ContractAddress, security_agent: ContractAddress,
+) {
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: security_agent);
+    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
+    staking_pause_dispatcher.pause();
+}
+
 /// Upgrades implementation of the given contract.
 pub(crate) fn upgrade_implementation(
     contract_address: ContractAddress,
