@@ -1047,6 +1047,162 @@ pub(crate) impl PoolUpgradeFlowImpl of FlowTrait<PoolUpgradeFlow> {
     }
 }
 
+/// Test multiple token delegations.
+/// Flow:
+/// Deploy 2 new btc tokens
+/// Staker stake
+/// Staker open delegation pools for BTC tokens
+/// Delegators delegate to all pools
+/// Attest
+/// Disable 2 BTC tokens
+/// Attest
+/// Enable 1 BTC token
+/// Attest
+/// Test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct MultipleTokensDelegationFlow {}
+pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDelegationFlow> {
+    fn test(self: MultipleTokensDelegationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        // Setup tokens.
+        let first_btc_token = system.btc_token;
+        let second_btc_token = system.deploy_second_btc_token();
+        system.staking.add_token(token_address: second_btc_token.contract_address());
+        system.staking.enable_token(token_address: second_btc_token.contract_address());
+        let third_btc_token = system.deploy_new_btc_token(name: "THIRD_BTC_TOKEN");
+        system.staking.add_token(token_address: third_btc_token.contract_address());
+        system.staking.enable_token(token_address: third_btc_token.contract_address());
+
+        // Stake and open pools.
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+        let first_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: first_btc_token.contract_address());
+        let second_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: second_btc_token.contract_address());
+        let third_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: third_btc_token.contract_address());
+
+        // Setup delegators.
+        let first_btc_delegator_amount = MIN_BTC_FOR_REWARDS;
+        let second_btc_delegator_amount = first_btc_delegator_amount * 2;
+        let third_btc_delegator_amount = first_btc_delegator_amount * 3;
+        let first_btc_delegator = system
+            .new_btc_delegator(amount: first_btc_delegator_amount, token: first_btc_token);
+        let second_btc_delegator = system
+            .new_btc_delegator(amount: second_btc_delegator_amount, token: second_btc_token);
+        let third_btc_delegator = system
+            .new_btc_delegator(amount: third_btc_delegator_amount, token: third_btc_token);
+
+        // Delegators delegate.
+        system
+            .delegate_btc(
+                delegator: first_btc_delegator,
+                pool: first_btc_pool,
+                amount: first_btc_delegator_amount,
+                token: first_btc_token,
+            );
+        system
+            .delegate_btc(
+                delegator: second_btc_delegator,
+                pool: second_btc_pool,
+                amount: second_btc_delegator_amount,
+                token: second_btc_token,
+            );
+        system
+            .delegate_btc(
+                delegator: third_btc_delegator,
+                pool: third_btc_pool,
+                amount: third_btc_delegator_amount,
+                token: third_btc_token,
+            );
+
+        // Attest.
+        system.advance_epoch_and_attest(:staker);
+
+        // Calculate rewards.
+        let mut total_first_pool_rewards = Zero::zero();
+        let mut total_second_pool_rewards = Zero::zero();
+        let mut total_third_pool_rewards = Zero::zero();
+        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: first_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: second_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        let (_, third_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: third_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        total_first_pool_rewards += first_pool_rewards;
+        total_second_pool_rewards += second_pool_rewards;
+        total_third_pool_rewards += third_pool_rewards;
+
+        // Disable 2 BTC tokens and attest.
+        system.advance_epoch();
+        system.staking.disable_token(token_address: second_btc_token.contract_address());
+        system.staking.disable_token(token_address: third_btc_token.contract_address());
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+
+        // Calculate rewards.
+        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: first_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        total_first_pool_rewards += first_pool_rewards;
+
+        // Enable 1 BTC token and attest.
+        system.advance_epoch();
+        system.staking.enable_token(token_address: second_btc_token.contract_address());
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+
+        // Calculate rewards.
+        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: first_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: second_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        total_first_pool_rewards += first_pool_rewards;
+        total_second_pool_rewards += second_pool_rewards;
+
+        // Test rewards.
+        system.advance_epoch();
+        let actual_first_pool_rewards = system
+            .delegator_claim_rewards(delegator: first_btc_delegator, pool: first_btc_pool);
+        let actual_second_pool_rewards = system
+            .delegator_claim_rewards(delegator: second_btc_delegator, pool: second_btc_pool);
+        let actual_third_pool_rewards = system
+            .delegator_claim_rewards(delegator: third_btc_delegator, pool: third_btc_pool);
+        assert!(actual_first_pool_rewards == total_first_pool_rewards);
+        assert!(actual_second_pool_rewards == total_second_pool_rewards);
+        assert!(actual_third_pool_rewards == total_third_pool_rewards);
+    }
+}
+
 /// Test pool member info migration with internal_pool_member_info, get_internal_pool_member_info
 /// and pool_member_info_v1 functions.
 /// Flow:

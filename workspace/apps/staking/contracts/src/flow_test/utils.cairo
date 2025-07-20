@@ -1098,11 +1098,12 @@ pub(crate) impl SystemImpl of SystemTrait {
     }
 
     fn deploy_second_btc_token(self: SystemState) -> Token {
+        self.deploy_new_btc_token(name: BTC_TOKEN_NAME_2())
+    }
+
+    fn deploy_new_btc_token(self: SystemState, name: ByteArray) -> Token {
         let btc_token = TokenConfig {
-            name: BTC_TOKEN_NAME_2(),
-            symbol: SYMBOL(),
-            initial_supply: INITIAL_SUPPLY.into(),
-            owner: OWNER_ADDRESS(),
+            name, symbol: SYMBOL(), initial_supply: INITIAL_SUPPLY.into(), owner: OWNER_ADDRESS(),
         }
             .deploy_btc_token();
         btc_token
