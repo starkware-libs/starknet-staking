@@ -1396,6 +1396,134 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl of FlowTrait<DelegatorExitAnd
     }
 }
 
+/// Test
+/// Test delegator exit pool and enter again.
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Attest
+/// Attest
+/// Attest
+/// Delagator exit intent
+/// Delegator exit action
+/// Delegator delegate with the same address
+/// Attest
+/// Attest
+/// Delegator claim rewards
+/// Staker exit intent
+/// Delegator exit intent
+/// Staker exit action
+/// Delegator exit action
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorExitIntentUpgradeSwitchFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) initial_reward_supplier_balance: Option<Amount>,
+    pub(crate) initial_stake_amount: Option<Amount>,
+}
+pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
+    DelegatorExitIntentUpgradeSwitchFlow,
+> {
+    fn setup_v1(ref self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let initial_stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: initial_stake_amount * 2);
+        let initial_reward_supplier_balance = system
+            .token
+            .balance_of(account: system.reward_supplier.address);
+        let commission = 200;
+
+        system.stake(:staker, amount: initial_stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch_and_attest(:staker);
+
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: initial_stake_amount);
+        let delegated_amount = initial_stake_amount / 2;
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch_and_attest(:staker);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_exit_wait_window();
+
+        self.staker = Option::Some(staker);
+        self.delegator = Option::Some(delegator);
+        self.delegated_amount = Option::Some(delegated_amount);
+        self.initial_reward_supplier_balance = Option::Some(initial_reward_supplier_balance);
+        self.initial_stake_amount = Option::Some(initial_stake_amount);
+    }
+
+    fn test(self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        system.staker_migration(staker_address: staker.staker.address);
+        let delegator = self.delegator.unwrap();
+        let initial_stake_amount = self.initial_stake_amount.unwrap();
+        let pool = system.staking.get_pool(:staker);
+        let delegated_amount = self.delegated_amount.unwrap();
+        let initial_reward_supplier_balance = self.initial_reward_supplier_balance.unwrap();
+        let commission = 200;
+
+        // Switch to new pool.
+        let second_stake_amount = initial_stake_amount * 2;
+        let staker2 = system.new_staker(amount: second_stake_amount);
+        system.stake(staker: staker2, amount: second_stake_amount, pool_enabled: true, :commission);
+        let pool2 = system.staking.get_pool(staker: staker2);
+        system
+            .switch_delegation_pool(
+                :delegator,
+                from_pool: pool,
+                to_staker: staker2.staker.address,
+                to_pool: pool2,
+                amount: delegated_amount,
+            );
+
+        // Switch back to old pool.
+        system.delegator_exit_intent(:delegator, pool: pool2, amount: delegated_amount);
+        system.advance_exit_wait_window();
+        system
+            .switch_delegation_pool(
+                :delegator,
+                from_pool: pool2,
+                to_staker: staker.staker.address,
+                to_pool: pool,
+                amount: delegated_amount,
+            );
+
+        // Staker and delegator exit.
+
+        system.staker_exit_intent(:staker);
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+
+        system.advance_exit_wait_window();
+
+        system.staker_exit_action(:staker);
+        system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
+
+        assert!(system.token.balance_of(account: system.staking.address) == second_stake_amount);
+        assert!(system.token.balance_of(account: pool) == 0);
+        assert!(system.token.balance_of(account: pool2) == 0);
+        assert!(
+            system.token.balance_of(account: staker.staker.address) == initial_stake_amount * 2,
+        );
+        assert!(
+            system.token.balance_of(account: delegator.delegator.address) == initial_stake_amount,
+        );
+        assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+        assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
+        assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
+                + system.token.balance_of(account: staker.reward.address)
+                + system.token.balance_of(account: delegator.reward.address),
+        );
+    }
+}
 
 /// Test delegator exit pool and enter again with switch.
 /// Flow:

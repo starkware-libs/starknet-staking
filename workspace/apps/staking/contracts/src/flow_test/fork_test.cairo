@@ -58,6 +58,18 @@ fn staker_intent_last_action_first_regression_test() {
     test_flow_mainnet(ref :flow);
 }
 
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_exit_intent_upgrade_switch_regression_test() {
+    let mut flow = flows::DelegatorExitIntentUpgradeSwitchFlow {
+        staker: Option::None,
+        delegator: Option::None,
+        delegated_amount: Option::None,
+        initial_reward_supplier_balance: Option::None,
+        initial_stake_amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
 
 #[test]
 #[fork("MAINNET_LATEST")]
