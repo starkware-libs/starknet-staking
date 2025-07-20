@@ -1664,6 +1664,9 @@ pub mod Staking {
             let mut total_pools_rewards: Amount = Zero::zero();
             let commission = staker_pool_info.commission();
             for (pool_contract, token_address) in staker_pool_info.pools() {
+                if !self.is_active_token(:token_address) {
+                    continue;
+                }
                 let pool_balance_curr_epoch = self
                     .get_staker_delegated_balance_curr_epoch(:staker_address, :token_address);
                 let (epoch_rewards, total_stake) = if token_address == STRK_TOKEN_ADDRESS {

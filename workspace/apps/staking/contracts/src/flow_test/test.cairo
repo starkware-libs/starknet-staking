@@ -28,6 +28,12 @@ fn set_open_for_delegation_flow_test() {
 }
 
 #[test]
+fn disabled_token_delegation_flow_test() {
+    let flow = flows::DisabledTokenDelegationFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn attest_with_zero_total_btc_stake_flow_test() {
     let flow = flows::AttestWithZeroTotalBtcStakeFlow {};
     test_flow_local(:flow);
