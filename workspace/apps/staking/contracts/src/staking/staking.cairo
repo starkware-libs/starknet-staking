@@ -65,6 +65,7 @@ pub mod Staking {
     pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
+    pub(crate) const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -759,7 +760,7 @@ pub mod Staking {
             // Migrate staker balance trace.
             let trace_len = self.staker_balance_trace.entry(staker_address).length();
             assert!(trace_len > 0, "{}", TraceErrors::EMPTY_TRACE);
-            let n = min(trace_len, 3);
+            let n = min(trace_len, MAX_MIGRATION_TRACE_ENTRIES);
             self.migrate_staker_balance_trace(:staker_address, :n, :has_pool);
             // Add staker address to the stakers vector.
             self.stakers.push(staker_address);
