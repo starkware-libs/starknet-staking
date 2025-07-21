@@ -21,6 +21,7 @@ use staking::staking::interface::{
     StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::EpochInfoTrait;
+use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
 use staking::test_utils::constants::{EPOCH_DURATION, ONE_BTC};
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
@@ -2303,24 +2304,21 @@ pub(crate) impl TotalStakeTraceAfterUpgradeFlowImpl of FlowTrait<TotalStakeTrace
             map_selector: selector!("tokens_total_stake_trace"),
             keys: [token_address.into()].span(),
         );
+        let length = load_trace_length(
+            contract_address: system.staking.address, trace_address: total_stake_trace_storage,
+        );
+        assert!(length == MAX_MIGRATION_TRACE_ENTRIES);
         let (key, value) = load_from_trace(
             contract_address: system.staking.address,
             trace_address: total_stake_trace_storage,
             index: 0,
-        );
-        assert!(key == 0);
-        assert!(value == 0);
-        let (key, value) = load_from_trace(
-            contract_address: system.staking.address,
-            trace_address: total_stake_trace_storage,
-            index: 1,
         );
         assert!(key == 1);
         assert!(value == amount);
         let (key, value) = load_from_trace(
             contract_address: system.staking.address,
             trace_address: total_stake_trace_storage,
-            index: 2,
+            index: 1,
         );
         assert!(key == 2);
         assert!(value == amount * 3);
@@ -2735,22 +2733,9 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
         let delegated_trace_length = load_trace_length(
             contract_address: system.staking.address, trace_address: delegated_trace_storage,
         );
-        assert!(own_trace_length == 3);
-        assert!(delegated_trace_length == 3);
+        assert!(own_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
+        assert!(delegated_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
         // Test latest: staker balance trace: epoch 3, stake_amount*2 + delegate_amount.
-        let (own_key, own_value) = load_from_trace(
-            contract_address: system.staking.address, trace_address: own_trace_storage, index: 2,
-        );
-        let (delegated_key, delegated_value) = load_from_trace(
-            contract_address: system.staking.address,
-            trace_address: delegated_trace_storage,
-            index: 2,
-        );
-        assert!(own_key == 3);
-        assert!(delegated_key == 3);
-        assert!(own_value == stake_amount * 2);
-        assert!(delegated_value == delegated_amount);
-        // Test penultimate: staker balance trace: epoch 2, stake_amount*2.
         let (own_key, own_value) = load_from_trace(
             contract_address: system.staking.address, trace_address: own_trace_storage, index: 1,
         );
@@ -2759,11 +2744,11 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
             trace_address: delegated_trace_storage,
             index: 1,
         );
-        assert!(own_key == 2);
-        assert!(delegated_key == 2);
+        assert!(own_key == 3);
+        assert!(delegated_key == 3);
         assert!(own_value == stake_amount * 2);
-        assert!(delegated_value == Zero::zero());
-        // Test first entry: staker balance trace: epoch 1, stake_amount.
+        assert!(delegated_value == delegated_amount);
+        // Test penultimate: staker balance trace: epoch 2, stake_amount*2.
         let (own_key, own_value) = load_from_trace(
             contract_address: system.staking.address, trace_address: own_trace_storage, index: 0,
         );
@@ -2772,9 +2757,9 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
             trace_address: delegated_trace_storage,
             index: 0,
         );
-        assert!(own_key == 1);
-        assert!(delegated_key == 1);
-        assert!(own_value == stake_amount);
+        assert!(own_key == 2);
+        assert!(delegated_key == 2);
+        assert!(own_value == stake_amount * 2);
         assert!(delegated_value == Zero::zero());
         // Test staker in stakers vector.
         let vec_storage = selector!("stakers");
