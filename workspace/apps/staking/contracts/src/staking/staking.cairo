@@ -760,8 +760,8 @@ pub mod Staking {
             // Migrate staker balance trace.
             let trace_len = self.staker_balance_trace.entry(staker_address).length();
             assert!(trace_len > 0, "{}", TraceErrors::EMPTY_TRACE);
-            let n = min(trace_len, MAX_MIGRATION_TRACE_ENTRIES);
-            self.migrate_staker_balance_trace(:staker_address, :n, :has_pool);
+            let entries_to_migrate = min(trace_len, MAX_MIGRATION_TRACE_ENTRIES);
+            self.migrate_staker_balance_trace(:staker_address, :entries_to_migrate, :has_pool);
             // Add staker address to the stakers vector.
             self.stakers.push(staker_address);
         }
@@ -1211,10 +1211,13 @@ pub mod Staking {
             total_stake
         }
 
-        /// Migrate the n latest checkpoints of the staker balance trace.
-        /// n can be only 1, or 2.
+        /// Migrate the `entries_to_migrate` latest checkpoints of the staker balance trace.
+        /// `entries_to_migrate` can be only 1, or 2.
         fn migrate_staker_balance_trace(
-            ref self: ContractState, staker_address: ContractAddress, n: u64, has_pool: bool,
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            entries_to_migrate: u64,
+            has_pool: bool,
         ) {
             let deprecated_trace = self.staker_balance_trace.entry(staker_address);
             let len = deprecated_trace.length();
@@ -1223,7 +1226,7 @@ pub mod Staking {
                 .staker_delegated_balance_trace
                 .entry(staker_address)
                 .entry(STRK_TOKEN_ADDRESS);
-            for i in len - n..len {
+            for i in len - entries_to_migrate..len {
                 let (epoch, staker_balance) = deprecated_trace.at(i);
                 let own_balance = staker_balance.amount_own();
                 own_balance_trace.insert(key: epoch, value: own_balance);

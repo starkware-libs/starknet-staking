@@ -66,10 +66,10 @@ mod StakingEICV1toV2 {
             let deprecated_trace = self.total_stake_trace;
             assert!(!deprecated_trace.is_empty(), "{}", TraceErrors::EMPTY_TRACE);
             let len = deprecated_trace.length();
-            let n = min(len, MAX_MIGRATION_TRACE_ENTRIES);
+            let entries_to_migrate = min(len, MAX_MIGRATION_TRACE_ENTRIES);
             let strk_token_address = self.token_dispatcher.read().contract_address;
             let strk_total_stake_trace = self.tokens_total_stake_trace.entry(strk_token_address);
-            for i in len - n..len {
+            for i in len - entries_to_migrate..len {
                 let (key, value) = deprecated_trace.at(i);
                 strk_total_stake_trace.insert(:key, :value);
             }
