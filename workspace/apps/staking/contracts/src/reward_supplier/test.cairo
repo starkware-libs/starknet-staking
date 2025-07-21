@@ -77,7 +77,7 @@ fn test_reward_supplier_constructor() {
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let state = @initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
+    let state = @initialize_reward_supplier_state_from_cfg(:cfg);
     assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
     assert!(state.token_dispatcher.read().contract_address == token_address);
     assert!(state.l1_pending_requested_amount.read() == Zero::zero());
@@ -110,7 +110,7 @@ fn test_claim_rewards() {
     let minting_curve_contract = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve_contract;
     // Use the reward supplier contract state to claim rewards.
-    let mut state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
+    let mut state = initialize_reward_supplier_state_from_cfg(:cfg);
     // Fund the the reward supplier contract.
     fund(target: test_address(), :amount, :token);
     // Update the unclaimed rewards for testing purposes.
@@ -130,11 +130,10 @@ fn test_claim_rewards() {
 #[test]
 fn test_contract_parameters_v1() {
     let mut cfg: StakingInitConfig = Default::default();
-    let token_address = cfg.test_info.strk_token.contract_address();
     // Change the block_timestamp so the contract_parameters_v1() won't return zero for all fields.
     let block_timestamp = Time::now().add(delta: Time::seconds(count: 1));
     start_cheat_block_timestamp_global(block_timestamp: block_timestamp.into());
-    let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
+    let state = initialize_reward_supplier_state_from_cfg(:cfg);
     let expected_info = RewardSupplierInfoV1 {
         unclaimed_rewards: STRK_IN_FRIS, l1_pending_requested_amount: Zero::zero(),
     };
