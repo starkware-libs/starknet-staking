@@ -614,7 +614,6 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
         self.base_mint_amount.serialize(ref calldata);
         minting_curve.address.serialize(ref calldata);
         staking.address.serialize(ref calldata);
-        token.contract_address().serialize(ref calldata);
         self.l1_reward_supplier.serialize(ref calldata);
         self.starkgate_address.serialize(ref calldata);
         self.governance_admin.serialize(ref calldata);

@@ -321,13 +321,12 @@ pub(crate) fn initialize_minting_curve_state(
 }
 
 pub(crate) fn initialize_reward_supplier_state_from_cfg(
-    token_address: ContractAddress, cfg: StakingInitConfig,
+    cfg: StakingInitConfig,
 ) -> RewardSupplier::ContractState {
     initialize_reward_supplier_state(
         base_mint_amount: cfg.reward_supplier.base_mint_amount,
         minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
         staking_contract: cfg.test_info.staking_contract,
-        :token_address,
         l1_reward_supplier: cfg.reward_supplier.l1_reward_supplier,
         starkgate_address: cfg.reward_supplier.starkgate_address,
         governance_admin: cfg.test_info.governance_admin,
@@ -337,7 +336,6 @@ pub(crate) fn initialize_reward_supplier_state(
     base_mint_amount: Amount,
     minting_curve_contract: ContractAddress,
     staking_contract: ContractAddress,
-    token_address: ContractAddress,
     l1_reward_supplier: felt252,
     starkgate_address: ContractAddress,
     governance_admin: ContractAddress,
@@ -348,7 +346,6 @@ pub(crate) fn initialize_reward_supplier_state(
         :base_mint_amount,
         :minting_curve_contract,
         :staking_contract,
-        :token_address,
         :l1_reward_supplier,
         :starkgate_address,
         :governance_admin,
@@ -464,7 +461,6 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     cfg.reward_supplier.base_mint_amount.serialize(ref calldata);
     cfg.reward_supplier.minting_curve_contract.serialize(ref calldata);
     cfg.test_info.staking_contract.serialize(ref calldata);
-    cfg.test_info.strk_token.contract_address().serialize(ref calldata);
     cfg.reward_supplier.l1_reward_supplier.serialize(ref calldata);
     cfg.reward_supplier.starkgate_address.serialize(ref calldata);
     cfg.test_info.governance_admin.serialize(ref calldata);
