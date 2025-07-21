@@ -68,6 +68,7 @@ use staking::staking::objects::{
     VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
+use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
 use staking::types::{Amount, InternalStakerInfoLatest, VecIndex};
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
@@ -3795,19 +3796,15 @@ fn test_staking_eic() {
         :storage_address,
         serialized_value: [MAINNET_STAKING_CLASS_HASH_V0().into()].span(),
     );
-    // Store 3 checkpoints in total stake trace.
+    // Store `MAX_MIGRATION_TRACE_ENTRIES` checkpoints in total stake trace.
     let trace_address = selector!("total_stake_trace");
     let total_stake_0: Amount = cfg.test_info.stake_amount;
     let total_stake_1: Amount = total_stake_0 + cfg.test_info.stake_amount;
-    let total_stake_2: Amount = total_stake_1 + cfg.test_info.stake_amount;
     append_to_trace(
         contract_address: staking_contract, :trace_address, key: 0, value: total_stake_0,
     );
     append_to_trace(
         contract_address: staking_contract, :trace_address, key: 1, value: total_stake_1,
-    );
-    append_to_trace(
-        contract_address: staking_contract, :trace_address, key: 2, value: total_stake_2,
     );
 
     // Upgrade.
@@ -3862,7 +3859,7 @@ fn test_staking_eic() {
         keys: [strk_token_address.into()].span(),
     );
     let trace_length = load_trace_length(contract_address: staking_contract, :trace_address);
-    assert!(trace_length == 3);
+    assert!(trace_length == MAX_MIGRATION_TRACE_ENTRIES);
     let (key_0, value_0) = load_from_trace(
         contract_address: staking_contract, :trace_address, index: 0,
     );
@@ -3873,11 +3870,6 @@ fn test_staking_eic() {
     );
     assert!(key_1 == 1);
     assert!(value_1 == total_stake_1);
-    let (key_2, value_2) = load_from_trace(
-        contract_address: staking_contract, :trace_address, index: 2,
-    );
-    assert!(key_2 == 2);
-    assert!(value_2 == total_stake_2);
 }
 
 // TODO: Find another way to test specific errors in EIC.
