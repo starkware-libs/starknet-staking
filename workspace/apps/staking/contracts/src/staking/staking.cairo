@@ -192,7 +192,6 @@ pub mod Staking {
     #[constructor]
     pub fn constructor(
         ref self: ContractState,
-        token_address: ContractAddress,
         min_stake: Amount,
         pool_contract_class_hash: ClassHash,
         reward_supplier: ContractAddress,
@@ -202,6 +201,7 @@ pub mod Staking {
         epoch_info: EpochInfo,
         attestation_contract: ContractAddress,
     ) {
+        let token_address = STRK_TOKEN_ADDRESS;
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });

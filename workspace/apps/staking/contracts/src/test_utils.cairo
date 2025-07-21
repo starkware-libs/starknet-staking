@@ -257,7 +257,6 @@ pub(crate) fn initialize_staking_state_from_cfg(
     ref cfg: StakingInitConfig,
 ) -> Staking::ContractState {
     initialize_staking_state(
-        token_address: cfg.test_info.strk_token.contract_address(),
         min_stake: cfg.staking_contract_info.min_stake,
         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
@@ -269,7 +268,6 @@ pub(crate) fn initialize_staking_state_from_cfg(
     )
 }
 pub(crate) fn initialize_staking_state(
-    token_address: ContractAddress,
     min_stake: Amount,
     pool_contract_class_hash: ClassHash,
     reward_supplier: ContractAddress,
@@ -283,7 +281,6 @@ pub(crate) fn initialize_staking_state(
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
     Staking::constructor(
         ref state,
-        :token_address,
         :min_stake,
         :pool_contract_class_hash,
         :reward_supplier,
@@ -388,7 +385,6 @@ pub(crate) fn deploy_mock_erc20_decimals_contract(
 
 pub(crate) fn deploy_staking_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
-    cfg.test_info.strk_token.contract_address().serialize(ref calldata);
     cfg.staking_contract_info.min_stake.serialize(ref calldata);
     cfg.staking_contract_info.pool_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
