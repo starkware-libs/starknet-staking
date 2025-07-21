@@ -7,6 +7,7 @@ mod StakingEICV1toV2 {
     use openzeppelin::token::erc20::interface::IERC20Dispatcher;
     use staking::constants::STAKING_V2_PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
+    use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
     use staking::types::Version;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
@@ -14,7 +15,6 @@ mod StakingEICV1toV2 {
     use starkware_utils::components::replaceability::interface::IEICInitializable;
     use starkware_utils::trace::errors::TraceErrors;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
-    const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3;
 
     #[storage]
     struct Storage {
