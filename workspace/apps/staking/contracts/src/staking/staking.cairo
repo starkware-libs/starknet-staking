@@ -1,6 +1,7 @@
 #[starknet::contract]
 pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
+    use core::cmp::min;
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use core::panics::panic_with_byte_array;
@@ -758,12 +759,8 @@ pub mod Staking {
             // Migrate staker balance trace.
             let trace_len = self.staker_balance_trace.entry(staker_address).length();
             assert!(trace_len > 0, "{}", TraceErrors::EMPTY_TRACE);
-            let n = 3;
-            if trace_len >= n {
-                self.migrate_staker_balance_trace(:staker_address, :n, :has_pool);
-            } else {
-                self.migrate_staker_balance_trace(:staker_address, n: trace_len, :has_pool);
-            }
+            let n = min(trace_len, 3);
+            self.migrate_staker_balance_trace(:staker_address, :n, :has_pool);
             // Add staker address to the stakers vector.
             self.stakers.push(staker_address);
         }
