@@ -1200,6 +1200,7 @@ pub mod Staking {
         }
     }
 
+    /// **Note**: This function doesn't verify that the token actually exists.
     #[generate_trait]
     pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         fn _get_total_stake(self: @ContractState, token_address: ContractAddress) -> Amount {
