@@ -2,6 +2,7 @@
 // This EIC is used to upgrade the staking contract from V1 to V2 (BTC).
 #[starknet::contract]
 mod StakingEICV1toV2 {
+    use core::cmp::min;
     use core::num::traits::Zero;
     use openzeppelin::token::erc20::interface::IERC20Dispatcher;
     use staking::constants::STAKING_V2_PREV_CONTRACT_VERSION;
@@ -65,13 +66,7 @@ mod StakingEICV1toV2 {
             let deprecated_trace = self.total_stake_trace;
             assert!(!deprecated_trace.is_empty(), "{}", TraceErrors::EMPTY_TRACE);
             let len = deprecated_trace.length();
-            let n = {
-                if len >= MAX_MIGRATION_TRACE_ENTRIES {
-                    MAX_MIGRATION_TRACE_ENTRIES
-                } else {
-                    len
-                }
-            };
+            let n = min(len, MAX_MIGRATION_TRACE_ENTRIES);
             let strk_token_address = self.token_dispatcher.read().contract_address;
             let strk_total_stake_trace = self.tokens_total_stake_trace.entry(strk_token_address);
             for i in len - n..len {
