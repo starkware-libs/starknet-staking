@@ -1087,10 +1087,18 @@ pub(crate) impl SystemImpl of SystemTrait {
     /// **Note**: This function assumes that the current block is the starting block of the
     /// current epoch.
     fn advance_block_into_attestation_window(self: SystemState, staker: Staker) {
+        let staker_address = staker.staker.address;
+        let stake = self.staker_total_amount(:staker);
+        self.advance_block_into_attestation_window_custom_stake(:staker_address, :stake);
+    }
+
+    fn advance_block_into_attestation_window_custom_stake(
+        self: SystemState, staker_address: ContractAddress, stake: Amount,
+    ) {
         let block_offset = calculate_block_offset(
-            stake: self.staker_total_amount(:staker).into(),
+            :stake,
             epoch_id: self.staking.get_epoch_info().current_epoch().into(),
-            staker_address: staker.staker.address.into(),
+            staker_address: staker_address.into(),
             epoch_len: self.staking.get_epoch_info().epoch_len_in_blocks().into(),
             attestation_window: MIN_ATTESTATION_WINDOW,
         );

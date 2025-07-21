@@ -40,7 +40,7 @@ use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, IStakingTokenManagerDispatcher,
-    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
 use staking::staking::staking::Staking;
@@ -1044,6 +1044,20 @@ pub(crate) fn calculate_staker_strk_rewards(
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
+    calculate_staker_strk_rewards_with_amount_and_pool_info(
+        amount_own: staker_info.amount_own,
+        pool_info: staker_info.pool_info,
+        :staking_contract,
+        :minting_curve_contract,
+    )
+}
+
+pub(crate) fn calculate_staker_strk_rewards_with_amount_and_pool_info(
+    amount_own: Amount,
+    pool_info: Option<StakerPoolInfoV1>,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+) -> (Amount, Amount) {
     let (strk_epoch_rewards, _) = calculate_current_epoch_rewards(
         :staking_contract, :minting_curve_contract,
     );
@@ -1051,12 +1065,12 @@ pub(crate) fn calculate_staker_strk_rewards(
     let (strk_curr_total_stake, _) = staking_dispatcher.get_current_total_staking_power();
     // Calculate staker own rewards.
     let mut staker_rewards = mul_wide_and_div(
-        lhs: strk_epoch_rewards, rhs: staker_info.amount_own, div: strk_curr_total_stake,
+        lhs: strk_epoch_rewards, rhs: amount_own, div: strk_curr_total_stake,
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     // Calculate staker STRK pool rewards.
     let pool_rewards = {
-        if let Option::Some(pool_info) = staker_info.pool_info {
+        if let Option::Some(pool_info) = pool_info {
             let pool_rewards_including_commission = mul_wide_and_div(
                 lhs: strk_epoch_rewards, rhs: pool_info.amount, div: strk_curr_total_stake,
             )

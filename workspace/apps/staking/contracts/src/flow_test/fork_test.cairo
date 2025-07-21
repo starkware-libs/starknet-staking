@@ -53,6 +53,15 @@ fn delegator_updated_after_staker_update_commission_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn staker_multiple_entries_migration_attest_regression_test() {
+    let mut flow = flows::StakerMultipleEntriesMigrationAttestFlow {
+        staker: Option::None, amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn staker_intent_last_action_first_regression_test() {
     let mut flow = flows::StakerIntentLastActionFirstFlow {};
     test_flow_mainnet(ref :flow);

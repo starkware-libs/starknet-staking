@@ -24,9 +24,9 @@ use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils::constants::{EPOCH_DURATION, ONE_BTC};
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
-    calculate_strk_pool_rewards, calculate_strk_pool_rewards_with_pool_balance,
-    compute_rewards_for_trace, deserialize_option, load_from_iterable_map, load_from_trace,
-    load_trace_length, strk_pool_update_rewards,
+    calculate_staker_strk_rewards_with_amount_and_pool_info, calculate_strk_pool_rewards,
+    calculate_strk_pool_rewards_with_pool_balance, compute_rewards_for_trace, deserialize_option,
+    load_from_iterable_map, load_from_trace, load_trace_length, strk_pool_update_rewards,
 };
 use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
 use staking::utils::compute_rewards_rounded_down;
@@ -1940,6 +1940,93 @@ pub(crate) impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> 
         system.advance_epoch();
         let total_staking_power = system.staking.get_current_total_staking_power_v2();
         assert!(total_staking_power == (amount, delegated_amount));
+    }
+}
+
+/// Flow:
+/// Staker stake
+/// Advance epoch
+/// Staker increase stake
+/// Upgrade
+/// Staker migration
+/// Test balance trace
+/// Staker attest
+/// Advance epoch
+/// Staker attest
+/// Test rewards
+/// Advance epoch
+/// Test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct StakerMultipleEntriesMigrationAttestFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) amount: Option<Amount>,
+}
+pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
+    StakerMultipleEntriesMigrationAttestFlow,
+> {
+    fn setup_v1(ref self: StakerMultipleEntriesMigrationAttestFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 2);
+        system.stake(:staker, :amount, pool_enabled: false, commission: 200);
+        system.advance_epoch();
+        system.increase_stake(:staker, :amount);
+
+        self.staker = Option::Some(staker);
+        self.amount = Option::Some(amount);
+    }
+
+    fn test(self: StakerMultipleEntriesMigrationAttestFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        system.staker_migration(:staker_address);
+        let amount = self.amount.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        // Test balance trace.
+        let own_trace_storage = snforge_std::map_entry_address(
+            map_selector: selector!("staker_own_balance_trace"),
+            keys: [staker_address.into()].span(),
+        );
+        let own_trace_length = load_trace_length(
+            contract_address: system.staking.address, trace_address: own_trace_storage,
+        );
+        assert!(own_trace_length == 2);
+        let (_, own_value) = load_from_trace(
+            contract_address: system.staking.address, trace_address: own_trace_storage, index: 0,
+        );
+        assert!(own_value == amount);
+        let (_, own_value) = load_from_trace(
+            contract_address: system.staking.address, trace_address: own_trace_storage, index: 1,
+        );
+        assert!(own_value == amount * 2);
+
+        // Attest.
+        system.advance_block_into_attestation_window_custom_stake(:staker_address, stake: amount);
+        system.attest(:staker);
+
+        // Second stake does not count towards rewards (since we attest in the same epoch).
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_amount_and_pool_info(
+            amount_own: amount, pool_info: Option::None, :staking_contract, :minting_curve_contract,
+        );
+
+        // Test rewards.
+        let actual_staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(actual_staker_rewards == expected_staker_rewards);
+
+        // Attest again.
+        system.advance_epoch_and_attest(:staker);
+
+        // Advance epoch and test rewards.
+        system.advance_epoch();
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_amount_and_pool_info(
+            amount_own: amount * 2,
+            pool_info: Option::None,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        let actual_staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(actual_staker_rewards == expected_staker_rewards);
     }
 }
 
