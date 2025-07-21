@@ -169,9 +169,8 @@ pub(crate) struct StakingState {
 
 #[generate_trait]
 pub(crate) impl StakingImpl of StakingTrait {
-    fn deploy(self: StakingConfig, token: Token) -> StakingState {
+    fn deploy(self: StakingConfig) -> StakingState {
         let mut calldata = ArrayTrait::new();
-        token.contract_address().serialize(ref calldata);
         self.min_stake.serialize(ref calldata);
         self.pool_contract_class_hash.serialize(ref calldata);
         self.reward_supplier.serialize(ref calldata);
@@ -906,7 +905,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
     fn deploy(self: SystemConfig) -> SystemState {
         let token = Token::STRK;
         let btc_token = self.btc_token.deploy_btc_token();
-        let staking = self.staking.deploy(:token);
+        let staking = self.staking.deploy();
         let minting_curve = self.minting_curve.deploy(:staking);
         let reward_supplier = self.reward_supplier.deploy(:minting_curve, :staking, :token);
         let attestation = self.attestation.deploy(:staking);
