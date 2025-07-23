@@ -1,6 +1,6 @@
 {
   "name": "@staking/contracts",
-  "version": "1.0.1-dev.756",
+  "version": "1.0.1-dev.757",
   "private": true,
   "description": "staking contracts",
   "scripts": {

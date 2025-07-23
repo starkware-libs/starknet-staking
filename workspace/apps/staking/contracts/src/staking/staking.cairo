@@ -969,7 +969,7 @@ pub mod Staking {
             to_pool_dispatcher
                 .enter_delegation_pool_from_staking_contract(amount: switched_amount, :data);
 
-            // Emit event.
+            // Emit events.
             self
                 .emit(
                     Events::StakeDelegatedBalanceChanged {
