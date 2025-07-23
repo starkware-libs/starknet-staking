@@ -124,8 +124,6 @@ pub mod Staking {
         attestation_contract: ContractAddress,
         // Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
-        // Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
-        // an epoch to the updated stake. Stakers that performed unstake_intent are not included.
         // Deprecated field of the total stake, used in V1.
         // total_stake_trace: Trace,
         // Map token address to checkpoints tracking total stake changes over time, with each
