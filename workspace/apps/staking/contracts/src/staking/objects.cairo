@@ -418,7 +418,7 @@ pub struct InternalStakerPoolInfoV1 {
 
 #[starknet::storage_node]
 pub(crate) struct InternalStakerPoolInfoV2 {
-    /// Commission for all pools.
+    /// Commission for all pools. Indicates if pools are enabled.
     pub(crate) commission: Option<Commission>,
     /// Map pool contract to their token address.
     pub(crate) pools: IterableMap<ContractAddress, ContractAddress>,
