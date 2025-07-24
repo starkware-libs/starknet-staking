@@ -3794,11 +3794,15 @@ fn test_staking_eic() {
     let trace_address = selector!("total_stake_trace");
     let total_stake_0: Amount = cfg.test_info.stake_amount;
     let total_stake_1: Amount = total_stake_0 + cfg.test_info.stake_amount;
+    let total_stake_2: Amount = total_stake_1 + cfg.test_info.stake_amount;
     append_to_trace(
         contract_address: staking_contract, :trace_address, key: 0, value: total_stake_0,
     );
     append_to_trace(
         contract_address: staking_contract, :trace_address, key: 1, value: total_stake_1,
+    );
+    append_to_trace(
+        contract_address: staking_contract, :trace_address, key: 2, value: total_stake_2,
     );
 
     // Upgrade.
@@ -3864,6 +3868,11 @@ fn test_staking_eic() {
     );
     assert!(key_1 == 1);
     assert!(value_1 == total_stake_1);
+    let (key_2, value_2) = load_from_trace(
+        contract_address: staking_contract, :trace_address, index: 2,
+    );
+    assert!(key_2 == 2);
+    assert!(value_2 == total_stake_2);
 }
 
 // TODO: Find another way to test specific errors in EIC.
