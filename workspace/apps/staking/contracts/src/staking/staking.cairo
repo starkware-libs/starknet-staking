@@ -1579,10 +1579,11 @@ pub mod Staking {
             undelegate_intent_value
         }
 
-        /// Get array of tuples with (pool_contract, pool_balance, pool_rewards) and update the pool
-        /// rewards.
+        /// Gets an array of tuples with (pool_contract, pool_balance, pool_rewards) and updates the
+        /// pool rewards.
         ///
-        /// Return array of tuples (pool_contract, pool_rewards) for the StakerRewardsUpdated event.
+        /// Returns an array of tuples (pool_contract, pool_rewards) for the
+        /// StakerRewardsUpdated event.
         fn update_pool_rewards(
             ref self: ContractState,
             staker_address: ContractAddress,
@@ -1592,8 +1593,6 @@ pub mod Staking {
             let strk_token_dispatcher = self.token_dispatcher.read();
             for (pool_contract, pool_balance, pool_rewards) in pools_rewards_data {
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-                pool_dispatcher
-                    .update_rewards_from_staking_contract(rewards: pool_rewards, :pool_balance);
                 // Rewards are always in STRK.
                 self
                     .send_rewards_to_delegation_pool(
@@ -1602,6 +1601,8 @@ pub mod Staking {
                         amount: pool_rewards,
                         token_dispatcher: strk_token_dispatcher,
                     );
+                pool_dispatcher
+                    .update_rewards_from_staking_contract(rewards: pool_rewards, :pool_balance);
                 pool_rewards_list.append((pool_contract, pool_rewards));
             }
             pool_rewards_list
