@@ -1737,11 +1737,12 @@ pub mod Staking {
             staker_address: ContractAddress,
             token_address: ContractAddress,
         ) {
-            self
+            let trace = self
                 .staker_delegated_balance_trace
-                .entry(staker_address)
-                .entry(token_address)
-                .insert(key: self.get_current_epoch(), value: Zero::zero());
+                .entry(key: staker_address)
+                .entry(key: token_address);
+            assert!(trace.is_empty(), "{}", Error::STAKER_ALREADY_HAS_POOL);
+            trace.insert(key: STARTING_EPOCH, value: Zero::zero());
         }
 
         /// Return the latest own balance recorded in the `staker_own_balance_trace`.
