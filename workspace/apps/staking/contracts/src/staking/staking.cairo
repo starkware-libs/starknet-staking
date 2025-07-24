@@ -1131,11 +1131,12 @@ pub mod Staking {
             let (strk_epoch_rewards, btc_epoch_rewards) = reward_supplier_dispatcher
                 .calculate_current_epoch_rewards();
             let (strk_total_stake, btc_total_stake) = self.get_current_total_staking_power();
+            let curr_epoch = self.get_current_epoch();
 
             // Calculate self rewards.
             let staker_own_rewards = self
                 .calculate_staker_own_rewards(
-                    :staker_address, :strk_epoch_rewards, :strk_total_stake,
+                    :staker_address, :strk_epoch_rewards, :strk_total_stake, :curr_epoch,
                 );
             // Calculate pools rewards.
             let staker_pool_info = self.internal_staker_pool_info(:staker_address);
@@ -1149,6 +1150,7 @@ pub mod Staking {
                         :strk_total_stake,
                         :btc_epoch_rewards,
                         :btc_total_stake,
+                        :curr_epoch,
                     )
             } else {
                 (Zero::zero(), Zero::zero(), array![])
@@ -1615,8 +1617,10 @@ pub mod Staking {
             staker_address: ContractAddress,
             strk_epoch_rewards: Amount,
             strk_total_stake: Amount,
+            curr_epoch: Epoch,
         ) -> Amount {
-            let own_balance_curr_epoch = self.get_staker_own_balance_curr_epoch(:staker_address);
+            let own_balance_curr_epoch = self
+                .get_staker_own_balance_curr_epoch(:staker_address, :curr_epoch);
             mul_wide_and_div(
                 lhs: strk_epoch_rewards, rhs: own_balance_curr_epoch, div: strk_total_stake,
             )
@@ -1638,6 +1642,7 @@ pub mod Staking {
             strk_total_stake: Amount,
             btc_epoch_rewards: Amount,
             btc_total_stake: Amount,
+            curr_epoch: Epoch,
         ) -> (Amount, Amount, Array<(ContractAddress, Amount, Amount)>) {
             // Array for rewards data needed to update pools.
             // Contains tuples of (pool_contract, pool_balance, pool_rewards).
@@ -1650,7 +1655,9 @@ pub mod Staking {
                     continue;
                 }
                 let pool_balance_curr_epoch = self
-                    .get_staker_delegated_balance_curr_epoch(:staker_address, :token_address);
+                    .get_staker_delegated_balance_curr_epoch(
+                        :staker_address, :token_address, :curr_epoch,
+                    );
                 let (epoch_rewards, total_stake) = if token_address == STRK_TOKEN_ADDRESS {
                     (strk_epoch_rewards, strk_total_stake)
                 } else {
@@ -1760,14 +1767,16 @@ pub mod Staking {
         fn get_staker_total_strk_balance_curr_epoch(
             self: @ContractState, staker_address: ContractAddress,
         ) -> Amount {
-            let curr_own_balance = self.get_staker_own_balance_curr_epoch(:staker_address);
+            let curr_epoch = self.get_current_epoch();
+            let curr_own_balance = self
+                .get_staker_own_balance_curr_epoch(:staker_address, :curr_epoch);
             let strk_token_address = STRK_TOKEN_ADDRESS;
             let curr_delegated_balance = if self
                 .internal_staker_pool_info(:staker_address)
                 .has_pool_for_token(token_address: strk_token_address) {
                 self
                     .get_staker_delegated_balance_curr_epoch(
-                        :staker_address, token_address: strk_token_address,
+                        :staker_address, token_address: strk_token_address, :curr_epoch,
                     )
             } else {
                 Zero::zero()
@@ -1775,21 +1784,28 @@ pub mod Staking {
             curr_own_balance + curr_delegated_balance
         }
 
+        /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
+        /// calls to `get_current_epoch()`.
         fn get_staker_own_balance_curr_epoch(
-            self: @ContractState, staker_address: ContractAddress,
+            self: @ContractState, staker_address: ContractAddress, curr_epoch: Epoch,
         ) -> Amount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
-            self.balance_at_curr_epoch(:trace, curr_epoch: self.get_current_epoch())
+            self.balance_at_curr_epoch(:trace, :curr_epoch)
         }
 
+        /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
+        /// calls to `get_current_epoch()`.
         fn get_staker_delegated_balance_curr_epoch(
-            self: @ContractState, staker_address: ContractAddress, token_address: ContractAddress,
+            self: @ContractState,
+            staker_address: ContractAddress,
+            token_address: ContractAddress,
+            curr_epoch: Epoch,
         ) -> Amount {
             let trace = self
                 .staker_delegated_balance_trace
                 .entry(key: staker_address)
                 .entry(key: token_address);
-            self.balance_at_curr_epoch(:trace, curr_epoch: self.get_current_epoch())
+            self.balance_at_curr_epoch(:trace, :curr_epoch)
         }
 
         /// Returns the balance at the current epoch.
