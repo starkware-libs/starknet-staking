@@ -1239,7 +1239,7 @@ pub mod Staking {
                 .staker_delegated_balance_trace
                 .entry(staker_address)
                 .entry(STRK_TOKEN_ADDRESS);
-            for i in len - entries_to_migrate..len {
+            for i in (len - entries_to_migrate)..len {
                 let (epoch, staker_balance) = deprecated_trace.at(i);
                 let own_balance = staker_balance.amount_own();
                 own_balance_trace.insert(key: epoch, value: own_balance);
