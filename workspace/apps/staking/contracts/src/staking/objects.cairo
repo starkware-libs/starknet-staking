@@ -27,13 +27,13 @@ pub(crate) struct UndelegateIntentKey {
 pub(crate) struct UndelegateIntentValue {
     pub unpool_time: Timestamp,
     pub amount: Amount,
-    pub staker_address: ContractAddress,
+    pub token_address: ContractAddress,
 }
 
 pub(crate) impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentValue> {
     fn zero() -> UndelegateIntentValue {
         UndelegateIntentValue {
-            unpool_time: Zero::zero(), amount: Zero::zero(), staker_address: Zero::zero(),
+            unpool_time: Zero::zero(), amount: Zero::zero(), token_address: Zero::zero(),
         }
     }
 
