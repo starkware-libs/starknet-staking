@@ -1633,7 +1633,7 @@ pub mod Staking {
         /// This function calculates the rewards for the staker's pools.
         /// The rewards will be updated and sent to pools later in `update_pools_rewards`.
         ///
-        /// Return: total commission rewards, total pools rewards, and a list of tuples with
+        /// Returns: total commission rewards, total pools rewards, and a list of tuples with
         /// (pool_contract, pool_balance, pool_rewards) for each pool that gets rewards.
         ///
         /// Precondition: Staker has at least one pool.
