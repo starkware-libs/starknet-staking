@@ -455,7 +455,7 @@ pub mod Staking {
             self.general_prerequisites();
             let staker_address = get_caller_address();
             let staker_info = self.internal_staker_info(:staker_address);
-            let staker_pool_info_mut = self.internal_staker_pool_info_mut(:staker_address);
+            let staker_pool_info_mut = self.staker_pool_info.entry(staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             assert!(self.does_token_exist(:token_address), "{}", Error::TOKEN_NOT_EXISTS);
             assert!(
@@ -630,7 +630,7 @@ pub mod Staking {
             let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
-            let staker_pool_info_mut = self.internal_staker_pool_info_mut(:staker_address);
+            let staker_pool_info_mut = self.staker_pool_info.entry(staker_address);
             if let Option::Some(old_commission) = staker_pool_info_mut.commission_opt() {
                 self
                     .update_commission(
@@ -653,7 +653,7 @@ pub mod Staking {
             let staker_address = get_caller_address();
             let staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
-            let staker_pool_info_mut = self.internal_staker_pool_info_mut(:staker_address);
+            let staker_pool_info_mut = self.staker_pool_info.entry(staker_address);
             assert!(staker_pool_info_mut.has_pool(), "{}", Error::MISSING_POOL_CONTRACT);
             let current_epoch = self.get_current_epoch();
             if let Option::Some(commission_commitment) = staker_pool_info_mut
@@ -742,7 +742,7 @@ pub mod Staking {
             );
             // Migrate staker pool info.
             let internal_staker_info = self.internal_staker_info(:staker_address);
-            let staker_pool_info_mut = self.internal_staker_pool_info_mut(:staker_address);
+            let staker_pool_info_mut = self.staker_pool_info.entry(staker_address);
             let mut has_pool = false;
             if let Option::Some(pool_info) = internal_staker_info._deprecated_pool_info {
                 has_pool = true;
@@ -1251,15 +1251,6 @@ pub mod Staking {
         fn internal_staker_pool_info(
             self: @ContractState, staker_address: ContractAddress,
         ) -> StoragePath<InternalStakerPoolInfoV2> {
-            self.staker_pool_info.entry(staker_address)
-        }
-
-        /// Return Mutable StoragePath to the internal staker pool information for the given
-        /// `staker_address`.
-        /// Note: This function does not check if the staker exists.
-        fn internal_staker_pool_info_mut(
-            ref self: ContractState, staker_address: ContractAddress,
-        ) -> StoragePath<Mutable<InternalStakerPoolInfoV2>> {
             self.staker_pool_info.entry(staker_address)
         }
 
