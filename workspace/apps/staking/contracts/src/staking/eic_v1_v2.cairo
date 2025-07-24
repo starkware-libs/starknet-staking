@@ -4,8 +4,7 @@
 mod StakingEICV1toV2 {
     use core::cmp::min;
     use core::num::traits::Zero;
-    use openzeppelin::token::erc20::interface::IERC20Dispatcher;
-    use staking::constants::STAKING_V2_PREV_CONTRACT_VERSION;
+    use staking::constants::{STAKING_V2_PREV_CONTRACT_VERSION, STRK_TOKEN_ADDRESS};
     use staking::errors::GenericError;
     use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
     use staking::types::Version;
@@ -30,8 +29,6 @@ mod StakingEICV1toV2 {
         pool_contract_class_hash: ClassHash,
         /// Deprecated field of the total stake.
         total_stake_trace: Trace,
-        /// A dispatcher of the token contract.
-        token_dispatcher: IERC20Dispatcher,
         /// Storage of the `pause` flag state.
         is_paused: bool,
     }
@@ -67,8 +64,7 @@ mod StakingEICV1toV2 {
             assert!(!deprecated_trace.is_empty(), "{}", TraceErrors::EMPTY_TRACE);
             let len = deprecated_trace.length();
             let entries_to_migrate = min(len, MAX_MIGRATION_TRACE_ENTRIES);
-            let strk_token_address = self.token_dispatcher.read().contract_address;
-            let strk_total_stake_trace = self.tokens_total_stake_trace.entry(strk_token_address);
+            let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
             for i in len - entries_to_migrate..len {
                 let (key, value) = deprecated_trace.at(i);
                 strk_total_stake_trace.insert(:key, :value);
