@@ -1472,7 +1472,7 @@ pub mod Staking {
             pool_contract
         }
 
-        // Adjusts the total stake based on changes in the delegated amount.
+        /// Adjusts the total stake based on changes in the delegated amount.
         fn update_total_stake_according_to_delegated_stake_changes(
             ref self: ContractState,
             token_address: ContractAddress,
