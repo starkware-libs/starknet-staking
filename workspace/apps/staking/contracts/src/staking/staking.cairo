@@ -846,7 +846,7 @@ pub mod Staking {
                 );
             self
                 .update_undelegate_intent_value(
-                    :staker_address, :staker_info, :undelegate_intent_key, :new_intent_amount,
+                    :token_address, :staker_info, :undelegate_intent_key, :new_intent_amount,
                 );
 
             self
@@ -892,8 +892,7 @@ pub mod Staking {
             // Clear the intent.
             self.clear_undelegate_intent(:undelegate_intent_key);
             // Extract the token address of the pool contract.
-            let token_address = self
-                .get_undelegate_intent_token(:undelegate_intent, :pool_contract);
+            let token_address = self.get_undelegate_intent_token(:undelegate_intent);
             // Transfer the intent amount to the pool contract.
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             token_dispatcher
@@ -936,11 +935,9 @@ pub mod Staking {
                 "{}",
                 GenericError::AMOUNT_TOO_HIGH,
             );
-            // Extract the token address of the pool contract.
+            // Extract the token address of the `from_pool` contract.
             let token_address = self
-                .get_undelegate_intent_token(
-                    undelegate_intent: undelegate_intent_value, pool_contract: from_pool,
-                );
+                .get_undelegate_intent_token(undelegate_intent: undelegate_intent_value);
             let old_intent_amount = undelegate_intent_value.amount;
             assert!(to_pool != from_pool, "{}", Error::SELF_SWITCH_NOT_ALLOWED);
 
@@ -1262,21 +1259,16 @@ pub mod Staking {
             self.staker_pool_info.entry(staker_address)
         }
 
-        /// Returns the token address for the given `undelegate_intent` and `pool_contract`.
+        /// Returns the token address for the given `undelegate_intent`.
         fn get_undelegate_intent_token(
-            self: @ContractState,
-            undelegate_intent: UndelegateIntentValue,
-            pool_contract: ContractAddress,
+            self: @ContractState, undelegate_intent: UndelegateIntentValue,
         ) -> ContractAddress {
-            // If undelegate_intent.staker_address is zero, it means the intent is for the STRK
+            // If undelegate_intent.token_address is zero, it means the intent is for the STRK
             // token (it was created before the BTC version).
-            if undelegate_intent.staker_address.is_zero() {
+            if undelegate_intent.token_address.is_zero() {
                 STRK_TOKEN_ADDRESS
             } else {
-                self
-                    .internal_staker_pool_info(staker_address: undelegate_intent.staker_address)
-                    .get_pool_token(:pool_contract)
-                    .expect_with_err(Error::INVALID_UNDELEGATE_INTENT_VALUE)
+                undelegate_intent.token_address
             }
         }
 
@@ -1563,7 +1555,7 @@ pub mod Staking {
         /// time.
         fn update_undelegate_intent_value(
             ref self: ContractState,
-            staker_address: ContractAddress,
+            token_address: ContractAddress,
             staker_info: InternalStakerInfoLatest,
             undelegate_intent_key: UndelegateIntentKey,
             new_intent_amount: Amount,
@@ -1573,8 +1565,8 @@ pub mod Staking {
             } else {
                 let unpool_time = staker_info
                     .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
-                assert!(staker_address.is_non_zero(), "{}", Error::CALLER_IS_ZERO_ADDRESS);
-                UndelegateIntentValue { amount: new_intent_amount, unpool_time, staker_address }
+                assert!(token_address.is_non_zero(), "{}", Error::TOKEN_IS_ZERO_ADDRESS);
+                UndelegateIntentValue { amount: new_intent_amount, unpool_time, token_address }
             };
             self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
         }

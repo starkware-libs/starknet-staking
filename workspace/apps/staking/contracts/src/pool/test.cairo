@@ -818,6 +818,7 @@ fn test_exit_delegation_pool_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
     let pool_contract = stake_with_pool_enabled(:cfg);
@@ -867,7 +868,7 @@ fn test_exit_delegation_pool_intent() {
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
         amount: expected_pool_member_info.unpool_amount.into(),
-        staker_address: cfg.test_info.staker_address,
+        token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 
@@ -1354,6 +1355,7 @@ fn test_partial_undelegate() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
     let pool_contract = stake_with_pool_enabled(:cfg);
@@ -1395,7 +1397,7 @@ fn test_partial_undelegate() {
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
         amount: expected_pool_member_info.unpool_amount,
-        staker_address: cfg.test_info.staker_address,
+        token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 

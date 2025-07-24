@@ -100,7 +100,7 @@ pub trait IStakingPool<TContractState> {
     /// 4. Calculate the timestamp when the pool may perform remove_from_delegation_pool_action for
     ///    this `amount` and `identifier` (notate it as unpool_time for following use).
     /// 5. Create an entry in pool_exit_intents map for this `identifier` and pool contract address
-    ///    with the value being `UndelegateIntentValue { amount, unpool_time }`.
+    ///    with the value being `UndelegateIntentValue { amount, unpool_time, token_address }`.
     /// 6. Return unpool_time.
     ///
     /// The function supports overriding intentions, upwards and downwards, *which recalculates the
