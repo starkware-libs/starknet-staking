@@ -1082,7 +1082,7 @@ pub mod Staking {
             self
                 .tokens_total_stake_trace
                 .entry(token_address)
-                .insert(key: self.get_current_epoch(), value: Zero::zero());
+                .insert(key: STARTING_EPOCH, value: Zero::zero());
             self.emit(TokenManagerEvents::TokenAdded { token_address });
         }
 
