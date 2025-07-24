@@ -1205,7 +1205,7 @@ pub mod Staking {
             let total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
             // Trace is initialized with a zero stake at the first valid epoch, so it is safe to
             // unwrap.
-            let (_, total_stake) = total_stake_trace.latest().unwrap().into();
+            let (_, total_stake) = total_stake_trace.latest().unwrap();
             total_stake
         }
 
