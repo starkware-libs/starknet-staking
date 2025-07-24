@@ -251,7 +251,9 @@ pub mod Staking {
                 GenericError::OPERATIONAL_EXISTS,
             );
             self.assert_staker_address_not_reused(:staker_address);
-            self.assert_staker_address_not_token(:staker_address);
+            assert!(
+                !self.does_token_exist(token_address: staker_address), "{}", Error::STAKER_IS_TOKEN,
+            );
             assert!(amount >= self.min_stake.read(), "{}", Error::AMOUNT_LESS_THAN_MIN_STAKE);
 
             // Transfer funds from staker. Sufficient approvals is a pre-condition.
@@ -1853,12 +1855,6 @@ pub mod Staking {
                 self.staker_own_balance_trace.entry(key: staker_address).is_empty(),
                 "{}",
                 Error::STAKER_ADDRESS_ALREADY_USED,
-            );
-        }
-
-        fn assert_staker_address_not_token(self: @ContractState, staker_address: ContractAddress) {
-            assert!(
-                !self.does_token_exist(token_address: staker_address), "{}", Error::STAKER_IS_TOKEN,
             );
         }
 
