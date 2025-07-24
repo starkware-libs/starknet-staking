@@ -4157,10 +4157,26 @@ fn test_get_active_tokens() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let strk_token_address = cfg.test_info.strk_token.contract_address();
+    let btc_token_address = cfg.test_info.btc_token.contract_address();
+
+    // Test when both tokens are active.
+    let expected_active_tokens = [strk_token_address, btc_token_address].span();
     let active_tokens = staking_dispatcher.get_active_tokens();
-    assert!(active_tokens.len() == 2);
-    assert!(*active_tokens[0] == cfg.test_info.strk_token.contract_address());
-    assert!(*active_tokens[1] == cfg.test_info.btc_token.contract_address());
+    assert!(active_tokens == expected_active_tokens);
+
+    // Disable the BTC token.
+    let security_agent = cfg.test_info.security_agent;
+    let token_manager_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: security_agent);
+    token_manager_dispatcher.disable_token(token_address: btc_token_address);
+
+    // Test when only the STRK token is active.
+    let expected_active_tokens = [strk_token_address].span();
+    let active_tokens = staking_dispatcher.get_active_tokens();
+    assert!(active_tokens == expected_active_tokens);
 }
 
 #[test]
