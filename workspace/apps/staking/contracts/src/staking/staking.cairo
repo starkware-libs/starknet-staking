@@ -1800,6 +1800,10 @@ pub mod Staking {
             self.balance_at_curr_epoch(:trace, curr_epoch: self.get_current_epoch())
         }
 
+        /// Returns the balance at the current epoch.
+        ///
+        /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
+        /// calls to `get_current_epoch()`.
         fn balance_at_curr_epoch(
             self: @ContractState, trace: StoragePath<Trace>, curr_epoch: Epoch,
         ) -> Amount {
