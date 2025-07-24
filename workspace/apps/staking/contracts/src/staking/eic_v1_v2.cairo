@@ -65,7 +65,7 @@ mod StakingEICV1toV2 {
             let len = deprecated_trace.length();
             let entries_to_migrate = min(len, MAX_MIGRATION_TRACE_ENTRIES);
             let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
-            for i in len - entries_to_migrate..len {
+            for i in (len - entries_to_migrate)..len {
                 let (key, value) = deprecated_trace.at(i);
                 strk_total_stake_trace.insert(:key, :value);
             }
