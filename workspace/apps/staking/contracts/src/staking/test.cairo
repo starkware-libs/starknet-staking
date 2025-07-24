@@ -3405,6 +3405,8 @@ fn test_internal_staker_info_outdated_version() {
     staking_dispatcher.internal_staker_info(:staker_address);
 }
 
+// TODO: Add test for staker migration with invalid balance trace that catches
+// POOL_BALANCE_NOT_ZERO.
 #[test]
 #[should_panic(expected: "Staker does not exist")]
 fn test_staker_migration_staker_not_exist() {

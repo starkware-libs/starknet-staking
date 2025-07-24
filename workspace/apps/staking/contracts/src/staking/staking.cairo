@@ -1246,6 +1246,10 @@ pub mod Staking {
                 if has_pool {
                     let delegated_balance = staker_balance.pool_amount();
                     delegated_balance_trace.insert(key: epoch, value: delegated_balance);
+                } else {
+                    assert!(
+                        staker_balance.pool_amount().is_zero(), "{}", Error::POOL_BALANCE_NOT_ZERO,
+                    )
                 }
             }
         }
