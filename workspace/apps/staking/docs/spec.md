@@ -52,6 +52,7 @@
     - [enable\_token](#enable_token)
     - [disable\_token](#disable_token)
     - [get\_active\_tokens](#get_active_tokens)
+    - [get\_tokens](#get_tokens)
     - [get\_total\_stake\_for\_token](#get_total_stake_for_token)
   - [Events](#events)
     - [Stake Own Balance Changed](#stake-own-balance-changed)
@@ -307,6 +308,7 @@ classDiagram
     enable_token()
     disable_token()
     get_active_tokens()
+    get_tokens()
     get_total_stake_for_token()
   }
   class DelegationPoolContract{
@@ -1389,6 +1391,19 @@ fn get_active_tokens(self: @ContractState) -> Span<ContractAddress>
 ```
 #### description <!-- omit from toc -->
 Get all active tokens.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address.
+#### logic <!-- omit from toc -->
+
+### get_tokens
+```rust
+fn get_tokens(self: @ContractState) -> Span<(ContractAddress, bool)>
+```
+#### description <!-- omit from toc -->
+Gets all tokens and their status.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->

@@ -2528,18 +2528,39 @@ pub(crate) impl DisableBtcTokenSameAndNextEpochFlowImpl of FlowTrait<
     fn test(self: DisableBtcTokenSameAndNextEpochFlow, ref system: SystemState) {
         let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
         let token_address = system.deploy_second_btc_token().contract_address();
+        let strk_token_address = system.token.contract_address();
+        let btc_token_address = system.btc_token.contract_address();
+
+        let expected_tokens_false = array![
+            (strk_token_address, true), (btc_token_address, true), (token_address, false),
+        ]
+            .span();
+        let expected_tokens_true = array![
+            (strk_token_address, true), (btc_token_address, true), (token_address, true),
+        ]
+            .span();
+
         system.staking.add_token(:token_address);
+        let tokens = system.staking.dispatcher().get_tokens();
+        assert!(tokens == expected_tokens_false);
+
         system.staking.enable_token(:token_address);
+        let tokens = system.staking.dispatcher().get_tokens();
+        assert!(tokens == expected_tokens_true);
 
         system.advance_epoch();
         system.staking.disable_token(:token_address);
 
         let active_tokens = system.staking.dispatcher().get_active_tokens();
+        let tokens = system.staking.dispatcher().get_tokens();
         assert!(active_tokens == expected_active_tokens);
+        assert!(tokens == expected_tokens_false);
 
         system.advance_epoch();
         let active_tokens = system.staking.dispatcher().get_active_tokens();
+        let tokens = system.staking.dispatcher().get_tokens();
         assert!(active_tokens == expected_active_tokens);
+        assert!(tokens == expected_tokens_false);
     }
 }
 
