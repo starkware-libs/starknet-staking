@@ -1148,9 +1148,17 @@ pub mod Staking {
             };
             // Update reward supplier.
             let staker_rewards = staker_own_rewards + commission_rewards;
+            // Update total rewards.
+            reward_supplier_dispatcher
+                .update_unclaimed_rewards_from_staking_contract(
+                    rewards: staker_rewards + total_pools_rewards,
+                );
+            // Claim pools rewards.
             self
-                .update_and_claim_reward_supplier(
-                    :reward_supplier_dispatcher, :staker_rewards, :total_pools_rewards,
+                .claim_from_reward_supplier(
+                    :reward_supplier_dispatcher,
+                    amount: total_pools_rewards,
+                    token_dispatcher: self.token_dispatcher.read(),
                 );
             // Update staker rewards.
             staker_info.unclaimed_rewards_own += staker_rewards;
@@ -1606,26 +1614,6 @@ pub mod Staking {
                 pool_rewards_list.append((pool_contract, pool_rewards));
             }
             pool_rewards_list
-        }
-
-        fn update_and_claim_reward_supplier(
-            ref self: ContractState,
-            reward_supplier_dispatcher: IRewardSupplierDispatcher,
-            staker_rewards: Amount,
-            total_pools_rewards: Amount,
-        ) {
-            // Update total rewards.
-            reward_supplier_dispatcher
-                .update_unclaimed_rewards_from_staking_contract(
-                    rewards: staker_rewards + total_pools_rewards,
-                );
-            // Claim pools rewards.
-            self
-                .claim_from_reward_supplier(
-                    :reward_supplier_dispatcher,
-                    amount: total_pools_rewards,
-                    token_dispatcher: self.token_dispatcher.read(),
-                );
         }
 
         /// Calculate and return the rewards for the own balance of the staker.
