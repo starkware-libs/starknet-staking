@@ -65,7 +65,7 @@ pub mod Staking {
     pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
-    pub(crate) const MAX_MIGRATION_TRACE_ENTRIES: u64 = 2;
+    pub(crate) const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -1227,7 +1227,7 @@ pub mod Staking {
         }
 
         /// Migrate the `entries_to_migrate` latest checkpoints of the staker balance trace.
-        /// `entries_to_migrate` can be only 1, or 2.
+        /// `entries_to_migrate` can be only 1, 2, or 3.
         fn migrate_staker_balance_trace(
             ref self: ContractState,
             staker_address: ContractAddress,
