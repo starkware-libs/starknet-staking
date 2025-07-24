@@ -705,6 +705,14 @@ pub mod Staking {
             active_tokens.span()
         }
 
+        fn get_tokens(self: @ContractState) -> Span<(ContractAddress, bool)> {
+            let mut tokens: Array<(ContractAddress, bool)> = array![(STRK_TOKEN_ADDRESS, true)];
+            for (token_address, is_active) in self.btc_tokens {
+                tokens.append((token_address, is_active));
+            }
+            tokens.span()
+        }
+
         fn get_total_stake_for_token(
             self: @ContractState, token_address: ContractAddress,
         ) -> Amount {

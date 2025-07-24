@@ -4164,6 +4164,26 @@ fn test_get_active_tokens() {
 }
 
 #[test]
+fn test_get_tokens() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_token_dispatcher = IStakingTokenManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
+    );
+    staking_token_dispatcher
+        .disable_token(token_address: cfg.test_info.btc_token.contract_address());
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let tokens = staking_dispatcher.get_tokens();
+    assert!(tokens.len() == 2);
+    assert!(*tokens[0] == (cfg.test_info.strk_token.contract_address(), true));
+    assert!(*tokens[1] == (cfg.test_info.btc_token.contract_address(), false));
+}
+
+#[test]
 fn test_add_token() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
