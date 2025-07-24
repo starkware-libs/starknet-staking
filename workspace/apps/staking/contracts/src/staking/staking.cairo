@@ -102,8 +102,8 @@ pub mod Staking {
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
         // Map potential operational address to eligible staker address.
         eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
-        // A dispatcher of the token contract.
-        token_dispatcher: IERC20Dispatcher,
+        // Deprecated field of a dispatcher of the token contract, used in V1.
+        // token_dispatcher: IERC20Dispatcher,
         // Deprecated field of the total stake, used in V0.
         // total_stake: Amount,
         // The class hash of the delegation pool contract.
@@ -199,10 +199,8 @@ pub mod Staking {
         epoch_info: EpochInfo,
         attestation_contract: ContractAddress,
     ) {
-        let token_address = STRK_TOKEN_ADDRESS;
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
-        self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.min_stake.write(min_stake);
         self.pool_contract_class_hash.write(pool_contract_class_hash);
         self
@@ -216,7 +214,7 @@ pub mod Staking {
         self.attestation_contract.write(attestation_contract);
         self
             .tokens_total_stake_trace
-            .entry(token_address)
+            .entry(STRK_TOKEN_ADDRESS)
             .insert(key: STARTING_EPOCH, value: Zero::zero());
     }
 
@@ -258,7 +256,7 @@ pub mod Staking {
 
             // Transfer funds from staker. Sufficient approvals is a pre-condition.
             let staking_contract = get_contract_address();
-            let token_dispatcher = self.token_dispatcher.read();
+            let token_dispatcher = self.token_dispatcher();
             token_dispatcher
                 .checked_transfer_from(
                     sender: staker_address, recipient: staking_contract, amount: amount.into(),
@@ -317,7 +315,7 @@ pub mod Staking {
 
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
-            let token_dispatcher = self.token_dispatcher.read();
+            let token_dispatcher = self.token_dispatcher();
             token_dispatcher
                 .checked_transfer_from(
                     sender: caller_address,
@@ -355,7 +353,7 @@ pub mod Staking {
             // Note: `send_rewards_to_staker` alters `staker_info` thus commit to storage is
             // performed only after that.
             let amount = staker_info.unclaimed_rewards_own;
-            let token_dispatcher = self.token_dispatcher.read();
+            let token_dispatcher = self.token_dispatcher();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
             self.write_staker_info(:staker_address, :staker_info);
             amount
@@ -413,7 +411,7 @@ pub mod Staking {
 
             // Send rewards to staker's reward address.
             // It must be part of this function's flow because staker_info is about to be erased.
-            let token_dispatcher = self.token_dispatcher.read();
+            let token_dispatcher = self.token_dispatcher();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
 
             // Return stake to staker.
@@ -544,7 +542,7 @@ pub mod Staking {
         fn contract_parameters_v1(self: @ContractState) -> StakingContractInfoV1 {
             StakingContractInfoV1 {
                 min_stake: self.min_stake.read(),
-                token_address: self.token_dispatcher.read().contract_address,
+                token_address: STRK_TOKEN_ADDRESS,
                 attestation_contract: self.attestation_contract.read(),
                 pool_contract_class_hash: self.pool_contract_class_hash.read(),
                 reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
@@ -1167,7 +1165,7 @@ pub mod Staking {
                 .claim_from_reward_supplier(
                     :reward_supplier_dispatcher,
                     amount: total_pools_rewards,
-                    token_dispatcher: self.token_dispatcher.read(),
+                    token_dispatcher: self.token_dispatcher(),
                 );
             // Update staker rewards.
             staker_info.unclaimed_rewards_own += staker_rewards;
@@ -1553,6 +1551,11 @@ pub mod Staking {
             (old_delegated_stake, new_delegated_stake)
         }
 
+        /// Return the token dispatcher for STRK.
+        fn token_dispatcher(self: @ContractState) -> IERC20Dispatcher {
+            IERC20Dispatcher { contract_address: STRK_TOKEN_ADDRESS }
+        }
+
         /// Updates undelegate intent value with the given `new_intent_amount` and an updated unpool
         /// time.
         fn update_undelegate_intent_value(
@@ -1593,7 +1596,7 @@ pub mod Staking {
             pools_rewards_data: Array<(ContractAddress, Amount, Amount)>,
         ) -> Array<(ContractAddress, Amount)> {
             let mut pool_rewards_list = array![];
-            let strk_token_dispatcher = self.token_dispatcher.read();
+            let strk_token_dispatcher = self.token_dispatcher();
             for (pool_contract, pool_balance, pool_rewards) in pools_rewards_data {
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
                 // Rewards are always in STRK.

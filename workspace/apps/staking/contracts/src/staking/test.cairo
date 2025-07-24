@@ -101,15 +101,6 @@ fn test_constructor() {
     let mut cfg: StakingInitConfig = Default::default();
     let mut state = initialize_staking_state_from_cfg(ref :cfg);
     assert!(state.min_stake.read() == cfg.staking_contract_info.min_stake);
-    assert!(
-        state
-            .token_dispatcher
-            .read()
-            .contract_address == cfg
-            .test_info
-            .strk_token
-            .contract_address(),
-    );
     let staker_address = state
         .operational_address_to_staker_address
         .read(cfg.staker_info.operational_address);
