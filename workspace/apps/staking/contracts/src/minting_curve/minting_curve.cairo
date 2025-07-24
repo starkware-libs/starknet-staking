@@ -131,7 +131,7 @@ pub mod MintingCurve {
         fn yearly_mint(self: @ContractState) -> Amount {
             let total_supply = self.total_supply.read();
             let staking_dispatcher = self.staking_dispatcher.read();
-            let total_stake = staking_dispatcher.get_total_stake();
+            let (total_stake, _) = staking_dispatcher.get_current_total_staking_power();
             let yearly_mint = self.compute_yearly_mint(:total_stake, :total_supply);
             yearly_mint
         }
