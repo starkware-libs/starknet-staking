@@ -428,10 +428,6 @@ pub(crate) struct InternalStakerPoolInfoV2 {
 
 #[generate_trait]
 pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
-    fn commission_opt(self: StoragePath<InternalStakerPoolInfoV2>) -> Option<Commission> {
-        self.commission.read()
-    }
-
     fn commission(self: StoragePath<InternalStakerPoolInfoV2>) -> Commission {
         self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
     }
@@ -482,10 +478,6 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
 
 #[generate_trait]
 pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTrait {
-    fn commission_opt(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Option<Commission> {
-        self.commission.read()
-    }
-
     fn commission(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Commission {
         self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
     }

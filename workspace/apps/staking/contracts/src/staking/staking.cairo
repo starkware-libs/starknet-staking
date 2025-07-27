@@ -522,7 +522,7 @@ pub mod Staking {
             // Assert that the staker exists.
             self.internal_staker_info(:staker_address);
             let internal_staker_pool_info = self.internal_staker_pool_info(:staker_address);
-            let commission = internal_staker_pool_info.commission_opt();
+            let commission = internal_staker_pool_info.commission.read();
             let mut pools: Array<PoolInfo> = array![];
             for (pool_contract, token_address) in internal_staker_pool_info.pools {
                 let amount = self.get_delegated_balance(:staker_address, :token_address);
@@ -630,7 +630,7 @@ pub mod Staking {
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
 
             let staker_pool_info_mut = self.staker_pool_info.entry(staker_address);
-            if let Option::Some(old_commission) = staker_pool_info_mut.commission_opt() {
+            if let Option::Some(old_commission) = staker_pool_info_mut.commission.read() {
                 self
                     .update_commission(
                         :staker_address, :staker_pool_info_mut, :old_commission, :commission,
