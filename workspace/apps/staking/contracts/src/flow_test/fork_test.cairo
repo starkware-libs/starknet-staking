@@ -69,6 +69,13 @@ fn staker_intent_last_action_first_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn staker_address_already_used_in_older_version_regression_test() {
+    let mut flow = flows::StakerAddressAlreadyUsedInOlderVersionFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn delegator_exit_intent_upgrade_switch_regression_test() {
     let mut flow = flows::DelegatorExitIntentUpgradeSwitchFlow {
         staker: Option::None,
