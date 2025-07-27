@@ -373,7 +373,7 @@ pub mod Staking {
             self.write_staker_info(:staker_address, :staker_info);
 
             // Write off the delegated stake from the total stake.
-            for (_, token_address) in self.internal_staker_pool_info(:staker_address).pools() {
+            for (_, token_address) in self.internal_staker_pool_info(:staker_address).pools {
                 let amount = self.get_delegated_balance(:staker_address, :token_address);
                 self.remove_from_total_stake(:token_address, :amount);
                 self
@@ -524,7 +524,7 @@ pub mod Staking {
             let internal_staker_pool_info = self.internal_staker_pool_info(:staker_address);
             let commission = internal_staker_pool_info.commission_opt();
             let mut pools: Array<PoolInfo> = array![];
-            for (pool_contract, token_address) in internal_staker_pool_info.pools() {
+            for (pool_contract, token_address) in internal_staker_pool_info.pools {
                 let amount = self.get_delegated_balance(:staker_address, :token_address);
                 pools.append(PoolInfo { pool_contract, token_address, amount });
             }
@@ -1394,7 +1394,7 @@ pub mod Staking {
             staker_address: ContractAddress,
             staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
         ) {
-            for (pool_contract, token_address) in staker_pool_info.pools() {
+            for (pool_contract, token_address) in staker_pool_info.pools {
                 let pool_balance = self.get_delegated_balance(:staker_address, :token_address);
                 let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
@@ -1652,7 +1652,7 @@ pub mod Staking {
             let mut total_commission_rewards: Amount = Zero::zero();
             let mut total_pools_rewards: Amount = Zero::zero();
             let commission = staker_pool_info.commission();
-            for (pool_contract, token_address) in staker_pool_info.pools() {
+            for (pool_contract, token_address) in staker_pool_info.pools {
                 if !self.is_active_token(:token_address) {
                     continue;
                 }

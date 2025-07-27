@@ -428,12 +428,6 @@ pub(crate) struct InternalStakerPoolInfoV2 {
 
 #[generate_trait]
 pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
-    fn pools(
-        self: StoragePath<InternalStakerPoolInfoV2>,
-    ) -> PendingStoragePath<IterableMap<ContractAddress, ContractAddress>> {
-        self.pools
-    }
-
     fn commission_opt(self: StoragePath<InternalStakerPoolInfoV2>) -> Option<Commission> {
         self.commission.read()
     }
