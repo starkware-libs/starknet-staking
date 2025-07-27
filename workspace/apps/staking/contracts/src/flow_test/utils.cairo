@@ -34,7 +34,8 @@ use staking::staking::interface::{
     IStakingMigrationDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
     IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
-    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+    IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
+    IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::interface_v0::{
     IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
@@ -223,6 +224,12 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn token_manager_dispatcher(self: StakingState) -> IStakingTokenManagerDispatcher nopanic {
         IStakingTokenManagerDispatcher { contract_address: self.address }
+    }
+
+    fn safe_token_manager_dispatcher(
+        self: StakingState,
+    ) -> IStakingTokenManagerSafeDispatcher nopanic {
+        IStakingTokenManagerSafeDispatcher { contract_address: self.address }
     }
 
     fn is_v0(self: StakingState) -> bool {
@@ -449,6 +456,26 @@ pub(crate) impl StakingImpl of StakingTrait {
             contract_address: self.address, caller_address: self.roles.security_agent,
         );
         self.token_manager_dispatcher().disable_token(:token_address);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn safe_disable_token(
+        self: StakingState, token_address: ContractAddress,
+    ) -> Result<(), Array<felt252>> {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.security_agent,
+        );
+        self.safe_token_manager_dispatcher().disable_token(:token_address)
+    }
+
+    #[feature("safe_dispatcher")]
+    fn safe_enable_token(
+        self: StakingState, token_address: ContractAddress,
+    ) -> Result<(), Array<felt252>> {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.token_admin,
+        );
+        self.safe_token_manager_dispatcher().enable_token(:token_address)
     }
 }
 

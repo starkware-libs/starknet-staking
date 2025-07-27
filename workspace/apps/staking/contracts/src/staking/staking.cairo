@@ -142,8 +142,13 @@ pub mod Staking {
         staker_delegated_balance_trace: Map<ContractAddress, Map<ContractAddress, Trace>>,
         // Map staker address to their pool info.
         staker_pool_info: Map<ContractAddress, InternalStakerPoolInfoV2>,
-        // Map token address to whether it's active.
-        btc_tokens: IterableMap<ContractAddress, bool>,
+        // Map token address to (is_active_first_epoch, is_active).
+        // The `is_active_first_epoch` is the first epoch that the `token_address` is in
+        // `is_active` state.
+        // Namely, if `e >= is_active_first_epoch` then the token is in `is_active` state.
+        // If `current_epoch <= e < is_active_first_epoch`, the tokens is in `!is_active` state.
+        // The state of older epochs cannot be determined.
+        btc_tokens: IterableMap<ContractAddress, (Epoch, bool)>,
         // Vector of staker addresses.
         stakers: Vec<ContractAddress>,
     }
@@ -561,8 +566,8 @@ pub mod Staking {
             let strk_curr_total_stake = self
                 .balance_at_curr_epoch(trace: strk_total_stake_trace, :curr_epoch);
             let mut btc_curr_total_stake = Zero::zero();
-            for (token_address, is_active) in self.btc_tokens {
-                if is_active {
+            for (token_address, _) in self.btc_tokens {
+                if self.is_btc_active(:token_address, :curr_epoch) {
                     let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
                     btc_curr_total_stake += self
                         .balance_at_curr_epoch(trace: btc_total_stake_trace, :curr_epoch);
@@ -697,8 +702,9 @@ pub mod Staking {
 
         fn get_active_tokens(self: @ContractState) -> Span<ContractAddress> {
             let mut active_tokens: Array<ContractAddress> = array![STRK_TOKEN_ADDRESS];
-            for (token_address, is_active) in self.btc_tokens {
-                if is_active {
+            let curr_epoch = self.get_current_epoch();
+            for (token_address, _) in self.btc_tokens {
+                if self.is_btc_active(:token_address, :curr_epoch) {
                     active_tokens.append(token_address);
                 }
             }
@@ -707,8 +713,9 @@ pub mod Staking {
 
         fn get_tokens(self: @ContractState) -> Span<(ContractAddress, bool)> {
             let mut tokens: Array<(ContractAddress, bool)> = array![(STRK_TOKEN_ADDRESS, true)];
-            for (token_address, is_active) in self.btc_tokens {
-                tokens.append((token_address, is_active));
+            let curr_epoch = self.get_current_epoch();
+            for (token_address, _) in self.btc_tokens {
+                tokens.append((token_address, self.is_btc_active(:token_address, :curr_epoch)));
             }
             tokens.span()
         }
@@ -716,7 +723,11 @@ pub mod Staking {
         fn get_total_stake_for_token(
             self: @ContractState, token_address: ContractAddress,
         ) -> Amount {
-            assert!(self.is_active_token(:token_address), "{}", Error::INVALID_TOKEN_ADDRESS);
+            let curr_epoch = self.get_current_epoch();
+            assert!(self.does_token_exist(:token_address), "{}", Error::INVALID_TOKEN_ADDRESS);
+            assert!(
+                self.is_active_token(:token_address, :curr_epoch), "{}", Error::TOKEN_NOT_ACTIVE,
+            );
             self._get_total_stake(:token_address)
         }
     }
@@ -1078,7 +1089,7 @@ pub mod Staking {
                 self.btc_tokens.read(token_address).is_none(), "{}", Error::TOKEN_ALREADY_EXISTS,
             );
             self.assert_btc_token_decimals(:token_address);
-            self.btc_tokens.write(token_address, false);
+            self.btc_tokens.write(token_address, (STARTING_EPOCH, false));
             // Initialize the token total stake trace.
             self
                 .tokens_total_stake_trace
@@ -1089,19 +1100,27 @@ pub mod Staking {
 
         fn enable_token(ref self: ContractState, token_address: ContractAddress) {
             self.roles.only_token_admin();
-            let is_active_opt: Option<bool> = self.btc_tokens.read(token_address);
+            let is_active_opt: Option<(Epoch, bool)> = self.btc_tokens.read(token_address);
             assert!(is_active_opt.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
-            assert!(!is_active_opt.unwrap(), "{}", Error::TOKEN_ALREADY_ENABLED);
-            self.btc_tokens.write(token_address, true);
+            let (is_active_first_epoch, is_active) = is_active_opt.unwrap();
+            let curr_epoch = self.get_current_epoch();
+            assert!(curr_epoch >= is_active_first_epoch, "{}", Error::INVALID_EPOCH);
+            assert!(!is_active, "{}", Error::TOKEN_ALREADY_ENABLED);
+            let next_is_active_first_epoch = curr_epoch + 1;
+            self.btc_tokens.write(token_address, (next_is_active_first_epoch, true));
             self.emit(TokenManagerEvents::TokenEnabled { token_address });
         }
 
         fn disable_token(ref self: ContractState, token_address: ContractAddress) {
             self.roles.only_security_agent();
-            let is_active_opt: Option<bool> = self.btc_tokens.read(token_address);
+            let is_active_opt: Option<(Epoch, bool)> = self.btc_tokens.read(token_address);
             assert!(is_active_opt.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
-            assert!(is_active_opt.unwrap(), "{}", Error::TOKEN_ALREADY_DISABLED);
-            self.btc_tokens.write(token_address, false);
+            let (is_active_first_epoch, is_active) = is_active_opt.unwrap();
+            let curr_epoch = self.get_current_epoch();
+            assert!(curr_epoch >= is_active_first_epoch, "{}", Error::INVALID_EPOCH);
+            assert!(is_active, "{}", Error::TOKEN_ALREADY_DISABLED);
+            let next_is_active_first_epoch = curr_epoch + 1;
+            self.btc_tokens.write(token_address, (next_is_active_first_epoch, false));
             self.emit(TokenManagerEvents::TokenDisabled { token_address });
         }
     }
@@ -1654,8 +1673,9 @@ pub mod Staking {
             let mut total_commission_rewards: Amount = Zero::zero();
             let mut total_pools_rewards: Amount = Zero::zero();
             let commission = staker_pool_info.commission();
+            let curr_epoch = self.get_current_epoch();
             for (pool_contract, token_address) in staker_pool_info.pools {
-                if !self.is_active_token(:token_address) {
+                if !self.is_active_token(:token_address, :curr_epoch) {
                     continue;
                 }
                 let pool_balance_curr_epoch = self
@@ -1900,9 +1920,21 @@ pub mod Staking {
             token_address == STRK_TOKEN_ADDRESS || self.btc_tokens.read(token_address).is_some()
         }
 
-        fn is_active_token(self: @ContractState, token_address: ContractAddress) -> bool {
-            token_address == STRK_TOKEN_ADDRESS
-                || self.btc_tokens.read(token_address) == Option::Some(true)
+        /// Returns true if the token is active in the current epoch.
+        /// Assumes that the token exists.
+        fn is_active_token(
+            self: @ContractState, token_address: ContractAddress, curr_epoch: Epoch,
+        ) -> bool {
+            token_address == STRK_TOKEN_ADDRESS || self.is_btc_active(:token_address, :curr_epoch)
+        }
+
+        /// Returns true if the BTC token is active in the current epoch.
+        /// Assumes that the token exists.
+        fn is_btc_active(
+            self: @ContractState, token_address: ContractAddress, curr_epoch: Epoch,
+        ) -> bool {
+            let (epoch, is_active) = self.btc_tokens.read(token_address).unwrap();
+            (curr_epoch >= epoch) == is_active
         }
     }
 }

@@ -47,6 +47,8 @@ pub(crate) enum Error {
     TOKEN_ALREADY_DISABLED,
     COMMISSION_NOT_SET,
     TOKEN_MISMATCH,
+    TOKEN_NOT_ACTIVE,
+    INVALID_EPOCH,
     POOL_BALANCE_NOT_ZERO,
 }
 
@@ -99,6 +101,8 @@ impl DescribableError of Describable<Error> {
             Error::TOKEN_ALREADY_DISABLED => "Token is already disabled",
             Error::COMMISSION_NOT_SET => "Commission is not set",
             Error::TOKEN_MISMATCH => "Token mismatch",
+            Error::TOKEN_NOT_ACTIVE => "Token is not active",
+            Error::INVALID_EPOCH => "Invalid epoch",
             Error::POOL_BALANCE_NOT_ZERO => "Staker has no pool, but `pool_amount` is not zero",
         }
     }

@@ -182,17 +182,9 @@ pub trait IStakingTokenManager<TContractState> {
     /// 2. Token decimals are validated once upon addition (expected to be 8).
     /// Subsequent changes to the token's decimals are not supported and may lead to issues.
     fn add_token(ref self: TContractState, token_address: ContractAddress);
-    /// Enable token for getting rewards.
-    ///
-    /// **Important note:** This function takes effect immediately upon execution.
-    /// It impacts the current epoch’s rewards, potentially increasing or decreasing them,
-    /// and may cause uneven distribution of rewards among stakers for this epoch.
+    /// Enable token for getting rewards. Takes effect from the next epoch.
     fn enable_token(ref self: TContractState, token_address: ContractAddress);
-    /// Disable token for getting rewards.
-    ///
-    /// **Important note:** This function takes effect immediately upon execution.
-    /// It impacts the current epoch’s rewards, potentially increasing or decreasing them,
-    /// and may cause uneven distribution of rewards among stakers for this epoch.
+    /// Disable token for getting rewards. Takes effect from the next epoch.
     fn disable_token(ref self: TContractState, token_address: ContractAddress);
 }
 
