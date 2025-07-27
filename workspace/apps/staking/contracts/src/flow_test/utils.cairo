@@ -1686,7 +1686,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
                 EPOCH_DURATION.into(),
                 EPOCH_LENGTH.into(),
                 STARTING_BLOCK_OFFSET.into(),
-                declare_pool_contract().into(),
+                MAINNET_POOL_CLASS_HASH_V1().into(),
                 self.attestation.unwrap().address.into(),
                 MAINNET_SECURITY_COUNSEL_ADDRESS().into(),
             ]
