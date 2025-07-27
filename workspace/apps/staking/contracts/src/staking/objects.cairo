@@ -502,13 +502,6 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
     ) {
         self.commission.write(Option::Some(commission));
     }
-
-    fn write_commission_commitment(
-        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
-        commission_commitment: CommissionCommitment,
-    ) {
-        self.commission_commitment.write(Option::Some(commission_commitment));
-    }
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
