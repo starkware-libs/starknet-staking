@@ -636,7 +636,7 @@ pub mod Staking {
                         :staker_address, :staker_pool_info_mut, :old_commission, :commission,
                     );
             } else {
-                staker_pool_info_mut.write_commission(:commission);
+                staker_pool_info_mut.commission.write(Option::Some(commission));
                 self.emit(Events::CommissionInitialized { staker_address, commission });
             }
         }
@@ -757,7 +757,7 @@ pub mod Staking {
                 let token_address = STRK_TOKEN_ADDRESS;
                 let pool_contract = pool_info._deprecated_pool_contract;
                 let commission = pool_info._deprecated_commission;
-                staker_pool_info_mut.write_commission(:commission);
+                staker_pool_info_mut.commission.write(Option::Some(commission));
                 staker_pool_info_mut.pools.write(pool_contract, token_address);
             }
             // Note: Staker might have a commission commitment only if he has a pool.
@@ -1303,7 +1303,7 @@ pub mod Staking {
             }
 
             // Update commission in storage.
-            staker_pool_info_mut.write_commission(:commission);
+            staker_pool_info_mut.commission.write(Option::Some(commission));
 
             // Emit event.
             self
