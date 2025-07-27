@@ -497,14 +497,6 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
         false
     }
 
-    fn write_new_pool(
-        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
-        pool_contract: ContractAddress,
-        token_address: ContractAddress,
-    ) {
-        self.pools.write(pool_contract, token_address);
-    }
-
     fn write_commission(
         self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, commission: Commission,
     ) {
