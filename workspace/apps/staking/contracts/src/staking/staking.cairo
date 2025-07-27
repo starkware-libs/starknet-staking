@@ -656,7 +656,8 @@ pub mod Staking {
             assert!(staker_pool_info_mut.has_pool(), "{}", Error::MISSING_POOL_CONTRACT);
             let current_epoch = self.get_current_epoch();
             if let Option::Some(commission_commitment) = staker_pool_info_mut
-                .commission_commitment_opt() {
+                .commission_commitment
+                .read() {
                 assert!(
                     !self.is_commission_commitment_active(:commission_commitment),
                     "{}",
@@ -1279,7 +1280,8 @@ pub mod Staking {
             commission: Commission,
         ) {
             if let Option::Some(commission_commitment) = staker_pool_info_mut
-                .commission_commitment_opt() {
+                .commission_commitment
+                .read() {
                 if self.is_commission_commitment_active(:commission_commitment) {
                     assert!(
                         commission <= commission_commitment.max_commission,

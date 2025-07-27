@@ -436,12 +436,6 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
         self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
     }
 
-    fn commission_commitment_opt(
-        self: StoragePath<InternalStakerPoolInfoV2>,
-    ) -> Option<CommissionCommitment> {
-        self.commission_commitment.read()
-    }
-
     fn commission_commitment(self: StoragePath<InternalStakerPoolInfoV2>) -> CommissionCommitment {
         self.commission_commitment.read().expect_with_err(Error::COMMISSION_COMMITMENT_NOT_SET)
     }
@@ -494,12 +488,6 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
 
     fn commission(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Commission {
         self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
-    }
-
-    fn commission_commitment_opt(
-        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
-    ) -> Option<CommissionCommitment> {
-        self.commission_commitment.read()
     }
 
     fn has_pool(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> bool {
