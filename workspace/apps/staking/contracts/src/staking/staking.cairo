@@ -35,7 +35,8 @@ pub mod Staking {
         VersionedInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
-        MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTrait,
+        MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTraceTrait,
+        StakerBalanceTrait,
     };
     use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, Version};
     use staking::utils::{
@@ -1870,6 +1871,13 @@ pub mod Staking {
         }
 
         fn assert_staker_address_not_reused(self: @ContractState, staker_address: ContractAddress) {
+            // Catch stakers that entered in an older version (V0 or V1), and performed
+            // `exit_action` in V1.
+            assert!(
+                self.staker_balance_trace.entry(key: staker_address).is_empty(),
+                "{}",
+                Error::STAKER_ADDRESS_ALREADY_USED_IN_V1,
+            );
             assert!(
                 self.staker_own_balance_trace.entry(key: staker_address).is_empty(),
                 "{}",

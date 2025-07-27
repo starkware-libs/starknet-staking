@@ -6480,6 +6480,40 @@ pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
     }
 }
 
+/// Test staker address already used in older version of the contract
+/// Flow:
+/// Stake
+/// Staker exit
+/// Upgrade
+/// Attempt stake
+#[derive(Drop, Copy)]
+pub(crate) struct StakerAddressAlreadyUsedInOlderVersionFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerAddressAlreadyUsedInOlderVersionFlowImpl of FlowTrait<
+    StakerAddressAlreadyUsedInOlderVersionFlow,
+> {
+    fn setup_v1(ref self: StakerAddressAlreadyUsedInOlderVersionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.staker_exit_intent(:staker);
+        system.advance_exit_wait_window();
+        system.staker_exit_action(:staker);
+
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: StakerAddressAlreadyUsedInOlderVersionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = self.staker.unwrap();
+        let result = system.safe_stake(:staker, :amount);
+        assert_panic_with_error(result, StakingError::STAKER_ADDRESS_ALREADY_USED_IN_V1.describe());
+    }
+}
+
 /// Flow:
 /// Create btc token
 /// Enable btc token

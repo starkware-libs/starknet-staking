@@ -1199,6 +1199,22 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
         }
     }
 
+    #[feature("safe_dispatcher")]
+    fn safe_stake(self: SystemState, staker: Staker, amount: Amount) -> Result<(), Array<felt252>> {
+        self.token.approve(owner: staker.staker.address, spender: self.staking.address, :amount);
+        cheat_caller_address_once(
+            contract_address: self.staking.address, caller_address: staker.staker.address,
+        );
+        self
+            .staking
+            .safe_dispatcher()
+            .stake(
+                reward_address: staker.reward.address,
+                operational_address: staker.operational.address,
+                :amount,
+            )
+    }
+
     fn increase_stake(self: SystemState, staker: Staker, amount: Amount) -> Amount {
         self.token.approve(owner: staker.staker.address, spender: self.staking.address, :amount);
         cheat_caller_address_once(
