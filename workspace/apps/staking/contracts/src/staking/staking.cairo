@@ -755,15 +755,14 @@ pub mod Staking {
                 has_pool = true;
                 let token_address = STRK_TOKEN_ADDRESS;
                 let pool_contract = pool_info._deprecated_pool_contract;
-                staker_pool_info_mut.write_new_pool(:pool_contract, :token_address);
                 let commission = pool_info._deprecated_commission;
                 staker_pool_info_mut.write_commission(:commission);
+                staker_pool_info_mut.write_new_pool(:pool_contract, :token_address);
             }
             // Note: Staker might have a commission commitment only if he has a pool.
-            if let Option::Some(commission_commitment) = internal_staker_info
-                ._deprecated_commission_commitment {
-                staker_pool_info_mut.write_commission_commitment(:commission_commitment);
-            }
+            staker_pool_info_mut
+                .commission_commitment
+                .write(internal_staker_info._deprecated_commission_commitment);
             // Migrate staker balance trace.
             self.migrate_staker_balance_trace(:staker_address, :has_pool);
             // Add staker address to the stakers vector.
