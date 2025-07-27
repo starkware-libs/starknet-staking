@@ -765,10 +765,7 @@ pub mod Staking {
                 staker_pool_info_mut.write_commission_commitment(:commission_commitment);
             }
             // Migrate staker balance trace.
-            let trace_len = self.staker_balance_trace.entry(staker_address).length();
-            assert!(trace_len > 0, "{}", TraceErrors::EMPTY_TRACE);
-            let entries_to_migrate = min(trace_len, MAX_MIGRATION_TRACE_ENTRIES);
-            self.migrate_staker_balance_trace(:staker_address, :entries_to_migrate, :has_pool);
+            self.migrate_staker_balance_trace(:staker_address, :has_pool);
             // Add staker address to the stakers vector.
             self.stakers.push(staker_address);
         }
@@ -1225,16 +1222,14 @@ pub mod Staking {
             total_stake
         }
 
-        /// Migrate the `entries_to_migrate` latest checkpoints of the staker balance trace.
-        /// `entries_to_migrate` can be only 1, 2, or 3.
+        /// Migrate the latest checkpoints of the staker balance trace.
         fn migrate_staker_balance_trace(
-            ref self: ContractState,
-            staker_address: ContractAddress,
-            entries_to_migrate: u64,
-            has_pool: bool,
+            ref self: ContractState, staker_address: ContractAddress, has_pool: bool,
         ) {
             let deprecated_trace = self.staker_balance_trace.entry(staker_address);
             let len = deprecated_trace.length();
+            let entries_to_migrate = min(len, MAX_MIGRATION_TRACE_ENTRIES);
+            assert(entries_to_migrate > 0, 'No entries to migrate');
             let own_balance_trace = self.staker_own_balance_trace.entry(staker_address);
             let delegated_balance_trace = self
                 .staker_delegated_balance_trace
