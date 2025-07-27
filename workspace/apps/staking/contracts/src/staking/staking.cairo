@@ -473,7 +473,7 @@ pub mod Staking {
                     :commission,
                 );
             // Update pool to storage.
-            staker_pool_info_mut.write_new_pool(:pool_contract, :token_address);
+            staker_pool_info_mut.pools.write(pool_contract, token_address);
             // Initialize the delegated balance trace.
             self.initialize_staker_delegated_balance_trace(:staker_address, :token_address);
             pool_contract
@@ -758,7 +758,7 @@ pub mod Staking {
                 let pool_contract = pool_info._deprecated_pool_contract;
                 let commission = pool_info._deprecated_commission;
                 staker_pool_info_mut.write_commission(:commission);
-                staker_pool_info_mut.write_new_pool(:pool_contract, :token_address);
+                staker_pool_info_mut.pools.write(pool_contract, token_address);
             }
             // Note: Staker might have a commission commitment only if he has a pool.
             staker_pool_info_mut
