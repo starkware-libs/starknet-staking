@@ -674,7 +674,7 @@ pub mod Staking {
                 Error::EXPIRATION_EPOCH_TOO_FAR,
             );
             let commission_commitment = CommissionCommitment { max_commission, expiration_epoch };
-            staker_pool_info_mut.write_commission_commitment(:commission_commitment);
+            staker_pool_info_mut.commission_commitment.write(Option::Some(commission_commitment));
             self
                 .emit(
                     Events::CommissionCommitmentSet {
