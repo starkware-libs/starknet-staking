@@ -2784,7 +2784,7 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
         );
         let delegated_trace_storage = snforge_std::map_entry_address(
             map_selector: selector!("staker_delegated_balance_trace"),
-            keys: [staker_address.into(), strk_token_address.into()].span(),
+            keys: [staker_address.into(), pool_contract.into()].span(),
         );
         let own_trace_length = load_trace_length(
             contract_address: system.staking.address, trace_address: own_trace_storage,
