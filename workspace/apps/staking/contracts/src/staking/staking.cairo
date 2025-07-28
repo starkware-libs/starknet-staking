@@ -418,16 +418,20 @@ pub mod Staking {
             // It must be part of this function's flow because staker_info is about to be erased.
             let token_dispatcher = self.token_dispatcher();
             self.send_rewards_to_staker(:staker_address, ref :staker_info, :token_dispatcher);
+            // Update staker info to storage (it will be erased later).
+            // This is done here to avoid re-entrancy.
+            self.write_staker_info(:staker_address, :staker_info);
+
+            let staker_amount = self.get_own_balance(:staker_address);
+            let staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            self.remove_staker(:staker_address, :staker_info, :staker_pool_info);
 
             // Return stake to staker.
-            let staker_amount = self.get_own_balance(:staker_address);
             token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
             // Return delegated stake to pools and zero their balances.
-            let staker_pool_info = self.internal_staker_pool_info(:staker_address);
             self.transfer_to_pools_when_unstake(:staker_address, :staker_pool_info);
             // Remove staker.
-            self.remove_staker(:staker_address, :staker_info, :staker_pool_info);
             staker_amount
         }
 
