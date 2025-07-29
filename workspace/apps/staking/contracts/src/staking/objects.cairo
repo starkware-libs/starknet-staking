@@ -436,25 +436,6 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
         self.commission_commitment.read().expect_with_err(Error::COMMISSION_COMMITMENT_NOT_SET)
     }
 
-    fn get_pool_token(
-        self: StoragePath<InternalStakerPoolInfoV2>, pool_contract: ContractAddress,
-    ) -> Option<ContractAddress> {
-        self.pools.read(pool_contract)
-    }
-
-    fn get_pools(self: StoragePath<InternalStakerPoolInfoV2>) -> Span<ContractAddress> {
-        let mut pools: Array<ContractAddress> = array![];
-        for (pool_contract, _) in self.pools {
-            pools.append(pool_contract);
-        }
-        pools.span()
-    }
-
-    /// Returns true if the staker has a pool.
-    fn has_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> bool {
-        self.pools.len() > 0
-    }
-
     fn get_strk_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> Option<ContractAddress> {
         for (pool_contract, token_address) in self.pools {
             if token_address == STRK_TOKEN_ADDRESS {
@@ -462,17 +443,6 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
             }
         }
         Option::None
-    }
-
-    fn has_pool_for_token(
-        self: StoragePath<InternalStakerPoolInfoV2>, token_address: ContractAddress,
-    ) -> bool {
-        for (_, pool_token_address) in self.pools {
-            if pool_token_address == token_address {
-                return true;
-            }
-        }
-        false
     }
 }
 
@@ -482,6 +452,21 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
         self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
     }
 
+    fn get_pool_token(
+        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, pool_contract: ContractAddress,
+    ) -> Option<ContractAddress> {
+        self.pools.read(pool_contract)
+    }
+
+    fn get_pools(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Span<ContractAddress> {
+        let mut pools: Array<ContractAddress> = array![];
+        for (pool_contract, _) in self.pools {
+            pools.append(pool_contract);
+        }
+        pools.span()
+    }
+
+    /// Returns true if the staker has a pool.
     fn has_pool(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> bool {
         self.pools.len() > 0
     }
