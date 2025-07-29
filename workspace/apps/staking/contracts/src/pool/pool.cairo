@@ -12,9 +12,7 @@ pub mod Pool {
         IERC20MetadataDispatcherTrait,
     };
     use staking::constants::{
-        BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8,
-        MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, STRK_BASE_VALUE, STRK_IN_FRIS,
-        STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
+        BTC_18D_CONFIG, BTC_8D_CONFIG, STRK_CONFIG, STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
     };
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
@@ -22,8 +20,8 @@ pub mod Pool {
         Events, IPool, IPoolMigration, PoolContractInfoV1, PoolMemberInfoV1,
     };
     use staking::pool::objects::{
-        InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
-        VInternalPoolMemberInfoTrait,
+        InternalPoolMemberInfoConvertTrait, SwitchPoolData, TokenRewardsConfig,
+        VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait,
     };
     use staking::pool::pool_member_balance_trace::trace::{
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
@@ -943,15 +941,24 @@ pub mod Pool {
         fn get_reward_calculation_params(
             self: @ContractState, token_address: ContractAddress,
         ) -> (Amount, Amount) {
-            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
-            if token_dispatcher.contract_address == STRK_TOKEN_ADDRESS {
-                (STRK_IN_FRIS, STRK_BASE_VALUE)
+            let config = self.get_token_rewards_config(:token_address);
+            (config.min_for_rewards, config.base_value)
+        }
+
+        /// Get token rewards configuration based on address and decimals.
+        fn get_token_rewards_config(
+            self: @ContractState, token_address: ContractAddress,
+        ) -> TokenRewardsConfig {
+            if token_address == STRK_TOKEN_ADDRESS {
+                STRK_CONFIG
             } else {
+                // BTC token.
+                let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
                 let decimals = token_dispatcher.decimals();
-                if decimals == BTC_DECIMALS_8 {
-                    (MIN_BTC_FOR_REWARDS_8, BTC_BASE_VALUE_8)
-                } else if decimals == BTC_DECIMALS_18 {
-                    (MIN_BTC_FOR_REWARDS_18, BTC_BASE_VALUE_18)
+                if decimals == BTC_8D_CONFIG.decimals {
+                    BTC_8D_CONFIG
+                } else if decimals == BTC_18D_CONFIG.decimals {
+                    BTC_18D_CONFIG
                 } else {
                     panic_with_byte_array(@"Invalid token decimals")
                 }
