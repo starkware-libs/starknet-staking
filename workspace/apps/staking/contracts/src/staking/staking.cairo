@@ -12,7 +12,7 @@ pub mod Staking {
         IERC20MetadataDispatcherTrait,
     };
     use staking::constants::{
-        BTC_DECIMALS_18, BTC_DECIMALS_8, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW,
+        BTC_18D_CONFIG, BTC_8D_CONFIG, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW,
         STAKING_V2_PREV_CONTRACT_VERSION, STARTING_EPOCH, STRK_TOKEN_ADDRESS,
     };
     use staking::errors::GenericError;
@@ -1910,7 +1910,7 @@ pub mod Staking {
             let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
             let decimals = token_dispatcher.decimals();
             assert!(
-                decimals == BTC_DECIMALS_8 || decimals == BTC_DECIMALS_18,
+                decimals == BTC_8D_CONFIG.decimals || decimals == BTC_18D_CONFIG.decimals,
                 "{}",
                 Error::INVALID_TOKEN_ADDRESS,
             );

@@ -144,6 +144,16 @@ pub(crate) impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
     }
 }
 
+#[derive(Drop)]
+pub struct TokenRewardsConfig {
+    /// Decimals of the token.
+    pub decimals: u8,
+    /// Minimum amount of tokens required to receive rewards.
+    pub min_for_rewards: Amount,
+    /// Base value for rewards calculation.
+    pub base_value: Index,
+}
+
 #[cfg(test)]
 #[generate_trait]
 pub(crate) impl InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Impl of InternalPoolMemberInfoLatestIntoPoolMemberInfoV1Trait {

@@ -1,13 +1,14 @@
 use constants::{
-    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT,
-    BTC_POOL_MEMBER_STAKE_AMOUNT, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION,
-    DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN,
-    INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS,
-    OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS,
-    POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
-    REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
-    STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
-    STARKGATE_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
+    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BTC_BASE_VALUE_18,
+    BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8, BTC_POOL_MEMBER_STAKE_AMOUNT,
+    BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION, DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH,
+    EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER,
+    MINTING_CONTRACT_ADDRESS, MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, MIN_STAKE,
+    OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN,
+    POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS,
+    POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT,
+    STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
+    STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_BASE_VALUE, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
 use core::num::traits::zero::Zero;
@@ -25,9 +26,8 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8, C_DENOM, DEFAULT_C_NUM,
-    DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8,
-    STARTING_EPOCH, STRK_BASE_VALUE, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
+    C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
+    STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
 };
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
@@ -69,12 +69,26 @@ use starkware_utils_testing::test_utils::{
 pub(crate) mod constants {
     use core::cmp::max;
     use core::num::traits::ops::pow::Pow;
-    use staking::constants::{BTC_BASE_VALUE_8, BTC_DECIMALS_8, MIN_BTC_FOR_REWARDS_8, STRK_IN_FRIS};
+    use staking::constants::STRK_IN_FRIS;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Commission, Index};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::time::time::Timestamp;
+
+    // STRK rewards constants.
+    pub const STRK_BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
+    pub const STRK_DECIMALS: u8 = 18;
+
+    // BTC (decimals = 8) rewards constants.
+    pub const BTC_DECIMALS_8: u8 = 8;
+    pub const MIN_BTC_FOR_REWARDS_8: Amount = 10_u128.pow(3);
+    pub const BTC_BASE_VALUE_8: Index = 10_u128.pow(13);
+
+    // BTC (decimals = 18) rewards constants.
+    pub const BTC_DECIMALS_18: u8 = 18;
+    pub const MIN_BTC_FOR_REWARDS_18: Amount = 10_u128.pow(13);
+    pub const BTC_BASE_VALUE_18: Index = 10_u128.pow(23);
 
     pub const TEST_BTC_DECIMALS: u8 = BTC_DECIMALS_8;
     pub const TEST_BTC_BASE_VALUE: u128 = BTC_BASE_VALUE_8;
@@ -1220,13 +1234,11 @@ fn get_reward_calculation_params(token_address: ContractAddress) -> (Amount, Amo
 #[cfg(test)]
 mod tests {
     use core::num::traits::zero::Zero;
-    use staking::constants::{
-        BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8,
-        MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, STRK_TOKEN_ADDRESS,
-    };
+    use staking::constants::STRK_TOKEN_ADDRESS;
     use super::{
-        BTC_TOKEN_NAME, OWNER_ADDRESS, STRK_BASE_VALUE, STRK_IN_FRIS, compute_rewards_for_trace,
-        deploy_mock_erc20_decimals_contract,
+        BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8, BTC_TOKEN_NAME,
+        MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, OWNER_ADDRESS, STRK_BASE_VALUE, STRK_IN_FRIS,
+        compute_rewards_for_trace, deploy_mock_erc20_decimals_contract,
     };
 
     #[test]
