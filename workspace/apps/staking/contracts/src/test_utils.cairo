@@ -14,7 +14,10 @@ use core::num::traits::zero::Zero;
 use core::panics::panic_with_byte_array;
 use core::poseidon::PoseidonTrait;
 use core::traits::Into;
-use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use openzeppelin::token::erc20::interface::{
+    IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
+    IERC20MetadataDispatcherTrait,
+};
 use snforge_std::{
     CheatSpan, ContractClassTrait, CustomToken, DeclareResultTrait, Token, TokenImpl, TokenTrait,
     cheat_caller_address, set_balance, start_cheat_block_hash_global,
@@ -22,9 +25,9 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    BTC_BASE_VALUE, BTC_DECIMALS, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW,
-    MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS, STARTING_EPOCH, STRK_BASE_VALUE, STRK_DECIMALS,
-    STRK_IN_FRIS,
+    BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8, C_DENOM, DEFAULT_C_NUM,
+    DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8,
+    STARTING_EPOCH, STRK_BASE_VALUE, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
 };
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
@@ -66,20 +69,23 @@ use starkware_utils_testing::test_utils::{
 pub(crate) mod constants {
     use core::cmp::max;
     use core::num::traits::ops::pow::Pow;
-    use staking::constants::{BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_IN_FRIS};
+    use staking::constants::{BTC_BASE_VALUE_8, BTC_DECIMALS_8, MIN_BTC_FOR_REWARDS_8, STRK_IN_FRIS};
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Commission, Index};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::time::time::Timestamp;
 
+    pub const TEST_BTC_DECIMALS: u8 = BTC_DECIMALS_8;
+    pub const TEST_BTC_BASE_VALUE: u128 = BTC_BASE_VALUE_8;
+    pub const TEST_MIN_BTC_FOR_REWARDS: Amount = MIN_BTC_FOR_REWARDS_8;
     pub const STAKER_INITIAL_BALANCE: Amount = 1000000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000 * STRK_IN_FRIS;
     pub const INITIAL_SUPPLY: Amount = 10000000000 * STRK_IN_FRIS;
     pub const MIN_STAKE: Amount = 20000 * STRK_IN_FRIS;
     pub const STAKE_AMOUNT: Amount = 100000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * STRK_IN_FRIS;
-    pub const BTC_POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * MIN_BTC_FOR_REWARDS;
+    pub const BTC_POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * TEST_MIN_BTC_FOR_REWARDS;
     pub const COMMISSION: Commission = 500;
     pub const STAKER_FINAL_INDEX: Index = 10;
     pub const BASE_MINT_AMOUNT: Amount = 1_300_000 * STRK_IN_FRIS;
@@ -95,7 +101,7 @@ pub(crate) mod constants {
     pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
     pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
-    pub(crate) const ONE_BTC: Amount = 10_u128.pow(BTC_DECIMALS.into()); // 10**8
+    pub(crate) const TEST_ONE_BTC: Amount = 10_u128.pow(TEST_BTC_DECIMALS.into());
 
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
@@ -1183,55 +1189,88 @@ pub(crate) fn calculate_pool_member_rewards(
 
 /// Compute the rewards for the pool trace.
 ///
-/// Precondition: decimals` must be either `STRK_DECIMALS` or `BTC_DECIMALS`.
+/// Precondition: decimals must be either `STRK_DECIMALS` or valid `BTC_DECIMALS`.
 pub(crate) fn compute_rewards_for_trace(
-    staking_rewards: Amount, total_stake: Amount, decimals: u8,
+    staking_rewards: Amount, total_stake: Amount, token_address: ContractAddress,
 ) -> Index {
-    let base_value = if decimals == STRK_DECIMALS {
-        // Return zero if the total stake is too small, to avoid overflow below.
-        if total_stake < STRK_IN_FRIS {
-            return Zero::zero();
-        }
-        STRK_BASE_VALUE
-    } else if decimals == BTC_DECIMALS {
-        // Return zero if the total stake is too small, to avoid overflow below.
-        if total_stake < MIN_BTC_FOR_REWARDS {
-            return Zero::zero();
-        }
-        BTC_BASE_VALUE
-    } else {
-        panic_with_byte_array(@"Invalid decimals")
-    };
+    let (min_amount_for_rewards, base_value) = get_reward_calculation_params(:token_address);
+    if total_stake < min_amount_for_rewards {
+        return Zero::zero();
+    }
     mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
         .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
+}
+
+fn get_reward_calculation_params(token_address: ContractAddress) -> (Amount, Amount) {
+    let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+    if token_dispatcher.contract_address == STRK_TOKEN_ADDRESS {
+        (STRK_IN_FRIS, STRK_BASE_VALUE)
+    } else {
+        let decimals = token_dispatcher.decimals();
+        if decimals == BTC_DECIMALS_8 {
+            (MIN_BTC_FOR_REWARDS_8, BTC_BASE_VALUE_8)
+        } else if decimals == BTC_DECIMALS_18 {
+            (MIN_BTC_FOR_REWARDS_18, BTC_BASE_VALUE_18)
+        } else {
+            panic_with_byte_array(@"Invalid token decimals")
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use core::num::traits::zero::Zero;
+    use staking::constants::{
+        BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8,
+        MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, STRK_TOKEN_ADDRESS,
+    };
     use super::{
-        BTC_BASE_VALUE, BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS,
-        STRK_IN_FRIS, compute_rewards_for_trace,
+        BTC_TOKEN_NAME, OWNER_ADDRESS, STRK_BASE_VALUE, STRK_IN_FRIS, compute_rewards_for_trace,
+        deploy_mock_erc20_decimals_contract,
     };
 
     #[test]
     fn test_compute_rewards_for_trace() {
-        assert!(
-            compute_rewards_for_trace(STRK_IN_FRIS, STRK_IN_FRIS, STRK_DECIMALS) == STRK_BASE_VALUE,
+        let btc_token_address_8 = deploy_mock_erc20_decimals_contract(
+            initial_supply: Zero::zero(),
+            owner_address: OWNER_ADDRESS(),
+            name: BTC_TOKEN_NAME(),
+            decimals: BTC_DECIMALS_8,
+        );
+        let btc_token_address_18 = deploy_mock_erc20_decimals_contract(
+            initial_supply: Zero::zero(),
+            owner_address: OWNER_ADDRESS(),
+            name: BTC_TOKEN_NAME(),
+            decimals: BTC_DECIMALS_18,
         );
         assert!(
             compute_rewards_for_trace(
-                STRK_IN_FRIS, STRK_IN_FRIS - 1, STRK_DECIMALS,
+                STRK_IN_FRIS, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
+            ) == STRK_BASE_VALUE,
+        );
+        assert!(
+            compute_rewards_for_trace(
+                STRK_IN_FRIS, STRK_IN_FRIS - 1, STRK_TOKEN_ADDRESS,
             ) == Zero::zero(),
         );
         assert!(
             compute_rewards_for_trace(
-                MIN_BTC_FOR_REWARDS, MIN_BTC_FOR_REWARDS, BTC_DECIMALS,
-            ) == BTC_BASE_VALUE,
+                MIN_BTC_FOR_REWARDS_8, MIN_BTC_FOR_REWARDS_8, btc_token_address_8,
+            ) == BTC_BASE_VALUE_8,
         );
         assert!(
             compute_rewards_for_trace(
-                MIN_BTC_FOR_REWARDS, MIN_BTC_FOR_REWARDS - 1, BTC_DECIMALS,
+                MIN_BTC_FOR_REWARDS_8, MIN_BTC_FOR_REWARDS_8 - 1, btc_token_address_8,
+            ) == Zero::zero(),
+        );
+        assert!(
+            compute_rewards_for_trace(
+                BTC_BASE_VALUE_18, BTC_BASE_VALUE_18, btc_token_address_18,
+            ) == BTC_BASE_VALUE_18,
+        );
+        assert!(
+            compute_rewards_for_trace(
+                MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_18 - 1, btc_token_address_18,
             ) == Zero::zero(),
         );
     }
@@ -1364,7 +1403,7 @@ pub(crate) fn setup_btc_token(cfg: StakingInitConfig, name: ByteArray) -> Contra
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         :name,
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     let staking_contract = cfg.test_info.staking_contract;
     let token_manager = IStakingTokenManagerDispatcher { contract_address: staking_contract };
