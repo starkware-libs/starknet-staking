@@ -3,7 +3,7 @@ use core::num::traits::Zero;
 use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
-use staking::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
+use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
 use starknet::storage::{Mutable, StoragePath};
 use starknet::{ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
@@ -483,28 +483,6 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
     }
 }
 
-#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-// This struct is used in V0 and should not be in used except for migration purpose.
-struct InternalStakerInfo {
-    reward_address: ContractAddress,
-    operational_address: ContractAddress,
-    unstake_time: Option<Timestamp>,
-    amount_own: Amount,
-    index: Index,
-    unclaimed_rewards_own: Amount,
-    pool_info: Option<StakerPoolInfo>,
-}
-
-/// This struct was used in V0 for both InternalStakerInfo and StakerInfo.
-/// Should not be in used except for migration purpose.
-#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-pub(crate) struct StakerPoolInfo {
-    pub pool_contract: ContractAddress,
-    pub amount: Amount,
-    pub unclaimed_rewards: Amount,
-    pub commission: Commission,
-}
-
 // **Note**: This struct should be made private in the next version of Internal Staker Info.
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct InternalStakerInfoV1 {
@@ -521,7 +499,7 @@ pub(crate) struct InternalStakerInfoV1 {
 pub(crate) enum VersionedInternalStakerInfo {
     #[default]
     None,
-    V0: InternalStakerInfo,
+    V0: (),
     V1: InternalStakerInfoV1,
 }
 
@@ -618,32 +596,6 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1Impl of StakerInfoIntoInternal
             // context, the commission commitment will be lost.
             _deprecated_commission_commitment: Option::None,
         }
-    }
-}
-
-#[cfg(test)]
-#[generate_trait]
-pub(crate) impl VersionedInternalStakerInfoTestImpl of VersionedInternalStakerInfoTestTrait {
-    fn new_v0(
-        reward_address: ContractAddress,
-        operational_address: ContractAddress,
-        unstake_time: Option<Timestamp>,
-        amount_own: Amount,
-        index: Index,
-        unclaimed_rewards_own: Amount,
-        pool_info: Option<StakerPoolInfo>,
-    ) -> VersionedInternalStakerInfo {
-        VersionedInternalStakerInfo::V0(
-            InternalStakerInfo {
-                reward_address,
-                operational_address,
-                unstake_time,
-                amount_own,
-                index,
-                unclaimed_rewards_own,
-                pool_info,
-            },
-        )
     }
 }
 

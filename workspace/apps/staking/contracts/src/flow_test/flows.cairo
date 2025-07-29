@@ -2574,22 +2574,16 @@ pub(crate) impl DisableBtcTokenSameAndNextEpochFlowImpl of FlowTrait<
 
         system.staking.enable_token(:token_address);
         let tokens = system.staking.dispatcher().get_tokens();
-        println!("tokens: {:?}", tokens);
-        println!("AAA");
         assert!(tokens == expected_tokens_false);
         system.advance_epoch();
         let tokens = system.staking.dispatcher().get_tokens();
-        println!("BBB");
         assert!(tokens == expected_tokens_true);
 
         system.staking.disable_token(:token_address);
         let tokens = system.staking.dispatcher().get_tokens();
-        println!("CCC");
         assert!(tokens == expected_tokens_true);
         system.advance_epoch();
-        println!("DDD");
         let active_tokens = system.staking.dispatcher().get_active_tokens();
-        println!("EEE");
         let tokens = system.staking.dispatcher().get_tokens();
         assert!(active_tokens == expected_active_tokens);
         assert!(tokens == expected_tokens_false);

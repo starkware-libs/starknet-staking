@@ -65,7 +65,7 @@ use staking::staking::objects::{
     InternalStakerInfoLatestTrait, InternalStakerInfoV1, InternalStakerPoolInfoV1,
     StakerInfoIntoInternalStakerInfoV1ITrait, UndelegateIntentKey, UndelegateIntentValue,
     UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
-    VersionedInternalStakerInfoTestTrait, VersionedInternalStakerInfoTrait,
+    VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
@@ -3337,26 +3337,6 @@ fn test_versioned_internal_staker_info_new_latest() {
     } else {
         panic!("Expected Version V1");
     }
-}
-
-#[test]
-fn test_versioned_internal_staker_info_is_none() {
-    let versioned_none = VersionedInternalStakerInfo::None;
-    let versioned_v0 = VersionedInternalStakerInfoTestTrait::new_v0(
-        reward_address: Zero::zero(),
-        operational_address: Zero::zero(),
-        unstake_time: Option::None,
-        amount_own: Zero::zero(),
-        index: Zero::zero(),
-        unclaimed_rewards_own: Zero::zero(),
-        pool_info: Option::None,
-    );
-    let versioned_latest = VersionedInternalStakerInfoTrait::new_latest(
-        reward_address: Zero::zero(), operational_address: Zero::zero(),
-    );
-    assert!(versioned_none.is_none());
-    assert!(!versioned_v0.is_none());
-    assert!(!versioned_latest.is_none());
 }
 
 #[test]
