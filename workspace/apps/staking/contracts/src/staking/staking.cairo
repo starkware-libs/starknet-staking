@@ -1346,7 +1346,7 @@ pub mod Staking {
         }
 
         fn claim_from_reward_supplier(
-            self: @ContractState,
+            ref self: ContractState,
             reward_supplier_dispatcher: IRewardSupplierDispatcher,
             amount: Amount,
             token_dispatcher: IERC20Dispatcher,
