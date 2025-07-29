@@ -12,8 +12,9 @@ pub mod Pool {
         IERC20MetadataDispatcherTrait,
     };
     use staking::constants::{
-        BTC_BASE_VALUE, BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS,
-        STRK_IN_FRIS, STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
+        BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8,
+        MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, STRK_BASE_VALUE, STRK_IN_FRIS,
+        STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
     };
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
@@ -97,6 +98,13 @@ pub mod Pool {
         // calculation.
         // Updated whenever rewards are received from the staking contract.
         cumulative_rewards_trace: Trace,
+        // Minimum amount of delegation required for rewards.
+        // Used to avoid overflow in the rewards calculation.
+        min_delegation_for_rewards: Amount,
+        // Staking rewards base value.
+        // Used in rewards calculation: $$ rewards = amount * interest / base_value $$,
+        // Where `interest` scales with `base_value`.
+        staking_rewards_base_value: Amount,
     }
 
     #[event]
@@ -138,6 +146,10 @@ pub mod Pool {
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.staker_removed.write(false);
         self.cumulative_rewards_trace.insert(key: Zero::zero(), value: Zero::zero());
+        let (min_delegation_for_rewards, staking_rewards_base_value) = self
+            .get_reward_calculation_params(:token_address);
+        self.min_delegation_for_rewards.write(min_delegation_for_rewards);
+        self.staking_rewards_base_value.write(staking_rewards_base_value);
     }
 
     #[abi(embed_v0)]
@@ -800,7 +812,7 @@ pub mod Pool {
             let mut from_sigma = self.find_sigma(from_checkpoint);
             let mut from_balance = from_checkpoint.balance();
 
-            let base_value = self.base_value_for_rewards();
+            let base_value = self.staking_rewards_base_value.read();
 
             // **Note**: The loop iterates over the balance changes in the pool member's balance
             // trace. This loop is unbounded but unlikely to exceed gas limits.
@@ -906,49 +918,44 @@ pub mod Pool {
                 .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
         }
 
-        fn token_decimals(self: @ContractState) -> u8 {
-            let token_metadata_dispatcher = IERC20MetadataDispatcher {
-                contract_address: self.token_dispatcher.read().contract_address,
-            };
-            token_metadata_dispatcher.decimals()
-        }
-
-        fn base_value_for_rewards(self: @ContractState) -> Index {
-            let decimals = self.token_decimals();
-            if decimals == STRK_DECIMALS {
-                STRK_BASE_VALUE
-            } else if decimals == BTC_DECIMALS {
-                BTC_BASE_VALUE
-            } else {
-                panic_with_byte_array(@"Invalid decimals")
-            }
-        }
-
         /// Compute the rewards for the pool trace.
-        // **Note**: Delegation rewards lost when pool balance is less than `MIN_BTC_FOR_REWARDS`
-        // or `STRK_IN_FRIS`. the staking contract continues to forward `pool_rewards` to the pool
-        // contract even in this case.
+        ///
+        /// `staking_rewards` is in `STRK_DECIMALS` decimals.
+        /// `total_stake` is in the contract's token decimals.
+        /// **Note**: Delegation rewards lost when pool balance is less than
+        /// `min_delegation_for_rewards`. The staking contract continues to forward
+        /// `pool_rewards` to the pool contract even in this case.
         fn compute_rewards_for_trace(
             self: @ContractState, staking_rewards: Amount, total_stake: Amount,
         ) -> Index {
-            let decimals = self.token_decimals();
-            let base_value = if decimals == STRK_DECIMALS {
-                // Return zero if the total stake is too small, to avoid overflow below.
-                if total_stake < STRK_IN_FRIS {
-                    return Zero::zero();
-                }
-                STRK_BASE_VALUE
-            } else if decimals == BTC_DECIMALS {
-                // Return zero if the total stake is too small, to avoid overflow below.
-                if total_stake < MIN_BTC_FOR_REWARDS {
-                    return Zero::zero();
-                }
-                BTC_BASE_VALUE
-            } else {
-                panic_with_byte_array(@"Invalid decimals")
-            };
-            mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
+            // Return zero if the total stake is too small, to avoid overflow below.
+            if total_stake < self.min_delegation_for_rewards.read() {
+                return Zero::zero();
+            }
+            mul_wide_and_div(
+                lhs: staking_rewards, rhs: self.staking_rewards_base_value.read(), div: total_stake,
+            )
                 .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
+        }
+
+        /// Get the reward calculation parameters for the token.
+        /// Returns (min_amount_for_rewards, base_value).
+        fn get_reward_calculation_params(
+            self: @ContractState, token_address: ContractAddress,
+        ) -> (Amount, Amount) {
+            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+            if token_dispatcher.contract_address == STRK_TOKEN_ADDRESS {
+                (STRK_IN_FRIS, STRK_BASE_VALUE)
+            } else {
+                let decimals = token_dispatcher.decimals();
+                if decimals == BTC_DECIMALS_8 {
+                    (MIN_BTC_FOR_REWARDS_8, BTC_BASE_VALUE_8)
+                } else if decimals == BTC_DECIMALS_18 {
+                    (MIN_BTC_FOR_REWARDS_18, BTC_BASE_VALUE_18)
+                } else {
+                    panic_with_byte_array(@"Invalid token decimals")
+                }
+            }
         }
     }
 }

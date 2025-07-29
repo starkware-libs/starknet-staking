@@ -22,6 +22,12 @@ fn multiple_tokens_delegation_flow_test() {
 }
 
 #[test]
+fn multiple_btc_pools_different_decimals_flow_test() {
+    let flow = flows::MultipleBTCPoolsDifferentDecimalsFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn new_token_delegation_flow_test() {
     let flow = flows::NewTokenDelegationFlow {};
     test_flow_local(:flow);

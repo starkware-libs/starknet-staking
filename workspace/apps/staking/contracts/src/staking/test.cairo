@@ -31,7 +31,7 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    BTC_DECIMALS, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
+    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
     V1_PREV_CONTRACT_VERSION,
 };
 use staking::errors::GenericError;
@@ -282,7 +282,7 @@ fn test_stake_with_token_address() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME_2(),
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
@@ -2437,7 +2437,7 @@ fn test_set_open_for_delegation_with_disabled_btc_token() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME_2(),
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     // Only add the token but not enable it.
     cheat_caller_address_once(
@@ -3060,7 +3060,7 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME_2(),
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     let btc_token_2 = custom_decimals_token(token_address: btc_token_address_2);
     cheat_caller_address(
@@ -4117,7 +4117,7 @@ fn test_add_token_assertions() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
-        decimals: BTC_DECIMALS + 1,
+        decimals: constants::TEST_BTC_DECIMALS + 1,
     );
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
@@ -4209,7 +4209,7 @@ fn test_add_token() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     // The STRK token is active and test_info.btc_token will be active in the next epoch.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -4252,7 +4252,7 @@ fn test_enable_token() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     // Add and enable the BTC token.
     let token_admin = cfg.test_info.token_admin;
@@ -4290,7 +4290,7 @@ fn test_disable_token() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     // Add and enable the BTC token.
     cheat_caller_address(
@@ -4352,7 +4352,7 @@ fn test_enable_token_assertions() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     cheat_caller_address(
         contract_address: staking_contract,
@@ -4402,7 +4402,7 @@ fn test_disable_token_assertions() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
