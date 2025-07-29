@@ -378,7 +378,8 @@ pub mod Staking {
 
             // Write off the delegated stake from the total stake.
             for (pool_contract, token_address) in self
-                .internal_staker_pool_info(:staker_address)
+                .staker_pool_info
+                .entry(staker_address)
                 .pools {
                 let amount = self.get_delegated_balance(:staker_address, :pool_contract);
                 self.remove_from_total_stake(:token_address, :amount);
@@ -425,7 +426,7 @@ pub mod Staking {
             self.write_staker_info(:staker_address, :staker_info);
 
             let staker_amount = self.get_own_balance(:staker_address);
-            let staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            let staker_pool_info = self.staker_pool_info.entry(staker_address);
             self.remove_staker(:staker_address, :staker_info, :staker_pool_info);
 
             // Return stake to staker.
@@ -500,7 +501,7 @@ pub mod Staking {
             let mut staker_info: StakerInfoV1 = internal_staker_info.into();
             // Set staker amount and pool amount from staker balance trace.
             staker_info.amount_own = self.get_own_balance(:staker_address);
-            let staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            let staker_pool_info = self.staker_pool_info.entry(staker_address);
             if let Option::Some(pool_contract) = staker_pool_info.get_strk_pool() {
                 let pool_amount = self.get_delegated_balance(:staker_address, :pool_contract);
                 // Commission must be set since staker has a pool.
@@ -530,7 +531,7 @@ pub mod Staking {
         ) -> StakerPoolInfoV2 {
             // Assert that the staker exists.
             self.internal_staker_info(:staker_address);
-            let internal_staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            let internal_staker_pool_info = self.staker_pool_info.entry(staker_address);
             let commission = internal_staker_pool_info.commission.read();
             let mut pools: Array<PoolInfo> = array![];
             for (pool_contract, token_address) in internal_staker_pool_info.pools {
@@ -697,7 +698,7 @@ pub mod Staking {
         ) -> CommissionCommitment {
             // Assert that the staker exists.
             self.internal_staker_info(:staker_address);
-            self.internal_staker_pool_info(:staker_address).commission_commitment()
+            self.staker_pool_info.entry(staker_address).commission_commitment()
         }
 
         fn is_paused(self: @ContractState) -> bool {
@@ -796,7 +797,8 @@ pub mod Staking {
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             let pool_contract = get_caller_address();
             let token_address = self
-                .internal_staker_pool_info(:staker_address)
+                .staker_pool_info
+                .entry(staker_address)
                 .get_pool_token(:pool_contract)
                 .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
 
@@ -837,7 +839,8 @@ pub mod Staking {
             let staker_info = self.internal_staker_info(:staker_address);
             let pool_contract = get_caller_address();
             let token_address = self
-                .internal_staker_pool_info(:staker_address)
+                .staker_pool_info
+                .entry(staker_address)
                 .get_pool_token(:pool_contract)
                 .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
 
@@ -957,7 +960,8 @@ pub mod Staking {
             // More asserts.
             assert!(to_staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
             let to_token_address = self
-                .internal_staker_pool_info(staker_address: to_staker)
+                .staker_pool_info
+                .entry(to_staker)
                 .get_pool_token(pool_contract: to_pool)
                 .expect_with_err(Error::DELEGATION_POOL_MISMATCH);
             assert!(token_address == to_token_address, "{}", Error::TOKEN_MISMATCH);
@@ -1158,7 +1162,7 @@ pub mod Staking {
                     :staker_address, :strk_epoch_rewards, :strk_total_stake, :curr_epoch,
                 );
             // Calculate pools rewards.
-            let staker_pool_info = self.internal_staker_pool_info(:staker_address);
+            let staker_pool_info = self.staker_pool_info.entry(staker_address);
             let (commission_rewards, total_pools_rewards, pools_rewards_data) = if staker_pool_info
                 .has_pool() {
                 self
@@ -1279,15 +1283,6 @@ pub mod Staking {
                     )
                 }
             }
-        }
-
-        /// Return StoragePath to the internal staker pool information for the given
-        /// `staker_address`.
-        /// Note: This function does not check if the staker exists.
-        fn internal_staker_pool_info(
-            self: @ContractState, staker_address: ContractAddress,
-        ) -> StoragePath<InternalStakerPoolInfoV2> {
-            self.staker_pool_info.entry(staker_address)
         }
 
         /// Returns the token address for the given `undelegate_intent`.
@@ -1416,7 +1411,7 @@ pub mod Staking {
         fn transfer_to_pools_when_unstake(
             ref self: ContractState,
             staker_address: ContractAddress,
-            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
+            staker_pool_info: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
         ) {
             for (pool_contract, token_address) in staker_pool_info.pools {
                 let pool_balance = self.get_delegated_balance(:staker_address, :pool_contract);
@@ -1436,7 +1431,7 @@ pub mod Staking {
             ref self: ContractState,
             staker_address: ContractAddress,
             staker_info: InternalStakerInfoLatest,
-            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
+            staker_pool_info: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
         ) {
             self.insert_staker_own_balance(:staker_address, own_balance: Zero::zero());
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
@@ -1664,7 +1659,7 @@ pub mod Staking {
         fn calculate_staker_pools_rewards(
             self: @ContractState,
             staker_address: ContractAddress,
-            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
+            staker_pool_info: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
             strk_epoch_rewards: Amount,
             strk_total_stake: Amount,
             btc_epoch_rewards: Amount,
@@ -1799,7 +1794,7 @@ pub mod Staking {
             let curr_epoch = self.get_current_epoch();
             let curr_own_balance = self
                 .get_staker_own_balance_curr_epoch(:staker_address, :curr_epoch);
-            let strk_pool = self.internal_staker_pool_info(:staker_address).get_strk_pool();
+            let strk_pool = self.staker_pool_info.entry(staker_address).get_strk_pool();
             let curr_delegated_balance = if strk_pool.is_some() {
                 self
                     .get_staker_delegated_balance_curr_epoch(
