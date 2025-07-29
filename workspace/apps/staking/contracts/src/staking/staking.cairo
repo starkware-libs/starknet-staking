@@ -1360,20 +1360,6 @@ pub mod Staking {
             );
         }
 
-        fn send_rewards(
-            self: @ContractState,
-            reward_address: ContractAddress,
-            amount: Amount,
-            token_dispatcher: IERC20Dispatcher,
-        ) {
-            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
-            self
-                .claim_from_reward_supplier(
-                    :reward_supplier_dispatcher, :amount, :token_dispatcher,
-                );
-            token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
-        }
-
         /// Sends the rewards to `staker_address`'s reward address.
         /// Important note:
         /// After calling this function, one must write the updated staker_info to the storage.
@@ -1385,8 +1371,13 @@ pub mod Staking {
         ) {
             let reward_address = staker_info.reward_address;
             let amount = staker_info.unclaimed_rewards_own;
+            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
 
-            self.send_rewards(:reward_address, :amount, :token_dispatcher);
+            self
+                .claim_from_reward_supplier(
+                    :reward_supplier_dispatcher, :amount, :token_dispatcher,
+                );
+            token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
             staker_info.unclaimed_rewards_own = Zero::zero();
 
             self.emit(Events::StakerRewardClaimed { staker_address, reward_address, amount });
