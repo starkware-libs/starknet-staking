@@ -94,6 +94,7 @@ use test_utils::{
     initialize_staking_state_from_cfg, load_from_simple_map, load_from_trace, load_trace_length,
     setup_btc_token, stake_for_testing_using_dispatcher, stake_from_zero_address,
     stake_with_pool_enabled, store_internal_staker_info_v0_to_map, store_to_simple_map,
+    to_amount_18_decimals,
 };
 
 #[test]
@@ -3104,13 +3105,14 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     let (expected_staker_strk_rewards, expected_strk_pool_rewards) = calculate_staker_strk_rewards(
         staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
     );
-    // Same calculation for both BTC pools.
+    // Same calculation for both BTC pools (both have the same decimals).
     let (expected_staker_btc_rewards_for_pool, expected_btc_pool_rewards) =
         calculate_staker_btc_pool_rewards(
         pool_balance: cfg.pool_member_info._deprecated_amount,
         :commission,
         :staking_contract,
         :minting_curve_contract,
+        token_address: btc_token_address,
     );
     // Assert staker rewards, delegator rewards, and pool balance before update.
     assert!(staker_info_before.unclaimed_rewards_own.is_zero());
@@ -4040,7 +4042,10 @@ fn test_get_current_total_staking_power() {
     let strk_total_stake = staking_dispatcher.staker_info_v1(:staker_address).amount_own;
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
-    let btc_total_stake = pool_dispatcher.pool_member_info_v1(:pool_member).amount;
+    let btc_total_stake = to_amount_18_decimals(
+        amount: pool_dispatcher.pool_member_info_v1(:pool_member).amount,
+        token_address: btc_token_address,
+    );
     advance_epoch_global();
     assert!(
         staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),

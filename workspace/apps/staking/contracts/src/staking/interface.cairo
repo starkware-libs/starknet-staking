@@ -37,6 +37,7 @@ pub trait IStaking<TContractState> {
     ) -> CommissionCommitment;
     fn contract_parameters_v1(self: @TContractState) -> StakingContractInfoV1;
     fn get_total_stake(self: @TContractState) -> Amount;
+    /// Returns the current epoch's (strk_total_stake, btc_total_stake), where both use 18 decimals.
     fn get_current_total_staking_power(self: @TContractState) -> (Amount, Amount);
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
@@ -47,6 +48,7 @@ pub trait IStaking<TContractState> {
     fn is_paused(self: @TContractState) -> bool;
     fn get_active_tokens(self: @TContractState) -> Span<ContractAddress>;
     fn get_tokens(self: @TContractState) -> Span<(ContractAddress, bool)>;
+    /// Returns the total stake for the given `token_address` in its native decimals.
     fn get_total_stake_for_token(self: @TContractState, token_address: ContractAddress) -> Amount;
 }
 

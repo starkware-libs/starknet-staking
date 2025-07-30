@@ -1,6 +1,8 @@
 use core::cmp::max;
-use core::num::traits::Zero;
-use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
+use core::num::traits::{Bounded, Pow, Zero};
+use staking::constants::{
+    BTC_18D_CONFIG, BTC_8D_CONFIG, STARTING_EPOCH, STRK_CONFIG, STRK_TOKEN_ADDRESS,
+};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
 use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
@@ -28,6 +30,90 @@ pub(crate) struct UndelegateIntentValue {
     pub unpool_time: Timestamp,
     pub amount: Amount,
     pub token_address: ContractAddress,
+}
+
+#[derive(Copy, Drop, Debug)]
+pub(crate) struct NormalizedAmount {
+    amount_18_decimals: Amount,
+}
+
+#[generate_trait]
+pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
+    /// Convert from `Amount` in 18 decimals to `NormalizedAmount`.
+    fn from_amount_18_decimals(amount: Amount) -> NormalizedAmount {
+        NormalizedAmount { amount_18_decimals: amount }
+    }
+
+    /// Convert from `Amount` in the given `decimals` to `NormalizedAmount`.
+    fn from_native_amount(amount: Amount, decimals: u8) -> NormalizedAmount {
+        assert!(
+            decimals == STRK_CONFIG.decimals
+                || decimals == BTC_8D_CONFIG.decimals
+                || decimals == BTC_18D_CONFIG.decimals,
+            "Unsupported decimals",
+        );
+        NormalizedAmount {
+            amount_18_decimals: amount * 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into()),
+        }
+    }
+
+    /// Convert from `NormalizedAmount` to `Amount` in 18 decimals.
+    fn to_amount_18_decimals(self: @NormalizedAmount) -> Amount {
+        *self.amount_18_decimals
+    }
+
+    /// Convert from `NormalizedAmount` to `Amount` in the given `decimals`.
+    fn to_native_amount(self: @NormalizedAmount, decimals: u8) -> Amount {
+        assert!(
+            decimals == STRK_CONFIG.decimals
+                || decimals == BTC_8D_CONFIG.decimals
+                || decimals == BTC_18D_CONFIG.decimals,
+            "Unsupported decimals",
+        );
+        *self.amount_18_decimals / 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into())
+    }
+}
+
+pub(crate) impl NormalizedAmountZero of Zero<NormalizedAmount> {
+    fn zero() -> NormalizedAmount {
+        NormalizedAmount { amount_18_decimals: Zero::zero() }
+    }
+
+    fn is_zero(self: @NormalizedAmount) -> bool {
+        self.amount_18_decimals.is_zero()
+    }
+
+    fn is_non_zero(self: @NormalizedAmount) -> bool {
+        !self.is_zero()
+    }
+}
+
+pub(crate) impl NormalizedAmountAdd of Add<NormalizedAmount> {
+    fn add(lhs: NormalizedAmount, rhs: NormalizedAmount) -> NormalizedAmount {
+        assert!(
+            Bounded::MAX - lhs.amount_18_decimals >= rhs.amount_18_decimals,
+            "{}",
+            Error::NORMALIZED_AMOUNT_ADD_OVERFLOW,
+        );
+        NormalizedAmount { amount_18_decimals: lhs.amount_18_decimals + rhs.amount_18_decimals }
+    }
+}
+
+pub(crate) impl NormalizedAmountPartialOrd of PartialOrd<NormalizedAmount> {
+    fn lt(lhs: NormalizedAmount, rhs: NormalizedAmount) -> bool {
+        lhs.amount_18_decimals < rhs.amount_18_decimals
+    }
+}
+
+pub(crate) impl NormalizedAmountSub of Sub<NormalizedAmount> {
+    fn sub(lhs: NormalizedAmount, rhs: NormalizedAmount) -> NormalizedAmount {
+        assert!(
+            lhs.amount_18_decimals >= rhs.amount_18_decimals,
+            "{}",
+            Error::NORMALIZED_AMOUNT_SUB_UNDERFLOW,
+        );
+        NormalizedAmount { amount_18_decimals: lhs.amount_18_decimals - rhs.amount_18_decimals }
+    }
 }
 
 pub(crate) impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentValue> {

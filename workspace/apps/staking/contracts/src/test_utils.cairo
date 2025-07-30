@@ -11,6 +11,7 @@ use constants::{
     STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_BASE_VALUE, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
+use core::num::traits::Pow;
 use core::num::traits::zero::Zero;
 use core::panics::panic_with_byte_array;
 use core::poseidon::PoseidonTrait;
@@ -27,7 +28,7 @@ use snforge_std::{
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
     C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
-    STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
+    STRK_CONFIG, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
 };
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
@@ -1103,6 +1104,7 @@ pub(crate) fn calculate_staker_strk_rewards_with_amount_and_pool_info(
 
 /// Return staker commission rewards and BTC pool rewards for the specified `pool_balance` and
 /// `commission`.
+/// This function expects the `pool_balance` to be in native decimals.
 ///
 /// Precondition: `pool_balance` and `btc_curr_total_stake` are not zero.
 pub(crate) fn calculate_staker_btc_pool_rewards(
@@ -1110,7 +1112,9 @@ pub(crate) fn calculate_staker_btc_pool_rewards(
     commission: Commission,
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
+    token_address: ContractAddress,
 ) -> (Amount, Amount) {
+    let pool_balance = to_amount_18_decimals(amount: pool_balance, :token_address);
     let (_, btc_epoch_rewards) = calculate_current_epoch_rewards(
         :staking_contract, :minting_curve_contract,
     );
@@ -1436,4 +1440,19 @@ pub(crate) fn custom_decimals_token(token_address: ContractAddress) -> Token {
             balances_variable_selector: selector!("ERC20_balances"),
         },
     )
+}
+
+fn get_token_decimals(token_address: ContractAddress) -> u8 {
+    let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+    token_dispatcher.decimals()
+}
+
+pub(crate) fn to_amount_18_decimals(amount: Amount, token_address: ContractAddress) -> Amount {
+    let decimals = get_token_decimals(:token_address);
+    amount * 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into())
+}
+
+pub(crate) fn to_native_amount(amount: Amount, token_address: ContractAddress) -> Amount {
+    let decimals = get_token_decimals(:token_address);
+    amount / 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into())
 }
