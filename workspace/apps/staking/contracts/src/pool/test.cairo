@@ -545,7 +545,11 @@ fn test_claim_rewards_btc_pool() {
     // Compute expected rewards.
     let pool_balance = cfg.pool_member_info._deprecated_amount;
     let (expected_commission_rewards, expected_pool_rewards) = calculate_staker_btc_pool_rewards(
-        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+        :pool_balance,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
     );
     assert!(expected_commission_rewards.is_non_zero());
 
@@ -735,7 +739,11 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     // Pool update rewards.
     let mut pool_balance = delegate_amount;
     let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
-        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+        :pool_balance,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
     );
     assert!(commission_rewards.is_non_zero());
     update_rewards_from_staking_contract_for_testing(
@@ -761,7 +769,11 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     // Balance changes after current epoch and there is no balance change at current epoch.
     advance_epoch_global();
     let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
-        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+        :pool_balance,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
     );
     assert!(commission_rewards.is_non_zero());
     update_rewards_from_staking_contract_for_testing(
@@ -785,7 +797,11 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     advance_epoch_global();
     pool_balance += delegate_amount;
     let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
-        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+        :pool_balance,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
     );
     assert!(commission_rewards.is_non_zero());
     update_rewards_from_staking_contract_for_testing(

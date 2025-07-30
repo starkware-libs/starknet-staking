@@ -1,5 +1,6 @@
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use staking::errors::{Erc20Error, GenericError};
+use staking::staking::objects::NormalizedAmount;
 use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use staking::types::{Amount, Commission, Index};
 use starknet::syscalls::deploy_syscall;
@@ -9,8 +10,10 @@ use starkware_utils::math::utils::{mul_wide_and_ceil_div, mul_wide_and_div};
 
 /// Computes the new delegated stake based on changing in the intent amount.
 pub(crate) fn compute_new_delegated_stake(
-    old_delegated_stake: Amount, old_intent_amount: Amount, new_intent_amount: Amount,
-) -> Amount {
+    old_delegated_stake: NormalizedAmount,
+    old_intent_amount: NormalizedAmount,
+    new_intent_amount: NormalizedAmount,
+) -> NormalizedAmount {
     let total_amount = old_intent_amount + old_delegated_stake;
     assert!(new_intent_amount <= total_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
     total_amount - new_intent_amount

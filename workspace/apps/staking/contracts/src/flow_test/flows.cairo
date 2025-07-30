@@ -29,6 +29,7 @@ use staking::test_utils::{
     calculate_staker_strk_rewards_with_amount_and_pool_info, calculate_strk_pool_rewards,
     calculate_strk_pool_rewards_with_pool_balance, compute_rewards_for_trace, deserialize_option,
     load_from_iterable_map, load_from_trace, load_trace_length, strk_pool_update_rewards,
+    to_amount_18_decimals,
 };
 use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
 use staking::utils::compute_rewards_rounded_down;
@@ -1138,18 +1139,21 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
             :commission,
             :staking_contract,
             :minting_curve_contract,
+            token_address: first_btc_token.contract_address(),
         );
         let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards(
             pool_balance: second_btc_delegator_amount,
             :commission,
             :staking_contract,
             :minting_curve_contract,
+            token_address: second_btc_token.contract_address(),
         );
         let (_, third_pool_rewards) = calculate_staker_btc_pool_rewards(
             pool_balance: third_btc_delegator_amount,
             :commission,
             :staking_contract,
             :minting_curve_contract,
+            token_address: third_btc_token.contract_address(),
         );
         total_first_pool_rewards += first_pool_rewards;
         total_second_pool_rewards += second_pool_rewards;
@@ -1178,6 +1182,7 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
             :commission,
             :staking_contract,
             :minting_curve_contract,
+            token_address: first_btc_token.contract_address(),
         );
         total_first_pool_rewards += first_pool_rewards;
 
@@ -1191,12 +1196,14 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
             :commission,
             :staking_contract,
             :minting_curve_contract,
+            token_address: first_btc_token.contract_address(),
         );
         let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards(
             pool_balance: second_btc_delegator_amount,
             :commission,
             :staking_contract,
             :minting_curve_contract,
+            token_address: second_btc_token.contract_address(),
         );
         total_first_pool_rewards += first_pool_rewards;
         total_second_pool_rewards += second_pool_rewards;
@@ -1766,6 +1773,7 @@ pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelega
             :commission,
             staking_contract: system.staking.address,
             minting_curve_contract: system.minting_curve.address,
+            token_address: second_token.contract_address(),
         );
         let rewards = system.delegator_claim_rewards(:delegator, :pool);
         let second_delegator_rewards = system
@@ -1962,7 +1970,10 @@ pub(crate) impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> 
 
         // Test total staking power after epoch.
         let total_staking_power = system.staking.get_current_total_staking_power_v2();
-        assert!(total_staking_power == (amount, delegated_amount));
+        let expected_btc_staking_power = to_amount_18_decimals(
+            amount: delegated_amount, :token_address,
+        );
+        assert!(total_staking_power == (amount, expected_btc_staking_power));
     }
 }
 
@@ -2026,10 +2037,15 @@ pub(crate) impl MultipleBTCPoolsDifferentDecimalsFlowImpl of FlowTrait<
         let rewards_8 = system.delegator_claim_rewards(delegator: delegator_8, pool: pool_8);
         let rewards_18 = system.delegator_claim_rewards(delegator: delegator_18, pool: pool_18);
         let (_, btc_staking_power) = system.staking.get_current_total_staking_power_v2();
+        assert!(rewards_8 == rewards_18);
         assert!(
-            rewards_8 == rewards_18 / 10_u128.pow(BTC_DECIMALS_18.into() - BTC_DECIMALS_8.into()),
+            btc_staking_power == to_amount_18_decimals(
+                amount: delegated_amount_8, token_address: token_8_address,
+            )
+                + to_amount_18_decimals(
+                    amount: delegated_amount_18, token_address: token_18_address,
+                ),
         );
-        assert!(btc_staking_power == delegated_amount_8 + delegated_amount_18);
     }
 }
 
@@ -3678,6 +3694,7 @@ pub(crate) impl SetCommissionMultiplePoolsFlowImpl of FlowTrait<SetCommissionMul
             commission: final_commission,
             :staking_contract,
             :minting_curve_contract,
+            token_address: btc_token_address,
         );
         let staker_info = system.staker_info_v1(:staker);
         let (expected_staker_rewards, _) = calculate_staker_strk_rewards(
@@ -3919,7 +3936,11 @@ pub(crate) impl ClaimRewardsMultipleDelegatorsBtcFlowImpl of FlowTrait<
 
         // Compute pool rewards.
         let (_, pool_rewards) = calculate_staker_btc_pool_rewards(
-            :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+            :pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: btc_token.contract_address(),
         );
 
         system.advance_epoch();
@@ -4426,7 +4447,11 @@ pub(crate) impl PoolWithMinBtcFlowImpl of FlowTrait<PoolWithMinBtcFlow> {
 
         let (expected_commission_rewards, expected_pool_rewards) =
             calculate_staker_btc_pool_rewards(
-            pool_balance: delegate_amount, :commission, :staking_contract, :minting_curve_contract,
+            pool_balance: delegate_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            :token_address,
         );
         let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
         let staker_rewards = system.staker_claim_rewards(:staker);
@@ -4735,7 +4760,11 @@ pub(crate) impl PoolWithLotsOfBtcFlowImpl of FlowTrait<PoolWithLotsOfBtcFlow> {
 
         let (expected_commission_rewards, expected_pool_rewards) =
             calculate_staker_btc_pool_rewards(
-            pool_balance: delegate_amount, :commission, :staking_contract, :minting_curve_contract,
+            pool_balance: delegate_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            :token_address,
         );
         let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
         let staker_rewards = system.staker_claim_rewards(:staker);
@@ -4871,7 +4900,11 @@ pub(crate) impl StakerMultiplePoolsAttestFlowImpl of FlowTrait<StakerMultiplePoo
         );
         let (expected_btc_commission_rewards, expected_btc_pool_rewards) =
             calculate_staker_btc_pool_rewards(
-            pool_balance: btc_amount, :commission, :staking_contract, :minting_curve_contract,
+            pool_balance: btc_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: first_btc_token.contract_address(),
         );
         let (expected_staker_strk_rewards, _) = calculate_staker_strk_rewards(
             staker_info: system.staker_info_v1(:staker), :staking_contract, :minting_curve_contract,
@@ -5047,7 +5080,11 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
         let (btc_commission_rewards, _) = calculate_staker_btc_pool_rewards(
-            pool_balance: btc_amount, :commission, :staking_contract, :minting_curve_contract,
+            pool_balance: btc_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: token.contract_address(),
         );
         let new_pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
         let new_staker_rewards = system.staker_claim_rewards(:staker);
@@ -6672,5 +6709,12 @@ pub(crate) impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
 // Change balance in some epochs (trace length should be > 1)
 // Upgrade
 // Open strk pool
+
+// TODO: decimal tests:
+// 1. Test with many decimals.
+// 2. Test attept to switch between pools with different decimals.
+// 3. Test exit pool with 8 and enter pool with 18 (and vice versa).
+// 4. Test switch between BTC 18 decimals and STRK (both 18 decimals).
+// 5. Test one delegator in 2 BTC pools with different decimals.
 
 

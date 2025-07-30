@@ -13,7 +13,7 @@ pub mod Staking {
     };
     use staking::constants::{
         BTC_18D_CONFIG, BTC_8D_CONFIG, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW,
-        STAKING_V2_PREV_CONTRACT_VERSION, STARTING_EPOCH, STRK_TOKEN_ADDRESS,
+        STAKING_V2_PREV_CONTRACT_VERSION, STARTING_EPOCH, STRK_CONFIG, STRK_TOKEN_ADDRESS,
     };
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
@@ -30,9 +30,9 @@ pub mod Staking {
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
         InternalStakerInfoLatestTrait, InternalStakerPoolInfoV2, InternalStakerPoolInfoV2MutTrait,
-        InternalStakerPoolInfoV2Trait, UndelegateIntentKey, UndelegateIntentValue,
-        UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
-        VersionedInternalStakerInfoTrait,
+        InternalStakerPoolInfoV2Trait, NormalizedAmount, NormalizedAmountTrait, UndelegateIntentKey,
+        UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
+        VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTraceTrait,
@@ -382,13 +382,14 @@ pub mod Staking {
                 .entry(staker_address)
                 .pools {
                 let amount = self.get_delegated_balance(:staker_address, :pool_contract);
-                self.remove_from_total_stake(:token_address, :amount);
+                self.remove_delegation_from_total_stake(:token_address, :amount);
+                let decimals = self.get_token_decimals(:token_address);
                 self
                     .emit(
                         Events::StakeDelegatedBalanceChanged {
                             staker_address,
                             token_address,
-                            old_delegated_stake: amount,
+                            old_delegated_stake: amount.to_native_amount(:decimals),
                             new_delegated_stake: Zero::zero(),
                         },
                     );
@@ -509,7 +510,12 @@ pub mod Staking {
                 staker_info
                     .pool_info =
                         Option::Some(
-                            StakerPoolInfoV1 { pool_contract, amount: pool_amount, commission },
+                            StakerPoolInfoV1 {
+                                pool_contract,
+                                amount: pool_amount
+                                    .to_native_amount(decimals: STRK_CONFIG.decimals),
+                                commission,
+                            },
                         );
             }
             staker_info
@@ -535,8 +541,16 @@ pub mod Staking {
             let commission = internal_staker_pool_info.commission.read();
             let mut pools: Array<PoolInfo> = array![];
             for (pool_contract, token_address) in internal_staker_pool_info.pools {
+                let decimals = self.get_token_decimals(:token_address);
                 let amount = self.get_delegated_balance(:staker_address, :pool_contract);
-                pools.append(PoolInfo { pool_contract, token_address, amount });
+                pools
+                    .append(
+                        PoolInfo {
+                            pool_contract,
+                            token_address,
+                            amount: amount.to_native_amount(:decimals),
+                        },
+                    );
             }
             StakerPoolInfoV2 { commission, pools: pools.span() }
         }
@@ -733,7 +747,11 @@ pub mod Staking {
             assert!(
                 self.is_active_token(:token_address, :curr_epoch), "{}", Error::TOKEN_NOT_ACTIVE,
             );
-            self._get_total_stake(:token_address)
+            let decimals = self.get_token_decimals(:token_address);
+            NormalizedAmountTrait::from_amount_18_decimals(
+                amount: self._get_total_stake(:token_address),
+            )
+                .to_native_amount(:decimals)
         }
     }
 
@@ -801,6 +819,8 @@ pub mod Staking {
                 .entry(staker_address)
                 .get_pool_token(:pool_contract)
                 .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
+            let decimals = self.get_token_decimals(:token_address);
+            let amount = NormalizedAmountTrait::from_native_amount(:amount, :decimals);
 
             // Update the staker's staked amount, and add to total_stake.
             let old_delegated_stake = self.get_delegated_balance(:staker_address, :pool_contract);
@@ -809,21 +829,26 @@ pub mod Staking {
                 .insert_staker_delegated_balance(
                     :staker_address, :pool_contract, delegated_balance: new_delegated_stake,
                 );
-            self.add_to_total_stake(:token_address, :amount);
+            self.add_delegation_to_total_stake(:token_address, :amount);
 
             // Transfer funds from the pool contract to the staking contract.
             // Sufficient approval is a pre-condition.
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             token_dispatcher
                 .checked_transfer_from(
-                    sender: pool_contract, recipient: get_contract_address(), amount: amount.into(),
+                    sender: pool_contract,
+                    recipient: get_contract_address(),
+                    amount: amount.to_native_amount(:decimals).into(),
                 );
 
             // Emit event.
             self
                 .emit(
                     Events::StakeDelegatedBalanceChanged {
-                        staker_address, token_address, old_delegated_stake, new_delegated_stake,
+                        staker_address,
+                        token_address,
+                        old_delegated_stake: old_delegated_stake.to_native_amount(:decimals),
+                        new_delegated_stake: new_delegated_stake.to_native_amount(:decimals),
                     },
                 );
         }
@@ -843,10 +868,14 @@ pub mod Staking {
                 .entry(staker_address)
                 .get_pool_token(:pool_contract)
                 .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
+            let decimals = self.get_token_decimals(:token_address);
+            let amount = NormalizedAmountTrait::from_native_amount(:amount, :decimals);
 
             // Update the delegated stake according to the new intent.
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
-            let old_intent_amount = self.get_pool_exit_intent(:undelegate_intent_key).amount;
+            let old_intent_amount = NormalizedAmountTrait::from_amount_18_decimals(
+                self.get_pool_exit_intent(:undelegate_intent_key).amount,
+            );
             let new_intent_amount = amount;
             // After this call, the staker balance will be updated.
             let (old_delegated_stake, new_delegated_stake) = self
@@ -870,8 +899,8 @@ pub mod Staking {
                         pool_contract,
                         token_address,
                         identifier,
-                        old_intent_amount,
-                        new_intent_amount,
+                        old_intent_amount: old_intent_amount.to_native_amount(:decimals),
+                        new_intent_amount: new_intent_amount.to_native_amount(:decimals),
                     },
                 );
             // If the staker is in the process of unstaking (intent called),
@@ -881,7 +910,10 @@ pub mod Staking {
                 self
                     .emit(
                         Events::StakeDelegatedBalanceChanged {
-                            staker_address, token_address, old_delegated_stake, new_delegated_stake,
+                            staker_address,
+                            token_address,
+                            old_delegated_stake: old_delegated_stake.to_native_amount(:decimals),
+                            new_delegated_stake: new_delegated_stake.to_native_amount(:decimals),
                         },
                     );
             }
@@ -894,7 +926,10 @@ pub mod Staking {
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let undelegate_intent = self.get_pool_exit_intent(:undelegate_intent_key);
-            if undelegate_intent.amount.is_zero() {
+            let undelegate_amount = NormalizedAmountTrait::from_amount_18_decimals(
+                undelegate_intent.amount,
+            );
+            if undelegate_amount.is_zero() {
                 return;
             }
             assert!(
@@ -907,18 +942,23 @@ pub mod Staking {
             self.clear_undelegate_intent(:undelegate_intent_key);
             // Extract the token address of the pool contract.
             let token_address = self.get_undelegate_intent_token(:undelegate_intent);
+            let decimals = self.get_token_decimals(:token_address);
             // Transfer the intent amount to the pool contract.
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             token_dispatcher
                 .checked_transfer(
-                    recipient: pool_contract, amount: undelegate_intent.amount.into(),
+                    recipient: pool_contract,
+                    amount: undelegate_amount.to_native_amount(:decimals).into(),
                 );
 
             // Emit event.
             self
                 .emit(
                     Events::RemoveFromDelegationPoolAction {
-                        pool_contract, token_address, identifier, amount: undelegate_intent.amount,
+                        pool_contract,
+                        token_address,
+                        identifier,
+                        amount: undelegate_amount.to_native_amount(:decimals),
                     },
                 );
         }
@@ -944,16 +984,18 @@ pub mod Staking {
             assert!(
                 undelegate_intent_value.is_non_zero(), "{}", PoolError::MISSING_UNDELEGATE_INTENT,
             );
-            assert!(
-                switched_amount <= undelegate_intent_value.amount,
-                "{}",
-                GenericError::AMOUNT_TOO_HIGH,
-            );
             // Extract the token address of the `from_pool` contract.
             let token_address = self
                 .get_undelegate_intent_token(undelegate_intent: undelegate_intent_value);
-            let old_intent_amount = undelegate_intent_value.amount;
+            let old_intent_amount = NormalizedAmountTrait::from_amount_18_decimals(
+                undelegate_intent_value.amount,
+            );
             assert!(to_pool != from_pool, "{}", Error::SELF_SWITCH_NOT_ALLOWED);
+            let decimals = self.get_token_decimals(:token_address);
+            let switched_amount = NormalizedAmountTrait::from_native_amount(
+                amount: switched_amount, :decimals,
+            );
+            assert!(switched_amount <= old_intent_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
 
             let to_staker_info = self.internal_staker_info(staker_address: to_staker);
 
@@ -976,20 +1018,23 @@ pub mod Staking {
                     pool_contract: to_pool,
                     delegated_balance: new_delegated_stake,
                 );
-            self.add_to_total_stake(:token_address, amount: switched_amount);
+            self.add_delegation_to_total_stake(:token_address, amount: switched_amount);
 
             // Update the undelegate intent. If the amount is zero, clear the intent.
-            undelegate_intent_value.amount -= switched_amount;
-            if undelegate_intent_value.amount.is_zero() {
+            let new_intent_amount = old_intent_amount - switched_amount;
+            if new_intent_amount.is_zero() {
                 self.clear_undelegate_intent(:undelegate_intent_key);
             } else {
+                undelegate_intent_value.amount = new_intent_amount.to_amount_18_decimals();
                 self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
             }
 
             // Notify `to_pool` about the new delegation.
             let to_pool_dispatcher = IPoolDispatcher { contract_address: to_pool };
             to_pool_dispatcher
-                .enter_delegation_pool_from_staking_contract(amount: switched_amount, :data);
+                .enter_delegation_pool_from_staking_contract(
+                    amount: switched_amount.to_native_amount(:decimals), :data,
+                );
 
             // Emit events.
             self
@@ -997,8 +1042,8 @@ pub mod Staking {
                     Events::StakeDelegatedBalanceChanged {
                         staker_address: to_staker,
                         token_address,
-                        old_delegated_stake,
-                        new_delegated_stake,
+                        old_delegated_stake: old_delegated_stake.to_native_amount(:decimals),
+                        new_delegated_stake: new_delegated_stake.to_native_amount(:decimals),
                     },
                 );
             self
@@ -1007,8 +1052,8 @@ pub mod Staking {
                         pool_contract: from_pool,
                         token_address,
                         identifier,
-                        old_intent_amount,
-                        new_intent_amount: undelegate_intent_value.amount,
+                        old_intent_amount: old_intent_amount.to_native_amount(:decimals),
+                        new_intent_amount: new_intent_amount.to_native_amount(:decimals),
                     },
                 );
         }
@@ -1422,8 +1467,12 @@ pub mod Staking {
                     .insert_staker_delegated_balance(
                         :staker_address, :pool_contract, delegated_balance: Zero::zero(),
                     );
+                let decimals = self.get_token_decimals(:token_address);
                 token_dispatcher
-                    .checked_transfer(recipient: pool_contract, amount: pool_balance.into());
+                    .checked_transfer(
+                        recipient: pool_contract,
+                        amount: pool_balance.to_native_amount(:decimals).into(),
+                    );
             }
         }
 
@@ -1485,17 +1534,17 @@ pub mod Staking {
         fn update_total_stake_according_to_delegated_stake_changes(
             ref self: ContractState,
             token_address: ContractAddress,
-            old_delegated_stake: Amount,
-            new_delegated_stake: Amount,
+            old_delegated_stake: NormalizedAmount,
+            new_delegated_stake: NormalizedAmount,
         ) {
             if new_delegated_stake < old_delegated_stake {
                 self
-                    .remove_from_total_stake(
+                    .remove_delegation_from_total_stake(
                         :token_address, amount: old_delegated_stake - new_delegated_stake,
                     );
             } else {
                 self
-                    .add_to_total_stake(
+                    .add_delegation_to_total_stake(
                         :token_address, amount: new_delegated_stake - old_delegated_stake,
                     );
             }
@@ -1510,6 +1559,12 @@ pub mod Staking {
                 );
         }
 
+        fn add_delegation_to_total_stake(
+            ref self: ContractState, token_address: ContractAddress, amount: NormalizedAmount,
+        ) {
+            self.add_to_total_stake(:token_address, amount: amount.to_amount_18_decimals());
+        }
+
         fn remove_from_total_stake(
             ref self: ContractState, token_address: ContractAddress, amount: Amount,
         ) {
@@ -1517,6 +1572,12 @@ pub mod Staking {
                 .update_total_stake(
                     :token_address, new_total_stake: self._get_total_stake(:token_address) - amount,
                 );
+        }
+
+        fn remove_delegation_from_total_stake(
+            ref self: ContractState, token_address: ContractAddress, amount: NormalizedAmount,
+        ) {
+            self.remove_from_total_stake(:token_address, amount: amount.to_amount_18_decimals());
         }
 
         fn update_total_stake(
@@ -1547,9 +1608,9 @@ pub mod Staking {
             token_address: ContractAddress,
             pool_contract: ContractAddress,
             staker_info: InternalStakerInfoLatest,
-            old_intent_amount: Amount,
-            new_intent_amount: Amount,
-        ) -> (Amount, Amount) {
+            old_intent_amount: NormalizedAmount,
+            new_intent_amount: NormalizedAmount,
+        ) -> (NormalizedAmount, NormalizedAmount) {
             let old_delegated_stake = self.get_delegated_balance(:staker_address, :pool_contract);
             let new_delegated_stake = compute_new_delegated_stake(
                 :old_delegated_stake, :old_intent_amount, :new_intent_amount,
@@ -1582,7 +1643,7 @@ pub mod Staking {
             token_address: ContractAddress,
             staker_info: InternalStakerInfoLatest,
             undelegate_intent_key: UndelegateIntentKey,
-            new_intent_amount: Amount,
+            new_intent_amount: NormalizedAmount,
         ) {
             let undelegate_intent_value = if new_intent_amount.is_zero() {
                 Zero::zero()
@@ -1590,7 +1651,9 @@ pub mod Staking {
                 let unpool_time = staker_info
                     .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
                 assert!(token_address.is_non_zero(), "{}", Error::TOKEN_IS_ZERO_ADDRESS);
-                UndelegateIntentValue { amount: new_intent_amount, unpool_time, token_address }
+                UndelegateIntentValue {
+                    amount: new_intent_amount.to_amount_18_decimals(), unpool_time, token_address,
+                }
             };
             self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
         }
@@ -1612,12 +1675,19 @@ pub mod Staking {
         fn update_pool_rewards(
             ref self: ContractState,
             staker_address: ContractAddress,
-            pools_rewards_data: Array<(ContractAddress, Amount, Amount)>,
+            pools_rewards_data: Array<(ContractAddress, NormalizedAmount, Amount)>,
         ) -> Array<(ContractAddress, Amount)> {
             let mut pool_rewards_list = array![];
             let strk_token_dispatcher = self.token_dispatcher();
             for (pool_contract, pool_balance, pool_rewards) in pools_rewards_data {
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+                // Unwrap is safe because the pool is already verified to exist.
+                let token_address = self
+                    .staker_pool_info
+                    .entry(staker_address)
+                    .get_pool_token(:pool_contract)
+                    .unwrap();
+                let decimals = self.get_token_decimals(:token_address);
                 // Rewards are always in STRK.
                 self
                     .send_rewards_to_delegation_pool(
@@ -1627,7 +1697,10 @@ pub mod Staking {
                         token_dispatcher: strk_token_dispatcher,
                     );
                 pool_dispatcher
-                    .update_rewards_from_staking_contract(rewards: pool_rewards, :pool_balance);
+                    .update_rewards_from_staking_contract(
+                        rewards: pool_rewards,
+                        pool_balance: pool_balance.to_native_amount(:decimals),
+                    );
                 pool_rewards_list.append((pool_contract, pool_rewards));
             }
             pool_rewards_list
@@ -1665,7 +1738,7 @@ pub mod Staking {
             btc_epoch_rewards: Amount,
             btc_total_stake: Amount,
             curr_epoch: Epoch,
-        ) -> (Amount, Amount, Array<(ContractAddress, Amount, Amount)>) {
+        ) -> (Amount, Amount, Array<(ContractAddress, NormalizedAmount, Amount)>) {
             // Array for rewards data needed to update pools.
             // Contains tuples of (pool_contract, pool_balance, pool_rewards).
             let mut pool_rewards_array = array![];
@@ -1689,7 +1762,9 @@ pub mod Staking {
                 // Calculate rewards for this pool.
                 let pool_rewards_including_commission = if total_stake.is_non_zero() {
                     mul_wide_and_div(
-                        lhs: epoch_rewards, rhs: pool_balance_curr_epoch, div: total_stake,
+                        lhs: epoch_rewards,
+                        rhs: pool_balance_curr_epoch.to_amount_18_decimals(),
+                        div: total_stake,
                     )
                         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
                 } else {
@@ -1739,13 +1814,15 @@ pub mod Staking {
             ref self: ContractState,
             staker_address: ContractAddress,
             pool_contract: ContractAddress,
-            delegated_balance: Amount,
+            delegated_balance: NormalizedAmount,
         ) {
             self
                 .staker_delegated_balance_trace
                 .entry(staker_address)
                 .entry(pool_contract)
-                .insert(key: self.get_next_epoch(), value: delegated_balance);
+                .insert(
+                    key: self.get_next_epoch(), value: delegated_balance.to_amount_18_decimals(),
+                );
         }
 
         /// Initializes the delegated balance trace for the given `pool_contract`.
@@ -1777,14 +1854,14 @@ pub mod Staking {
         /// the given `pool_contract`.
         fn get_delegated_balance(
             self: @ContractState, staker_address: ContractAddress, pool_contract: ContractAddress,
-        ) -> Amount {
+        ) -> NormalizedAmount {
             let trace = self
                 .staker_delegated_balance_trace
                 .entry(key: staker_address)
                 .entry(key: pool_contract);
             // Unwrap is safe since the trace must already be initialized.
             let (_, delegated_balance) = trace.latest().unwrap();
-            delegated_balance
+            NormalizedAmountTrait::from_amount_18_decimals(amount: delegated_balance)
         }
 
         /// Return the total STRK balance of the staker in the current epoch.
@@ -1803,7 +1880,8 @@ pub mod Staking {
             } else {
                 Zero::zero()
             };
-            curr_own_balance + curr_delegated_balance
+            curr_own_balance
+                + curr_delegated_balance.to_native_amount(decimals: STRK_CONFIG.decimals)
         }
 
         /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
@@ -1822,12 +1900,14 @@ pub mod Staking {
             staker_address: ContractAddress,
             pool_contract: ContractAddress,
             curr_epoch: Epoch,
-        ) -> Amount {
+        ) -> NormalizedAmount {
             let trace = self
                 .staker_delegated_balance_trace
                 .entry(key: staker_address)
                 .entry(key: pool_contract);
-            self.balance_at_curr_epoch(:trace, :curr_epoch)
+            NormalizedAmountTrait::from_amount_18_decimals(
+                amount: self.balance_at_curr_epoch(:trace, :curr_epoch),
+            )
         }
 
         /// Returns the balance at the current epoch.
@@ -1935,6 +2015,11 @@ pub mod Staking {
         ) -> bool {
             let (epoch, is_active) = self.btc_tokens.read(token_address).unwrap();
             (curr_epoch >= epoch) == is_active
+        }
+
+        fn get_token_decimals(self: @ContractState, token_address: ContractAddress) -> u8 {
+            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+            token_dispatcher.decimals()
         }
     }
 }
