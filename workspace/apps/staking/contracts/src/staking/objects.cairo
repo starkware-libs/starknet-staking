@@ -1,6 +1,6 @@
 use core::cmp::max;
 use core::num::traits::{Bounded, Pow, Zero};
-use core::ops::AddAssign;
+use core::ops::{AddAssign, SubAssign};
 use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
@@ -27,11 +27,11 @@ pub(crate) struct UndelegateIntentKey {
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct UndelegateIntentValue {
     pub unpool_time: Timestamp,
-    pub amount: Amount,
+    pub amount: NormalizedAmount,
     pub token_address: ContractAddress,
 }
 
-#[derive(Copy, Drop, Debug)]
+#[derive(Copy, Drop, Debug, Serde, starknet::Store, PartialEq)]
 pub(crate) struct NormalizedAmount {
     amount_18_decimals: Amount,
 }
@@ -121,6 +121,17 @@ pub(crate) impl NormalizedAmountSub of Sub<NormalizedAmount> {
             Error::NORMALIZED_AMOUNT_SUB_UNDERFLOW,
         );
         NormalizedAmount { amount_18_decimals: lhs.amount_18_decimals - rhs.amount_18_decimals }
+    }
+}
+
+pub(crate) impl NormalizedAmountSubAssign of SubAssign<NormalizedAmount, NormalizedAmount> {
+    fn sub_assign(ref self: NormalizedAmount, rhs: NormalizedAmount) {
+        assert!(
+            self.amount_18_decimals >= rhs.amount_18_decimals,
+            "{}",
+            Error::NORMALIZED_AMOUNT_SUB_UNDERFLOW,
+        );
+        self.amount_18_decimals -= rhs.amount_18_decimals;
     }
 }
 

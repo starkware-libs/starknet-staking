@@ -874,9 +874,7 @@ pub mod Staking {
 
             // Update the delegated stake according to the new intent.
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
-            let old_intent_amount = NormalizedAmountTrait::from_amount_18_decimals(
-                self.get_pool_exit_intent(:undelegate_intent_key).amount,
-            );
+            let old_intent_amount = self.get_pool_exit_intent(:undelegate_intent_key).amount;
             let new_intent_amount = normalized_amount;
             // After this call, the staker balance will be updated.
             let (old_delegated_stake, new_delegated_stake) = self
@@ -927,10 +925,7 @@ pub mod Staking {
             let pool_contract = get_caller_address();
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let undelegate_intent = self.get_pool_exit_intent(:undelegate_intent_key);
-            let undelegate_amount = NormalizedAmountTrait::from_amount_18_decimals(
-                undelegate_intent.amount,
-            );
-            if undelegate_amount.is_zero() {
+            if undelegate_intent.amount.is_zero() {
                 return;
             }
             assert!(
@@ -945,7 +940,7 @@ pub mod Staking {
             let token_address = self.get_undelegate_intent_token(:undelegate_intent);
             let decimals = self.get_token_decimals(:token_address);
             // Transfer the intent amount to the pool contract.
-            let native_amount = undelegate_amount.to_native_amount(:decimals);
+            let native_amount = undelegate_intent.amount.to_native_amount(:decimals);
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             token_dispatcher
                 .checked_transfer(recipient: pool_contract, amount: native_amount.into());
@@ -983,9 +978,7 @@ pub mod Staking {
             // Extract the token address of the `from_pool` contract.
             let token_address = self
                 .get_undelegate_intent_token(undelegate_intent: undelegate_intent_value);
-            let old_intent_amount = NormalizedAmountTrait::from_amount_18_decimals(
-                undelegate_intent_value.amount,
-            );
+            let old_intent_amount = undelegate_intent_value.amount;
             assert!(to_pool != from_pool, "{}", Error::SELF_SWITCH_NOT_ALLOWED);
             let decimals = self.get_token_decimals(:token_address);
             let normalized_switched_amount = NormalizedAmountTrait::from_native_amount(
@@ -1021,11 +1014,10 @@ pub mod Staking {
             self.add_to_total_stake(:token_address, amount: normalized_switched_amount);
 
             // Update the undelegate intent. If the amount is zero, clear the intent.
-            let new_intent_amount = old_intent_amount - normalized_switched_amount;
-            if new_intent_amount.is_zero() {
+            undelegate_intent_value.amount -= normalized_switched_amount;
+            if undelegate_intent_value.amount.is_zero() {
                 self.clear_undelegate_intent(:undelegate_intent_key);
             } else {
-                undelegate_intent_value.amount = new_intent_amount.to_amount_18_decimals();
                 self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
             }
 
@@ -1051,7 +1043,9 @@ pub mod Staking {
                         token_address,
                         identifier,
                         old_intent_amount: old_intent_amount.to_native_amount(:decimals),
-                        new_intent_amount: new_intent_amount.to_native_amount(:decimals),
+                        new_intent_amount: undelegate_intent_value
+                            .amount
+                            .to_native_amount(:decimals),
                     },
                 );
         }
@@ -1638,9 +1632,7 @@ pub mod Staking {
                 let unpool_time = staker_info
                     .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
                 assert!(token_address.is_non_zero(), "{}", Error::TOKEN_IS_ZERO_ADDRESS);
-                UndelegateIntentValue {
-                    amount: new_intent_amount.to_amount_18_decimals(), unpool_time, token_address,
-                }
+                UndelegateIntentValue { amount: new_intent_amount, unpool_time, token_address }
             };
             self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
         }
