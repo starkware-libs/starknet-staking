@@ -292,7 +292,7 @@ pub mod Staking {
             self.operational_address_to_staker_address.write(operational_address, staker_address);
 
             // Update total stake.
-            self.add_to_total_stake(token_address: STRK_TOKEN_ADDRESS, :amount);
+            self.add_to_total_stake(token_address: STRK_TOKEN_ADDRESS, amount: normalized_amount);
 
             // Add staker address to the stakers vector.
             self.stakers.push(staker_address);
@@ -395,7 +395,7 @@ pub mod Staking {
                 .entry(staker_address)
                 .pools {
                 let amount = self.get_delegated_balance(:staker_address, :pool_contract);
-                self.remove_delegation_from_total_stake(:token_address, :amount);
+                self.remove_from_total_stake(:token_address, :amount);
                 let decimals = self.get_token_decimals(:token_address);
                 self
                     .emit(
@@ -408,7 +408,7 @@ pub mod Staking {
                     );
             }
             // Write off the self stake from the total stake.
-            let old_self_stake = self.get_own_balance(:staker_address).to_strk_amount();
+            let old_self_stake = self.get_own_balance(:staker_address);
             self.remove_from_total_stake(token_address: STRK_TOKEN_ADDRESS, amount: old_self_stake);
 
             // Emit events.
@@ -416,7 +416,9 @@ pub mod Staking {
             self
                 .emit(
                     Events::StakeOwnBalanceChanged {
-                        staker_address, old_self_stake, new_self_stake: Zero::zero(),
+                        staker_address,
+                        old_self_stake: old_self_stake.to_strk_amount(),
+                        new_self_stake: Zero::zero(),
                     },
                 );
             unstake_time
@@ -580,7 +582,7 @@ pub mod Staking {
         }
 
         fn get_total_stake(self: @ContractState) -> Amount {
-            self._get_total_stake(token_address: STRK_TOKEN_ADDRESS)
+            self._get_total_stake(token_address: STRK_TOKEN_ADDRESS).to_strk_amount()
         }
 
         fn get_current_total_staking_power(self: @ContractState) -> (Amount, Amount) {
@@ -588,7 +590,7 @@ pub mod Staking {
             let curr_epoch = self.get_current_epoch();
             let strk_curr_total_stake = self
                 .balance_at_curr_epoch(trace: strk_total_stake_trace, :curr_epoch);
-            let mut btc_curr_total_stake = Zero::zero();
+            let mut btc_curr_total_stake: NormalizedAmount = Zero::zero();
             for (token_address, _) in self.btc_tokens {
                 if self.is_btc_active(:token_address, :curr_epoch) {
                     let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
@@ -596,7 +598,7 @@ pub mod Staking {
                         .balance_at_curr_epoch(trace: btc_total_stake_trace, :curr_epoch);
                 }
             }
-            (strk_curr_total_stake, btc_curr_total_stake)
+            (strk_curr_total_stake.to_strk_amount(), btc_curr_total_stake.to_amount_18_decimals())
         }
 
         fn change_operational_address(
@@ -752,10 +754,7 @@ pub mod Staking {
                 self.is_active_token(:token_address, :curr_epoch), "{}", Error::TOKEN_NOT_ACTIVE,
             );
             let decimals = self.get_token_decimals(:token_address);
-            NormalizedAmountTrait::from_amount_18_decimals(
-                amount: self._get_total_stake(:token_address),
-            )
-                .to_native_amount(:decimals)
+            self._get_total_stake(:token_address).to_native_amount(:decimals)
         }
     }
 
@@ -833,7 +832,7 @@ pub mod Staking {
                 .insert_staker_delegated_balance(
                     :staker_address, :pool_contract, delegated_balance: new_delegated_stake,
                 );
-            self.add_delegation_to_total_stake(:token_address, amount: normalized_amount);
+            self.add_to_total_stake(:token_address, amount: normalized_amount);
 
             // Transfer funds from the pool contract to the staking contract.
             // Sufficient approval is a pre-condition.
@@ -1019,7 +1018,7 @@ pub mod Staking {
                     pool_contract: to_pool,
                     delegated_balance: new_delegated_stake,
                 );
-            self.add_delegation_to_total_stake(:token_address, amount: normalized_switched_amount);
+            self.add_to_total_stake(:token_address, amount: normalized_switched_amount);
 
             // Update the undelegate intent. If the amount is zero, clear the intent.
             let new_intent_amount = old_intent_amount - normalized_switched_amount;
@@ -1294,12 +1293,14 @@ pub mod Staking {
     /// **Note**: This function doesn't verify that the token actually exists.
     #[generate_trait]
     pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
-        fn _get_total_stake(self: @ContractState, token_address: ContractAddress) -> Amount {
+        fn _get_total_stake(
+            self: @ContractState, token_address: ContractAddress,
+        ) -> NormalizedAmount {
             let total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
             // Trace is initialized with a zero stake at the first valid epoch, so it is safe to
             // unwrap.
             let (_, total_stake) = total_stake_trace.latest().unwrap();
-            total_stake
+            NormalizedAmountTrait::from_amount_18_decimals(total_stake)
         }
 
         /// Migrate the latest checkpoints of the staker balance trace.
@@ -1540,19 +1541,19 @@ pub mod Staking {
         ) {
             if new_delegated_stake < old_delegated_stake {
                 self
-                    .remove_delegation_from_total_stake(
+                    .remove_from_total_stake(
                         :token_address, amount: old_delegated_stake - new_delegated_stake,
                     );
             } else {
                 self
-                    .add_delegation_to_total_stake(
+                    .add_to_total_stake(
                         :token_address, amount: new_delegated_stake - old_delegated_stake,
                     );
             }
         }
 
         fn add_to_total_stake(
-            ref self: ContractState, token_address: ContractAddress, amount: Amount,
+            ref self: ContractState, token_address: ContractAddress, amount: NormalizedAmount,
         ) {
             self
                 .update_total_stake(
@@ -1560,14 +1561,8 @@ pub mod Staking {
                 );
         }
 
-        fn add_delegation_to_total_stake(
-            ref self: ContractState, token_address: ContractAddress, amount: NormalizedAmount,
-        ) {
-            self.add_to_total_stake(:token_address, amount: amount.to_amount_18_decimals());
-        }
-
         fn remove_from_total_stake(
-            ref self: ContractState, token_address: ContractAddress, amount: Amount,
+            ref self: ContractState, token_address: ContractAddress, amount: NormalizedAmount,
         ) {
             self
                 .update_total_stake(
@@ -1575,19 +1570,15 @@ pub mod Staking {
                 );
         }
 
-        fn remove_delegation_from_total_stake(
-            ref self: ContractState, token_address: ContractAddress, amount: NormalizedAmount,
-        ) {
-            self.remove_from_total_stake(:token_address, amount: amount.to_amount_18_decimals());
-        }
-
         fn update_total_stake(
-            ref self: ContractState, token_address: ContractAddress, new_total_stake: Amount,
+            ref self: ContractState,
+            token_address: ContractAddress,
+            new_total_stake: NormalizedAmount,
         ) {
             self
                 .tokens_total_stake_trace
                 .entry(token_address)
-                .insert(key: self.get_next_epoch(), value: new_total_stake);
+                .insert(key: self.get_next_epoch(), value: new_total_stake.to_amount_18_decimals());
         }
 
         /// Wrap initial operations required in any public staking function.
@@ -1890,7 +1881,7 @@ pub mod Staking {
             self: @ContractState, staker_address: ContractAddress, curr_epoch: Epoch,
         ) -> NormalizedAmount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
-            NormalizedAmountTrait::from_strk_amount(self.balance_at_curr_epoch(:trace, :curr_epoch))
+            self.balance_at_curr_epoch(:trace, :curr_epoch)
         }
 
         /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
@@ -1905,9 +1896,7 @@ pub mod Staking {
                 .staker_delegated_balance_trace
                 .entry(key: staker_address)
                 .entry(key: pool_contract);
-            NormalizedAmountTrait::from_amount_18_decimals(
-                amount: self.balance_at_curr_epoch(:trace, :curr_epoch),
-            )
+            self.balance_at_curr_epoch(:trace, :curr_epoch)
         }
 
         /// Returns the balance at the current epoch.
@@ -1916,15 +1905,16 @@ pub mod Staking {
         /// calls to `get_current_epoch()`.
         fn balance_at_curr_epoch(
             self: @ContractState, trace: StoragePath<Trace>, curr_epoch: Epoch,
-        ) -> Amount {
+        ) -> NormalizedAmount {
             let (epoch, balance) = trace.latest().unwrap_or_else(|err| panic!("{err}"));
-            if epoch <= curr_epoch {
+            let current_balance = if epoch <= curr_epoch {
                 balance
             } else {
                 let (epoch, balance) = trace.penultimate().unwrap_or_else(|err| panic!("{err}"));
                 assert!(epoch <= curr_epoch, "{}", GenericError::INVALID_PENULTIMATE);
                 balance
-            }
+            };
+            NormalizedAmountTrait::from_amount_18_decimals(amount: current_balance)
         }
 
         fn increase_staker_own_amount(
@@ -1933,10 +1923,7 @@ pub mod Staking {
             let old_own_balance = self.get_own_balance(:staker_address);
             let new_own_balance = old_own_balance + amount;
             self.insert_staker_own_balance(:staker_address, own_balance: new_own_balance);
-            self
-                .add_to_total_stake(
-                    token_address: STRK_TOKEN_ADDRESS, amount: amount.to_strk_amount(),
-                );
+            self.add_to_total_stake(token_address: STRK_TOKEN_ADDRESS, :amount);
             (old_own_balance, new_own_balance)
         }
 

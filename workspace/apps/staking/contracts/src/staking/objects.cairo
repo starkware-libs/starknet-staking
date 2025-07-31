@@ -1,5 +1,6 @@
 use core::cmp::max;
 use core::num::traits::{Bounded, Pow, Zero};
+use core::ops::AddAssign;
 use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
@@ -92,6 +93,17 @@ pub(crate) impl NormalizedAmountAdd of Add<NormalizedAmount> {
             Error::NORMALIZED_AMOUNT_ADD_OVERFLOW,
         );
         NormalizedAmount { amount_18_decimals: lhs.amount_18_decimals + rhs.amount_18_decimals }
+    }
+}
+
+pub(crate) impl NormalizedAmountAddAssign of AddAssign<NormalizedAmount, NormalizedAmount> {
+    fn add_assign(ref self: NormalizedAmount, rhs: NormalizedAmount) {
+        assert!(
+            Bounded::MAX - self.amount_18_decimals >= rhs.amount_18_decimals,
+            "{}",
+            Error::NORMALIZED_AMOUNT_ADD_OVERFLOW,
+        );
+        self.amount_18_decimals += rhs.amount_18_decimals;
     }
 }
 
