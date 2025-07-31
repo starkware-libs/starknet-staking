@@ -52,9 +52,7 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
                 || decimals == BTC_18D_CONFIG.decimals,
             "Unsupported decimals",
         );
-        NormalizedAmount {
-            amount_18_decimals: amount * 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into()),
-        }
+        NormalizedAmount { amount_18_decimals: amount * 10_u128.pow(18 - decimals.into()) }
     }
 
     /// Convert from `NormalizedAmount` to `Amount` in 18 decimals.
@@ -70,7 +68,7 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
                 || decimals == BTC_18D_CONFIG.decimals,
             "Unsupported decimals",
         );
-        *self.amount_18_decimals / 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into())
+        *self.amount_18_decimals / 10_u128.pow(18 - decimals.into())
     }
 }
 
