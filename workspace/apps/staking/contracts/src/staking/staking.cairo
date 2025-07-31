@@ -991,10 +991,14 @@ pub mod Staking {
             );
             assert!(to_pool != from_pool, "{}", Error::SELF_SWITCH_NOT_ALLOWED);
             let decimals = self.get_token_decimals(:token_address);
-            let switched_amount = NormalizedAmountTrait::from_native_amount(
+            let normalized_switched_amount = NormalizedAmountTrait::from_native_amount(
                 amount: switched_amount, :decimals,
             );
-            assert!(switched_amount <= old_intent_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
+            assert!(
+                normalized_switched_amount <= old_intent_amount,
+                "{}",
+                GenericError::AMOUNT_TOO_HIGH,
+            );
 
             let to_staker_info = self.internal_staker_info(staker_address: to_staker);
 
@@ -1010,17 +1014,17 @@ pub mod Staking {
             // Update `to_staker`'s delegated stake amount, and add to total stake.
             let old_delegated_stake = self
                 .get_delegated_balance(staker_address: to_staker, pool_contract: to_pool);
-            let new_delegated_stake = old_delegated_stake + switched_amount;
+            let new_delegated_stake = old_delegated_stake + normalized_switched_amount;
             self
                 .insert_staker_delegated_balance(
                     staker_address: to_staker,
                     pool_contract: to_pool,
                     delegated_balance: new_delegated_stake,
                 );
-            self.add_delegation_to_total_stake(:token_address, amount: switched_amount);
+            self.add_delegation_to_total_stake(:token_address, amount: normalized_switched_amount);
 
             // Update the undelegate intent. If the amount is zero, clear the intent.
-            let new_intent_amount = old_intent_amount - switched_amount;
+            let new_intent_amount = old_intent_amount - normalized_switched_amount;
             if new_intent_amount.is_zero() {
                 self.clear_undelegate_intent(:undelegate_intent_key);
             } else {
@@ -1031,9 +1035,7 @@ pub mod Staking {
             // Notify `to_pool` about the new delegation.
             let to_pool_dispatcher = IPoolDispatcher { contract_address: to_pool };
             to_pool_dispatcher
-                .enter_delegation_pool_from_staking_contract(
-                    amount: switched_amount.to_native_amount(:decimals), :data,
-                );
+                .enter_delegation_pool_from_staking_contract(amount: switched_amount, :data);
 
             // Emit events.
             self
