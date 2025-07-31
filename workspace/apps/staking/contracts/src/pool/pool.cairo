@@ -144,10 +144,9 @@ pub mod Pool {
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.staker_removed.write(false);
         self.cumulative_rewards_trace.insert(key: Zero::zero(), value: Zero::zero());
-        let (min_delegation_for_rewards, staking_rewards_base_value) = self
-            .get_reward_calculation_params(:token_address);
-        self.min_delegation_for_rewards.write(min_delegation_for_rewards);
-        self.staking_rewards_base_value.write(staking_rewards_base_value);
+        let config = self.get_token_rewards_config(:token_address);
+        self.min_delegation_for_rewards.write(config.min_for_rewards);
+        self.staking_rewards_base_value.write(config.base_value);
     }
 
     #[abi(embed_v0)]
@@ -934,15 +933,6 @@ pub mod Pool {
                 lhs: staking_rewards, rhs: self.staking_rewards_base_value.read(), div: total_stake,
             )
                 .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
-        }
-
-        /// Get the reward calculation parameters for the token.
-        /// Returns (min_amount_for_rewards, base_value).
-        fn get_reward_calculation_params(
-            self: @ContractState, token_address: ContractAddress,
-        ) -> (Amount, Amount) {
-            let config = self.get_token_rewards_config(:token_address);
-            (config.min_for_rewards, config.base_value)
         }
 
         /// Get token rewards configuration based on address and decimals.
