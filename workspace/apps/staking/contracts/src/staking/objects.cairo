@@ -48,6 +48,11 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
         NormalizedAmount { amount_18_decimals: amount * 10_u128.pow(18 - decimals.into()) }
     }
 
+    /// Convert from `Amount` in STRK decimals to `NormalizedAmount`.
+    fn from_strk_amount(amount: Amount) -> NormalizedAmount {
+        NormalizedAmount { amount_18_decimals: amount }
+    }
+
     /// Convert from `NormalizedAmount` to `Amount` in 18 decimals.
     fn to_amount_18_decimals(self: @NormalizedAmount) -> Amount {
         *self.amount_18_decimals

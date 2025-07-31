@@ -266,6 +266,7 @@ pub mod Staking {
                 !self.does_token_exist(token_address: staker_address), "{}", Error::STAKER_IS_TOKEN,
             );
             assert!(amount >= self.min_stake.read(), "{}", Error::AMOUNT_LESS_THAN_MIN_STAKE);
+            let normalized_amount = NormalizedAmountTrait::from_strk_amount(:amount);
 
             // Transfer funds from staker. Sufficient approvals is a pre-condition.
             let staking_contract = get_contract_address();
@@ -275,7 +276,7 @@ pub mod Staking {
                     sender: staker_address, recipient: staking_contract, amount: amount.into(),
                 );
 
-            self.insert_staker_own_balance(:staker_address, own_balance: amount);
+            self.insert_staker_own_balance(:staker_address, own_balance: normalized_amount);
 
             // Create the record for the staker.
             self
@@ -325,6 +326,7 @@ pub mod Staking {
                 GenericError::CALLER_CANNOT_INCREASE_STAKE,
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
+            let normalized_amount = NormalizedAmountTrait::from_strk_amount(:amount);
 
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
@@ -337,14 +339,17 @@ pub mod Staking {
                 );
 
             // Update staker's staked amount, and total stake.
-            let (old_self_stake, new_self_stake) = self
-                .increase_staker_own_amount(:staker_address, :amount);
+            let (normalized_old_self_stake, normalized_new_self_stake) = self
+                .increase_staker_own_amount(:staker_address, amount: normalized_amount);
 
             // Emit events.
+            let new_self_stake = normalized_new_self_stake.to_strk_amount();
             self
                 .emit(
                     Events::StakeOwnBalanceChanged {
-                        staker_address, old_self_stake, new_self_stake,
+                        staker_address,
+                        old_self_stake: normalized_old_self_stake.to_strk_amount(),
+                        new_self_stake: new_self_stake,
                     },
                 );
             new_self_stake
@@ -403,7 +408,7 @@ pub mod Staking {
                     );
             }
             // Write off the self stake from the total stake.
-            let old_self_stake = self.get_own_balance(:staker_address);
+            let old_self_stake = self.get_own_balance(:staker_address).to_strk_amount();
             self.remove_from_total_stake(token_address: STRK_TOKEN_ADDRESS, amount: old_self_stake);
 
             // Emit events.
@@ -434,7 +439,7 @@ pub mod Staking {
             // This is done here to avoid re-entrancy.
             self.write_staker_info(:staker_address, :staker_info);
 
-            let staker_amount = self.get_own_balance(:staker_address);
+            let staker_amount = self.get_own_balance(:staker_address).to_strk_amount();
             let staker_pool_info = self.staker_pool_info.entry(staker_address);
             self.remove_staker(:staker_address, :staker_info, :staker_pool_info);
 
@@ -508,7 +513,7 @@ pub mod Staking {
             let internal_staker_info = self.internal_staker_info(:staker_address);
             let mut staker_info: StakerInfoV1 = internal_staker_info.into();
             // Set staker amount and pool amount from staker balance trace.
-            staker_info.amount_own = self.get_own_balance(:staker_address);
+            staker_info.amount_own = self.get_own_balance(:staker_address).to_strk_amount();
             let staker_pool_info = self.staker_pool_info.entry(staker_address);
             if let Option::Some(pool_contract) = staker_pool_info.get_strk_pool() {
                 let pool_amount = self.get_delegated_balance(:staker_address, :pool_contract);
@@ -1266,7 +1271,9 @@ pub mod Staking {
             let current_epoch_starting_block = epoch_info.current_epoch_starting_block();
             AttestationInfoTrait::new(
                 staker_address: staker_address,
-                stake: self.get_staker_total_strk_balance_curr_epoch(:staker_address),
+                stake: self
+                    .get_staker_total_strk_balance_curr_epoch(:staker_address)
+                    .to_strk_amount(),
                 epoch_len: epoch_len,
                 epoch_id: epoch_id,
                 current_epoch_starting_block: current_epoch_starting_block,
@@ -1705,8 +1712,11 @@ pub mod Staking {
         ) -> Amount {
             let own_balance_curr_epoch = self
                 .get_staker_own_balance_curr_epoch(:staker_address, :curr_epoch);
+
             mul_wide_and_div(
-                lhs: strk_epoch_rewards, rhs: own_balance_curr_epoch, div: strk_total_stake,
+                lhs: strk_epoch_rewards,
+                rhs: own_balance_curr_epoch.to_strk_amount(),
+                div: strk_total_stake,
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
@@ -1791,12 +1801,12 @@ pub mod Staking {
         }
 
         fn insert_staker_own_balance(
-            ref self: ContractState, staker_address: ContractAddress, own_balance: Amount,
+            ref self: ContractState, staker_address: ContractAddress, own_balance: NormalizedAmount,
         ) {
             self
                 .staker_own_balance_trace
                 .entry(staker_address)
-                .insert(key: self.get_next_epoch(), value: own_balance);
+                .insert(key: self.get_next_epoch(), value: own_balance.to_strk_amount());
         }
 
         fn insert_staker_delegated_balance(
@@ -1832,11 +1842,13 @@ pub mod Staking {
         }
 
         /// Return the latest own balance recorded in the `staker_own_balance_trace`.
-        fn get_own_balance(self: @ContractState, staker_address: ContractAddress) -> Amount {
+        fn get_own_balance(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> NormalizedAmount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
             // Unwrap is safe since the trace must already be initialized.
             let (_, own_balance) = trace.latest().unwrap();
-            own_balance
+            NormalizedAmountTrait::from_strk_amount(amount: own_balance)
         }
 
         /// Return the latest delegated balance recorded in the `staker_delegated_balance_trace` of
@@ -1856,7 +1868,7 @@ pub mod Staking {
         /// Return the total STRK balance of the staker in the current epoch.
         fn get_staker_total_strk_balance_curr_epoch(
             self: @ContractState, staker_address: ContractAddress,
-        ) -> Amount {
+        ) -> NormalizedAmount {
             let curr_epoch = self.get_current_epoch();
             let curr_own_balance = self
                 .get_staker_own_balance_curr_epoch(:staker_address, :curr_epoch);
@@ -1869,16 +1881,16 @@ pub mod Staking {
             } else {
                 Zero::zero()
             };
-            curr_own_balance + curr_delegated_balance.to_strk_amount()
+            curr_own_balance + curr_delegated_balance
         }
 
         /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
         /// calls to `get_current_epoch()`.
         fn get_staker_own_balance_curr_epoch(
             self: @ContractState, staker_address: ContractAddress, curr_epoch: Epoch,
-        ) -> Amount {
+        ) -> NormalizedAmount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
-            self.balance_at_curr_epoch(:trace, :curr_epoch)
+            NormalizedAmountTrait::from_strk_amount(self.balance_at_curr_epoch(:trace, :curr_epoch))
         }
 
         /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
@@ -1916,12 +1928,15 @@ pub mod Staking {
         }
 
         fn increase_staker_own_amount(
-            ref self: ContractState, staker_address: ContractAddress, amount: Amount,
-        ) -> (Amount, Amount) {
+            ref self: ContractState, staker_address: ContractAddress, amount: NormalizedAmount,
+        ) -> (NormalizedAmount, NormalizedAmount) {
             let old_own_balance = self.get_own_balance(:staker_address);
             let new_own_balance = old_own_balance + amount;
             self.insert_staker_own_balance(:staker_address, own_balance: new_own_balance);
-            self.add_to_total_stake(token_address: STRK_TOKEN_ADDRESS, :amount);
+            self
+                .add_to_total_stake(
+                    token_address: STRK_TOKEN_ADDRESS, amount: amount.to_strk_amount(),
+                );
             (old_own_balance, new_own_balance)
         }
 
