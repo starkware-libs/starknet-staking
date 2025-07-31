@@ -92,8 +92,10 @@ pub mod Staking {
         // Deprecated global index of the staking system.
         // Was used in V0, to calculate the accrued interest.
         // global_index: Index,
+
         // Deprecated timestamp of the last global index update, used in V0.
         // global_index_last_update_timestamp: Timestamp,
+
         // Minimum amount of initial stake.
         min_stake: Amount,
         // Map staker address to their staker info.
@@ -104,8 +106,10 @@ pub mod Staking {
         eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
         // Deprecated field of a dispatcher of the token contract, used in V1.
         // token_dispatcher: IERC20Dispatcher,
+
         // Deprecated field of the total stake, used in V0.
         // total_stake: Amount,
+
         // The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
         // Undelegate intents from pool contracts.
@@ -126,6 +130,7 @@ pub mod Staking {
         prev_class_hash: Map<Version, ClassHash>,
         // Deprecated field of the total stake, used in V1.
         // total_stake_trace: Trace,
+
         // Map token address to checkpoints tracking total stake changes over time, with each
         // checkpoint mapping an epoch to the updated stake. Stakers that performed unstake_intent
         // are not included.
