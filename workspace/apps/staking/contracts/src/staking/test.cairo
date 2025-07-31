@@ -63,9 +63,9 @@ use staking::staking::interface::{
 use staking::staking::objects::{
     AttestationInfoTrait, EpochInfoTrait, InternalStakerInfoLatestTestTrait,
     InternalStakerInfoLatestTrait, InternalStakerInfoV1, InternalStakerPoolInfoV1,
-    StakerInfoIntoInternalStakerInfoV1ITrait, UndelegateIntentKey, UndelegateIntentValue,
-    UndelegateIntentValueTrait, UndelegateIntentValueZero, VersionedInternalStakerInfo,
-    VersionedInternalStakerInfoTrait,
+    NormalizedAmountTrait, StakerInfoIntoInternalStakerInfoV1ITrait, UndelegateIntentKey,
+    UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
+    VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
@@ -1211,7 +1211,9 @@ fn test_remove_from_delegation_pool_intent() {
     let expected_unpool_time = Time::now()
         .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
-        unpool_time: expected_unpool_time, amount: intent_amount, token_address,
+        unpool_time: expected_unpool_time,
+        amount: NormalizedAmountTrait::from_strk_amount(intent_amount),
+        token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 
@@ -1277,7 +1279,9 @@ fn test_remove_from_delegation_pool_intent() {
     let expected_unpool_time = Time::now()
         .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
-        unpool_time: expected_unpool_time, amount: new_intent_amount, token_address,
+        unpool_time: expected_unpool_time,
+        amount: NormalizedAmountTrait::from_strk_amount(new_intent_amount),
+        token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 
@@ -1348,7 +1352,9 @@ fn test_remove_from_delegation_pool_intent_assertions() {
         pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
     let invalid_undelegate_intent_value = UndelegateIntentValue {
-        unpool_time: Timestamp { seconds: 1 }, amount: 0, token_address,
+        unpool_time: Timestamp { seconds: 1 },
+        amount: NormalizedAmountTrait::from_strk_amount(0),
+        token_address,
     };
     store_to_simple_map(
         map_selector: selector!("pool_exit_intents"),
@@ -1554,7 +1560,11 @@ fn test_switch_staking_delegation_pool() {
         key: undelegate_intent_key,
         contract: staking_contract,
     );
-    assert!(actual_undelegate_intent_value.amount == expected_undelegate_intent_value_amount);
+    assert!(
+        actual_undelegate_intent_value
+            .amount
+            .to_strk_amount() == expected_undelegate_intent_value_amount,
+    );
     assert!(actual_undelegate_intent_value.unpool_time.is_non_zero());
     assert!(to_pool_dispatcher.pool_member_info_v1(:pool_member).amount == switched_amount);
     let caller_address = from_pool_contract;
@@ -3264,7 +3274,9 @@ fn test_undelegate_intent_is_zero() {
 #[test]
 fn test_undelegate_intent_is_non_zero() {
     let d = UndelegateIntentValue {
-        unpool_time: UNPOOL_TIME, amount: 1, token_address: Zero::zero(),
+        unpool_time: UNPOOL_TIME,
+        amount: NormalizedAmountTrait::from_strk_amount(1),
+        token_address: Zero::zero(),
     };
     assert!(!d.is_zero());
     assert!(d.is_non_zero());
@@ -3277,11 +3289,15 @@ fn test_undelegate_intent_is_valid() {
     };
     assert!(d.is_valid());
     let d = UndelegateIntentValue {
-        unpool_time: UNPOOL_TIME, amount: 1, token_address: Zero::zero(),
+        unpool_time: UNPOOL_TIME,
+        amount: NormalizedAmountTrait::from_strk_amount(1),
+        token_address: Zero::zero(),
     };
     assert!(d.is_valid());
     let d = UndelegateIntentValue {
-        unpool_time: Zero::zero(), amount: 1, token_address: Zero::zero(),
+        unpool_time: Zero::zero(),
+        amount: NormalizedAmountTrait::from_strk_amount(1),
+        token_address: Zero::zero(),
     };
     assert!(!d.is_valid());
     let d = UndelegateIntentValue {
@@ -3297,7 +3313,9 @@ fn test_undelegate_intent_assert_valid() {
     };
     d.assert_valid();
     let d = UndelegateIntentValue {
-        unpool_time: UNPOOL_TIME, amount: 1, token_address: Zero::zero(),
+        unpool_time: UNPOOL_TIME,
+        amount: NormalizedAmountTrait::from_strk_amount(1),
+        token_address: Zero::zero(),
     };
     d.assert_valid();
 }
@@ -3306,7 +3324,9 @@ fn test_undelegate_intent_assert_valid() {
 #[should_panic(expected: "Invalid undelegate intent value")]
 fn test_undelegate_intent_assert_valid_panic() {
     let d = UndelegateIntentValue {
-        unpool_time: Zero::zero(), amount: 1, token_address: Zero::zero(),
+        unpool_time: Zero::zero(),
+        amount: NormalizedAmountTrait::from_strk_amount(1),
+        token_address: Zero::zero(),
     };
     d.assert_valid();
 }

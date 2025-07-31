@@ -40,8 +40,8 @@ use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
 use staking::staking::objects::{
-    InternalStakerInfoLatestTestTrait, UndelegateIntentKey, UndelegateIntentValue,
-    UndelegateIntentValueZero,
+    InternalStakerInfoLatestTestTrait, NormalizedAmountTrait, UndelegateIntentKey,
+    UndelegateIntentValue, UndelegateIntentValueZero,
 };
 use staking::types::InternalPoolMemberInfoLatest;
 use staking::{event_test_utils, test_utils};
@@ -883,7 +883,7 @@ fn test_exit_delegation_pool_intent() {
     );
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
-        amount: expected_pool_member_info.unpool_amount.into(),
+        amount: NormalizedAmountTrait::from_strk_amount(expected_pool_member_info.unpool_amount),
         token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
@@ -1412,7 +1412,7 @@ fn test_partial_undelegate() {
     );
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
-        amount: expected_pool_member_info.unpool_amount,
+        amount: NormalizedAmountTrait::from_strk_amount(expected_pool_member_info.unpool_amount),
         token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
