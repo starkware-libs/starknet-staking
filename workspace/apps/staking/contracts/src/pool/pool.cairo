@@ -214,15 +214,15 @@ pub mod Pool {
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
 
-            // Update the pool member's balance checkpoint.
-            let old_delegated_stake = self.increase_next_epoch_balance(:pool_member, :amount);
-            let new_delegated_stake = old_delegated_stake + amount;
-
             // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
             let staker_address = self.staker_address.read();
             self.transfer_from_delegator(pool_member: caller_address, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
+
+            // Update the pool member's balance checkpoint.
+            let old_delegated_stake = self.increase_next_epoch_balance(:pool_member, :amount);
+            let new_delegated_stake = old_delegated_stake + amount;
 
             // Emit events.
             self
