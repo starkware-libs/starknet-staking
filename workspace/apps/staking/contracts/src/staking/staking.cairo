@@ -1301,16 +1301,9 @@ pub mod Staking {
             let entries_to_migrate = min(len, MAX_MIGRATION_TRACE_ENTRIES);
             assert(entries_to_migrate > 0, 'No entries to migrate');
             let own_balance_trace = self.staker_own_balance_trace.entry(staker_address);
-            let delegated_balance_trace = if pool_contract.is_some() {
-                Option::Some(
-                    self
-                        .staker_delegated_balance_trace
-                        .entry(key: staker_address)
-                        .entry(key: pool_contract.unwrap()),
-                )
-            } else {
-                Option::None
-            };
+            let staker_pool_traces = self.staker_delegated_balance_trace.entry(staker_address);
+            let delegated_balance_trace = pool_contract
+                .map(|contract_address| staker_pool_traces.entry(contract_address));
             for i in (len - entries_to_migrate)..len {
                 let (epoch, staker_balance) = deprecated_trace.at(i);
                 let own_balance = staker_balance.amount_own();
