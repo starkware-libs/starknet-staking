@@ -1,8 +1,6 @@
 use core::cmp::max;
 use core::num::traits::{Bounded, Pow, Zero};
-use staking::constants::{
-    BTC_18D_CONFIG, BTC_8D_CONFIG, STARTING_EPOCH, STRK_CONFIG, STRK_TOKEN_ADDRESS,
-};
+use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
 use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
@@ -46,12 +44,7 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
 
     /// Convert from `Amount` in the given `decimals` to `NormalizedAmount`.
     fn from_native_amount(amount: Amount, decimals: u8) -> NormalizedAmount {
-        assert!(
-            decimals == STRK_CONFIG.decimals
-                || decimals == BTC_8D_CONFIG.decimals
-                || decimals == BTC_18D_CONFIG.decimals,
-            "Unsupported decimals",
-        );
+        assert!(decimals >= 5 && decimals <= 18, "Unsupported decimals");
         NormalizedAmount { amount_18_decimals: amount * 10_u128.pow(18 - decimals.into()) }
     }
 
@@ -62,12 +55,7 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
 
     /// Convert from `NormalizedAmount` to `Amount` in the given `decimals`.
     fn to_native_amount(self: @NormalizedAmount, decimals: u8) -> Amount {
-        assert!(
-            decimals == STRK_CONFIG.decimals
-                || decimals == BTC_8D_CONFIG.decimals
-                || decimals == BTC_18D_CONFIG.decimals,
-            "Unsupported decimals",
-        );
+        assert!(decimals >= 5 && decimals <= 18, "Unsupported decimals");
         *self.amount_18_decimals / 10_u128.pow(18 - decimals.into())
     }
 
