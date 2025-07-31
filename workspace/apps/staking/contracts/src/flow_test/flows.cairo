@@ -1,7 +1,7 @@
 use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
 use snforge_std::{TokenImpl, start_cheat_block_number_global};
-use staking::constants::{MIN_ATTESTATION_WINDOW, STRK_IN_FRIS};
+use staking::constants::{BTC_18D_CONFIG, MIN_ATTESTATION_WINDOW, STRK_IN_FRIS};
 use staking::errors::GenericError;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
@@ -1095,7 +1095,7 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
 
         // Setup delegators.
         let first_btc_delegator_amount = TEST_MIN_BTC_FOR_REWARDS;
-        let second_btc_delegator_amount = first_btc_delegator_amount * 2;
+        let second_btc_delegator_amount = BTC_18D_CONFIG.min_for_rewards * 2;
         let third_btc_delegator_amount = first_btc_delegator_amount * 3;
         let first_btc_delegator = system
             .new_btc_delegator(amount: first_btc_delegator_amount, token: first_btc_token);
@@ -1806,7 +1806,8 @@ pub(crate) struct DisabledTokenDelegationFlow {}
 pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelegationFlow> {
     fn test(self: DisabledTokenDelegationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
-        let delegated_amount = TEST_MIN_BTC_FOR_REWARDS;
+        let delegated_amount_8 = TEST_MIN_BTC_FOR_REWARDS;
+        let delegated_amount_18 = BTC_18D_CONFIG.min_for_rewards;
         let staker = system.new_staker(:amount);
         let commission = 200;
 
@@ -1828,15 +1829,15 @@ pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelega
             .set_open_for_delegation(:staker, token_address: second_token_address);
 
         // Delegate.
-        let delegator = system.new_btc_delegator(amount: delegated_amount, token: token);
+        let delegator = system.new_btc_delegator(amount: delegated_amount_8, token: token);
         let second_delegator = system
-            .new_btc_delegator(amount: delegated_amount, token: second_token);
-        system.delegate_btc(:delegator, :pool, amount: delegated_amount, :token);
+            .new_btc_delegator(amount: delegated_amount_18, token: second_token);
+        system.delegate_btc(:delegator, :pool, amount: delegated_amount_8, :token);
         system
             .delegate_btc(
                 delegator: second_delegator,
                 pool: second_pool,
-                amount: delegated_amount,
+                amount: delegated_amount_18,
                 token: second_token,
             );
 
@@ -1862,7 +1863,7 @@ pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelega
 
         // Test rewards in the epoch after we disabled the token.
         let (_, expected_rewards) = calculate_staker_btc_pool_rewards(
-            pool_balance: delegated_amount,
+            pool_balance: delegated_amount_18,
             :commission,
             staking_contract: system.staking.address,
             minting_curve_contract: system.minting_curve.address,
@@ -2032,7 +2033,7 @@ pub(crate) impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> 
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
-        let delegated_amount = TEST_MIN_BTC_FOR_REWARDS;
+        let delegated_amount = BTC_18D_CONFIG.min_for_rewards;
 
         // Stake and set commission.
         system.stake(:staker, :amount, pool_enabled: false, :commission);
@@ -3049,7 +3050,7 @@ pub(crate) impl MultiPoolExitIntentFlowImpl of FlowTrait<MultiPoolExitIntentFlow
         let amount = system.staking.get_min_stake();
         let strk_delegator_amount = amount * 2;
         let first_btc_amount = TEST_MIN_BTC_FOR_REWARDS * 3;
-        let second_btc_amount = TEST_MIN_BTC_FOR_REWARDS * 4;
+        let second_btc_amount = BTC_18D_CONFIG.min_for_rewards * 4;
         let staker = system.new_staker(:amount);
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: true, :commission);

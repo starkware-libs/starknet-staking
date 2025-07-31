@@ -16,7 +16,7 @@ use staking::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
-use staking::constants::{DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
+use staking::constants::{BTC_18D_CONFIG, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
 };
@@ -1132,7 +1132,7 @@ pub(crate) impl SystemImpl of SystemTrait {
     }
 
     fn deploy_second_btc_token(self: SystemState) -> Token {
-        self.deploy_new_btc_token(name: BTC_TOKEN_NAME_2(), decimals: TEST_BTC_DECIMALS)
+        self.deploy_new_btc_token(name: BTC_TOKEN_NAME_2(), decimals: BTC_18D_CONFIG.decimals)
     }
 
     fn deploy_new_btc_token(self: SystemState, name: ByteArray, decimals: u8) -> Token {
