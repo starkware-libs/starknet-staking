@@ -13,7 +13,7 @@ pub mod Staking {
     };
     use staking::constants::{
         BTC_18D_CONFIG, BTC_8D_CONFIG, DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW,
-        STAKING_V2_PREV_CONTRACT_VERSION, STARTING_EPOCH, STRK_CONFIG, STRK_TOKEN_ADDRESS,
+        STAKING_V2_PREV_CONTRACT_VERSION, STARTING_EPOCH, STRK_TOKEN_ADDRESS,
     };
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
@@ -518,10 +518,7 @@ pub mod Staking {
                     .pool_info =
                         Option::Some(
                             StakerPoolInfoV1 {
-                                pool_contract,
-                                amount: pool_amount
-                                    .to_native_amount(decimals: STRK_CONFIG.decimals),
-                                commission,
+                                pool_contract, amount: pool_amount.to_strk_amount(), commission,
                             },
                         );
             }
@@ -1872,8 +1869,7 @@ pub mod Staking {
             } else {
                 Zero::zero()
             };
-            curr_own_balance
-                + curr_delegated_balance.to_native_amount(decimals: STRK_CONFIG.decimals)
+            curr_own_balance + curr_delegated_balance.to_strk_amount()
         }
 
         /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
