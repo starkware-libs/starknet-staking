@@ -175,16 +175,17 @@ pub mod Pool {
             let token_dispatcher = self.token_dispatcher.read();
             assert!(token_dispatcher.contract_address != pool_member, "{}", Error::CALLER_IS_TOKEN);
 
-            // Create the pool member record.
-            self
-                .pool_member_info
-                .write(pool_member, VInternalPoolMemberInfoTrait::new_latest(:reward_address));
-            self.set_next_epoch_balance(:pool_member, :amount);
-
             // Transfer funds from the delegator to the staking contract.
             let staker_address = self.staker_address.read();
             self.transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
+
+            self.set_next_epoch_balance(:pool_member, :amount);
+
+            // Create the pool member record.
+            self
+                .pool_member_info
+                .write(pool_member, VInternalPoolMemberInfoTrait::new_latest(:reward_address));
 
             // Emit events.
             self
