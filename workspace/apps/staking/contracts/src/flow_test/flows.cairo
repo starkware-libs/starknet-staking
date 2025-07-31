@@ -1291,6 +1291,99 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl of FlowTrait<PoolMemberInfoAf
     }
 }
 
+/// Flow:
+/// Staker1 stake
+/// Staker2 stake
+/// Upgrade
+/// Migrate stakers
+/// Test staker_pool_info for both
+/// Both attest
+/// Test rewards both
+#[derive(Drop, Copy)]
+pub(crate) struct MultipleStakersMigrationAttestFlow {
+    pub(crate) staker1: Option<Staker>,
+    pub(crate) staker2: Option<Staker>,
+    pub(crate) staker_info1: Option<StakerInfoV1>,
+    pub(crate) staker_info2: Option<StakerInfoV1>,
+    pub(crate) commission: Option<Commission>,
+    pub(crate) pool_address: Option<ContractAddress>,
+}
+pub(crate) impl MultipleStakersMigrationAttestFlowImpl of FlowTrait<
+    MultipleStakersMigrationAttestFlow,
+> {
+    fn setup_v1(ref self: MultipleStakersMigrationAttestFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker1 = system.new_staker(amount: amount * 2);
+        let staker2 = system.new_staker(amount: amount * 2);
+        let commission = 200;
+        system.stake(staker: staker1, amount: amount, pool_enabled: false, :commission);
+        system.stake(staker: staker2, amount: amount, pool_enabled: true, :commission);
+        system.advance_epoch();
+
+        self.staker1 = Option::Some(staker1);
+        self.staker2 = Option::Some(staker2);
+        self.staker_info1 = Option::Some(system.staker_info_v1(staker: staker1));
+        self.staker_info2 = Option::Some(system.staker_info_v1(staker: staker2));
+        self.commission = Option::Some(commission);
+        self.pool_address = Option::Some(system.staking.get_pool(staker: staker2));
+    }
+
+    fn test(self: MultipleStakersMigrationAttestFlow, ref system: SystemState) {
+        let staker1 = self.staker1.unwrap();
+        let staker2 = self.staker2.unwrap();
+        system.staker_migration(staker_address: staker1.staker.address);
+        system.staker_migration(staker_address: staker2.staker.address);
+        let staker_info1 = self.staker_info1.unwrap();
+        let staker_info2 = self.staker_info2.unwrap();
+        let commission = self.commission.unwrap();
+        let pool_address = self.pool_address.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        // Test pool info.
+        let expected_pool_info1 = StakerPoolInfoV2 {
+            commission: Option::None, pools: array![].span(),
+        };
+        let expected_pool_info2 = StakerPoolInfoV2 {
+            commission: Option::Some(commission),
+            pools: array![
+                PoolInfo {
+                    token_address: system.token.contract_address(),
+                    pool_contract: pool_address,
+                    amount: 0,
+                },
+            ]
+                .span(),
+        };
+        let actual_pool_info1 = system.staker_pool_info(staker: staker1);
+        let actual_pool_info2 = system.staker_pool_info(staker: staker2);
+        assert!(actual_pool_info1 == expected_pool_info1);
+        assert!(actual_pool_info2 == expected_pool_info2);
+
+        // Test staker_info.
+        let actual_staker_info1 = system.staker_info_v1(staker: staker1);
+        let actual_staker_info2 = system.staker_info_v1(staker: staker2);
+        assert!(actual_staker_info1 == staker_info1);
+        assert!(actual_staker_info2 == staker_info2);
+
+        // Second staker window is earlier.
+        system.advance_block_into_attestation_window(staker: staker2);
+        system.attest(staker: staker2);
+        system.advance_block_into_attestation_window(staker: staker1);
+        system.attest(staker: staker1);
+        system.advance_epoch();
+
+        // Test rewards.
+        let (expected_rewards1, _) = calculate_staker_strk_rewards(
+            staker_info: staker_info1, :staking_contract, :minting_curve_contract,
+        );
+        let actual_rewards1 = system.staker_claim_rewards(staker: staker1);
+        let actual_rewards2 = system.staker_claim_rewards(staker: staker2);
+        assert!(actual_rewards1 == expected_rewards1);
+        assert!(actual_rewards2 == actual_rewards1);
+    }
+}
+
 /// Test pool member info migration with internal_pool_member_info, get_internal_pool_member_info
 /// and pool_member_info_v1 functions.
 /// Flow:

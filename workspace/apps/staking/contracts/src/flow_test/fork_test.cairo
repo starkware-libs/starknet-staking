@@ -25,6 +25,20 @@ fn delegator_intent_after_staker_action_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn multiple_stakers_migration_attest_regression_test() {
+    let mut flow = flows::MultipleStakersMigrationAttestFlow {
+        staker1: Option::None,
+        staker2: Option::None,
+        staker_info1: Option::None,
+        staker_info2: Option::None,
+        commission: Option::None,
+        pool_address: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn delegator_intent_regression_test() {
     let mut flow = flows::DelegatorIntentFlow {};
     test_flow_mainnet(ref :flow);
