@@ -943,21 +943,16 @@ pub mod Staking {
             let token_address = self.get_undelegate_intent_token(:undelegate_intent);
             let decimals = self.get_token_decimals(:token_address);
             // Transfer the intent amount to the pool contract.
+            let native_amount = undelegate_amount.to_native_amount(:decimals);
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             token_dispatcher
-                .checked_transfer(
-                    recipient: pool_contract,
-                    amount: undelegate_amount.to_native_amount(:decimals).into(),
-                );
+                .checked_transfer(recipient: pool_contract, amount: native_amount.into());
 
             // Emit event.
             self
                 .emit(
                     Events::RemoveFromDelegationPoolAction {
-                        pool_contract,
-                        token_address,
-                        identifier,
-                        amount: undelegate_amount.to_native_amount(:decimals),
+                        pool_contract, token_address, identifier, amount: native_amount,
                     },
                 );
         }
