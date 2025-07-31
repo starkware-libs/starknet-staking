@@ -546,15 +546,10 @@ pub mod Staking {
             let mut pools: Array<PoolInfo> = array![];
             for (pool_contract, token_address) in internal_staker_pool_info.pools {
                 let decimals = self.get_token_decimals(:token_address);
-                let amount = self.get_delegated_balance(:staker_address, :pool_contract);
-                pools
-                    .append(
-                        PoolInfo {
-                            pool_contract,
-                            token_address,
-                            amount: amount.to_native_amount(:decimals),
-                        },
-                    );
+                let amount = self
+                    .get_delegated_balance(:staker_address, :pool_contract)
+                    .to_native_amount(:decimals);
+                pools.append(PoolInfo { pool_contract, token_address, amount });
             }
             StakerPoolInfoV2 { commission, pools: pools.span() }
         }
