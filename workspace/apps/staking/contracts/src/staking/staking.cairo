@@ -435,7 +435,6 @@ pub mod Staking {
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
             // Return delegated stake to pools and zero their balances.
             self.transfer_to_pools_when_unstake(:staker_address, :staker_pool_info);
-            // Remove staker.
             staker_amount
         }
 
