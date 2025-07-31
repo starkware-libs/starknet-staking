@@ -898,7 +898,7 @@ pub mod Pool {
             let staking_dispatcher = IStakingDispatcher {
                 contract_address: self.staking_pool_dispatcher.read().contract_address,
             };
-            // The staker must have commission since he has a pool (this contract). So unwrap is
+            // The staker must have commission since it has a pool (this contract). So unwrap is
             // safe.
             staking_dispatcher
                 .staker_pool_info(staker_address: self.staker_address.read())
