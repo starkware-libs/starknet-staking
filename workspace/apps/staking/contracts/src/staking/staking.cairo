@@ -819,25 +819,23 @@ pub mod Staking {
                 .get_pool_token(:pool_contract)
                 .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
             let decimals = self.get_token_decimals(:token_address);
-            let amount = NormalizedAmountTrait::from_native_amount(:amount, :decimals);
+            let normalized_amount = NormalizedAmountTrait::from_native_amount(:amount, :decimals);
 
             // Update the staker's staked amount, and add to total_stake.
             let old_delegated_stake = self.get_delegated_balance(:staker_address, :pool_contract);
-            let new_delegated_stake = old_delegated_stake + amount;
+            let new_delegated_stake = old_delegated_stake + normalized_amount;
             self
                 .insert_staker_delegated_balance(
                     :staker_address, :pool_contract, delegated_balance: new_delegated_stake,
                 );
-            self.add_delegation_to_total_stake(:token_address, :amount);
+            self.add_delegation_to_total_stake(:token_address, amount: normalized_amount);
 
             // Transfer funds from the pool contract to the staking contract.
             // Sufficient approval is a pre-condition.
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             token_dispatcher
                 .checked_transfer_from(
-                    sender: pool_contract,
-                    recipient: get_contract_address(),
-                    amount: amount.to_native_amount(:decimals).into(),
+                    sender: pool_contract, recipient: get_contract_address(), amount: amount.into(),
                 );
 
             // Emit event.
