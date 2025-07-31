@@ -868,14 +868,14 @@ pub mod Staking {
                 .get_pool_token(:pool_contract)
                 .expect_with_err(Error::CALLER_IS_NOT_POOL_CONTRACT);
             let decimals = self.get_token_decimals(:token_address);
-            let amount = NormalizedAmountTrait::from_native_amount(:amount, :decimals);
+            let normalized_amount = NormalizedAmountTrait::from_native_amount(:amount, :decimals);
 
             // Update the delegated stake according to the new intent.
             let undelegate_intent_key = UndelegateIntentKey { pool_contract, identifier };
             let old_intent_amount = NormalizedAmountTrait::from_amount_18_decimals(
                 self.get_pool_exit_intent(:undelegate_intent_key).amount,
             );
-            let new_intent_amount = amount;
+            let new_intent_amount = normalized_amount;
             // After this call, the staker balance will be updated.
             let (old_delegated_stake, new_delegated_stake) = self
                 .update_delegated_stake(
@@ -899,7 +899,7 @@ pub mod Staking {
                         token_address,
                         identifier,
                         old_intent_amount: old_intent_amount.to_native_amount(:decimals),
-                        new_intent_amount: new_intent_amount.to_native_amount(:decimals),
+                        new_intent_amount: amount,
                     },
                 );
             // If the staker is in the process of unstaking (intent called),
