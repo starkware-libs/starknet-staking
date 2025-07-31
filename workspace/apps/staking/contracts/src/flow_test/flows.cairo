@@ -27,7 +27,7 @@ use staking::test_utils::constants::{
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
     calculate_staker_strk_rewards_with_amount_and_pool_info, calculate_strk_pool_rewards,
-    calculate_strk_pool_rewards_with_pool_balance, compute_rewards_for_trace, deserialize_option,
+    calculate_strk_pool_rewards_with_pool_balance, compute_rewards_per_unit, deserialize_option,
     load_from_iterable_map, load_from_trace, load_trace_length, strk_pool_update_rewards,
     to_amount_18_decimals,
 };
@@ -4173,7 +4173,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
         sigma +=
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
@@ -4196,7 +4196,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
         sigma +=
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
@@ -4219,7 +4219,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
         sigma +=
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
@@ -4236,7 +4236,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         sigma +=
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
@@ -4255,13 +4255,13 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
         );
         let from_sigma = sigma;
         sigma +=
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
         system.advance_epoch_and_attest(:staker);
         sigma +=
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
         delegator_1_rewards +=
@@ -4285,7 +4285,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
         sigma +=
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 

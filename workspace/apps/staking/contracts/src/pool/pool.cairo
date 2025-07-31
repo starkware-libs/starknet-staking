@@ -557,7 +557,7 @@ pub mod Pool {
                     key: self.get_current_epoch(),
                     value: latest
                         + self
-                            .compute_rewards_for_trace(
+                            .compute_rewards_per_unit(
                                 staking_rewards: rewards, total_stake: pool_balance,
                             ),
                 );
@@ -923,7 +923,7 @@ pub mod Pool {
         /// **Note**: Delegation rewards lost when pool balance is less than
         /// `min_delegation_for_rewards`. The staking contract continues to forward
         /// `pool_rewards` to the pool contract even in this case.
-        fn compute_rewards_for_trace(
+        fn compute_rewards_per_unit(
             self: @ContractState, staking_rewards: Amount, total_stake: Amount,
         ) -> Index {
             // Return zero if the total stake is too small, to avoid overflow below.
