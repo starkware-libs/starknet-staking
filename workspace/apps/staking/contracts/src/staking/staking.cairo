@@ -688,7 +688,7 @@ pub mod Staking {
                     Error::COMMISSION_COMMITMENT_EXISTS,
                 );
             }
-            // Staker must have a commission since he has a pool.
+            // Staker must have a commission since it has a pool.
             let current_commission = staker_pool_info_mut.commission();
             assert!(current_commission <= max_commission, "{}", Error::MAX_COMMISSION_TOO_LOW);
             assert!(expiration_epoch > current_epoch, "{}", Error::EXPIRATION_EPOCH_TOO_EARLY);
