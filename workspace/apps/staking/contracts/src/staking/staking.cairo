@@ -155,6 +155,8 @@ pub mod Staking {
         btc_tokens: IterableMap<ContractAddress, (Epoch, bool)>,
         // Vector of staker addresses.
         stakers: Vec<ContractAddress>,
+        // Map token address to its decimals.
+        token_decimals: Map<ContractAddress, u8>,
     }
 
     #[event]
@@ -226,6 +228,7 @@ pub mod Staking {
             .tokens_total_stake_trace
             .entry(STRK_TOKEN_ADDRESS)
             .insert(key: STARTING_EPOCH, value: Zero::zero());
+        self.token_decimals.write(STRK_TOKEN_ADDRESS, 18);
     }
 
     #[abi(embed_v0)]
@@ -1135,8 +1138,15 @@ pub mod Staking {
             assert!(
                 self.btc_tokens.read(token_address).is_none(), "{}", Error::TOKEN_ALREADY_EXISTS,
             );
-            self.assert_btc_token_decimals(:token_address);
+            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+            let decimals = token_dispatcher.decimals();
+            assert!(
+                decimals == BTC_8D_CONFIG.decimals || decimals == BTC_18D_CONFIG.decimals,
+                "{}",
+                Error::INVALID_TOKEN_ADDRESS,
+            );
             self.btc_tokens.write(token_address, (STARTING_EPOCH, false));
+            self.token_decimals.write(token_address, decimals);
             // Initialize the token total stake trace.
             self
                 .tokens_total_stake_trace
@@ -1968,15 +1978,6 @@ pub mod Staking {
             );
         }
 
-        fn assert_btc_token_decimals(self: @ContractState, token_address: ContractAddress) {
-            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
-            let decimals = token_dispatcher.decimals();
-            assert!(
-                decimals == BTC_8D_CONFIG.decimals || decimals == BTC_18D_CONFIG.decimals,
-                "{}",
-                Error::INVALID_TOKEN_ADDRESS,
-            );
-        }
 
         fn does_token_exist(self: @ContractState, token_address: ContractAddress) -> bool {
             token_address == STRK_TOKEN_ADDRESS || self.btc_tokens.read(token_address).is_some()
@@ -2000,8 +2001,7 @@ pub mod Staking {
         }
 
         fn get_token_decimals(self: @ContractState, token_address: ContractAddress) -> u8 {
-            let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
-            token_dispatcher.decimals()
+            self.token_decimals.read(token_address)
         }
     }
 

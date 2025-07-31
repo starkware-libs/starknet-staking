@@ -22,6 +22,8 @@ mod StakingEICV1toV2 {
         /// checkpoint mapping an epoch to the updated stake. Stakers that performed unstake_intent
         /// are not included.
         tokens_total_stake_trace: Map<ContractAddress, Trace>,
+        /// Map token address to its decimals.
+        token_decimals: Map<ContractAddress, u8>,
         // --- Existing fields ---
         /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
@@ -50,7 +52,10 @@ mod StakingEICV1toV2 {
             assert!(pool_contract_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
             self.pool_contract_class_hash.write(pool_contract_class_hash);
 
-            // 3. Migrate total_stake_trace.
+            // 3. Set STRK token decimals.
+            self.token_decimals.write(STRK_TOKEN_ADDRESS, 18);
+
+            // 4. Migrate total_stake_trace.
             self.migrate_total_stake_trace();
         }
     }
