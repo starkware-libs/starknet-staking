@@ -1208,7 +1208,7 @@ pub(crate) fn calculate_pool_member_rewards(
 /// Compute the rewards for the pool trace.
 ///
 /// Precondition: decimals must be either `STRK_DECIMALS` or valid `BTC_DECIMALS`.
-pub(crate) fn compute_rewards_for_trace(
+pub(crate) fn compute_rewards_per_unit(
     staking_rewards: Amount, total_stake: Amount, token_address: ContractAddress,
 ) -> Index {
     let (min_amount_for_rewards, base_value) = get_reward_calculation_params(:token_address);
@@ -1242,11 +1242,11 @@ mod tests {
     use super::{
         BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8, BTC_TOKEN_NAME,
         MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, OWNER_ADDRESS, STRK_BASE_VALUE, STRK_IN_FRIS,
-        compute_rewards_for_trace, deploy_mock_erc20_decimals_contract,
+        compute_rewards_per_unit, deploy_mock_erc20_decimals_contract,
     };
 
     #[test]
-    fn test_compute_rewards_for_trace() {
+    fn test_compute_rewards_per_unit() {
         let btc_token_address_8 = deploy_mock_erc20_decimals_contract(
             initial_supply: Zero::zero(),
             owner_address: OWNER_ADDRESS(),
@@ -1260,32 +1260,32 @@ mod tests {
             decimals: BTC_DECIMALS_18,
         );
         assert!(
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 STRK_IN_FRIS, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
             ) == STRK_BASE_VALUE,
         );
         assert!(
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 STRK_IN_FRIS, STRK_IN_FRIS - 1, STRK_TOKEN_ADDRESS,
             ) == Zero::zero(),
         );
         assert!(
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 MIN_BTC_FOR_REWARDS_8, MIN_BTC_FOR_REWARDS_8, btc_token_address_8,
             ) == BTC_BASE_VALUE_8,
         );
         assert!(
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 MIN_BTC_FOR_REWARDS_8, MIN_BTC_FOR_REWARDS_8 - 1, btc_token_address_8,
             ) == Zero::zero(),
         );
         assert!(
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 BTC_BASE_VALUE_18, BTC_BASE_VALUE_18, btc_token_address_18,
             ) == BTC_BASE_VALUE_18,
         );
         assert!(
-            compute_rewards_for_trace(
+            compute_rewards_per_unit(
                 MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_18 - 1, btc_token_address_18,
             ) == Zero::zero(),
         );
