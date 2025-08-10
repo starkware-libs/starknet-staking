@@ -266,7 +266,7 @@ pub mod Staking {
                 !self.does_token_exist(token_address: staker_address), "{}", Error::STAKER_IS_TOKEN,
             );
             assert!(amount >= self.min_stake.read(), "{}", Error::AMOUNT_LESS_THAN_MIN_STAKE);
-            let normalized_amount = NormalizedAmountTrait::from_strk_amount(:amount);
+            let normalized_amount = NormalizedAmountTrait::from_strk_native_amount(:amount);
 
             // Transfer funds from staker. Sufficient approvals is a pre-condition.
             let staking_contract = get_contract_address();
@@ -326,7 +326,7 @@ pub mod Staking {
                 GenericError::CALLER_CANNOT_INCREASE_STAKE,
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
-            let normalized_amount = NormalizedAmountTrait::from_strk_amount(:amount);
+            let normalized_amount = NormalizedAmountTrait::from_strk_native_amount(:amount);
 
             // Transfer funds from caller (which is either the staker or their reward address).
             let staking_contract_address = get_contract_address();
@@ -1826,7 +1826,7 @@ pub mod Staking {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
             // Unwrap is safe since the trace must already be initialized.
             let (_, own_balance) = trace.latest().unwrap();
-            NormalizedAmountTrait::from_strk_amount(amount: own_balance)
+            NormalizedAmountTrait::from_strk_native_amount(amount: own_balance)
         }
 
         /// Return the latest delegated balance recorded in the `staker_delegated_balance_trace` of

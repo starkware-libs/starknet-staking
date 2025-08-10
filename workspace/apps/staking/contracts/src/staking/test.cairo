@@ -1212,7 +1212,7 @@ fn test_remove_from_delegation_pool_intent() {
         .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time,
-        amount: NormalizedAmountTrait::from_strk_amount(intent_amount),
+        amount: NormalizedAmountTrait::from_strk_native_amount(intent_amount),
         token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
@@ -1280,7 +1280,7 @@ fn test_remove_from_delegation_pool_intent() {
         .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time,
-        amount: NormalizedAmountTrait::from_strk_amount(new_intent_amount),
+        amount: NormalizedAmountTrait::from_strk_native_amount(new_intent_amount),
         token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
@@ -1353,7 +1353,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     };
     let invalid_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: Timestamp { seconds: 1 },
-        amount: NormalizedAmountTrait::from_strk_amount(0),
+        amount: NormalizedAmountTrait::from_strk_native_amount(0),
         token_address,
     };
     store_to_simple_map(
@@ -3275,7 +3275,7 @@ fn test_undelegate_intent_is_zero() {
 fn test_undelegate_intent_is_non_zero() {
     let d = UndelegateIntentValue {
         unpool_time: UNPOOL_TIME,
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     assert!(!d.is_zero());
@@ -3290,13 +3290,13 @@ fn test_undelegate_intent_is_valid() {
     assert!(d.is_valid());
     let d = UndelegateIntentValue {
         unpool_time: UNPOOL_TIME,
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     assert!(d.is_valid());
     let d = UndelegateIntentValue {
         unpool_time: Zero::zero(),
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     assert!(!d.is_valid());
@@ -3314,7 +3314,7 @@ fn test_undelegate_intent_assert_valid() {
     d.assert_valid();
     let d = UndelegateIntentValue {
         unpool_time: UNPOOL_TIME,
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     d.assert_valid();
@@ -3325,7 +3325,7 @@ fn test_undelegate_intent_assert_valid() {
 fn test_undelegate_intent_assert_valid_panic() {
     let d = UndelegateIntentValue {
         unpool_time: Zero::zero(),
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     d.assert_valid();
