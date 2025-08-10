@@ -1856,10 +1856,10 @@ pub mod Staking {
             let curr_own_balance = self
                 .get_staker_own_balance_curr_epoch(:staker_address, :curr_epoch);
             let strk_pool = self.staker_pool_info.entry(staker_address).get_strk_pool();
-            let curr_delegated_balance = if strk_pool.is_some() {
+            let curr_delegated_balance = if let Some(strk_pool) = strk_pool {
                 self
                     .get_staker_delegated_balance_curr_epoch(
-                        :staker_address, pool_contract: strk_pool.unwrap(), :curr_epoch,
+                        :staker_address, pool_contract: strk_pool, :curr_epoch,
                     )
             } else {
                 Zero::zero()
