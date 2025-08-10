@@ -343,12 +343,12 @@ pub mod Staking {
                 .increase_staker_own_amount(:staker_address, amount: normalized_amount);
 
             // Emit events.
-            let new_self_stake = normalized_new_self_stake.to_strk_amount();
+            let new_self_stake = normalized_new_self_stake.to_strk_native_amount();
             self
                 .emit(
                     Events::StakeOwnBalanceChanged {
                         staker_address,
-                        old_self_stake: normalized_old_self_stake.to_strk_amount(),
+                        old_self_stake: normalized_old_self_stake.to_strk_native_amount(),
                         new_self_stake: new_self_stake,
                     },
                 );
@@ -417,7 +417,7 @@ pub mod Staking {
                 .emit(
                     Events::StakeOwnBalanceChanged {
                         staker_address,
-                        old_self_stake: old_self_stake.to_strk_amount(),
+                        old_self_stake: old_self_stake.to_strk_native_amount(),
                         new_self_stake: Zero::zero(),
                     },
                 );
@@ -441,7 +441,7 @@ pub mod Staking {
             // This is done here to avoid re-entrancy.
             self.write_staker_info(:staker_address, :staker_info);
 
-            let staker_amount = self.get_own_balance(:staker_address).to_strk_amount();
+            let staker_amount = self.get_own_balance(:staker_address).to_strk_native_amount();
             let staker_pool_info = self.staker_pool_info.entry(staker_address);
             self.remove_staker(:staker_address, :staker_info, :staker_pool_info);
 
@@ -515,7 +515,7 @@ pub mod Staking {
             let internal_staker_info = self.internal_staker_info(:staker_address);
             let mut staker_info: StakerInfoV1 = internal_staker_info.into();
             // Set staker amount and pool amount from staker balance trace.
-            staker_info.amount_own = self.get_own_balance(:staker_address).to_strk_amount();
+            staker_info.amount_own = self.get_own_balance(:staker_address).to_strk_native_amount();
             let staker_pool_info = self.staker_pool_info.entry(staker_address);
             if let Option::Some(pool_contract) = staker_pool_info.get_strk_pool() {
                 let pool_amount = self.get_delegated_balance(:staker_address, :pool_contract);
@@ -525,7 +525,9 @@ pub mod Staking {
                     .pool_info =
                         Option::Some(
                             StakerPoolInfoV1 {
-                                pool_contract, amount: pool_amount.to_strk_amount(), commission,
+                                pool_contract,
+                                amount: pool_amount.to_strk_native_amount(),
+                                commission,
                             },
                         );
             }
@@ -582,7 +584,7 @@ pub mod Staking {
         }
 
         fn get_total_stake(self: @ContractState) -> Amount {
-            self._get_total_stake(token_address: STRK_TOKEN_ADDRESS).to_strk_amount()
+            self._get_total_stake(token_address: STRK_TOKEN_ADDRESS).to_strk_native_amount()
         }
 
         fn get_current_total_staking_power(self: @ContractState) -> (Amount, Amount) {
@@ -598,7 +600,10 @@ pub mod Staking {
                         .balance_at_curr_epoch(trace: btc_total_stake_trace, :curr_epoch);
                 }
             }
-            (strk_curr_total_stake.to_strk_amount(), btc_curr_total_stake.to_amount_18_decimals())
+            (
+                strk_curr_total_stake.to_strk_native_amount(),
+                btc_curr_total_stake.to_amount_18_decimals(),
+            )
         }
 
         fn change_operational_address(
@@ -1262,7 +1267,7 @@ pub mod Staking {
                 staker_address: staker_address,
                 stake: self
                     .get_staker_total_strk_balance_curr_epoch(:staker_address)
-                    .to_strk_amount(),
+                    .to_strk_native_amount(),
                 epoch_len: epoch_len,
                 epoch_id: epoch_id,
                 current_epoch_starting_block: current_epoch_starting_block,
@@ -1694,7 +1699,7 @@ pub mod Staking {
 
             mul_wide_and_div(
                 lhs: strk_epoch_rewards,
-                rhs: own_balance_curr_epoch.to_strk_amount(),
+                rhs: own_balance_curr_epoch.to_strk_native_amount(),
                 div: strk_total_stake,
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
@@ -1784,7 +1789,7 @@ pub mod Staking {
             self
                 .staker_own_balance_trace
                 .entry(staker_address)
-                .insert(key: self.get_next_epoch(), value: own_balance.to_strk_amount());
+                .insert(key: self.get_next_epoch(), value: own_balance.to_strk_native_amount());
         }
 
         fn insert_staker_delegated_balance(

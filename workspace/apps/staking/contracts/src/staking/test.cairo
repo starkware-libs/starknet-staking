@@ -1563,7 +1563,7 @@ fn test_switch_staking_delegation_pool() {
     assert!(
         actual_undelegate_intent_value
             .amount
-            .to_strk_amount() == expected_undelegate_intent_value_amount,
+            .to_strk_native_amount() == expected_undelegate_intent_value_amount,
     );
     assert!(actual_undelegate_intent_value.unpool_time.is_non_zero());
     assert!(to_pool_dispatcher.pool_member_info_v1(:pool_member).amount == switched_amount);

@@ -66,7 +66,7 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
     }
 
     /// Convert from `NormalizedAmount` to `Amount` in STRK decimals.
-    fn to_strk_amount(self: @NormalizedAmount) -> Amount {
+    fn to_strk_native_amount(self: @NormalizedAmount) -> Amount {
         *self.amount_18_decimals
     }
 }
