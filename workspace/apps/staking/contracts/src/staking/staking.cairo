@@ -1964,7 +1964,6 @@ pub mod Staking {
             );
         }
 
-
         fn does_token_exist(self: @ContractState, token_address: ContractAddress) -> bool {
             token_address == STRK_TOKEN_ADDRESS || self.btc_tokens.read(token_address).is_some()
         }
