@@ -1022,7 +1022,7 @@ pub(crate) impl SystemImpl of SystemTrait {
     /// Creates a new account with the specified amount.
     fn new_account(ref self: SystemState, amount: Amount) -> Account {
         self.base_account += 1;
-        let account = AccountTrait::new(address: self.base_account, amount: amount);
+        let account = AccountTrait::new(address: self.base_account, :amount);
         fund(target: account.address, :amount, token: self.token);
         account
     }

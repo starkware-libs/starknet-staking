@@ -3639,7 +3639,7 @@ fn test_epoch_info_update_only_epoch_duration() {
     let epoch_duration = EPOCH_DURATION / 10;
     let epochs_in_year_before = epoch_info.epochs_in_year();
     let expected_epochs_in_year = epochs_in_year_before * 10;
-    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
+    epoch_info.update(:epoch_duration, :epoch_length);
     assert!(epochs_in_year_before == epoch_info.epochs_in_year());
     advance_epoch_global();
     assert!(expected_epochs_in_year == epoch_info.epochs_in_year());
@@ -3655,7 +3655,7 @@ fn test_epoch_info_update_in_first_epoch() {
     let mut epoch_info = EpochInfoTrait::new(
         :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
-    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
+    epoch_info.update(:epoch_duration, :epoch_length);
 }
 
 #[test]
@@ -3669,8 +3669,8 @@ fn test_epoch_info_update_already_updated() {
         :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
     advance_epoch_global();
-    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
-    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
+    epoch_info.update(:epoch_duration, :epoch_length);
+    epoch_info.update(:epoch_duration, :epoch_length);
 }
 
 
