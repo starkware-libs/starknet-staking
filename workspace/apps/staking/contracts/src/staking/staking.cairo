@@ -1135,11 +1135,7 @@ pub mod Staking {
             );
             let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
             let decimals = token_dispatcher.decimals();
-            assert!(
-                decimals == BTC_8D_CONFIG.decimals || decimals == BTC_18D_CONFIG.decimals,
-                "{}",
-                Error::INVALID_TOKEN_ADDRESS,
-            );
+            assert!(decimals >= 5 && decimals <= 18, "{}", Error::INVALID_TOKEN_ADDRESS);
             self.btc_tokens.write(token_address, (STARTING_EPOCH, false));
             self.token_decimals.write(token_address, decimals);
             // Initialize the token total stake trace.
