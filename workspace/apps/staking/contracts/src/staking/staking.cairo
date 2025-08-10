@@ -1723,7 +1723,6 @@ pub mod Staking {
             let mut total_commission_rewards: Amount = Zero::zero();
             let mut total_pools_rewards: Amount = Zero::zero();
             let commission = staker_pool_info.commission();
-            let curr_epoch = self.get_current_epoch();
             for (pool_contract, token_address) in staker_pool_info.pools {
                 if !self.is_active_token(:token_address, :curr_epoch) {
                     continue;
