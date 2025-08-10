@@ -1660,13 +1660,6 @@ pub mod Staking {
             let strk_token_dispatcher = strk_token_dispatcher();
             for (pool_contract, pool_balance, pool_rewards) in pools_rewards_data {
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-                // Unwrap is safe because the pool is already verified to exist.
-                let token_address = self
-                    .staker_pool_info
-                    .entry(staker_address)
-                    .get_pool_token(:pool_contract)
-                    .unwrap();
-                let decimals = self.get_token_decimals(:token_address);
                 // Rewards are always in STRK.
                 self
                     .send_rewards_to_delegation_pool(
@@ -1675,6 +1668,13 @@ pub mod Staking {
                         amount: pool_rewards,
                         token_dispatcher: strk_token_dispatcher,
                     );
+                // Unwrap is safe because the pool is already verified to exist.
+                let token_address = self
+                    .staker_pool_info
+                    .entry(staker_address)
+                    .get_pool_token(:pool_contract)
+                    .unwrap();
+                let decimals = self.get_token_decimals(:token_address);
                 pool_dispatcher
                     .update_rewards_from_staking_contract(
                         rewards: pool_rewards,
