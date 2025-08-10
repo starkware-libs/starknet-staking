@@ -107,12 +107,6 @@ pub(crate) impl NormalizedAmountAddAssign of AddAssign<NormalizedAmount, Normali
     }
 }
 
-pub(crate) impl NormalizedAmountPartialOrd of PartialOrd<NormalizedAmount> {
-    fn lt(lhs: NormalizedAmount, rhs: NormalizedAmount) -> bool {
-        lhs.amount_18_decimals < rhs.amount_18_decimals
-    }
-}
-
 pub(crate) impl NormalizedAmountSub of Sub<NormalizedAmount> {
     fn sub(lhs: NormalizedAmount, rhs: NormalizedAmount) -> NormalizedAmount {
         assert!(
@@ -132,6 +126,12 @@ pub(crate) impl NormalizedAmountSubAssign of SubAssign<NormalizedAmount, Normali
             Error::NORMALIZED_AMOUNT_SUB_UNDERFLOW,
         );
         self.amount_18_decimals -= rhs.amount_18_decimals;
+    }
+}
+
+pub(crate) impl NormalizedAmountPartialOrd of PartialOrd<NormalizedAmount> {
+    fn lt(lhs: NormalizedAmount, rhs: NormalizedAmount) -> bool {
+        lhs.amount_18_decimals < rhs.amount_18_decimals
     }
 }
 
