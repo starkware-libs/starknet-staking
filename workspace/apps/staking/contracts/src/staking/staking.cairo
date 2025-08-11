@@ -587,7 +587,9 @@ pub mod Staking {
             self._get_total_stake(token_address: STRK_TOKEN_ADDRESS).to_strk_native_amount()
         }
 
-        fn get_current_total_staking_power(self: @ContractState) -> (Amount, Amount) {
+        fn get_current_total_staking_power(
+            self: @ContractState,
+        ) -> (NormalizedAmount, NormalizedAmount) {
             let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
             let curr_epoch = self.get_current_epoch();
             let strk_curr_total_stake = self
@@ -600,10 +602,7 @@ pub mod Staking {
                         .balance_at_curr_epoch(trace: btc_total_stake_trace, :curr_epoch);
                 }
             }
-            (
-                strk_curr_total_stake.to_strk_native_amount(),
-                btc_curr_total_stake.to_amount_18_decimals(),
-            )
+            (strk_curr_total_stake, btc_curr_total_stake)
         }
 
         fn change_operational_address(
@@ -1691,7 +1690,7 @@ pub mod Staking {
             self: @ContractState,
             staker_address: ContractAddress,
             strk_epoch_rewards: Amount,
-            strk_total_stake: Amount,
+            strk_total_stake: NormalizedAmount,
             curr_epoch: Epoch,
         ) -> Amount {
             let own_balance_curr_epoch = self
@@ -1700,7 +1699,7 @@ pub mod Staking {
             mul_wide_and_div(
                 lhs: strk_epoch_rewards,
                 rhs: own_balance_curr_epoch.to_strk_native_amount(),
-                div: strk_total_stake,
+                div: strk_total_stake.to_strk_native_amount(),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
         }
@@ -1717,9 +1716,9 @@ pub mod Staking {
             staker_address: ContractAddress,
             staker_pool_info: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
             strk_epoch_rewards: Amount,
-            strk_total_stake: Amount,
+            strk_total_stake: NormalizedAmount,
             btc_epoch_rewards: Amount,
-            btc_total_stake: Amount,
+            btc_total_stake: NormalizedAmount,
             curr_epoch: Epoch,
         ) -> (Amount, Amount, Array<(ContractAddress, NormalizedAmount, Amount)>) {
             // Array for rewards data needed to update pools.
@@ -1746,7 +1745,7 @@ pub mod Staking {
                     mul_wide_and_div(
                         lhs: epoch_rewards,
                         rhs: pool_balance_curr_epoch.to_amount_18_decimals(),
-                        div: total_stake,
+                        div: total_stake.to_amount_18_decimals(),
                     )
                         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
                 } else {

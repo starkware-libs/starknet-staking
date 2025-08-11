@@ -4068,7 +4068,11 @@ fn test_get_current_total_staking_power() {
     );
     advance_epoch_global();
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake),
+                NormalizedAmountTrait::from_amount_18_decimals(btc_total_stake),
+            ),
     );
 
     cheat_caller_address_once(
@@ -4079,11 +4083,18 @@ fn test_get_current_total_staking_power() {
     };
     staking_token_dispatcher.disable_token(token_address: btc_token_address);
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake),
+                NormalizedAmountTrait::from_amount_18_decimals(btc_total_stake),
+            ),
     );
     advance_epoch_global();
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, Zero::zero()),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake), Zero::zero(),
+            ),
     );
 
     cheat_caller_address_once(
@@ -4091,11 +4102,18 @@ fn test_get_current_total_staking_power() {
     );
     staking_token_dispatcher.enable_token(token_address: btc_token_address);
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, Zero::zero()),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake), Zero::zero(),
+            ),
     );
     advance_epoch_global();
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake),
+                NormalizedAmountTrait::from_amount_18_decimals(btc_total_stake),
+            ),
     );
 }
 

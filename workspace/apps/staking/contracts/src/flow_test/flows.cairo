@@ -18,7 +18,7 @@ use staking::staking::interface::{
     CommissionCommitment, IStakingDispatcherTrait, IStakingSafeDispatcherTrait, PoolInfo,
     StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
-use staking::staking::objects::EpochInfoTrait;
+use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait};
 use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
 use staking::test_utils::constants::{
     BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, STRK_BASE_VALUE, TEST_BTC_DECIMALS,
@@ -2052,7 +2052,7 @@ pub(crate) impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> 
 
         // Test total staking power.
         let total_staking_power = system.staking.get_current_total_staking_power_v2();
-        assert!(total_staking_power == (0, 0));
+        assert!(total_staking_power == (Zero::zero(), Zero::zero()));
 
         system.advance_epoch();
         // Test new token staking power.
@@ -2067,7 +2067,12 @@ pub(crate) impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> 
         let expected_btc_staking_power = to_amount_18_decimals(
             amount: delegated_amount, :token_address,
         );
-        assert!(total_staking_power == (amount, expected_btc_staking_power));
+        assert!(
+            total_staking_power == (
+                NormalizedAmountTrait::from_strk_native_amount(amount),
+                NormalizedAmountTrait::from_amount_18_decimals(expected_btc_staking_power),
+            ),
+        );
     }
 }
 
@@ -2132,14 +2137,13 @@ pub(crate) impl MultipleBTCPoolsDifferentDecimalsFlowImpl of FlowTrait<
         let rewards_18 = system.delegator_claim_rewards(delegator: delegator_18, pool: pool_18);
         let (_, btc_staking_power) = system.staking.get_current_total_staking_power_v2();
         assert!(rewards_8 == rewards_18);
-        assert!(
-            btc_staking_power == to_amount_18_decimals(
-                amount: delegated_amount_8, token_address: token_8_address,
-            )
-                + to_amount_18_decimals(
-                    amount: delegated_amount_18, token_address: token_18_address,
-                ),
-        );
+        let expected_btc_staking_power = NormalizedAmountTrait::from_native_amount(
+            amount: delegated_amount_8, decimals: BTC_DECIMALS_8,
+        )
+            + NormalizedAmountTrait::from_native_amount(
+                amount: delegated_amount_18, decimals: BTC_DECIMALS_18,
+            );
+        assert!(btc_staking_power == expected_btc_staking_power);
     }
 }
 
@@ -2538,7 +2542,11 @@ pub(crate) impl TotalStakeTraceAfterUpgradeFlowImpl of FlowTrait<TotalStakeTrace
             .get_total_stake_for_token(:token_address);
         assert!(total_stake == amount * 3);
         assert!(strk_total_stake == total_stake);
-        assert!(current_staking_power == (amount, 0));
+        assert!(
+            current_staking_power == (
+                NormalizedAmountTrait::from_strk_native_amount(amount), Zero::zero(),
+            ),
+        );
     }
 }
 
@@ -5277,7 +5285,11 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl of FlowTrait<TotalStakeAfterUpgra
         let (strk_current_total_stake, btc_current_total_stake) = system
             .staking
             .get_current_total_staking_power_v2();
-        assert!(strk_current_total_stake == self.current_total_stake.unwrap());
+        assert!(
+            strk_current_total_stake == NormalizedAmountTrait::from_strk_native_amount(
+                self.current_total_stake.unwrap(),
+            ),
+        );
         assert!(btc_current_total_stake.is_zero())
     }
 }
