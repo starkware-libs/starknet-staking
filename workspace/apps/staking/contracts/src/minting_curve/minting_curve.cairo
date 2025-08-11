@@ -16,7 +16,7 @@ pub mod MintingCurve {
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
-    pub const CONTRACT_VERSION: felt252 = '1.0.0';
+    pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);

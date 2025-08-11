@@ -25,7 +25,7 @@ pub mod RewardSupplier {
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
-    pub const CONTRACT_VERSION: felt252 = '2.0.0';
+    pub const CONTRACT_VERSION: felt252 = '3.0.0';
     pub const ALPHA: u128 = 25;
     pub const ALPHA_DENOMINATOR: u128 = 100;
 
