@@ -1,5 +1,5 @@
 use core::cmp::max;
-use core::num::traits::{Bounded, Pow, Zero};
+use core::num::traits::{Pow, Zero};
 use core::ops::{AddAssign, SubAssign};
 use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
@@ -87,44 +87,24 @@ pub(crate) impl NormalizedAmountZero of Zero<NormalizedAmount> {
 
 pub(crate) impl NormalizedAmountAdd of Add<NormalizedAmount> {
     fn add(lhs: NormalizedAmount, rhs: NormalizedAmount) -> NormalizedAmount {
-        assert!(
-            Bounded::MAX - lhs.amount_18_decimals >= rhs.amount_18_decimals,
-            "{}",
-            Error::NORMALIZED_AMOUNT_ADD_OVERFLOW,
-        );
         NormalizedAmount { amount_18_decimals: lhs.amount_18_decimals + rhs.amount_18_decimals }
     }
 }
 
 pub(crate) impl NormalizedAmountAddAssign of AddAssign<NormalizedAmount, NormalizedAmount> {
     fn add_assign(ref self: NormalizedAmount, rhs: NormalizedAmount) {
-        assert!(
-            Bounded::MAX - self.amount_18_decimals >= rhs.amount_18_decimals,
-            "{}",
-            Error::NORMALIZED_AMOUNT_ADD_OVERFLOW,
-        );
         self.amount_18_decimals += rhs.amount_18_decimals;
     }
 }
 
 pub(crate) impl NormalizedAmountSub of Sub<NormalizedAmount> {
     fn sub(lhs: NormalizedAmount, rhs: NormalizedAmount) -> NormalizedAmount {
-        assert!(
-            lhs.amount_18_decimals >= rhs.amount_18_decimals,
-            "{}",
-            Error::NORMALIZED_AMOUNT_SUB_UNDERFLOW,
-        );
         NormalizedAmount { amount_18_decimals: lhs.amount_18_decimals - rhs.amount_18_decimals }
     }
 }
 
 pub(crate) impl NormalizedAmountSubAssign of SubAssign<NormalizedAmount, NormalizedAmount> {
     fn sub_assign(ref self: NormalizedAmount, rhs: NormalizedAmount) {
-        assert!(
-            self.amount_18_decimals >= rhs.amount_18_decimals,
-            "{}",
-            Error::NORMALIZED_AMOUNT_SUB_UNDERFLOW,
-        );
         self.amount_18_decimals -= rhs.amount_18_decimals;
     }
 }
