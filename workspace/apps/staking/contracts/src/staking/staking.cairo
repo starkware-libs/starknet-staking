@@ -1909,6 +1909,7 @@ pub mod Staking {
             NormalizedAmountTrait::from_amount_18_decimals(amount: current_balance)
         }
 
+        /// Returns (old_own_balance, new_own_balance).
         fn increase_staker_own_amount(
             ref self: ContractState, staker_address: ContractAddress, amount: NormalizedAmount,
         ) -> (NormalizedAmount, NormalizedAmount) {
