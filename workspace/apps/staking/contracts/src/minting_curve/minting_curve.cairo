@@ -10,13 +10,14 @@ pub mod MintingCurve {
         ConfigEvents, Events, IMintingCurve, IMintingCurveConfig, MintingCurveContractInfo,
     };
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+    use staking::staking::objects::NormalizedAmountTrait;
     use staking::types::{Amount, Inflation};
     use starknet::ContractAddress;
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
-    pub const CONTRACT_VERSION: felt252 = '1.0.0';
+    pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -132,7 +133,10 @@ pub mod MintingCurve {
             let total_supply = self.total_supply.read();
             let staking_dispatcher = self.staking_dispatcher.read();
             let (total_stake, _) = staking_dispatcher.get_current_total_staking_power();
-            let yearly_mint = self.compute_yearly_mint(:total_stake, :total_supply);
+            let yearly_mint = self
+                .compute_yearly_mint(
+                    total_stake: total_stake.to_strk_native_amount(), :total_supply,
+                );
             yearly_mint
         }
 

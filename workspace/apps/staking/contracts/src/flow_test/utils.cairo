@@ -43,7 +43,7 @@ use staking::staking::interface_v0::{
 use staking::staking::interface_v1::{
     IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
 };
-use staking::staking::objects::{EpochInfo, EpochInfoTrait};
+use staking::staking::objects::{EpochInfo, EpochInfoTrait, NormalizedAmount};
 use staking::test_utils::constants::{
     BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
     INITIAL_SUPPLY, MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS, STARTING_BLOCK_OFFSET,
@@ -343,7 +343,9 @@ pub(crate) impl StakingImpl of StakingTrait {
         self.dispatcher_v1_for_tests().get_current_total_staking_power()
     }
 
-    fn get_current_total_staking_power_v2(self: StakingState) -> (Amount, Amount) {
+    fn get_current_total_staking_power_v2(
+        self: StakingState,
+    ) -> (NormalizedAmount, NormalizedAmount) {
         self.dispatcher().get_current_total_staking_power()
     }
 
@@ -1022,7 +1024,7 @@ pub(crate) impl SystemImpl of SystemTrait {
     /// Creates a new account with the specified amount.
     fn new_account(ref self: SystemState, amount: Amount) -> Account {
         self.base_account += 1;
-        let account = AccountTrait::new(address: self.base_account, amount: amount);
+        let account = AccountTrait::new(address: self.base_account, :amount);
         fund(target: account.address, :amount, token: self.token);
         account
     }
@@ -1710,13 +1712,9 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v0_v1(),
             eic_init_data: array![
-                MAINNET_STAKING_CLASS_HASH_V0().into(),
-                EPOCH_DURATION.into(),
-                EPOCH_LENGTH.into(),
-                STARTING_BLOCK_OFFSET.into(),
-                MAINNET_POOL_CLASS_HASH_V1().into(),
-                self.attestation.unwrap().address.into(),
-                MAINNET_SECURITY_COUNSEL_ADDRESS().into(),
+                MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_DURATION.into(), EPOCH_LENGTH.into(),
+                STARTING_BLOCK_OFFSET.into(), MAINNET_POOL_CLASS_HASH_V1().into(),
+                self.attestation.unwrap().address.into(), MAINNET_SECURITY_COUNSEL_ADDRESS().into(),
             ]
                 .span(),
         };

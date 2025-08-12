@@ -883,7 +883,9 @@ fn test_exit_delegation_pool_intent() {
     );
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
-        amount: NormalizedAmountTrait::from_strk_amount(expected_pool_member_info.unpool_amount),
+        amount: NormalizedAmountTrait::from_strk_native_amount(
+            expected_pool_member_info.unpool_amount,
+        ),
         token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
@@ -1412,7 +1414,9 @@ fn test_partial_undelegate() {
     );
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
-        amount: NormalizedAmountTrait::from_strk_amount(expected_pool_member_info.unpool_amount),
+        amount: NormalizedAmountTrait::from_strk_native_amount(
+            expected_pool_member_info.unpool_amount,
+        ),
         token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);

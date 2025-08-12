@@ -46,7 +46,9 @@ use staking::staking::interface::{
     IStakingPauseDispatcherTrait, IStakingTokenManagerDispatcher,
     IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
-use staking::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
+use staking::staking::objects::{
+    EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait, NormalizedAmountTrait,
+};
 use staking::staking::staking::Staking;
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
@@ -1078,14 +1080,18 @@ pub(crate) fn calculate_staker_strk_rewards_with_amount_and_pool_info(
     let (strk_curr_total_stake, _) = staking_dispatcher.get_current_total_staking_power();
     // Calculate staker own rewards.
     let mut staker_rewards = mul_wide_and_div(
-        lhs: strk_epoch_rewards, rhs: amount_own, div: strk_curr_total_stake,
+        lhs: strk_epoch_rewards,
+        rhs: amount_own,
+        div: strk_curr_total_stake.to_strk_native_amount(),
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     // Calculate staker STRK pool rewards.
     let pool_rewards = {
         if let Option::Some(pool_info) = pool_info {
             let pool_rewards_including_commission = mul_wide_and_div(
-                lhs: strk_epoch_rewards, rhs: pool_info.amount, div: strk_curr_total_stake,
+                lhs: strk_epoch_rewards,
+                rhs: pool_info.amount,
+                div: strk_curr_total_stake.to_strk_native_amount(),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
             let commission_rewards = compute_commission_amount_rounded_down(
@@ -1122,7 +1128,9 @@ pub(crate) fn calculate_staker_btc_pool_rewards(
     let (_, btc_curr_total_stake) = staking_dispatcher.get_current_total_staking_power();
     // Calculate pool rewards including commission.
     let pool_rewards_including_commission = mul_wide_and_div(
-        lhs: btc_epoch_rewards, rhs: pool_balance, div: btc_curr_total_stake,
+        lhs: btc_epoch_rewards,
+        rhs: pool_balance,
+        div: btc_curr_total_stake.to_amount_18_decimals(),
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     // Split rewards into commission and pool rewards.
@@ -1188,7 +1196,9 @@ pub(crate) fn calculate_strk_pool_rewards_with_pool_balance(
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let commission = staker_info.pool_info.unwrap().commission;
     let pool_rewards_including_commission = mul_wide_and_div(
-        lhs: strk_epoch_rewards, rhs: pool_balance, div: strk_curr_total_stake,
+        lhs: strk_epoch_rewards,
+        rhs: pool_balance,
+        div: strk_curr_total_stake.to_strk_native_amount(),
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     let commission_rewards = compute_commission_amount_rounded_down(

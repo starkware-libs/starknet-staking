@@ -824,14 +824,14 @@ fn add_to_delegation_after_intent_flow_test() {
     system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount / 4);
     system.advance_epoch_and_attest(:staker);
 
-    system.add_to_delegation_pool(:delegator, pool: pool, amount: delegator_amount / 4);
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 4);
     system.advance_epoch_and_attest(:staker);
 
     // Full intent.
     system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount * 3 / 4);
     system.advance_epoch_and_attest(:staker);
 
-    system.add_to_delegation_pool(:delegator, pool: pool, amount: delegator_amount / 4);
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 4);
     system.advance_epoch_and_attest(:staker);
     system.advance_epoch();
 

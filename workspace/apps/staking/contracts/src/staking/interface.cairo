@@ -1,6 +1,6 @@
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
-use staking::staking::objects::{AttestationInfo, EpochInfo};
+use staking::staking::objects::{AttestationInfo, EpochInfo, NormalizedAmount};
 use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
@@ -36,9 +36,13 @@ pub trait IStaking<TContractState> {
         self: @TContractState, staker_address: ContractAddress,
     ) -> CommissionCommitment;
     fn contract_parameters_v1(self: @TContractState) -> StakingContractInfoV1;
+    /// Returns the latest total stake for the STRK token only.
+    /// Note: The function name does not specify STRK for backwards compatibility.
     fn get_total_stake(self: @TContractState) -> Amount;
     /// Returns the current epoch's (strk_total_stake, btc_total_stake), where both use 18 decimals.
-    fn get_current_total_staking_power(self: @TContractState) -> (Amount, Amount);
+    fn get_current_total_staking_power(
+        self: @TContractState,
+    ) -> (NormalizedAmount, NormalizedAmount);
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
     fn set_commission(ref self: TContractState, commission: Commission);

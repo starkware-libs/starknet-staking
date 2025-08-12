@@ -50,8 +50,6 @@ pub(crate) enum Error {
     TOKEN_NOT_ACTIVE,
     INVALID_EPOCH,
     POOL_BALANCE_NOT_ZERO,
-    NORMALIZED_AMOUNT_SUB_UNDERFLOW,
-    NORMALIZED_AMOUNT_ADD_OVERFLOW,
 }
 
 impl DescribableError of Describable<Error> {
@@ -106,8 +104,6 @@ impl DescribableError of Describable<Error> {
             Error::TOKEN_NOT_ACTIVE => "Token is not active",
             Error::INVALID_EPOCH => "Invalid epoch",
             Error::POOL_BALANCE_NOT_ZERO => "Staker has no pool, but `pool_amount` is not zero",
-            Error::NORMALIZED_AMOUNT_SUB_UNDERFLOW => "Normalized amount subtraction underflow",
-            Error::NORMALIZED_AMOUNT_ADD_OVERFLOW => "Normalized amount addition overflow",
         }
     }
 }

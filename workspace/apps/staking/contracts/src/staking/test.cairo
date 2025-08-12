@@ -1212,7 +1212,7 @@ fn test_remove_from_delegation_pool_intent() {
         .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time,
-        amount: NormalizedAmountTrait::from_strk_amount(intent_amount),
+        amount: NormalizedAmountTrait::from_strk_native_amount(intent_amount),
         token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
@@ -1280,7 +1280,7 @@ fn test_remove_from_delegation_pool_intent() {
         .add(delta: staking_dispatcher.contract_parameters_v1().exit_wait_window);
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_unpool_time,
-        amount: NormalizedAmountTrait::from_strk_amount(new_intent_amount),
+        amount: NormalizedAmountTrait::from_strk_native_amount(new_intent_amount),
         token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
@@ -1353,7 +1353,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     };
     let invalid_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: Timestamp { seconds: 1 },
-        amount: NormalizedAmountTrait::from_strk_amount(0),
+        amount: NormalizedAmountTrait::from_strk_native_amount(0),
         token_address,
     };
     store_to_simple_map(
@@ -1563,7 +1563,7 @@ fn test_switch_staking_delegation_pool() {
     assert!(
         actual_undelegate_intent_value
             .amount
-            .to_strk_amount() == expected_undelegate_intent_value_amount,
+            .to_strk_native_amount() == expected_undelegate_intent_value_amount,
     );
     assert!(actual_undelegate_intent_value.unpool_time.is_non_zero());
     assert!(to_pool_dispatcher.pool_member_info_v1(:pool_member).amount == switched_amount);
@@ -3275,7 +3275,7 @@ fn test_undelegate_intent_is_zero() {
 fn test_undelegate_intent_is_non_zero() {
     let d = UndelegateIntentValue {
         unpool_time: UNPOOL_TIME,
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     assert!(!d.is_zero());
@@ -3290,13 +3290,13 @@ fn test_undelegate_intent_is_valid() {
     assert!(d.is_valid());
     let d = UndelegateIntentValue {
         unpool_time: UNPOOL_TIME,
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     assert!(d.is_valid());
     let d = UndelegateIntentValue {
         unpool_time: Zero::zero(),
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     assert!(!d.is_valid());
@@ -3314,7 +3314,7 @@ fn test_undelegate_intent_assert_valid() {
     d.assert_valid();
     let d = UndelegateIntentValue {
         unpool_time: UNPOOL_TIME,
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     d.assert_valid();
@@ -3325,7 +3325,7 @@ fn test_undelegate_intent_assert_valid() {
 fn test_undelegate_intent_assert_valid_panic() {
     let d = UndelegateIntentValue {
         unpool_time: Zero::zero(),
-        amount: NormalizedAmountTrait::from_strk_amount(1),
+        amount: NormalizedAmountTrait::from_strk_native_amount(1),
         token_address: Zero::zero(),
     };
     d.assert_valid();
@@ -3639,7 +3639,7 @@ fn test_epoch_info_update_only_epoch_duration() {
     let epoch_duration = EPOCH_DURATION / 10;
     let epochs_in_year_before = epoch_info.epochs_in_year();
     let expected_epochs_in_year = epochs_in_year_before * 10;
-    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
+    epoch_info.update(:epoch_duration, :epoch_length);
     assert!(epochs_in_year_before == epoch_info.epochs_in_year());
     advance_epoch_global();
     assert!(expected_epochs_in_year == epoch_info.epochs_in_year());
@@ -3655,7 +3655,7 @@ fn test_epoch_info_update_in_first_epoch() {
     let mut epoch_info = EpochInfoTrait::new(
         :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
-    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
+    epoch_info.update(:epoch_duration, :epoch_length);
 }
 
 #[test]
@@ -3669,8 +3669,8 @@ fn test_epoch_info_update_already_updated() {
         :epoch_duration, :epoch_length, starting_block: get_block_number(),
     );
     advance_epoch_global();
-    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
-    epoch_info.update(:epoch_duration, epoch_length: epoch_length);
+    epoch_info.update(:epoch_duration, :epoch_length);
+    epoch_info.update(:epoch_duration, :epoch_length);
 }
 
 
@@ -4068,7 +4068,11 @@ fn test_get_current_total_staking_power() {
     );
     advance_epoch_global();
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake),
+                NormalizedAmountTrait::from_amount_18_decimals(btc_total_stake),
+            ),
     );
 
     cheat_caller_address_once(
@@ -4079,11 +4083,18 @@ fn test_get_current_total_staking_power() {
     };
     staking_token_dispatcher.disable_token(token_address: btc_token_address);
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake),
+                NormalizedAmountTrait::from_amount_18_decimals(btc_total_stake),
+            ),
     );
     advance_epoch_global();
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, Zero::zero()),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake), Zero::zero(),
+            ),
     );
 
     cheat_caller_address_once(
@@ -4091,11 +4102,18 @@ fn test_get_current_total_staking_power() {
     );
     staking_token_dispatcher.enable_token(token_address: btc_token_address);
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, Zero::zero()),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake), Zero::zero(),
+            ),
     );
     advance_epoch_global();
     assert!(
-        staking_dispatcher.get_current_total_staking_power() == (strk_total_stake, btc_total_stake),
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake),
+                NormalizedAmountTrait::from_amount_18_decimals(btc_total_stake),
+            ),
     );
 }
 
@@ -4142,7 +4160,19 @@ fn test_add_token_assertions() {
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         name: BTC_TOKEN_NAME(),
-        decimals: constants::TEST_BTC_DECIMALS + 1,
+        decimals: 4,
+    );
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
+    );
+    let result = staking_token_manager_safe_dispatcher
+        .add_token(token_address: invalid_token_address);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_TOKEN_ADDRESS.describe());
+    let invalid_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: BTC_TOKEN_NAME(),
+        decimals: 19,
     );
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
