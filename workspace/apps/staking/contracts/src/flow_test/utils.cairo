@@ -1712,13 +1712,9 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v0_v1(),
             eic_init_data: array![
-                MAINNET_STAKING_CLASS_HASH_V0().into(),
-                EPOCH_DURATION.into(),
-                EPOCH_LENGTH.into(),
-                STARTING_BLOCK_OFFSET.into(),
-                MAINNET_POOL_CLASS_HASH_V1().into(),
-                self.attestation.unwrap().address.into(),
-                MAINNET_SECURITY_COUNSEL_ADDRESS().into(),
+                MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_DURATION.into(), EPOCH_LENGTH.into(),
+                STARTING_BLOCK_OFFSET.into(), MAINNET_POOL_CLASS_HASH_V1().into(),
+                self.attestation.unwrap().address.into(), MAINNET_SECURITY_COUNSEL_ADDRESS().into(),
             ]
                 .span(),
         };
