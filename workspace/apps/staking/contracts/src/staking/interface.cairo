@@ -195,6 +195,9 @@ pub trait IStakingTokenManager<TContractState> {
     /// **Note**: Once enabled, a token can only be disabled after at least one epoch.
     fn enable_token(ref self: TContractState, token_address: ContractAddress);
     /// Disable token for getting rewards. Takes effect from the next epoch.
+    ///
+    /// **Note**: disabled token is not eligible for rewards and has no staking power but still can
+    /// be staked or unstaked.
     fn disable_token(ref self: TContractState, token_address: ContractAddress);
 }
 
