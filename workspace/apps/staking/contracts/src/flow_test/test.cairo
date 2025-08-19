@@ -261,7 +261,7 @@ fn disable_enable_btc_token_same_epoch_flow_test() {
 /// Delegator exit_intent full amount
 /// Delegator switch full amount to the same delegation pool
 #[test]
-#[should_panic(expected: "SELF_SWITCH_NOT_ALLOWED")]
+#[should_panic(expected: "Self switch is not allowed")]
 fn switch_to_same_delegation_pool_flow_test() {
     let cfg: StakingInitConfig = Default::default();
     let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
