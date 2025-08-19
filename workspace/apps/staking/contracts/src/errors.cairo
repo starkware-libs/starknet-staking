@@ -66,6 +66,7 @@ impl DescribableGenericError of Describable<GenericError> {
 pub(crate) enum Erc20Error {
     INSUFFICIENT_BALANCE,
     INSUFFICIENT_ALLOWANCE,
+    TRANSFER_FAILED,
 }
 
 impl DescribableErc20Error of Describable<Erc20Error> {
@@ -73,6 +74,7 @@ impl DescribableErc20Error of Describable<Erc20Error> {
         match self {
             Erc20Error::INSUFFICIENT_BALANCE => "Insufficient ERC20 balance",
             Erc20Error::INSUFFICIENT_ALLOWANCE => "Insufficient ERC20 allowance",
+            Erc20Error::TRANSFER_FAILED => "ERC20 transfer failed",
         }
     }
 }

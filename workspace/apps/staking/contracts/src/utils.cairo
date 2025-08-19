@@ -98,7 +98,9 @@ pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
             "{}",
             Erc20Error::INSUFFICIENT_ALLOWANCE,
         );
-        self.transfer_from(:sender, :recipient, :amount)
+        let success = self.transfer_from(:sender, :recipient, :amount);
+        assert!(success, "{}", Erc20Error::TRANSFER_FAILED);
+        success
     }
 
     fn checked_transfer(self: IERC20Dispatcher, recipient: ContractAddress, amount: u256) -> bool {
@@ -107,7 +109,9 @@ pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
             "{}",
             Erc20Error::INSUFFICIENT_BALANCE,
         );
-        self.transfer(:recipient, :amount)
+        let success = self.transfer(:recipient, :amount);
+        assert!(success, "{}", Erc20Error::TRANSFER_FAILED);
+        success
     }
 }
 

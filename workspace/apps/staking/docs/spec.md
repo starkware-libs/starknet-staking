@@ -196,6 +196,7 @@
     - [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
     - [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
     - [INSUFFICIENT\_BALANCE](#insufficient_balance)
+    - [TRANSFER\_FAILED](#transfer_failed)
     - [REWARD\_ADDRESS\_MISMATCH](#reward_address_mismatch)
     - [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
     - [ATTEST\_IS\_DONE](#attest_is_done)
@@ -2466,6 +2467,9 @@ Only token admin.
 
 ### INSUFFICIENT_BALANCE
 "Insufficient ERC20 balance"
+
+### TRANSFER_FAILED
+"ERC20 transfer failed"
 
 ### REWARD_ADDRESS_MISMATCH
 "Reward address mismatch"
