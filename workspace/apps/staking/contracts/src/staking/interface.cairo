@@ -196,6 +196,13 @@ pub trait IStakingTokenManager<TContractState> {
 
 #[starknet::interface]
 pub trait IStakingAttestation<TContractState> {
+    /// Calculate and update rewards for the `staker_address` for the current epoch.
+    /// Send pool rewards to the pool.
+    /// This is called after the attestation contract validate that the staker has attested
+    /// correctly.
+    /// **Note**: Staker unable to attest block in epoch where they initiated unstake intent.
+    /// **Note**: The total staking power for rewards calculation includes all stakers stakes,
+    /// regardless of whether they attest in the same epoch.
     fn update_rewards_from_attestation_contract(
         ref self: TContractState, staker_address: ContractAddress,
     );

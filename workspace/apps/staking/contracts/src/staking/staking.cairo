@@ -1179,11 +1179,6 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingAttestationImpl of IStakingAttestation<ContractState> {
-        /// Calculate and update rewards for the `staker_address` for the current epoch.
-        /// Send pool rewards to the pool.
-        /// This is called after the attestation contract validate that the staker has attested
-        /// correctly.
-        // **Note**: Staker unable to attest block in epoch where they initiated unstake intent.
         fn update_rewards_from_attestation_contract(
             ref self: ContractState, staker_address: ContractAddress,
         ) {
