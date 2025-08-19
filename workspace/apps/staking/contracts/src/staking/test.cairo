@@ -2655,7 +2655,7 @@ fn test_set_max_exit_waiting_duration() {
 }
 
 #[test]
-#[should_panic(expected: "ILLEGAL_EXIT_DURATION")]
+#[should_panic(expected: "Illegal exit duration")]
 fn test_set_too_long_exit_duration() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

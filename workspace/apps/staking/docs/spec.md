@@ -2456,10 +2456,10 @@ Only token admin.
 "Only StarkGate can call on_receive"
 
 ### UNEXPECTED_TOKEN
-"UNEXPECTED_TOKEN"
+"Unexpected token"
 
 ### SELF_SWITCH_NOT_ALLOWED
-"SELF_SWITCH_NOT_ALLOWED"
+"Self switch is not allowed"
 
 ### INSUFFICIENT_ALLOWANCE
 "Insufficient ERC20 allowance"
@@ -2471,7 +2471,7 @@ Only token admin.
 "Reward address mismatch"
 
 ### ILLEGAL_EXIT_DURATION
-"ILLEGAL_EXIT_DURATION"
+"Illegal exit duration"
 
 ### ATTEST_IS_DONE
 "Attestation is done for this epoch"

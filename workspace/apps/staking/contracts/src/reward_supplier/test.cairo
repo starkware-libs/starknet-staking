@@ -251,7 +251,7 @@ fn test_on_receive_caller_not_starkgate() {
 }
 
 #[test]
-#[should_panic(expected: "UNEXPECTED_TOKEN")]
+#[should_panic(expected: "Unexpected token")]
 fn test_on_receive_unexpected_token() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
