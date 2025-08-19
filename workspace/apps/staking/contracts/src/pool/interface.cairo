@@ -30,6 +30,8 @@ pub trait IPool<TContractState> {
     /// Calculate and update `pool_member`'s rewards,
     /// then transfer them to the reward address.
     /// Return the amount transferred to the reward address.
+    ///
+    /// **Note**: Rewards are claimable up to, but not including, the current epoch.
     fn claim_rewards(ref self: TContractState, pool_member: ContractAddress) -> Amount;
 
     /// Move `amount` funds of a pool member to `to_staker`'s pool `to_pool`.
