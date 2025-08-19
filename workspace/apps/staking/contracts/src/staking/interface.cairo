@@ -76,6 +76,7 @@ pub trait IStakingMigration<TContractState> {
     /// Precondition: The staker exists, does not have a pool and its version is V0.
     ///
     /// This function is used only during migration.
+    /// **Note**: All stakers are migrated during the upgrade process, no user action is required.
     fn staker_migration(ref self: TContractState, staker_address: ContractAddress);
 }
 
