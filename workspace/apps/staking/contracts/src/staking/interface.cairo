@@ -20,6 +20,7 @@ pub trait IStaking<TContractState> {
     ) -> Amount;
     fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn unstake_intent(ref self: TContractState) -> Timestamp;
+    /// **Note**: Staker cannot stake again after `unstake_action`.
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn set_open_for_delegation(
@@ -189,6 +190,8 @@ pub trait IStakingTokenManager<TContractState> {
     /// Subsequent changes to the token's decimals are not supported and may lead to issues.
     fn add_token(ref self: TContractState, token_address: ContractAddress);
     /// Enable token for getting rewards. Takes effect from the next epoch.
+    ///
+    /// **Note**: Once enabled, a token can only be disabled after at least one epoch.
     fn enable_token(ref self: TContractState, token_address: ContractAddress);
     /// Disable token for getting rewards. Takes effect from the next epoch.
     fn disable_token(ref self: TContractState, token_address: ContractAddress);

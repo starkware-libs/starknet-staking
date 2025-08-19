@@ -154,6 +154,7 @@ pub mod Staking {
         // The state of older epochs cannot be determined.
         btc_tokens: IterableMap<ContractAddress, (Epoch, bool)>,
         // Vector of staker addresses.
+        // **Note**: Stakers are not removed from this vector when they unstake.
         stakers: Vec<ContractAddress>,
         // Map token address to its decimals.
         token_decimals: Map<ContractAddress, u8>,
