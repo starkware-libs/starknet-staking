@@ -47,8 +47,8 @@ pub mod MintingCurve {
         total_supply: Amount,
         // L1 reward supplier.
         l1_reward_supplier: felt252,
-        // The numerator of the inflation rate. The denominator is C_DENOM. C_NUM / C_DENOM is the
-        // fraction of the total supply that can be minted in a year.
+        // The numerator of the inflation rate. The denominator is C_DENOM.
+        // Yearly mint is (C_NUM / C_DENOM) * sqrt(total_stake * total_supply).
         c_num: Inflation,
     }
 
