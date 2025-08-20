@@ -1664,19 +1664,19 @@ pub mod Staking {
             undelegate_intent_value
         }
 
-        /// Gets an array of tuples with (pool_contract, pool_balance, pool_rewards) and updates the
-        /// pool rewards.
+        /// Gets an array of tuples with (pool_contract, token_address, pool_balance, pool_rewards)
+        /// and updates the pool rewards.
         ///
         /// Returns an array of tuples (pool_contract, pool_rewards) for the
         /// StakerRewardsUpdated event.
         fn update_pool_rewards(
             ref self: ContractState,
             staker_address: ContractAddress,
-            pools_rewards_data: Array<(ContractAddress, NormalizedAmount, Amount)>,
+            pools_rewards_data: Array<(ContractAddress, ContractAddress, NormalizedAmount, Amount)>,
         ) -> Array<(ContractAddress, Amount)> {
             let mut pool_rewards_list = array![];
             let strk_token_dispatcher = strk_token_dispatcher();
-            for (pool_contract, pool_balance, pool_rewards) in pools_rewards_data {
+            for (pool_contract, token_address, pool_balance, pool_rewards) in pools_rewards_data {
                 let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
                 // Rewards are always in STRK.
                 self
@@ -1686,12 +1686,6 @@ pub mod Staking {
                         amount: pool_rewards,
                         token_dispatcher: strk_token_dispatcher,
                     );
-                // Unwrap is safe because the pool is already verified to exist.
-                let token_address = self
-                    .staker_pool_info
-                    .entry(staker_address)
-                    .get_pool_token(:pool_contract)
-                    .unwrap();
                 let decimals = self.get_token_decimals(:token_address);
                 pool_dispatcher
                     .update_rewards_from_staking_contract(
@@ -1726,7 +1720,8 @@ pub mod Staking {
         /// The rewards will be updated and sent to pools later in `update_pools_rewards`.
         ///
         /// Returns: total commission rewards, total pools rewards, and a list of tuples with
-        /// (pool_contract, pool_balance, pool_rewards) for each pool that gets rewards.
+        /// (pool_contract, token_address, pool_balance, pool_rewards) for each pool that gets
+        /// rewards.
         ///
         /// Precondition: Staker has at least one pool.
         fn calculate_staker_pools_rewards(
@@ -1738,9 +1733,9 @@ pub mod Staking {
             btc_epoch_rewards: Amount,
             btc_total_stake: NormalizedAmount,
             curr_epoch: Epoch,
-        ) -> (Amount, Amount, Array<(ContractAddress, NormalizedAmount, Amount)>) {
+        ) -> (Amount, Amount, Array<(ContractAddress, ContractAddress, NormalizedAmount, Amount)>) {
             // Array for rewards data needed to update pools.
-            // Contains tuples of (pool_contract, pool_balance, pool_rewards).
+            // Contains tuples of (pool_contract, token_address, pool_balance, pool_rewards).
             let mut pool_rewards_array = array![];
             let mut total_commission_rewards: Amount = Zero::zero();
             let mut total_pools_rewards: Amount = Zero::zero();
@@ -1778,7 +1773,9 @@ pub mod Staking {
                 total_pools_rewards += pool_rewards;
                 if pool_rewards.is_non_zero() {
                     pool_rewards_array
-                        .append((pool_contract, pool_balance_curr_epoch, pool_rewards));
+                        .append(
+                            (pool_contract, token_address, pool_balance_curr_epoch, pool_rewards),
+                        );
                 }
             }
             (total_commission_rewards, total_pools_rewards, pool_rewards_array)
