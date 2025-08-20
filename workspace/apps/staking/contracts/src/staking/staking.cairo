@@ -1498,6 +1498,8 @@ pub mod Staking {
             self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
             let operational_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(operational_address, Zero::zero());
+            staker_pool_info.commission.write(Option::None);
+            staker_pool_info.commission_commitment.write(Option::None);
             let pool_contracts = staker_pool_info.get_pools();
             self
                 .emit(
