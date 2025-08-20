@@ -45,7 +45,7 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
 
     /// Convert from `Amount` in the given `decimals` to `NormalizedAmount`.
     fn from_native_amount(amount: Amount, decimals: u8) -> NormalizedAmount {
-        assert!(decimals >= 5 && decimals <= 18, "Unsupported decimals");
+        assert!(decimals == 18 || decimals == 8, "Unsupported decimals");
         NormalizedAmount { amount_18_decimals: amount * 10_u128.pow(18 - decimals.into()) }
     }
 
@@ -61,7 +61,7 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
 
     /// Convert from `NormalizedAmount` to `Amount` in the given `decimals`.
     fn to_native_amount(self: @NormalizedAmount, decimals: u8) -> Amount {
-        assert!(decimals >= 5 && decimals <= 18, "Unsupported decimals");
+        assert!(decimals == 18 || decimals == 8, "Unsupported decimals");
         *self.amount_18_decimals / 10_u128.pow(18 - decimals.into())
     }
 
