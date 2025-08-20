@@ -596,8 +596,8 @@ pub mod Staking {
             let strk_curr_total_stake = self
                 .balance_at_curr_epoch(trace: strk_total_stake_trace, :curr_epoch);
             let mut btc_curr_total_stake: NormalizedAmount = Zero::zero();
-            for (token_address, _) in self.btc_tokens {
-                if self.is_btc_active(:token_address, :curr_epoch) {
+            for (token_address, active_status) in self.btc_tokens {
+                if self.is_btc_active(:active_status, :curr_epoch) {
                     let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
                     btc_curr_total_stake += self
                         .balance_at_curr_epoch(trace: btc_total_stake_trace, :curr_epoch);
@@ -733,8 +733,8 @@ pub mod Staking {
         fn get_active_tokens(self: @ContractState) -> Span<ContractAddress> {
             let mut active_tokens: Array<ContractAddress> = array![STRK_TOKEN_ADDRESS];
             let curr_epoch = self.get_current_epoch();
-            for (token_address, _) in self.btc_tokens {
-                if self.is_btc_active(:token_address, :curr_epoch) {
+            for (token_address, active_status) in self.btc_tokens {
+                if self.is_btc_active(:active_status, :curr_epoch) {
                     active_tokens.append(token_address);
                 }
             }
@@ -744,8 +744,9 @@ pub mod Staking {
         fn get_tokens(self: @ContractState) -> Span<(ContractAddress, bool)> {
             let mut tokens: Array<(ContractAddress, bool)> = array![(STRK_TOKEN_ADDRESS, true)];
             let curr_epoch = self.get_current_epoch();
-            for (token_address, _) in self.btc_tokens {
-                tokens.append((token_address, self.is_btc_active(:token_address, :curr_epoch)));
+            for (token_address, active_status) in self.btc_tokens {
+                let is_btc_active = self.is_btc_active(:active_status, :curr_epoch);
+                tokens.append((token_address, is_btc_active));
             }
             tokens.span()
         }
@@ -1992,15 +1993,18 @@ pub mod Staking {
         fn is_active_token(
             self: @ContractState, token_address: ContractAddress, curr_epoch: Epoch,
         ) -> bool {
-            token_address == STRK_TOKEN_ADDRESS || self.is_btc_active(:token_address, :curr_epoch)
+            token_address == STRK_TOKEN_ADDRESS
+                || self
+                    .is_btc_active(
+                        active_status: self.btc_tokens.read(token_address).unwrap(), :curr_epoch,
+                    )
         }
 
         /// Returns true if the BTC token is active in the current epoch.
-        /// Assumes that the token exists.
         fn is_btc_active(
-            self: @ContractState, token_address: ContractAddress, curr_epoch: Epoch,
+            self: @ContractState, active_status: (Epoch, bool), curr_epoch: Epoch,
         ) -> bool {
-            let (epoch, is_active) = self.btc_tokens.read(token_address).unwrap();
+            let (epoch, is_active) = active_status;
             (curr_epoch >= epoch) == is_active
         }
 
