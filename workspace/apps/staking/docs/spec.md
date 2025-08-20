@@ -211,6 +211,8 @@
     - [COMMISSION\_NOT\_SET](#commission_not_set)
     - [TOKEN\_MISMATCH](#token_mismatch)
     - [STAKER\_IS\_TOKEN](#staker_is_token)
+    - [INTERNAL\_STAKER\_INFO\_OUTDATED\_VERSION](#internal_staker_info_outdated_version)
+    - [STAKER\_NOT\_MIGRATED](#staker_not_migrated)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -1209,6 +1211,8 @@ This function is used for migration purposes. It converts legacy staker info typ
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [INTERNAL\_STAKER\_INFO\_OUTDATED\_VERSION](#internal_staker_info_outdated_version)
+3. [STAKER\_NOT\_MIGRATED](#staker_not_migrated)
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.
 #### access control <!-- omit from toc -->
@@ -2512,6 +2516,12 @@ Only token admin.
 
 ### STAKER_IS_TOKEN
 "Staker address is a token address"
+
+### INTERNAL_STAKER_INFO_OUTDATED_VERSION
+"Outdated version of Internal Staker Info"
+
+### STAKER_NOT_MIGRATED
+"Staker is not migrated to latest version"
 
 # Structs
 ### StakerPoolInfoV1
