@@ -377,6 +377,14 @@ fn staker_migration_called_twice_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+#[should_panic(expected: "Staker is not migrated to latest version")]
+fn internal_staker_info_without_staker_migration_regression_test() {
+    let mut flow = flows::InternalStakerInfoWithoutStakerMigrationFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn delegator_intent_before_claim_rewards_after_regression_test() {
     let mut flow = flows::DelegatorIntentBeforeClaimRewardsAfterFlow {
         staker: Option::None, pool_address: Option::None, delegator: Option::None,

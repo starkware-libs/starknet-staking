@@ -768,16 +768,14 @@ pub mod Staking {
         fn internal_staker_info(
             self: @ContractState, staker_address: ContractAddress,
         ) -> InternalStakerInfoLatest {
-            let versioned_internal_staker_info = self.staker_info.read(staker_address);
-            match versioned_internal_staker_info {
-                VersionedInternalStakerInfo::None => panic_with_byte_array(
-                    err: @GenericError::STAKER_NOT_EXISTS.describe(),
-                ),
-                VersionedInternalStakerInfo::V0(_) => panic_with_byte_array(
-                    err: @Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION.describe(),
-                ),
-                VersionedInternalStakerInfo::V1(internal_staker_info_v1) => internal_staker_info_v1,
-            }
+            let internal_staker_info = self._internal_staker_info(:staker_address);
+            // Assert staker already migrated to V2.
+            assert!(
+                !self.staker_own_balance_trace.entry(staker_address).is_empty(),
+                "{}",
+                Error::STAKER_NOT_MIGRATED,
+            );
+            internal_staker_info
         }
 
         /// Migrate staker pool info and balance trace.
@@ -791,7 +789,7 @@ pub mod Staking {
                 Error::STAKER_INFO_ALREADY_UPDATED,
             );
             // Migrate staker pool info.
-            let internal_staker_info = self.internal_staker_info(:staker_address);
+            let internal_staker_info = self._internal_staker_info(:staker_address);
             let staker_pool_info = self.staker_pool_info.entry(staker_address);
             let mut pool_contract = Option::None;
             if let Option::Some(pool_info) = internal_staker_info._deprecated_pool_info {
@@ -1283,6 +1281,26 @@ pub mod Staking {
     /// **Note**: This function doesn't verify that the token actually exists.
     #[generate_trait]
     pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+        /// This function differs from `internal_staker_info` function in that it doesn't assert
+        /// that the staker has already migrated to V2.
+        ///
+        /// Use `_internal_staker_info` only within `staker_migration`.
+        /// For all other cases, call `internal_staker_info`.
+        fn _internal_staker_info(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> InternalStakerInfoLatest {
+            let versioned_internal_staker_info = self.staker_info.read(staker_address);
+            match versioned_internal_staker_info {
+                VersionedInternalStakerInfo::None => panic_with_byte_array(
+                    err: @GenericError::STAKER_NOT_EXISTS.describe(),
+                ),
+                VersionedInternalStakerInfo::V0(_) => panic_with_byte_array(
+                    err: @Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION.describe(),
+                ),
+                VersionedInternalStakerInfo::V1(internal_staker_info_v1) => internal_staker_info_v1,
+            }
+        }
+
         fn _get_total_stake(
             self: @ContractState, token_address: ContractAddress,
         ) -> NormalizedAmount {

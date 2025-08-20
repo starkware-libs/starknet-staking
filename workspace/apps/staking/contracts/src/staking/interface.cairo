@@ -63,7 +63,7 @@ pub trait IStakingMigration<TContractState> {
     /// Reads the internal staker information for the given `staker_address` from storage and
     /// returns it.
     ///
-    /// Precondition: The staker exists and its version is V1.
+    /// Precondition: The staker exists and is already migrated to V2 (Its version is V1).
     fn internal_staker_info(
         self: @TContractState, staker_address: ContractAddress,
     ) -> InternalStakerInfoLatest;

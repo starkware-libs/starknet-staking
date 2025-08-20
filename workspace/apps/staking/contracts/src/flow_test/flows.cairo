@@ -3900,6 +3900,39 @@ pub(crate) impl StakerMigrationCalledTwiceFlowImpl of FlowTrait<StakerMigrationC
     }
 }
 
+// Test internal_staker_info called without staker_migration.
+#[derive(Drop, Copy)]
+pub(crate) struct InternalStakerInfoWithoutStakerMigrationFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl InternalStakerInfoWithoutStakerMigrationFlowImpl of FlowTrait<
+    InternalStakerInfoWithoutStakerMigrationFlow,
+> {
+    fn get_staker_address(
+        self: InternalStakerInfoWithoutStakerMigrationFlow,
+    ) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup_v1(ref self: InternalStakerInfoWithoutStakerMigrationFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        /// Staker balance trace: epoch 1, stake_amount.
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(self: InternalStakerInfoWithoutStakerMigrationFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        // Should panic.
+        system.internal_staker_info(:staker);
+    }
+}
+
 // TODO: Test all claim_rewards/calculate rewards of pools with BTC.
 
 /// Test claim_rewards with multiple delegators.
