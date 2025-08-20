@@ -1468,6 +1468,8 @@ pub mod Staking {
             }
         }
 
+        /// **Note**: `pools` in `staker_pool_info` is not cleaned up when staker is removed but it
+        /// is not used anymore.
         fn remove_staker(
             ref self: ContractState,
             staker_address: ContractAddress,
