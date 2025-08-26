@@ -1,8 +1,7 @@
 use core::num::traits::Zero;
+use core::num::traits::ops::pow::Pow;
 use snforge_std::{TokenImpl, start_cheat_block_number_global};
-use staking_test::constants::{
-    MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS, STRK_IN_FRIS,
-};
+use staking_test::constants::{BTC_18D_CONFIG, MIN_ATTESTATION_WINDOW, STRK_IN_FRIS};
 use staking_test::errors::GenericError;
 use staking_test::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
@@ -13,26 +12,34 @@ use staking_test::pool::errors::Error as PoolError;
 use staking_test::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
+use staking_test::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
 use staking_test::staking::errors::Error as StakingError;
 use staking_test::staking::interface::{
     CommissionCommitment, IStakingDispatcherTrait, IStakingSafeDispatcherTrait, PoolInfo,
     StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
-use staking_test::staking::objects::EpochInfoTrait;
-use staking_test::test_utils::constants::EPOCH_DURATION;
+use staking_test::staking::objects::{EpochInfoTrait, NormalizedAmountTrait};
+use staking_test::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
+use staking_test::test_utils::constants::{
+    BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, STRK_BASE_VALUE, TEST_BTC_DECIMALS,
+    TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
+};
 use staking_test::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
-    calculate_strk_pool_rewards, calculate_strk_pool_rewards_with_pool_balance,
-    compute_rewards_for_trace, deserialize_option, load_from_iterable_map, load_from_trace,
-    load_trace_length, strk_pool_update_rewards,
+    calculate_staker_strk_rewards_with_amount_and_pool_info, calculate_strk_pool_rewards,
+    calculate_strk_pool_rewards_with_pool_balance, compute_rewards_per_unit, deserialize_option,
+    load_from_iterable_map, load_from_trace, load_trace_length, strk_pool_update_rewards,
+    to_amount_18_decimals,
 };
 use staking_test::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
 use staking_test::utils::compute_rewards_rounded_down;
 use starknet::{ContractAddress, Store};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
+use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
+
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
 /// Staker increase_stake - cover if pool amount = 0 in calc_rew
@@ -180,6 +187,105 @@ pub impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
         assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
         assert!(
             system.token.balance_of(account: delegator.delegator.address) == stake_amount
+                - switch_amount,
+        );
+        assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+        assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
+        assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
+                + system.token.balance_of(account: staker.reward.address)
+                + system.token.balance_of(account: delegator.reward.address)
+                + system.token.balance_of(account: pool),
+        );
+    }
+}
+
+/// Flow - Basic Stake with BTC:
+/// Staker stake
+/// Staker open BTC pool
+/// Staker increase_stake - cover if pool amount = 0 in calc_rew
+/// Delegator delegate (and create) to Staker
+/// Staker increase_stake - cover pool amount > 0 in calc_rew
+/// Delegator increase_delegate
+/// Delegator exit intent
+/// Staker exit intent and action
+/// Staker2 stake
+/// Staker2 open BTC pool
+/// Delegator switch
+/// Test balances
+#[derive(Drop, Copy)]
+pub struct BasicStakeBTCFlow {}
+pub impl BasicStakeBTCFlowImpl of FlowTrait<BasicStakeBTCFlow> {
+    fn test(self: BasicStakeBTCFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let delegate_amount = TEST_MIN_BTC_FOR_REWARDS * 16;
+        let initial_reward_supplier_balance = system
+            .token
+            .balance_of(account: system.reward_supplier.address);
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+
+        // Staker open BTC pool
+        system.set_commission(:staker, :commission);
+        let token = system.btc_token;
+        let token_address = token.contract_address();
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_stake(:staker, amount: stake_amount / 2);
+        system.advance_epoch_and_attest(:staker);
+
+        let delegator = system.new_btc_delegator(amount: delegate_amount, :token);
+        system.delegate_btc(:delegator, :pool, amount: delegate_amount / 2, :token);
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_stake(:staker, amount: stake_amount / 4);
+        system.advance_epoch_and_attest(:staker);
+
+        system.increase_delegate_btc(:delegator, :pool, amount: delegate_amount / 4, :token);
+        system.advance_epoch_and_attest(:staker);
+
+        let switch_amount = delegate_amount * 3 / 4;
+        system.delegator_exit_intent(:delegator, :pool, amount: switch_amount);
+        system.advance_epoch_and_attest(:staker);
+
+        system.staker_exit_intent(:staker);
+        system.advance_time(time: system.staking.get_exit_wait_window());
+
+        system.delegator_claim_rewards(:delegator, :pool);
+        system.staker_exit_action(:staker);
+
+        let staker2 = system.new_staker(amount: stake_amount);
+        system
+            .stake(
+                staker: staker2,
+                amount: stake_amount,
+                pool_enabled: false,
+                commission: commission / 2,
+            );
+        system.set_commission(staker: staker2, commission: commission / 2);
+        let pool2 = system.set_open_for_delegation(staker: staker2, :token_address);
+        system
+            .switch_delegation_pool(
+                :delegator,
+                from_pool: pool,
+                to_staker: staker2.staker.address,
+                to_pool: pool2,
+                amount: switch_amount,
+            );
+
+        assert!(system.token.balance_of(account: system.staking.address) == stake_amount);
+        assert!(system.btc_token.balance_of(account: system.staking.address) == switch_amount);
+        assert!(system.token.balance_of(account: pool) < 100);
+        assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
+        assert!(
+            system.btc_token.balance_of(account: delegator.delegator.address) == delegate_amount
                 - switch_amount,
         );
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
@@ -944,6 +1050,178 @@ pub impl PoolUpgradeFlowImpl of FlowTrait<PoolUpgradeFlow> {
     }
 }
 
+/// Test multiple token delegations.
+/// Flow:
+/// Deploy 2 new btc tokens
+/// Staker stake
+/// Staker open delegation pools for BTC tokens
+/// Delegators delegate to all pools
+/// Attest
+/// Disable 2 BTC tokens
+/// Attest
+/// Enable 1 BTC token
+/// Attest
+/// Test rewards
+#[derive(Drop, Copy)]
+pub struct MultipleTokensDelegationFlow {}
+pub impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDelegationFlow> {
+    fn test(self: MultipleTokensDelegationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        // Setup tokens.
+        let first_btc_token = system.btc_token;
+        let second_btc_token = system.deploy_second_btc_token();
+        system.staking.add_token(token_address: second_btc_token.contract_address());
+        system.staking.enable_token(token_address: second_btc_token.contract_address());
+        let third_btc_token = system
+            .deploy_new_btc_token(name: "THIRD_BTC_TOKEN", decimals: TEST_BTC_DECIMALS);
+        system.staking.add_token(token_address: third_btc_token.contract_address());
+        system.staking.enable_token(token_address: third_btc_token.contract_address());
+
+        // Stake and open pools.
+        system.advance_epoch();
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+        let first_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: first_btc_token.contract_address());
+        let second_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: second_btc_token.contract_address());
+        let third_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: third_btc_token.contract_address());
+
+        // Setup delegators.
+        let first_btc_delegator_amount = TEST_MIN_BTC_FOR_REWARDS;
+        let second_btc_delegator_amount = BTC_18D_CONFIG.min_for_rewards * 2;
+        let third_btc_delegator_amount = first_btc_delegator_amount * 3;
+        let first_btc_delegator = system
+            .new_btc_delegator(amount: first_btc_delegator_amount, token: first_btc_token);
+        let second_btc_delegator = system
+            .new_btc_delegator(amount: second_btc_delegator_amount, token: second_btc_token);
+        let third_btc_delegator = system
+            .new_btc_delegator(amount: third_btc_delegator_amount, token: third_btc_token);
+
+        // Delegators delegate.
+        system
+            .delegate_btc(
+                delegator: first_btc_delegator,
+                pool: first_btc_pool,
+                amount: first_btc_delegator_amount,
+                token: first_btc_token,
+            );
+        system
+            .delegate_btc(
+                delegator: second_btc_delegator,
+                pool: second_btc_pool,
+                amount: second_btc_delegator_amount,
+                token: second_btc_token,
+            );
+        system
+            .delegate_btc(
+                delegator: third_btc_delegator,
+                pool: third_btc_pool,
+                amount: third_btc_delegator_amount,
+                token: third_btc_token,
+            );
+
+        // Attest.
+        system.advance_epoch_and_attest(:staker);
+
+        // Calculate rewards.
+        let mut total_first_pool_rewards = Zero::zero();
+        let mut total_second_pool_rewards = Zero::zero();
+        let mut total_third_pool_rewards = Zero::zero();
+        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: first_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: first_btc_token.contract_address(),
+        );
+        let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: second_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: second_btc_token.contract_address(),
+        );
+        let (_, third_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: third_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: third_btc_token.contract_address(),
+        );
+        total_first_pool_rewards += first_pool_rewards;
+        total_second_pool_rewards += second_pool_rewards;
+        total_third_pool_rewards += third_pool_rewards;
+
+        // Disable 2 BTC tokens and attest.
+        system.advance_epoch();
+        system.staking.disable_token(token_address: second_btc_token.contract_address());
+        system.staking.disable_token(token_address: third_btc_token.contract_address());
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+
+        total_first_pool_rewards += first_pool_rewards;
+        total_second_pool_rewards += second_pool_rewards;
+        total_third_pool_rewards += third_pool_rewards;
+
+        // Enable 1 BTC token and attest.
+        system.advance_epoch();
+        system.staking.enable_token(token_address: second_btc_token.contract_address());
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+
+        // Calculate rewards.
+        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: first_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: first_btc_token.contract_address(),
+        );
+        total_first_pool_rewards += first_pool_rewards;
+
+        system.advance_epoch();
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+
+        // Calculate rewards.
+        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: first_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: first_btc_token.contract_address(),
+        );
+        let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: second_btc_delegator_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: second_btc_token.contract_address(),
+        );
+        total_first_pool_rewards += first_pool_rewards;
+        total_second_pool_rewards += second_pool_rewards;
+
+        // Test rewards.
+        system.advance_epoch();
+        let actual_first_pool_rewards = system
+            .delegator_claim_rewards(delegator: first_btc_delegator, pool: first_btc_pool);
+        let actual_second_pool_rewards = system
+            .delegator_claim_rewards(delegator: second_btc_delegator, pool: second_btc_pool);
+        let actual_third_pool_rewards = system
+            .delegator_claim_rewards(delegator: third_btc_delegator, pool: third_btc_pool);
+        assert!(actual_first_pool_rewards == total_first_pool_rewards);
+        assert!(actual_second_pool_rewards == total_second_pool_rewards);
+        assert!(actual_third_pool_rewards == total_third_pool_rewards);
+    }
+}
+
 /// Test pool member info migration with internal_pool_member_info, get_internal_pool_member_info
 /// and pool_member_info_v1 functions.
 /// Flow:
@@ -1010,6 +1288,99 @@ pub impl PoolMemberInfoAfterUpgradeFlowImpl of FlowTrait<PoolMemberInfoAfterUpgr
                 expected_pool_member_info.to_internal(),
             ),
         );
+    }
+}
+
+/// Flow:
+/// Staker1 stake
+/// Staker2 stake
+/// Upgrade
+/// Migrate stakers
+/// Test staker_pool_info for both
+/// Both attest
+/// Test rewards both
+#[derive(Drop, Copy)]
+pub struct MultipleStakersMigrationAttestFlow {
+    pub staker1: Option<Staker>,
+    pub staker2: Option<Staker>,
+    pub staker_info1: Option<StakerInfoV1>,
+    pub staker_info2: Option<StakerInfoV1>,
+    pub commission: Option<Commission>,
+    pub pool_address: Option<ContractAddress>,
+}
+pub impl MultipleStakersMigrationAttestFlowImpl of FlowTrait<
+    MultipleStakersMigrationAttestFlow,
+> {
+    fn setup_v1(ref self: MultipleStakersMigrationAttestFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker1 = system.new_staker(amount: amount * 2);
+        let staker2 = system.new_staker(amount: amount * 2);
+        let commission = 200;
+        system.stake(staker: staker1, :amount, pool_enabled: false, :commission);
+        system.stake(staker: staker2, :amount, pool_enabled: true, :commission);
+        system.advance_epoch();
+
+        self.staker1 = Option::Some(staker1);
+        self.staker2 = Option::Some(staker2);
+        self.staker_info1 = Option::Some(system.staker_info_v1(staker: staker1));
+        self.staker_info2 = Option::Some(system.staker_info_v1(staker: staker2));
+        self.commission = Option::Some(commission);
+        self.pool_address = Option::Some(system.staking.get_pool(staker: staker2));
+    }
+
+    fn test(self: MultipleStakersMigrationAttestFlow, ref system: SystemState) {
+        let staker1 = self.staker1.unwrap();
+        let staker2 = self.staker2.unwrap();
+        system.staker_migration(staker_address: staker1.staker.address);
+        system.staker_migration(staker_address: staker2.staker.address);
+        let staker_info1 = self.staker_info1.unwrap();
+        let staker_info2 = self.staker_info2.unwrap();
+        let commission = self.commission.unwrap();
+        let pool_address = self.pool_address.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        // Test pool info.
+        let expected_pool_info1 = StakerPoolInfoV2 {
+            commission: Option::None, pools: array![].span(),
+        };
+        let expected_pool_info2 = StakerPoolInfoV2 {
+            commission: Option::Some(commission),
+            pools: array![
+                PoolInfo {
+                    token_address: system.token.contract_address(),
+                    pool_contract: pool_address,
+                    amount: 0,
+                },
+            ]
+                .span(),
+        };
+        let actual_pool_info1 = system.staker_pool_info(staker: staker1);
+        let actual_pool_info2 = system.staker_pool_info(staker: staker2);
+        assert!(actual_pool_info1 == expected_pool_info1);
+        assert!(actual_pool_info2 == expected_pool_info2);
+
+        // Test staker_info.
+        let actual_staker_info1 = system.staker_info_v1(staker: staker1);
+        let actual_staker_info2 = system.staker_info_v1(staker: staker2);
+        assert!(actual_staker_info1 == staker_info1);
+        assert!(actual_staker_info2 == staker_info2);
+
+        // Second staker window is earlier.
+        system.advance_block_into_attestation_window(staker: staker2);
+        system.attest(staker: staker2);
+        system.advance_block_into_attestation_window(staker: staker1);
+        system.attest(staker: staker1);
+        system.advance_epoch();
+
+        // Test rewards.
+        let (expected_rewards1, _) = calculate_staker_strk_rewards(
+            staker_info: staker_info1, :staking_contract, :minting_curve_contract,
+        );
+        let actual_rewards1 = system.staker_claim_rewards(staker: staker1);
+        let actual_rewards2 = system.staker_claim_rewards(staker: staker2);
+        assert!(actual_rewards1 == expected_rewards1);
+        assert!(actual_rewards2 == actual_rewards1);
     }
 }
 
@@ -1293,6 +1664,220 @@ pub impl DelegatorExitAndEnterAgainFlowImpl of FlowTrait<DelegatorExitAndEnterAg
     }
 }
 
+/// Test
+/// Test delegator exit pool and enter again.
+/// Flow:
+/// Staker stake with pool
+/// Delegator delegate
+/// Attest
+/// Attest
+/// Attest
+/// Delagator exit intent
+/// Delegator exit action
+/// Delegator delegate with the same address
+/// Attest
+/// Attest
+/// Delegator claim rewards
+/// Staker exit intent
+/// Delegator exit intent
+/// Staker exit action
+/// Delegator exit action
+#[derive(Drop, Copy)]
+pub struct DelegatorExitIntentUpgradeSwitchFlow {
+    pub staker: Option<Staker>,
+    pub delegator: Option<Delegator>,
+    pub delegated_amount: Option<Amount>,
+    pub initial_reward_supplier_balance: Option<Amount>,
+    pub initial_stake_amount: Option<Amount>,
+}
+pub impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
+    DelegatorExitIntentUpgradeSwitchFlow,
+> {
+    fn setup_v1(ref self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let initial_stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: initial_stake_amount * 2);
+        let initial_reward_supplier_balance = system
+            .token
+            .balance_of(account: system.reward_supplier.address);
+        let commission = 200;
+
+        system.stake(:staker, amount: initial_stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch_and_attest(:staker);
+
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: initial_stake_amount);
+        let delegated_amount = initial_stake_amount / 2;
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch_and_attest(:staker);
+
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_exit_wait_window();
+
+        self.staker = Option::Some(staker);
+        self.delegator = Option::Some(delegator);
+        self.delegated_amount = Option::Some(delegated_amount);
+        self.initial_reward_supplier_balance = Option::Some(initial_reward_supplier_balance);
+        self.initial_stake_amount = Option::Some(initial_stake_amount);
+    }
+
+    fn test(self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        system.staker_migration(staker_address: staker.staker.address);
+        let delegator = self.delegator.unwrap();
+        let initial_stake_amount = self.initial_stake_amount.unwrap();
+        let pool = system.staking.get_pool(:staker);
+        let delegated_amount = self.delegated_amount.unwrap();
+        let initial_reward_supplier_balance = self.initial_reward_supplier_balance.unwrap();
+        let commission = 200;
+
+        // Switch to new pool.
+        let second_stake_amount = initial_stake_amount * 2;
+        let staker2 = system.new_staker(amount: second_stake_amount);
+        system.stake(staker: staker2, amount: second_stake_amount, pool_enabled: true, :commission);
+        let pool2 = system.staking.get_pool(staker: staker2);
+        system
+            .switch_delegation_pool(
+                :delegator,
+                from_pool: pool,
+                to_staker: staker2.staker.address,
+                to_pool: pool2,
+                amount: delegated_amount,
+            );
+
+        // Switch back to old pool.
+        system.delegator_exit_intent(:delegator, pool: pool2, amount: delegated_amount);
+        system.advance_exit_wait_window();
+        system
+            .switch_delegation_pool(
+                :delegator,
+                from_pool: pool2,
+                to_staker: staker.staker.address,
+                to_pool: pool,
+                amount: delegated_amount,
+            );
+
+        // Staker and delegator exit.
+
+        system.staker_exit_intent(:staker);
+        system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
+
+        system.advance_exit_wait_window();
+
+        system.staker_exit_action(:staker);
+        system.delegator_exit_action(:delegator, :pool);
+        system.delegator_claim_rewards(:delegator, :pool);
+
+        assert!(system.token.balance_of(account: system.staking.address) == second_stake_amount);
+        assert!(system.token.balance_of(account: pool) == 0);
+        assert!(system.token.balance_of(account: pool2) == 0);
+        assert!(
+            system.token.balance_of(account: staker.staker.address) == initial_stake_amount * 2,
+        );
+        assert!(
+            system.token.balance_of(account: delegator.delegator.address) == initial_stake_amount,
+        );
+        assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
+        assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
+        assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
+        assert!(
+            initial_reward_supplier_balance == system
+                .token
+                .balance_of(account: system.reward_supplier.address)
+                + system.token.balance_of(account: staker.reward.address)
+                + system.token.balance_of(account: delegator.reward.address),
+        );
+    }
+}
+
+/// Test disabled token delegation.
+/// Flow:
+/// Staker stake
+/// Open 2 BTC pools
+/// Delegators delegate
+/// Disable 1 BTC token
+/// Attest
+/// Test pool rewards and balance
+#[derive(Drop, Copy)]
+pub struct DisabledTokenDelegationFlow {}
+pub impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelegationFlow> {
+    fn test(self: DisabledTokenDelegationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let delegated_amount_8 = TEST_MIN_BTC_FOR_REWARDS;
+        let delegated_amount_18 = BTC_18D_CONFIG.min_for_rewards;
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+
+        // Setup tokens.
+        let token = system.btc_token;
+        let token_address = token.contract_address();
+        let second_token = system.deploy_second_btc_token();
+        let second_token_address = second_token.contract_address();
+        system.staking.add_token(token_address: second_token_address);
+        system.staking.enable_token(token_address: second_token_address);
+
+        // Stake.
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+
+        // Open pools.
+        system.set_commission(:staker, :commission);
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+        let second_pool = system
+            .set_open_for_delegation(:staker, token_address: second_token_address);
+
+        // Delegate.
+        let delegator = system.new_btc_delegator(amount: delegated_amount_8, :token);
+        let second_delegator = system
+            .new_btc_delegator(amount: delegated_amount_18, token: second_token);
+        system.delegate_btc(:delegator, :pool, amount: delegated_amount_8, :token);
+        system
+            .delegate_btc(
+                delegator: second_delegator,
+                pool: second_pool,
+                amount: delegated_amount_18,
+                token: second_token,
+            );
+
+        // Advance epoch so that attesting will be possible and the delegation will take effect.
+        system.advance_epoch();
+
+        // Disable token and attest.
+        system.staking.disable_token(:token_address);
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+        system.advance_epoch();
+
+        // Test rewards in the epoch we disabled the token, should be the same.
+        let rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let second_delegator_rewards = system
+            .delegator_claim_rewards(delegator: second_delegator, pool: second_pool);
+        assert!(rewards == second_delegator_rewards);
+
+        // Attest again.
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+        system.advance_epoch();
+
+        // Test rewards in the epoch after we disabled the token.
+        let (_, expected_rewards) = calculate_staker_btc_pool_rewards(
+            pool_balance: delegated_amount_18,
+            :commission,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+            token_address: second_token.contract_address(),
+        );
+        let rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let second_delegator_rewards = system
+            .delegator_claim_rewards(delegator: second_delegator, pool: second_pool);
+        let pool_balance = system.token.balance_of(account: pool);
+        assert!(rewards == 0);
+        assert!(second_delegator_rewards == expected_rewards);
+        assert!(pool_balance == 0);
+    }
+}
 
 /// Test delegator exit pool and enter again with switch.
 /// Flow:
@@ -1429,6 +2014,223 @@ pub impl DelegatorExitAndEnterAgainWithSwitchFlowImpl of FlowTrait<
                 + system.token.balance_of(account: staker1.reward.address)
                 + system.token.balance_of(account: delegator.reward.address),
         );
+    }
+}
+
+/// Test new token delegation
+/// Flow:
+/// Staker stake
+/// Add new btc token
+/// Staker open delegation pool for new token
+/// Delegator delegate
+/// Test staking power
+/// Advance epoch
+/// Test staking power
+#[derive(Drop, Copy)]
+pub struct NewTokenDelegationFlow {}
+pub impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> {
+    fn test(self: NewTokenDelegationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let delegated_amount = BTC_18D_CONFIG.min_for_rewards;
+
+        // Stake and set commission.
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+
+        // Deploy, add, and enable token.
+        let token = system.deploy_second_btc_token();
+        let token_address = token.contract_address();
+        system.staking.add_token(:token_address);
+        system.staking.enable_token(:token_address);
+
+        // Set open for delegation and delegate.
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+        let delegator = system.new_btc_delegator(amount: delegated_amount, :token);
+        system.delegate_btc(:delegator, :pool, amount: delegated_amount, :token);
+
+        // Test total staking power.
+        let total_staking_power = system.staking.get_current_total_staking_power_v2();
+        assert!(total_staking_power == (Zero::zero(), Zero::zero()));
+
+        system.advance_epoch();
+        // Test new token staking power.
+        let new_token_staking_power = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(:token_address);
+        assert!(new_token_staking_power == delegated_amount);
+
+        // Test total staking power after epoch.
+        let total_staking_power = system.staking.get_current_total_staking_power_v2();
+        let expected_btc_staking_power = to_amount_18_decimals(
+            amount: delegated_amount, :token_address,
+        );
+        assert!(
+            total_staking_power == (
+                NormalizedAmountTrait::from_strk_native_amount(amount),
+                NormalizedAmountTrait::from_amount_18_decimals(expected_btc_staking_power),
+            ),
+        );
+    }
+}
+
+/// Flow:
+/// Staker stake
+/// Staker open 2 BTC pools (one with 8 decimals, one with 18 decimals)
+/// Delegators delegate
+/// Attest
+/// Test rewards are not equal
+/// Test total staking power
+#[derive(Drop, Copy)]
+pub struct MultipleBTCPoolsDifferentDecimalsFlow {}
+pub impl MultipleBTCPoolsDifferentDecimalsFlowImpl of FlowTrait<
+    MultipleBTCPoolsDifferentDecimalsFlow,
+> {
+    fn test(self: MultipleBTCPoolsDifferentDecimalsFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let delegated_amount_8 = 10_u128.pow(BTC_DECIMALS_8.into()); // One BTC
+        let delegated_amount_18 = 10_u128.pow(BTC_DECIMALS_18.into()); // One BTC
+
+        // Stake and set commission.
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+
+        // Setups tokens.
+        let token_8 = system.deploy_new_btc_token(name: "BTC_TOKEN_8", decimals: BTC_DECIMALS_8);
+        let token_18 = system.deploy_new_btc_token(name: "BTC_TOKEN_18", decimals: BTC_DECIMALS_18);
+        let token_8_address = token_8.contract_address();
+        let token_18_address = token_18.contract_address();
+        system.staking.add_token(token_address: token_8_address);
+        system.staking.add_token(token_address: token_18_address);
+        system.staking.enable_token(token_address: token_8_address);
+        system.staking.enable_token(token_address: token_18_address);
+
+        // Set open for delegation.
+        let pool_8 = system.set_open_for_delegation(:staker, token_address: token_8_address);
+        let pool_18 = system.set_open_for_delegation(:staker, token_address: token_18_address);
+
+        // Delegators delegate.
+        let delegator_8 = system.new_btc_delegator(amount: delegated_amount_8, token: token_8);
+        let delegator_18 = system.new_btc_delegator(amount: delegated_amount_18, token: token_18);
+        system
+            .delegate_btc(
+                delegator: delegator_8, pool: pool_8, amount: delegated_amount_8, token: token_8,
+            );
+        system
+            .delegate_btc(
+                delegator: delegator_18,
+                pool: pool_18,
+                amount: delegated_amount_18,
+                token: token_18,
+            );
+
+        // Attest.
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        // Test rewards are not equal.
+        let rewards_8 = system.delegator_claim_rewards(delegator: delegator_8, pool: pool_8);
+        let rewards_18 = system.delegator_claim_rewards(delegator: delegator_18, pool: pool_18);
+        let (_, btc_staking_power) = system.staking.get_current_total_staking_power_v2();
+        assert!(rewards_8 == rewards_18);
+        let expected_btc_staking_power = NormalizedAmountTrait::from_native_amount(
+            amount: delegated_amount_8, decimals: BTC_DECIMALS_8,
+        )
+            + NormalizedAmountTrait::from_native_amount(
+                amount: delegated_amount_18, decimals: BTC_DECIMALS_18,
+            );
+        assert!(btc_staking_power == expected_btc_staking_power);
+    }
+}
+
+/// Flow:
+/// Staker stake
+/// Advance epoch
+/// Staker increase stake
+/// Upgrade
+/// Staker migration
+/// Test balance trace
+/// Staker attest
+/// Advance epoch
+/// Staker attest
+/// Test rewards
+/// Advance epoch
+/// Test rewards
+#[derive(Drop, Copy)]
+pub struct StakerMultipleEntriesMigrationAttestFlow {
+    pub staker: Option<Staker>,
+    pub amount: Option<Amount>,
+}
+pub impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
+    StakerMultipleEntriesMigrationAttestFlow,
+> {
+    fn setup_v1(ref self: StakerMultipleEntriesMigrationAttestFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 2);
+        system.stake(:staker, :amount, pool_enabled: false, commission: 200);
+        system.advance_epoch();
+        system.increase_stake(:staker, :amount);
+
+        self.staker = Option::Some(staker);
+        self.amount = Option::Some(amount);
+    }
+
+    fn test(self: StakerMultipleEntriesMigrationAttestFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        system.staker_migration(:staker_address);
+        let amount = self.amount.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        // Test balance trace.
+        let own_trace_storage = snforge_std::map_entry_address(
+            map_selector: selector!("staker_own_balance_trace"),
+            keys: [staker_address.into()].span(),
+        );
+        let own_trace_length = load_trace_length(
+            contract_address: system.staking.address, trace_address: own_trace_storage,
+        );
+        assert!(own_trace_length == 2);
+        let (_, own_value) = load_from_trace(
+            contract_address: system.staking.address, trace_address: own_trace_storage, index: 0,
+        );
+        assert!(own_value == amount);
+        let (_, own_value) = load_from_trace(
+            contract_address: system.staking.address, trace_address: own_trace_storage, index: 1,
+        );
+        assert!(own_value == amount * 2);
+
+        // Attest.
+        system.advance_block_into_attestation_window_custom_stake(:staker_address, stake: amount);
+        system.attest(:staker);
+
+        // Second stake does not count towards rewards (since we attest in the same epoch).
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_amount_and_pool_info(
+            amount_own: amount, pool_info: Option::None, :staking_contract, :minting_curve_contract,
+        );
+
+        // Test rewards.
+        let actual_staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(actual_staker_rewards == expected_staker_rewards);
+
+        // Attest again.
+        system.advance_epoch_and_attest(:staker);
+
+        // Advance epoch and test rewards.
+        system.advance_epoch();
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_amount_and_pool_info(
+            amount_own: amount * 2,
+            pool_info: Option::None,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        let actual_staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(actual_staker_rewards == expected_staker_rewards);
     }
 }
 
@@ -1668,6 +2470,86 @@ pub impl StakerAttestAfterIntentFlowImpl of FlowTrait<StakerAttestAfterIntentFlo
     }
 }
 
+/// Test total stake trace before and after upgrade
+/// Flow:
+/// Staker stake with pool
+/// Staker increase stake
+/// Delegator delegate
+/// Upgrade
+/// Test total stake trace
+/// Test total stake view
+#[derive(Drop, Copy)]
+pub struct TotalStakeTraceAfterUpgradeFlow {
+    pub amount: Option<Amount>,
+}
+pub impl TotalStakeTraceAfterUpgradeFlowImpl of FlowTrait<TotalStakeTraceAfterUpgradeFlow> {
+    fn setup_v1(ref self: TotalStakeTraceAfterUpgradeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 2);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+
+        system.advance_epoch();
+        system.increase_stake(:staker, :amount);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+
+        self.amount = Option::Some(amount);
+    }
+
+    fn test(self: TotalStakeTraceAfterUpgradeFlow, ref system: SystemState) {
+        let amount = self.amount.unwrap();
+        let token_address = system.token.contract_address();
+
+        // Test total stake trace.
+        let total_stake_trace_storage = snforge_std::map_entry_address(
+            map_selector: selector!("tokens_total_stake_trace"),
+            keys: [token_address.into()].span(),
+        );
+        let length = load_trace_length(
+            contract_address: system.staking.address, trace_address: total_stake_trace_storage,
+        );
+        assert!(length == MAX_MIGRATION_TRACE_ENTRIES);
+        let (key, value) = load_from_trace(
+            contract_address: system.staking.address,
+            trace_address: total_stake_trace_storage,
+            index: 0,
+        );
+        assert!(key == 0);
+        assert!(value == 0);
+        let (key, value) = load_from_trace(
+            contract_address: system.staking.address,
+            trace_address: total_stake_trace_storage,
+            index: 1,
+        );
+        assert!(key == 1);
+        assert!(value == amount);
+        let (key, value) = load_from_trace(
+            contract_address: system.staking.address,
+            trace_address: total_stake_trace_storage,
+            index: 2,
+        );
+        assert!(key == 2);
+        assert!(value == amount * 3);
+
+        // Test total stake view.
+        let current_staking_power = system.staking.get_current_total_staking_power_v2();
+        let total_stake = system.staking.get_total_stake();
+        let strk_total_stake = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(:token_address);
+        assert!(total_stake == amount * 3);
+        assert!(strk_total_stake == total_stake);
+        assert!(
+            current_staking_power == (
+                NormalizedAmountTrait::from_strk_native_amount(amount), Zero::zero(),
+            ),
+        );
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// Delegator delegate
@@ -1849,7 +2731,7 @@ pub impl DelegatorClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
 
 /// Flow
 /// Disable btc token
-/// Test btc token is disabled
+/// Test btc token is not disabled
 /// Advance epoch
 /// Test btc token is disabled
 #[derive(Drop, Copy)]
@@ -1858,20 +2740,46 @@ pub impl DisableBtcTokenSameAndNextEpochFlowImpl of FlowTrait<
     DisableBtcTokenSameAndNextEpochFlow,
 > {
     fn test(self: DisableBtcTokenSameAndNextEpochFlow, ref system: SystemState) {
+        system.advance_epoch();
         let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
         let token_address = system.deploy_second_btc_token().contract_address();
+        let strk_token_address = system.token.contract_address();
+        let btc_token_address = system.btc_token.contract_address();
+
+        let expected_tokens_false = array![
+            (strk_token_address, true), (btc_token_address, true), (token_address, false),
+        ]
+            .span();
+        let expected_tokens_true = array![
+            (strk_token_address, true), (btc_token_address, true), (token_address, true),
+        ]
+            .span();
+
         system.staking.add_token(:token_address);
+        let tokens = system.staking.dispatcher().get_tokens();
+        assert!(tokens == expected_tokens_false);
+
         system.staking.enable_token(:token_address);
-
+        let tokens = system.staking.dispatcher().get_tokens();
+        assert!(tokens == expected_tokens_false);
         system.advance_epoch();
+        let tokens = system.staking.dispatcher().get_tokens();
+        assert!(tokens == expected_tokens_true);
+
         system.staking.disable_token(:token_address);
-
+        let tokens = system.staking.dispatcher().get_tokens();
+        assert!(tokens == expected_tokens_true);
+        system.advance_epoch();
         let active_tokens = system.staking.dispatcher().get_active_tokens();
+        let tokens = system.staking.dispatcher().get_tokens();
         assert!(active_tokens == expected_active_tokens);
+        assert!(tokens == expected_tokens_false);
 
         system.advance_epoch();
         let active_tokens = system.staking.dispatcher().get_active_tokens();
+        let tokens = system.staking.dispatcher().get_tokens();
         assert!(active_tokens == expected_active_tokens);
+        assert!(tokens == expected_tokens_false);
     }
 }
 
@@ -2057,7 +2965,7 @@ pub impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
         );
         let delegated_trace_storage = snforge_std::map_entry_address(
             map_selector: selector!("staker_delegated_balance_trace"),
-            keys: [staker_address.into(), strk_token_address.into()].span(),
+            keys: [staker_address.into(), pool_contract.into()].span(),
         );
         let own_trace_length = load_trace_length(
             contract_address: system.staking.address, trace_address: own_trace_storage,
@@ -2065,8 +2973,8 @@ pub impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
         let delegated_trace_length = load_trace_length(
             contract_address: system.staking.address, trace_address: delegated_trace_storage,
         );
-        assert!(own_trace_length == 3);
-        assert!(delegated_trace_length == 3);
+        assert!(own_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
+        assert!(delegated_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
         // Test latest: staker balance trace: epoch 3, stake_amount*2 + delegate_amount.
         let (own_key, own_value) = load_from_trace(
             contract_address: system.staking.address, trace_address: own_trace_storage, index: 2,
@@ -2129,6 +3037,105 @@ pub impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
             .try_into()
             .unwrap();
         assert!(staker_in_vec == staker_address);
+    }
+}
+
+/// Test multi pool exit intent.
+/// Flow:
+/// Staker stake with pool
+/// Staker open 2 BTC pools
+/// Delegators delegate to both pools
+/// Staker attest
+/// Staker exit intent
+/// Test total_stake
+/// Staker exit action
+/// Test delegations and rewards transferred to pools
+
+#[derive(Drop, Copy)]
+pub struct MultiPoolExitIntentFlow {}
+pub impl MultiPoolExitIntentFlowImpl of FlowTrait<MultiPoolExitIntentFlow> {
+    fn test(self: MultiPoolExitIntentFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let strk_delegator_amount = amount * 2;
+        let first_btc_amount = TEST_MIN_BTC_FOR_REWARDS * 3;
+        let second_btc_amount = BTC_18D_CONFIG.min_for_rewards * 4;
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        // Setup tokens and pools.
+        let strk_token = system.token;
+        let first_btc_token = system.btc_token;
+        let second_btc_token = system.deploy_second_btc_token();
+        system.staking.add_token(token_address: second_btc_token.contract_address());
+        system.staking.enable_token(token_address: second_btc_token.contract_address());
+        let strk_pool = system.staking.get_pool(:staker);
+        let first_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: first_btc_token.contract_address());
+        let second_btc_pool = system
+            .set_open_for_delegation(:staker, token_address: second_btc_token.contract_address());
+
+        // Setup delegations.
+        let strk_delegator = system.new_delegator(amount: strk_delegator_amount);
+        let first_btc_delegator = system
+            .new_btc_delegator(amount: first_btc_amount, token: first_btc_token);
+        let second_btc_delegator = system
+            .new_btc_delegator(amount: second_btc_amount, token: second_btc_token);
+        system.delegate(delegator: strk_delegator, pool: strk_pool, amount: strk_delegator_amount);
+        system
+            .delegate_btc(
+                delegator: first_btc_delegator,
+                pool: first_btc_pool,
+                amount: first_btc_amount,
+                token: first_btc_token,
+            );
+        system
+            .delegate_btc(
+                delegator: second_btc_delegator,
+                pool: second_btc_pool,
+                amount: second_btc_amount,
+                token: second_btc_token,
+            );
+
+        // Attest.
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        // Exit intent.
+        system.staker_exit_intent(:staker);
+
+        // Test total_stake.
+        let strk_total_stake = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(token_address: strk_token.contract_address());
+        let first_btc_total_stake = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(token_address: first_btc_token.contract_address());
+        let second_btc_total_stake = system
+            .staking
+            .dispatcher()
+            .get_total_stake_for_token(token_address: second_btc_token.contract_address());
+        assert!(strk_total_stake == 0);
+        assert!(first_btc_total_stake == 0);
+        assert!(second_btc_total_stake == 0);
+
+        // Exit action.
+        system.advance_exit_wait_window();
+        system.staker_exit_action(:staker);
+
+        // Test delegations and rewards.
+        let strk_pool_balance = strk_token.balance_of(account: strk_pool);
+        let first_btc_pool_strk_balance = strk_token.balance_of(account: first_btc_pool);
+        let second_btc_pool_strk_balance = strk_token.balance_of(account: second_btc_pool);
+        let first_btc_pool_btc_balance = first_btc_token.balance_of(account: first_btc_pool);
+        let second_btc_pool_btc_balance = second_btc_token.balance_of(account: second_btc_pool);
+        assert!(strk_pool_balance > strk_delegator_amount);
+        assert!(first_btc_pool_btc_balance == first_btc_amount);
+        assert!(second_btc_pool_btc_balance == second_btc_amount);
+        assert!(first_btc_pool_strk_balance > 0);
+        assert!(second_btc_pool_strk_balance > first_btc_pool_strk_balance);
     }
 }
 
@@ -2731,6 +3738,83 @@ pub impl StakerWithPoolWithoutCommissionCommitmentMigrationFlowImpl of FlowTrait
     }
 }
 
+/// Test set commission multiple pools.
+/// Flow:
+/// Staker stake with pool
+/// Staker set commission
+/// Staker open BTC pool
+/// Staker set commission
+/// Test pool contract parameters
+/// Delegators delegate
+/// Attest
+/// Test rewards
+#[derive(Drop, Copy)]
+pub struct SetCommissionMultiplePoolsFlow {}
+pub impl SetCommissionMultiplePoolsFlowImpl of FlowTrait<SetCommissionMultiplePoolsFlow> {
+    fn test(self: SetCommissionMultiplePoolsFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let btc_amount = TEST_MIN_BTC_FOR_REWARDS;
+        let staker = system.new_staker(:amount);
+        system.stake(:staker, :amount, pool_enabled: true, commission: 800);
+        let strk_pool = system.staking.get_pool(:staker);
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let btc_token = system.btc_token;
+        let btc_token_address = btc_token.contract_address();
+
+        system.set_commission(:staker, commission: 400);
+
+        let btc_pool = system.set_open_for_delegation(:staker, token_address: btc_token_address);
+        let final_commission = 200;
+        system.set_commission(:staker, commission: final_commission);
+
+        let strk_pool_contract_parameters = system.contract_parameters_v1(pool: strk_pool);
+        let btc_pool_contract_parameters = system.contract_parameters_v1(pool: btc_pool);
+        assert!(strk_pool_contract_parameters.commission == 200);
+        assert!(btc_pool_contract_parameters.commission == 200);
+
+        let strk_delegator = system.new_delegator(:amount);
+        let btc_delegator = system.new_btc_delegator(amount: btc_amount, token: btc_token);
+        system.delegate(delegator: strk_delegator, pool: strk_pool, :amount);
+        system
+            .delegate_btc(
+                delegator: btc_delegator, pool: btc_pool, amount: btc_amount, token: btc_token,
+            );
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let expected_strk_pool_rewards = calculate_strk_pool_rewards_with_pool_balance(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            pool_balance: amount,
+        );
+        let (expected_btc_commission_rewards, expected_btc_pool_rewards) =
+            calculate_staker_btc_pool_rewards(
+            pool_balance: btc_amount,
+            commission: final_commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: btc_token_address,
+        );
+        let staker_info = system.staker_info_v1(:staker);
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards(
+            :staker_info, :staking_contract, :minting_curve_contract,
+        );
+
+        let actual_strk_pool_rewards = system
+            .delegator_claim_rewards(delegator: strk_delegator, pool: strk_pool);
+        let actual_btc_pool_rewards = system
+            .delegator_claim_rewards(delegator: btc_delegator, pool: btc_pool);
+        let actual_staker_rewards = system.staker_claim_rewards(:staker);
+
+        assert!(actual_strk_pool_rewards == expected_strk_pool_rewards);
+        assert!(actual_btc_pool_rewards == expected_btc_pool_rewards);
+        assert!(actual_staker_rewards == expected_staker_rewards + expected_btc_commission_rewards);
+    }
+}
+
 /// Test staker_migration - without pool, in intent.
 /// Flow:
 /// Staker stake
@@ -2813,6 +3897,39 @@ pub impl StakerMigrationCalledTwiceFlowImpl of FlowTrait<StakerMigrationCalledTw
         let staker_address = staker.staker.address;
         // Should panic.
         system.staker_migration(:staker_address);
+    }
+}
+
+// Test internal_staker_info called without staker_migration.
+#[derive(Drop, Copy)]
+pub struct InternalStakerInfoWithoutStakerMigrationFlow {
+    pub staker: Option<Staker>,
+}
+pub impl InternalStakerInfoWithoutStakerMigrationFlowImpl of FlowTrait<
+    InternalStakerInfoWithoutStakerMigrationFlow,
+> {
+    fn get_staker_address(
+        self: InternalStakerInfoWithoutStakerMigrationFlow,
+    ) -> Option<ContractAddress> {
+        Option::None
+    }
+
+    fn setup_v1(ref self: InternalStakerInfoWithoutStakerMigrationFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let stake_amount = min_stake * 2;
+        let staker = system.new_staker(amount: stake_amount * 2);
+        let commission = 200;
+
+        /// Staker balance trace: epoch 1, stake_amount.
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(self: InternalStakerInfoWithoutStakerMigrationFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        // Should panic.
+        system.internal_staker_info(:staker);
     }
 }
 
@@ -2930,7 +4047,7 @@ pub impl ClaimRewardsMultipleDelegatorsBtcFlowImpl of FlowTrait<
         let pool = system
             .set_open_for_delegation(:staker, token_address: btc_token.contract_address());
 
-        let delegated_amount = MIN_BTC_FOR_REWARDS * 16;
+        let delegated_amount = TEST_MIN_BTC_FOR_REWARDS * 16;
         let delegator_1 = system.new_btc_delegator(amount: delegated_amount, token: btc_token);
         let delegator_2 = system.new_btc_delegator(amount: delegated_amount, token: btc_token);
         let delegator_3 = system.new_btc_delegator(amount: delegated_amount, token: btc_token);
@@ -2954,7 +4071,11 @@ pub impl ClaimRewardsMultipleDelegatorsBtcFlowImpl of FlowTrait<
 
         // Compute pool rewards.
         let (_, pool_rewards) = calculate_staker_btc_pool_rewards(
-            :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+            :pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: btc_token.contract_address(),
         );
 
         system.advance_epoch();
@@ -3149,7 +4270,7 @@ pub impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClaimReward
         let commission = 200;
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
-        let decimals = STRK_DECIMALS;
+        let token_address = system.token.contract_address();
         let base_value = STRK_BASE_VALUE;
 
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
@@ -3187,8 +4308,8 @@ pub impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClaimReward
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
         sigma +=
-            compute_rewards_for_trace(
-                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            compute_rewards_per_unit(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
         system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
@@ -3210,8 +4331,8 @@ pub impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClaimReward
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
         sigma +=
-            compute_rewards_for_trace(
-                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            compute_rewards_per_unit(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
         system.advance_epoch();
@@ -3233,8 +4354,8 @@ pub impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClaimReward
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
         sigma +=
-            compute_rewards_for_trace(
-                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            compute_rewards_per_unit(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
         system
@@ -3250,8 +4371,8 @@ pub impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClaimReward
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         sigma +=
-            compute_rewards_for_trace(
-                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            compute_rewards_per_unit(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
         system
@@ -3269,14 +4390,14 @@ pub impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClaimReward
         );
         let from_sigma = sigma;
         sigma +=
-            compute_rewards_for_trace(
-                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            compute_rewards_per_unit(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
         system.advance_epoch_and_attest(:staker);
         sigma +=
-            compute_rewards_for_trace(
-                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            compute_rewards_per_unit(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
         delegator_1_rewards +=
             compute_rewards_rounded_down(
@@ -3299,8 +4420,8 @@ pub impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClaimReward
                 :pool_rewards, pool_member_balance: delegated_amount_1, :pool_balance,
             );
         sigma +=
-            compute_rewards_for_trace(
-                staking_rewards: pool_rewards, total_stake: pool_balance, :decimals,
+            compute_rewards_per_unit(
+                staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
         system.advance_epoch();
@@ -3409,12 +4530,78 @@ pub impl PoolClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
 
         let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
 
-        let actual_pool_rewards = system.delegator_claim_rewards(delegator: delegator, :pool);
+        let actual_pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
 
         assert!(pool_member_info.unclaimed_rewards == expected_pool_rewards);
         assert!(expected_pool_rewards == actual_pool_rewards);
         assert!(
             expected_pool_rewards == system.token.balance_of(account: delegator.reward.address),
+        );
+    }
+}
+
+/// Pool with min btc
+/// Flow:
+/// Staker stake
+/// Staker open for btc delegation
+/// Delegator delegate
+/// Staker attest
+/// Delegator claim rewards
+/// Test rewards
+#[derive(Drop, Copy)]
+pub struct PoolWithMinBtcFlow {}
+pub impl PoolWithMinBtcFlowImpl of FlowTrait<PoolWithMinBtcFlow> {
+    fn test(self: PoolWithMinBtcFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+
+        let token = system.btc_token;
+        let token_address = token.contract_address();
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+
+        let delegate_amount = TEST_MIN_BTC_FOR_REWARDS;
+        let delegator = system.new_btc_delegator(amount: delegate_amount, :token);
+        system.delegate_btc(:delegator, :pool, amount: delegate_amount - 1, :token);
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(pool_rewards.is_zero());
+        assert!(staker_rewards.is_non_zero());
+
+        system.increase_delegate_btc(:delegator, :pool, amount: 1, :token);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let (expected_commission_rewards, expected_pool_rewards) =
+            calculate_staker_btc_pool_rewards(
+            pool_balance: delegate_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            :token_address,
+        );
+        let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(pool_rewards == expected_pool_rewards);
+        assert!(staker_rewards > expected_commission_rewards);
+        assert!(
+            wide_abs_diff(
+                mul_wide_and_div(
+                    lhs: pool_rewards + expected_commission_rewards,
+                    rhs: ALPHA_DENOMINATOR - ALPHA,
+                    div: ALPHA,
+                )
+                    .unwrap(),
+                staker_rewards - expected_commission_rewards,
+            ) < 100,
         );
     }
 }
@@ -3514,6 +4701,226 @@ pub impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
     }
 }
 
+/// Test delegator intent in v0 action in v2
+/// Flow:
+/// Staker stake with pool
+/// Delegators delegate
+/// Delegators exit intent (full, half, none)
+/// Upgrade
+/// Upgrade
+/// Delegators exit action
+/// Test balances
+#[derive(Drop, Copy)]
+pub struct DelegatorIntentInV0ActionInV2Flow {
+    pub staker: Option<Staker>,
+    pub delegators: Option<(Delegator, Delegator, Delegator)>,
+    pub amount: Option<Amount>,
+    pub pool_address: Option<ContractAddress>,
+}
+pub impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
+    DelegatorIntentInV0ActionInV2Flow,
+> {
+    fn get_staker_address(self: DelegatorIntentInV0ActionInV2Flow) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
+    fn get_pool_address(self: DelegatorIntentInV0ActionInV2Flow) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: DelegatorIntentInV0ActionInV2Flow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator1 = system.new_delegator(:amount);
+        let delegator2 = system.new_delegator(:amount);
+        let delegator3 = system.new_delegator(:amount);
+
+        system.delegate(delegator: delegator1, :pool, :amount);
+        system.delegate(delegator: delegator2, :pool, :amount);
+        system.delegate(delegator: delegator3, :pool, :amount);
+        system.delegator_exit_intent(delegator: delegator1, :pool, :amount);
+        system.delegator_exit_intent(delegator: delegator2, :pool, amount: amount / 2);
+        system.delegator_exit_intent(delegator: delegator3, :pool, amount: 0);
+        system.advance_exit_wait_window();
+
+        self.staker = Option::Some(staker);
+        self.pool_address = Option::Some(pool);
+        self.delegators = Option::Some((delegator1, delegator2, delegator3));
+        self.amount = Option::Some(amount);
+    }
+
+    fn test(self: DelegatorIntentInV0ActionInV2Flow, ref system: SystemState) {
+        let pool = self.pool_address.unwrap();
+        let (delegator1, delegator2, delegator3) = self.delegators.unwrap();
+        let amount = self.amount.unwrap();
+
+        system.delegator_exit_action(delegator: delegator1, :pool);
+        system.delegator_exit_action(delegator: delegator2, :pool);
+        let result = system.safe_delegator_exit_action(delegator: delegator3, :pool);
+        assert_panic_with_error(
+            :result, expected_error: PoolError::MISSING_UNDELEGATE_INTENT.describe(),
+        );
+
+        let delegator1_balance = system.token.balance_of(account: delegator1.delegator.address);
+        let delegator2_balance = system.token.balance_of(account: delegator2.delegator.address);
+        let delegator3_balance = system.token.balance_of(account: delegator3.delegator.address);
+        let staking_balance = system.token.balance_of(account: system.staking.address);
+        assert!(delegator1_balance == amount);
+        assert!(delegator2_balance == amount / 2);
+        assert!(delegator3_balance == 0);
+        assert!(staking_balance == amount * 5 / 2);
+    }
+}
+
+/// Test delegator full intent before double upgrade
+/// Flow:
+/// Staker stake with pool
+/// Delegators delegate
+/// Delegators exit intent (full, half, none)
+/// Upgrade
+/// Upgrade
+/// Delegators change intent
+/// Delegators exit action
+/// Test balances
+#[derive(Drop, Copy)]
+pub struct DelegatorIntentInV0ChangeIntentActionInV2Flow {
+    pub staker: Option<Staker>,
+    pub delegators: Option<(Delegator, Delegator, Delegator)>,
+    pub amount: Option<Amount>,
+    pub pool_address: Option<ContractAddress>,
+}
+pub impl DelegatorIntentInV0ChangeIntentActionInV2FlowImpl of FlowTrait<
+    DelegatorIntentInV0ChangeIntentActionInV2Flow,
+> {
+    fn get_staker_address(
+        self: DelegatorIntentInV0ChangeIntentActionInV2Flow,
+    ) -> Option<ContractAddress> {
+        Option::Some(self.staker.unwrap().staker.address)
+    }
+
+    fn get_pool_address(
+        self: DelegatorIntentInV0ChangeIntentActionInV2Flow,
+    ) -> Option<ContractAddress> {
+        self.pool_address
+    }
+
+    fn setup(ref self: DelegatorIntentInV0ChangeIntentActionInV2Flow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator1 = system.new_delegator(:amount);
+        let delegator2 = system.new_delegator(:amount);
+        let delegator3 = system.new_delegator(:amount);
+
+        system.delegate(delegator: delegator1, :pool, :amount);
+        system.delegate(delegator: delegator2, :pool, :amount);
+        system.delegate(delegator: delegator3, :pool, :amount);
+        system.delegator_exit_intent(delegator: delegator1, :pool, :amount);
+        system.delegator_exit_intent(delegator: delegator2, :pool, amount: amount / 2);
+        system.delegator_exit_intent(delegator: delegator3, :pool, amount: 0);
+        system.advance_exit_wait_window();
+
+        self.staker = Option::Some(staker);
+        self.pool_address = Option::Some(pool);
+        self.delegators = Option::Some((delegator1, delegator2, delegator3));
+        self.amount = Option::Some(amount);
+    }
+
+    fn test(self: DelegatorIntentInV0ChangeIntentActionInV2Flow, ref system: SystemState) {
+        let pool = self.pool_address.unwrap();
+        let (delegator1, delegator2, delegator3) = self.delegators.unwrap();
+        let amount = self.amount.unwrap();
+
+        system.delegator_exit_intent(delegator: delegator1, :pool, amount: amount / 2);
+        system.delegator_exit_intent(delegator: delegator2, :pool, amount: Zero::zero());
+        system.delegator_exit_intent(delegator: delegator3, :pool, :amount);
+        system.advance_exit_wait_window();
+        system.delegator_exit_action(delegator: delegator1, :pool);
+        let result = system.safe_delegator_exit_action(delegator: delegator2, :pool);
+        assert_panic_with_error(
+            :result, expected_error: PoolError::MISSING_UNDELEGATE_INTENT.describe(),
+        );
+        system.delegator_exit_action(delegator: delegator3, :pool);
+
+        let delegator1_balance = system.token.balance_of(account: delegator1.delegator.address);
+        let delegator2_balance = system.token.balance_of(account: delegator2.delegator.address);
+        let delegator3_balance = system.token.balance_of(account: delegator3.delegator.address);
+        let staking_balance = system.token.balance_of(account: system.staking.address);
+        assert!(delegator1_balance == amount / 2);
+        assert!(delegator2_balance == Zero::zero());
+        assert!(delegator3_balance == amount);
+        assert!(staking_balance == amount * 5 / 2);
+    }
+}
+
+
+/// Pool with lots of btc
+/// Flow:
+/// Staker stake
+/// Staker open for btc delegation
+/// Delegator delegate
+/// Staker attest
+/// Delegator claim rewards
+/// Test rewards
+#[derive(Drop, Copy)]
+pub struct PoolWithLotsOfBtcFlow {}
+pub impl PoolWithLotsOfBtcFlowImpl of FlowTrait<PoolWithLotsOfBtcFlow> {
+    fn test(self: PoolWithLotsOfBtcFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+
+        let token = system.btc_token;
+        let token_address = token.contract_address();
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+
+        // ~ 5 times as much as total supply of btc.
+        let delegate_amount = 10_u128.pow(8) * TEST_ONE_BTC;
+        let delegator = system.new_btc_delegator(amount: delegate_amount, :token);
+        system.delegate_btc(:delegator, :pool, amount: delegate_amount, :token);
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let (expected_commission_rewards, expected_pool_rewards) =
+            calculate_staker_btc_pool_rewards(
+            pool_balance: delegate_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            :token_address,
+        );
+        let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(wide_abs_diff(pool_rewards, expected_pool_rewards) < 100);
+        assert!(staker_rewards > expected_commission_rewards);
+        assert!(
+            wide_abs_diff(
+                mul_wide_and_div(
+                    lhs: pool_rewards
+                        + expected_commission_rewards
+                        + system.token.balance_of(account: pool),
+                    rhs: ALPHA_DENOMINATOR - ALPHA,
+                    div: ALPHA,
+                )
+                    .unwrap(),
+                staker_rewards - expected_commission_rewards,
+            ) < 100,
+        );
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// Delegator delegate
@@ -3552,7 +4959,7 @@ pub impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl of FlowTrait<
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
         system.delegate(:delegator, :pool, amount: stake_amount);
-        system.delegator_exit_intent(delegator: delegator, :pool, amount: stake_amount);
+        system.delegator_exit_intent(:delegator, :pool, amount: stake_amount);
 
         self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
@@ -3584,7 +4991,7 @@ pub struct StakerMultiplePoolsAttestFlow {}
 pub impl StakerMultiplePoolsAttestFlowImpl of FlowTrait<StakerMultiplePoolsAttestFlow> {
     fn test(self: StakerMultiplePoolsAttestFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
-        let btc_amount = MIN_BTC_FOR_REWARDS;
+        let btc_amount = TEST_MIN_BTC_FOR_REWARDS;
         let staker = system.new_staker(:amount);
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: true, :commission);
@@ -3628,7 +5035,11 @@ pub impl StakerMultiplePoolsAttestFlowImpl of FlowTrait<StakerMultiplePoolsAttes
         );
         let (expected_btc_commission_rewards, expected_btc_pool_rewards) =
             calculate_staker_btc_pool_rewards(
-            pool_balance: btc_amount, :commission, :staking_contract, :minting_curve_contract,
+            pool_balance: btc_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: first_btc_token.contract_address(),
         );
         let (expected_staker_strk_rewards, _) = calculate_staker_strk_rewards(
             staker_info: system.staker_info_v1(:staker), :staking_contract, :minting_curve_contract,
@@ -3724,6 +5135,100 @@ pub impl IncreaseStakeIntentSameEpochFlowImpl of FlowTrait<
 }
 
 /// Flow:
+/// Staker stake
+/// Delegator delegate
+/// Staker attest
+/// Delegator claim rewards
+/// Staker claim rewards
+/// Upgrade
+/// Staker attest
+/// Test pool rewards
+/// Test staker rewards
+/// Staker open BTC pool
+/// BTC Delegator delegate
+/// Staker attest
+/// Test pool rewards
+/// Test staker rewards
+#[derive(Drop, Copy)]
+pub struct PoolAttestFlow {
+    pub staker: Option<Staker>,
+    pub delegator: Option<Delegator>,
+    pub pool_rewards: Option<Amount>,
+    pub staker_rewards: Option<Amount>,
+    pub commission: Option<u16>,
+}
+pub impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
+    fn setup_v1(ref self: PoolAttestFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        self.staker = Option::Some(staker);
+        self.delegator = Option::Some(delegator);
+        self.pool_rewards = Option::Some(pool_rewards);
+        self.staker_rewards = Option::Some(staker_rewards);
+        self.commission = Option::Some(commission);
+    }
+
+    fn test(self: PoolAttestFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        system.staker_migration(staker_address: staker.staker.address);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = self.delegator.unwrap();
+        let pool_rewards = self.pool_rewards.unwrap();
+        let staker_rewards = self.staker_rewards.unwrap();
+        let commission = self.commission.unwrap();
+        let token = system.btc_token;
+        let btc_amount = TEST_MIN_BTC_FOR_REWARDS;
+
+        // Attest.
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        // Test pool rewards.
+        let mid_pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let mid_staker_rewards = system.staker_claim_rewards(:staker);
+        // Allow 1% difference.
+        // TODO: new rewards are lower , change C.
+        assert!(pool_rewards - mid_pool_rewards < (pool_rewards / 100).into());
+        assert!(staker_rewards - mid_staker_rewards < (staker_rewards / 100).into());
+
+        // Open BTC pool.
+        let btc_pool = system
+            .set_open_for_delegation(:staker, token_address: token.contract_address());
+        let btc_delegator = system.new_btc_delegator(amount: btc_amount, :token);
+        system.delegate_btc(delegator: btc_delegator, pool: btc_pool, amount: btc_amount, :token);
+
+        // Attest.
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        // Test pool rewards.
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let (btc_commission_rewards, _) = calculate_staker_btc_pool_rewards(
+            pool_balance: btc_amount,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: token.contract_address(),
+        );
+        let new_pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let new_staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(new_pool_rewards == mid_pool_rewards);
+        assert!(new_staker_rewards == mid_staker_rewards + btc_commission_rewards);
+    }
+}
+
+/// Flow:
 /// First staker stake with pool
 /// First delegator delegate
 /// Second staker stake with pool
@@ -3813,7 +5318,11 @@ pub impl TotalStakeAfterUpgradeFlowImpl of FlowTrait<TotalStakeAfterUpgradeFlow>
         let (strk_current_total_stake, btc_current_total_stake) = system
             .staking
             .get_current_total_staking_power_v2();
-        assert!(strk_current_total_stake == self.current_total_stake.unwrap());
+        assert!(
+            strk_current_total_stake == NormalizedAmountTrait::from_strk_native_amount(
+                self.current_total_stake.unwrap(),
+            ),
+        );
         assert!(btc_current_total_stake.is_zero())
     }
 }
@@ -4558,6 +6067,31 @@ pub impl DelegatorExitBeforeEnterAfterFlowImpl of FlowTrait<
     }
 }
 
+/// Test attest with total_btc_stake = 0
+/// Flow:
+/// Staker stake
+/// Staker open btc pool
+/// Staker attest
+/// Test no rewards for btc pool
+#[derive(Drop, Copy)]
+pub struct AttestWithZeroTotalBtcStakeFlow {}
+pub impl AttestWithZeroTotalBtcStakeFlowImpl of FlowTrait<AttestWithZeroTotalBtcStakeFlow> {
+    fn test(self: AttestWithZeroTotalBtcStakeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+        let token_address = system.btc_token.contract_address();
+
+        let pool = system.set_open_for_delegation(:staker, :token_address);
+        system.advance_epoch_and_attest(:staker);
+
+        let pool_balance = system.token.balance_of(account: pool);
+        assert!(pool_balance == 0);
+    }
+}
+
 /// Flow:
 /// Staker stake with pool
 /// First delegator delegate
@@ -4689,6 +6223,48 @@ pub impl DelegatorExitWithNonUpgradedPoolFlowImpl of FlowTrait<
                 delegator: third_delegator, :pool, amount: third_delegator_info.amount,
             );
         assert_panic_with_error(result, PoolError::UNDELEGATE_IN_PROGRESS.describe());
+    }
+}
+
+/// Test add token without enable
+/// Flow:
+/// Staker stake
+/// Add token
+/// Staker open pool with new token
+/// Delegator delegate
+/// Staker attest
+/// Test no pool rewards
+#[derive(Drop, Copy)]
+pub struct AddTokenWithoutEnableFlow {}
+pub impl AddTokenWithoutEnableFlowImpl of FlowTrait<AddTokenWithoutEnableFlow> {
+    fn test(self: AddTokenWithoutEnableFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.set_commission(:staker, :commission);
+        let token = system.deploy_second_btc_token();
+        system.staking.add_token(token_address: token.contract_address());
+
+        let pool = system.set_open_for_delegation(:staker, token_address: token.contract_address());
+
+        let delegator = system.new_btc_delegator(:amount, :token);
+        system.delegate_btc(:delegator, :pool, :amount, :token);
+
+        system.advance_epoch_and_attest(:staker);
+        system.advance_epoch();
+
+        let delegator_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let unclaimed_rewards = system.reward_supplier.get_unclaimed_rewards();
+        let staker_info = system.staker_info_v1(:staker);
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards(
+            :staker_info, :staking_contract, :minting_curve_contract,
+        );
+        assert!(delegator_rewards == Zero::zero());
+        assert!(wide_abs_diff(unclaimed_rewards, expected_staker_rewards) == STRK_IN_FRIS.into());
     }
 }
 
@@ -5056,7 +6632,7 @@ pub impl StakerInIntentMigrationVecFlowImpl of FlowTrait<StakerInIntentMigration
         let staker = system.new_staker(:amount);
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: false, :commission);
-        system.staker_exit_intent(staker: staker);
+        system.staker_exit_intent(:staker);
         self.staker = Option::Some(staker);
     }
 
@@ -5174,9 +6750,45 @@ pub impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
     }
 }
 
+/// Test staker address already used in older version of the contract
+/// Flow:
+/// Stake
+/// Staker exit
+/// Upgrade
+/// Attempt stake
+#[derive(Drop, Copy)]
+pub struct StakerAddressAlreadyUsedInOlderVersionFlow {
+    pub staker: Option<Staker>,
+}
+pub impl StakerAddressAlreadyUsedInOlderVersionFlowImpl of FlowTrait<
+    StakerAddressAlreadyUsedInOlderVersionFlow,
+> {
+    fn setup_v1(ref self: StakerAddressAlreadyUsedInOlderVersionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.staker_exit_intent(:staker);
+        system.advance_exit_wait_window();
+        system.staker_exit_action(:staker);
+
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: StakerAddressAlreadyUsedInOlderVersionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = self.staker.unwrap();
+        let result = system.safe_stake(:staker, :amount);
+        assert_panic_with_error(result, StakingError::STAKER_ADDRESS_ALREADY_USED_IN_V1.describe());
+    }
+}
+
 /// Flow:
 /// Create btc token
 /// Enable btc token
+/// Try to disable btc token
+/// Advance epoch
 /// Disable btc token
 /// Test btc token is disabled
 #[derive(Drop, Copy)]
@@ -5185,13 +6797,17 @@ pub impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
     EnableDisableBtcTokenSameEpochFlow,
 > {
     fn test(self: EnableDisableBtcTokenSameEpochFlow, ref system: SystemState) {
+        system.advance_epoch();
         let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
 
         let token_address = system.deploy_second_btc_token().contract_address();
         system.staking.add_token(:token_address);
         system.staking.enable_token(:token_address);
+        let res = system.staking.safe_disable_token(:token_address);
+        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
+        system.advance_epoch();
         system.staking.disable_token(:token_address);
-
+        system.advance_epoch();
         let active_tokens = system.staking.dispatcher().get_active_tokens();
         assert!(active_tokens == expected_active_tokens);
     }
@@ -5199,6 +6815,8 @@ pub impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
 
 /// Flow:
 /// Disable btc token
+/// Try to enable btc token
+/// Advance epoch
 /// Enable btc token
 /// Test btc token is enabled
 #[derive(Drop, Copy)]
@@ -5209,7 +6827,11 @@ pub impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
     fn test(self: DisableEnableBtcTokenSameEpochFlow, ref system: SystemState) {
         let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
         let token_address = system.btc_token.contract_address();
+        system.advance_epoch();
         system.staking.disable_token(:token_address);
+        let res = system.staking.safe_enable_token(:token_address);
+        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
+        system.advance_epoch();
         system.staking.enable_token(:token_address);
 
         let active_tokens = system.staking.dispatcher().get_active_tokens();
@@ -5226,5 +6848,12 @@ pub impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
 // Change balance in some epochs (trace length should be > 1)
 // Upgrade
 // Open strk pool
+
+// TODO: decimal tests:
+// 1. Test with many decimals.
+// 2. Test attept to switch between pools with different decimals.
+// 3. Test exit pool with 8 and enter pool with 18 (and vice versa).
+// 4. Test switch between BTC 18 decimals and STRK (both 18 decimals).
+// 5. Test one delegator in 2 BTC pools with different decimals.
 
 

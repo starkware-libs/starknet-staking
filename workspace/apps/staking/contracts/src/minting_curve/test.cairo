@@ -8,7 +8,8 @@ use staking_test::minting_curve::interface::{
 };
 use staking_test::test_utils::constants::NON_TOKEN_ADMIN;
 use staking_test::test_utils::{
-    StakingInitConfig, general_contract_system_deployment, stake_for_testing_using_dispatcher,
+    StakingInitConfig, advance_epoch_global, general_contract_system_deployment,
+    stake_for_testing_using_dispatcher,
 };
 use staking_test::types::Amount;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
@@ -33,6 +34,13 @@ fn test_yearly_mint() {
     let expected_minted_tokens: Amount = cfg.minting_curve_contract_info.c_num.into()
         * unadjusted_mint_amount
         / cfg.minting_curve_contract_info.c_denom.into();
+
+    // Current stake power is 0, so no minting.
+    let minted_tokens = minting_curve_dispatcher.yearly_mint();
+    assert!(minted_tokens == 0);
+
+    // After advancing epoch, the stake power is not 0, so we expect minting.
+    advance_epoch_global();
     let minted_tokens = minting_curve_dispatcher.yearly_mint();
     assert!(minted_tokens == expected_minted_tokens);
 }

@@ -1,6 +1,6 @@
 use core::num::traits::Zero;
 use staking_test::staking::errors::Error;
-use staking_test::staking::objects::{AttestationInfo, EpochInfo};
+use staking_test::staking::objects::{AttestationInfo, EpochInfo, NormalizedAmount};
 use staking_test::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
@@ -20,6 +20,7 @@ pub trait IStaking<TContractState> {
     ) -> Amount;
     fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn unstake_intent(ref self: TContractState) -> Timestamp;
+    /// **Note**: Staker cannot stake again after `unstake_action`.
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> Amount;
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
     fn set_open_for_delegation(
@@ -36,8 +37,13 @@ pub trait IStaking<TContractState> {
         self: @TContractState, staker_address: ContractAddress,
     ) -> CommissionCommitment;
     fn contract_parameters_v1(self: @TContractState) -> StakingContractInfoV1;
+    /// Returns the latest total stake for the STRK token only.
+    /// Note: The function name does not specify STRK for backwards compatibility.
     fn get_total_stake(self: @TContractState) -> Amount;
-    fn get_current_total_staking_power(self: @TContractState) -> (Amount, Amount);
+    /// Returns the current epoch's (strk_total_stake, btc_total_stake), where both use 18 decimals.
+    fn get_current_total_staking_power(
+        self: @TContractState,
+    ) -> (NormalizedAmount, NormalizedAmount);
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
     fn set_commission(ref self: TContractState, commission: Commission);
@@ -46,6 +52,8 @@ pub trait IStaking<TContractState> {
     );
     fn is_paused(self: @TContractState) -> bool;
     fn get_active_tokens(self: @TContractState) -> Span<ContractAddress>;
+    fn get_tokens(self: @TContractState) -> Span<(ContractAddress, bool)>;
+    /// Returns the total stake for the given `token_address` in its native decimals.
     fn get_total_stake_for_token(self: @TContractState, token_address: ContractAddress) -> Amount;
 }
 
@@ -55,7 +63,7 @@ pub trait IStakingMigration<TContractState> {
     /// Reads the internal staker information for the given `staker_address` from storage and
     /// returns it.
     ///
-    /// Precondition: The staker exists and its version is V1.
+    /// Precondition: The staker exists and is already migrated to V2 (Its version is V1).
     fn internal_staker_info(
         self: @TContractState, staker_address: ContractAddress,
     ) -> InternalStakerInfoLatest;
@@ -68,6 +76,7 @@ pub trait IStakingMigration<TContractState> {
     /// Precondition: The staker exists, does not have a pool and its version is V0.
     ///
     /// This function is used only during migration.
+    /// **Note**: All stakers are migrated during the upgrade process, no user action is required.
     fn staker_migration(ref self: TContractState, staker_address: ContractAddress);
 }
 
@@ -99,7 +108,7 @@ pub trait IStakingPool<TContractState> {
     /// 4. Calculate the timestamp when the pool may perform remove_from_delegation_pool_action for
     ///    this `amount` and `identifier` (notate it as unpool_time for following use).
     /// 5. Create an entry in pool_exit_intents map for this `identifier` and pool contract address
-    ///    with the value being `UndelegateIntentValue { amount, unpool_time }`.
+    ///    with the value being `UndelegateIntentValue { amount, unpool_time, token_address }`.
     /// 6. Return unpool_time.
     ///
     /// The function supports overriding intentions, upwards and downwards, *which recalculates the
@@ -177,26 +186,30 @@ pub trait IStakingTokenManager<TContractState> {
     /// Adding too many tokens can lead to unbounded complexity and potential performance issues.
     /// The token set is intended to remain fixed and small, ensuring all loops over it are safely
     /// bounded.
-    /// It is the security admin's responsibility to enforce this token limit.
+    /// It is the token admin's responsibility to enforce this token limit.
     /// 2. Token decimals are validated once upon addition (expected to be 8).
     /// Subsequent changes to the token's decimals are not supported and may lead to issues.
     fn add_token(ref self: TContractState, token_address: ContractAddress);
-    /// Enable token for getting rewards.
+    /// Enable token for getting rewards. Takes effect from the next epoch.
     ///
-    /// **Important note:** This function takes effect immediately upon execution.
-    /// It impacts the current epoch’s rewards, potentially increasing or decreasing them,
-    /// and may cause uneven distribution of rewards among stakers for this epoch.
+    /// **Note**: Once enabled, a token can only be disabled after at least one epoch.
     fn enable_token(ref self: TContractState, token_address: ContractAddress);
-    /// Disable token for getting rewards.
+    /// Disable token for getting rewards. Takes effect from the next epoch.
     ///
-    /// **Important note:** This function takes effect immediately upon execution.
-    /// It impacts the current epoch’s rewards, potentially increasing or decreasing them,
-    /// and may cause uneven distribution of rewards among stakers for this epoch.
+    /// **Note**: disabled token is not eligible for rewards and has no staking power but still can
+    /// be staked or unstaked.
     fn disable_token(ref self: TContractState, token_address: ContractAddress);
 }
 
 #[starknet::interface]
 pub trait IStakingAttestation<TContractState> {
+    /// Calculate and update rewards for the `staker_address` for the current epoch.
+    /// Send pool rewards to the pool.
+    /// This is called after the attestation contract validate that the staker has attested
+    /// correctly.
+    /// **Note**: Staker unable to attest block in epoch where they initiated unstake intent.
+    /// **Note**: The total staking power for rewards calculation includes all stakers stakes,
+    /// regardless of whether they attest in the same epoch.
     fn update_rewards_from_attestation_contract(
         ref self: TContractState, staker_address: ContractAddress,
     );

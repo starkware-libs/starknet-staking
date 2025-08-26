@@ -40,8 +40,8 @@ use staking_test::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
 use staking_test::staking::objects::{
-    InternalStakerInfoLatestTestTrait, UndelegateIntentKey, UndelegateIntentValue,
-    UndelegateIntentValueZero,
+    InternalStakerInfoLatestTestTrait, NormalizedAmountTrait, UndelegateIntentKey,
+    UndelegateIntentValue, UndelegateIntentValueZero,
 };
 use staking_test::types::InternalPoolMemberInfoLatest;
 use staking_test::{event_test_utils, test_utils};
@@ -172,6 +172,12 @@ fn test_enter_delegation_pool_assertions() {
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, :amount);
     assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_EXISTS.describe());
+
+    // Catch CALLER_IS_TOKEN.
+    let token_address = token.contract_address();
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: token_address);
+    let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, :amount);
+    assert_panic_with_error(:result, expected_error: Error::CALLER_IS_TOKEN.describe());
 }
 
 #[test]
@@ -539,7 +545,11 @@ fn test_claim_rewards_btc_pool() {
     // Compute expected rewards.
     let pool_balance = cfg.pool_member_info._deprecated_amount;
     let (expected_commission_rewards, expected_pool_rewards) = calculate_staker_btc_pool_rewards(
-        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+        :pool_balance,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
     );
     assert!(expected_commission_rewards.is_non_zero());
 
@@ -729,7 +739,11 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     // Pool update rewards.
     let mut pool_balance = delegate_amount;
     let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
-        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+        :pool_balance,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
     );
     assert!(commission_rewards.is_non_zero());
     update_rewards_from_staking_contract_for_testing(
@@ -755,7 +769,11 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     // Balance changes after current epoch and there is no balance change at current epoch.
     advance_epoch_global();
     let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
-        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+        :pool_balance,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
     );
     assert!(commission_rewards.is_non_zero());
     update_rewards_from_staking_contract_for_testing(
@@ -779,7 +797,11 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     advance_epoch_global();
     pool_balance += delegate_amount;
     let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
-        :pool_balance, :commission, :staking_contract, :minting_curve_contract,
+        :pool_balance,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
     );
     assert!(commission_rewards.is_non_zero());
     update_rewards_from_staking_contract_for_testing(
@@ -812,6 +834,7 @@ fn test_exit_delegation_pool_intent() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
     let pool_contract = stake_with_pool_enabled(:cfg);
@@ -860,8 +883,10 @@ fn test_exit_delegation_pool_intent() {
     );
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
-        amount: expected_pool_member_info.unpool_amount.into(),
-        staker_address: cfg.test_info.staker_address,
+        amount: NormalizedAmountTrait::from_strk_native_amount(
+            expected_pool_member_info.unpool_amount,
+        ),
+        token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 
@@ -1348,6 +1373,7 @@ fn test_partial_undelegate() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
     let pool_contract = stake_with_pool_enabled(:cfg);
@@ -1388,8 +1414,10 @@ fn test_partial_undelegate() {
     );
     let expected_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: expected_pool_member_info.unpool_time.expect('unpool_time is None'),
-        amount: expected_pool_member_info.unpool_amount,
-        staker_address: cfg.test_info.staker_address,
+        amount: NormalizedAmountTrait::from_strk_native_amount(
+            expected_pool_member_info.unpool_amount,
+        ),
+        token_address,
     };
     assert!(actual_undelegate_intent_value == expected_undelegate_intent_value);
 

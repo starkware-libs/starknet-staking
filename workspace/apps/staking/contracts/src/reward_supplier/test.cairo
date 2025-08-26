@@ -6,7 +6,7 @@ use RewardSupplier::{
     ALPHA, CONTRACT_IDENTITY as reward_supplier_identity,
     CONTRACT_VERSION as reward_supplier_version,
 };
-use Staking::{CONTRACT_IDENTITY as staking_identity, CONTRACT_VERSION as staking_version};
+use staking_test::{CONTRACT_IDENTITY as staking_identity, CONTRACT_VERSION as staking_version};
 use core::num::traits::Zero;
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -51,10 +51,10 @@ fn test_identity() {
     assert!(mint_curve_identity == 'Minting Curve');
     assert!(pool_identity == 'Staking Delegation Pool');
 
-    assert!(staking_version == '2.0.0');
-    assert!(reward_supplier_version == '2.0.0');
-    assert!(mint_curve_version == '1.0.0');
-    assert!(pool_version == '2.0.0');
+    assert!(staking_version == '3.0.0');
+    assert!(reward_supplier_version == '3.0.0');
+    assert!(mint_curve_version == '2.0.0');
+    assert!(pool_version == '3.0.0');
 
     // Test identity on deployed instances.
     let mut cfg: StakingInitConfig = Default::default();
@@ -77,7 +77,7 @@ fn test_reward_supplier_constructor() {
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let state = @initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
+    let state = @initialize_reward_supplier_state_from_cfg(:cfg);
     assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
     assert!(state.token_dispatcher.read().contract_address == token_address);
     assert!(state.l1_pending_requested_amount.read() == Zero::zero());
@@ -110,7 +110,7 @@ fn test_claim_rewards() {
     let minting_curve_contract = deploy_minting_curve_contract(:cfg);
     cfg.reward_supplier.minting_curve_contract = minting_curve_contract;
     // Use the reward supplier contract state to claim rewards.
-    let mut state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
+    let mut state = initialize_reward_supplier_state_from_cfg(:cfg);
     // Fund the the reward supplier contract.
     fund(target: test_address(), :amount, :token);
     // Update the unclaimed rewards for testing purposes.
@@ -130,11 +130,10 @@ fn test_claim_rewards() {
 #[test]
 fn test_contract_parameters_v1() {
     let mut cfg: StakingInitConfig = Default::default();
-    let token_address = cfg.test_info.strk_token.contract_address();
     // Change the block_timestamp so the contract_parameters_v1() won't return zero for all fields.
     let block_timestamp = Time::now().add(delta: Time::seconds(count: 1));
     start_cheat_block_timestamp_global(block_timestamp: block_timestamp.into());
-    let state = initialize_reward_supplier_state_from_cfg(:token_address, :cfg);
+    let state = initialize_reward_supplier_state_from_cfg(:cfg);
     let expected_info = RewardSupplierInfoV1 {
         unclaimed_rewards: STRK_IN_FRIS, l1_pending_requested_amount: Zero::zero(),
     };
@@ -252,7 +251,7 @@ fn test_on_receive_caller_not_starkgate() {
 }
 
 #[test]
-#[should_panic(expected: "UNEXPECTED_TOKEN")]
+#[should_panic(expected: "Unexpected token")]
 fn test_on_receive_unexpected_token() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

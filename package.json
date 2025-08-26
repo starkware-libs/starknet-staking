@@ -10,7 +10,7 @@
     "npkill": "^0.10.0",
     "prettier": "^3.3.3",
     "sort-package-json": "^2.10.0",
-    "turbo": "2.0.14"
+    "turbo": "^2.5.5"
   },
   "scripts": {
     "build": "turbo run build",

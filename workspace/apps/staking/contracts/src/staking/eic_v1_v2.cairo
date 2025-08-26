@@ -2,18 +2,16 @@
 // This EIC is used to upgrade the staking contract from V1 to V2 (BTC).
 #[starknet::contract]
 mod StakingEICV1toV2 {
+    use core::cmp::min;
     use core::num::traits::Zero;
-    use openzeppelin::token::erc20::interface::IERC20Dispatcher;
-    use staking_test::constants::STAKING_V2_PREV_CONTRACT_VERSION;
+    use staking_test::constants::{STAKING_V2_PREV_CONTRACT_VERSION, STRK_TOKEN_ADDRESS};
     use staking_test::errors::GenericError;
+    use staking_test::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
     use staking_test::types::Version;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
     use starknet::storage::{Map, StoragePathEntry, StoragePointerReadAccess};
     use starkware_utils::components::replaceability::interface::IEICInitializable;
-    use starkware_utils::storage::iterable_map::{
-        IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
-    };
     use starkware_utils::trace::errors::TraceErrors;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 
@@ -24,8 +22,8 @@ mod StakingEICV1toV2 {
         /// checkpoint mapping an epoch to the updated stake. Stakers that performed unstake_intent
         /// are not included.
         tokens_total_stake_trace: Map<ContractAddress, Trace>,
-        // Map token address to whether it's active.
-        btc_tokens: IterableMap<ContractAddress, bool>,
+        /// Map token address to its decimals.
+        token_decimals: Map<ContractAddress, u8>,
         // --- Existing fields ---
         /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
@@ -33,14 +31,15 @@ mod StakingEICV1toV2 {
         pool_contract_class_hash: ClassHash,
         /// Deprecated field of the total stake.
         total_stake_trace: Trace,
-        /// A dispatcher of the token contract.
-        token_dispatcher: IERC20Dispatcher,
+        /// Storage of the `pause` flag state.
+        is_paused: bool,
     }
 
     /// Expected data : [prev_class_hash, pool_contract_class_hash]
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
+            assert(self.is_paused.read(), 'CONTRACT_IS_NOT_PAUSED');
             assert(eic_init_data.len() == 2, 'EXPECTED_DATA_LENGTH_2');
             let prev_class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
             let pool_contract_class_hash: ClassHash = (*eic_init_data[1]).try_into().unwrap();
@@ -53,7 +52,10 @@ mod StakingEICV1toV2 {
             assert!(pool_contract_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
             self.pool_contract_class_hash.write(pool_contract_class_hash);
 
-            // 3. Migrate total_stake_trace.
+            // 3. Set STRK token decimals.
+            self.token_decimals.write(STRK_TOKEN_ADDRESS, 18);
+
+            // 4. Migrate total_stake_trace.
             self.migrate_total_stake_trace();
         }
     }
@@ -61,21 +63,14 @@ mod StakingEICV1toV2 {
     #[generate_trait]
     impl EICHelper of IEICHelper {
         /// Migrate the deprecated total stake trace to tokens_total_stake_trace.
-        /// Migrate up to 3 latest checkpoints.
+        /// Migrate up to MAX_MIGRATION_TRACE_ENTRIES latest checkpoints.
         fn migrate_total_stake_trace(ref self: ContractState) {
             let deprecated_trace = self.total_stake_trace;
             assert!(!deprecated_trace.is_empty(), "{}", TraceErrors::EMPTY_TRACE);
             let len = deprecated_trace.length();
-            let n = {
-                if len >= 3 {
-                    3
-                } else {
-                    len
-                }
-            };
-            let strk_token_address = self.token_dispatcher.read().contract_address;
-            let strk_total_stake_trace = self.tokens_total_stake_trace.entry(strk_token_address);
-            for i in len - n..len {
+            let entries_to_migrate = min(len, MAX_MIGRATION_TRACE_ENTRIES);
+            let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
+            for i in (len - entries_to_migrate)..len {
                 let (key, value) = deprecated_trace.at(i);
                 strk_total_stake_trace.insert(:key, :value);
             }

@@ -1,17 +1,33 @@
-use staking_test::types::{Amount, Epoch, Index, Inflation, Version};
+use core::num::traits::Pow;
+use staking_test::pool::objects::TokenRewardsConfig;
+use staking_test::types::{Amount, Epoch, Inflation, Version};
 use starknet::ContractAddress;
 use starkware_utils::constants::WEEK;
 use starkware_utils::time::time::TimeDelta;
 
 pub const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 3 * WEEK };
 pub const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };
-pub const STRK_BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
-pub const BTC_BASE_VALUE: Index = 10_000_000_000_000; // 10**13
-/// Min STRK for rewards.
 pub const STRK_IN_FRIS: Amount = 1_000_000_000_000_000_000; // 10**18
-pub const MIN_BTC_FOR_REWARDS: Amount = 1_000; // 10**3
-pub const STRK_DECIMALS: u8 = 18;
-pub const BTC_DECIMALS: u8 = 8;
+
+/// Token configuration for rewards calculation.
+///
+/// - STRK: Token with 18 decimals
+/// - BTC_8D: Bitcoin with native 8 decimals
+/// - BTC_18D: Wrapped Bitcoin with 18 decimals
+///
+/// The `min_for_rewards` is the minimum delegated stake required to earn rewards.
+/// The `base_value` is used for precision in reward calculations.
+pub const STRK_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+    decimals: 18, min_for_rewards: 10_u128.pow(18), base_value: 10_u128.pow(28),
+};
+
+pub const BTC_8D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+    decimals: 8, min_for_rewards: 10_u128.pow(3), base_value: 10_u128.pow(13),
+};
+
+pub const BTC_18D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+    decimals: 18, min_for_rewards: 10_u128.pow(13), base_value: 10_u128.pow(23),
+};
 // === Reward Distribution - Important Note ===
 //
 // Previous version:

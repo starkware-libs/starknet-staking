@@ -1,20 +1,25 @@
 use constants::{
-    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT,
-    BTC_POOL_MEMBER_STAKE_AMOUNT, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION,
-    DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN,
-    INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_STAKE, OPERATIONAL_ADDRESS,
-    OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS,
-    POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT,
-    REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
-    STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
-    STARKGATE_ADDRESS, TOKEN_ADMIN, UPGRADE_GOVERNOR,
+    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BTC_BASE_VALUE_18,
+    BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8, BTC_POOL_MEMBER_STAKE_AMOUNT,
+    BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION, DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH,
+    EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER,
+    MINTING_CONTRACT_ADDRESS, MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, MIN_STAKE,
+    OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN,
+    POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS,
+    POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT,
+    STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
+    STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_BASE_VALUE, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
+use core::num::traits::Pow;
 use core::num::traits::zero::Zero;
 use core::panics::panic_with_byte_array;
 use core::poseidon::PoseidonTrait;
 use core::traits::Into;
-use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use openzeppelin::token::erc20::interface::{
+    IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
+    IERC20MetadataDispatcherTrait,
+};
 use snforge_std::{
     CheatSpan, ContractClassTrait, CustomToken, DeclareResultTrait, Token, TokenImpl, TokenTrait,
     cheat_caller_address, set_balance, start_cheat_block_hash_global,
@@ -22,9 +27,8 @@ use snforge_std::{
 };
 use staking_test::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking_test::constants::{
-    BTC_BASE_VALUE, BTC_DECIMALS, C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW,
-    MIN_ATTESTATION_WINDOW, MIN_BTC_FOR_REWARDS, STARTING_EPOCH, STRK_BASE_VALUE, STRK_DECIMALS,
-    STRK_IN_FRIS,
+    C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
+    STRK_CONFIG, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
 };
 use staking_test::errors::GenericError;
 use staking_test::minting_curve::interface::{
@@ -40,9 +44,11 @@ use staking_test::staking::errors::Error as StakingError;
 use staking_test::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, IStakingTokenManagerDispatcher,
-    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait,
+    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
-use staking_test::staking::objects::{EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait};
+use staking_test::staking::objects::{
+    EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait, NormalizedAmountTrait,
+};
 use staking_test::staking::staking::Staking;
 use staking_test::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
@@ -65,20 +71,38 @@ use starkware_utils_testing::test_utils::{
 
 pub mod constants {
     use core::cmp::max;
-    use staking_test::constants::{MIN_BTC_FOR_REWARDS, STRK_IN_FRIS};
+    use core::num::traits::ops::pow::Pow;
+    use staking_test::constants::STRK_IN_FRIS;
     use staking_test::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking_test::types::{Amount, Commission, Index};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::time::time::Timestamp;
 
+    // STRK rewards constants.
+    pub const STRK_BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
+    pub const STRK_DECIMALS: u8 = 18;
+
+    // BTC (decimals = 8) rewards constants.
+    pub const BTC_DECIMALS_8: u8 = 8;
+    pub const MIN_BTC_FOR_REWARDS_8: Amount = 10_u128.pow(3);
+    pub const BTC_BASE_VALUE_8: Index = 10_u128.pow(13);
+
+    // BTC (decimals = 18) rewards constants.
+    pub const BTC_DECIMALS_18: u8 = 18;
+    pub const MIN_BTC_FOR_REWARDS_18: Amount = 10_u128.pow(13);
+    pub const BTC_BASE_VALUE_18: Index = 10_u128.pow(23);
+
+    pub const TEST_BTC_DECIMALS: u8 = BTC_DECIMALS_8;
+    pub const TEST_BTC_BASE_VALUE: u128 = BTC_BASE_VALUE_8;
+    pub const TEST_MIN_BTC_FOR_REWARDS: Amount = MIN_BTC_FOR_REWARDS_8;
     pub const STAKER_INITIAL_BALANCE: Amount = 1000000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_INITIAL_BALANCE: Amount = 10000 * STRK_IN_FRIS;
     pub const INITIAL_SUPPLY: Amount = 10000000000 * STRK_IN_FRIS;
     pub const MIN_STAKE: Amount = 20000 * STRK_IN_FRIS;
     pub const STAKE_AMOUNT: Amount = 100000 * STRK_IN_FRIS;
     pub const POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * STRK_IN_FRIS;
-    pub const BTC_POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * MIN_BTC_FOR_REWARDS;
+    pub const BTC_POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * TEST_MIN_BTC_FOR_REWARDS;
     pub const COMMISSION: Commission = 500;
     pub const STAKER_FINAL_INDEX: Index = 10;
     pub const BASE_MINT_AMOUNT: Amount = 1_300_000 * STRK_IN_FRIS;
@@ -94,6 +118,8 @@ pub mod constants {
     pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
     pub const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
+    pub const TEST_ONE_BTC: Amount = 10_u128.pow(TEST_BTC_DECIMALS.into());
+
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
         'CALLER_ADDRESS'.try_into().unwrap()
@@ -254,7 +280,6 @@ pub fn initialize_staking_state_from_cfg(
     ref cfg: StakingInitConfig,
 ) -> Staking::ContractState {
     initialize_staking_state(
-        token_address: cfg.test_info.strk_token.contract_address(),
         min_stake: cfg.staking_contract_info.min_stake,
         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
         reward_supplier: cfg.staking_contract_info.reward_supplier,
@@ -266,7 +291,6 @@ pub fn initialize_staking_state_from_cfg(
     )
 }
 pub fn initialize_staking_state(
-    token_address: ContractAddress,
     min_stake: Amount,
     pool_contract_class_hash: ClassHash,
     reward_supplier: ContractAddress,
@@ -280,7 +304,6 @@ pub fn initialize_staking_state(
     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
     Staking::constructor(
         ref state,
-        :token_address,
         :min_stake,
         :pool_contract_class_hash,
         :reward_supplier,
@@ -321,13 +344,12 @@ pub fn initialize_minting_curve_state(
 }
 
 pub fn initialize_reward_supplier_state_from_cfg(
-    token_address: ContractAddress, cfg: StakingInitConfig,
+    cfg: StakingInitConfig,
 ) -> RewardSupplier::ContractState {
     initialize_reward_supplier_state(
         base_mint_amount: cfg.reward_supplier.base_mint_amount,
         minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
         staking_contract: cfg.test_info.staking_contract,
-        :token_address,
         l1_reward_supplier: cfg.reward_supplier.l1_reward_supplier,
         starkgate_address: cfg.reward_supplier.starkgate_address,
         governance_admin: cfg.test_info.governance_admin,
@@ -337,7 +359,6 @@ pub fn initialize_reward_supplier_state(
     base_mint_amount: Amount,
     minting_curve_contract: ContractAddress,
     staking_contract: ContractAddress,
-    token_address: ContractAddress,
     l1_reward_supplier: felt252,
     starkgate_address: ContractAddress,
     governance_admin: ContractAddress,
@@ -348,7 +369,6 @@ pub fn initialize_reward_supplier_state(
         :base_mint_amount,
         :minting_curve_contract,
         :staking_contract,
-        :token_address,
         :l1_reward_supplier,
         :starkgate_address,
         :governance_admin,
@@ -385,7 +405,6 @@ pub fn deploy_mock_erc20_decimals_contract(
 
 pub fn deploy_staking_contract(cfg: StakingInitConfig) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
-    cfg.test_info.strk_token.contract_address().serialize(ref calldata);
     cfg.staking_contract_info.min_stake.serialize(ref calldata);
     cfg.staking_contract_info.pool_contract_class_hash.serialize(ref calldata);
     cfg.staking_contract_info.reward_supplier.serialize(ref calldata);
@@ -465,7 +484,6 @@ pub fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> ContractAddres
     cfg.reward_supplier.base_mint_amount.serialize(ref calldata);
     cfg.reward_supplier.minting_curve_contract.serialize(ref calldata);
     cfg.test_info.staking_contract.serialize(ref calldata);
-    cfg.test_info.strk_token.contract_address().serialize(ref calldata);
     cfg.reward_supplier.l1_reward_supplier.serialize(ref calldata);
     cfg.reward_supplier.starkgate_address.serialize(ref calldata);
     cfg.test_info.governance_admin.serialize(ref calldata);
@@ -1041,6 +1059,20 @@ pub fn calculate_staker_strk_rewards(
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
+    calculate_staker_strk_rewards_with_amount_and_pool_info(
+        amount_own: staker_info.amount_own,
+        pool_info: staker_info.pool_info,
+        :staking_contract,
+        :minting_curve_contract,
+    )
+}
+
+pub fn calculate_staker_strk_rewards_with_amount_and_pool_info(
+    amount_own: Amount,
+    pool_info: Option<StakerPoolInfoV1>,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+) -> (Amount, Amount) {
     let (strk_epoch_rewards, _) = calculate_current_epoch_rewards(
         :staking_contract, :minting_curve_contract,
     );
@@ -1048,14 +1080,18 @@ pub fn calculate_staker_strk_rewards(
     let (strk_curr_total_stake, _) = staking_dispatcher.get_current_total_staking_power();
     // Calculate staker own rewards.
     let mut staker_rewards = mul_wide_and_div(
-        lhs: strk_epoch_rewards, rhs: staker_info.amount_own, div: strk_curr_total_stake,
+        lhs: strk_epoch_rewards,
+        rhs: amount_own,
+        div: strk_curr_total_stake.to_strk_native_amount(),
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     // Calculate staker STRK pool rewards.
     let pool_rewards = {
-        if let Option::Some(pool_info) = staker_info.pool_info {
+        if let Option::Some(pool_info) = pool_info {
             let pool_rewards_including_commission = mul_wide_and_div(
-                lhs: strk_epoch_rewards, rhs: pool_info.amount, div: strk_curr_total_stake,
+                lhs: strk_epoch_rewards,
+                rhs: pool_info.amount,
+                div: strk_curr_total_stake.to_strk_native_amount(),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
             let commission_rewards = compute_commission_amount_rounded_down(
@@ -1074,6 +1110,7 @@ pub fn calculate_staker_strk_rewards(
 
 /// Return staker commission rewards and BTC pool rewards for the specified `pool_balance` and
 /// `commission`.
+/// This function expects the `pool_balance` to be in native decimals.
 ///
 /// Precondition: `pool_balance` and `btc_curr_total_stake` are not zero.
 pub fn calculate_staker_btc_pool_rewards(
@@ -1081,7 +1118,9 @@ pub fn calculate_staker_btc_pool_rewards(
     commission: Commission,
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
+    token_address: ContractAddress,
 ) -> (Amount, Amount) {
+    let pool_balance = to_amount_18_decimals(amount: pool_balance, :token_address);
     let (_, btc_epoch_rewards) = calculate_current_epoch_rewards(
         :staking_contract, :minting_curve_contract,
     );
@@ -1089,7 +1128,9 @@ pub fn calculate_staker_btc_pool_rewards(
     let (_, btc_curr_total_stake) = staking_dispatcher.get_current_total_staking_power();
     // Calculate pool rewards including commission.
     let pool_rewards_including_commission = mul_wide_and_div(
-        lhs: btc_epoch_rewards, rhs: pool_balance, div: btc_curr_total_stake,
+        lhs: btc_epoch_rewards,
+        rhs: pool_balance,
+        div: btc_curr_total_stake.to_amount_18_decimals(),
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     // Split rewards into commission and pool rewards.
@@ -1155,7 +1196,9 @@ pub fn calculate_strk_pool_rewards_with_pool_balance(
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let commission = staker_info.pool_info.unwrap().commission;
     let pool_rewards_including_commission = mul_wide_and_div(
-        lhs: strk_epoch_rewards, rhs: pool_balance, div: strk_curr_total_stake,
+        lhs: strk_epoch_rewards,
+        rhs: pool_balance,
+        div: strk_curr_total_stake.to_strk_native_amount(),
     )
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     let commission_rewards = compute_commission_amount_rounded_down(
@@ -1174,55 +1217,86 @@ pub fn calculate_pool_member_rewards(
 
 /// Compute the rewards for the pool trace.
 ///
-/// Precondition: decimals` must be either `STRK_DECIMALS` or `BTC_DECIMALS`.
-pub fn compute_rewards_for_trace(
-    staking_rewards: Amount, total_stake: Amount, decimals: u8,
+/// Precondition: decimals must be either `STRK_DECIMALS` or valid `BTC_DECIMALS`.
+pub fn compute_rewards_per_unit(
+    staking_rewards: Amount, total_stake: Amount, token_address: ContractAddress,
 ) -> Index {
-    let base_value = if decimals == STRK_DECIMALS {
-        // Return zero if the total stake is too small, to avoid overflow below.
-        if total_stake < STRK_IN_FRIS {
-            return Zero::zero();
-        }
-        STRK_BASE_VALUE
-    } else if decimals == BTC_DECIMALS {
-        // Return zero if the total stake is too small, to avoid overflow below.
-        if total_stake < MIN_BTC_FOR_REWARDS {
-            return Zero::zero();
-        }
-        BTC_BASE_VALUE
-    } else {
-        panic_with_byte_array(@"Invalid decimals")
-    };
+    let (min_amount_for_rewards, base_value) = get_reward_calculation_params(:token_address);
+    if total_stake < min_amount_for_rewards {
+        return Zero::zero();
+    }
     mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
         .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
+}
+
+fn get_reward_calculation_params(token_address: ContractAddress) -> (Amount, Amount) {
+    let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+    if token_dispatcher.contract_address == STRK_TOKEN_ADDRESS {
+        (STRK_IN_FRIS, STRK_BASE_VALUE)
+    } else {
+        let decimals = token_dispatcher.decimals();
+        if decimals == BTC_DECIMALS_8 {
+            (MIN_BTC_FOR_REWARDS_8, BTC_BASE_VALUE_8)
+        } else if decimals == BTC_DECIMALS_18 {
+            (MIN_BTC_FOR_REWARDS_18, BTC_BASE_VALUE_18)
+        } else {
+            panic_with_byte_array(@"Invalid token decimals")
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use core::num::traits::zero::Zero;
+    use staking_test::constants::STRK_TOKEN_ADDRESS;
     use super::{
-        BTC_BASE_VALUE, BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS,
-        STRK_IN_FRIS, compute_rewards_for_trace,
+        BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8, BTC_TOKEN_NAME,
+        MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, OWNER_ADDRESS, STRK_BASE_VALUE, STRK_IN_FRIS,
+        compute_rewards_per_unit, deploy_mock_erc20_decimals_contract,
     };
 
     #[test]
-    fn test_compute_rewards_for_trace() {
-        assert!(
-            compute_rewards_for_trace(STRK_IN_FRIS, STRK_IN_FRIS, STRK_DECIMALS) == STRK_BASE_VALUE,
+    fn test_compute_rewards_per_unit() {
+        let btc_token_address_8 = deploy_mock_erc20_decimals_contract(
+            initial_supply: Zero::zero(),
+            owner_address: OWNER_ADDRESS(),
+            name: BTC_TOKEN_NAME(),
+            decimals: BTC_DECIMALS_8,
+        );
+        let btc_token_address_18 = deploy_mock_erc20_decimals_contract(
+            initial_supply: Zero::zero(),
+            owner_address: OWNER_ADDRESS(),
+            name: BTC_TOKEN_NAME(),
+            decimals: BTC_DECIMALS_18,
         );
         assert!(
-            compute_rewards_for_trace(
-                STRK_IN_FRIS, STRK_IN_FRIS - 1, STRK_DECIMALS,
+            compute_rewards_per_unit(
+                STRK_IN_FRIS, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
+            ) == STRK_BASE_VALUE,
+        );
+        assert!(
+            compute_rewards_per_unit(
+                STRK_IN_FRIS, STRK_IN_FRIS - 1, STRK_TOKEN_ADDRESS,
             ) == Zero::zero(),
         );
         assert!(
-            compute_rewards_for_trace(
-                MIN_BTC_FOR_REWARDS, MIN_BTC_FOR_REWARDS, BTC_DECIMALS,
-            ) == BTC_BASE_VALUE,
+            compute_rewards_per_unit(
+                MIN_BTC_FOR_REWARDS_8, MIN_BTC_FOR_REWARDS_8, btc_token_address_8,
+            ) == BTC_BASE_VALUE_8,
         );
         assert!(
-            compute_rewards_for_trace(
-                MIN_BTC_FOR_REWARDS, MIN_BTC_FOR_REWARDS - 1, BTC_DECIMALS,
+            compute_rewards_per_unit(
+                MIN_BTC_FOR_REWARDS_8, MIN_BTC_FOR_REWARDS_8 - 1, btc_token_address_8,
+            ) == Zero::zero(),
+        );
+        assert!(
+            compute_rewards_per_unit(
+                BTC_BASE_VALUE_18, BTC_BASE_VALUE_18, btc_token_address_18,
+            ) == BTC_BASE_VALUE_18,
+        );
+        assert!(
+            compute_rewards_per_unit(
+                MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_18 - 1, btc_token_address_18,
             ) == Zero::zero(),
         );
     }
@@ -1355,13 +1429,13 @@ pub fn setup_btc_token(cfg: StakingInitConfig, name: ByteArray) -> ContractAddre
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
         :name,
-        decimals: BTC_DECIMALS,
+        decimals: constants::TEST_BTC_DECIMALS,
     );
     let staking_contract = cfg.test_info.staking_contract;
     let token_manager = IStakingTokenManagerDispatcher { contract_address: staking_contract };
     cheat_caller_address(
         contract_address: staking_contract,
-        caller_address: cfg.test_info.security_admin,
+        caller_address: cfg.test_info.token_admin,
         span: CheatSpan::TargetCalls(2),
     );
     token_manager.add_token(token_address: btc_token_address);
@@ -1376,4 +1450,19 @@ pub fn custom_decimals_token(token_address: ContractAddress) -> Token {
             balances_variable_selector: selector!("ERC20_balances"),
         },
     )
+}
+
+fn get_token_decimals(token_address: ContractAddress) -> u8 {
+    let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+    token_dispatcher.decimals()
+}
+
+pub fn to_amount_18_decimals(amount: Amount, token_address: ContractAddress) -> Amount {
+    let decimals = get_token_decimals(:token_address);
+    amount * 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into())
+}
+
+pub fn to_native_amount(amount: Amount, token_address: ContractAddress) -> Amount {
+    let decimals = get_token_decimals(:token_address);
+    amount / 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into())
 }
