@@ -10,13 +10,14 @@ pub mod MintingCurve {
         ConfigEvents, Events, IMintingCurve, IMintingCurveConfig, MintingCurveContractInfo,
     };
     use staking_test::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
+    use staking_test::staking::objects::NormalizedAmountTrait;
     use staking_test::types::{Amount, Inflation};
     use starknet::ContractAddress;
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
-    pub const CONTRACT_VERSION: felt252 = '1.0.0';
+    pub const CONTRACT_VERSION: felt252 = '2.0.0';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -46,8 +47,8 @@ pub mod MintingCurve {
         total_supply: Amount,
         // L1 reward supplier.
         l1_reward_supplier: felt252,
-        // The numerator of the inflation rate. The denominator is C_DENOM. C_NUM / C_DENOM is the
-        // fraction of the total supply that can be minted in a year.
+        // The numerator of the inflation rate. The denominator is C_DENOM.
+        // Yearly mint is (C_NUM / C_DENOM) * sqrt(total_stake * total_supply).
         c_num: Inflation,
     }
 
@@ -128,8 +129,11 @@ pub mod MintingCurve {
         fn yearly_mint(self: @ContractState) -> Amount {
             let total_supply = self.total_supply.read();
             let staking_dispatcher = self.staking_dispatcher.read();
-            let total_stake = staking_dispatcher.get_total_stake();
-            let yearly_mint = self.compute_yearly_mint(:total_stake, :total_supply);
+            let (total_stake, _) = staking_dispatcher.get_current_total_staking_power();
+            let yearly_mint = self
+                .compute_yearly_mint(
+                    total_stake: total_stake.to_strk_native_amount(), :total_supply,
+                );
             yearly_mint
         }
 

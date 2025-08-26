@@ -52,6 +52,7 @@
     - [enable\_token](#enable_token)
     - [disable\_token](#disable_token)
     - [get\_active\_tokens](#get_active_tokens)
+    - [get\_tokens](#get_tokens)
     - [get\_total\_stake\_for\_token](#get_total_stake_for_token)
   - [Events](#events)
     - [Stake Own Balance Changed](#stake-own-balance-changed)
@@ -182,6 +183,7 @@
     - [ATTEST\_WINDOW\_TOO\_SMALL](#attest_window_too_small)
     - [ATTEST\_EPOCH\_ZERO](#attest_epoch_zero)
     - [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
+    - [CALLER\_IS\_TOKEN](#caller_is_token)
     - [COMMISSION\_COMMITMENT\_EXPIRED](#commission_commitment_expired)
     - [COMMISSION\_COMMITMENT\_NOT\_SET](#commission_commitment_not_set)
     - [CALLER\_IS\_ZERO\_ADDRESS](#caller_is_zero_address)
@@ -194,6 +196,7 @@
     - [SELF\_SWITCH\_NOT\_ALLOWED](#self_switch_not_allowed)
     - [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
     - [INSUFFICIENT\_BALANCE](#insufficient_balance)
+    - [TRANSFER\_FAILED](#transfer_failed)
     - [REWARD\_ADDRESS\_MISMATCH](#reward_address_mismatch)
     - [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
     - [ATTEST\_IS\_DONE](#attest_is_done)
@@ -201,11 +204,15 @@
     - [STAKER\_INFO\_ALREADY\_UPDATED](#staker_info_already_updated)
     - [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
     - [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
+    - [TOKEN\_IS\_STAKER](#token_is_staker)
     - [TOKEN\_NOT\_EXISTS](#token_not_exists)
     - [TOKEN\_ALREADY\_ENABLED](#token_already_enabled)
     - [TOKEN\_ALREADY\_DISABLED](#token_already_disabled)
     - [COMMISSION\_NOT\_SET](#commission_not_set)
     - [TOKEN\_MISMATCH](#token_mismatch)
+    - [STAKER\_IS\_TOKEN](#staker_is_token)
+    - [INTERNAL\_STAKER\_INFO\_OUTDATED\_VERSION](#internal_staker_info_outdated_version)
+    - [STAKER\_NOT\_MIGRATED](#staker_not_migrated)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -304,6 +311,7 @@ classDiagram
     enable_token()
     disable_token()
     get_active_tokens()
+    get_tokens()
     get_total_stake_for_token()
   }
   class DelegationPoolContract{
@@ -552,7 +560,8 @@ Add a new staker to the stake.
 2. [STAKER\_EXISTS](#staker_exists)
 3. [OPERATIONAL\_EXISTS](#operational_exists)
 4. [STAKER\_ADDRESS\_ALREADY\_USED](#staker_address_already_used)
-5. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
+5. [STAKER\_IS\_TOKEN](#staker_is_token)
+6. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) is not listed in the contract.
@@ -1116,10 +1125,10 @@ Any address can execute.
 
 ### get_current_total_staking_power
 ```rust
-get_current_total_staking_power(self: @ContractState) -> (Amount, Amount)
+get_current_total_staking_power(self: @ContractState) -> (NormalizedAmount, NormalizedAmount)
 ```
 #### description <!-- omit from toc -->
-Return the total STRK stake amount and the total active BTC stake amount at the current epoch.
+Return the total STRK stake amount and the total active BTC stake amount at the current epoch. Both normalized to 18 decimals.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -1202,6 +1211,8 @@ This function is used for migration purposes. It converts legacy staker info typ
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [INTERNAL\_STAKER\_INFO\_OUTDATED\_VERSION](#internal_staker_info_outdated_version)
+3. [STAKER\_NOT\_MIGRATED](#staker_not_migrated)
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.
 #### access control <!-- omit from toc -->
@@ -1335,10 +1346,11 @@ Add a new token to the staking contract.
 #### emits <!-- omit from toc -->
 1. [Token Added](#token-added)
 #### errors <!-- omit from toc -->
-1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 2. [ZERO\_ADDRESS](#zero_address)
-3. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
-4. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
+3. [TOKEN\_IS\_STAKER](#token_is_staker)
+4. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
+5. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only security admin.
@@ -1353,7 +1365,7 @@ Enable a token for getting rewards.
 #### emits <!-- omit from toc -->
 1. [Token Enabled](#token-enabled)
 #### errors <!-- omit from toc -->
-1. [ONLY\_SECURITY\_ADMIN](#only_security_admin)
+1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 2. [TOKEN\_NOT\_EXISTS](#token_not_exists)
 3. [TOKEN\_ALREADY\_ENABLED](#token_already_enabled)
 #### pre-condition <!-- omit from toc -->
@@ -1384,6 +1396,19 @@ fn get_active_tokens(self: @ContractState) -> Span<ContractAddress>
 ```
 #### description <!-- omit from toc -->
 Get all active tokens.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address.
+#### logic <!-- omit from toc -->
+
+### get_tokens
+```rust
+fn get_tokens(self: @ContractState) -> Span<(ContractAddress, bool)>
+```
+#### description <!-- omit from toc -->
+Gets all tokens and their status.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
@@ -1608,10 +1633,11 @@ Add a new pool member to the delegation pool.
 1. [STAKER\_INACTIVE](#staker_inactive)
 2. [POOL\_MEMBER\_EXISTS](#pool_member_exists)
 3. [AMOUNT\_IS\_ZERO](#amount_is_zero)
-4. [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
-5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-6. [INSUFFICIENT\_BALANCE](#insufficient_balance)
-7. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+4. [CALLER\_IS\_TOKEN](#caller_is_token)
+5. [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
+6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+7. [INSUFFICIENT\_BALANCE](#insufficient_balance)
+8. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 #### pre-condition <!-- omit from toc -->
 1. Staker is active and not in an exit window.
 2. `caller_address` is not listed in the contract as a pool member.
@@ -2407,6 +2433,9 @@ Only token admin.
 ### ATTEST_WRONG_BLOCK_HASH
 "Attestation with wrong block hash"
 
+### CALLER_IS_TOKEN
+"Caller is a token address"
+
 ### COMMISSION_COMMITMENT_EXPIRED
 "Commission commitment has expired, can only decrease or set a new commitment"
 
@@ -2432,10 +2461,10 @@ Only token admin.
 "Only StarkGate can call on_receive"
 
 ### UNEXPECTED_TOKEN
-"UNEXPECTED_TOKEN"
+"Unexpected token"
 
 ### SELF_SWITCH_NOT_ALLOWED
-"SELF_SWITCH_NOT_ALLOWED"
+"Self switch is not allowed"
 
 ### INSUFFICIENT_ALLOWANCE
 "Insufficient ERC20 allowance"
@@ -2443,11 +2472,14 @@ Only token admin.
 ### INSUFFICIENT_BALANCE
 "Insufficient ERC20 balance"
 
+### TRANSFER_FAILED
+"ERC20 transfer failed"
+
 ### REWARD_ADDRESS_MISMATCH
 "Reward address mismatch"
 
 ### ILLEGAL_EXIT_DURATION
-"ILLEGAL_EXIT_DURATION"
+"Illegal exit duration"
 
 ### ATTEST_IS_DONE
 "Attestation is done for this epoch"
@@ -2476,8 +2508,20 @@ Only token admin.
 ### TOKEN_ALREADY_EXISTS
 "Token already exists"
 
+### TOKEN_IS_STAKER
+"Token is a staker address"
+
 ### TOKEN_MISMATCH
 "Token mismatch"
+
+### STAKER_IS_TOKEN
+"Staker address is a token address"
+
+### INTERNAL_STAKER_INFO_OUTDATED_VERSION
+"Outdated version of Internal Staker Info"
+
+### STAKER_NOT_MIGRATED
+"Staker is not migrated to latest version"
 
 # Structs
 ### StakerPoolInfoV1
@@ -2557,7 +2601,7 @@ Only token admin.
 | --------------- | ----------------------- |
 | unpool_time     | [TimeStamp](#timestamp) |
 | amount          | [Amount](#amount)       |
-| staker_address  | address                 |
+| token_address   | address                 |
 
 ### TimeStamp
 | name    | type |

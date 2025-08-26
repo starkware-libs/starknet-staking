@@ -87,7 +87,7 @@ fn get_pool_exit_intent(
    ) -> UndelegateIntentValue;
 ```
 ```rust
-pub(crate) struct UndelegateIntentValue {
+pub struct UndelegateIntentValue {
    pub unpool_time: Timestamp,
    pub amount: Amount,
 }
@@ -114,10 +114,10 @@ fn get_current_total_staking_power(self: @TContractState) -> Amount;
 ```
 After:
 ```rust
-fn get_current_total_staking_power(self: @TContractState) -> (Amount, Amount);
+fn get_current_total_staking_power(self: @TContractState) -> (NormalizedAmount, NormalizedAmount);
 ```
 Changes:
-1. Change return type to tuple of (Amount, Amount) - first amount is the total staking power of the STRK token (same as before), second amount is the total staking power of the BTC active tokens.
+1. Change return type to tuple of (NormalizedAmount, NormalizedAmount) - first amount is the total staking power of the STRK token (same as before), second amount is the total staking power of the BTC active tokens. Both amounts are normalized to 18 decimals.
 
 ### Events
 #### CommissionChanged

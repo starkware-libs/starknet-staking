@@ -12,8 +12,7 @@ pub mod Pool {
         IERC20MetadataDispatcherTrait,
     };
     use staking_test::constants::{
-        BTC_BASE_VALUE, BTC_DECIMALS, MIN_BTC_FOR_REWARDS, STRK_BASE_VALUE, STRK_DECIMALS,
-        STRK_IN_FRIS, STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
+        BTC_18D_CONFIG, BTC_8D_CONFIG, STRK_CONFIG, STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
     };
     use staking_test::errors::GenericError;
     use staking_test::pool::errors::Error;
@@ -21,8 +20,8 @@ pub mod Pool {
         Events, IPool, IPoolMigration, PoolContractInfoV1, PoolMemberInfoV1,
     };
     use staking_test::pool::objects::{
-        InternalPoolMemberInfoConvertTrait, SwitchPoolData, VInternalPoolMemberInfo,
-        VInternalPoolMemberInfoTrait,
+        InternalPoolMemberInfoConvertTrait, SwitchPoolData, TokenRewardsConfig,
+        VInternalPoolMemberInfo, VInternalPoolMemberInfoTrait,
     };
     use staking_test::pool::pool_member_balance_trace::trace::{
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
@@ -50,7 +49,7 @@ pub mod Pool {
     use starkware_utils::time::time::{Time, Timestamp};
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
-    pub const CONTRACT_VERSION: felt252 = '2.0.0';
+    pub const CONTRACT_VERSION: felt252 = '3.0.0';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -97,6 +96,13 @@ pub mod Pool {
         // calculation.
         // Updated whenever rewards are received from the staking contract.
         cumulative_rewards_trace: Trace,
+        // Minimum amount of delegation required for rewards.
+        // Used to avoid overflow in the rewards calculation.
+        min_delegation_for_rewards: Amount,
+        // Staking rewards base value.
+        // Used in rewards calculation: $$ rewards = amount * interest / base_value $$,
+        // Where `interest` scales with `base_value`.
+        staking_rewards_base_value: Amount,
     }
 
     #[event]
@@ -138,6 +144,9 @@ pub mod Pool {
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
         self.staker_removed.write(false);
         self.cumulative_rewards_trace.insert(key: Zero::zero(), value: Zero::zero());
+        let config = self.get_token_rewards_config(:token_address);
+        self.min_delegation_for_rewards.write(config.min_for_rewards);
+        self.staking_rewards_base_value.write(config.base_value);
     }
 
     #[abi(embed_v0)]
@@ -163,18 +172,20 @@ pub mod Pool {
                 self.pool_member_info.read(pool_member).is_none(), "{}", Error::POOL_MEMBER_EXISTS,
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
+            let token_dispatcher = self.token_dispatcher.read();
+            assert!(token_dispatcher.contract_address != pool_member, "{}", Error::CALLER_IS_TOKEN);
+
+            // Transfer funds from the delegator to the staking contract.
+            let staker_address = self.staker_address.read();
+            self.transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
+            self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
+
+            self.set_next_epoch_balance(:pool_member, :amount);
 
             // Create the pool member record.
             self
                 .pool_member_info
                 .write(pool_member, VInternalPoolMemberInfoTrait::new_latest(:reward_address));
-            self.set_next_epoch_balance(:pool_member, :amount);
-
-            // Transfer funds from the delegator to the staking contract.
-            let token_dispatcher = self.token_dispatcher.read();
-            let staker_address = self.staker_address.read();
-            self.transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
-            self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
             // Emit events.
             self
@@ -203,15 +214,15 @@ pub mod Pool {
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
 
-            // Update the pool member's balance checkpoint.
-            let old_delegated_stake = self.increase_next_epoch_balance(:pool_member, :amount);
-            let new_delegated_stake = old_delegated_stake + amount;
-
             // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
             let staker_address = self.staker_address.read();
             self.transfer_from_delegator(pool_member: caller_address, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
+
+            // Update the pool member's balance checkpoint.
+            let old_delegated_stake = self.increase_next_epoch_balance(:pool_member, :amount);
+            let new_delegated_stake = old_delegated_stake + amount;
 
             // Emit events.
             self
@@ -546,7 +557,7 @@ pub mod Pool {
                     key: self.get_current_epoch(),
                     value: latest
                         + self
-                            .compute_rewards_for_trace(
+                            .compute_rewards_per_unit(
                                 staking_rewards: rewards, total_stake: pool_balance,
                             ),
                 );
@@ -799,8 +810,10 @@ pub mod Pool {
             let mut from_sigma = self.find_sigma(from_checkpoint);
             let mut from_balance = from_checkpoint.balance();
 
-            let base_value = self.base_value_for_rewards();
+            let base_value = self.staking_rewards_base_value.read();
 
+            // **Note**: The loop iterates over the balance changes in the pool member's balance
+            // trace. This loop is unbounded but unlikely to exceed gas limits.
             while entry_to_claim_from < pool_member_trace_length {
                 let pool_member_checkpoint = pool_member_trace.at(entry_to_claim_from);
                 // If the balance change is after `until_epoch` (and therefore does not affect
@@ -885,7 +898,7 @@ pub mod Pool {
             let staking_dispatcher = IStakingDispatcher {
                 contract_address: self.staking_pool_dispatcher.read().contract_address,
             };
-            // The staker must have commission since he has a pool (this contract). So unwrap is
+            // The staker must have commission since it has a pool (this contract). So unwrap is
             // safe.
             staking_dispatcher
                 .staker_pool_info(staker_address: self.staker_address.read())
@@ -903,46 +916,44 @@ pub mod Pool {
                 .write(pool_member, VInternalPoolMemberInfoTrait::wrap_latest(pool_member_info));
         }
 
-        fn token_decimals(self: @ContractState) -> u8 {
-            let token_metadata_dispatcher = IERC20MetadataDispatcher {
-                contract_address: self.token_dispatcher.read().contract_address,
-            };
-            token_metadata_dispatcher.decimals()
-        }
-
-        fn base_value_for_rewards(self: @ContractState) -> Index {
-            let decimals = self.token_decimals();
-            if decimals == STRK_DECIMALS {
-                STRK_BASE_VALUE
-            } else if decimals == BTC_DECIMALS {
-                BTC_BASE_VALUE
-            } else {
-                panic_with_byte_array(@"Invalid decimals")
-            }
-        }
-
         /// Compute the rewards for the pool trace.
-        fn compute_rewards_for_trace(
+        ///
+        /// `staking_rewards` is in `STRK_DECIMALS` decimals.
+        /// `total_stake` is in the contract's token decimals.
+        /// **Note**: Delegation rewards lost when pool balance is less than
+        /// `min_delegation_for_rewards`. The staking contract continues to forward
+        /// `pool_rewards` to the pool contract even in this case.
+        fn compute_rewards_per_unit(
             self: @ContractState, staking_rewards: Amount, total_stake: Amount,
         ) -> Index {
-            let decimals = self.token_decimals();
-            let base_value = if decimals == STRK_DECIMALS {
-                // Return zero if the total stake is too small, to avoid overflow below.
-                if total_stake < STRK_IN_FRIS {
-                    return Zero::zero();
-                }
-                STRK_BASE_VALUE
-            } else if decimals == BTC_DECIMALS {
-                // Return zero if the total stake is too small, to avoid overflow below.
-                if total_stake < MIN_BTC_FOR_REWARDS {
-                    return Zero::zero();
-                }
-                BTC_BASE_VALUE
-            } else {
-                panic_with_byte_array(@"Invalid decimals")
-            };
-            mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
+            // Return zero if the total stake is too small, to avoid overflow below.
+            if total_stake < self.min_delegation_for_rewards.read() {
+                return Zero::zero();
+            }
+            mul_wide_and_div(
+                lhs: staking_rewards, rhs: self.staking_rewards_base_value.read(), div: total_stake,
+            )
                 .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
+        }
+
+        /// Get token rewards configuration based on address and decimals.
+        fn get_token_rewards_config(
+            self: @ContractState, token_address: ContractAddress,
+        ) -> TokenRewardsConfig {
+            if token_address == STRK_TOKEN_ADDRESS {
+                STRK_CONFIG
+            } else {
+                // BTC token.
+                let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
+                let decimals = token_dispatcher.decimals();
+                if decimals == BTC_8D_CONFIG.decimals {
+                    BTC_8D_CONFIG
+                } else if decimals == BTC_18D_CONFIG.decimals {
+                    BTC_18D_CONFIG
+                } else {
+                    panic_with_byte_array(@"Invalid token decimals")
+                }
+            }
         }
     }
 }

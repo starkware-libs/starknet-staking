@@ -16,7 +16,7 @@ use staking_test::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
-use staking_test::constants::{BTC_DECIMALS, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
+use staking_test::constants::{BTC_18D_CONFIG, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
 use staking_test::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
 };
@@ -34,7 +34,8 @@ use staking_test::staking::interface::{
     IStakingMigrationDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
     IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
-    IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+    IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
+    IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking_test::staking::interface_v0::{
     IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
@@ -42,11 +43,11 @@ use staking_test::staking::interface_v0::{
 use staking_test::staking::interface_v1::{
     IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
 };
-use staking_test::staking::objects::{EpochInfo, EpochInfoTrait};
+use staking_test::staking::objects::{EpochInfo, EpochInfoTrait, NormalizedAmount};
 use staking_test::test_utils::constants::{
     BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
     INITIAL_SUPPLY, MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS, STARTING_BLOCK_OFFSET,
-    UPGRADE_GOVERNOR,
+    TEST_BTC_DECIMALS, UPGRADE_GOVERNOR,
 };
 use staking_test::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
@@ -169,9 +170,8 @@ pub struct StakingState {
 
 #[generate_trait]
 pub impl StakingImpl of StakingTrait {
-    fn deploy(self: StakingConfig, token: Token) -> StakingState {
+    fn deploy(self: StakingConfig) -> StakingState {
         let mut calldata = ArrayTrait::new();
-        token.contract_address().serialize(ref calldata);
         self.min_stake.serialize(ref calldata);
         self.pool_contract_class_hash.serialize(ref calldata);
         self.reward_supplier.serialize(ref calldata);
@@ -224,6 +224,12 @@ pub impl StakingImpl of StakingTrait {
 
     fn token_manager_dispatcher(self: StakingState) -> IStakingTokenManagerDispatcher nopanic {
         IStakingTokenManagerDispatcher { contract_address: self.address }
+    }
+
+    fn safe_token_manager_dispatcher(
+        self: StakingState,
+    ) -> IStakingTokenManagerSafeDispatcher nopanic {
+        IStakingTokenManagerSafeDispatcher { contract_address: self.address }
     }
 
     fn is_v0(self: StakingState) -> bool {
@@ -337,7 +343,9 @@ pub impl StakingImpl of StakingTrait {
         self.dispatcher_v1_for_tests().get_current_total_staking_power()
     }
 
-    fn get_current_total_staking_power_v2(self: StakingState) -> (Amount, Amount) {
+    fn get_current_total_staking_power_v2(
+        self: StakingState,
+    ) -> (NormalizedAmount, NormalizedAmount) {
         self.dispatcher().get_current_total_staking_power()
     }
 
@@ -433,14 +441,14 @@ pub impl StakingImpl of StakingTrait {
 
     fn add_token(self: StakingState, token_address: ContractAddress) {
         cheat_caller_address_once(
-            contract_address: self.address, caller_address: self.roles.security_admin,
+            contract_address: self.address, caller_address: self.roles.token_admin,
         );
         self.token_manager_dispatcher().add_token(:token_address);
     }
 
     fn enable_token(self: StakingState, token_address: ContractAddress) {
         cheat_caller_address_once(
-            contract_address: self.address, caller_address: self.roles.security_admin,
+            contract_address: self.address, caller_address: self.roles.token_admin,
         );
         self.token_manager_dispatcher().enable_token(:token_address);
     }
@@ -450,6 +458,26 @@ pub impl StakingImpl of StakingTrait {
             contract_address: self.address, caller_address: self.roles.security_agent,
         );
         self.token_manager_dispatcher().disable_token(:token_address);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn safe_disable_token(
+        self: StakingState, token_address: ContractAddress,
+    ) -> Result<(), Array<felt252>> {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.security_agent,
+        );
+        self.safe_token_manager_dispatcher().disable_token(:token_address)
+    }
+
+    #[feature("safe_dispatcher")]
+    fn safe_enable_token(
+        self: StakingState, token_address: ContractAddress,
+    ) -> Result<(), Array<felt252>> {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.token_admin,
+        );
+        self.safe_token_manager_dispatcher().enable_token(:token_address)
     }
 }
 
@@ -615,7 +643,6 @@ pub impl RewardSupplierImpl of RewardSupplierTrait {
         self.base_mint_amount.serialize(ref calldata);
         minting_curve.address.serialize(ref calldata);
         staking.address.serialize(ref calldata);
-        token.contract_address().serialize(ref calldata);
         self.l1_reward_supplier.serialize(ref calldata);
         self.starkgate_address.serialize(ref calldata);
         self.governance_admin.serialize(ref calldata);
@@ -892,12 +919,12 @@ pub impl SystemConfigImpl of SystemConfigTrait {
     }
 
     /// Deploys a BTC token with the given configuration and 8 decimals and returns the token state.
-    fn deploy_btc_token(self: TokenConfig) -> Token {
+    fn deploy_btc_token(self: TokenConfig, decimals: u8) -> Token {
         let btc_token_address = deploy_mock_erc20_decimals_contract(
             initial_supply: self.initial_supply,
             owner_address: self.owner,
             name: self.name,
-            decimals: BTC_DECIMALS,
+            :decimals,
         );
         custom_decimals_token(token_address: btc_token_address)
     }
@@ -905,8 +932,8 @@ pub impl SystemConfigImpl of SystemConfigTrait {
     /// Deploys the system configuration and returns the system state.
     fn deploy(self: SystemConfig) -> SystemState {
         let token = Token::STRK;
-        let btc_token = self.btc_token.deploy_btc_token();
-        let staking = self.staking.deploy(:token);
+        let btc_token = self.btc_token.deploy_btc_token(decimals: TEST_BTC_DECIMALS);
+        let staking = self.staking.deploy();
         let minting_curve = self.minting_curve.deploy(:staking);
         let reward_supplier = self.reward_supplier.deploy(:minting_curve, :staking, :token);
         let attestation = self.attestation.deploy(:staking);
@@ -941,7 +968,7 @@ pub impl SystemConfigImpl of SystemConfigTrait {
         // Add BTC token to the staking contract.
         cheat_caller_address(
             contract_address: staking.address,
-            caller_address: self.staking.roles.security_admin,
+            caller_address: self.staking.roles.token_admin,
             span: CheatSpan::TargetCalls(2),
         );
         staking.token_manager_dispatcher().add_token(token_address: btc_token.contract_address());
@@ -957,7 +984,7 @@ pub impl SystemConfigImpl of SystemConfigTrait {
         let token = Token::STRK;
         let token_address = token.contract_address();
         // TODO: Change this once we have the BTC token address?
-        let btc_token = self.btc_token.deploy_btc_token();
+        let btc_token = self.btc_token.deploy_btc_token(decimals: TEST_BTC_DECIMALS);
         let staking = self.staking.deploy_mainnet_contract_v0(:token_address);
         let minting_curve = self.minting_curve.deploy_mainnet_contract_v0(:staking);
         let reward_supplier = self
@@ -997,7 +1024,7 @@ pub impl SystemImpl of SystemTrait {
     /// Creates a new account with the specified amount.
     fn new_account(ref self: SystemState, amount: Amount) -> Account {
         self.base_account += 1;
-        let account = AccountTrait::new(address: self.base_account, amount: amount);
+        let account = AccountTrait::new(address: self.base_account, :amount);
         fund(target: account.address, :amount, token: self.token);
         account
     }
@@ -1055,7 +1082,9 @@ pub impl SystemImpl of SystemTrait {
     /// Note: This function is built on the assumption that exit window > k epochs
     fn advance_exit_wait_window(ref self: SystemState) {
         self.advance_time(time: self.staking.get_exit_wait_window());
-        self.advance_epoch();
+        if !self.staking.is_v0() {
+            self.advance_epoch();
+        }
     }
 
     fn set_pool_for_upgrade(ref self: SystemState, pool_address: ContractAddress) {
@@ -1082,27 +1111,37 @@ pub impl SystemImpl of SystemTrait {
     }
 
     /// Advances the required block number into the attestation window.
-    /// **Note**: This function assumes that the current block is the starting block of the
-    /// current epoch.
     fn advance_block_into_attestation_window(self: SystemState, staker: Staker) {
-        let block_offset = calculate_block_offset(
-            stake: self.staker_total_amount(:staker).into(),
+        let staker_address = staker.staker.address;
+        let stake = self.staker_total_amount(:staker);
+        self.advance_block_into_attestation_window_custom_stake(:staker_address, :stake);
+    }
+
+    fn advance_block_into_attestation_window_custom_stake(
+        self: SystemState, staker_address: ContractAddress, stake: Amount,
+    ) {
+        let block_offset_from_epoch_start = calculate_block_offset(
+            :stake,
             epoch_id: self.staking.get_epoch_info().current_epoch().into(),
-            staker_address: staker.staker.address.into(),
+            staker_address: staker_address.into(),
             epoch_len: self.staking.get_epoch_info().epoch_len_in_blocks().into(),
             attestation_window: MIN_ATTESTATION_WINDOW,
         );
+        let current_block = get_block_number();
+        let epoch_start_block = self.staking.get_epoch_info().current_epoch_starting_block();
+        let block_offset = block_offset_from_epoch_start - (current_block - epoch_start_block);
         advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
     }
 
     fn deploy_second_btc_token(self: SystemState) -> Token {
+        self.deploy_new_btc_token(name: BTC_TOKEN_NAME_2(), decimals: BTC_18D_CONFIG.decimals)
+    }
+
+    fn deploy_new_btc_token(self: SystemState, name: ByteArray, decimals: u8) -> Token {
         let btc_token = TokenConfig {
-            name: BTC_TOKEN_NAME_2(),
-            symbol: SYMBOL(),
-            initial_supply: INITIAL_SUPPLY.into(),
-            owner: OWNER_ADDRESS(),
+            name, symbol: SYMBOL(), initial_supply: INITIAL_SUPPLY.into(), owner: OWNER_ADDRESS(),
         }
-            .deploy_btc_token();
+            .deploy_btc_token(:decimals);
         btc_token
     }
 }
@@ -1188,6 +1227,22 @@ pub impl SystemStakerImpl of SystemStakerTrait {
                 self.set_open_for_strk_delegation(:staker, :commission);
             }
         }
+    }
+
+    #[feature("safe_dispatcher")]
+    fn safe_stake(self: SystemState, staker: Staker, amount: Amount) -> Result<(), Array<felt252>> {
+        self.token.approve(owner: staker.staker.address, spender: self.staking.address, :amount);
+        cheat_caller_address_once(
+            contract_address: self.staking.address, caller_address: staker.staker.address,
+        );
+        self
+            .staking
+            .safe_dispatcher()
+            .stake(
+                reward_address: staker.reward.address,
+                operational_address: staker.operational.address,
+                :amount,
+            )
     }
 
     fn increase_stake(self: SystemState, staker: Staker, amount: Amount) -> Amount {
@@ -1393,8 +1448,13 @@ pub impl SystemDelegatorImpl of SystemDelegatorTrait {
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
         );
-        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
+        if self.staking.is_v0() {
+            let pool_dispatcher = IPoolV0Dispatcher { contract_address: pool };
+            pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
+        } else {
+            let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+            pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
+        }
     }
 
     fn delegate_btc(
@@ -1423,14 +1483,34 @@ pub impl SystemDelegatorImpl of SystemDelegatorTrait {
         pool_dispatcher.add_to_delegation_pool(pool_member: delegator.delegator.address, :amount)
     }
 
+    fn increase_delegate_btc(
+        self: SystemState,
+        delegator: Delegator,
+        pool: ContractAddress,
+        amount: Amount,
+        token: Token,
+    ) -> Amount {
+        token.approve(owner: delegator.delegator.address, spender: pool, :amount);
+        cheat_caller_address_once(
+            contract_address: pool, caller_address: delegator.delegator.address,
+        );
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.add_to_delegation_pool(pool_member: delegator.delegator.address, :amount)
+    }
+
     fn delegator_exit_intent(
         self: SystemState, delegator: Delegator, pool: ContractAddress, amount: Amount,
     ) {
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
         );
-        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-        pool_dispatcher.exit_delegation_pool_intent(:amount)
+        if self.staking.is_v0() {
+            let pool_dispatcher = IPoolV0Dispatcher { contract_address: pool };
+            pool_dispatcher.exit_delegation_pool_intent(:amount)
+        } else {
+            let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+            pool_dispatcher.exit_delegation_pool_intent(:amount)
+        }
     }
 
     #[feature("safe_dispatcher")]
@@ -1632,13 +1712,9 @@ pub impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract_v0_v1(),
             eic_init_data: array![
-                MAINNET_STAKING_CLASS_HASH_V0().into(),
-                EPOCH_DURATION.into(),
-                EPOCH_LENGTH.into(),
-                STARTING_BLOCK_OFFSET.into(),
-                declare_pool_contract().into(),
-                self.attestation.unwrap().address.into(),
-                MAINNET_SECURITY_COUNSEL_ADDRESS().into(),
+                MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_DURATION.into(), EPOCH_LENGTH.into(),
+                STARTING_BLOCK_OFFSET.into(), MAINNET_POOL_CLASS_HASH_V1().into(),
+                self.attestation.unwrap().address.into(), MAINNET_SECURITY_COUNSEL_ADDRESS().into(),
             ]
                 .span(),
         };
@@ -1704,7 +1780,7 @@ pub impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         // Add BTC token to the staking contract.
         cheat_caller_address(
             contract_address: self.staking.address,
-            caller_address: self.staking.roles.security_admin,
+            caller_address: self.staking.roles.token_admin,
             span: CheatSpan::TargetCalls(2),
         );
         self
@@ -1759,6 +1835,14 @@ fn declare_reward_supplier_contract() -> ClassHash {
 
 fn declare_minting_curve_contract() -> ClassHash {
     *snforge_std::declare("MintingCurve").unwrap().contract_class().class_hash
+}
+
+pub fn pause_staking_contract(
+    staking_contract: ContractAddress, security_agent: ContractAddress,
+) {
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: security_agent);
+    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
+    staking_pause_dispatcher.pause();
 }
 
 /// Upgrades implementation of the given contract.

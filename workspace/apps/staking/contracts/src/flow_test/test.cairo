@@ -16,8 +16,38 @@ fn basic_stake_flow_test() {
 }
 
 #[test]
+fn multiple_tokens_delegation_flow_test() {
+    let flow = flows::MultipleTokensDelegationFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn multiple_btc_pools_different_decimals_flow_test() {
+    let flow = flows::MultipleBTCPoolsDifferentDecimalsFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn new_token_delegation_flow_test() {
+    let flow = flows::NewTokenDelegationFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn set_open_for_delegation_flow_test() {
     let flow = flows::SetOpenForDelegationFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn disabled_token_delegation_flow_test() {
+    let flow = flows::DisabledTokenDelegationFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn attest_with_zero_total_btc_stake_flow_test() {
+    let flow = flows::AttestWithZeroTotalBtcStakeFlow {};
     test_flow_local(:flow);
 }
 
@@ -28,8 +58,20 @@ fn delegator_intent_after_staker_action_flow_test() {
 }
 
 #[test]
+fn basic_stake_btc_flow_test() {
+    let flow = flows::BasicStakeBTCFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn delegator_intent_flow_test() {
     let flow = flows::DelegatorIntentFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn add_token_without_enable_flow_test() {
+    let flow = flows::AddTokenWithoutEnableFlow {};
     test_flow_local(:flow);
 }
 
@@ -40,8 +82,20 @@ fn operations_after_dead_staker_flow_test() {
 }
 
 #[test]
+fn set_commission_multiple_pools_flow_test() {
+    let flow = flows::SetCommissionMultiplePoolsFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn delegator_didnt_update_after_staker_update_commission_flow_test() {
     let flow = flows::DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
+fn pool_with_min_btc_flow_test() {
+    let flow = flows::PoolWithMinBtcFlow {};
     test_flow_local(:flow);
 }
 
@@ -112,6 +166,12 @@ fn claim_rewards_multiple_delegators_btc_flow_test() {
 }
 
 #[test]
+fn pool_with_lots_of_btc_flow_test() {
+    let flow = flows::PoolWithLotsOfBtcFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn pool_claim_after_claim_flow_test() {
     let flow = flows::PoolClaimAfterClaimFlow {};
     test_flow_local(:flow);
@@ -172,6 +232,12 @@ fn attest_after_delegator_intent_flow_test() {
 }
 
 #[test]
+fn multi_pool_exit_intent_flow_test() {
+    let flow = flows::MultiPoolExitIntentFlow {};
+    test_flow_local(:flow);
+}
+
+#[test]
 fn diverse_staker_vec_flow_test() {
     let flow = flows::DiverseStakerVecFlow {};
     test_flow_local(:flow);
@@ -195,7 +261,7 @@ fn disable_enable_btc_token_same_epoch_flow_test() {
 /// Delegator exit_intent full amount
 /// Delegator switch full amount to the same delegation pool
 #[test]
-#[should_panic(expected: "SELF_SWITCH_NOT_ALLOWED")]
+#[should_panic(expected: "Self switch is not allowed")]
 fn switch_to_same_delegation_pool_flow_test() {
     let cfg: StakingInitConfig = Default::default();
     let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
@@ -758,14 +824,14 @@ fn add_to_delegation_after_intent_flow_test() {
     system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount / 4);
     system.advance_epoch_and_attest(:staker);
 
-    system.add_to_delegation_pool(:delegator, pool: pool, amount: delegator_amount / 4);
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 4);
     system.advance_epoch_and_attest(:staker);
 
     // Full intent.
     system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount * 3 / 4);
     system.advance_epoch_and_attest(:staker);
 
-    system.add_to_delegation_pool(:delegator, pool: pool, amount: delegator_amount / 4);
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 4);
     system.advance_epoch_and_attest(:staker);
     system.advance_epoch();
 

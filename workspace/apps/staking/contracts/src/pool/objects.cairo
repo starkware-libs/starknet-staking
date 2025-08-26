@@ -5,7 +5,8 @@ use staking_test::pool::interface_v0::{IPoolV0DispatcherTrait, IPoolV0LibraryDis
 use staking_test::pool::pool_member_balance_trace::trace::{
     PoolMemberCheckpoint, PoolMemberCheckpointTrait,
 };
-use staking_test::types::{Amount, Commission, Index, InternalPoolMemberInfoLatest, VecIndex};
+use staking_test::types::InternalPoolMemberInfoLatest;
+use staking_test::types::{Amount, Commission, Index, VecIndex};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::time::time::Timestamp;
 
@@ -139,6 +140,16 @@ pub impl VInternalPoolMemberInfoImpl of VInternalPoolMemberInfoTrait {
             _ => false,
         }
     }
+}
+
+#[derive(Drop)]
+pub struct TokenRewardsConfig {
+    /// Decimals of the token.
+    pub decimals: u8,
+    /// Minimum amount of tokens required to receive rewards.
+    pub min_for_rewards: Amount,
+    /// Base value for rewards calculation.
+    pub base_value: Index,
 }
 
 #[cfg(test)]

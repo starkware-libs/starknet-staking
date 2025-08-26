@@ -14,6 +14,7 @@ pub enum Error {
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     INVALID_LATEST_EPOCH,
     INVALID_EPOCH,
+    CALLER_IS_TOKEN,
 }
 
 impl DescribableError of Describable<Error> {
@@ -31,6 +32,7 @@ impl DescribableError of Describable<Error> {
             Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS => "Claim rewards must be called from pool member address or reward address",
             Error::INVALID_LATEST_EPOCH => "Invalid latest epoch",
             Error::INVALID_EPOCH => "Invalid epoch",
+            Error::CALLER_IS_TOKEN => "Caller is a token address",
         }
     }
 }

@@ -6,7 +6,7 @@ pub mod RewardSupplier {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking_test::constants::STRK_IN_FRIS;
+    use staking_test::constants::{STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
     use staking_test::errors::GenericError;
     use staking_test::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking_test::reward_supplier::errors::Error;
@@ -25,7 +25,7 @@ pub mod RewardSupplier {
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
-    pub const CONTRACT_VERSION: felt252 = '2.0.0';
+    pub const CONTRACT_VERSION: felt252 = '3.0.0';
     pub const ALPHA: u128 = 25;
     pub const ALPHA_DENOMINATOR: u128 = 100;
 
@@ -88,15 +88,15 @@ pub mod RewardSupplier {
         base_mint_amount: Amount,
         minting_curve_contract: ContractAddress,
         staking_contract: ContractAddress,
-        token_address: ContractAddress,
         l1_reward_supplier: felt252,
         starkgate_address: ContractAddress,
         governance_admin: ContractAddress,
     ) {
+        let token_address = STRK_TOKEN_ADDRESS;
         self.roles.initialize(:governance_admin);
         self.staking_contract.write(staking_contract);
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
-        // Initialize unclaimed_rewards with 1 STRK to make up for round ups of pool rewards.
+        // Initialize unclaimed_rewards with 1 STRK to make up for round ups of pool rewards
         // calculation in the staking contract.
         self.unclaimed_rewards.write(STRK_IN_FRIS);
         self.l1_pending_requested_amount.write(Zero::zero());

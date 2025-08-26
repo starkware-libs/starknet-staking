@@ -161,7 +161,6 @@ pub mod Attestation {
             self.attestation_window.read()
         }
 
-        /// **Note**: New `attestation_window` takes effect immediately in current epoch.
         fn set_attestation_window(ref self: ContractState, attestation_window: u16) {
             self.roles.only_app_governor();
             assert!(

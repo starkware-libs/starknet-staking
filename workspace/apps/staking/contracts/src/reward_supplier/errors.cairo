@@ -10,7 +10,7 @@ impl DescribableError of Describable<Error> {
     fn describe(self: @Error) -> ByteArray {
         match self {
             Error::ON_RECEIVE_NOT_FROM_STARKGATE => "Only StarkGate can call on_receive",
-            Error::UNEXPECTED_TOKEN => "UNEXPECTED_TOKEN",
+            Error::UNEXPECTED_TOKEN => "Unexpected token",
         }
     }
 }

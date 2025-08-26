@@ -1,10 +1,11 @@
 use core::cmp::max;
-use core::num::traits::Zero;
+use core::num::traits::{Pow, Zero};
+use core::ops::{AddAssign, SubAssign};
 use staking_test::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking_test::staking::errors::Error;
 use staking_test::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
-use staking_test::types::{Amount, Commission, Epoch, Index, InternalStakerInfoLatest};
-use starknet::storage::{Mutable, PendingStoragePath, StoragePath};
+use staking_test::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
+use starknet::storage::{Mutable, StoragePath};
 use starknet::{ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::storage::iterable_map::{
@@ -26,14 +27,98 @@ pub struct UndelegateIntentKey {
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct UndelegateIntentValue {
     pub unpool_time: Timestamp,
-    pub amount: Amount,
-    pub staker_address: ContractAddress,
+    pub amount: NormalizedAmount,
+    pub token_address: ContractAddress,
+}
+
+#[derive(Copy, Drop, Debug, Serde, starknet::Store, PartialEq)]
+pub struct NormalizedAmount {
+    amount_18_decimals: Amount,
+}
+
+#[generate_trait]
+pub impl NormalizedAmountImpl of NormalizedAmountTrait {
+    /// Convert from `Amount` in 18 decimals to `NormalizedAmount`.
+    fn from_amount_18_decimals(amount: Amount) -> NormalizedAmount {
+        NormalizedAmount { amount_18_decimals: amount }
+    }
+
+    /// Convert from `Amount` in the given `decimals` to `NormalizedAmount`.
+    fn from_native_amount(amount: Amount, decimals: u8) -> NormalizedAmount {
+        assert!(decimals == 18 || decimals == 8, "Unsupported decimals");
+        NormalizedAmount { amount_18_decimals: amount * 10_u128.pow(18 - decimals.into()) }
+    }
+
+    /// Convert from `Amount` in STRK decimals to `NormalizedAmount`.
+    fn from_strk_native_amount(amount: Amount) -> NormalizedAmount {
+        NormalizedAmount { amount_18_decimals: amount }
+    }
+
+    /// Convert from `NormalizedAmount` to `Amount` in 18 decimals.
+    fn to_amount_18_decimals(self: @NormalizedAmount) -> Amount {
+        *self.amount_18_decimals
+    }
+
+    /// Convert from `NormalizedAmount` to `Amount` in the given `decimals`.
+    fn to_native_amount(self: @NormalizedAmount, decimals: u8) -> Amount {
+        assert!(decimals == 18 || decimals == 8, "Unsupported decimals");
+        *self.amount_18_decimals / 10_u128.pow(18 - decimals.into())
+    }
+
+    /// Convert from `NormalizedAmount` to `Amount` in STRK decimals.
+    fn to_strk_native_amount(self: @NormalizedAmount) -> Amount {
+        *self.amount_18_decimals
+    }
+}
+
+pub impl NormalizedAmountZero of Zero<NormalizedAmount> {
+    fn zero() -> NormalizedAmount {
+        NormalizedAmount { amount_18_decimals: Zero::zero() }
+    }
+
+    fn is_zero(self: @NormalizedAmount) -> bool {
+        self.amount_18_decimals.is_zero()
+    }
+
+    fn is_non_zero(self: @NormalizedAmount) -> bool {
+        !self.is_zero()
+    }
+}
+
+pub impl NormalizedAmountAdd of Add<NormalizedAmount> {
+    fn add(lhs: NormalizedAmount, rhs: NormalizedAmount) -> NormalizedAmount {
+        NormalizedAmount { amount_18_decimals: lhs.amount_18_decimals + rhs.amount_18_decimals }
+    }
+}
+
+pub impl NormalizedAmountAddAssign of AddAssign<NormalizedAmount, NormalizedAmount> {
+    fn add_assign(ref self: NormalizedAmount, rhs: NormalizedAmount) {
+        self.amount_18_decimals += rhs.amount_18_decimals;
+    }
+}
+
+pub impl NormalizedAmountSub of Sub<NormalizedAmount> {
+    fn sub(lhs: NormalizedAmount, rhs: NormalizedAmount) -> NormalizedAmount {
+        NormalizedAmount { amount_18_decimals: lhs.amount_18_decimals - rhs.amount_18_decimals }
+    }
+}
+
+pub impl NormalizedAmountSubAssign of SubAssign<NormalizedAmount, NormalizedAmount> {
+    fn sub_assign(ref self: NormalizedAmount, rhs: NormalizedAmount) {
+        self.amount_18_decimals -= rhs.amount_18_decimals;
+    }
+}
+
+pub impl NormalizedAmountPartialOrd of PartialOrd<NormalizedAmount> {
+    fn lt(lhs: NormalizedAmount, rhs: NormalizedAmount) -> bool {
+        lhs.amount_18_decimals < rhs.amount_18_decimals
+    }
 }
 
 pub impl UndelegateIntentValueZero of core::num::traits::Zero<UndelegateIntentValue> {
     fn zero() -> UndelegateIntentValue {
         UndelegateIntentValue {
-            unpool_time: Zero::zero(), amount: Zero::zero(), staker_address: Zero::zero(),
+            unpool_time: Zero::zero(), amount: Zero::zero(), token_address: Zero::zero(),
         }
     }
 
@@ -418,7 +503,7 @@ pub struct InternalStakerPoolInfoV1 {
 
 #[starknet::storage_node]
 pub struct InternalStakerPoolInfoV2 {
-    /// Commission for all pools.
+    /// Commission for all pools. Indicates if pools are enabled.
     pub commission: Option<Commission>,
     /// Map pool contract to their token address.
     pub pools: IterableMap<ContractAddress, ContractAddress>,
@@ -428,47 +513,12 @@ pub struct InternalStakerPoolInfoV2 {
 
 #[generate_trait]
 pub impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
-    fn pools(
-        self: StoragePath<InternalStakerPoolInfoV2>,
-    ) -> PendingStoragePath<IterableMap<ContractAddress, ContractAddress>> {
-        self.pools
-    }
-
-    fn commission_opt(self: StoragePath<InternalStakerPoolInfoV2>) -> Option<Commission> {
-        self.commission.read()
-    }
-
     fn commission(self: StoragePath<InternalStakerPoolInfoV2>) -> Commission {
         self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
     }
 
-    fn commission_commitment_opt(
-        self: StoragePath<InternalStakerPoolInfoV2>,
-    ) -> Option<CommissionCommitment> {
-        self.commission_commitment.read()
-    }
-
     fn commission_commitment(self: StoragePath<InternalStakerPoolInfoV2>) -> CommissionCommitment {
         self.commission_commitment.read().expect_with_err(Error::COMMISSION_COMMITMENT_NOT_SET)
-    }
-
-    fn get_pool_token(
-        self: StoragePath<InternalStakerPoolInfoV2>, pool_contract: ContractAddress,
-    ) -> Option<ContractAddress> {
-        self.pools.read(pool_contract)
-    }
-
-    fn get_pools(self: StoragePath<InternalStakerPoolInfoV2>) -> Span<ContractAddress> {
-        let mut pools: Array<ContractAddress> = array![];
-        for (pool_contract, _) in self.pools {
-            pools.append(pool_contract);
-        }
-        pools.span()
-    }
-
-    /// Returns true if the staker has a pool.
-    fn has_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> bool {
-        self.pools.len() > 0
     }
 
     fn get_strk_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> Option<ContractAddress> {
@@ -479,35 +529,29 @@ pub impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
         }
         Option::None
     }
-
-    fn has_pool_for_token(
-        self: StoragePath<InternalStakerPoolInfoV2>, token_address: ContractAddress,
-    ) -> bool {
-        for (_, pool_token_address) in self.pools {
-            if pool_token_address == token_address {
-                return true;
-            }
-        }
-        false
-    }
 }
 
 #[generate_trait]
 pub impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTrait {
-    fn commission_opt(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Option<Commission> {
-        self.commission.read()
-    }
-
     fn commission(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Commission {
         self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
     }
 
-    fn commission_commitment_opt(
-        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
-    ) -> Option<CommissionCommitment> {
-        self.commission_commitment.read()
+    fn get_pool_token(
+        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, pool_contract: ContractAddress,
+    ) -> Option<ContractAddress> {
+        self.pools.read(pool_contract)
     }
 
+    fn get_pools(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Span<ContractAddress> {
+        let mut pools: Array<ContractAddress> = array![];
+        for (pool_contract, _) in self.pools {
+            pools.append(pool_contract);
+        }
+        pools.span()
+    }
+
+    /// Returns true if the staker has a pool.
     fn has_pool(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> bool {
         self.pools.len() > 0
     }
@@ -522,49 +566,6 @@ pub impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTrait {
         }
         false
     }
-
-    fn write_new_pool(
-        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
-        pool_contract: ContractAddress,
-        token_address: ContractAddress,
-    ) {
-        self.pools.write(pool_contract, token_address);
-    }
-
-    fn write_commission(
-        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>, commission: Commission,
-    ) {
-        self.commission.write(Option::Some(commission));
-    }
-
-    fn write_commission_commitment(
-        self: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
-        commission_commitment: CommissionCommitment,
-    ) {
-        self.commission_commitment.write(Option::Some(commission_commitment));
-    }
-}
-
-#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-// This struct is used in V0 and should not be in used except for migration purpose.
-struct InternalStakerInfo {
-    reward_address: ContractAddress,
-    operational_address: ContractAddress,
-    unstake_time: Option<Timestamp>,
-    amount_own: Amount,
-    index: Index,
-    unclaimed_rewards_own: Amount,
-    pool_info: Option<StakerPoolInfo>,
-}
-
-/// This struct was used in V0 for both InternalStakerInfo and StakerInfo.
-/// Should not be in used except for migration purpose.
-#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-pub struct StakerPoolInfo {
-    pub pool_contract: ContractAddress,
-    pub amount: Amount,
-    pub unclaimed_rewards: Amount,
-    pub commission: Commission,
 }
 
 // **Note**: This struct should be made private in the next version of Internal Staker Info.
@@ -583,7 +584,7 @@ pub struct InternalStakerInfoV1 {
 pub enum VersionedInternalStakerInfo {
     #[default]
     None,
-    V0: InternalStakerInfo,
+    V0: (),
     V1: InternalStakerInfoV1,
 }
 
@@ -679,32 +680,6 @@ pub impl StakerInfoIntoInternalStakerInfoV1Impl of StakerInfoIntoInternalStakerI
             // context, the commission commitment will be lost.
             _deprecated_commission_commitment: Option::None,
         }
-    }
-}
-
-#[cfg(test)]
-#[generate_trait]
-pub impl VersionedInternalStakerInfoTestImpl of VersionedInternalStakerInfoTestTrait {
-    fn new_v0(
-        reward_address: ContractAddress,
-        operational_address: ContractAddress,
-        unstake_time: Option<Timestamp>,
-        amount_own: Amount,
-        index: Index,
-        unclaimed_rewards_own: Amount,
-        pool_info: Option<StakerPoolInfo>,
-    ) -> VersionedInternalStakerInfo {
-        VersionedInternalStakerInfo::V0(
-            InternalStakerInfo {
-                reward_address,
-                operational_address,
-                unstake_time,
-                amount_own,
-                index,
-                unclaimed_rewards_own,
-                pool_info,
-            },
-        )
     }
 }
 

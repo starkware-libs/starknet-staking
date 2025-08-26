@@ -13,6 +13,10 @@ pub trait IPoolV0<TContractState> {
     fn get_pool_member_info(
         self: @TContractState, pool_member: ContractAddress,
     ) -> Option<PoolMemberInfo>;
+    fn enter_delegation_pool(
+        ref self: TContractState, reward_address: ContractAddress, amount: Amount,
+    );
+    fn exit_delegation_pool_intent(ref self: TContractState, amount: Amount);
 }
 
 /// Pool member info used in V0.
@@ -52,7 +56,6 @@ pub impl PoolMemberInfoImpl of PoolMemberInfoTrait {
     }
 }
 
-#[cfg(test)]
 #[generate_trait]
 pub impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfoIntoInternalPoolMemberInfoV1Trait {
     fn to_internal(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
