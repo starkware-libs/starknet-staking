@@ -1,0 +1,39 @@
+warn: in context of a workspace, only the `profile` set in the workspace manifest is applied,
+but the `staking_test` package also defines `profile` in the manifest
+
+    Updating git repository https://github.com/starkware-libs/starkware-starknet-utils
+warn: in context of a workspace, only the `profile` set in the workspace manifest is applied,
+but the `starkware_utils_testing` package also defines `profile` in the manifest
+
+warn: in context of a workspace, only the `profile` set in the workspace manifest is applied,
+but the `starkware_utils` package also defines `profile` in the manifest
+
+warn: in context of a workspace, only the `profile` set in the workspace manifest is applied,
+but the `starkware_utils_testing` package also defines `profile` in the manifest
+
+warn: in context of a workspace, only the `profile` set in the workspace manifest is applied,
+but the `starkware_utils` package also defines `profile` in the manifest
+
+warn: in context of a workspace, only the `profile` set in the workspace manifest is applied,
+but the `starkware_utils_testing` package also defines `profile` in the manifest
+
+warn: in context of a workspace, only the `profile` set in the workspace manifest is applied,
+but the `starkware_utils` package also defines `profile` in the manifest
+
+ Downloading openzeppelin_introspection v2.0.0
+ Downloading openzeppelin v2.0.0
+ Downloading openzeppelin_access v2.0.0
+ Downloading openzeppelin_security v2.0.0
+ Downloading openzeppelin_token v2.0.0
+ Downloading snforge_scarb_plugin v0.48.0
+ Downloading openzeppelin_utils v2.0.0
+ Downloading openzeppelin_upgrades v2.0.0
+ Downloading openzeppelin_account v2.0.0
+ Downloading openzeppelin_presets v2.0.0
+ Downloading openzeppelin_merkle_tree v2.0.0
+ Downloading openzeppelin_finance v2.0.0
+ Downloading openzeppelin_governance v2.0.0
+ Downloading snforge_std v0.48.0
+   Compiling lib(staking_test) staking_test v1.14.5 (/Users/vt/endur/starknet-staking/workspace/apps/staking/contracts/Scarb.toml)
+   Compiling starknet-contract(staking_test) staking_test v1.14.5 (/Users/vt/endur/starknet-staking/workspace/apps/staking/contracts/Scarb.toml)
+    Finished `dev` profile target(s) in 38 seconds

@@ -1,9 +1,6 @@
-#[cfg(test)]
 use core::num::traits::Zero;
 use staking_test::pool::interface::PoolMemberInfoV1;
-#[cfg(test)]
 use staking_test::pool::objects::InternalPoolMemberInfoV1;
-#[cfg(test)]
 use staking_test::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking_test::types::{Amount, Commission, Index};
 use starknet::ContractAddress;
@@ -59,7 +56,6 @@ pub impl PoolMemberInfoImpl of PoolMemberInfoTrait {
     }
 }
 
-#[cfg(test)]
 #[generate_trait]
 pub impl PoolMemberInfoIntoInternalPoolMemberInfoV1Impl of PoolMemberInfoIntoInternalPoolMemberInfoV1Trait {
     fn to_internal(self: PoolMemberInfo) -> InternalPoolMemberInfoV1 {
