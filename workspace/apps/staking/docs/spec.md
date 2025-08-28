@@ -1370,7 +1370,7 @@ Enable a token for getting rewards.
 3. [TOKEN\_ALREADY\_ENABLED](#token_already_enabled)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
-Only security admin.
+Only token admin.
 #### logic <!-- omit from toc -->
 
 ### disable_token
