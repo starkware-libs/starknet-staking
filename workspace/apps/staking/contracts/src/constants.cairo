@@ -1,6 +1,6 @@
 use core::num::traits::Pow;
 use staking_test::pool::objects::TokenRewardsConfig;
-use staking_test::types::{Amount, Epoch, Inflation, Version};
+use staking_test::types::{Amount, Epoch, Inflation, Version, Index};
 use starknet::ContractAddress;
 use starkware_utils::constants::WEEK;
 use starkware_utils::time::time::TimeDelta;
@@ -8,6 +8,12 @@ use starkware_utils::time::time::TimeDelta;
 pub const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 3 * WEEK };
 pub const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };
 pub const STRK_IN_FRIS: Amount = 1_000_000_000_000_000_000; // 10**18
+
+pub const BTC_BASE_VALUE: Amount = 10_u128.pow(13);
+pub const BTC_DECIMALS: u8 = 8;
+pub const MIN_BTC_FOR_REWARDS: Amount = 10_u128.pow(3);
+pub const STRK_BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
+pub const STRK_DECIMALS: u8 = 18;
 
 /// Token configuration for rewards calculation.
 ///

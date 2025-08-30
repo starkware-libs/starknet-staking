@@ -855,7 +855,7 @@ pub struct SystemState {
     pub pool: Option<PoolState>,
     pub attestation: Option<AttestationState>,
     pub base_account: felt252,
-    staker_address: Option<ContractAddress>,
+    pub staker_address: Option<ContractAddress>,
 }
 
 #[generate_trait]
@@ -1776,7 +1776,7 @@ pub impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
             self.staker_migration(staker_address);
         }
         self.staking.unpause();
-        self.minting_curve.set_c_num(DEFAULT_C_NUM);
+        // self.minting_curve.set_c_num(DEFAULT_C_NUM);
         // Add BTC token to the staking contract.
         cheat_caller_address(
             contract_address: self.staking.address,
@@ -1817,11 +1817,11 @@ pub impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         let implementation_data = ImplementationData {
             impl_hash: declare_reward_supplier_contract(), eic_data: Option::None, final: false,
         };
-        upgrade_implementation(
-            contract_address: self.reward_supplier.address,
-            :implementation_data,
-            upgrade_governor: self.reward_supplier.roles.upgrade_governor,
-        );
+        // upgrade_implementation(
+        //     contract_address: self.reward_supplier.address,
+        //     :implementation_data,
+        //     upgrade_governor: self.reward_supplier.roles.upgrade_governor,
+        // );
     }
 }
 

@@ -7,7 +7,6 @@ use starkware_utils::time::time::{TimeDelta, Timestamp};
 
 /// Staking V0 interface.
 /// Used for testing purposes.
-#[cfg(test)]
 #[starknet::interface]
 pub trait IStakingV0ForTests<TContractState> {
     fn contract_parameters(self: @TContractState) -> StakingContractInfo;
@@ -68,7 +67,6 @@ pub impl StakerInfoImpl of StakerInfoTrait {
 
 /// `StakingContractInfo` struct used in V0.
 /// **Note**: This struct should not be used in V1. It should only be used for testing.
-#[cfg(test)]
 #[derive(Copy, Debug, Drop, PartialEq, Serde)]
 pub struct StakingContractInfo {
     pub min_stake: Amount,
@@ -81,7 +79,6 @@ pub struct StakingContractInfo {
 
 /// This struct was used in V0 for both InternalStakerInfo and StakerInfo.
 /// Should not be in used except for migration purpose.
-#[cfg(test)]
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
 pub struct StakerPoolInfo {
     pub pool_contract: ContractAddress,

@@ -276,105 +276,106 @@ pub mod constants {
         'DUMMY_BTC_TOKEN_ADDRESS'.try_into().unwrap()
     }
 }
-pub fn initialize_staking_state_from_cfg(
-    ref cfg: StakingInitConfig,
-) -> Staking::ContractState {
-    initialize_staking_state(
-        min_stake: cfg.staking_contract_info.min_stake,
-        pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
-        reward_supplier: cfg.staking_contract_info.reward_supplier,
-        pool_contract_admin: cfg.test_info.pool_contract_admin,
-        governance_admin: cfg.test_info.governance_admin,
-        prev_class_hash: cfg.staking_contract_info.prev_staking_contract_class_hash,
-        epoch_info: cfg.staking_contract_info.epoch_info,
-        attestation_contract: cfg.test_info.attestation_contract,
-    )
-}
-pub fn initialize_staking_state(
-    min_stake: Amount,
-    pool_contract_class_hash: ClassHash,
-    reward_supplier: ContractAddress,
-    pool_contract_admin: ContractAddress,
-    governance_admin: ContractAddress,
-    prev_class_hash: ClassHash,
-    epoch_info: EpochInfo,
-    attestation_contract: ContractAddress,
-) -> Staking::ContractState {
-    let mut state = Staking::contract_state_for_testing();
-    cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
-    Staking::constructor(
-        ref state,
-        :min_stake,
-        :pool_contract_class_hash,
-        :reward_supplier,
-        :pool_contract_admin,
-        :governance_admin,
-        :prev_class_hash,
-        :epoch_info,
-        :attestation_contract,
-    );
-    state
-}
+// pub fn initialize_staking_state_from_cfg(
+//     ref cfg: StakingInitConfig,
+// ) -> Staking::ContractState {
+//     initialize_staking_state(
+//         min_stake: cfg.staking_contract_info.min_stake,
+//         pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
+//         reward_supplier: cfg.staking_contract_info.reward_supplier,
+//         pool_contract_admin: cfg.test_info.pool_contract_admin,
+//         governance_admin: cfg.test_info.governance_admin,
+//         prev_class_hash: cfg.staking_contract_info.prev_staking_contract_class_hash,
+//         epoch_info: cfg.staking_contract_info.epoch_info,
+//         attestation_contract: cfg.test_info.attestation_contract,
+//     )
+// }
 
+// pub fn initialize_staking_state(
+//     min_stake: Amount,
+//     pool_contract_class_hash: ClassHash,
+//     reward_supplier: ContractAddress,
+//     pool_contract_admin: ContractAddress,
+//     governance_admin: ContractAddress,
+//     prev_class_hash: ClassHash,
+//     epoch_info: EpochInfo,
+//     attestation_contract: ContractAddress,
+// ) -> Staking::ContractState {
+//     let mut state = Staking::contract_state_for_testing();
+//     cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
+//     Staking::constructor(
+//         ref state,
+//         :min_stake,
+//         :pool_contract_class_hash,
+//         :reward_supplier,
+//         :pool_contract_admin,
+//         :governance_admin,
+//         :prev_class_hash,
+//         :epoch_info,
+//         :attestation_contract,
+//     );
+//     state
+// }
 
-pub fn initialize_pool_state(
-    staker_address: ContractAddress,
-    staking_contract: ContractAddress,
-    token_address: ContractAddress,
-    governance_admin: ContractAddress,
-) -> Pool::ContractState {
-    let mut state = Pool::contract_state_for_testing();
-    Pool::constructor(
-        ref state, :staker_address, :staking_contract, :token_address, :governance_admin,
-    );
-    state
-}
+// pub fn initialize_pool_state(
+//     staker_address: ContractAddress,
+//     staking_contract: ContractAddress,
+//     token_address: ContractAddress,
+//     governance_admin: ContractAddress,
+// ) -> Pool::ContractState {
+//     let mut state = Pool::contract_state_for_testing();
+//     Pool::constructor(
+//         ref state, :staker_address, :staking_contract, :token_address, :governance_admin,
+//     );
+//     state
+// }
 
-pub fn initialize_minting_curve_state(
-    staking_contract: ContractAddress,
-    total_supply: Amount,
-    l1_reward_supplier: felt252,
-    governance_admin: ContractAddress,
-) -> MintingCurve::ContractState {
-    let mut state = MintingCurve::contract_state_for_testing();
-    MintingCurve::constructor(
-        ref state, :staking_contract, :total_supply, :l1_reward_supplier, :governance_admin,
-    );
-    state
-}
+// pub fn initialize_minting_curve_state(
+//     staking_contract: ContractAddress,
+//     total_supply: Amount,
+//     l1_reward_supplier: felt252,
+//     governance_admin: ContractAddress,
+// ) -> MintingCurve::ContractState {
+//     let mut state = MintingCurve::contract_state_for_testing();
+//     MintingCurve::constructor(
+//         ref state, :staking_contract, :total_supply, :l1_reward_supplier, :governance_admin,
+//     );
+//     state
+// }
 
-pub fn initialize_reward_supplier_state_from_cfg(
-    cfg: StakingInitConfig,
-) -> RewardSupplier::ContractState {
-    initialize_reward_supplier_state(
-        base_mint_amount: cfg.reward_supplier.base_mint_amount,
-        minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
-        staking_contract: cfg.test_info.staking_contract,
-        l1_reward_supplier: cfg.reward_supplier.l1_reward_supplier,
-        starkgate_address: cfg.reward_supplier.starkgate_address,
-        governance_admin: cfg.test_info.governance_admin,
-    )
-}
-pub fn initialize_reward_supplier_state(
-    base_mint_amount: Amount,
-    minting_curve_contract: ContractAddress,
-    staking_contract: ContractAddress,
-    l1_reward_supplier: felt252,
-    starkgate_address: ContractAddress,
-    governance_admin: ContractAddress,
-) -> RewardSupplier::ContractState {
-    let mut state = RewardSupplier::contract_state_for_testing();
-    RewardSupplier::constructor(
-        ref state,
-        :base_mint_amount,
-        :minting_curve_contract,
-        :staking_contract,
-        :l1_reward_supplier,
-        :starkgate_address,
-        :governance_admin,
-    );
-    state
-}
+// pub fn initialize_reward_supplier_state_from_cfg(
+//     cfg: StakingInitConfig,
+// ) -> RewardSupplier::ContractState {
+//     initialize_reward_supplier_state(
+//         base_mint_amount: cfg.reward_supplier.base_mint_amount,
+//         minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
+//         staking_contract: cfg.test_info.staking_contract,
+//         l1_reward_supplier: cfg.reward_supplier.l1_reward_supplier,
+//         starkgate_address: cfg.reward_supplier.starkgate_address,
+//         governance_admin: cfg.test_info.governance_admin,
+//     )
+// }
+
+// pub fn initialize_reward_supplier_state(
+//     base_mint_amount: Amount,
+//     minting_curve_contract: ContractAddress,
+//     staking_contract: ContractAddress,
+//     l1_reward_supplier: felt252,
+//     starkgate_address: ContractAddress,
+//     governance_admin: ContractAddress,
+// ) -> RewardSupplier::ContractState {
+//     let mut state = RewardSupplier::contract_state_for_testing();
+//     RewardSupplier::constructor(
+//         ref state,
+//         :base_mint_amount,
+//         :minting_curve_contract,
+//         :staking_contract,
+//         :l1_reward_supplier,
+//         :starkgate_address,
+//         :governance_admin,
+//     );
+//     state
+// }
 
 pub fn deploy_mock_erc20_contract(
     initial_supply: u256, owner_address: ContractAddress, name: ByteArray,

@@ -7,8 +7,6 @@ edition = "2023_11"
 starknet.workspace = true
 openzeppelin.workspace = true
 starkware_utils.workspace = true
-
-[dev-dependencies]
 assert_macros.workspace = true
 snforge_std.workspace = true
 starkware_utils_testing.workspace = true

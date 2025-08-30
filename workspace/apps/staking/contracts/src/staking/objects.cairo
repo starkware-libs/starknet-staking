@@ -33,7 +33,7 @@ pub struct UndelegateIntentValue {
 
 #[derive(Copy, Drop, Debug, Serde, starknet::Store, PartialEq)]
 pub struct NormalizedAmount {
-    amount_18_decimals: Amount,
+    pub amount_18_decimals: Amount,
 }
 
 #[generate_trait]

@@ -3,20 +3,12 @@ members = ["workspace/apps/staking/contracts"]
 
 [workspace.dependencies]
 starknet = "2.12.0"
-<<<<<<< HEAD
 assert_macros = "2.11.4"
 openzeppelin = "2.0.0"
 openzeppelin_testing = "4.6.0"
-snforge_std = "0.45.0"
-starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "1fe679e9d7f5c19db08559db7b52cfb305b5c69b" }
-starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "1fe679e9d7f5c19db08559db7b52cfb305b5c69b" }
-=======
-assert_macros = "2.12.0"
-openzeppelin = "2.0.0"
 snforge_std = "0.48.0"
 starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "8a5af9509d93815542b8a701cee22a1b9ec1fe34" }
 starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "8a5af9509d93815542b8a701cee22a1b9ec1fe34" }
->>>>>>> 0ab65fa15208761c5f9d70a4d66e1c30390f3cfd
 
 [scripts]
 test = "snforge test"

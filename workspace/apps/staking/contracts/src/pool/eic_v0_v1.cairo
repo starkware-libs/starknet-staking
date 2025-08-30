@@ -1,5 +1,4 @@
 // An External Initializer Contract to upgrade a pool contract.
-#[cfg(test)]
 #[starknet::contract]
 mod PoolEICV0toV1 {
     use core::num::traits::Zero;
