@@ -1,4 +1,4 @@
-use staking::types::Amount;
+use staking_test::types::Amount;
 use starknet::{ContractAddress, EthAddress};
 
 #[starknet::interface]
@@ -22,7 +22,7 @@ pub trait IRewardSupplier<TContractState> {
 }
 
 pub mod Events {
-    use staking::types::Amount;
+    use staking_test::types::Amount;
 
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
     pub struct MintRequest {

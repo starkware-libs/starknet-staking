@@ -4,10 +4,10 @@
 mod StakingEICV1toV2 {
     use core::cmp::min;
     use core::num::traits::Zero;
-    use staking::constants::{STAKING_V2_PREV_CONTRACT_VERSION, STRK_TOKEN_ADDRESS};
-    use staking::errors::GenericError;
-    use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
-    use staking::types::Version;
+    use staking_test::constants::{STAKING_V2_PREV_CONTRACT_VERSION, STRK_TOKEN_ADDRESS};
+    use staking_test::errors::GenericError;
+    use staking_test::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
+    use staking_test::types::Version;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
     use starknet::storage::{Map, StoragePathEntry, StoragePointerReadAccess};

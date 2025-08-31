@@ -1,5 +1,5 @@
 use core::num::traits::Zero;
-use staking::types::{Amount, Epoch};
+use staking_test::types::{Amount, Epoch};
 use starknet::storage::{
     Mutable, MutableVecTrait, StoragePath, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
     VecTrait,
@@ -20,14 +20,14 @@ struct StakerBalanceCheckpoint {
 }
 
 #[derive(Copy, Drop, Serde, starknet::Store, Debug, PartialEq)]
-pub(crate) struct StakerBalance {
+pub struct StakerBalance {
     // The amount staked by the staker.
     amount_own: Amount,
     // Amount own + delegated amount.
     total_amount: Amount,
 }
 
-pub(crate) impl StakerBalanceZero of core::num::traits::Zero<StakerBalance> {
+pub impl StakerBalanceZero of core::num::traits::Zero<StakerBalance> {
     fn zero() -> StakerBalance {
         StakerBalance { amount_own: Zero::zero(), total_amount: Zero::zero() }
     }
@@ -42,7 +42,7 @@ pub(crate) impl StakerBalanceZero of core::num::traits::Zero<StakerBalance> {
 }
 
 #[generate_trait]
-pub(crate) impl StakerBalanceImpl of StakerBalanceTrait {
+pub impl StakerBalanceImpl of StakerBalanceTrait {
     fn new(amount_own: Amount) -> StakerBalance {
         StakerBalance { amount_own, total_amount: amount_own }
     }

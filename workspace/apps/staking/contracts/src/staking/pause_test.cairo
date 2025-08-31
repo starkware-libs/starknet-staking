@@ -1,18 +1,18 @@
 use core::num::traits::Zero;
 use snforge_std::TokenTrait;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use staking::event_test_utils::{
+use staking_test::event_test_utils::{
     assert_number_of_events, assert_paused_event, assert_unpaused_event,
 };
-use staking::staking::interface::{
+use staking_test::staking::interface::{
     IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolDispatcherTrait,
 };
-use staking::test_utils::constants::{
+use staking_test::test_utils::constants::{
     DUMMY_ADDRESS, DUMMY_IDENTIFIER, NON_SECURITY_ADMIN, NON_SECURITY_AGENT,
 };
-use staking::test_utils::{
+use staking_test::test_utils::{
     StakingInitConfig, general_contract_system_deployment, load_one_felt, pause_staking_contract,
     stake_for_testing_using_dispatcher,
 };

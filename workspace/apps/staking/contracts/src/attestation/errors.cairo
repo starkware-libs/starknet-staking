@@ -1,6 +1,6 @@
 use starkware_utils::errors::{Describable, ErrorDisplay};
 #[derive(Drop)]
-pub(crate) enum Error {
+pub enum Error {
     ATTEST_IS_DONE,
     ATTEST_OUT_OF_WINDOW,
     ATTEST_WRONG_BLOCK_HASH,

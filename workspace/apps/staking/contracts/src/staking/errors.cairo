@@ -1,8 +1,8 @@
-use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
+use staking_test::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use starkware_utils::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]
-pub(crate) enum Error {
+pub enum Error {
     AMOUNT_LESS_THAN_MIN_STAKE,
     COMMISSION_OUT_OF_RANGE,
     UNSTAKE_IN_PROGRESS,

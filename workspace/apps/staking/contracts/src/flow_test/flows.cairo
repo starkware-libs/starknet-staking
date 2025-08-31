@@ -1,38 +1,38 @@
 use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
 use snforge_std::{TokenImpl, start_cheat_block_number_global};
-use staking::constants::{BTC_18D_CONFIG, MIN_ATTESTATION_WINDOW, STRK_IN_FRIS};
-use staking::errors::GenericError;
-use staking::flow_test::utils::{
+use staking_test::constants::{BTC_18D_CONFIG, MIN_ATTESTATION_WINDOW, STRK_IN_FRIS};
+use staking_test::errors::GenericError;
+use staking_test::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
     SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait,
     TokenHelperTrait,
 };
-use staking::pool::errors::Error as PoolError;
-use staking::pool::interface_v0::{
+use staking_test::pool::errors::Error as PoolError;
+use staking_test::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
-use staking::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
-use staking::staking::errors::Error as StakingError;
-use staking::staking::interface::{
+use staking_test::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
+use staking_test::staking::errors::Error as StakingError;
+use staking_test::staking::interface::{
     CommissionCommitment, IStakingDispatcherTrait, IStakingSafeDispatcherTrait, PoolInfo,
     StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
-use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait};
-use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
-use staking::test_utils::constants::{
+use staking_test::staking::objects::{EpochInfoTrait, NormalizedAmountTrait};
+use staking_test::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
+use staking_test::test_utils::constants::{
     BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, STRK_BASE_VALUE, TEST_BTC_DECIMALS,
     TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
 };
-use staking::test_utils::{
+use staking_test::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
     calculate_staker_strk_rewards_with_amount_and_pool_info, calculate_strk_pool_rewards,
     calculate_strk_pool_rewards_with_pool_balance, compute_rewards_per_unit, deserialize_option,
     load_from_iterable_map, load_from_trace, load_trace_length, strk_pool_update_rewards,
     to_amount_18_decimals,
 };
-use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
-use staking::utils::compute_rewards_rounded_down;
+use staking_test::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
+use staking_test::utils::compute_rewards_rounded_down;
 use starknet::{ContractAddress, Store};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
@@ -48,8 +48,8 @@ use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_
 /// Delegator increase_delegate
 /// Exit and check
 #[derive(Drop, Copy)]
-pub(crate) struct BasicStakeFlow {}
-pub(crate) impl BasicStakeFlowImpl of FlowTrait<BasicStakeFlow> {
+pub struct BasicStakeFlow {}
+pub impl BasicStakeFlowImpl of FlowTrait<BasicStakeFlow> {
     fn test(self: BasicStakeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -110,12 +110,12 @@ pub(crate) impl BasicStakeFlowImpl of FlowTrait<BasicStakeFlow> {
 /// Delegator switch
 /// Test switch
 #[derive(Drop, Copy)]
-pub(crate) struct PoolUpgradeBasicFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) stake_amount: Option<Amount>,
-    pub(crate) initial_reward_supplier_balance: Option<Amount>,
+pub struct PoolUpgradeBasicFlow {
+    pub staker: Option<Staker>,
+    pub stake_amount: Option<Amount>,
+    pub initial_reward_supplier_balance: Option<Amount>,
 }
-pub(crate) impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
+pub impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
     fn setup_v1(ref self: PoolUpgradeBasicFlow, ref system: SystemState) {
         let initial_reward_supplier_balance = system
             .token
@@ -217,8 +217,8 @@ pub(crate) impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
 /// Delegator switch
 /// Test balances
 #[derive(Drop, Copy)]
-pub(crate) struct BasicStakeBTCFlow {}
-pub(crate) impl BasicStakeBTCFlowImpl of FlowTrait<BasicStakeBTCFlow> {
+pub struct BasicStakeBTCFlow {}
+pub impl BasicStakeBTCFlowImpl of FlowTrait<BasicStakeBTCFlow> {
     fn test(self: BasicStakeBTCFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -312,8 +312,8 @@ pub(crate) impl BasicStakeBTCFlowImpl of FlowTrait<BasicStakeBTCFlow> {
 /// Delegator exit_intent
 /// Delegator exit_action
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorIntentAfterStakerActionFlow {}
-pub(crate) impl DelegatorIntentAfterStakerActionFlowImpl of FlowTrait<
+pub struct DelegatorIntentAfterStakerActionFlow {}
+pub impl DelegatorIntentAfterStakerActionFlowImpl of FlowTrait<
     DelegatorIntentAfterStakerActionFlow,
 > {
     fn test(self: DelegatorIntentAfterStakerActionFlow, ref system: SystemState) {
@@ -374,8 +374,8 @@ pub(crate) impl DelegatorIntentAfterStakerActionFlowImpl of FlowTrait<
 /// Delegator delegate - cover delegating after opening an initially closed pool
 /// Exit and check
 #[derive(Drop, Copy)]
-pub(crate) struct SetOpenForDelegationFlow {}
-pub(crate) impl SetOpenForDelegationFlowImpl of FlowTrait<SetOpenForDelegationFlow> {
+pub struct SetOpenForDelegationFlow {}
+pub impl SetOpenForDelegationFlowImpl of FlowTrait<SetOpenForDelegationFlow> {
     fn test(self: SetOpenForDelegationFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let initial_stake_amount = min_stake * 2;
@@ -450,8 +450,8 @@ pub(crate) impl SetOpenForDelegationFlowImpl of FlowTrait<SetOpenForDelegationFl
 /// Delegators switch delegation pool
 /// Test pools
 #[derive(Drop, Copy)]
-pub(crate) struct MultiplePoolsDelegatorIntentActionSwitchFlow {}
-pub(crate) impl MultiplePoolsDelegatorIntentActionSwitchFlowImpl of FlowTrait<
+pub struct MultiplePoolsDelegatorIntentActionSwitchFlow {}
+pub impl MultiplePoolsDelegatorIntentActionSwitchFlowImpl of FlowTrait<
     MultiplePoolsDelegatorIntentActionSwitchFlow,
 > {
     fn test(self: MultiplePoolsDelegatorIntentActionSwitchFlow, ref system: SystemState) {
@@ -580,8 +580,8 @@ pub(crate) impl MultiplePoolsDelegatorIntentActionSwitchFlowImpl of FlowTrait<
 /// Delegator exit_intent all amount
 /// Delegator exit_action
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorIntentFlow {}
-pub(crate) impl DelegatorIntentFlowImpl of FlowTrait<DelegatorIntentFlow> {
+pub struct DelegatorIntentFlow {}
+pub impl DelegatorIntentFlowImpl of FlowTrait<DelegatorIntentFlow> {
     fn test(self: DelegatorIntentFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -661,8 +661,8 @@ pub(crate) impl DelegatorIntentFlowImpl of FlowTrait<DelegatorIntentFlow> {
 // Delegator exit_intent for full amount in staker2's pool
 // Delegator exit_action for full amount in staker2's pool
 #[derive(Drop, Copy)]
-pub(crate) struct OperationsAfterDeadStakerFlow {}
-pub(crate) impl OperationsAfterDeadStakerFlowImpl of FlowTrait<OperationsAfterDeadStakerFlow> {
+pub struct OperationsAfterDeadStakerFlow {}
+pub impl OperationsAfterDeadStakerFlowImpl of FlowTrait<OperationsAfterDeadStakerFlow> {
     fn test(self: OperationsAfterDeadStakerFlow, ref system: SystemState) {
         let initial_reward_supplier_balance = system
             .token
@@ -789,8 +789,8 @@ pub(crate) impl OperationsAfterDeadStakerFlowImpl of FlowTrait<OperationsAfterDe
 // Staker exit_intent
 // Staker exit_action
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {}
-pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl of FlowTrait<
+pub struct DelegatorDidntUpdateAfterStakerUpdateCommissionFlow {}
+pub impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl of FlowTrait<
     DelegatorDidntUpdateAfterStakerUpdateCommissionFlow,
 > {
     fn test(self: DelegatorDidntUpdateAfterStakerUpdateCommissionFlow, ref system: SystemState) {
@@ -863,8 +863,8 @@ pub(crate) impl DelegatorDidntUpdateAfterStakerUpdateCommissionFlowImpl of FlowT
 // Staker exit_intent
 // Staker exit_action
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorUpdatedAfterStakerUpdateCommissionFlow {}
-pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl of FlowTrait<
+pub struct DelegatorUpdatedAfterStakerUpdateCommissionFlow {}
+pub impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl of FlowTrait<
     DelegatorUpdatedAfterStakerUpdateCommissionFlow,
 > {
     fn test(self: DelegatorUpdatedAfterStakerUpdateCommissionFlow, ref system: SystemState) {
@@ -944,8 +944,8 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl of FlowTrait
 /// Staker exit_action
 /// Delegator exit_action
 #[derive(Drop, Copy)]
-pub(crate) struct StakerIntentLastActionFirstFlow {}
-pub(crate) impl StakerIntentLastActionFirstFlowImpl of FlowTrait<StakerIntentLastActionFirstFlow> {
+pub struct StakerIntentLastActionFirstFlow {}
+pub impl StakerIntentLastActionFirstFlowImpl of FlowTrait<StakerIntentLastActionFirstFlow> {
     fn test(self: StakerIntentLastActionFirstFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let initial_stake_amount = min_stake * 2;
@@ -1004,13 +1004,13 @@ pub(crate) impl StakerIntentLastActionFirstFlowImpl of FlowTrait<StakerIntentLas
 /// Delegator exit_intent
 /// Delegator exit_action
 #[derive(Drop, Copy)]
-pub(crate) struct PoolUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegated_amount: Amount,
-    pub(crate) staker: Option<Staker>,
+pub struct PoolUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub delegated_amount: Amount,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl PoolUpgradeFlowImpl of FlowTrait<PoolUpgradeFlow> {
+pub impl PoolUpgradeFlowImpl of FlowTrait<PoolUpgradeFlow> {
     fn get_staker_address(self: PoolUpgradeFlow) -> Option<ContractAddress> {
         Option::Some(self.staker.unwrap().staker.address)
     }
@@ -1063,8 +1063,8 @@ pub(crate) impl PoolUpgradeFlowImpl of FlowTrait<PoolUpgradeFlow> {
 /// Attest
 /// Test rewards
 #[derive(Drop, Copy)]
-pub(crate) struct MultipleTokensDelegationFlow {}
-pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDelegationFlow> {
+pub struct MultipleTokensDelegationFlow {}
+pub impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDelegationFlow> {
     fn test(self: MultipleTokensDelegationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -1230,13 +1230,13 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
 /// Upgrade
 /// internal_pool_member_info & get_internal_pool_member_info & pool_member_info_v1
 #[derive(Drop, Copy)]
-pub(crate) struct PoolMemberInfoAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegator_info: Option<PoolMemberInfo>,
-    pub(crate) staker: Option<Staker>,
+pub struct PoolMemberInfoAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub delegator_info: Option<PoolMemberInfo>,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl of FlowTrait<PoolMemberInfoAfterUpgradeFlow> {
+pub impl PoolMemberInfoAfterUpgradeFlowImpl of FlowTrait<PoolMemberInfoAfterUpgradeFlow> {
     fn get_staker_address(self: PoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
         Option::Some(self.staker.unwrap().staker.address)
     }
@@ -1300,15 +1300,15 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl of FlowTrait<PoolMemberInfoAf
 /// Both attest
 /// Test rewards both
 #[derive(Drop, Copy)]
-pub(crate) struct MultipleStakersMigrationAttestFlow {
-    pub(crate) staker1: Option<Staker>,
-    pub(crate) staker2: Option<Staker>,
-    pub(crate) staker_info1: Option<StakerInfoV1>,
-    pub(crate) staker_info2: Option<StakerInfoV1>,
-    pub(crate) commission: Option<Commission>,
-    pub(crate) pool_address: Option<ContractAddress>,
+pub struct MultipleStakersMigrationAttestFlow {
+    pub staker1: Option<Staker>,
+    pub staker2: Option<Staker>,
+    pub staker_info1: Option<StakerInfoV1>,
+    pub staker_info2: Option<StakerInfoV1>,
+    pub commission: Option<Commission>,
+    pub pool_address: Option<ContractAddress>,
 }
-pub(crate) impl MultipleStakersMigrationAttestFlowImpl of FlowTrait<
+pub impl MultipleStakersMigrationAttestFlowImpl of FlowTrait<
     MultipleStakersMigrationAttestFlow,
 > {
     fn setup_v1(ref self: MultipleStakersMigrationAttestFlow, ref system: SystemState) {
@@ -1393,13 +1393,13 @@ pub(crate) impl MultipleStakersMigrationAttestFlowImpl of FlowTrait<
 /// Upgrade
 /// internal_pool_member_info & get_internal_pool_member_info & pool_member_info_v1
 #[derive(Drop, Copy)]
-pub(crate) struct PoolMemberInfoUndelegateAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegator_info: Option<PoolMemberInfo>,
-    pub(crate) staker: Option<Staker>,
+pub struct PoolMemberInfoUndelegateAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub delegator_info: Option<PoolMemberInfo>,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl of FlowTrait<
+pub impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl of FlowTrait<
     PoolMemberInfoUndelegateAfterUpgradeFlow,
 > {
     fn get_staker_address(
@@ -1465,13 +1465,13 @@ pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl of FlowTrait<
 /// Upgrade
 /// Delegator increase delegate
 #[derive(Drop, Copy)]
-pub(crate) struct IncreaseDelegationAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegated_amount: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
+pub struct IncreaseDelegationAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub delegated_amount: Option<Amount>,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl of FlowTrait<
+pub impl IncreaseDelegationAfterUpgradeFlowImpl of FlowTrait<
     IncreaseDelegationAfterUpgradeFlow,
 > {
     fn get_staker_address(self: IncreaseDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
@@ -1516,12 +1516,12 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl of FlowTrait<
 /// Upgrade
 /// Staker increase_stake
 #[derive(Drop, Copy)]
-pub(crate) struct IncreaseStakeAfterUpgradeFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) stake_amount: Option<Amount>,
-    pub(crate) pool_address: Option<ContractAddress>,
+pub struct IncreaseStakeAfterUpgradeFlow {
+    pub staker: Option<Staker>,
+    pub stake_amount: Option<Amount>,
+    pub pool_address: Option<ContractAddress>,
 }
-pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl of FlowTrait<IncreaseStakeAfterUpgradeFlow> {
+pub impl IncreaseStakeAfterUpgradeFlowImpl of FlowTrait<IncreaseStakeAfterUpgradeFlow> {
     fn get_staker_address(self: IncreaseStakeAfterUpgradeFlow) -> Option<ContractAddress> {
         Option::Some(self.staker.unwrap().staker.address)
     }
@@ -1573,8 +1573,8 @@ pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl of FlowTrait<IncreaseStakeAfte
 /// Staker exit action
 /// Delegator exit action
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorExitAndEnterAgainFlow {}
-pub(crate) impl DelegatorExitAndEnterAgainFlowImpl of FlowTrait<DelegatorExitAndEnterAgainFlow> {
+pub struct DelegatorExitAndEnterAgainFlow {}
+pub impl DelegatorExitAndEnterAgainFlowImpl of FlowTrait<DelegatorExitAndEnterAgainFlow> {
     fn test(self: DelegatorExitAndEnterAgainFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let initial_stake_amount = min_stake * 2;
@@ -1683,14 +1683,14 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl of FlowTrait<DelegatorExitAnd
 /// Staker exit action
 /// Delegator exit action
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorExitIntentUpgradeSwitchFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegated_amount: Option<Amount>,
-    pub(crate) initial_reward_supplier_balance: Option<Amount>,
-    pub(crate) initial_stake_amount: Option<Amount>,
+pub struct DelegatorExitIntentUpgradeSwitchFlow {
+    pub staker: Option<Staker>,
+    pub delegator: Option<Delegator>,
+    pub delegated_amount: Option<Amount>,
+    pub initial_reward_supplier_balance: Option<Amount>,
+    pub initial_stake_amount: Option<Amount>,
 }
-pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
+pub impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
     DelegatorExitIntentUpgradeSwitchFlow,
 > {
     fn setup_v1(ref self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
@@ -1802,8 +1802,8 @@ pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
 /// Attest
 /// Test pool rewards and balance
 #[derive(Drop, Copy)]
-pub(crate) struct DisabledTokenDelegationFlow {}
-pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelegationFlow> {
+pub struct DisabledTokenDelegationFlow {}
+pub impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelegationFlow> {
     fn test(self: DisabledTokenDelegationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let delegated_amount_8 = TEST_MIN_BTC_FOR_REWARDS;
@@ -1901,8 +1901,8 @@ pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelega
 /// Staker1 exit action
 /// Delegator exit action
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorExitAndEnterAgainWithSwitchFlow {}
-pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl of FlowTrait<
+pub struct DelegatorExitAndEnterAgainWithSwitchFlow {}
+pub impl DelegatorExitAndEnterAgainWithSwitchFlowImpl of FlowTrait<
     DelegatorExitAndEnterAgainWithSwitchFlow,
 > {
     fn test(self: DelegatorExitAndEnterAgainWithSwitchFlow, ref system: SystemState) {
@@ -2027,8 +2027,8 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl of FlowTrait<
 /// Advance epoch
 /// Test staking power
 #[derive(Drop, Copy)]
-pub(crate) struct NewTokenDelegationFlow {}
-pub(crate) impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> {
+pub struct NewTokenDelegationFlow {}
+pub impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> {
     fn test(self: NewTokenDelegationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -2084,8 +2084,8 @@ pub(crate) impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> 
 /// Test rewards are not equal
 /// Test total staking power
 #[derive(Drop, Copy)]
-pub(crate) struct MultipleBTCPoolsDifferentDecimalsFlow {}
-pub(crate) impl MultipleBTCPoolsDifferentDecimalsFlowImpl of FlowTrait<
+pub struct MultipleBTCPoolsDifferentDecimalsFlow {}
+pub impl MultipleBTCPoolsDifferentDecimalsFlowImpl of FlowTrait<
     MultipleBTCPoolsDifferentDecimalsFlow,
 > {
     fn test(self: MultipleBTCPoolsDifferentDecimalsFlow, ref system: SystemState) {
@@ -2161,11 +2161,11 @@ pub(crate) impl MultipleBTCPoolsDifferentDecimalsFlowImpl of FlowTrait<
 /// Advance epoch
 /// Test rewards
 #[derive(Drop, Copy)]
-pub(crate) struct StakerMultipleEntriesMigrationAttestFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) amount: Option<Amount>,
+pub struct StakerMultipleEntriesMigrationAttestFlow {
+    pub staker: Option<Staker>,
+    pub amount: Option<Amount>,
 }
-pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
+pub impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
     StakerMultipleEntriesMigrationAttestFlow,
 > {
     fn setup_v1(ref self: StakerMultipleEntriesMigrationAttestFlow, ref system: SystemState) {
@@ -2241,12 +2241,12 @@ pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
 /// Upgrade
 /// Delegator exit_action
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorActionAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) staker: Option<Staker>,
+pub struct DelegatorActionAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl DelegatorActionAfterUpgradeFlowImpl of FlowTrait<DelegatorActionAfterUpgradeFlow> {
+pub impl DelegatorActionAfterUpgradeFlowImpl of FlowTrait<DelegatorActionAfterUpgradeFlow> {
     fn get_staker_address(self: DelegatorActionAfterUpgradeFlow) -> Option<ContractAddress> {
         Option::Some(self.staker.unwrap().staker.address)
     }
@@ -2301,13 +2301,13 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl of FlowTrait<DelegatorAction
 /// Upgrade
 /// Delegator exit_intent
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorIntentAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegated_amount: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
+pub struct DelegatorIntentAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub delegated_amount: Option<Amount>,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl of FlowTrait<DelegatorIntentAfterUpgradeFlow> {
+pub impl DelegatorIntentAfterUpgradeFlowImpl of FlowTrait<DelegatorIntentAfterUpgradeFlow> {
     fn get_staker_address(self: DelegatorIntentAfterUpgradeFlow) -> Option<ContractAddress> {
         Option::Some(self.staker.unwrap().staker.address)
     }
@@ -2351,11 +2351,11 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl of FlowTrait<DelegatorIntent
 /// Upgrade
 /// Staker exit_intent
 #[derive(Drop, Copy)]
-pub(crate) struct StakerIntentAfterUpgradeFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) pool_address: Option<ContractAddress>,
+pub struct StakerIntentAfterUpgradeFlow {
+    pub staker: Option<Staker>,
+    pub pool_address: Option<ContractAddress>,
 }
-pub(crate) impl StakerIntentAfterUpgradeFlowImpl of FlowTrait<StakerIntentAfterUpgradeFlow> {
+pub impl StakerIntentAfterUpgradeFlowImpl of FlowTrait<StakerIntentAfterUpgradeFlow> {
     fn get_staker_address(self: StakerIntentAfterUpgradeFlow) -> Option<ContractAddress> {
         Option::Some(self.staker.unwrap().staker.address)
     }
@@ -2392,12 +2392,12 @@ pub(crate) impl StakerIntentAfterUpgradeFlowImpl of FlowTrait<StakerIntentAfterU
 /// Upgrade
 /// Staker exit_action
 #[derive(Drop, Copy)]
-pub(crate) struct StakerActionAfterUpgradeFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) pool_address: Option<ContractAddress>,
+pub struct StakerActionAfterUpgradeFlow {
+    pub staker: Option<Staker>,
+    pub pool_address: Option<ContractAddress>,
 }
 
-pub(crate) impl StakerActionAfterUpgradeFlowImpl of FlowTrait<StakerActionAfterUpgradeFlow> {
+pub impl StakerActionAfterUpgradeFlowImpl of FlowTrait<StakerActionAfterUpgradeFlow> {
     fn get_staker_address(self: StakerActionAfterUpgradeFlow) -> Option<ContractAddress> {
         Option::Some(self.staker.unwrap().staker.address)
     }
@@ -2443,11 +2443,11 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl of FlowTrait<StakerActionAfterU
 /// Upgrade
 /// Staker attest
 #[derive(Drop, Copy)]
-pub(crate) struct StakerAttestAfterIntentFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct StakerAttestAfterIntentFlow {
+    pub staker: Option<Staker>,
 }
 
-pub(crate) impl StakerAttestAfterIntentFlowImpl of FlowTrait<StakerAttestAfterIntentFlow> {
+pub impl StakerAttestAfterIntentFlowImpl of FlowTrait<StakerAttestAfterIntentFlow> {
     fn get_staker_address(self: StakerAttestAfterIntentFlow) -> Option<ContractAddress> {
         Option::Some(self.staker.unwrap().staker.address)
     }
@@ -2479,10 +2479,10 @@ pub(crate) impl StakerAttestAfterIntentFlowImpl of FlowTrait<StakerAttestAfterIn
 /// Test total stake trace
 /// Test total stake view
 #[derive(Drop, Copy)]
-pub(crate) struct TotalStakeTraceAfterUpgradeFlow {
-    pub(crate) amount: Option<Amount>,
+pub struct TotalStakeTraceAfterUpgradeFlow {
+    pub amount: Option<Amount>,
 }
-pub(crate) impl TotalStakeTraceAfterUpgradeFlowImpl of FlowTrait<TotalStakeTraceAfterUpgradeFlow> {
+pub impl TotalStakeTraceAfterUpgradeFlowImpl of FlowTrait<TotalStakeTraceAfterUpgradeFlow> {
     fn setup_v1(ref self: TotalStakeTraceAfterUpgradeFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(amount: amount * 2);
@@ -2557,13 +2557,13 @@ pub(crate) impl TotalStakeTraceAfterUpgradeFlowImpl of FlowTrait<TotalStakeTrace
 /// Delegator partial undelegate
 /// Delegator switch
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorPartialIntentAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegated_amount: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
+pub struct DelegatorPartialIntentAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub delegated_amount: Option<Amount>,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl of FlowTrait<
+pub impl DelegatorPartialIntentAfterUpgradeFlowImpl of FlowTrait<
     DelegatorPartialIntentAfterUpgradeFlow,
 > {
     fn get_staker_address(self: DelegatorPartialIntentAfterUpgradeFlow) -> Option<ContractAddress> {
@@ -2626,12 +2626,12 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl of FlowTrait<
 /// Upgrade
 /// Change commission
 #[derive(Drop, Copy)]
-pub(crate) struct ChangeCommissionAfterUpgradeFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) commission: Option<Commission>,
+pub struct ChangeCommissionAfterUpgradeFlow {
+    pub staker: Option<Staker>,
+    pub pool_address: Option<ContractAddress>,
+    pub commission: Option<Commission>,
 }
-pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl of FlowTrait<
+pub impl ChangeCommissionAfterUpgradeFlowImpl of FlowTrait<
     ChangeCommissionAfterUpgradeFlow,
 > {
     fn get_staker_address(self: ChangeCommissionAfterUpgradeFlow) -> Option<ContractAddress> {
@@ -2676,12 +2676,12 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl of FlowTrait<
 /// Upgrade
 /// Delegator claim rewards
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorClaimRewardsAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) staker: Option<Staker>,
+pub struct DelegatorClaimRewardsAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
+pub impl DelegatorClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
     DelegatorClaimRewardsAfterUpgradeFlow,
 > {
     fn get_staker_address(self: DelegatorClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
@@ -2735,8 +2735,8 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
 /// Advance epoch
 /// Test btc token is disabled
 #[derive(Drop, Copy)]
-pub(crate) struct DisableBtcTokenSameAndNextEpochFlow {}
-pub(crate) impl DisableBtcTokenSameAndNextEpochFlowImpl of FlowTrait<
+pub struct DisableBtcTokenSameAndNextEpochFlow {}
+pub impl DisableBtcTokenSameAndNextEpochFlowImpl of FlowTrait<
     DisableBtcTokenSameAndNextEpochFlow,
 > {
     fn test(self: DisableBtcTokenSameAndNextEpochFlow, ref system: SystemState) {
@@ -2790,13 +2790,13 @@ pub(crate) impl DisableBtcTokenSameAndNextEpochFlowImpl of FlowTrait<
 /// Upgrade
 /// Delegator full switch
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorSwitchAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegated_amount: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
+pub struct DelegatorSwitchAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub delegated_amount: Option<Amount>,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl of FlowTrait<DelegatorSwitchAfterUpgradeFlow> {
+pub impl DelegatorSwitchAfterUpgradeFlowImpl of FlowTrait<DelegatorSwitchAfterUpgradeFlow> {
     fn get_staker_address(self: DelegatorSwitchAfterUpgradeFlow) -> Option<ContractAddress> {
         Option::Some(self.staker.unwrap().staker.address)
     }
@@ -2859,13 +2859,13 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl of FlowTrait<DelegatorSwitch
 
 /// Test staker_migration - with pool, with commission commitment.
 #[derive(Drop, Copy)]
-pub(crate) struct StakerMigrationFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) staker_info: Option<StakerInfoV1>,
-    pub(crate) internal_staker_info: Option<InternalStakerInfoLatest>,
-    pub(crate) commission_commitment: Option<CommissionCommitment>,
+pub struct StakerMigrationFlow {
+    pub staker: Option<Staker>,
+    pub staker_info: Option<StakerInfoV1>,
+    pub internal_staker_info: Option<InternalStakerInfoLatest>,
+    pub commission_commitment: Option<CommissionCommitment>,
 }
-pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
+pub impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
     fn setup_v1(ref self: StakerMigrationFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -3052,8 +3052,8 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
 /// Test delegations and rewards transferred to pools
 
 #[derive(Drop, Copy)]
-pub(crate) struct MultiPoolExitIntentFlow {}
-pub(crate) impl MultiPoolExitIntentFlowImpl of FlowTrait<MultiPoolExitIntentFlow> {
+pub struct MultiPoolExitIntentFlow {}
+pub impl MultiPoolExitIntentFlowImpl of FlowTrait<MultiPoolExitIntentFlow> {
     fn test(self: MultiPoolExitIntentFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let strk_delegator_amount = amount * 2;
@@ -3152,16 +3152,16 @@ pub(crate) impl MultiPoolExitIntentFlowImpl of FlowTrait<MultiPoolExitIntentFlow
 /// Test staker_pool_infos
 /// Test delegators infos
 #[derive(Drop, Copy)]
-pub(crate) struct IntentDelegatorUpgradeSwitchFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator_full_intent: Option<Delegator>,
-    pub(crate) delegator_half_intent: Option<Delegator>,
-    pub(crate) delegator_zero_intent: Option<Delegator>,
-    pub(crate) amount: Option<Amount>,
-    pub(crate) commission: Option<Commission>,
+pub struct IntentDelegatorUpgradeSwitchFlow {
+    pub staker: Option<Staker>,
+    pub pool_address: Option<ContractAddress>,
+    pub delegator_full_intent: Option<Delegator>,
+    pub delegator_half_intent: Option<Delegator>,
+    pub delegator_zero_intent: Option<Delegator>,
+    pub amount: Option<Amount>,
+    pub commission: Option<Commission>,
 }
-pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
+pub impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
     IntentDelegatorUpgradeSwitchFlow,
 > {
     fn setup_v1(ref self: IntentDelegatorUpgradeSwitchFlow, ref system: SystemState) {
@@ -3293,11 +3293,11 @@ pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
 /// Test staker balance trace is empty
 /// Test staker pool trace is empty
 #[derive(Drop, Copy)]
-pub(crate) struct StakerWithoutPoolMigrationBalanceTracesFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) staker_info: Option<StakerInfoV1>,
+pub struct StakerWithoutPoolMigrationBalanceTracesFlow {
+    pub staker: Option<Staker>,
+    pub staker_info: Option<StakerInfoV1>,
 }
-pub(crate) impl StakerWithoutPoolMigrationBalanceTracesFlowImpl of FlowTrait<
+pub impl StakerWithoutPoolMigrationBalanceTracesFlowImpl of FlowTrait<
     StakerWithoutPoolMigrationBalanceTracesFlow,
 > {
     fn setup_v1(ref self: StakerWithoutPoolMigrationBalanceTracesFlow, ref system: SystemState) {
@@ -3365,16 +3365,16 @@ pub(crate) impl StakerWithoutPoolMigrationBalanceTracesFlowImpl of FlowTrait<
 /// Test delegators infos
 /// Test delegators balances
 #[derive(Drop, Copy)]
-pub(crate) struct IntentDelegatorUpgradeActionFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator_full_intent: Option<Delegator>,
-    pub(crate) delegator_half_intent: Option<Delegator>,
-    pub(crate) delegator_zero_intent: Option<Delegator>,
-    pub(crate) amount: Option<Amount>,
-    pub(crate) commission: Option<Commission>,
+pub struct IntentDelegatorUpgradeActionFlow {
+    pub staker: Option<Staker>,
+    pub pool_address: Option<ContractAddress>,
+    pub delegator_full_intent: Option<Delegator>,
+    pub delegator_half_intent: Option<Delegator>,
+    pub delegator_zero_intent: Option<Delegator>,
+    pub amount: Option<Amount>,
+    pub commission: Option<Commission>,
 }
-pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
+pub impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
     IntentDelegatorUpgradeActionFlow,
 > {
     fn setup_v1(ref self: IntentDelegatorUpgradeActionFlow, ref system: SystemState) {
@@ -3474,11 +3474,11 @@ pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
 /// Test staker_pool_info
 /// Test staker_info did not change
 #[derive(Drop, Copy)]
-pub(crate) struct StakerWithPoolInIntentMigrationFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) staker_info: Option<StakerInfoV1>,
+pub struct StakerWithPoolInIntentMigrationFlow {
+    pub staker: Option<Staker>,
+    pub staker_info: Option<StakerInfoV1>,
 }
-pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
+pub impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
     StakerWithPoolInIntentMigrationFlow,
 > {
     fn setup_v1(ref self: StakerWithPoolInIntentMigrationFlow, ref system: SystemState) {
@@ -3530,16 +3530,16 @@ pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
 /// Test staker_pool_info
 /// Test delegators infos
 #[derive(Drop, Copy)]
-pub(crate) struct IntentDelegatorUpgradeIntentFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator_full_intent: Option<Delegator>,
-    pub(crate) delegator_half_intent: Option<Delegator>,
-    pub(crate) delegator_zero_intent: Option<Delegator>,
-    pub(crate) amount: Option<Amount>,
-    pub(crate) commission: Option<Commission>,
+pub struct IntentDelegatorUpgradeIntentFlow {
+    pub staker: Option<Staker>,
+    pub pool_address: Option<ContractAddress>,
+    pub delegator_full_intent: Option<Delegator>,
+    pub delegator_half_intent: Option<Delegator>,
+    pub delegator_zero_intent: Option<Delegator>,
+    pub amount: Option<Amount>,
+    pub commission: Option<Commission>,
 }
-pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of FlowTrait<
+pub impl IntentDelegatorUpgradeIntentFlowImpl of FlowTrait<
     IntentDelegatorUpgradeIntentFlow,
 > {
     fn setup_v1(ref self: IntentDelegatorUpgradeIntentFlow, ref system: SystemState) {
@@ -3636,10 +3636,10 @@ pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of FlowTrait<
 /// Open strk pool
 /// Test staker pool info
 #[derive(Drop, Copy)]
-pub(crate) struct StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlowImpl of FlowTrait<
+pub impl StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlowImpl of FlowTrait<
     StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow,
 > {
     fn setup_v1(
@@ -3685,11 +3685,11 @@ pub(crate) impl StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlowImpl of Fl
 /// Test staker_pool_info
 /// Test commission commitment not set
 #[derive(Drop, Copy)]
-pub(crate) struct StakerWithPoolWithoutCommissionCommitmentMigrationFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) staker_info: Option<StakerInfoV1>,
+pub struct StakerWithPoolWithoutCommissionCommitmentMigrationFlow {
+    pub staker: Option<Staker>,
+    pub staker_info: Option<StakerInfoV1>,
 }
-pub(crate) impl StakerWithPoolWithoutCommissionCommitmentMigrationFlowImpl of FlowTrait<
+pub impl StakerWithPoolWithoutCommissionCommitmentMigrationFlowImpl of FlowTrait<
     StakerWithPoolWithoutCommissionCommitmentMigrationFlow,
 > {
     fn setup_v1(
@@ -3749,8 +3749,8 @@ pub(crate) impl StakerWithPoolWithoutCommissionCommitmentMigrationFlowImpl of Fl
 /// Attest
 /// Test rewards
 #[derive(Drop, Copy)]
-pub(crate) struct SetCommissionMultiplePoolsFlow {}
-pub(crate) impl SetCommissionMultiplePoolsFlowImpl of FlowTrait<SetCommissionMultiplePoolsFlow> {
+pub struct SetCommissionMultiplePoolsFlow {}
+pub impl SetCommissionMultiplePoolsFlowImpl of FlowTrait<SetCommissionMultiplePoolsFlow> {
     fn test(self: SetCommissionMultiplePoolsFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let btc_amount = TEST_MIN_BTC_FOR_REWARDS;
@@ -3824,11 +3824,11 @@ pub(crate) impl SetCommissionMultiplePoolsFlowImpl of FlowTrait<SetCommissionMul
 /// Test staker_pool_info
 /// Test staker_info did not change
 #[derive(Drop, Copy)]
-pub(crate) struct StakerWithoutPoolInIntentMigrationFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) staker_info: Option<StakerInfoV1>,
+pub struct StakerWithoutPoolInIntentMigrationFlow {
+    pub staker: Option<Staker>,
+    pub staker_info: Option<StakerInfoV1>,
 }
-pub(crate) impl StakerWithoutPoolInIntentMigrationFlowImpl of FlowTrait<
+pub impl StakerWithoutPoolInIntentMigrationFlowImpl of FlowTrait<
     StakerWithoutPoolInIntentMigrationFlow,
 > {
     fn setup_v1(ref self: StakerWithoutPoolInIntentMigrationFlow, ref system: SystemState) {
@@ -3872,10 +3872,10 @@ pub(crate) impl StakerWithoutPoolInIntentMigrationFlowImpl of FlowTrait<
 
 // Test staker_migration called twice.
 #[derive(Drop, Copy)]
-pub(crate) struct StakerMigrationCalledTwiceFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct StakerMigrationCalledTwiceFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl StakerMigrationCalledTwiceFlowImpl of FlowTrait<StakerMigrationCalledTwiceFlow> {
+pub impl StakerMigrationCalledTwiceFlowImpl of FlowTrait<StakerMigrationCalledTwiceFlow> {
     fn get_staker_address(self: StakerMigrationCalledTwiceFlow) -> Option<ContractAddress> {
         Option::Some(self.staker?.staker.address)
     }
@@ -3902,10 +3902,10 @@ pub(crate) impl StakerMigrationCalledTwiceFlowImpl of FlowTrait<StakerMigrationC
 
 // Test internal_staker_info called without staker_migration.
 #[derive(Drop, Copy)]
-pub(crate) struct InternalStakerInfoWithoutStakerMigrationFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct InternalStakerInfoWithoutStakerMigrationFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl InternalStakerInfoWithoutStakerMigrationFlowImpl of FlowTrait<
+pub impl InternalStakerInfoWithoutStakerMigrationFlowImpl of FlowTrait<
     InternalStakerInfoWithoutStakerMigrationFlow,
 > {
     fn get_staker_address(
@@ -3937,8 +3937,8 @@ pub(crate) impl InternalStakerInfoWithoutStakerMigrationFlowImpl of FlowTrait<
 
 /// Test claim_rewards with multiple delegators.
 #[derive(Drop, Copy)]
-pub(crate) struct ClaimRewardsMultipleDelegatorsFlow {}
-pub(crate) impl ClaimRewardsMultipleDelegatorsFlowImpl of FlowTrait<
+pub struct ClaimRewardsMultipleDelegatorsFlow {}
+pub impl ClaimRewardsMultipleDelegatorsFlowImpl of FlowTrait<
     ClaimRewardsMultipleDelegatorsFlow,
 > {
     fn test(self: ClaimRewardsMultipleDelegatorsFlow, ref system: SystemState) {
@@ -4030,8 +4030,8 @@ pub(crate) impl ClaimRewardsMultipleDelegatorsFlowImpl of FlowTrait<
 
 /// Test claim_rewards with multiple delegators.
 #[derive(Drop, Copy)]
-pub(crate) struct ClaimRewardsMultipleDelegatorsBtcFlow {}
-pub(crate) impl ClaimRewardsMultipleDelegatorsBtcFlowImpl of FlowTrait<
+pub struct ClaimRewardsMultipleDelegatorsBtcFlow {}
+pub impl ClaimRewardsMultipleDelegatorsBtcFlowImpl of FlowTrait<
     ClaimRewardsMultipleDelegatorsBtcFlow,
 > {
     fn test(self: ClaimRewardsMultipleDelegatorsBtcFlow, ref system: SystemState) {
@@ -4165,8 +4165,8 @@ pub(crate) impl ClaimRewardsMultipleDelegatorsBtcFlowImpl of FlowTrait<
 /// Exit action staker and delegator
 /// Delegator claim_rewards - Cover claim after exit action
 #[derive(Drop, Copy)]
-pub(crate) struct PoolClaimAfterClaimFlow {}
-pub(crate) impl PoolClaimAfterClaimFlowImpl of FlowTrait<PoolClaimAfterClaimFlow> {
+pub struct PoolClaimAfterClaimFlow {}
+pub impl PoolClaimAfterClaimFlowImpl of FlowTrait<PoolClaimAfterClaimFlow> {
     fn test(self: PoolClaimAfterClaimFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -4260,8 +4260,8 @@ pub(crate) impl PoolClaimAfterClaimFlowImpl of FlowTrait<PoolClaimAfterClaimFlow
 /// Delegator1 claim_rewards
 /// Delegator2 claim_rewards
 #[derive(Drop, Copy)]
-pub(crate) struct ChangeBalanceClaimRewardsFlow {}
-pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClaimRewardsFlow> {
+pub struct ChangeBalanceClaimRewardsFlow {}
+pub impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClaimRewardsFlow> {
     fn test(self: ChangeBalanceClaimRewardsFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -4465,13 +4465,13 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
 /// pool_member_info (calculate_rewards)
 /// claim_rewards
 #[derive(Drop, Copy)]
-pub(crate) struct PoolClaimRewardsAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) staker: Option<Staker>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegator_info: Option<PoolMemberInfo>,
+pub struct PoolClaimRewardsAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub staker: Option<Staker>,
+    pub delegator: Option<Delegator>,
+    pub delegator_info: Option<PoolMemberInfo>,
 }
-pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
+pub impl PoolClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
     PoolClaimRewardsAfterUpgradeFlow,
 > {
     fn get_staker_address(self: PoolClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
@@ -4549,8 +4549,8 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
 /// Delegator claim rewards
 /// Test rewards
 #[derive(Drop, Copy)]
-pub(crate) struct PoolWithMinBtcFlow {}
-pub(crate) impl PoolWithMinBtcFlowImpl of FlowTrait<PoolWithMinBtcFlow> {
+pub struct PoolWithMinBtcFlow {}
+pub impl PoolWithMinBtcFlowImpl of FlowTrait<PoolWithMinBtcFlow> {
     fn test(self: PoolWithMinBtcFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -4618,14 +4618,14 @@ pub(crate) impl PoolWithMinBtcFlowImpl of FlowTrait<PoolWithMinBtcFlow> {
 /// attest
 /// claim_rewards
 #[derive(Drop, Copy)]
-pub(crate) struct PoolChangeBalanceAfterUpgradeFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) staker: Option<Staker>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) delegator_info: Option<PoolMemberInfo>,
-    pub(crate) delegated_amount: Amount,
+pub struct PoolChangeBalanceAfterUpgradeFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub staker: Option<Staker>,
+    pub delegator: Option<Delegator>,
+    pub delegator_info: Option<PoolMemberInfo>,
+    pub delegated_amount: Amount,
 }
-pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
+pub impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
     PoolChangeBalanceAfterUpgradeFlow,
 > {
     fn get_staker_address(self: PoolChangeBalanceAfterUpgradeFlow) -> Option<ContractAddress> {
@@ -4711,13 +4711,13 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
 /// Delegators exit action
 /// Test balances
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorIntentInV0ActionInV2Flow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) delegators: Option<(Delegator, Delegator, Delegator)>,
-    pub(crate) amount: Option<Amount>,
-    pub(crate) pool_address: Option<ContractAddress>,
+pub struct DelegatorIntentInV0ActionInV2Flow {
+    pub staker: Option<Staker>,
+    pub delegators: Option<(Delegator, Delegator, Delegator)>,
+    pub amount: Option<Amount>,
+    pub pool_address: Option<ContractAddress>,
 }
-pub(crate) impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
+pub impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
     DelegatorIntentInV0ActionInV2Flow,
 > {
     fn get_staker_address(self: DelegatorIntentInV0ActionInV2Flow) -> Option<ContractAddress> {
@@ -4787,13 +4787,13 @@ pub(crate) impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
 /// Delegators exit action
 /// Test balances
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorIntentInV0ChangeIntentActionInV2Flow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) delegators: Option<(Delegator, Delegator, Delegator)>,
-    pub(crate) amount: Option<Amount>,
-    pub(crate) pool_address: Option<ContractAddress>,
+pub struct DelegatorIntentInV0ChangeIntentActionInV2Flow {
+    pub staker: Option<Staker>,
+    pub delegators: Option<(Delegator, Delegator, Delegator)>,
+    pub amount: Option<Amount>,
+    pub pool_address: Option<ContractAddress>,
 }
-pub(crate) impl DelegatorIntentInV0ChangeIntentActionInV2FlowImpl of FlowTrait<
+pub impl DelegatorIntentInV0ChangeIntentActionInV2FlowImpl of FlowTrait<
     DelegatorIntentInV0ChangeIntentActionInV2Flow,
 > {
     fn get_staker_address(
@@ -4870,8 +4870,8 @@ pub(crate) impl DelegatorIntentInV0ChangeIntentActionInV2FlowImpl of FlowTrait<
 /// Delegator claim rewards
 /// Test rewards
 #[derive(Drop, Copy)]
-pub(crate) struct PoolWithLotsOfBtcFlow {}
-pub(crate) impl PoolWithLotsOfBtcFlowImpl of FlowTrait<PoolWithLotsOfBtcFlow> {
+pub struct PoolWithLotsOfBtcFlow {}
+pub impl PoolWithLotsOfBtcFlowImpl of FlowTrait<PoolWithLotsOfBtcFlow> {
     fn test(self: PoolWithLotsOfBtcFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -4929,12 +4929,12 @@ pub(crate) impl PoolWithLotsOfBtcFlowImpl of FlowTrait<PoolWithLotsOfBtcFlow> {
 /// Staker attest
 /// Delegator claim rewards
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorIntentBeforeClaimRewardsAfterFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
+pub struct DelegatorIntentBeforeClaimRewardsAfterFlow {
+    pub staker: Option<Staker>,
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
 }
-pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl of FlowTrait<
+pub impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl of FlowTrait<
     DelegatorIntentBeforeClaimRewardsAfterFlow,
 > {
     fn get_staker_address(
@@ -4987,8 +4987,8 @@ pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl of FlowTrait<
 /// Attest
 /// Test staker and pool rewards
 #[derive(Drop, Copy)]
-pub(crate) struct StakerMultiplePoolsAttestFlow {}
-pub(crate) impl StakerMultiplePoolsAttestFlowImpl of FlowTrait<StakerMultiplePoolsAttestFlow> {
+pub struct StakerMultiplePoolsAttestFlow {}
+pub impl StakerMultiplePoolsAttestFlowImpl of FlowTrait<StakerMultiplePoolsAttestFlow> {
     fn test(self: StakerMultiplePoolsAttestFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let btc_amount = TEST_MIN_BTC_FOR_REWARDS;
@@ -5069,10 +5069,10 @@ pub(crate) impl StakerMultiplePoolsAttestFlowImpl of FlowTrait<StakerMultiplePoo
 /// Set open for delegation
 /// Delegator delegate
 #[derive(Drop, Copy)]
-pub(crate) struct SetOpenForDelegationAfterUpgradeFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct SetOpenForDelegationAfterUpgradeFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl of FlowTrait<
+pub impl SetOpenForDelegationAfterUpgradeFlowImpl of FlowTrait<
     SetOpenForDelegationAfterUpgradeFlow,
 > {
     fn get_staker_address(self: SetOpenForDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
@@ -5113,8 +5113,8 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl of FlowTrait<
 /// Staker exit intent (same epoch)
 /// Staker exit action
 #[derive(Drop, Copy)]
-pub(crate) struct IncreaseStakeIntentSameEpochFlow {}
-pub(crate) impl IncreaseStakeIntentSameEpochFlowImpl of FlowTrait<
+pub struct IncreaseStakeIntentSameEpochFlow {}
+pub impl IncreaseStakeIntentSameEpochFlowImpl of FlowTrait<
     IncreaseStakeIntentSameEpochFlow,
 > {
     fn test(self: IncreaseStakeIntentSameEpochFlow, ref system: SystemState) {
@@ -5150,14 +5150,14 @@ pub(crate) impl IncreaseStakeIntentSameEpochFlowImpl of FlowTrait<
 /// Test pool rewards
 /// Test staker rewards
 #[derive(Drop, Copy)]
-pub(crate) struct PoolAttestFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) pool_rewards: Option<Amount>,
-    pub(crate) staker_rewards: Option<Amount>,
-    pub(crate) commission: Option<u16>,
+pub struct PoolAttestFlow {
+    pub staker: Option<Staker>,
+    pub delegator: Option<Delegator>,
+    pub pool_rewards: Option<Amount>,
+    pub staker_rewards: Option<Amount>,
+    pub commission: Option<u16>,
 }
-pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
+pub impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
     fn setup_v1(ref self: PoolAttestFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -5235,8 +5235,8 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
 /// Second delegator delegate
 /// Assert total stake
 #[derive(Drop, Copy)]
-pub(crate) struct AssertTotalStakeAfterMultiStakeFlow {}
-pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl of FlowTrait<
+pub struct AssertTotalStakeAfterMultiStakeFlow {}
+pub impl AssertTotalStakeAfterMultiStakeFlowImpl of FlowTrait<
     AssertTotalStakeAfterMultiStakeFlow,
 > {
     fn test(self: AssertTotalStakeAfterMultiStakeFlow, ref system: SystemState) {
@@ -5263,13 +5263,13 @@ pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl of FlowTrait<
 
 /// Test total_stake after upgrade
 #[derive(Drop, Copy)]
-pub(crate) struct TotalStakeAfterUpgradeFlow {
-    pub(crate) total_stake: Option<Amount>,
-    pub(crate) current_total_stake: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
-    pub(crate) staker2: Option<Staker>,
+pub struct TotalStakeAfterUpgradeFlow {
+    pub total_stake: Option<Amount>,
+    pub current_total_stake: Option<Amount>,
+    pub staker: Option<Staker>,
+    pub staker2: Option<Staker>,
 }
-pub(crate) impl TotalStakeAfterUpgradeFlowImpl of FlowTrait<TotalStakeAfterUpgradeFlow> {
+pub impl TotalStakeAfterUpgradeFlowImpl of FlowTrait<TotalStakeAfterUpgradeFlow> {
     fn get_staker_address(self: TotalStakeAfterUpgradeFlow) -> Option<ContractAddress> {
         Option::Some(self.staker?.staker.address)
     }
@@ -5334,8 +5334,8 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl of FlowTrait<TotalStakeAfterUpgra
 /// Delegator full exit intent
 /// Delegator exit action
 #[derive(Drop, Copy)]
-pub(crate) struct DelegateIntentSameEpochFlow {}
-pub(crate) impl DelegateIntentSameEpochFlowImpl of FlowTrait<DelegateIntentSameEpochFlow> {
+pub struct DelegateIntentSameEpochFlow {}
+pub impl DelegateIntentSameEpochFlowImpl of FlowTrait<DelegateIntentSameEpochFlow> {
     fn test(self: DelegateIntentSameEpochFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -5383,8 +5383,8 @@ pub(crate) impl DelegateIntentSameEpochFlowImpl of FlowTrait<DelegateIntentSameE
 /// Exit intent staker and all delegators
 /// Exit action staker and all delegators
 #[derive(Drop, Copy)]
-pub(crate) struct PoolClaimRewardsFlow {}
-pub(crate) impl PoolClaimRewardsFlowImpl of FlowTrait<PoolClaimRewardsFlow> {
+pub struct PoolClaimRewardsFlow {}
+pub impl PoolClaimRewardsFlowImpl of FlowTrait<PoolClaimRewardsFlow> {
     fn test(self: PoolClaimRewardsFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -5499,8 +5499,8 @@ pub(crate) impl PoolClaimRewardsFlowImpl of FlowTrait<PoolClaimRewardsFlow> {
 /// Exit intent staker and all delegators
 /// Exit action staker and all delegators
 #[derive(Drop, Copy)]
-pub(crate) struct PoolClaimRewardsFlowBtc {}
-pub(crate) impl PoolClaimRewardsFlowBtcImpl of FlowTrait<PoolClaimRewardsFlowBtc> {
+pub struct PoolClaimRewardsFlowBtc {}
+pub impl PoolClaimRewardsFlowBtcImpl of FlowTrait<PoolClaimRewardsFlowBtc> {
     fn test(self: PoolClaimRewardsFlowBtc, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -5603,8 +5603,8 @@ pub(crate) impl PoolClaimRewardsFlowBtcImpl of FlowTrait<PoolClaimRewardsFlowBtc
 /// Second staker exit intent
 /// Second staker exit action
 #[derive(Drop, Copy)]
-pub(crate) struct TwoStakersSameOperationalAddressFlow {}
-pub(crate) impl TwoStakersSameOperationalAddressFlowImpl of FlowTrait<
+pub struct TwoStakersSameOperationalAddressFlow {}
+pub impl TwoStakersSameOperationalAddressFlowImpl of FlowTrait<
     TwoStakersSameOperationalAddressFlow,
 > {
     fn test(self: TwoStakersSameOperationalAddressFlow, ref system: SystemState) {
@@ -5667,16 +5667,16 @@ pub(crate) impl TwoStakersSameOperationalAddressFlowImpl of FlowTrait<
 /// Second delegator claim rewards
 /// Third delegator claim rewards
 #[derive(Drop, Copy)]
-pub(crate) struct ClaimRewardsWithNonUpgradedPoolFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) first_delegator: Option<Delegator>,
-    pub(crate) first_delegator_info: Option<PoolMemberInfo>,
-    pub(crate) second_delegator: Option<Delegator>,
-    pub(crate) second_delegator_info: Option<PoolMemberInfo>,
-    pub(crate) third_delegator: Option<Delegator>,
-    pub(crate) third_delegator_info: Option<PoolMemberInfo>,
+pub struct ClaimRewardsWithNonUpgradedPoolFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub first_delegator: Option<Delegator>,
+    pub first_delegator_info: Option<PoolMemberInfo>,
+    pub second_delegator: Option<Delegator>,
+    pub second_delegator_info: Option<PoolMemberInfo>,
+    pub third_delegator: Option<Delegator>,
+    pub third_delegator_info: Option<PoolMemberInfo>,
 }
-pub(crate) impl ClaimRewardsWithNonUpgradedPoolFlowImpl of FlowTrait<
+pub impl ClaimRewardsWithNonUpgradedPoolFlowImpl of FlowTrait<
     ClaimRewardsWithNonUpgradedPoolFlow,
 > {
     fn setup(ref self: ClaimRewardsWithNonUpgradedPoolFlow, ref system: SystemState) {
@@ -5749,18 +5749,18 @@ pub(crate) impl ClaimRewardsWithNonUpgradedPoolFlowImpl of FlowTrait<
 }
 
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorActionWithNonUpgradedPoolFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) first_delegator: Option<Delegator>,
-    pub(crate) first_delegator_info: Option<PoolMemberInfo>,
-    pub(crate) second_delegator: Option<Delegator>,
-    pub(crate) second_delegator_info: Option<PoolMemberInfo>,
-    pub(crate) third_delegator: Option<Delegator>,
-    pub(crate) third_delegator_info: Option<PoolMemberInfo>,
-    pub(crate) initial_reward_supplier_balance: Option<Amount>,
+pub struct DelegatorActionWithNonUpgradedPoolFlow {
+    pub staker: Option<Staker>,
+    pub pool_address: Option<ContractAddress>,
+    pub first_delegator: Option<Delegator>,
+    pub first_delegator_info: Option<PoolMemberInfo>,
+    pub second_delegator: Option<Delegator>,
+    pub second_delegator_info: Option<PoolMemberInfo>,
+    pub third_delegator: Option<Delegator>,
+    pub third_delegator_info: Option<PoolMemberInfo>,
+    pub initial_reward_supplier_balance: Option<Amount>,
 }
-pub(crate) impl DelegatorActionWithNonUpgradedPoolFlowImpl of FlowTrait<
+pub impl DelegatorActionWithNonUpgradedPoolFlowImpl of FlowTrait<
     DelegatorActionWithNonUpgradedPoolFlow,
 > {
     fn setup(ref self: DelegatorActionWithNonUpgradedPoolFlow, ref system: SystemState) {
@@ -5923,13 +5923,13 @@ pub(crate) impl DelegatorActionWithNonUpgradedPoolFlowImpl of FlowTrait<
 /// First delegator switch
 /// Second delegator switch
 #[derive(Drop, Copy)]
-pub(crate) struct SwitchWithNonUpgradedPoolFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) first_delegator: Option<Delegator>,
-    pub(crate) second_delegator: Option<Delegator>,
-    pub(crate) stake_amount: Option<Amount>,
+pub struct SwitchWithNonUpgradedPoolFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub first_delegator: Option<Delegator>,
+    pub second_delegator: Option<Delegator>,
+    pub stake_amount: Option<Amount>,
 }
-pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl of FlowTrait<SwitchWithNonUpgradedPoolFlow> {
+pub impl SwitchWithNonUpgradedPoolFlowImpl of FlowTrait<SwitchWithNonUpgradedPoolFlow> {
     fn setup(ref self: SwitchWithNonUpgradedPoolFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -6018,12 +6018,12 @@ pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl of FlowTrait<SwitchWithNonUpgr
 /// Upgrade
 /// Delegator enter
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorExitBeforeEnterAfterFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) delegator: Option<Delegator>,
-    pub(crate) staker: Option<Staker>,
+pub struct DelegatorExitBeforeEnterAfterFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub delegator: Option<Delegator>,
+    pub staker: Option<Staker>,
 }
-pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl of FlowTrait<
+pub impl DelegatorExitBeforeEnterAfterFlowImpl of FlowTrait<
     DelegatorExitBeforeEnterAfterFlow,
 > {
     fn get_staker_address(self: DelegatorExitBeforeEnterAfterFlow) -> Option<ContractAddress> {
@@ -6074,8 +6074,8 @@ pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl of FlowTrait<
 /// Staker attest
 /// Test no rewards for btc pool
 #[derive(Drop, Copy)]
-pub(crate) struct AttestWithZeroTotalBtcStakeFlow {}
-pub(crate) impl AttestWithZeroTotalBtcStakeFlowImpl of FlowTrait<AttestWithZeroTotalBtcStakeFlow> {
+pub struct AttestWithZeroTotalBtcStakeFlow {}
+pub impl AttestWithZeroTotalBtcStakeFlowImpl of FlowTrait<AttestWithZeroTotalBtcStakeFlow> {
     fn test(self: AttestWithZeroTotalBtcStakeFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -6107,16 +6107,16 @@ pub(crate) impl AttestWithZeroTotalBtcStakeFlowImpl of FlowTrait<AttestWithZeroT
 /// Second delegator exit action
 /// Third delegator exit intent
 #[derive(Drop, Copy)]
-pub(crate) struct DelegatorExitWithNonUpgradedPoolFlow {
-    pub(crate) pool_address: Option<ContractAddress>,
-    pub(crate) first_delegator: Option<Delegator>,
-    pub(crate) first_delegator_info: Option<PoolMemberInfo>,
-    pub(crate) second_delegator: Option<Delegator>,
-    pub(crate) second_delegator_info: Option<PoolMemberInfo>,
-    pub(crate) third_delegator: Option<Delegator>,
-    pub(crate) third_delegator_info: Option<PoolMemberInfo>,
+pub struct DelegatorExitWithNonUpgradedPoolFlow {
+    pub pool_address: Option<ContractAddress>,
+    pub first_delegator: Option<Delegator>,
+    pub first_delegator_info: Option<PoolMemberInfo>,
+    pub second_delegator: Option<Delegator>,
+    pub second_delegator_info: Option<PoolMemberInfo>,
+    pub third_delegator: Option<Delegator>,
+    pub third_delegator_info: Option<PoolMemberInfo>,
 }
-pub(crate) impl DelegatorExitWithNonUpgradedPoolFlowImpl of FlowTrait<
+pub impl DelegatorExitWithNonUpgradedPoolFlowImpl of FlowTrait<
     DelegatorExitWithNonUpgradedPoolFlow,
 > {
     fn setup(ref self: DelegatorExitWithNonUpgradedPoolFlow, ref system: SystemState) {
@@ -6235,8 +6235,8 @@ pub(crate) impl DelegatorExitWithNonUpgradedPoolFlowImpl of FlowTrait<
 /// Staker attest
 /// Test no pool rewards
 #[derive(Drop, Copy)]
-pub(crate) struct AddTokenWithoutEnableFlow {}
-pub(crate) impl AddTokenWithoutEnableFlowImpl of FlowTrait<AddTokenWithoutEnableFlow> {
+pub struct AddTokenWithoutEnableFlow {}
+pub impl AddTokenWithoutEnableFlowImpl of FlowTrait<AddTokenWithoutEnableFlow> {
     fn test(self: AddTokenWithoutEnableFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -6275,8 +6275,8 @@ pub(crate) impl AddTokenWithoutEnableFlowImpl of FlowTrait<AddTokenWithoutEnable
 /// Delegator exit action
 /// Delegator add to delegation
 #[derive(Drop, Copy)]
-pub(crate) struct AddToDelegationAfterExitActionFlow {}
-pub(crate) impl AddToDelegationAfterExitActionFlowImpl of FlowTrait<
+pub struct AddToDelegationAfterExitActionFlow {}
+pub impl AddToDelegationAfterExitActionFlowImpl of FlowTrait<
     AddToDelegationAfterExitActionFlow,
 > {
     fn test(self: AddToDelegationAfterExitActionFlow, ref system: SystemState) {
@@ -6312,8 +6312,8 @@ pub(crate) impl AddToDelegationAfterExitActionFlowImpl of FlowTrait<
 /// Advance epoch
 /// Assert epoch rewards are changed
 #[derive(Drop, Copy)]
-pub(crate) struct SetEpochInfoFlow {}
-pub(crate) impl SetEpochInfoFlowImpl of FlowTrait<SetEpochInfoFlow> {
+pub struct SetEpochInfoFlow {}
+pub impl SetEpochInfoFlowImpl of FlowTrait<SetEpochInfoFlow> {
     fn test(self: SetEpochInfoFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -6381,8 +6381,8 @@ pub(crate) impl SetEpochInfoFlowImpl of FlowTrait<SetEpochInfoFlow> {
 /// Staker Attest
 /// Assert zero rewards for the delegator
 #[derive(Drop, Copy)]
-pub(crate) struct AttestAfterDelegatorIntentFlow {}
-pub(crate) impl AttestAfterDelegatorIntentFlowImpl of FlowTrait<AttestAfterDelegatorIntentFlow> {
+pub struct AttestAfterDelegatorIntentFlow {}
+pub impl AttestAfterDelegatorIntentFlowImpl of FlowTrait<AttestAfterDelegatorIntentFlow> {
     fn test(self: AttestAfterDelegatorIntentFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -6416,8 +6416,8 @@ pub(crate) impl AttestAfterDelegatorIntentFlowImpl of FlowTrait<AttestAfterDeleg
 /// attest
 /// pool_member_info
 #[derive(Drop, Copy)]
-pub(crate) struct PoolCalculateRewardsTwiceFlow {}
-pub(crate) impl PoolCalculateRewardsTwiceFlowImpl of FlowTrait<PoolCalculateRewardsTwiceFlow> {
+pub struct PoolCalculateRewardsTwiceFlow {}
+pub impl PoolCalculateRewardsTwiceFlowImpl of FlowTrait<PoolCalculateRewardsTwiceFlow> {
     fn test(self: PoolCalculateRewardsTwiceFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -6464,8 +6464,8 @@ pub(crate) impl PoolCalculateRewardsTwiceFlowImpl of FlowTrait<PoolCalculateRewa
 /// Staker4 exit action
 /// Staker3 exit intent
 #[derive(Drop, Copy)]
-pub(crate) struct DiverseStakerVecFlow {}
-pub(crate) impl DiverseStakerVecFlowImpl of FlowTrait<DiverseStakerVecFlow> {
+pub struct DiverseStakerVecFlow {}
+pub impl DiverseStakerVecFlowImpl of FlowTrait<DiverseStakerVecFlow> {
     fn test(self: DiverseStakerVecFlow, ref system: SystemState) {
         let stake_amount = system.staking.get_min_stake();
         let commission = 200;
@@ -6511,10 +6511,10 @@ pub(crate) impl DiverseStakerVecFlowImpl of FlowTrait<DiverseStakerVecFlow> {
 /// Staker3 stake
 /// Test stakers in stakers vector
 #[derive(Drop, Copy)]
-pub(crate) struct MultipleStakersMigrationVecFlow {
-    pub(crate) old_stakers: Option<(Staker, Staker)>,
+pub struct MultipleStakersMigrationVecFlow {
+    pub old_stakers: Option<(Staker, Staker)>,
 }
-pub(crate) impl MultipleStakersMigrationVecFlowImpl of FlowTrait<MultipleStakersMigrationVecFlow> {
+pub impl MultipleStakersMigrationVecFlowImpl of FlowTrait<MultipleStakersMigrationVecFlow> {
     fn setup_v1(ref self: MultipleStakersMigrationVecFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker1 = system.new_staker(:amount);
@@ -6560,10 +6560,10 @@ pub(crate) impl MultipleStakersMigrationVecFlowImpl of FlowTrait<MultipleStakers
 /// Staker open btc pool with the same token (should fail)
 /// Test staker_pool_info
 #[derive(Drop, Copy)]
-pub(crate) struct StakerWithoutPoolMigrationOpenPoolsFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct StakerWithoutPoolMigrationOpenPoolsFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl StakerWithoutPoolMigrationOpenPoolsFlowImpl of FlowTrait<
+pub impl StakerWithoutPoolMigrationOpenPoolsFlowImpl of FlowTrait<
     StakerWithoutPoolMigrationOpenPoolsFlow,
 > {
     fn setup_v1(ref self: StakerWithoutPoolMigrationOpenPoolsFlow, ref system: SystemState) {
@@ -6623,10 +6623,10 @@ pub(crate) impl StakerWithoutPoolMigrationOpenPoolsFlowImpl of FlowTrait<
 /// Staker migration
 /// Test staker in staker vector
 #[derive(Drop, Copy)]
-pub(crate) struct StakerInIntentMigrationVecFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct StakerInIntentMigrationVecFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl StakerInIntentMigrationVecFlowImpl of FlowTrait<StakerInIntentMigrationVecFlow> {
+pub impl StakerInIntentMigrationVecFlowImpl of FlowTrait<StakerInIntentMigrationVecFlow> {
     fn setup_v1(ref self: StakerInIntentMigrationVecFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -6652,10 +6652,10 @@ pub(crate) impl StakerInIntentMigrationVecFlowImpl of FlowTrait<StakerInIntentMi
 /// Staker set commission
 /// Test staker pool info commission is set
 #[derive(Drop, Copy)]
-pub(crate) struct StakerWithPoolMigrationSetCommissionFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct StakerWithPoolMigrationSetCommissionFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl StakerWithPoolMigrationSetCommissionFlowImpl of FlowTrait<
+pub impl StakerWithPoolMigrationSetCommissionFlowImpl of FlowTrait<
     StakerWithPoolMigrationSetCommissionFlow,
 > {
     fn setup_v1(ref self: StakerWithPoolMigrationSetCommissionFlow, ref system: SystemState) {
@@ -6685,10 +6685,10 @@ pub(crate) impl StakerWithPoolMigrationSetCommissionFlowImpl of FlowTrait<
 /// Staker exit action
 /// Test staker does not exist
 #[derive(Drop, Copy)]
-pub(crate) struct StakerExitFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct StakerExitFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
+pub impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
     fn setup_v1(ref self: StakerExitFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -6721,10 +6721,10 @@ pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
 /// Staker migration
 /// Test staker attestation fails
 #[derive(Drop, Copy)]
-pub(crate) struct StakerExitIntentAttestAfterMigrationFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct StakerExitIntentAttestAfterMigrationFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
+pub impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
     StakerExitIntentAttestAfterMigrationFlow,
 > {
     fn setup_v1(ref self: StakerExitIntentAttestAfterMigrationFlow, ref system: SystemState) {
@@ -6757,10 +6757,10 @@ pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
 /// Upgrade
 /// Attempt stake
 #[derive(Drop, Copy)]
-pub(crate) struct StakerAddressAlreadyUsedInOlderVersionFlow {
-    pub(crate) staker: Option<Staker>,
+pub struct StakerAddressAlreadyUsedInOlderVersionFlow {
+    pub staker: Option<Staker>,
 }
-pub(crate) impl StakerAddressAlreadyUsedInOlderVersionFlowImpl of FlowTrait<
+pub impl StakerAddressAlreadyUsedInOlderVersionFlowImpl of FlowTrait<
     StakerAddressAlreadyUsedInOlderVersionFlow,
 > {
     fn setup_v1(ref self: StakerAddressAlreadyUsedInOlderVersionFlow, ref system: SystemState) {
@@ -6792,8 +6792,8 @@ pub(crate) impl StakerAddressAlreadyUsedInOlderVersionFlowImpl of FlowTrait<
 /// Disable btc token
 /// Test btc token is disabled
 #[derive(Drop, Copy)]
-pub(crate) struct EnableDisableBtcTokenSameEpochFlow {}
-pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
+pub struct EnableDisableBtcTokenSameEpochFlow {}
+pub impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
     EnableDisableBtcTokenSameEpochFlow,
 > {
     fn test(self: EnableDisableBtcTokenSameEpochFlow, ref system: SystemState) {
@@ -6820,8 +6820,8 @@ pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
 /// Enable btc token
 /// Test btc token is enabled
 #[derive(Drop, Copy)]
-pub(crate) struct DisableEnableBtcTokenSameEpochFlow {}
-pub(crate) impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
+pub struct DisableEnableBtcTokenSameEpochFlow {}
+pub impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
     DisableEnableBtcTokenSameEpochFlow,
 > {
     fn test(self: DisableEnableBtcTokenSameEpochFlow, ref system: SystemState) {

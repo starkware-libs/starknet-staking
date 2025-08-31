@@ -1,6 +1,6 @@
 use core::num::traits::Zero;
-use staking::pool::pool_member_balance_trace::mock::{IMockTrace, MockTrace};
-use staking::pool::pool_member_balance_trace::trace::{
+use staking_test::pool::pool_member_balance_trace::mock::{IMockTrace, MockTrace};
+use staking_test::pool::pool_member_balance_trace::trace::{
     PoolMemberBalanceTrait, PoolMemberCheckpointTrait,
 };
 

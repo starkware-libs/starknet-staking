@@ -1,15 +1,15 @@
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use staking::errors::{Erc20Error, GenericError};
-use staking::staking::objects::NormalizedAmount;
-use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
-use staking::types::{Amount, Commission, Index};
+use staking_test::errors::{Erc20Error, GenericError};
+use staking_test::staking::objects::NormalizedAmount;
+use staking_test::staking::staking::Staking::COMMISSION_DENOMINATOR;
+use staking_test::types::{Amount, Commission, Index};
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_contract_address};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::{mul_wide_and_ceil_div, mul_wide_and_div};
 
 /// Computes the new delegated stake based on changing in the intent amount.
-pub(crate) fn compute_new_delegated_stake(
+pub fn compute_new_delegated_stake(
     old_delegated_stake: NormalizedAmount,
     old_intent_amount: NormalizedAmount,
     new_intent_amount: NormalizedAmount,
@@ -19,7 +19,7 @@ pub(crate) fn compute_new_delegated_stake(
     total_amount - new_intent_amount
 }
 
-pub(crate) fn deploy_delegation_pool_contract(
+pub fn deploy_delegation_pool_contract(
     class_hash: ClassHash,
     contract_address_salt: felt252,
     staker_address: ContractAddress,
@@ -42,7 +42,7 @@ pub(crate) fn deploy_delegation_pool_contract(
 // Compute the commission amount of the staker from the pool rewards.
 //
 // $$ commission_amount = rewards_including_commission * commission / COMMISSION_DENOMINATOR $$
-pub(crate) fn compute_commission_amount_rounded_down(
+pub fn compute_commission_amount_rounded_down(
     rewards_including_commission: Amount, commission: Commission,
 ) -> Amount {
     mul_wide_and_div(
@@ -57,7 +57,7 @@ pub(crate) fn compute_commission_amount_rounded_down(
 //
 // $$ commission_amount = ceil_of_division(rewards_including_commission * commission,
 // COMMISSION_DENOMINATOR) $$
-pub(crate) fn compute_commission_amount_rounded_up(
+pub fn compute_commission_amount_rounded_up(
     rewards_including_commission: Amount, commission: Commission,
 ) -> Amount {
     mul_wide_and_ceil_div(
@@ -75,7 +75,7 @@ pub(crate) fn compute_commission_amount_rounded_up(
 // small rounding remainders (dust) without tracking or redistributing them.
 // This results in negligible reward losses for delegators, as the total distributed rewards
 // are slightly less than the allocated amount.
-pub(crate) fn compute_rewards_rounded_down(
+pub fn compute_rewards_rounded_down(
     amount: Amount, interest: Index, base_value: Index,
 ) -> Amount {
     mul_wide_and_div(lhs: amount, rhs: interest, div: base_value)
@@ -83,12 +83,12 @@ pub(crate) fn compute_rewards_rounded_down(
 }
 
 // Compute the threshold for requesting funds from L1 Reward Supplier.
-pub(crate) fn compute_threshold(base_mint_amount: Amount) -> Amount {
+pub fn compute_threshold(base_mint_amount: Amount) -> Amount {
     base_mint_amount / 2
 }
 
 #[generate_trait]
-pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
+pub impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
     fn checked_transfer_from(
         self: IERC20Dispatcher, sender: ContractAddress, recipient: ContractAddress, amount: u256,
     ) -> bool {

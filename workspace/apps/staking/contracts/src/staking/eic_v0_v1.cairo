@@ -5,10 +5,10 @@
 #[starknet::contract]
 mod StakingEICV0toV1 {
     use core::num::traits::Zero;
-    use staking::constants::{STARTING_EPOCH, V1_PREV_CONTRACT_VERSION};
-    use staking::errors::GenericError;
-    use staking::staking::objects::{EpochInfo, EpochInfoTrait};
-    use staking::types::{Amount, Version};
+    use staking_test::constants::{STARTING_EPOCH, V1_PREV_CONTRACT_VERSION};
+    use staking_test::errors::GenericError;
+    use staking_test::staking::objects::{EpochInfo, EpochInfoTrait};
+    use staking_test::types::{Amount, Version};
     use starknet::class_hash::ClassHash;
     use starknet::storage::Map;
     use starknet::{ContractAddress, get_block_number};

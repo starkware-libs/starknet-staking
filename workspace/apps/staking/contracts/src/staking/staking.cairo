@@ -11,35 +11,35 @@ pub mod Staking {
         IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
         IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::{
+    use staking_test::constants::{
         DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
         STARTING_EPOCH, STRK_TOKEN_ADDRESS,
     };
-    use staking::errors::GenericError;
-    use staking::pool::errors::Error as PoolError;
-    use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
-    use staking::reward_supplier::interface::{
+    use staking_test::errors::GenericError;
+    use staking_test::pool::errors::Error as PoolError;
+    use staking_test::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
+    use staking_test::reward_supplier::interface::{
         IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     };
-    use staking::staking::errors::Error;
-    use staking::staking::interface::{
+    use staking_test::staking::errors::Error;
+    use staking_test::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
         IStakingMigration, IStakingPause, IStakingPool, IStakingTokenManager, PauseEvents, PoolInfo,
         StakerInfoV1, StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1, TokenManagerEvents,
     };
-    use staking::staking::objects::{
+    use staking_test::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
         InternalStakerInfoLatestTrait, InternalStakerPoolInfoV2, InternalStakerPoolInfoV2MutTrait,
         InternalStakerPoolInfoV2Trait, NormalizedAmount, NormalizedAmountTrait, UndelegateIntentKey,
         UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
         VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
     };
-    use staking::staking::staker_balance_trace::trace::{
+    use staking_test::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTraceTrait,
         StakerBalanceTrait,
     };
-    use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, Version};
-    use staking::utils::{
+    use staking_test::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, Version};
+    use staking_test::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
         compute_new_delegated_stake, deploy_delegation_pool_contract,
     };
@@ -65,7 +65,7 @@ pub mod Staking {
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
-    pub(crate) const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3;
+    pub const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -1270,7 +1270,7 @@ pub mod Staking {
     }
 
     #[generate_trait]
-    pub(crate) impl InternalStakingMigration of IStakingMigrationInternal {
+    pub impl InternalStakingMigration of IStakingMigrationInternal {
         /// Returns the class hash of the previous contract version.
         ///
         /// **Note**: This function must be reimplemented in the next version of the contract.
@@ -1281,7 +1281,7 @@ pub mod Staking {
 
     /// **Note**: This function doesn't verify that the token actually exists.
     #[generate_trait]
-    pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
+    pub impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         /// This function differs from `internal_staker_info` function in that it doesn't assert
         /// that the staker has already migrated to V2.
         ///

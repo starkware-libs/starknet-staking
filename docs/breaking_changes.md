@@ -87,7 +87,7 @@ fn get_pool_exit_intent(
    ) -> UndelegateIntentValue;
 ```
 ```rust
-pub(crate) struct UndelegateIntentValue {
+pub struct UndelegateIntentValue {
    pub unpool_time: Timestamp,
    pub amount: Amount,
 }
