@@ -5,7 +5,7 @@ use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
 use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
-use starknet::storage::{Mutable, StoragePath};
+use starknet::storage::{Mutable, StoragePath, StoragePathMutableConversion};
 use starknet::{ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::storage::iterable_map::{
@@ -534,7 +534,7 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
 #[generate_trait]
 pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTrait {
     fn commission(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Commission {
-        self.commission.read().expect_with_err(Error::COMMISSION_NOT_SET)
+        self.as_non_mut().commission()
     }
 
     fn get_pool_token(
