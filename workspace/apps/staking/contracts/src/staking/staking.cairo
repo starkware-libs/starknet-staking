@@ -1342,6 +1342,15 @@ pub mod Staking {
             NormalizedAmountTrait::from_amount_18_decimals(total_stake)
         }
 
+        /// Calculates the rewards for a block in the current epoch (for STRK and BTC).
+        fn calculate_block_rewards(self: @ContractState) -> (Amount, Amount) {
+            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
+            let (strk_rewards, btc_rewards) = reward_supplier_dispatcher
+                .calculate_current_epoch_rewards();
+            let epoch_len_in_blocks = self.get_epoch_info().epoch_len_in_blocks();
+            (strk_rewards / epoch_len_in_blocks.into(), btc_rewards / epoch_len_in_blocks.into())
+        }
+
         /// Migrate the latest checkpoints of the staker balance trace.
         fn migrate_staker_balance_trace(
             ref self: ContractState,
