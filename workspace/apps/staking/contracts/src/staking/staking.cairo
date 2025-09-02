@@ -45,8 +45,8 @@ pub mod Staking {
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::{
-        Map, Mutable, MutableVecTrait, StoragePath, StoragePathEntry, StoragePointerReadAccess,
-        StoragePointerWriteAccess, Vec,
+        Map, Mutable, MutableVecTrait, StoragePath, StoragePathEntry, StoragePathMutableConversion,
+        StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
@@ -450,7 +450,10 @@ pub mod Staking {
             token_dispatcher
                 .checked_transfer(recipient: staker_address, amount: staker_amount.into());
             // Return delegated stake to pools and zero their balances.
-            self.transfer_to_pools_when_unstake(:staker_address, :staker_pool_info);
+            self
+                .transfer_to_pools_when_unstake(
+                    :staker_address, staker_pool_info: staker_pool_info.as_non_mut(),
+                );
             staker_amount
         }
 
@@ -1207,7 +1210,7 @@ pub mod Staking {
                 self
                     .calculate_staker_pools_rewards(
                         :staker_address,
-                        :staker_pool_info,
+                        staker_pool_info: staker_pool_info.as_non_mut(),
                         :strk_epoch_rewards,
                         :strk_total_stake,
                         :btc_epoch_rewards,
@@ -1467,7 +1470,7 @@ pub mod Staking {
         fn transfer_to_pools_when_unstake(
             ref self: ContractState,
             staker_address: ContractAddress,
-            staker_pool_info: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
+            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
         ) {
             for (pool_contract, token_address) in staker_pool_info.pools {
                 let pool_balance = self.get_delegated_balance(:staker_address, :pool_contract);
@@ -1728,7 +1731,7 @@ pub mod Staking {
         fn calculate_staker_pools_rewards(
             self: @ContractState,
             staker_address: ContractAddress,
-            staker_pool_info: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
+            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
             strk_epoch_rewards: Amount,
             strk_total_stake: NormalizedAmount,
             btc_epoch_rewards: Amount,
