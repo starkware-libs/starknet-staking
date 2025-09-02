@@ -57,7 +57,7 @@ use test_utils::{
     cheat_target_attestation_block_hash, claim_rewards_for_pool_member, constants,
     deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
     general_contract_system_deployment, initialize_pool_state, load_from_simple_map,
-    stake_for_testing_using_dispatcher, stake_with_pool_enabled,
+    stake_for_testing_using_dispatcher, stake_with_strk_pool_enabled,
     update_rewards_from_staking_contract_for_testing,
 };
 
@@ -67,7 +67,7 @@ fn test_identity() {
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     check_identity(pool_contract, pool_identity, pool_version);
 }
 
@@ -79,7 +79,7 @@ fn test_enter_delegation_pool() {
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let mut spy = snforge_std::spy_events();
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
 
@@ -150,7 +150,7 @@ fn test_enter_delegation_pool_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
     let reward_address = cfg.pool_member_info.reward_address;
@@ -187,7 +187,7 @@ fn test_add_to_delegation_pool() {
     let token = cfg.test_info.strk_token;
     let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
 
@@ -236,7 +236,7 @@ fn test_add_to_delegation_pool_assertions() {
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
     // Stake, and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
@@ -273,7 +273,7 @@ fn test_add_to_delegation_pool_from_reward_address() {
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
     let token_address = token.contract_address();
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
 
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
@@ -399,7 +399,7 @@ fn test_change_reward_address() {
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
 
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
@@ -458,7 +458,7 @@ fn test_claim_rewards_strk_pool() {
     let staking_contract = cfg.test_info.staking_contract;
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
 
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     // Check that the pool member info was updated correctly.
@@ -590,7 +590,7 @@ fn test_claim_rewards_no_rewards() {
     let token_address = token.contract_address();
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
 
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
 
     let pool_member = cfg.test_info.pool_member_address;
@@ -618,7 +618,7 @@ fn test_claim_rewards_with_balance_changes_strk_pool() {
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let staker_address = cfg.test_info.staker_address;
 
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let pool_member = cfg.test_info.pool_member_address;
@@ -837,7 +837,7 @@ fn test_exit_delegation_pool_intent() {
     let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
 
     // Exit delegation pool intent, and validate the results.
@@ -916,7 +916,7 @@ fn test_exit_delegation_pool_intent_assertions() {
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
     // Stake, and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: pool_contract };
@@ -958,7 +958,7 @@ fn test_exit_delegation_pool_action() {
     let pool_member = cfg.test_info.pool_member_address;
     let operational_address = cfg.staker_info.operational_address;
     // Stake and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -1040,7 +1040,7 @@ fn test_exit_delegation_pool_action_assertions() {
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
     // Stake, and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: pool_contract };
@@ -1071,13 +1071,13 @@ fn test_switch_delegation_pool() {
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
     // Stake, and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     // Create other staker with pool.
     let switch_amount = cfg.pool_member_info._deprecated_amount / 2;
     cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
-    let to_staker_pool_contract = stake_with_pool_enabled(:cfg);
+    let to_staker_pool_contract = stake_with_strk_pool_enabled(:cfg);
     cheat_caller_address(
         contract_address: pool_contract,
         caller_address: cfg.test_info.pool_member_address,
@@ -1134,12 +1134,12 @@ fn test_switch_delegation_pool_assertions() {
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
     // Stake, and enter delegation pool.
-    let from_pool = stake_with_pool_enabled(:cfg);
+    let from_pool = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(pool_contract: from_pool, :cfg, :token);
     // Create other staker with pool.
     cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
     cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
-    let to_pool = stake_with_pool_enabled(:cfg);
+    let to_pool = stake_with_strk_pool_enabled(:cfg);
     let switch_amount = cfg.pool_member_info._deprecated_amount / 2;
     let pool_dispatcher = IPoolDispatcher { contract_address: from_pool };
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: from_pool };
@@ -1198,7 +1198,7 @@ fn test_claim_rewards_unauthorized_address() {
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
 
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
@@ -1213,7 +1213,7 @@ fn test_enter_delegation_pool_from_staking_contract() {
     let mut cfg: StakingInitConfig = Default::default();
     let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let mut spy = snforge_std::spy_events();
     let staker_address = cfg.test_info.staker_address;
@@ -1286,7 +1286,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     let token = cfg.test_info.strk_token;
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let pool_safe_dispatcher = IPoolSafeDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
@@ -1342,7 +1342,7 @@ fn test_contract_parameters_v1() {
     let token_address = cfg.test_info.strk_token.contract_address();
     let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let expected_pool_contract_info = PoolContractInfoV1 {
         staker_address: cfg.test_info.staker_address,
@@ -1360,7 +1360,7 @@ fn test_update_rewards_from_staking_contract_caller_not_staking_contract() {
     let mut cfg: StakingInitConfig = Default::default();
     let staking_contract = deploy_staking_contract(:cfg);
     cfg.test_info.staking_contract = staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     cheat_caller_address_once(
         contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
@@ -1376,7 +1376,7 @@ fn test_partial_undelegate() {
     let token_address = token.contract_address();
     let staking_contract = cfg.test_info.staking_contract;
     // Stake, and enter delegation pool.
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     // Create a variable that will be constant throughout the test, and will be the sum of the pool
     // member's amount and unpool amount.
@@ -1455,7 +1455,7 @@ fn test_get_pool_member_info() {
     let token = cfg.test_info.strk_token;
     // Check before enter the pool.
     let pool_member = cfg.test_info.pool_member_address;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let option_pool_member_info = pool_dispatcher.get_pool_member_info_v1(:pool_member);
     assert!(option_pool_member_info.is_none());
@@ -1473,7 +1473,7 @@ fn test_pool_member_info() {
     let token = cfg.test_info.strk_token;
     let staking_contract = cfg.test_info.staking_contract;
     let pool_member = cfg.test_info.pool_member_address;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let mut expected_pool_member_info: PoolMemberInfoV1 = cfg.pool_member_info.to_external();
@@ -1497,7 +1497,7 @@ fn test_pool_member_info() {
 fn test_pool_member_info_pool_member_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     pool_dispatcher.pool_member_info_v1(pool_member: NON_POOL_MEMBER_ADDRESS());
 }
@@ -1653,7 +1653,7 @@ fn test_internal_pool_member_info() {
     let token = cfg.test_info.strk_token;
     let staking_contract = cfg.test_info.staking_contract;
     let pool_member = cfg.test_info.pool_member_address;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolMigrationDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let mut expected_pool_member_info: InternalPoolMemberInfoLatest = cfg.pool_member_info;
@@ -1678,7 +1678,7 @@ fn test_internal_pool_member_info() {
 fn test_internal_pool_member_info_pool_member_doesnt_exist() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolMigrationDispatcher { contract_address: pool_contract };
     pool_dispatcher.internal_pool_member_info(pool_member: NON_POOL_MEMBER_ADDRESS());
 }
@@ -1690,7 +1690,7 @@ fn test_get_internal_pool_member_info() {
     let token = cfg.test_info.strk_token;
     // Check before enter the pool.
     let pool_member = cfg.test_info.pool_member_address;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolMigrationDispatcher { contract_address: pool_contract };
     let option_pool_member_info = pool_dispatcher.get_internal_pool_member_info(:pool_member);
     assert!(option_pool_member_info.is_none());
@@ -1709,7 +1709,7 @@ fn test_update_rewards_from_staking_contract() {
     general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
     let staking_contract = cfg.test_info.staking_contract;
-    let pool_contract = stake_with_pool_enabled(:cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let pool_member = cfg.test_info.pool_member_address;
 

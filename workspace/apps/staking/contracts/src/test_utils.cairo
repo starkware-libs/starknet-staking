@@ -606,7 +606,7 @@ pub(crate) fn stake_from_zero_address(cfg: StakingInitConfig) {
         );
 }
 
-pub(crate) fn stake_with_pool_enabled(mut cfg: StakingInitConfig) -> ContractAddress {
+pub(crate) fn stake_with_strk_pool_enabled(mut cfg: StakingInitConfig) -> ContractAddress {
     cfg.test_info.strk_pool_enabled = true;
     stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher {
