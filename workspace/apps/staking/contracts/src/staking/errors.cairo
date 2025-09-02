@@ -51,6 +51,9 @@ pub(crate) enum Error {
     TOKEN_NOT_ACTIVE,
     INVALID_EPOCH,
     POOL_BALANCE_NOT_ZERO,
+    PUBLIC_KEY_SET_IN_PROGRESS,
+    PUBLIC_KEY_MUST_DIFFER,
+    INVALID_PUBLIC_KEY,
 }
 
 impl DescribableError of Describable<Error> {
@@ -106,6 +109,9 @@ impl DescribableError of Describable<Error> {
             Error::TOKEN_NOT_ACTIVE => "Token is not active",
             Error::INVALID_EPOCH => "Invalid epoch",
             Error::POOL_BALANCE_NOT_ZERO => "Staker has no pool, but `pool_amount` is not zero",
+            Error::PUBLIC_KEY_SET_IN_PROGRESS => "Public key set is in progress",
+            Error::PUBLIC_KEY_MUST_DIFFER => "Public key is already set to provided value",
+            Error::INVALID_PUBLIC_KEY => "Public key is invalid",
         }
     }
 }

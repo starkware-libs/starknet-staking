@@ -6,8 +6,8 @@ use constants::{
     MINTING_CONTRACT_ADDRESS, MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, MIN_STAKE,
     OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN,
     POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS,
-    POOL_MEMBER_STAKE_AMOUNT, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT,
-    STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
+    POOL_MEMBER_STAKE_AMOUNT, PUBLIC_KEY, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN,
+    SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
     STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_BASE_VALUE, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
@@ -52,7 +52,7 @@ use staking::staking::objects::{
 use staking::staking::staking::Staking;
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
-    InternalStakerPoolInfoLatest,
+    InternalStakerPoolInfoLatest, PublicKey,
 };
 use staking::utils::{
     compute_commission_amount_rounded_down, compute_commission_amount_rounded_up,
@@ -74,7 +74,7 @@ pub(crate) mod constants {
     use core::num::traits::ops::pow::Pow;
     use staking::constants::STRK_IN_FRIS;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
-    use staking::types::{Amount, Commission, Index};
+    use staking::types::{Amount, Commission, Index, PublicKey};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::time::time::Timestamp;
@@ -274,6 +274,9 @@ pub(crate) mod constants {
     }
     pub fn DUMMY_BTC_TOKEN_ADDRESS() -> ContractAddress {
         'DUMMY_BTC_TOKEN_ADDRESS'.try_into().unwrap()
+    }
+    pub fn PUBLIC_KEY() -> PublicKey {
+        'PUBLIC_KEY'
     }
 }
 pub(crate) fn initialize_staking_state_from_cfg(
@@ -910,6 +913,7 @@ pub(crate) struct TestInfo {
     pub global_index: Index,
     pub strk_token: Token,
     pub btc_token: Token,
+    pub public_key: PublicKey,
 }
 
 #[derive(Drop, Copy)]
@@ -997,6 +1001,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             global_index: Zero::zero(),
             strk_token: Token::STRK,
             btc_token: custom_decimals_token(token_address: BTC_TOKEN_ADDRESS()),
+            public_key: PUBLIC_KEY(),
         };
         let reward_supplier = RewardSupplierInfoV1 {
             base_mint_amount: BASE_MINT_AMOUNT,

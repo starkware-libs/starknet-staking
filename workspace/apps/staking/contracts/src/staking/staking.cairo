@@ -38,7 +38,7 @@ pub mod Staking {
         MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTraceTrait,
         StakerBalanceTrait,
     };
-    use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, Version};
+    use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, PublicKey, Version};
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
         compute_new_delegated_stake, deploy_delegation_pool_contract,
@@ -158,6 +158,11 @@ pub mod Staking {
         stakers: Vec<ContractAddress>,
         // Map token address to its decimals.
         token_decimals: Map<ContractAddress, u8>,
+        // Map staker address to (activation_epoch, old_public_key, new_public_key).
+        // Similarily to `btc_tokens`, the `activation_epoch` is the first epoch from
+        // which the `new_public_key` is valid. Up until `activation_epoch`, the
+        // `old_public_key` is valid.
+        public_key: Map<ContractAddress, (Epoch, PublicKey, PublicKey)>,
     }
 
     #[event]
@@ -198,6 +203,7 @@ pub mod Staking {
         TokenAdded: TokenManagerEvents::TokenAdded,
         TokenEnabled: TokenManagerEvents::TokenEnabled,
         TokenDisabled: TokenManagerEvents::TokenDisabled,
+        PublicKeySet: Events::PublicKeySet,
     }
 
     #[constructor]
@@ -764,6 +770,27 @@ pub mod Staking {
             );
             let decimals = self.get_token_decimals(:token_address);
             self._get_total_stake(:token_address).to_native_amount(:decimals)
+        }
+
+        fn set_public_key(ref self: ContractState, public_key: PublicKey) {
+            self.general_prerequisites();
+            assert!(public_key.is_non_zero(), "{}", Error::INVALID_PUBLIC_KEY);
+            let staker_address = get_caller_address();
+            let staker_info = self.internal_staker_info(:staker_address);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+
+            let (curr_activation_epoch, _, prev_public_key) = self.public_key.read(staker_address);
+            let curr_epoch = self.get_current_epoch();
+            // TODO: Confirm with product this set period is ok.
+            assert!(curr_epoch >= curr_activation_epoch, "{}", Error::PUBLIC_KEY_SET_IN_PROGRESS);
+            assert!(prev_public_key != public_key, "{}", Error::PUBLIC_KEY_MUST_DIFFER);
+
+            // TODO: Use new method for calculating the change epoch.
+            let new_activation_epoch = curr_epoch + 2;
+            self
+                .public_key
+                .write(staker_address, (new_activation_epoch, prev_public_key, public_key));
+            self.emit(Events::PublicKeySet { staker_address, public_key });
         }
     }
 

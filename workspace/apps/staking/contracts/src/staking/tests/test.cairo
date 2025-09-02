@@ -15,7 +15,7 @@ use event_test_utils::{
     assert_delete_staker_event, assert_epoch_info_changed_event,
     assert_exit_wait_window_changed_event, assert_minimum_stake_changed_event,
     assert_new_delegation_pool_event, assert_new_staker_event, assert_number_of_events,
-    assert_remove_from_delegation_pool_action_event,
+    assert_public_key_set_event, assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
     assert_rewards_supplied_to_delegation_pool_event, assert_stake_delegated_balance_changed_event,
     assert_stake_own_balance_changed_event, assert_staker_exit_intent_event,
@@ -4564,4 +4564,154 @@ fn test_get_total_stake_for_token_not_active() {
     staking_token_dispatcher.disable_token(token_address: btc_token_address);
     advance_epoch_global();
     staking_dispatcher.get_total_stake_for_token(token_address: btc_token_address);
+}
+
+#[test]
+fn test_set_public_key() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key = cfg.test_info.public_key;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    let mut spy = snforge_std::spy_events();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_public_key(:public_key);
+    // TODO: Test with views
+    // TODO: set again and test with views before and after
+
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_public_key");
+    assert_public_key_set_event(spied_event: events[0], :staker_address, :public_key);
+}
+
+#[test]
+#[should_panic(expected: "Public key is invalid")]
+fn test_set_public_key_invalid_public_key() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key = Zero::zero();
+
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_public_key(:public_key);
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_set_public_key_staker_does_not_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let public_key = cfg.test_info.public_key;
+
+    staking_dispatcher.set_public_key(:public_key);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_public_key_while_public_key_set_in_progress() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key_1 = 'PUBLIC_KEY_1';
+    let public_key_2 = 'PUBLIC_KEY_2';
+
+    stake_for_testing_using_dispatcher(:cfg);
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(4),
+    );
+    staking_dispatcher.set_public_key(public_key: public_key_1);
+    let result = staking_safe_dispatcher.set_public_key(public_key: public_key_2);
+    assert_panic_with_error(:result, expected_error: Error::PUBLIC_KEY_SET_IN_PROGRESS.describe());
+
+    advance_epoch_global();
+    let result = staking_safe_dispatcher.set_public_key(public_key: public_key_2);
+    assert_panic_with_error(:result, expected_error: Error::PUBLIC_KEY_SET_IN_PROGRESS.describe());
+
+    advance_epoch_global();
+    staking_dispatcher.set_public_key(public_key: public_key_2);
+    // TODO: Test with views
+}
+
+#[test]
+#[should_panic(expected: "Public key is already set to provided value")]
+fn test_set_public_key_same_public_key() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key = cfg.test_info.public_key;
+
+    stake_for_testing_using_dispatcher(:cfg);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_public_key(:public_key);
+
+    advance_epoch_global();
+    advance_epoch_global();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_public_key(:public_key);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_public_key_while_unstake_in_progress() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key = cfg.test_info.public_key;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(3),
+    );
+    let unstake_time = staking_dispatcher.unstake_intent();
+
+    // Test before unstake window ends.
+    let result = staking_safe_dispatcher.set_public_key(:public_key);
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
+
+    // Test after unstake window ends.
+    start_cheat_block_timestamp_global(
+        block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into(),
+    );
+    let result = staking_safe_dispatcher.set_public_key(:public_key);
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_set_public_key_staker_left() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key = cfg.test_info.public_key;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let unstake_time = staking_dispatcher.unstake_intent();
+    start_cheat_block_timestamp_global(
+        block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into(),
+    );
+    staking_dispatcher.unstake_action(:staker_address);
+
+    staking_dispatcher.set_public_key(:public_key);
 }

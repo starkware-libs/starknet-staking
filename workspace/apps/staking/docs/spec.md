@@ -54,6 +54,7 @@
     - [get\_active\_tokens](#get_active_tokens)
     - [get\_tokens](#get_tokens)
     - [get\_total\_stake\_for\_token](#get_total_stake_for_token)
+    - [set\_public\_key](#set_public_key)
   - [Events](#events)
     - [Stake Own Balance Changed](#stake-own-balance-changed)
     - [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
@@ -82,6 +83,7 @@
     - [Token Added](#token-added)
     - [Token Enabled](#token-enabled)
     - [Token Disabled](#token-disabled)
+    - [Public Key Set](#public-key-set)
 - [Pool contract](#pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -213,6 +215,9 @@
     - [STAKER\_IS\_TOKEN](#staker_is_token)
     - [INTERNAL\_STAKER\_INFO\_OUTDATED\_VERSION](#internal_staker_info_outdated_version)
     - [STAKER\_NOT\_MIGRATED](#staker_not_migrated)
+    - [PUBLIC\_KEY\_SET\_IN\_PROGRESS](#public_key_set_in_progress)
+    - [PUBLIC\_KEY\_MUST\_DIFFER](#PUBLIC_KEY_MUST_DIFFER)
+    - [INVALID\_PUBLIC\_KEY](#invalid_public_key)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -235,6 +240,7 @@
     - [Index](#index)
     - [Inflation](#inflation)
     - [Epoch](#epoch)
+    - [PublicKey](#publickey)
 
 </details>
 
@@ -1430,6 +1436,26 @@ Returns the total stake for the given token. Panic if the token is not active or
 Any address.
 #### logic <!-- omit from toc -->
 
+### set_public_key
+```rust
+fn set_public_key(self: @ContractState, public_key: PublicKey)
+```
+#### description <!-- omit from toc -->
+Sets the public key for the caller.
+#### emits <!-- omit from toc -->
+1. [Public Key Set](#public-key-set)
+#### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [PUBLIC\_KEY\_SET\_IN\_PROGRESS](#public_key_set_in_progress)
+3. [PUBLIC\_KEY\_MUST\_DIFFER](#PUBLIC_KEY_MUST_DIFFER)
+4. [INVALID\_PUBLIC\_KEY](#invalid_public_key)
+5. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only staker address.
+#### logic <!-- omit from toc -->
+
 ## Events
 ### Stake Own Balance Changed
 | data                | type              | keyed |
@@ -1612,6 +1638,12 @@ Any address.
 | data           | type              | keyed |
 | -------------- | ----------------- | ----- |
 | token_address  | address           | ✅    |
+
+### Public Key Set
+| data           | type                     | keyed |
+| -------------- | ------------------------ | ----- |
+| staker_address | address                  | ✅    |
+| public_key     | [PublicKey](#publickey)  | ❌    |
 
 # Pool contract
 ## Functions
@@ -2523,6 +2555,15 @@ Only token admin.
 ### STAKER_NOT_MIGRATED
 "Staker is not migrated to latest version"
 
+### PUBLIC_KEY_SET_IN_PROGRESS
+"Public key set is in progress"
+
+### PUBLIC_KEY_MUST_DIFFER
+"Public key is already set to provided value"
+
+### INVALID_PUBLIC_KEY
+"Public key is invalid"
+
 # Structs
 ### StakerPoolInfoV1
 | name              | type                      |
@@ -2649,3 +2690,6 @@ Inflation: u16
 
 ### Epoch
 Epoch: u64
+
+### PublicKey
+PublicKey: felt252

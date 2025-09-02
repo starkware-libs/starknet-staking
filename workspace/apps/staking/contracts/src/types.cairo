@@ -9,6 +9,7 @@ pub(crate) type Inflation = u16;
 pub(crate) type Epoch = u64;
 pub(crate) type Version = felt252;
 pub(crate) type VecIndex = u64;
+pub(crate) type PublicKey = felt252;
 
 // ------ Migration ------ //
 // **Note**: These aliases should be updated in the next version.
