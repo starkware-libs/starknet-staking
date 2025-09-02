@@ -14,7 +14,7 @@ snforge_std.workspace = true
 starkware_utils_testing.workspace = true
 
 [scripts]
-test = "SNFORGE_BACKTRACE=1 snforge test"
+test = "snforge test"
 
 [lib]
 
