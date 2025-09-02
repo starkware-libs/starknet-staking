@@ -105,21 +105,13 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
     /// This will return the last inserted checkpoint that maintains the structure's
     /// invariant of non-decreasing keys.
     fn latest(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
-        let checkpoints = self.checkpoints;
-        let len = checkpoints.len();
-        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
-        let checkpoint = checkpoints[len - 1].read();
-        (checkpoint.key, checkpoint.value)
+        self._nth_back(0)
     }
 
     /// Retrieves the penultimate checkpoint from the trace structure.
     /// Penultimate checkpoint is the second last checkpoint in the trace.
     fn penultimate(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
-        let checkpoints = self.checkpoints;
-        let len = checkpoints.len();
-        assert!(len > 1, "{}", TraceErrors::PENULTIMATE_NOT_EXIST);
-        let checkpoint = checkpoints[len - 2].read();
-        (checkpoint.key, checkpoint.value)
+        self._nth_back(1)
     }
 
     /// Returns the total number of checkpoints.
@@ -203,5 +195,17 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     /// Returns the total number of checkpoints.
     fn length(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> u64 {
         self.as_non_mut().length()
+    }
+}
+
+#[generate_trait]
+impl TraceHelperImpl of TraceHelperTrait {
+    /// Returns the `n`th element from the end of the trace.
+    fn _nth_back(self: StoragePath<PoolMemberBalanceTrace>, n: u64) -> (Epoch, PoolMemberBalance) {
+        let checkpoints = self.checkpoints;
+        let len = checkpoints.len();
+        assert!(n < len, "{}", TraceErrors::INDEX_OUT_OF_BOUNDS);
+        let checkpoint = checkpoints[len - n - 1].read();
+        (checkpoint.key, checkpoint.value)
     }
 }
