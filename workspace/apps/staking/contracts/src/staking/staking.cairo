@@ -58,6 +58,7 @@ pub mod Staking {
     use starkware_utils::math::utils::mul_wide_and_div;
     use starkware_utils::storage::iterable_map::{
         IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
+        MutableIterableMapTrait,
     };
     use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
@@ -460,6 +461,8 @@ pub mod Staking {
                 .transfer_to_pools_when_unstake(
                     :staker_address, staker_pool_info: staker_pool_info.as_non_mut(),
                 );
+            // Clear staker pools.
+            staker_pool_info.pools.clear();
             staker_amount
         }
 
@@ -1514,8 +1517,8 @@ pub mod Staking {
             }
         }
 
-        /// **Note**: `pools` in `staker_pool_info` is not cleaned up when staker is removed but it
-        /// is not used anymore.
+        /// **Note**: `staker_pool_info.pools` is not cleaned up here, cleanup happens later, after
+        /// `transfer_to_pools_when_unstake`.
         fn remove_staker(
             ref self: ContractState,
             staker_address: ContractAddress,
