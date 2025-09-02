@@ -5,7 +5,7 @@ use starknet::ContractAddress;
 use starkware_utils::constants::WEEK;
 use starkware_utils::time::time::TimeDelta;
 
-pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 3 * WEEK };
+pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: WEEK };
 pub(crate) const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };
 pub(crate) const STRK_IN_FRIS: Amount = 1_000_000_000_000_000_000; // 10**18
 

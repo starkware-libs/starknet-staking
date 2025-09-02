@@ -172,6 +172,9 @@ pub trait IStakingPause<TContractState> {
 #[starknet::interface]
 pub trait IStakingConfig<TContractState> {
     fn set_min_stake(ref self: TContractState, min_stake: Amount);
+    /// Note: Changing the exit wait window does not retroactively affect validators/delegators
+    /// who already submitted an exit_intent call. They remain governed by
+    /// the old exit wait window when calling exit_action.
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
     fn set_epoch_info(ref self: TContractState, epoch_duration: u32, epoch_length: u32);
