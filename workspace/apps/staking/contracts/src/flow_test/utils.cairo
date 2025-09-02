@@ -37,13 +37,13 @@ use staking::staking::interface::{
     IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
     IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
-use staking::staking::interface_v0::{
+use staking::staking::objects::{EpochInfo, EpochInfoTrait, NormalizedAmount};
+use staking::staking::tests::interface_v0::{
     IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
-use staking::staking::interface_v1::{
+use staking::staking::tests::interface_v1::{
     IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
 };
-use staking::staking::objects::{EpochInfo, EpochInfoTrait, NormalizedAmount};
 use staking::test_utils::constants::{
     BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
     INITIAL_SUPPLY, MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS, STARTING_BLOCK_OFFSET,
