@@ -14,6 +14,7 @@ pub trait IMockTrace<TContractState> {
     fn is_non_empty_mutable(ref self: TContractState) -> bool;
     fn length_mutable(ref self: TContractState) -> u64;
     fn at(self: @TContractState, pos: u64) -> PoolMemberCheckpoint;
+    fn antepenultimate(self: @TContractState) -> (Epoch, PoolMemberBalance);
 }
 
 #[starknet::contract]
@@ -66,6 +67,10 @@ pub mod MockTrace {
 
         fn at(self: @ContractState, pos: u64) -> PoolMemberCheckpoint {
             self.trace.at(:pos)
+        }
+
+        fn antepenultimate(self: @ContractState) -> (Epoch, PoolMemberBalance) {
+            self.trace.antepenultimate()
         }
     }
 }
