@@ -60,7 +60,7 @@ use staking::utils::{
 };
 use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::constants::SYMBOL;
-use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::errors::{Describable, OptionAuxTrait};
 use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
@@ -1240,7 +1240,7 @@ fn get_reward_calculation_params(token_address: ContractAddress) -> (Amount, Amo
         } else if decimals == BTC_DECIMALS_18 {
             (MIN_BTC_FOR_REWARDS_18, BTC_BASE_VALUE_18)
         } else {
-            panic_with_byte_array(@"Invalid token decimals")
+            panic_with_byte_array(err: @StakingError::INVALID_TOKEN_ADDRESS.describe())
         }
     }
 }

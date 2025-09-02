@@ -951,7 +951,7 @@ pub mod Pool {
                 } else if decimals == BTC_18D_CONFIG.decimals {
                     BTC_18D_CONFIG
                 } else {
-                    panic_with_byte_array(@"Invalid token decimals")
+                    panic_with_byte_array(err: @StakingError::INVALID_TOKEN_ADDRESS.describe())
                 }
             }
         }
