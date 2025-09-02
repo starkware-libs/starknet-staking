@@ -1081,9 +1081,6 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingConfigImpl of IStakingConfig<ContractState> {
-        // **Note**: If the min stake threshold is increased, already existing validators can
-        // continue to attest with a stake which is below the minimum threshold as well as increase
-        // already existing stake and still result in the total one being under the threshold.
         fn set_min_stake(ref self: ContractState, min_stake: Amount) {
             self.roles.only_token_admin();
             let old_min_stake = self.min_stake.read();

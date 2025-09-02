@@ -171,6 +171,9 @@ pub trait IStakingPause<TContractState> {
 
 #[starknet::interface]
 pub trait IStakingConfig<TContractState> {
+    /// **Note**: If the min stake threshold is increased, already existing validators can
+    /// continue to attest with a stake which is below the minimum threshold as well as increase
+    /// already existing stake and still result in the total one being under the threshold.
     fn set_min_stake(ref self: TContractState, min_stake: Amount);
     /// Note: Changing the exit wait window does not retroactively affect validators/delegators
     /// who already submitted an exit_intent call. They remain governed by
