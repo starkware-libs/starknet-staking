@@ -1409,6 +1409,12 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
         self.attest(:staker);
     }
 
+    fn advance_block_custom_and_attest(self: SystemState, staker: Staker, stake: Amount) {
+        let staker_address = staker.staker.address;
+        self.advance_block_into_attestation_window_custom_stake(:staker_address, :stake);
+        self.attest(:staker);
+    }
+
     fn staker_total_amount(self: SystemState, staker: Staker) -> Amount {
         let staker_info = self.staker_info_v1(:staker);
         let mut total = staker_info.amount_own;
