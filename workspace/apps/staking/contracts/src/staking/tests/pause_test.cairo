@@ -324,3 +324,14 @@ fn test_set_commission_commitment_when_paused() {
         .set_commission_commitment(max_commission: Zero::zero(), expiration_epoch: Zero::zero());
 }
 
+#[test]
+#[should_panic(expected: "Contract is paused")]
+fn test_set_public_key_when_paused() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    pause_staking_contract(:cfg);
+    let staking_dispatcher = IStakingDispatcher {
+        contract_address: cfg.test_info.staking_contract,
+    };
+    staking_dispatcher.set_public_key(public_key: cfg.test_info.public_key);
+}

@@ -1,7 +1,7 @@
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::objects::{AttestationInfo, EpochInfo, NormalizedAmount};
-use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
+use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, PublicKey};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
@@ -55,6 +55,8 @@ pub trait IStaking<TContractState> {
     fn get_tokens(self: @TContractState) -> Span<(ContractAddress, bool)>;
     /// Returns the total stake for the given `token_address` in its native decimals.
     fn get_total_stake_for_token(self: @TContractState, token_address: ContractAddress) -> Amount;
+    /// Set the public key for the calling staker.
+    fn set_public_key(ref self: TContractState, public_key: PublicKey);
 }
 
 // **Note**: This trait must be reimplemented in the next version of the contract.
@@ -225,7 +227,7 @@ pub trait IStakingAttestation<TContractState> {
 }
 
 pub mod Events {
-    use staking::types::{Amount, Commission, Epoch};
+    use staking::types::{Amount, Commission, Epoch, PublicKey};
     use starknet::ContractAddress;
     use starkware_utils::time::time::Timestamp;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
@@ -389,6 +391,13 @@ pub mod Events {
         pub staker_address: ContractAddress,
         pub max_commission: Commission,
         pub expiration_epoch: Epoch,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct PublicKeySet {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub public_key: PublicKey,
     }
 }
 
