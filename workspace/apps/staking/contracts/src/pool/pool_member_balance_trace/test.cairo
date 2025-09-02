@@ -53,7 +53,7 @@ fn test_insert_unordered_insertion() {
 }
 
 #[test]
-#[should_panic(expected: "Empty trace")]
+#[should_panic(expected: "Index out of bounds")]
 fn test_latest_empty_trace() {
     let mut mock_trace = CONTRACT_STATE();
 
@@ -89,7 +89,7 @@ fn test_penultimate() {
 }
 
 #[test]
-#[should_panic(expected: "Penultimate does not exist")]
+#[should_panic(expected: "Index out of bounds")]
 fn test_penultimate_not_exist() {
     let mut mock_trace = CONTRACT_STATE();
 
