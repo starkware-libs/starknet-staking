@@ -180,7 +180,7 @@ pub mod Pool {
             self.transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
-            self.set_next_epoch_balance(:pool_member, :amount);
+            self.set_member_balance(:pool_member, :amount);
 
             // Create the pool member record.
             self
@@ -221,7 +221,7 @@ pub mod Pool {
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
             // Update the pool member's balance checkpoint.
-            let old_delegated_stake = self.increase_next_epoch_balance(:pool_member, :amount);
+            let old_delegated_stake = self.increase_member_balance(:pool_member, :amount);
             let new_delegated_stake = old_delegated_stake + amount;
 
             // Emit events.
@@ -257,7 +257,7 @@ pub mod Pool {
             self.write_pool_member_info(:pool_member, :pool_member_info);
 
             // Update the pool member's balance checkpoint.
-            self.set_next_epoch_balance(:pool_member, amount: new_delegated_stake);
+            self.set_member_balance(:pool_member, amount: new_delegated_stake);
 
             // Emit events.
             self
@@ -432,7 +432,7 @@ pub mod Pool {
                         Error::REWARD_ADDRESS_MISMATCH,
                     );
                     // Update the pool member's balance checkpoint.
-                    self.increase_next_epoch_balance(:pool_member, :amount);
+                    self.increase_member_balance(:pool_member, :amount);
                     VInternalPoolMemberInfoTrait::wrap_latest(value: pool_member_info)
                 },
                 Option::None => {
@@ -440,7 +440,7 @@ pub mod Pool {
                     let reward_address = switch_pool_data.reward_address;
 
                     // Update the pool member's balance checkpoint.
-                    self.set_next_epoch_balance(:pool_member, :amount);
+                    self.set_member_balance(:pool_member, :amount);
 
                     let pool_member_info = VInternalPoolMemberInfoTrait::new_latest(
                         :reward_address,
@@ -708,7 +708,7 @@ pub mod Pool {
             }
         }
 
-        fn set_next_epoch_balance(
+        fn set_member_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) {
             let trace = self.pool_member_epoch_balance.entry(pool_member);
@@ -721,11 +721,11 @@ pub mod Pool {
 
         /// Increase the next epoch balance of the pool member by the given `amount`.
         /// Returns the previous balance.
-        fn increase_next_epoch_balance(
+        fn increase_member_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) -> Amount {
             let current_balance = self.get_latest_member_balance(:pool_member);
-            self.set_next_epoch_balance(:pool_member, amount: current_balance + amount);
+            self.set_member_balance(:pool_member, amount: current_balance + amount);
             current_balance
         }
 
