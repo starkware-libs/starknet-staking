@@ -1,8 +1,8 @@
 use core::num::traits::Zero;
 use staking::types::{Amount, Epoch, VecIndex};
 use starknet::storage::{
-    Mutable, MutableVecTrait, StoragePath, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
-    VecTrait,
+    Mutable, MutableVecTrait, StoragePath, StoragePathMutableConversion, StoragePointerReadAccess,
+    StoragePointerWriteAccess, Vec, VecTrait,
 };
 use starkware_utils::trace::errors::TraceErrors;
 
@@ -192,20 +192,16 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     /// This will return the last inserted checkpoint that maintains the structure's
     /// invariant of non-decreasing keys.
     fn latest(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> (Epoch, PoolMemberBalance) {
-        let checkpoints = self.checkpoints;
-        let len = checkpoints.len();
-        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
-        let checkpoint = checkpoints[len - 1].read();
-        (checkpoint.key, checkpoint.value)
+        self.as_non_mut().latest()
     }
 
     /// Returns whether the trace is non empty.
     fn is_non_empty(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> bool {
-        self.checkpoints.len().is_non_zero()
+        self.as_non_mut().is_non_empty()
     }
 
     /// Returns the total number of checkpoints.
     fn length(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> u64 {
-        self.checkpoints.len()
+        self.as_non_mut().length()
     }
 }
