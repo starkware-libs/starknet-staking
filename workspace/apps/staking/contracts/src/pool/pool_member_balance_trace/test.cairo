@@ -207,3 +207,27 @@ fn test_pool_member_checkpoint_getters() {
     assert!(trace.balance() == 5);
     assert!(trace.cumulative_rewards_trace_idx() == 10);
 }
+
+#[test]
+fn test_antepenultimate() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    mock_trace
+        .insert(100, PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
+    mock_trace
+        .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
+    mock_trace
+        .insert(300, PoolMemberBalanceTrait::new(balance: 3000, cumulative_rewards_trace_idx: 3));
+
+    let (key, value) = mock_trace.antepenultimate();
+    assert!(key == 100);
+    assert!(value == PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
+}
+
+#[test]
+#[should_panic(expected: "Index out of bounds")]
+fn test_antepenultimate_not_exist() {
+    let mut mock_trace = CONTRACT_STATE();
+
+    let _ = mock_trace.antepenultimate();
+}

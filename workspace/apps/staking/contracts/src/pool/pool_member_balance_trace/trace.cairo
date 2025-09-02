@@ -114,6 +114,12 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
         self._nth_back(1)
     }
 
+    /// Retrieves the antepenultimate checkpoint from the trace structure.
+    /// Antepenultimate checkpoint is the third last checkpoint in the trace.
+    fn antepenultimate(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
+        self._nth_back(2)
+    }
+
     /// Returns the total number of checkpoints.
     fn length(self: StoragePath<PoolMemberBalanceTrace>) -> u64 {
         self.checkpoints.len()
