@@ -252,7 +252,7 @@ function info template:
 #### parameters
 | name | type |
 | ---- | ---- |
-#### return 
+#### return
 #### emits
 #### errors
 #### pre-condition
@@ -506,7 +506,7 @@ sequenceDiagram
   DelegationPoolContract A ->>+ StakingContract: switch_staking_delegation_pool
   StakingContract ->>- DelegationPoolContract B: enter_delegation_pool_from_staking_contract
   deactivate DelegationPoolContract A
-  loop 
+  loop
     Note left of StakingContract:  optional for switching some<br/> of the funds but keeping the rest<br/> with the original stakeror splitting<br/> between multiple stakers
     pool member ->>+ DelegationPoolContract A: switch_delegation_pool
     DelegationPoolContract A ->> StakingContract: switch_staking_delegation_pool
@@ -588,11 +588,11 @@ Only staker address.
 ### increase_stake
 ```rust
 fn increase_stake(
-    ref self: ContractState, 
-    staker_address: ContractAddress, 
+    ref self: ContractState,
+    staker_address: ContractAddress,
     amount: Amount
 ) -> Amount
-``` 
+```
 #### description <!-- omit from toc -->
 Increase the amount staked for an existing staker.
 Return the updated self stake amount.
@@ -619,7 +619,7 @@ Only the staker address or rewards address for which the change is requested for
 fn unstake_intent(ref self: ContractState) -> TimeStamp
 ```
 #### description <!-- omit from toc -->
-Inform of the intent to exit the stake. 
+Inform of the intent to exit the stake.
 This will remove the funds from the staking protocol, initiate an exit window timeout, and block the staker's ability to attest starting from the current epoch.
 This will also block the staker's ability to re-stake from the same address in the future.
 Return the time in which the staker will be able to unstake.
@@ -644,7 +644,7 @@ Only the staker address for which the operation is requested for.
 ### unstake_action
 ```rust
 fn unstake_action(
-  ref self: ContractState, 
+  ref self: ContractState,
   staker_address: ContractAddress
 ) -> Amount
 ```
@@ -680,7 +680,7 @@ Any address can execute.
 ### claim_rewards
 ```rust
 fn claim_rewards(
-  ref self: ContractState, 
+  ref self: ContractState,
   staker_address: ContractAddress
 ) -> Amount
 ```
@@ -705,8 +705,8 @@ Only staker address or reward address can execute.
 ### add_stake_from_pool
 ```rust
 fn add_stake_from_pool(
-    ref self: ContractState, 
-    staker_address: ContractAddress, 
+    ref self: ContractState,
+    staker_address: ContractAddress,
     amount: Amount
 )
 ```
@@ -768,7 +768,7 @@ Only pool contract for the given staker can execute.
 ### remove_from_delegation_pool_action
 ```rust
 fn remove_from_delegation_pool_action(
-    ref self: ContractState, 
+    ref self: ContractState,
     identifier: felt252
 )
 ```
@@ -836,7 +836,7 @@ Only pool contract for the given staker can execute.
 ### change_reward_address
 ```rust
 fn change_reward_address(
-  ref self: ContractState, 
+  ref self: ContractState,
   reward_address: ContractAddress
 )
 ```
@@ -858,7 +858,7 @@ Only staker address.
 ### set_open_for_delegation
 ```rust
 fn set_open_for_delegation(
-  ref self: ContractState, 
+  ref self: ContractState,
   token_address: ContractAddress,
 ) -> ContractAddress
 ```
@@ -890,7 +890,7 @@ Only staker address.
 ### set_commission
 ```rust
 fn set_commission(
-    ref self: ContractState, 
+    ref self: ContractState,
     commission: Commission,
 )
 ```
@@ -911,7 +911,7 @@ Note: `commission` should be between 0 and 10000. for example 1000 is 10%.
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker exist in the contract.
-3. If there is no active commission commitment, `commission` must be lower than the current 
+3. If there is no active commission commitment, `commission` must be lower than the current
 commission.
 4. `commission` is not above the maximum commission for staking.
 #### access control <!-- omit from toc -->
@@ -960,7 +960,7 @@ Only staker address.
 ### get_staker_commission_commitment
 ```rust
 fn get_staker_commission_commitment(
-  self: @ContractState, 
+  self: @ContractState,
   staker_address: ContractAddress
 ) -> CommissionCommitment
 ```
@@ -980,7 +980,7 @@ Any address can execute.
 ### staker_info_v1
 ```rust
 fn staker_info_v1(
-  self: @ContractState, 
+  self: @ContractState,
   staker_address: ContractAddress
 ) -> StakerInfoV1
 ```
@@ -1000,7 +1000,7 @@ Any address can execute.
 ### get_staker_info_v1
 ```rust
 fn get_staker_info_v1(
-  self: @ContractState, 
+  self: @ContractState,
   staker_address: ContractAddress
 ) -> Option<StakerInfoV1>
 ```
@@ -1017,7 +1017,7 @@ Any address can execute.
 ### staker_pool_info
 ```rust
 fn staker_pool_info(
-  self: @ContractState, 
+  self: @ContractState,
   staker_address: ContractAddress
 ) -> StakerPoolInfoV2
 ```
@@ -1064,7 +1064,7 @@ Any address can execute.
 ### update_rewards_from_attestation_contract
 ```rust
 fn update_rewards_from_attestation_contract(ref self: ContractState,
- staker_address: ContractAddress) 
+ staker_address: ContractAddress)
 ```
 #### description <!-- omit from toc -->
 Calculate and update rewards for the staker for the current epoch.
@@ -1147,7 +1147,7 @@ Any address can execute.
 ### declare_operational_address
 ```rust
 fn declare_operational_address(
-    ref self: ContractState, 
+    ref self: ContractState,
     staker_address: ContractAddress
 )
 ```
@@ -1168,7 +1168,7 @@ Allows `staker_address` to use the caller's address in the future, in `change_op
 ### change_operational_address
 ```rust
 fn change_operational_address(
-    ref self: ContractState, 
+    ref self: ContractState,
     operational_address: ContractAddress
 )
 ```
@@ -1209,7 +1209,7 @@ Any address can execute.
 ### internal_staker_info
 ```rust
 fn internal_staker_info(
-    self: @ContractState, 
+    self: @ContractState,
     staker_address: ContractAddress
 ) -> InternalStakerInfoLatest
 ```
@@ -1667,8 +1667,8 @@ Any address.
 ### enter_delegation_pool
 ```rust
 fn enter_delegation_pool(
-    ref self: ContractState, 
-    reward_address: ContractAddress, 
+    ref self: ContractState,
+    reward_address: ContractAddress,
     amount: Amount
 )
 ```
@@ -1704,8 +1704,8 @@ Only a non-listed pool member address.
 ### add_to_delegation_pool
 ```rust
 fn add_to_delegation_pool(
-    ref self: ContractState, 
-    pool_member: ContractAddress, 
+    ref self: ContractState,
+    pool_member: ContractAddress,
     amount: Amount
 ) -> Amount
 ```
@@ -1737,7 +1737,7 @@ Only the pool member address or rewards address for which the change is requeste
 ### exit_delegation_pool_intent
 ```rust
 fn exit_delegation_pool_intent(
-  ref self: ContractState, 
+  ref self: ContractState,
   amount: Amount
 )
 ```
@@ -1754,7 +1754,7 @@ Inform of the intent to exit the stake. This will deduct the specified amount of
 4. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 #### pre-condition <!-- omit from toc -->
 1. Pool member (caller) is listed in the contract.
-2. `amount` is lower or equal to the total amount of the pool member (caller). 
+2. `amount` is lower or equal to the total amount of the pool member (caller).
 3. Pool member (caller) is not in an exit window or staker is active.
 4. Staking contract is unpaused.
 #### access control <!-- omit from toc -->
@@ -1768,7 +1768,7 @@ Only the pool member address for which the operation is requested for.
 ### exit_delegation_pool_action
 ```rust
 fn exit_delegation_pool_action(
-    ref self: ContractState, 
+    ref self: ContractState,
     pool_member: ContractAddress
 ) -> Amount
 ```
@@ -1796,7 +1796,7 @@ Any address can execute.
 ### claim_rewards
 ```rust
 fn claim_rewards(
-  ref self: ContractState, 
+  ref self: ContractState,
   pool_member: ContractAddress
 ) -> Amount
 ```
@@ -1856,8 +1856,8 @@ Only pool member can execute.
 ### enter_delegation_pool_from_staking_contract
 ```rust
 fn enter_delegation_pool_from_staking_contract(
-    ref self: ContractState, 
-    amount: Amount, 
+    ref self: ContractState,
+    amount: Amount,
     data: Span<felt252>
 )
 ```
@@ -1906,7 +1906,7 @@ Only staking contract can execute.
 ### change_reward_address
 ```rust
 fn change_reward_address(
-  ref self: ContractState, 
+  ref self: ContractState,
   reward_address: ContractAddress
 )
 ```
@@ -1926,7 +1926,7 @@ Only pool member can execute.
 ### pool_member_info_v1
 ```rust
 fn pool_member_info_v1(
-  self: @ContractState, 
+  self: @ContractState,
   pool_member: ContractAddress
 ) -> PoolMemberInfoV1
 ```
@@ -1945,7 +1945,7 @@ Any address can execute.
 ### get_pool_member_info_v1
 ```rust
 fn get_pool_member_info_v1(
-  self: @ContractState, 
+  self: @ContractState,
   pool_member: ContractAddress
 ) -> Option<PoolMemberInfoV1>
 ```
@@ -1975,8 +1975,8 @@ Return [PoolContractInfoV1](#poolcontractinfov1) of the contract.
 ### update_rewards_from_staking_contract
 ```rust
 fn update_rewards_from_staking_contract(
-    ref self: ContractState, 
-    rewards: Amount, 
+    ref self: ContractState,
+    rewards: Amount,
     pool_balance: Amount
 )
 ```
@@ -2130,7 +2130,7 @@ fn on_receive(
 ```
 #### description <!-- omit from toc -->
 Get notified by StarkGate `amount` was transferred from L1.
-Return true upon success. 
+Return true upon success.
 The function will fail only in the unlikely scenario where `amount` is over 2**128 FRI.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
@@ -2199,7 +2199,7 @@ Any address can execute.
 
 ### set_c_num
 ```rust
-fn set_c_num(ref self: ContractState, c_num: Inflation) 
+fn set_c_num(ref self: ContractState, c_num: Inflation)
 ```
 #### description <!-- omit from toc -->
 Set the miniting cap.
@@ -2230,7 +2230,7 @@ Only token admin.
 ## Functions
 ### attest
 ```rust
-fn attest(ref self: ContractState, attest_info: AttestInfo) 
+fn attest(ref self: ContractState, attest_info: AttestInfo)
 ```
 #### description <!-- omit from toc -->
 Validates the attestation of a staker and call staking [update_rewards_from_attestation_contract](#update_rewards_from_attestation_contract).
