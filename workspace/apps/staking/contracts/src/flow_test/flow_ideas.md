@@ -4,3 +4,6 @@
 - Intent, upgrade, set public key.
 - Exit, upgrade, set public key.
 - Set same public key for 2 different stakers.
+
+## `get_current_public_key`
+- Upgrade, get public key.

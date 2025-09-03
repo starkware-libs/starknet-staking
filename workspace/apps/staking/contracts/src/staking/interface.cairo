@@ -57,6 +57,8 @@ pub trait IStaking<TContractState> {
     fn get_total_stake_for_token(self: @TContractState, token_address: ContractAddress) -> Amount;
     /// Set the public key for the calling staker.
     fn set_public_key(ref self: TContractState, public_key: PublicKey);
+    /// Get the current public key for the given `staker_address`.
+    fn get_current_public_key(self: @TContractState, staker_address: ContractAddress) -> PublicKey;
 }
 
 // **Note**: This trait must be reimplemented in the next version of the contract.

@@ -55,6 +55,7 @@
     - [get\_tokens](#get_tokens)
     - [get\_total\_stake\_for\_token](#get_total_stake_for_token)
     - [set\_public\_key](#set_public_key)
+    - [get\_current\_public\_key](#get_current_public_key)
   - [Events](#events)
     - [Stake Own Balance Changed](#stake-own-balance-changed)
     - [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
@@ -218,6 +219,7 @@
     - [PUBLIC\_KEY\_SET\_IN\_PROGRESS](#public_key_set_in_progress)
     - [PUBLIC\_KEY\_MUST\_DIFFER](#PUBLIC_KEY_MUST_DIFFER)
     - [INVALID\_PUBLIC\_KEY](#invalid_public_key)
+    - [PUBLIC\_KEY\_NOT\_SET](#public_key_not_set)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -1456,6 +1458,21 @@ Sets the public key for the caller.
 Only staker address.
 #### logic <!-- omit from toc -->
 
+### get_current_public_key
+```rust
+fn get_current_public_key(self: @ContractState, staker_address: ContractAddress)
+```
+#### description <!-- omit from toc -->
+Returns the current public key for the specified staker.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [PUBLIC\_KEY\_NOT\_SET](#public_key_not_set)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address.
+#### logic <!-- omit from toc -->
+
 ## Events
 ### Stake Own Balance Changed
 | data                | type              | keyed |
@@ -2563,6 +2580,9 @@ Only token admin.
 
 ### INVALID_PUBLIC_KEY
 "Public key is invalid"
+
+### PUBLIC_KEY_NOT_SET
+"Public key is not set"
 
 # Structs
 ### StakerPoolInfoV1

@@ -54,6 +54,7 @@ pub(crate) enum Error {
     PUBLIC_KEY_SET_IN_PROGRESS,
     PUBLIC_KEY_MUST_DIFFER,
     INVALID_PUBLIC_KEY,
+    PUBLIC_KEY_NOT_SET,
 }
 
 impl DescribableError of Describable<Error> {
@@ -112,6 +113,7 @@ impl DescribableError of Describable<Error> {
             Error::PUBLIC_KEY_SET_IN_PROGRESS => "Public key set is in progress",
             Error::PUBLIC_KEY_MUST_DIFFER => "Public key is already set to provided value",
             Error::INVALID_PUBLIC_KEY => "Public key is invalid",
+            Error::PUBLIC_KEY_NOT_SET => "Public key is not set",
         }
     }
 }

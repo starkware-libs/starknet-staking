@@ -795,6 +795,23 @@ pub mod Staking {
                 .write(staker_address, (new_activation_epoch, prev_public_key, public_key));
             self.emit(Events::PublicKeySet { staker_address, public_key });
         }
+
+        fn get_current_public_key(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> PublicKey {
+            // Assert the staker exists.
+            self.internal_staker_info(:staker_address);
+            let (activation_epoch, old_public_key, new_public_key) = self
+                .public_key
+                .read(staker_address);
+            let public_key = if self.get_current_epoch() >= activation_epoch {
+                new_public_key
+            } else {
+                old_public_key
+            };
+            assert!(public_key.is_non_zero(), "{}", Error::PUBLIC_KEY_NOT_SET);
+            public_key
+        }
     }
 
     #[abi(embed_v0)]
