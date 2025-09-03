@@ -164,6 +164,11 @@ pub mod Staking {
         // which the `new_public_key` is valid. Up until `activation_epoch`, the
         // `old_public_key` is valid.
         public_key: Map<ContractAddress, (Epoch, PublicKey, PublicKey)>,
+        // Map staker address to the epoch when the unstake intent takes effect.
+        // **Note**: Stakers that called `unstake_intent` before V3 will not have this record.
+        // TODO: Consider adding to InternalStakerInfoV1.
+        // TODO: Consider view function.
+        staker_unstake_intent_epoch: Map<ContractAddress, Epoch>,
     }
 
     #[event]
@@ -396,6 +401,12 @@ pub mod Staking {
             let unstake_time = Time::now().add(delta: self.exit_wait_window.read());
             staker_info.unstake_time = Option::Some(unstake_time);
             self.write_staker_info(:staker_address, :staker_info);
+
+            // Write the unstake intent epoch.
+            // TODO: Change to 2 epoch with
+            // https://github.com/starkware-industries/starknet-apps/pull/5034
+            // (or in this PR if it's already merged)
+            self.staker_unstake_intent_epoch.write(staker_address, self.get_next_epoch());
 
             // Write off the delegated stake from the total stake.
             for (pool_contract, token_address) in self
