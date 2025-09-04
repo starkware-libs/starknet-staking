@@ -826,6 +826,15 @@ pub mod Staking {
             assert!(public_key.is_non_zero(), "{}", Error::PUBLIC_KEY_NOT_SET);
             public_key
         }
+
+        fn get_current_epoch_data(self: @ContractState) -> (Epoch, u64, u32) {
+            let epoch_info = self.epoch_info.read();
+            (
+                epoch_info.current_epoch(),
+                epoch_info.current_epoch_starting_block(),
+                epoch_info.epoch_len_in_blocks(),
+            )
+        }
     }
 
     #[abi(embed_v0)]

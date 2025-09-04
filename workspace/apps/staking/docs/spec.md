@@ -56,6 +56,7 @@
     - [get\_total\_stake\_for\_token](#get_total_stake_for_token)
     - [set\_public\_key](#set_public_key)
     - [get\_current\_public\_key](#get_current_public_key)
+    - [get\_current\_epoch\_data](#get_current_epoch_data)
   - [Events](#events)
     - [Stake Own Balance Changed](#stake-own-balance-changed)
     - [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
@@ -1469,6 +1470,19 @@ Returns the current public key for the specified staker.
 #### errors <!-- omit from toc -->
 1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 2. [PUBLIC\_KEY\_NOT\_SET](#public_key_not_set)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address.
+#### logic <!-- omit from toc -->
+
+### get_current_epoch_data
+```rust
+fn get_current_epoch_data(self: @ContractState) -> (Epoch, u64, u32)
+```
+#### description <!-- omit from toc -->
+Returns (epoch_id, epoch_starting_block, epoch_length) for the current epoch.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Any address.
