@@ -24,8 +24,9 @@ pub mod Staking {
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
-        IStakingMigration, IStakingPause, IStakingPool, IStakingTokenManager, PauseEvents, PoolInfo,
-        StakerInfoV1, StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1, TokenManagerEvents,
+        IStakingMigration, IStakingPause, IStakingPool, IStakingRewardsManager,
+        IStakingTokenManager, PauseEvents, PoolInfo, StakerInfoV1, StakerPoolInfoV1,
+        StakerPoolInfoV2, StakingContractInfoV1, TokenManagerEvents,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
@@ -169,6 +170,9 @@ pub mod Staking {
         // TODO: Consider adding to InternalStakerInfoV1.
         // TODO: Consider view function.
         staker_unstake_intent_epoch: Map<ContractAddress, Epoch>,
+        // Last block number for which rewards were distributed.
+        // TODO: Type for block number.
+        last_reward_block: u64,
     }
 
     #[event]
@@ -1247,6 +1251,7 @@ pub mod Staking {
         ) {
             // Prerequisites and asserts.
             self.general_prerequisites();
+            // TODO: Add v3 flag checking.
             self.assert_caller_is_attestation_contract();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
@@ -1256,58 +1261,17 @@ pub mod Staking {
             let (strk_epoch_rewards, btc_epoch_rewards) = reward_supplier_dispatcher
                 .calculate_current_epoch_rewards();
             let (strk_total_stake, btc_total_stake) = self.get_current_total_staking_power();
-            let curr_epoch = self.get_current_epoch();
 
-            // Calculate self rewards.
-            let staker_own_rewards = self
-                .calculate_staker_own_rewards(
-                    :staker_address, :strk_epoch_rewards, :strk_total_stake, :curr_epoch,
-                );
-            // Calculate pools rewards.
-            let staker_pool_info = self.staker_pool_info.entry(staker_address);
-            let (commission_rewards, total_pools_rewards, pools_rewards_data) = if staker_pool_info
-                .has_pool() {
-                self
-                    .calculate_staker_pools_rewards(
-                        :staker_address,
-                        staker_pool_info: staker_pool_info.as_non_mut(),
-                        :strk_epoch_rewards,
-                        :strk_total_stake,
-                        :btc_epoch_rewards,
-                        :btc_total_stake,
-                        :curr_epoch,
-                    )
-            } else {
-                (Zero::zero(), Zero::zero(), array![])
-            };
-            // Update reward supplier.
-            let staker_rewards = staker_own_rewards + commission_rewards;
-            // Update total rewards.
-            reward_supplier_dispatcher
-                .update_unclaimed_rewards_from_staking_contract(
-                    rewards: staker_rewards + total_pools_rewards,
-                );
-            // Claim pools rewards.
             self
-                .claim_from_reward_supplier(
+                ._update_rewards(
+                    :staker_address,
+                    strk_total_rewards: strk_epoch_rewards,
+                    btc_total_rewards: btc_epoch_rewards,
+                    :strk_total_stake,
+                    :btc_total_stake,
+                    :staker_info,
                     :reward_supplier_dispatcher,
-                    amount: total_pools_rewards,
-                    token_dispatcher: strk_token_dispatcher(),
                 );
-            // Update staker rewards.
-            staker_info.unclaimed_rewards_own += staker_rewards;
-
-            // Update pools rewards.
-            let pool_rewards_list = self.update_pool_rewards(:staker_address, :pools_rewards_data);
-            // Emit event.
-            self
-                .emit(
-                    Events::StakerRewardsUpdated {
-                        staker_address, staker_rewards, pool_rewards: pool_rewards_list.span(),
-                    },
-                );
-            // Write staker rewards to storage.
-            self.write_staker_info(:staker_address, :staker_info);
         }
 
         fn get_attestation_info_by_operational_address(
@@ -1329,6 +1293,50 @@ pub mod Staking {
                 epoch_id: epoch_id,
                 current_epoch_starting_block: current_epoch_starting_block,
             )
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl StakingRewardsImpl of IStakingRewardsManager<ContractState> {
+        fn update_rewards(ref self: ContractState, staker_address: ContractAddress) {
+            self.general_prerequisites();
+            // TODO: Add v3 flag checking.
+            // TODO: Assert caller is starkware sequencer.
+            let current_block_number = starknet::get_block_number();
+            assert!(
+                current_block_number > self.last_reward_block.read(),
+                "{}",
+                Error::REWARDS_ALREADY_UPDATED,
+            );
+
+            // Assert staker exists.
+            let staker_info = self.internal_staker_info(:staker_address);
+            // TODO: Assert staker is not in unstake intent.
+
+            // Update last block rewards.
+            self.last_reward_block.write(current_block_number);
+
+            // Get current block data.
+            // TODO: Optimize by reading reward_supplier_dispatcher here and pass it as a param.
+            let (strk_block_rewards, btc_block_rewards) = self.calculate_block_rewards();
+            // TODO: Optimize by reading staker_pool_info and curr_epoch here and pass them as
+            // params.
+            let staker_total_strk_balance = self
+                .get_staker_total_strk_balance_curr_epoch(:staker_address);
+            assert!(staker_total_strk_balance.is_non_zero(), "{}", Error::INVALID_STAKER)
+            let staker_total_btc_balance = self
+                .get_staker_total_btc_balance_curr_epoch(:staker_address);
+
+            self
+                ._update_rewards(
+                    :staker_address,
+                    strk_total_rewards: strk_block_rewards,
+                    btc_total_rewards: btc_block_rewards,
+                    strk_total_stake: staker_total_strk_balance,
+                    btc_total_stake: staker_total_btc_balance,
+                    :staker_info,
+                    reward_supplier_dispatcher: self.reward_supplier_dispatcher.read(),
+                );
         }
     }
 
@@ -1771,6 +1779,7 @@ pub mod Staking {
         }
 
         /// Calculate and return the rewards for the own balance of the staker.
+        // TODO: rename epoch rewards and doc v2 and v3.
         fn calculate_staker_own_rewards(
             self: @ContractState,
             staker_address: ContractAddress,
@@ -1798,6 +1807,7 @@ pub mod Staking {
         /// rewards.
         ///
         /// Precondition: Staker has at least one pool.
+        // TODO: rename epoch rewards and doc v2 and v3.
         fn calculate_staker_pools_rewards(
             self: @ContractState,
             staker_address: ContractAddress,
@@ -1953,6 +1963,7 @@ pub mod Staking {
         }
 
         /// Return the total STRK balance of the staker in the current epoch.
+        /// TODO: Optimize storage readings by getting curr_epoch as a param.
         fn get_staker_total_strk_balance_curr_epoch(
             self: @ContractState, staker_address: ContractAddress,
         ) -> NormalizedAmount {
@@ -1969,6 +1980,28 @@ pub mod Staking {
                 Zero::zero()
             };
             curr_own_balance + curr_delegated_balance
+        }
+
+        /// Returns the total BTC balance of the staker in the current epoch.
+        /// TODO: Optimize storage readings by getting curr_epoch as a param.
+        fn get_staker_total_btc_balance_curr_epoch(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> NormalizedAmount {
+            let mut total_btc_balance: NormalizedAmount = Zero::zero();
+            let curr_epoch = self.get_current_epoch();
+            let staker_pool_info = self.staker_pool_info.entry(staker_address);
+            for (pool_contract, token_address) in staker_pool_info.pools {
+                // TODO: Consider optimize here - `is_active_token` check again the STRK token.
+                if token_address != STRK_TOKEN_ADDRESS
+                    && self.is_active_token(:token_address, :curr_epoch) {
+                    let pool_balance_curr_epoch = self
+                        .get_staker_delegated_balance_at_epoch(
+                            :staker_address, :pool_contract, epoch_id: curr_epoch,
+                        );
+                    total_btc_balance += pool_balance_curr_epoch;
+                }
+            }
+            total_btc_balance
         }
 
         /// Note that `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`.
@@ -2119,6 +2152,94 @@ pub mod Staking {
             } else {
                 None
             }
+        }
+
+        /// Calculates rewards for the given staker and his pools, updates the staker's
+        /// `unclaimed_rewards`, and updates and transfers rewards to the pools.
+        ///
+        /// **In V2 - `update_rewards_from_attestation_contract`:**
+        /// Rewards are calculated as the staker's relative share of the total stake, multiplied by
+        /// epoch rewards.
+        /// - `strk_total_rewards` = STRK epoch rewards.
+        /// - `btc_total_rewards` = BTC epoch rewards.
+        /// - `strk_total_stake` = current total STRK staking power.
+        /// - `btc_total_stake` = current total BTC staking power.
+        ///
+        /// **In V3 - `update_rewards`:**
+        /// Rewards are calculated as the relative share of the staker's own stake and each of his
+        /// pools within the staker's total stake, multiplied by block rewards.
+        /// - `strk_total_rewards` = STRK block rewards.
+        /// - `btc_total_rewards` = BTC block rewards.
+        /// - `strk_total_stake` = current total STRK staked for the given staker (own + delegated).
+        /// - `btc_total_stake` = current total BTC staked for the given staker (delegated).
+        fn _update_rewards(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            strk_total_rewards: Amount,
+            btc_total_rewards: Amount,
+            strk_total_stake: NormalizedAmount,
+            btc_total_stake: NormalizedAmount,
+            mut staker_info: InternalStakerInfoLatest,
+            reward_supplier_dispatcher: IRewardSupplierDispatcher,
+        ) {
+            let curr_epoch = self.get_current_epoch();
+
+            // Calculate self rewards.
+            let staker_own_rewards = self
+                .calculate_staker_own_rewards(
+                    :staker_address,
+                    strk_epoch_rewards: strk_total_rewards,
+                    :strk_total_stake,
+                    :curr_epoch,
+                );
+
+            // Calculate pools rewards.
+            let staker_pool_info = self.staker_pool_info.entry(staker_address);
+            let (commission_rewards, total_pools_rewards, pools_rewards_data) = if staker_pool_info
+                .has_pool() {
+                self
+                    .calculate_staker_pools_rewards(
+                        :staker_address,
+                        staker_pool_info: staker_pool_info.as_non_mut(),
+                        strk_epoch_rewards: strk_total_rewards,
+                        :strk_total_stake,
+                        btc_epoch_rewards: btc_total_rewards,
+                        :btc_total_stake,
+                        :curr_epoch,
+                    )
+            } else {
+                (Zero::zero(), Zero::zero(), array![])
+            };
+
+            // Update reward supplier.
+            let staker_rewards = staker_own_rewards + commission_rewards;
+            // Update total rewards.
+            reward_supplier_dispatcher
+                .update_unclaimed_rewards_from_staking_contract(
+                    rewards: staker_rewards + total_pools_rewards,
+                );
+            // Claim pools rewards.
+            self
+                .claim_from_reward_supplier(
+                    :reward_supplier_dispatcher,
+                    amount: total_pools_rewards,
+                    token_dispatcher: strk_token_dispatcher(),
+                );
+            // Update staker rewards.
+            staker_info.unclaimed_rewards_own += staker_rewards;
+
+            // Update pools rewards.
+            let pool_rewards_list = self.update_pool_rewards(:staker_address, :pools_rewards_data);
+            // Emit event.
+            self
+                .emit(
+                    Events::StakerRewardsUpdated {
+                        staker_address, staker_rewards, pool_rewards: pool_rewards_list.span(),
+                    },
+                );
+
+            // Write staker rewards to storage.
+            self.write_staker_info(:staker_address, :staker_info);
         }
     }
 

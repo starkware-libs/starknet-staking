@@ -13,3 +13,12 @@
 
 ## `get_current_staker_info` (name is WIP)
 - Get staker info while staker has zero balance.
+
+## `update_rewards`
+- staker with only strk pool.
+- staker with only btc pool.
+- staker with empty pool (STRK + BTC).
+- staker with 2 btc pools with different decimals.
+- staker immediately/one epoch after he called intent.
+- update rewards for 2 different blocks in the same epoch - should be same rewards.
+- Change epoch len in blocks - rewards should be changed.

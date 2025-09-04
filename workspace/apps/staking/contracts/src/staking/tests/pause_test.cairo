@@ -7,7 +7,8 @@ use staking::event_test_utils::{
 use staking::staking::interface::{
     IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
-    IStakingPoolDispatcher, IStakingPoolDispatcherTrait,
+    IStakingPoolDispatcher, IStakingPoolDispatcherTrait, IStakingRewardsManagerDispatcher,
+    IStakingRewardsManagerDispatcherTrait,
 };
 use staking::test_utils::constants::{
     DUMMY_ADDRESS, DUMMY_IDENTIFIER, NON_SECURITY_ADMIN, NON_SECURITY_AGENT,
@@ -334,4 +335,16 @@ fn test_set_public_key_when_paused() {
         contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.set_public_key(public_key: cfg.test_info.public_key);
+}
+
+#[test]
+#[should_panic(expected: "Contract is paused")]
+fn test_update_rewards_when_paused() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    pause_staking_contract(:cfg);
+    let staking_dispatcher = IStakingRewardsManagerDispatcher {
+        contract_address: cfg.test_info.staking_contract,
+    };
+    staking_dispatcher.update_rewards(staker_address: DUMMY_ADDRESS());
 }

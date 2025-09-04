@@ -230,6 +230,12 @@ pub trait IStakingAttestation<TContractState> {
     ) -> AttestationInfo;
 }
 
+#[starknet::interface]
+pub trait IStakingRewardsManager<TContractState> {
+    /// Update current block rewards for the given `staker_address`.
+    fn update_rewards(ref self: TContractState, staker_address: ContractAddress);
+}
+
 pub mod Events {
     use staking::types::{Amount, Commission, Epoch, PublicKey};
     use starknet::ContractAddress;

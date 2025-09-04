@@ -55,6 +55,8 @@ pub(crate) enum Error {
     INVALID_PUBLIC_KEY,
     PUBLIC_KEY_NOT_SET,
     ATTEST_WITH_ZERO_BALANCE,
+    REWARDS_ALREADY_UPDATED,
+    INVALID_STAKER,
 }
 
 impl DescribableError of Describable<Error> {
@@ -114,6 +116,8 @@ impl DescribableError of Describable<Error> {
             Error::INVALID_PUBLIC_KEY => "Public key is invalid",
             Error::PUBLIC_KEY_NOT_SET => "Public key is not set",
             Error::ATTEST_WITH_ZERO_BALANCE => "Cannot attest with zero balance",
+            Error::REWARDS_ALREADY_UPDATED => "Rewards were already updated for the current block",
+            Error::INVALID_STAKER => "Staker is invalid for getting rewards",
         }
     }
 }

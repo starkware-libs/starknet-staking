@@ -57,6 +57,7 @@
     - [set\_public\_key](#set_public_key)
     - [get\_current\_public\_key](#get_current_public_key)
     - [get\_current\_epoch\_data](#get_current_epoch_data)
+    - [update\_rewards](#update_rewards)
   - [Events](#events)
     - [Stake Own Balance Changed](#stake-own-balance-changed)
     - [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
@@ -222,6 +223,8 @@
     - [INVALID\_PUBLIC\_KEY](#invalid_public_key)
     - [PUBLIC\_KEY\_NOT\_SET](#public_key_not_set)
     - [ATTEST\_WITH_ZERO_BALANCE](#attest_with_zero_balance)
+    - [REWARDS\_ALREADY\_UPDATED](#rewards_already_updated)
+    - [INVALID\_STAKER](#invalid_staker)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -323,6 +326,7 @@ classDiagram
     get_active_tokens()
     get_tokens()
     get_total_stake_for_token()
+    update_rewards()
   }
   class DelegationPoolContract{
     map < pool_member_address, PoolMemberInfo >
@@ -1488,6 +1492,33 @@ Returns (epoch_id, epoch_starting_block, epoch_length) for the current epoch.
 Any address.
 #### logic <!-- omit from toc -->
 
+### update_rewards
+```rust
+fn update_rewards(ref self: TContractState, staker_address: ContractAddress);
+```
+#### description <!-- omit from toc -->
+Calculate and update the current block rewards for the for the given `staker_address`.
+Send pool rewards to the pools.
+#### emits <!-- omit from toc -->
+1. [Staker Rewards Updated](#staker-rewards-updated)
+2. [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
+#### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [REWARDS\_ALREADY\_UPDATED](#rewards_already_updated)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+4. [INVALID\_STAKER](#invalid_staker)
+#### pre-condition <!-- omit from toc -->
+Rewards did not disttributed for the current block yet. 
+#### access control <!-- omit from toc -->
+Only starkware sequencer.
+#### logic <!-- omit from toc -->
+1. Calculate total block rewards.
+2. Calculate staker rewards (include commission) and pool rewards.
+3. Update `unclaimed_rewards_own` of the staker.
+4. Update and transfer rewards to the pools, if exist.
+5. Update Reward Supplier's `unclaimed_rewards`.
+6. Update `last_reward_block` to the current block.
+
 ## Events
 ### Stake Own Balance Changed
 | data                | type              | keyed |
@@ -2602,6 +2633,12 @@ Only token admin.
 
 ### ATTEST_WITH_ZERO_BALANCE
 "Cannot attest with zero balance"
+
+### REWARDS_ALREADY_UPDATED
+"Rewards were already updated for the current block"
+
+### INVALID_STAKER
+"Staker is invalid for getting rewards"
 
 # Structs
 ### StakerPoolInfoV1
