@@ -815,16 +815,9 @@ pub mod Staking {
         ) -> PublicKey {
             // Assert the staker exists.
             self.internal_staker_info(:staker_address);
-            let (activation_epoch, old_public_key, new_public_key) = self
-                .public_key
-                .read(staker_address);
-            let public_key = if self.get_current_epoch() >= activation_epoch {
-                new_public_key
-            } else {
-                old_public_key
-            };
-            assert!(public_key.is_non_zero(), "{}", Error::PUBLIC_KEY_NOT_SET);
-            public_key
+            self
+                .get_public_key_at_epoch(:staker_address, epoch_id: self.get_current_epoch())
+                .expect_with_err(Error::PUBLIC_KEY_NOT_SET)
         }
 
         fn get_current_epoch_data(self: @ContractState) -> (Epoch, u64, u32) {
@@ -2106,6 +2099,26 @@ pub mod Staking {
 
         fn get_token_decimals(self: @ContractState, token_address: ContractAddress) -> u8 {
             self.token_decimals.read(token_address)
+        }
+
+        /// Returns the public key for `staker_address` at `epoch_id`,
+        /// or `None` if the public key is not set.
+        /// **Note**: This function does not check if the staker exists.
+        /// **Note**: `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`.
+        fn get_public_key_at_epoch(
+            self: @ContractState, staker_address: ContractAddress, epoch_id: Epoch,
+        ) -> Option<PublicKey> {
+            let (activation_epoch, old_pk, new_pk) = self.public_key.read(staker_address);
+            let current_pk = if epoch_id >= activation_epoch {
+                new_pk
+            } else {
+                old_pk
+            };
+            if current_pk.is_non_zero() {
+                Some(current_pk)
+            } else {
+                None
+            }
         }
     }
 
