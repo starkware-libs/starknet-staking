@@ -1280,18 +1280,15 @@ pub mod Staking {
             let staker_address = self.get_staker_address_by_operational(:operational_address);
 
             // Return the attestation info.
+            let stake = self
+                .get_staker_total_strk_balance_curr_epoch(:staker_address)
+                .to_strk_native_amount();
             let epoch_info = self.get_epoch_info();
             let epoch_len = epoch_info.epoch_len_in_blocks();
             let epoch_id = epoch_info.current_epoch();
             let current_epoch_starting_block = epoch_info.current_epoch_starting_block();
             AttestationInfoTrait::new(
-                staker_address: staker_address,
-                stake: self
-                    .get_staker_total_strk_balance_curr_epoch(:staker_address)
-                    .to_strk_native_amount(),
-                epoch_len: epoch_len,
-                epoch_id: epoch_id,
-                current_epoch_starting_block: current_epoch_starting_block,
+                :staker_address, :stake, :epoch_len, :epoch_id, :current_epoch_starting_block,
             )
         }
     }
