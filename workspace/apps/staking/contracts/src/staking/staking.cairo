@@ -1294,7 +1294,7 @@ pub mod Staking {
     }
 
     #[abi(embed_v0)]
-    impl StakingRewardsImpl of IStakingRewardsManager<ContractState> {
+    impl StakingRewardsManagerImpl of IStakingRewardsManager<ContractState> {
         fn update_rewards(ref self: ContractState, staker_address: ContractAddress) {
             self.general_prerequisites();
             // TODO: Add v3 flag checking.
