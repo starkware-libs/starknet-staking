@@ -69,6 +69,23 @@ fn test_attest() {
 }
 
 #[test]
+#[should_panic(expected: "Attestation for starting epoch is not allowed")]
+fn test_attest_starting_epoch() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
+    let block_hash = Zero::zero();
+    stake_for_testing_using_dispatcher(:cfg);
+    advance_block_into_attestation_window(:cfg, stake: Zero::zero());
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: cfg.staker_info.operational_address,
+    );
+    attestation_dispatcher.attest(:block_hash);
+}
+
+#[test]
 #[feature("safe_dispatcher")]
 fn test_attest_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
