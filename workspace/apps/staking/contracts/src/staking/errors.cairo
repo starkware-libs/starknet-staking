@@ -55,6 +55,7 @@ pub(crate) enum Error {
     PUBLIC_KEY_MUST_DIFFER,
     INVALID_PUBLIC_KEY,
     PUBLIC_KEY_NOT_SET,
+    ATTEST_WITH_ZERO_BALANCE,
 }
 
 impl DescribableError of Describable<Error> {
@@ -114,6 +115,7 @@ impl DescribableError of Describable<Error> {
             Error::PUBLIC_KEY_MUST_DIFFER => "Public key is already set to provided value",
             Error::INVALID_PUBLIC_KEY => "Public key is invalid",
             Error::PUBLIC_KEY_NOT_SET => "Public key is not set",
+            Error::ATTEST_WITH_ZERO_BALANCE => "Cannot attest with zero balance",
         }
     }
 }

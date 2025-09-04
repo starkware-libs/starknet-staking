@@ -220,6 +220,7 @@
     - [PUBLIC\_KEY\_MUST\_DIFFER](#PUBLIC_KEY_MUST_DIFFER)
     - [INVALID\_PUBLIC\_KEY](#invalid_public_key)
     - [PUBLIC\_KEY\_NOT\_SET](#public_key_not_set)
+    - [ATTEST\_WITH_ZERO_BALANCE](#attest_with_zero_balance)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -2243,6 +2244,7 @@ Validates the attestation of a staker and call staking [update_rewards_from_atte
 4. [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
 5. [ATTEST\_WRONG\_BLOCK\_HASH](#attest_wrong_block_hash)
 6. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+7. [ATTEST\_WITH\_ZERO\_BALANCE](#attest_with_zero_balance)
 #### logic <!-- omit from toc -->
 1. Validate the attestation.
 2. [update_rewards_from_attestation_contract](#update_rewards_from_attestation_contract).
@@ -2583,6 +2585,9 @@ Only token admin.
 
 ### PUBLIC_KEY_NOT_SET
 "Public key is not set"
+
+### ATTEST_WITH_ZERO_BALANCE
+"Cannot attest with zero balance"
 
 # Structs
 ### StakerPoolInfoV1

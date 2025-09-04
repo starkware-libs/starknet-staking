@@ -1778,6 +1778,7 @@ pub mod Staking {
         ) -> Amount {
             let own_balance_curr_epoch = self
                 .get_staker_own_balance_at_epoch(:staker_address, epoch_id: curr_epoch);
+            assert!(own_balance_curr_epoch.is_non_zero(), "{}", Error::ATTEST_WITH_ZERO_BALANCE);
 
             mul_wide_and_div(
                 lhs: strk_epoch_rewards,

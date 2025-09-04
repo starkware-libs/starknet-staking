@@ -12,6 +12,7 @@ use staking::event_test_utils::{
     assert_attestation_window_changed_event, assert_number_of_events,
     assert_staker_attestation_successful_event,
 };
+use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils;
@@ -90,6 +91,7 @@ fn test_attest_starting_epoch() {
 fn test_attest_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
+    advance_epoch_global();
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
@@ -105,6 +107,24 @@ fn test_attest_assertions() {
     );
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
     let block_hash = Zero::zero();
+
+    // Catch ATTEST_WITH_ZERO_BALANCE.
+    let block_offset = calculate_block_offset(
+        stake: Zero::zero(),
+        epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
+        staker_address: cfg.test_info.staker_address.into(),
+        epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
+        attestation_window: new_attestation_window,
+    );
+    advance_block_number_global(blocks: block_offset + new_attestation_window.into());
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: operational_address,
+    );
+    let result = attestation_safe_dispatcher.attest(:block_hash);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::ATTEST_WITH_ZERO_BALANCE.describe(),
+    );
 
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
