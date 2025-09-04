@@ -529,6 +529,11 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
         }
         Option::None
     }
+
+    /// Returns true if the staker has a pool.
+    fn has_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> bool {
+        self.pools.len() > 0
+    }
 }
 
 #[generate_trait]
@@ -553,7 +558,7 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
 
     /// Returns true if the staker has a pool.
     fn has_pool(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> bool {
-        self.pools.len() > 0
+        self.as_non_mut().has_pool()
     }
 
     fn has_pool_for_token(

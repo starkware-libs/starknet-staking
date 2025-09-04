@@ -1261,7 +1261,7 @@ pub mod Staking {
             let (strk_epoch_rewards, btc_epoch_rewards) = reward_supplier_dispatcher
                 .calculate_current_epoch_rewards();
             let (strk_total_stake, btc_total_stake) = self.get_current_total_staking_power();
-
+            let staker_pool_info = self.staker_pool_info.entry(staker_address).as_non_mut();
             self
                 ._update_rewards(
                     :staker_address,
@@ -1270,6 +1270,7 @@ pub mod Staking {
                     :strk_total_stake,
                     :btc_total_stake,
                     :staker_info,
+                    :staker_pool_info,
                     :reward_supplier_dispatcher,
                 );
         }
@@ -1280,8 +1281,9 @@ pub mod Staking {
             let staker_address = self.get_staker_address_by_operational(:operational_address);
 
             // Return the attestation info.
+            let staker_pool_info = self.staker_pool_info.entry(staker_address);
             let stake = self
-                .get_staker_total_strk_balance_curr_epoch(:staker_address)
+                .get_staker_total_strk_balance_curr_epoch(:staker_address, :staker_pool_info)
                 .to_strk_native_amount();
             let epoch_info = self.get_epoch_info();
             let epoch_len = epoch_info.epoch_len_in_blocks();
@@ -1317,13 +1319,14 @@ pub mod Staking {
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             let (strk_block_rewards, btc_block_rewards) = self
                 .calculate_block_rewards(:reward_supplier_dispatcher);
-            // TODO: Optimize by reading staker_pool_info and curr_epoch here and pass them as
+            // TODO: Optimize by reading curr_epoch here and pass them as
             // params.
+            let staker_pool_info = self.staker_pool_info.entry(staker_address).as_non_mut();
             let staker_total_strk_balance = self
-                .get_staker_total_strk_balance_curr_epoch(:staker_address);
+                .get_staker_total_strk_balance_curr_epoch(:staker_address, :staker_pool_info);
             assert!(staker_total_strk_balance.is_non_zero(), "{}", Error::INVALID_STAKER)
             let staker_total_btc_balance = self
-                .get_staker_total_btc_balance_curr_epoch(:staker_address);
+                .get_staker_total_btc_balance_curr_epoch(:staker_address, :staker_pool_info);
 
             self
                 ._update_rewards(
@@ -1333,6 +1336,7 @@ pub mod Staking {
                     strk_total_stake: staker_total_strk_balance,
                     btc_total_stake: staker_total_btc_balance,
                     :staker_info,
+                    :staker_pool_info,
                     :reward_supplier_dispatcher,
                 );
         }
@@ -1982,12 +1986,14 @@ pub mod Staking {
         /// Return the total STRK balance of the staker in the current epoch.
         /// TODO: Optimize storage readings by getting curr_epoch as a param.
         fn get_staker_total_strk_balance_curr_epoch(
-            self: @ContractState, staker_address: ContractAddress,
+            self: @ContractState,
+            staker_address: ContractAddress,
+            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
         ) -> NormalizedAmount {
             let curr_epoch = self.get_current_epoch();
             let curr_own_balance = self
                 .get_staker_own_balance_at_epoch(:staker_address, epoch_id: curr_epoch);
-            let strk_pool = self.staker_pool_info.entry(staker_address).get_strk_pool();
+            let strk_pool = staker_pool_info.get_strk_pool();
             let curr_delegated_balance = if let Some(strk_pool) = strk_pool {
                 self
                     .get_staker_delegated_balance_at_epoch(
@@ -2002,11 +2008,12 @@ pub mod Staking {
         /// Returns the total BTC balance of the staker in the current epoch.
         /// TODO: Optimize storage readings by getting curr_epoch as a param.
         fn get_staker_total_btc_balance_curr_epoch(
-            self: @ContractState, staker_address: ContractAddress,
+            self: @ContractState,
+            staker_address: ContractAddress,
+            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
         ) -> NormalizedAmount {
             let mut total_btc_balance: NormalizedAmount = Zero::zero();
             let curr_epoch = self.get_current_epoch();
-            let staker_pool_info = self.staker_pool_info.entry(staker_address);
             for (pool_contract, token_address) in staker_pool_info.pools {
                 // TODO: Consider optimize here - `is_active_token` check again the STRK token.
                 if token_address != STRK_TOKEN_ADDRESS
@@ -2197,6 +2204,7 @@ pub mod Staking {
             strk_total_stake: NormalizedAmount,
             btc_total_stake: NormalizedAmount,
             mut staker_info: InternalStakerInfoLatest,
+            staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
             reward_supplier_dispatcher: IRewardSupplierDispatcher,
         ) {
             let curr_epoch = self.get_current_epoch();
@@ -2208,13 +2216,12 @@ pub mod Staking {
                 );
 
             // Calculate pools rewards.
-            let staker_pool_info = self.staker_pool_info.entry(staker_address);
             let (commission_rewards, total_pools_rewards, pools_rewards_data) = if staker_pool_info
                 .has_pool() {
                 self
                     .calculate_staker_pools_rewards(
                         :staker_address,
-                        staker_pool_info: staker_pool_info.as_non_mut(),
+                        :staker_pool_info,
                         :strk_total_rewards,
                         :strk_total_stake,
                         :btc_total_rewards,
