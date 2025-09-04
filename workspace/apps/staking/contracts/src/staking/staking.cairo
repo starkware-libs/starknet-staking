@@ -617,13 +617,13 @@ pub mod Staking {
             let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
             let curr_epoch = self.get_current_epoch();
             let strk_curr_total_stake = self
-                .balance_at_curr_epoch(trace: strk_total_stake_trace, :curr_epoch);
+                .balance_at_epoch(trace: strk_total_stake_trace, epoch_id: curr_epoch);
             let mut btc_curr_total_stake: NormalizedAmount = Zero::zero();
             for (token_address, active_status) in self.btc_tokens {
                 if self.is_btc_active(:active_status, :curr_epoch) {
                     let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
                     btc_curr_total_stake += self
-                        .balance_at_curr_epoch(trace: btc_total_stake_trace, :curr_epoch);
+                        .balance_at_epoch(trace: btc_total_stake_trace, epoch_id: curr_epoch);
                 }
             }
             (strk_curr_total_stake, btc_curr_total_stake)
@@ -1774,7 +1774,7 @@ pub mod Staking {
             curr_epoch: Epoch,
         ) -> Amount {
             let own_balance_curr_epoch = self
-                .get_staker_own_balance_curr_epoch(:staker_address, :curr_epoch);
+                .get_staker_own_balance_at_epoch(:staker_address, epoch_id: curr_epoch);
 
             mul_wide_and_div(
                 lhs: strk_epoch_rewards,
@@ -1813,8 +1813,8 @@ pub mod Staking {
                     continue;
                 }
                 let pool_balance_curr_epoch = self
-                    .get_staker_delegated_balance_curr_epoch(
-                        :staker_address, :pool_contract, :curr_epoch,
+                    .get_staker_delegated_balance_at_epoch(
+                        :staker_address, :pool_contract, epoch_id: curr_epoch,
                     );
                 let (epoch_rewards, total_stake) = if token_address == STRK_TOKEN_ADDRESS {
                     (strk_epoch_rewards, strk_total_stake)
@@ -1936,12 +1936,12 @@ pub mod Staking {
         ) -> NormalizedAmount {
             let curr_epoch = self.get_current_epoch();
             let curr_own_balance = self
-                .get_staker_own_balance_curr_epoch(:staker_address, :curr_epoch);
+                .get_staker_own_balance_at_epoch(:staker_address, epoch_id: curr_epoch);
             let strk_pool = self.staker_pool_info.entry(staker_address).get_strk_pool();
             let curr_delegated_balance = if let Some(strk_pool) = strk_pool {
                 self
-                    .get_staker_delegated_balance_curr_epoch(
-                        :staker_address, pool_contract: strk_pool, :curr_epoch,
+                    .get_staker_delegated_balance_at_epoch(
+                        :staker_address, pool_contract: strk_pool, epoch_id: curr_epoch,
                     )
             } else {
                 Zero::zero()
@@ -1949,43 +1949,43 @@ pub mod Staking {
             curr_own_balance + curr_delegated_balance
         }
 
-        /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
-        /// calls to `get_current_epoch()`.
-        fn get_staker_own_balance_curr_epoch(
-            self: @ContractState, staker_address: ContractAddress, curr_epoch: Epoch,
+        /// Note that `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`.
+        /// This parameter exists to save calls to `get_current_epoch()`.
+        fn get_staker_own_balance_at_epoch(
+            self: @ContractState, staker_address: ContractAddress, epoch_id: Epoch,
         ) -> NormalizedAmount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
-            self.balance_at_curr_epoch(:trace, :curr_epoch)
+            self.balance_at_epoch(:trace, :epoch_id)
         }
 
-        /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
-        /// calls to `get_current_epoch()`.
-        fn get_staker_delegated_balance_curr_epoch(
+        /// Note that `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`.
+        /// This parameter exists to save calls to `get_current_epoch()`.
+        fn get_staker_delegated_balance_at_epoch(
             self: @ContractState,
             staker_address: ContractAddress,
             pool_contract: ContractAddress,
-            curr_epoch: Epoch,
+            epoch_id: Epoch,
         ) -> NormalizedAmount {
             let trace = self
                 .staker_delegated_balance_trace
                 .entry(key: staker_address)
                 .entry(key: pool_contract);
-            self.balance_at_curr_epoch(:trace, :curr_epoch)
+            self.balance_at_epoch(:trace, :epoch_id)
         }
 
-        /// Returns the balance at the current epoch.
+        /// Returns the balance at the specified epoch.
         ///
-        /// Note that `curr_epoch` must be `get_current_epoch()`. This parameter exists to save
-        /// calls to `get_current_epoch()`.
-        fn balance_at_curr_epoch(
-            self: @ContractState, trace: StoragePath<Trace>, curr_epoch: Epoch,
+        /// Note that `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`.
+        /// This parameter exists to save calls to `get_current_epoch()`.
+        fn balance_at_epoch(
+            self: @ContractState, trace: StoragePath<Trace>, epoch_id: Epoch,
         ) -> NormalizedAmount {
             let (epoch, balance) = trace.latest().unwrap_or_else(|err| panic!("{err}"));
-            let current_balance = if epoch <= curr_epoch {
+            let current_balance = if epoch <= epoch_id {
                 balance
             } else {
                 let (epoch, balance) = trace.penultimate().unwrap_or_else(|err| panic!("{err}"));
-                assert!(epoch <= curr_epoch, "{}", GenericError::INVALID_PENULTIMATE);
+                assert!(epoch <= epoch_id, "{}", GenericError::INVALID_PENULTIMATE);
                 balance
             };
             NormalizedAmountTrait::from_amount_18_decimals(amount: current_balance)
