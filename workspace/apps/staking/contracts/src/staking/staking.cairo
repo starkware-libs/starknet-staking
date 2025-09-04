@@ -1314,8 +1314,9 @@ pub mod Staking {
             self.last_reward_block.write(current_block_number);
 
             // Get current block data.
-            // TODO: Optimize by reading reward_supplier_dispatcher here and pass it as a param.
-            let (strk_block_rewards, btc_block_rewards) = self.calculate_block_rewards();
+            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
+            let (strk_block_rewards, btc_block_rewards) = self
+                .calculate_block_rewards(:reward_supplier_dispatcher);
             // TODO: Optimize by reading staker_pool_info and curr_epoch here and pass them as
             // params.
             let staker_total_strk_balance = self
@@ -1332,7 +1333,7 @@ pub mod Staking {
                     strk_total_stake: staker_total_strk_balance,
                     btc_total_stake: staker_total_btc_balance,
                     :staker_info,
-                    reward_supplier_dispatcher: self.reward_supplier_dispatcher.read(),
+                    :reward_supplier_dispatcher,
                 );
         }
     }
@@ -1381,8 +1382,9 @@ pub mod Staking {
         }
 
         /// Calculates the rewards for a block in the current epoch (for STRK and BTC).
-        fn calculate_block_rewards(self: @ContractState) -> (Amount, Amount) {
-            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
+        fn calculate_block_rewards(
+            self: @ContractState, reward_supplier_dispatcher: IRewardSupplierDispatcher,
+        ) -> (Amount, Amount) {
             let (strk_rewards, btc_rewards) = reward_supplier_dispatcher
                 .calculate_current_epoch_rewards();
             let epoch_len_in_blocks = self.get_epoch_info().epoch_len_in_blocks();
