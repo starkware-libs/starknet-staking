@@ -289,7 +289,10 @@ pub mod Staking {
                     sender: staker_address, recipient: staking_contract, amount: amount.into(),
                 );
 
-            self.insert_staker_own_balance(:staker_address, own_balance: normalized_amount);
+            self
+                .initialize_staker_own_balance_trace(
+                    :staker_address, own_balance: normalized_amount,
+                );
 
             // Create the record for the staker.
             self
@@ -1872,6 +1875,22 @@ pub mod Staking {
                 .staker_own_balance_trace
                 .entry(staker_address)
                 .insert(key: self.get_next_epoch(), value: own_balance.to_strk_native_amount());
+        }
+
+        fn initialize_staker_own_balance_trace(
+            ref self: ContractState, staker_address: ContractAddress, own_balance: NormalizedAmount,
+        ) {
+            assert!(
+                self.staker_own_balance_trace.entry(key: staker_address).is_empty(),
+                "{}",
+                Error::STAKER_ADDRESS_ALREADY_USED,
+            );
+            // Initialize trace with baseline entry to ensure robust balance queries.
+            self
+                .staker_own_balance_trace
+                .entry(staker_address)
+                .insert(key: STARTING_EPOCH, value: Zero::zero());
+            self.insert_staker_own_balance(:staker_address, :own_balance);
         }
 
         fn insert_staker_delegated_balance(

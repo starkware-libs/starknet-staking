@@ -21,7 +21,6 @@ use starkware_utils::components::replaceability::interface::{
 };
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::errors::Describable;
-use starkware_utils::trace::errors::TraceErrors;
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };
@@ -88,14 +87,7 @@ fn test_attest_assertions() {
         contract_address: attestation_contract, caller_address: cfg.test_info.app_governor,
     );
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
-
-    // Catch INDEX_OUT_OF_BOUNDS.
     let block_hash = Zero::zero();
-    cheat_caller_address_once(
-        contract_address: attestation_contract, caller_address: operational_address,
-    );
-    let result = attestation_safe_dispatcher.attest(:block_hash);
-    assert_panic_with_error(:result, expected_error: TraceErrors::INDEX_OUT_OF_BOUNDS.describe());
 
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
