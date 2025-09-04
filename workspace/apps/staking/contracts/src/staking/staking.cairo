@@ -1778,11 +1778,18 @@ pub mod Staking {
         }
 
         /// Calculate and return the rewards for the own balance of the staker.
-        // TODO: rename epoch rewards and doc v2 and v3.
+        ///
+        /// **In V2:**
+        /// - `strk_total_rewards` = STRK epoch rewards.
+        /// - `strk_total_stake` = current total STRK staking power.
+        ///
+        /// **In V3:**
+        /// - `strk_total_rewards` = STRK block rewards.
+        /// - `strk_total_stake` = current total STRK staked for the given staker (own + delegated).
         fn calculate_staker_own_rewards(
             self: @ContractState,
             staker_address: ContractAddress,
-            strk_epoch_rewards: Amount,
+            strk_total_rewards: Amount,
             strk_total_stake: NormalizedAmount,
             curr_epoch: Epoch,
         ) -> Amount {
@@ -1791,7 +1798,7 @@ pub mod Staking {
             assert!(own_balance_curr_epoch.is_non_zero(), "{}", Error::ATTEST_WITH_ZERO_BALANCE);
 
             mul_wide_and_div(
-                lhs: strk_epoch_rewards,
+                lhs: strk_total_rewards,
                 rhs: own_balance_curr_epoch.to_strk_native_amount(),
                 div: strk_total_stake.to_strk_native_amount(),
             )
@@ -1806,14 +1813,25 @@ pub mod Staking {
         /// rewards.
         ///
         /// Precondition: Staker has at least one pool.
-        // TODO: rename epoch rewards and doc v2 and v3.
+        ///
+        /// **In V2:**
+        /// - `strk_total_rewards` = STRK epoch rewards.
+        /// - `strk_total_stake` = current total STRK staking power.
+        /// - `btc_total_rewards` = BTC epoch rewards.
+        /// - `btc_total_stake` = current total BTC staking power.
+        ///
+        /// **In V3:**
+        /// - `strk_total_rewards` = STRK block rewards.
+        /// - `strk_total_stake` = current total STRK staked for the given staker (own + delegated).
+        /// - `btc_total_rewards` = BTC block rewards.
+        /// - `btc_total_stake` = current total BTC staked for the given staker (delegated).
         fn calculate_staker_pools_rewards(
             self: @ContractState,
             staker_address: ContractAddress,
             staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
-            strk_epoch_rewards: Amount,
+            strk_total_rewards: Amount,
             strk_total_stake: NormalizedAmount,
-            btc_epoch_rewards: Amount,
+            btc_total_rewards: Amount,
             btc_total_stake: NormalizedAmount,
             curr_epoch: Epoch,
         ) -> (Amount, Amount, Array<(ContractAddress, ContractAddress, NormalizedAmount, Amount)>) {
@@ -1831,15 +1849,15 @@ pub mod Staking {
                     .get_staker_delegated_balance_at_epoch(
                         :staker_address, :pool_contract, epoch_id: curr_epoch,
                     );
-                let (epoch_rewards, total_stake) = if token_address == STRK_TOKEN_ADDRESS {
-                    (strk_epoch_rewards, strk_total_stake)
+                let (total_rewards, total_stake) = if token_address == STRK_TOKEN_ADDRESS {
+                    (strk_total_rewards, strk_total_stake)
                 } else {
-                    (btc_epoch_rewards, btc_total_stake)
+                    (btc_total_rewards, btc_total_stake)
                 };
                 // Calculate rewards for this pool.
                 let pool_rewards_including_commission = if total_stake.is_non_zero() {
                     mul_wide_and_div(
-                        lhs: epoch_rewards,
+                        lhs: total_rewards,
                         rhs: pool_balance_curr_epoch.to_amount_18_decimals(),
                         div: total_stake.to_amount_18_decimals(),
                     )
@@ -2186,10 +2204,7 @@ pub mod Staking {
             // Calculate self rewards.
             let staker_own_rewards = self
                 .calculate_staker_own_rewards(
-                    :staker_address,
-                    strk_epoch_rewards: strk_total_rewards,
-                    :strk_total_stake,
-                    :curr_epoch,
+                    :staker_address, :strk_total_rewards, :strk_total_stake, :curr_epoch,
                 );
 
             // Calculate pools rewards.
@@ -2200,9 +2215,9 @@ pub mod Staking {
                     .calculate_staker_pools_rewards(
                         :staker_address,
                         staker_pool_info: staker_pool_info.as_non_mut(),
-                        strk_epoch_rewards: strk_total_rewards,
+                        :strk_total_rewards,
                         :strk_total_stake,
-                        btc_epoch_rewards: btc_total_rewards,
+                        :btc_total_rewards,
                         :btc_total_stake,
                         :curr_epoch,
                     )
