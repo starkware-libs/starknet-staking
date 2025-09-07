@@ -1,9 +1,7 @@
 use core::num::traits::Zero;
 use snforge_std::TokenTrait;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use staking::event_test_utils::{
-    assert_number_of_events, assert_paused_event, assert_unpaused_event,
-};
+use staking::event_test_utils::{assert_paused_event, assert_unpaused_event};
 use staking::staking::interface::{
     IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
@@ -17,6 +15,7 @@ use staking::test_utils::{
     StakingInitConfig, general_contract_system_deployment, load_one_felt, pause_staking_contract,
     stake_for_testing_using_dispatcher,
 };
+use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]

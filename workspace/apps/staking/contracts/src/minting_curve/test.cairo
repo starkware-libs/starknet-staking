@@ -1,7 +1,7 @@
 use core::num::traits::{Sqrt, WideMul};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::constants::MAX_C_NUM;
-use staking::event_test_utils::{assert_minting_cap_changed_event, assert_number_of_events};
+use staking::event_test_utils::assert_minting_cap_changed_event;
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
     IMintingCurveDispatcherTrait, MintingCurveContractInfo,
@@ -12,6 +12,7 @@ use staking::test_utils::{
     stake_for_testing_using_dispatcher,
 };
 use staking::types::Amount;
+use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]

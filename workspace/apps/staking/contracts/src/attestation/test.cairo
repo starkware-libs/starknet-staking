@@ -9,8 +9,7 @@ use staking::attestation::interface::{
 use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::errors::GenericError;
 use staking::event_test_utils::{
-    assert_attestation_window_changed_event, assert_number_of_events,
-    assert_staker_attestation_successful_event,
+    assert_attestation_window_changed_event, assert_staker_attestation_successful_event,
 };
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
@@ -22,6 +21,7 @@ use starkware_utils::components::replaceability::interface::{
 };
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::errors::Describable;
+use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };

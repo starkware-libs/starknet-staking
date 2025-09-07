@@ -14,7 +14,6 @@ use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{TokenTrait, start_cheat_block_timestamp_global, test_address};
 use staking::constants::STRK_IN_FRIS;
 use staking::errors::GenericError;
-use staking::event_test_utils::assert_number_of_events;
 use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
 use staking::minting_curve::minting_curve::MintingCurve;
 use staking::pool::pool::Pool;
@@ -34,6 +33,7 @@ use starknet::Store;
 use starkware_utils::errors::Describable;
 use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
 use starkware_utils::time::time::Time;
+use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
 };

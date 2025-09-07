@@ -12,18 +12,6 @@ use starknet::ContractAddress;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::assert_expected_event_emitted;
 
-pub(crate) fn assert_number_of_events(actual: u32, expected: u32, message: ByteArray) {
-    assert!(
-        actual == expected,
-        "{actual} events were emitted instead of {expected}. Context: {message}",
-    );
-}
-
-pub(crate) fn panic_with_event_details(expected_emitted_by: @ContractAddress, details: ByteArray) {
-    let start = format!("Could not match expected event from address {:?}", *expected_emitted_by);
-    panic!("{}: {}", start, details);
-}
-
 pub(crate) fn assert_staker_exit_intent_event(
     spied_event: @(ContractAddress, Event),
     staker_address: ContractAddress,

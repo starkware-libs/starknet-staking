@@ -14,8 +14,8 @@ use event_test_utils::{
     assert_commission_initialized_event, assert_declare_operational_address_event,
     assert_delete_staker_event, assert_epoch_info_changed_event,
     assert_exit_wait_window_changed_event, assert_minimum_stake_changed_event,
-    assert_new_delegation_pool_event, assert_new_staker_event, assert_number_of_events,
-    assert_public_key_set_event, assert_remove_from_delegation_pool_action_event,
+    assert_new_delegation_pool_event, assert_new_staker_event, assert_public_key_set_event,
+    assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
     assert_rewards_supplied_to_delegation_pool_event, assert_stake_delegated_balance_changed_event,
     assert_stake_own_balance_changed_event, assert_staker_exit_intent_event,
@@ -83,6 +83,7 @@ use starkware_utils::storage::iterable_map::{
     IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
 };
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
+use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
 };

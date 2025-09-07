@@ -11,10 +11,9 @@ use core::option::OptionTrait;
 use core::serde::Serde;
 use event_test_utils::{
     assert_delegation_pool_member_balance_changed_event, assert_new_pool_member_event,
-    assert_number_of_events, assert_pool_member_exit_action_event,
-    assert_pool_member_exit_intent_event, assert_pool_member_reward_address_change_event,
-    assert_pool_member_reward_claimed_event, assert_staker_removed_event,
-    assert_switch_delegation_pool_event,
+    assert_pool_member_exit_action_event, assert_pool_member_exit_intent_event,
+    assert_pool_member_reward_address_change_event, assert_pool_member_reward_claimed_event,
+    assert_staker_removed_event, assert_switch_delegation_pool_event,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
@@ -47,6 +46,7 @@ use staking::types::InternalPoolMemberInfoLatest;
 use staking::{event_test_utils, test_utils};
 use starkware_utils::errors::Describable;
 use starkware_utils::time::time::Time;
+use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
