@@ -1790,6 +1790,9 @@ pub mod Staking {
         /// **In V3:**
         /// - `strk_total_rewards` = STRK block rewards.
         /// - `strk_total_stake` = current total STRK staked for the given staker (own + delegated).
+        ///
+        /// **Note**: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
+        /// storage reads.
         fn calculate_staker_own_rewards(
             self: @ContractState,
             staker_address: ContractAddress,
@@ -1829,6 +1832,9 @@ pub mod Staking {
         /// - `strk_total_stake` = current total STRK staked for the given staker (own + delegated).
         /// - `btc_total_rewards` = BTC block rewards.
         /// - `btc_total_stake` = current total BTC staked for the given staker (delegated).
+        ///
+        /// **Note**: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
+        /// storage reads.
         fn calculate_staker_pools_rewards(
             self: @ContractState,
             staker_address: ContractAddress,
@@ -2136,6 +2142,9 @@ pub mod Staking {
 
         /// Returns true if the token is active in the current epoch.
         /// Assumes that the token exists.
+        ///
+        /// **Note**: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
+        /// storage reads.
         fn is_active_token(
             self: @ContractState, token_address: ContractAddress, curr_epoch: Epoch,
         ) -> bool {
@@ -2147,6 +2156,9 @@ pub mod Staking {
         }
 
         /// Returns true if the BTC token is active in the current epoch.
+        ///
+        /// **Note**: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
+        /// storage reads.
         fn is_btc_active(
             self: @ContractState, active_status: (Epoch, bool), curr_epoch: Epoch,
         ) -> bool {
