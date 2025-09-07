@@ -67,7 +67,7 @@ use staking::staking::objects::{
     InternalStakerInfoLatestTrait, InternalStakerInfoV1, InternalStakerPoolInfoV1,
     NormalizedAmountTrait, StakerInfoIntoInternalStakerInfoV1ITrait, UndelegateIntentKey,
     UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
-    VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
+    VInternalStakerInfo, VInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
@@ -3675,20 +3675,18 @@ fn test_versioned_internal_staker_info_wrap_latest() {
         _deprecated_pool_info: Option::None,
         _deprecated_commission_commitment: Option::None,
     };
-    let versioned_internal_staker_info = VersionedInternalStakerInfoTrait::wrap_latest(
+    let versioned_internal_staker_info = VInternalStakerInfoTrait::wrap_latest(
         internal_staker_info,
     );
-    assert!(
-        versioned_internal_staker_info == VersionedInternalStakerInfo::V1(internal_staker_info),
-    );
+    assert!(versioned_internal_staker_info == VInternalStakerInfo::V1(internal_staker_info));
 }
 
 #[test]
 fn test_versioned_internal_staker_info_new_latest() {
-    let internal_staker_info = VersionedInternalStakerInfoTrait::new_latest(
+    let internal_staker_info = VInternalStakerInfoTrait::new_latest(
         reward_address: Zero::zero(), operational_address: Zero::zero(),
     );
-    if let VersionedInternalStakerInfo::V1(_) = internal_staker_info {
+    if let VInternalStakerInfo::V1(_) = internal_staker_info {
         return;
     } else {
         panic!("Expected Version V1");

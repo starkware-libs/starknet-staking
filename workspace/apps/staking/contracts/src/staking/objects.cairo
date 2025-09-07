@@ -586,7 +586,7 @@ pub(crate) struct InternalStakerInfoV1 {
 
 // **Note**: This struct should be updated in the next version of Internal Staker Info.
 #[derive(Debug, PartialEq, Drop, Copy, starknet::Store)]
-pub(crate) enum VersionedInternalStakerInfo {
+pub(crate) enum VInternalStakerInfo {
     #[default]
     None,
     V0: (),
@@ -594,15 +594,15 @@ pub(crate) enum VersionedInternalStakerInfo {
 }
 
 #[generate_trait]
-pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTrait {
-    fn wrap_latest(value: InternalStakerInfoV1) -> VersionedInternalStakerInfo nopanic {
-        VersionedInternalStakerInfo::V1(value)
+pub(crate) impl VInternalStakerInfoImpl of VInternalStakerInfoTrait {
+    fn wrap_latest(value: InternalStakerInfoV1) -> VInternalStakerInfo nopanic {
+        VInternalStakerInfo::V1(value)
     }
 
     fn new_latest(
         reward_address: ContractAddress, operational_address: ContractAddress,
-    ) -> VersionedInternalStakerInfo {
-        VersionedInternalStakerInfo::V1(
+    ) -> VInternalStakerInfo {
+        VInternalStakerInfo::V1(
             InternalStakerInfoV1 {
                 reward_address,
                 operational_address,
@@ -614,9 +614,9 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
         )
     }
 
-    fn is_none(self: @VersionedInternalStakerInfo) -> bool nopanic {
+    fn is_none(self: @VInternalStakerInfo) -> bool nopanic {
         match *self {
-            VersionedInternalStakerInfo::None => true,
+            VInternalStakerInfo::None => true,
             _ => false,
         }
     }

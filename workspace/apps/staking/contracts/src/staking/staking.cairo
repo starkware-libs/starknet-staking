@@ -33,7 +33,7 @@ pub mod Staking {
         InternalStakerInfoLatestTrait, InternalStakerPoolInfoV2, InternalStakerPoolInfoV2MutTrait,
         InternalStakerPoolInfoV2Trait, NormalizedAmount, NormalizedAmountTrait, UndelegateIntentKey,
         UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
-        VersionedInternalStakerInfo, VersionedInternalStakerInfoTrait,
+        VInternalStakerInfo, VInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTraceTrait,
@@ -101,7 +101,7 @@ pub mod Staking {
         // Minimum amount of initial stake.
         min_stake: Amount,
         // Map staker address to their staker info.
-        staker_info: Map<ContractAddress, VersionedInternalStakerInfo>,
+        staker_info: Map<ContractAddress, VInternalStakerInfo>,
         // Map operational address to staker address, as it must be a 1 to 1 mapping.
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
         // Map potential operational address to eligible staker address.
@@ -303,9 +303,7 @@ pub mod Staking {
                 .staker_info
                 .write(
                     staker_address,
-                    VersionedInternalStakerInfoTrait::new_latest(
-                        :reward_address, :operational_address,
-                    ),
+                    VInternalStakerInfoTrait::new_latest(:reward_address, :operational_address),
                 );
 
             // Update the operational address mapping, which is a 1 to 1 mapping.
@@ -1365,13 +1363,13 @@ pub mod Staking {
         ) -> InternalStakerInfoLatest {
             let versioned_internal_staker_info = self.staker_info.read(staker_address);
             match versioned_internal_staker_info {
-                VersionedInternalStakerInfo::None => panic_with_byte_array(
+                VInternalStakerInfo::None => panic_with_byte_array(
                     err: @GenericError::STAKER_NOT_EXISTS.describe(),
                 ),
-                VersionedInternalStakerInfo::V0(_) => panic_with_byte_array(
+                VInternalStakerInfo::V0(_) => panic_with_byte_array(
                     err: @Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION.describe(),
                 ),
-                VersionedInternalStakerInfo::V1(internal_staker_info_v1) => internal_staker_info_v1,
+                VInternalStakerInfo::V1(internal_staker_info_v1) => internal_staker_info_v1,
             }
         }
 
@@ -1579,7 +1577,7 @@ pub mod Staking {
             staker_pool_info: StoragePath<Mutable<InternalStakerPoolInfoV2>>,
         ) {
             self.insert_staker_own_balance(:staker_address, own_balance: Zero::zero());
-            self.staker_info.write(staker_address, VersionedInternalStakerInfo::None);
+            self.staker_info.write(staker_address, VInternalStakerInfo::None);
             let operational_address = staker_info.operational_address;
             self.operational_address_to_staker_address.write(operational_address, Zero::zero());
             staker_pool_info.commission.write(Option::None);
@@ -2110,7 +2108,7 @@ pub mod Staking {
         ) {
             self
                 .staker_info
-                .write(staker_address, VersionedInternalStakerInfoTrait::wrap_latest(staker_info));
+                .write(staker_address, VInternalStakerInfoTrait::wrap_latest(staker_info));
         }
 
         fn assert_staker_address_not_reused(self: @ContractState, staker_address: ContractAddress) {
