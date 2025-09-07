@@ -496,9 +496,9 @@ mod epoch_info_tests {
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-pub struct InternalStakerPoolInfoV1 {
-    pub _deprecated_pool_contract: ContractAddress,
-    pub _deprecated_commission: Commission,
+pub(crate) struct InternalStakerPoolInfoV1 {
+    pub(crate) _deprecated_pool_contract: ContractAddress,
+    pub(crate) _deprecated_commission: Commission,
 }
 
 #[starknet::storage_node]
