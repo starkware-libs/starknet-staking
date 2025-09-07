@@ -2739,11 +2739,12 @@ Only token admin.
 ### EpochInfo
 | name                              | type    |
 | --------------------------------- | ------- |
-| block_duration                    | u16     |
-| length                            | u16     |
+| epoch_duration                    | u32     |
+| length                            | u32     |
 | starting_block                    | u64     |
 | starting_epoch                    | Epoch   |
-| last_starting_block_before_update | u64     |
+| previous_length                   | u32     |
+| previous_epoch_duration           | u32     |
 
 ### MintingCurveContractInfo
 | name    | type      |
