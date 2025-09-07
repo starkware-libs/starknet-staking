@@ -608,7 +608,7 @@ pub mod Staking {
                 token_address: STRK_TOKEN_ADDRESS,
                 attestation_contract: self.attestation_contract.read(),
                 pool_contract_class_hash: self.pool_contract_class_hash.read(),
-                reward_supplier: self.reward_supplier_dispatcher.read().contract_address,
+                reward_supplier: self.reward_supplier_dispatcher.contract_address.read(),
                 exit_wait_window: self.exit_wait_window.read(),
             }
         }
@@ -1172,7 +1172,7 @@ pub mod Staking {
 
         fn set_reward_supplier(ref self: ContractState, reward_supplier: ContractAddress) {
             self.roles.only_token_admin();
-            let old_reward_supplier = self.reward_supplier_dispatcher.read().contract_address;
+            let old_reward_supplier = self.reward_supplier_dispatcher.contract_address.read();
             self
                 .reward_supplier_dispatcher
                 .write(IRewardSupplierDispatcher { contract_address: reward_supplier });

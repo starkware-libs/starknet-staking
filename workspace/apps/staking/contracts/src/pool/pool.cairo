@@ -537,8 +537,8 @@ pub mod Pool {
             PoolContractInfoV1 {
                 staker_address: self.staker_address.read(),
                 staker_removed: self.staker_removed.read(),
-                staking_contract: self.staking_pool_dispatcher.read().contract_address,
-                token_address: self.token_dispatcher.read().contract_address,
+                staking_contract: self.staking_pool_dispatcher.contract_address.read(),
+                token_address: self.token_dispatcher.contract_address.read(),
                 commission: self.get_commission_from_staking_contract(),
             }
         }
@@ -676,7 +676,7 @@ pub mod Pool {
 
         fn assert_caller_is_staking_contract(self: @ContractState) {
             assert!(
-                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
+                get_caller_address() == self.staking_pool_dispatcher.contract_address.read(),
                 "{}",
                 GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
@@ -684,7 +684,7 @@ pub mod Pool {
 
         fn get_current_epoch(self: @ContractState) -> Epoch {
             let staking_dispatcher = IStakingDispatcher {
-                contract_address: self.staking_pool_dispatcher.read().contract_address,
+                contract_address: self.staking_pool_dispatcher.contract_address.read(),
             };
             staking_dispatcher.get_current_epoch()
         }
@@ -896,7 +896,7 @@ pub mod Pool {
                 return Zero::zero();
             }
             let staking_dispatcher = IStakingDispatcher {
-                contract_address: self.staking_pool_dispatcher.read().contract_address,
+                contract_address: self.staking_pool_dispatcher.contract_address.read(),
             };
             // The staker must have commission since it has a pool (this contract). So unwrap is
             // safe.

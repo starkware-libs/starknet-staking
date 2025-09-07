@@ -188,7 +188,7 @@ pub mod RewardSupplier {
             );
             // The bridge may serve multiple tokens, only the correct token may be received.
             assert!(
-                l2_token == self.token_dispatcher.read().contract_address,
+                l2_token == self.token_dispatcher.contract_address.read(),
                 "{}",
                 Error::UNEXPECTED_TOKEN,
             );
