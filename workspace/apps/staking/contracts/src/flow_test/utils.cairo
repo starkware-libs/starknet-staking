@@ -55,7 +55,7 @@ use staking::test_utils::{
     declare_staking_eic_contract_v1_v2, deploy_mock_erc20_decimals_contract, fund,
 };
 use staking::types::{
-    Amount, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
+    Amount, BlockNumber, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
     InternalStakerInfoLatest, VecIndex,
 };
 use starknet::syscalls::deploy_syscall;
@@ -826,7 +826,7 @@ pub(crate) impl AttestationImpl of AttestationTrait {
 
     fn get_current_epoch_target_attestation_block(
         self: AttestationState, operational_address: ContractAddress,
-    ) -> u64 {
+    ) -> BlockNumber {
         self.dispatcher().get_current_epoch_target_attestation_block(:operational_address)
     }
 }

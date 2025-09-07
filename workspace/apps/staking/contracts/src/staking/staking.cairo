@@ -39,7 +39,9 @@ pub mod Staking {
         MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTraceTrait,
         StakerBalanceTrait,
     };
-    use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, PublicKey, Version};
+    use staking::types::{
+        Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey, Version,
+    };
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
         compute_new_delegated_stake, deploy_delegation_pool_contract,
@@ -171,8 +173,7 @@ pub mod Staking {
         // TODO: Consider view function.
         staker_unstake_intent_epoch: Map<ContractAddress, Epoch>,
         // Last block number for which rewards were distributed.
-        // TODO: Type for block number.
-        last_reward_block: u64,
+        last_reward_block: BlockNumber,
     }
 
     #[event]
@@ -822,7 +823,7 @@ pub mod Staking {
                 .expect_with_err(Error::PUBLIC_KEY_NOT_SET)
         }
 
-        fn get_current_epoch_data(self: @ContractState) -> (Epoch, u64, u32) {
+        fn get_current_epoch_data(self: @ContractState) -> (Epoch, BlockNumber, u32) {
             let epoch_info = self.epoch_info.read();
             (
                 epoch_info.current_epoch(),

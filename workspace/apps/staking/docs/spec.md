@@ -248,6 +248,7 @@
     - [Inflation](#inflation)
     - [Epoch](#epoch)
     - [PublicKey](#publickey)
+    - [BlockNumber](#blocknumber)
 
 </details>
 
@@ -1481,7 +1482,7 @@ Any address.
 
 ### get_current_epoch_data
 ```rust
-fn get_current_epoch_data(self: @ContractState) -> (Epoch, u64, u32)
+fn get_current_epoch_data(self: @ContractState) -> (Epoch, BlockNumber, u32)
 ```
 #### description <!-- omit from toc -->
 Returns (epoch_id, epoch_starting_block, epoch_length) for the current epoch.
@@ -2328,7 +2329,7 @@ Any address can execute.
 ```rust
 fn get_current_epoch_target_attestation_block(
     self: @TContractState,
-    operational_address: ContractAddress,) -> u64;
+    operational_address: ContractAddress,) -> BlockNumber;
 ```
 
 #### description <!-- omit from toc -->
@@ -2737,14 +2738,14 @@ Only token admin.
 | current_epoch  | Epoch           |
 
 ### EpochInfo
-| name                              | type    |
-| --------------------------------- | ------- |
-| epoch_duration                    | u32     |
-| length                            | u32     |
-| starting_block                    | u64     |
-| starting_epoch                    | Epoch   |
-| previous_length                   | u32     |
-| previous_epoch_duration           | u32     |
+| name                              | type            |
+| --------------------------------- | --------------- |
+| epoch_duration                    | u32             |
+| length                            | u32             |
+| starting_block                    | BlockNumber     |
+| starting_epoch                    | Epoch           |
+| previous_length                   | u32             |
+| previous_epoch_duration           | u32             |
 
 ### MintingCurveContractInfo
 | name    | type      |
@@ -2770,3 +2771,6 @@ Epoch: u64
 
 ### PublicKey
 PublicKey: felt252
+
+### BlockNumber
+BlockNumber: u64

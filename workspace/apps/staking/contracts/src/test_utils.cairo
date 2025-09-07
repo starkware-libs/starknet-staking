@@ -75,7 +75,7 @@ pub(crate) mod constants {
     use core::num::traits::ops::pow::Pow;
     use staking::constants::STRK_IN_FRIS;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
-    use staking::types::{Amount, Commission, Index, PublicKey};
+    use staking::types::{Amount, BlockNumber, Commission, Index, PublicKey};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::time::time::Timestamp;
@@ -114,7 +114,7 @@ pub(crate) mod constants {
     pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
     // number of blocks in one epoch
     pub const EPOCH_LENGTH: u32 = 300;
-    pub const EPOCH_STARTING_BLOCK: u64 = 463476;
+    pub const EPOCH_STARTING_BLOCK: BlockNumber = 463476;
     // duration of  one epoch in seconds
     pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;

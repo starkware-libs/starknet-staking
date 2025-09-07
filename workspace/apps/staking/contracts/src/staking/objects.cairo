@@ -4,7 +4,7 @@ use core::ops::{AddAssign, SubAssign};
 use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
-use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
+use staking::types::{Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest};
 use starknet::storage::{Mutable, StoragePath, StoragePathMutableConversion};
 use starknet::{ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
@@ -150,7 +150,7 @@ pub(crate) struct EpochInfo {
     // The length of the epoch in blocks.
     length: u32,
     // The first block of the first epoch with this length.
-    starting_block: u64,
+    starting_block: BlockNumber,
     // The first epoch id with this length, changes by a call to update.
     starting_epoch: Epoch,
     // The length of the epoch prior to the update.
@@ -163,7 +163,7 @@ pub(crate) struct EpochInfo {
 pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     /// Create a new epoch info object. this should happen once, and is initializing the epoch info
     /// to the starting epoch.
-    fn new(epoch_duration: u32, epoch_length: u32, starting_block: u64) -> EpochInfo {
+    fn new(epoch_duration: u32, epoch_length: u32, starting_block: BlockNumber) -> EpochInfo {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
         assert!(epoch_duration.is_non_zero(), "{}", Error::INVALID_EPOCH_DURATION);
         assert!(starting_block >= get_block_number(), "{}", Error::INVALID_STARTING_BLOCK);
@@ -225,7 +225,7 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     }
 
     /// Get the starting block of the current epoch.
-    fn current_epoch_starting_block(self: @EpochInfo) -> u64 {
+    fn current_epoch_starting_block(self: @EpochInfo) -> BlockNumber {
         if self.update_done_in_this_epoch() {
             // The epoch info updated and the current block is before the starting block of the
             // next epoch with the new length.
@@ -700,7 +700,7 @@ pub struct AttestationInfo {
     // The id of the current epoch.
     epoch_id: Epoch,
     // The first block of the current epoch.
-    current_epoch_starting_block: u64,
+    current_epoch_starting_block: BlockNumber,
 }
 
 #[generate_trait]
@@ -710,7 +710,7 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
         stake: Amount,
         epoch_len: u32,
         epoch_id: Epoch,
-        current_epoch_starting_block: u64,
+        current_epoch_starting_block: BlockNumber,
     ) -> AttestationInfo {
         AttestationInfo { staker_address, stake, epoch_len, epoch_id, current_epoch_starting_block }
     }
@@ -727,7 +727,7 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
     fn epoch_id(self: @AttestationInfo) -> Epoch {
         *self.epoch_id
     }
-    fn current_epoch_starting_block(self: @AttestationInfo) -> u64 {
+    fn current_epoch_starting_block(self: @AttestationInfo) -> BlockNumber {
         *self.current_epoch_starting_block
     }
 }

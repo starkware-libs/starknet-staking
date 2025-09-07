@@ -16,7 +16,7 @@ pub mod Attestation {
     use staking::staking::objects::{
         AttestationInfo as StakingAttestationInfo, AttestationInfoTrait,
     };
-    use staking::types::Epoch;
+    use staking::types::{BlockNumber, Epoch};
     use starknet::storage::Map;
     use starknet::syscalls::get_block_hash_syscall;
     use starknet::{ContractAddress, get_block_number, get_caller_address};
@@ -148,7 +148,7 @@ pub mod Attestation {
         /// computation of the target attestation block.
         fn get_current_epoch_target_attestation_block(
             self: @ContractState, operational_address: ContractAddress,
-        ) -> u64 {
+        ) -> BlockNumber {
             let staking_dispatcher = IStakingAttestationDispatcher {
                 contract_address: self.staking_contract.read(),
             };
@@ -213,7 +213,7 @@ pub mod Attestation {
 
         fn _calculate_target_attestation_block(
             self: @ContractState, staking_attestation_info: StakingAttestationInfo,
-        ) -> u64 {
+        ) -> BlockNumber {
             // Compute staker hash for the attestation.
             let hash = PoseidonTrait::new()
                 .update(staking_attestation_info.stake().into())
@@ -231,7 +231,7 @@ pub mod Attestation {
             target_attestation_block
         }
 
-        fn _assert_attest_in_window(self: @ContractState, target_attestation_block: u64) {
+        fn _assert_attest_in_window(self: @ContractState, target_attestation_block: BlockNumber) {
             let attestation_window = self.attestation_window.read();
             let current_block_number = get_block_number();
             let min_block = target_attestation_block + MIN_ATTESTATION_WINDOW.into();
@@ -243,7 +243,9 @@ pub mod Attestation {
             );
         }
 
-        fn get_target_block_hash(self: @ContractState, target_attestation_block: u64) -> felt252 {
+        fn get_target_block_hash(
+            self: @ContractState, target_attestation_block: BlockNumber,
+        ) -> felt252 {
             match get_block_hash_syscall(block_number: target_attestation_block) {
                 Ok(x) => x,
                 Err(_) => panic!("{}", Error::BLOCK_HASH_UNWRAP_FAILED.describe()),

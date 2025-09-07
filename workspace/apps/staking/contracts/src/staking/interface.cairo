@@ -1,7 +1,7 @@
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::objects::{AttestationInfo, EpochInfo, NormalizedAmount};
-use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, PublicKey};
+use staking::types::{Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
@@ -60,7 +60,7 @@ pub trait IStaking<TContractState> {
     /// Get the current public key for the given `staker_address`.
     fn get_current_public_key(self: @TContractState, staker_address: ContractAddress) -> PublicKey;
     /// Returns (epoch_id, epoch_starting_block, epoch_length) for the current epoch.
-    fn get_current_epoch_data(self: @TContractState) -> (Epoch, u64, u32);
+    fn get_current_epoch_data(self: @TContractState) -> (Epoch, BlockNumber, u32);
 }
 
 // **Note**: This trait must be reimplemented in the next version of the contract.
