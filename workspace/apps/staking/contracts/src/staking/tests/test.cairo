@@ -3295,6 +3295,36 @@ fn test_update_rewards_only_staker() {
 }
 
 #[test]
+fn test_update_rewards_miss_blocks() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_rewards_dispatcher = IStakingRewardsManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    stake_for_testing_using_dispatcher(:cfg);
+    advance_epoch_global();
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
+    let (strk_epoch_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
+    let epoch_len_in_blocks = cfg.staking_contract_info.epoch_info.epoch_len_in_blocks();
+    let strk_block_rewards = strk_epoch_rewards / epoch_len_in_blocks.into();
+    let staker_info_expected = StakerInfoV1 {
+        unclaimed_rewards_own: strk_block_rewards * 2, ..staker_info_before,
+    };
+    staking_rewards_dispatcher.update_rewards(:staker_address);
+    advance_block_number_global(blocks: 2);
+    staking_rewards_dispatcher.update_rewards(:staker_address);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_expected);
+}
+
+#[test]
 fn test_update_rewards_with_strk_pool() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
