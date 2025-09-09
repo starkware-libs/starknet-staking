@@ -43,12 +43,12 @@ pub mod MintingCurve {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staking_dispatcher: IStakingDispatcher,
-        // Total supply of the token in L1. This is updated by the L1 reward supplier.
+        /// Total supply of the token in L1. This is updated by the L1 reward supplier.
         total_supply: Amount,
-        // L1 reward supplier.
+        /// L1 reward supplier.
         l1_reward_supplier: felt252,
-        // The numerator of the inflation rate. The denominator is C_DENOM.
-        // Yearly mint is (C_NUM / C_DENOM) * sqrt(total_stake * total_supply).
+        /// The numerator of the inflation rate. The denominator is C_DENOM.
+        /// Yearly mint is (C_NUM / C_DENOM) * sqrt(total_stake * total_supply).
         c_num: Inflation,
     }
 
@@ -94,7 +94,7 @@ pub mod MintingCurve {
         }
     }
 
-    // Message updating the total supply, sent by the L1 reward supplier.
+    /// Message updating the total supply, sent by the L1 reward supplier.
     #[l1_handler]
     fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: Amount) {
         assert!(
@@ -144,9 +144,9 @@ pub mod MintingCurve {
 
     #[abi(embed_v0)]
     impl IMintingCurveConfigImpl of IMintingCurveConfig<ContractState> {
-        // Set the maximum inflation rate that can be minted in a year.
-        // c_num is the numerator of the fraction c_num / C_DENOM (currently C_DENOM = 10,000).
-        // If you wish to set the inflation rate to 1.7%, you should set c_num to 170.
+        /// Set the maximum inflation rate that can be minted in a year.
+        /// c_num is the numerator of the fraction c_num / C_DENOM (currently C_DENOM = 10,000).
+        /// If you wish to set the inflation rate to 1.7%, you should set c_num to 170.
         fn set_c_num(ref self: ContractState, c_num: Inflation) {
             self.roles.only_token_admin();
             assert!(c_num <= MAX_C_NUM, "{}", Error::C_NUM_OUT_OF_RANGE);

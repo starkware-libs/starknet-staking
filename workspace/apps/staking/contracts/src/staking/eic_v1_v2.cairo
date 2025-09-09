@@ -1,5 +1,5 @@
-// An External Initializer Contract to upgrade a staking contract.
-// This EIC is used to upgrade the staking contract from V1 to V2 (BTC).
+/// An External Initializer Contract to upgrade a staking contract.
+/// This EIC is used to upgrade the staking contract from V1 to V2 (BTC).
 #[starknet::contract]
 mod StakingEICV1toV2 {
     use core::cmp::min;
@@ -27,7 +27,7 @@ mod StakingEICV1toV2 {
         // --- Existing fields ---
         /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
-        // The class hash of the delegation pool contract.
+        /// The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
         /// Deprecated field of the total stake.
         total_stake_trace: Trace,

@@ -1867,13 +1867,13 @@ pub(crate) fn upgrade_implementation(
 #[generate_trait]
 /// System factory for creating system states used in flow and regression tests.
 pub(crate) impl SystemFactoryImpl of SystemFactoryTrait {
-    // System state used for flow tests.
+    /// System state used for flow tests.
     fn local_system() -> SystemState {
         let cfg: StakingInitConfig = Default::default();
         SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy()
     }
 
-    // System state used for regression tests.
+    /// System state used for regression tests.
     fn mainnet_system() -> SystemState {
         let mut cfg: StakingInitConfig = Default::default();
         cfg.staking_contract_info.pool_contract_class_hash = MAINNET_POOL_CLASS_HASH_V0();

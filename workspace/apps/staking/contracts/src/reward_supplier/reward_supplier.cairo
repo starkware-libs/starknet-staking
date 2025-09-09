@@ -53,18 +53,18 @@ pub mod RewardSupplier {
         src5: SRC5Component::Storage,
         // Deprecated last_timestamp field, used in V0.
         // last_timestamp: Timestamp,
-        // The amount of unclaimed rewards owed to the staking contract.
+        /// The amount of unclaimed rewards owed to the staking contract.
         unclaimed_rewards: Amount,
-        // The amount of tokens requested from L1.
+        /// The amount of tokens requested from L1.
         l1_pending_requested_amount: Amount,
-        // The amount of tokens that is requested from L1 in a single message.
+        /// The amount of tokens that is requested from L1 in a single message.
         base_mint_amount: Amount,
         minting_curve_dispatcher: IMintingCurveDispatcher,
         staking_contract: ContractAddress,
         token_dispatcher: IERC20Dispatcher,
-        // L1 reward supplier contract.
+        /// L1 reward supplier contract.
         l1_reward_supplier: felt252,
-        // Token bridge address.
+        /// Token bridge address.
         starkgate_address: ContractAddress,
     }
 
@@ -149,7 +149,7 @@ pub mod RewardSupplier {
             self.request_funds(:unclaimed_rewards);
         }
 
-        // This function is called by the staking contract, claiming an amount of owed rewards.
+        /// This function is called by the staking contract, claiming an amount of owed rewards.
         fn claim_rewards(ref self: ContractState, amount: Amount) {
             // Asserts.
             let staking_contract = self.staking_contract.read();
@@ -167,7 +167,7 @@ pub mod RewardSupplier {
             token_dispatcher.checked_transfer(recipient: staking_contract, amount: amount.into());
         }
 
-        // Callback function for StarkGate deposit.
+        /// Callback function for StarkGate deposit.
         fn on_receive(
             ref self: ContractState,
             l2_token: ContractAddress,
@@ -217,7 +217,7 @@ pub mod RewardSupplier {
 
     #[generate_trait]
     impl InternalRewardSupplierFunctions of InternalRewardSupplierFunctionsTrait {
-        // Requests funds from L1 to account for new rewards, if the contract's balance is too low.
+        /// Requests funds from L1 to account for new rewards, if the contract's balance is too low.
         fn request_funds(ref self: ContractState, unclaimed_rewards: Amount) {
             // Read current balance.
             let token_dispatcher = self.token_dispatcher.read();

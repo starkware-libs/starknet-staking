@@ -1,4 +1,4 @@
-// An External Initializer Contract to upgrade a pool contract.
+/// An External Initializer Contract to upgrade a pool contract.
 #[cfg(test)]
 #[starknet::contract]
 mod PoolEICV0toV1 {
@@ -18,21 +18,21 @@ mod PoolEICV0toV1 {
     #[storage]
     struct Storage {
         // --- New fields ---
-        // Map version to class hash of the contract.
+        /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
-        // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
-        // calculation.
+        /// Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
+        /// calculation.
         cumulative_rewards_trace: Trace,
-        // Indicates whether the staker has been removed from the staking contract.
+        /// Indicates whether the staker has been removed from the staking contract.
         staker_removed: bool,
         // --- Existing fields ---
-        // Stores the final global index of staking contract, used for updating pending rewards
-        // during PoolMemberInfo migration.
+        /// Stores the final global index of staking contract, used for updating pending rewards
+        /// during PoolMemberInfo migration.
         final_staker_index: Option<Index>,
-        // Dispatcher for the staking contract's pool functions, used for the final index and the
-        // StakerInfo migration.
+        /// Dispatcher for the staking contract's pool functions, used for the final index and the
+        /// StakerInfo migration.
         staking_pool_dispatcher: IStakingPoolV1ForTestsDispatcher,
-        // The staker address, used for the final index and the StakerInfo migration.
+        /// The staker address, used for the final index and the StakerInfo migration.
         staker_address: ContractAddress,
     }
 

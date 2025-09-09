@@ -19,8 +19,8 @@ const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct UndelegateIntentKey {
     pub pool_contract: ContractAddress,
-    // The identifier is generally the pool member address, but it can be any unique identifier,
-    // depending on the logic of the pool contract.
+    /// The identifier is generally the pool member address, but it can be any unique identifier,
+    /// depending on the logic of the pool contract.
     pub identifier: felt252,
 }
 
@@ -145,17 +145,17 @@ pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
 
 #[derive(Debug, Hash, Drop, Serde, Copy, PartialEq, starknet::Store)]
 pub(crate) struct EpochInfo {
-    // The duration of the epoch in seconds.
+    /// The duration of the epoch in seconds.
     epoch_duration: u32,
-    // The length of the epoch in blocks.
+    /// The length of the epoch in blocks.
     length: u32,
-    // The first block of the first epoch with this length.
+    /// The first block of the first epoch with this length.
     starting_block: BlockNumber,
-    // The first epoch id with this length, changes by a call to update.
+    /// The first epoch id with this length, changes by a call to update.
     starting_epoch: Epoch,
-    // The length of the epoch prior to the update.
+    /// The length of the epoch prior to the update.
     previous_length: u32,
-    // The duration of the epoch prior to the update.
+    /// The duration of the epoch prior to the update.
     previous_epoch_duration: u32,
 }
 
@@ -691,15 +691,15 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1Impl of StakerInfoIntoInternal
 
 #[derive(Serde, Drop, Copy, Debug)]
 pub struct AttestationInfo {
-    // The address of the staker mapped to the operational address provided.
+    /// The address of the staker mapped to the operational address provided.
     staker_address: ContractAddress,
-    // The amount of stake the staker has in current epoch.
+    /// The amount of stake the staker has in current epoch.
     stake: Amount,
-    // The length of the epoch in blocks.
+    /// The length of the epoch in blocks.
     epoch_len: u32,
-    // The id of the current epoch.
+    /// The id of the current epoch.
     epoch_id: Epoch,
-    // The first block of the current epoch.
+    /// The first block of the current epoch.
     current_epoch_starting_block: BlockNumber,
 }
 

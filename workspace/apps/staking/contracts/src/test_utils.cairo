@@ -80,16 +80,16 @@ pub(crate) mod constants {
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::time::time::Timestamp;
 
-    // STRK rewards constants.
+    /// STRK rewards constants.
     pub const STRK_BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
     pub const STRK_DECIMALS: u8 = 18;
 
-    // BTC (decimals = 8) rewards constants.
+    /// BTC (decimals = 8) rewards constants.
     pub const BTC_DECIMALS_8: u8 = 8;
     pub const MIN_BTC_FOR_REWARDS_8: Amount = 10_u128.pow(3);
     pub const BTC_BASE_VALUE_8: Index = 10_u128.pow(13);
 
-    // BTC (decimals = 18) rewards constants.
+    /// BTC (decimals = 18) rewards constants.
     pub const BTC_DECIMALS_18: u8 = 18;
     pub const MIN_BTC_FOR_REWARDS_18: Amount = 10_u128.pow(13);
     pub const BTC_BASE_VALUE_18: Index = 10_u128.pow(23);
@@ -112,10 +112,10 @@ pub(crate) mod constants {
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
     pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
     pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
-    // number of blocks in one epoch
+    /// number of blocks in one epoch
     pub const EPOCH_LENGTH: u32 = 300;
     pub const EPOCH_STARTING_BLOCK: BlockNumber = 463476;
-    // duration of  one epoch in seconds
+    /// duration of  one epoch in seconds
     pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
     pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
@@ -724,7 +724,7 @@ pub(crate) fn store_to_simple_map<
     snforge_std::store(target: contract, :storage_address, :serialized_value);
 }
 
-// This only works for shallow Option. i.e. if within V there is an Option, this will fail.
+/// This only works for shallow Option. i.e. if within V there is an Option, this will fail.
 pub(crate) fn load_option_from_simple_map<
     K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<Option<V>>,
 >(
@@ -745,7 +745,7 @@ pub(crate) fn load_option_from_simple_map<
     }
 }
 
-// Store internal staker info v0 with pool_info = None.
+/// Store internal staker info v0 with pool_info = None.
 pub(crate) fn store_internal_staker_info_v0_to_map(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
@@ -849,7 +849,7 @@ fn compute_unclaimed_rewards_member(
     return rewards_including_commission - commission_amount;
 }
 
-// Assumes the staking contract has already been deployed.
+/// Assumes the staking contract has already been deployed.
 pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
     let staking_contract = cfg.test_info.staking_contract;
     let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };

@@ -13,7 +13,7 @@ pub(crate) type PublicKey = felt252;
 pub(crate) type BlockNumber = u64;
 
 // ------ Migration ------ //
-// **Note**: These aliases should be updated in the next version.
+/// **Note**: These aliases should be updated in the next version.
 pub(crate) type InternalStakerInfoLatest = InternalStakerInfoV1;
 pub(crate) type InternalStakerPoolInfoLatest = InternalStakerPoolInfoV1;
 pub(crate) type InternalPoolMemberInfoLatest = InternalPoolMemberInfoV1;

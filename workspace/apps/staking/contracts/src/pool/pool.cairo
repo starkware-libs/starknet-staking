@@ -74,34 +74,34 @@ pub mod Pool {
         #[substorage(v0)]
         roles: RolesComponent::Storage,
         staker_address: ContractAddress,
-        // Map pool member to their pool member info.
+        /// Map pool member to their pool member info.
         pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
         // Deprecated field from V0. Stores the final global index of staking contract if the staker
         // was active during the upgrade to V1. If the staker was removed in V0, it retains the
         // final staker index.
         // final_staker_index: Option<Index>,
-        // Dispatcher for the staking contract's pool functions.
+        /// Dispatcher for the staking contract's pool functions.
         staking_pool_dispatcher: IStakingPoolDispatcher,
-        // Dispatcher for the token contract.
+        /// Dispatcher for the token contract.
         token_dispatcher: IERC20Dispatcher,
         // Deprecated commission field, was used in V0.
         // commission: Commission,
-        // Map pool member to their epoch-balance info.
+        /// Map pool member to their epoch-balance info.
         pool_member_epoch_balance: Map<ContractAddress, PoolMemberBalanceTrace>,
-        // Map version to class hash of the contract.
+        /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
-        // Indicates whether the staker has been removed from the staking contract.
+        /// Indicates whether the staker has been removed from the staking contract.
         staker_removed: bool,
-        // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
-        // calculation.
-        // Updated whenever rewards are received from the staking contract.
+        /// Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
+        /// calculation.
+        /// Updated whenever rewards are received from the staking contract.
         cumulative_rewards_trace: Trace,
-        // Minimum amount of delegation required for rewards.
-        // Used to avoid overflow in the rewards calculation.
+        /// Minimum amount of delegation required for rewards.
+        /// Used to avoid overflow in the rewards calculation.
         min_delegation_for_rewards: Amount,
-        // Staking rewards base value.
-        // Used in rewards calculation: $$ rewards = amount * interest / base_value $$,
-        // Where `interest` scales with `base_value`.
+        /// Staking rewards base value.
+        /// Used in rewards calculation: $$ rewards = amount * interest / base_value $$,
+        /// Where `interest` scales with `base_value`.
         staking_rewards_base_value: Amount,
     }
 
@@ -499,7 +499,7 @@ pub mod Pool {
                 );
         }
 
-        // This function provides the pool member info (with projected rewards).
+        /// This function provides the pool member info (with projected rewards).
         fn pool_member_info_v1(
             self: @ContractState, pool_member: ContractAddress,
         ) -> PoolMemberInfoV1 {

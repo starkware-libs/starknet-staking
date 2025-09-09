@@ -39,9 +39,9 @@ pub(crate) fn deploy_delegation_pool_contract(
     pool_address
 }
 
-// Compute the commission amount of the staker from the pool rewards.
-//
-// $$ commission_amount = rewards_including_commission * commission / COMMISSION_DENOMINATOR $$
+/// Compute the commission amount of the staker from the pool rewards.
+///
+/// $$ commission_amount = rewards_including_commission * commission / COMMISSION_DENOMINATOR $$
 pub(crate) fn compute_commission_amount_rounded_down(
     rewards_including_commission: Amount, commission: Commission,
 ) -> Amount {
@@ -53,10 +53,10 @@ pub(crate) fn compute_commission_amount_rounded_down(
         .expect_with_err(err: GenericError::COMMISSION_ISNT_AMOUNT_TYPE)
 }
 
-// Compute the commission amount of the staker from the pool rewards.
-//
-// $$ commission_amount = ceil_of_division(rewards_including_commission * commission,
-// COMMISSION_DENOMINATOR) $$
+/// Compute the commission amount of the staker from the pool rewards.
+///
+/// $$ commission_amount = ceil_of_division(rewards_including_commission * commission,
+/// COMMISSION_DENOMINATOR) $$
 pub(crate) fn compute_commission_amount_rounded_up(
     rewards_including_commission: Amount, commission: Commission,
 ) -> Amount {
@@ -71,10 +71,10 @@ pub(crate) fn compute_commission_amount_rounded_up(
 /// Compute the rewards from the amount and interest.
 ///
 /// $$ rewards = amount * interest / base_value $$
-// **Note**: The Pool contract’s reward calculation logic uses integer division, discarding
-// small rounding remainders (dust) without tracking or redistributing them.
-// This results in negligible reward losses for delegators, as the total distributed rewards
-// are slightly less than the allocated amount.
+/// **Note**: The Pool contract’s reward calculation logic uses integer division, discarding
+/// small rounding remainders (dust) without tracking or redistributing them.
+/// This results in negligible reward losses for delegators, as the total distributed rewards
+/// are slightly less than the allocated amount.
 pub(crate) fn compute_rewards_rounded_down(
     amount: Amount, interest: Index, base_value: Index,
 ) -> Amount {
@@ -82,7 +82,7 @@ pub(crate) fn compute_rewards_rounded_down(
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
-// Compute the threshold for requesting funds from L1 Reward Supplier.
+/// Compute the threshold for requesting funds from L1 Reward Supplier.
 pub(crate) fn compute_threshold(base_mint_amount: Amount) -> Amount {
     base_mint_amount / 2
 }

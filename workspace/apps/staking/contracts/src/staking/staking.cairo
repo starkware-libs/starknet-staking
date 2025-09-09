@@ -100,13 +100,13 @@ pub mod Staking {
         // Deprecated timestamp of the last global index update, used in V0.
         // global_index_last_update_timestamp: Timestamp,
 
-        // Minimum amount of initial stake.
+        /// Minimum amount of initial stake.
         min_stake: Amount,
-        // Map staker address to their staker info.
+        /// Map staker address to their staker info.
         staker_info: Map<ContractAddress, VInternalStakerInfo>,
-        // Map operational address to staker address, as it must be a 1 to 1 mapping.
+        /// Map operational address to staker address, as it must be a 1 to 1 mapping.
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
-        // Map potential operational address to eligible staker address.
+        /// Map potential operational address to eligible staker address.
         eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
         // Deprecated field of a dispatcher of the token contract, used in V1.
         // token_dispatcher: IERC20Dispatcher,
@@ -114,65 +114,65 @@ pub mod Staking {
         // Deprecated field of the total stake, used in V0.
         // total_stake: Amount,
 
-        // The class hash of the delegation pool contract.
+        /// The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
-        // Undelegate intents from pool contracts.
+        /// Undelegate intents from pool contracts.
         pool_exit_intents: Map<UndelegateIntentKey, UndelegateIntentValue>,
-        // A dispatcher of the reward supplier contract.
+        /// A dispatcher of the reward supplier contract.
         reward_supplier_dispatcher: IRewardSupplierDispatcher,
-        // Initial governor address of the spinned-off delegation pool contract.
+        /// Initial governor address of the spinned-off delegation pool contract.
         pool_contract_admin: ContractAddress,
-        // Storage of the `pause` flag state.
+        /// Storage of the `pause` flag state.
         is_paused: bool,
-        // Required delay (in seconds) between unstake intent and unstake action.
+        /// Required delay (in seconds) between unstake intent and unstake action.
         exit_wait_window: TimeDelta,
-        // Epoch info.
+        /// Epoch info.
         epoch_info: EpochInfo,
-        // The contract that staker sends attestation transaction to.
+        /// The contract that staker sends attestation transaction to.
         attestation_contract: ContractAddress,
-        // Map version to class hash of the contract.
+        /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
         // Deprecated field of the total stake, used in V1.
         // total_stake_trace: Trace,
 
-        // Map token address to checkpoints tracking total stake changes over time, with each
-        // checkpoint mapping an epoch to the updated stake. Stakers that performed unstake_intent
-        // are not included.
+        /// Map token address to checkpoints tracking total stake changes over time, with each
+        /// checkpoint mapping an epoch to the updated stake. Stakers that performed unstake_intent
+        /// are not included.
         tokens_total_stake_trace: Map<ContractAddress, Trace>,
-        // Map staker address to their balance trace.
-        // Deprecated field of the staker balance trace, used in V1.
-        // Now used only for migration from V1 to V2.
+        /// Map staker address to their balance trace.
+        /// Deprecated field of the staker balance trace, used in V1.
+        /// Now used only for migration from V1 to V2.
         staker_balance_trace: Map<ContractAddress, StakerBalanceTrace>,
-        // Map staker address to their own balance trace.
+        /// Map staker address to their own balance trace.
         staker_own_balance_trace: Map<ContractAddress, Trace>,
-        // Map staker address to their delegated balance trace per pool contract (map pool contract
-        // to their balance trace).
+        /// Map staker address to their delegated balance trace per pool contract (map pool contract
+        /// to their balance trace).
         staker_delegated_balance_trace: Map<ContractAddress, Map<ContractAddress, Trace>>,
-        // Map staker address to their pool info.
+        /// Map staker address to their pool info.
         staker_pool_info: Map<ContractAddress, InternalStakerPoolInfoV2>,
-        // Map token address to (is_active_first_epoch, is_active).
-        // The `is_active_first_epoch` is the first epoch that the `token_address` is in
-        // `is_active` state.
-        // Namely, if `e >= is_active_first_epoch` then the token is in `is_active` state.
-        // If `current_epoch <= e < is_active_first_epoch`, the tokens is in `!is_active` state.
-        // The state of older epochs cannot be determined.
+        /// Map token address to (is_active_first_epoch, is_active).
+        /// The `is_active_first_epoch` is the first epoch that the `token_address` is in
+        /// `is_active` state.
+        /// Namely, if `e >= is_active_first_epoch` then the token is in `is_active` state.
+        /// If `current_epoch <= e < is_active_first_epoch`, the tokens is in `!is_active` state.
+        /// The state of older epochs cannot be determined.
         btc_tokens: IterableMap<ContractAddress, (Epoch, bool)>,
-        // Vector of staker addresses.
-        // **Note**: Stakers are not removed from this vector when they unstake.
+        /// Vector of staker addresses.
+        /// **Note**: Stakers are not removed from this vector when they unstake.
         stakers: Vec<ContractAddress>,
-        // Map token address to its decimals.
+        /// Map token address to its decimals.
         token_decimals: Map<ContractAddress, u8>,
-        // Map staker address to (activation_epoch, old_public_key, new_public_key).
-        // Similarily to `btc_tokens`, the `activation_epoch` is the first epoch from
-        // which the `new_public_key` is valid. Up until `activation_epoch`, the
-        // `old_public_key` is valid.
+        /// Map staker address to (activation_epoch, old_public_key, new_public_key).
+        /// Similarily to `btc_tokens`, the `activation_epoch` is the first epoch from
+        /// which the `new_public_key` is valid. Up until `activation_epoch`, the
+        /// `old_public_key` is valid.
         public_key: Map<ContractAddress, (Epoch, PublicKey, PublicKey)>,
-        // Map staker address to the epoch when the unstake intent takes effect.
-        // **Note**: Stakers that called `unstake_intent` before V3 will not have this record.
+        /// Map staker address to the epoch when the unstake intent takes effect.
+        /// **Note**: Stakers that called `unstake_intent` before V3 will not have this record.
         // TODO: Consider adding to InternalStakerInfoV1.
         // TODO: Consider view function.
         staker_unstake_intent_epoch: Map<ContractAddress, Epoch>,
-        // Last block number for which rewards were distributed.
+        /// Last block number for which rewards were distributed.
         last_reward_block: BlockNumber,
     }
 
@@ -562,8 +562,8 @@ pub mod Staking {
             staker_info
         }
 
-        // This function provides the staker info (with projected rewards) wrapped in an Option.
-        // If the staker does not exist, it returns None.
+        /// This function provides the staker info (with projected rewards) wrapped in an Option.
+        /// If the staker does not exist, it returns None.
         fn get_staker_info_v1(
             self: @ContractState, staker_address: ContractAddress,
         ) -> Option<StakerInfoV1> {
@@ -703,9 +703,9 @@ pub mod Staking {
             }
         }
 
-        // **Note**: Current commission increase safeguards still allow for sudden commission
-        // changes.
-        // **Note**: Updating epoch info can impact the commission commitment expiration date.
+        /// **Note**: Current commission increase safeguards still allow for sudden commission
+        /// changes.
+        /// **Note**: Updating epoch info can impact the commission commitment expiration date.
         fn set_commission_commitment(
             ref self: ContractState, max_commission: Commission, expiration_epoch: Epoch,
         ) {
