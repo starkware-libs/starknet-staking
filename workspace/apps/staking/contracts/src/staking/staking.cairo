@@ -1300,7 +1300,9 @@ pub mod Staking {
 
     #[abi(embed_v0)]
     impl StakingRewardsManagerImpl of IStakingRewardsManager<ContractState> {
-        fn update_rewards(ref self: ContractState, staker_address: ContractAddress) {
+        fn update_rewards(
+            ref self: ContractState, staker_address: ContractAddress, disable_rewards: bool,
+        ) {
             self.general_prerequisites();
             // TODO: Add v3 flag checking.
             // TODO: Assert caller is starkware sequencer.
@@ -1315,25 +1317,30 @@ pub mod Staking {
             let staker_info = self.internal_staker_info(:staker_address);
             // TODO: Assert staker is not in unstake intent.
 
-            // Update last block rewards.
-            self.last_reward_block.write(current_block_number);
-
-            // Get current block data.
-            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
-            let (strk_block_rewards, btc_block_rewards) = self
-                .calculate_block_rewards(:reward_supplier_dispatcher);
             let staker_pool_info = self.staker_pool_info.entry(staker_address).as_non_mut();
             let curr_epoch = self.get_current_epoch();
             let staker_total_strk_balance = self
                 .get_staker_total_strk_balance_curr_epoch(
                     :staker_address, :staker_pool_info, :curr_epoch,
                 );
-            assert!(staker_total_strk_balance.is_non_zero(), "{}", Error::INVALID_STAKER)
+            // Assert staker is active.
+            assert!(staker_total_strk_balance.is_non_zero(), "{}", Error::INVALID_STAKER);
+
+            // Update last block rewards.
+            self.last_reward_block.write(current_block_number);
+
+            if disable_rewards {
+                return;
+            }
+
+            // Get current block data and update rewards.
+            let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
+            let (strk_block_rewards, btc_block_rewards) = self
+                .calculate_block_rewards(:reward_supplier_dispatcher);
             let staker_total_btc_balance = self
                 .get_staker_total_btc_balance_curr_epoch(
                     :staker_address, :staker_pool_info, :curr_epoch,
                 );
-
             self
                 ._update_rewards(
                     :staker_address,

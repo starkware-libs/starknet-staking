@@ -1495,11 +1495,12 @@ Any address.
 
 ### update_rewards
 ```rust
-fn update_rewards(ref self: TContractState, staker_address: ContractAddress);
+fn update_rewards(ref self: TContractState, staker_address: ContractAddress, disable_rewards: bool);
 ```
 #### description <!-- omit from toc -->
 Calculate and update the current block rewards for the for the given `staker_address`.
 Send pool rewards to the pools.
+Distribute rewards only if `disable_rewards` is False.
 #### emits <!-- omit from toc -->
 1. [Staker Rewards Updated](#staker-rewards-updated)
 2. [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)

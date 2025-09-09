@@ -3280,7 +3280,7 @@ fn test_update_rewards_only_staker() {
         unclaimed_rewards_own: strk_block_rewards, ..staker_info_before,
     };
     let mut spy = snforge_std::spy_events();
-    staking_rewards_dispatcher.update_rewards(:staker_address);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_expected);
     // Validate StakerRewardsUpdated event.
@@ -3317,9 +3317,9 @@ fn test_update_rewards_miss_blocks() {
     let staker_info_expected = StakerInfoV1 {
         unclaimed_rewards_own: strk_block_rewards * 2, ..staker_info_before,
     };
-    staking_rewards_dispatcher.update_rewards(:staker_address);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
     advance_block_number_global(blocks: 2);
-    staking_rewards_dispatcher.update_rewards(:staker_address);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_expected);
 }
@@ -3370,7 +3370,7 @@ fn test_update_rewards_with_strk_pool() {
     };
     // Update rewards.
     let mut spy = snforge_std::spy_events();
-    staking_rewards_dispatcher.update_rewards(:staker_address);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
 
     // Assert staker rewards update.
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
@@ -3518,7 +3518,7 @@ fn test_update_rewards_with_both_strk_and_btc() {
         unclaimed_rewards_own: expected_staker_total_rewards, ..staker_info_before,
     };
     let mut spy = snforge_std::spy_events();
-    staking_rewards_dispatcher.update_rewards(:staker_address);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
     advance_epoch_global();
 
     // Assert staker rewards update.
@@ -3597,24 +3597,64 @@ fn test_update_rewards_assertions() {
     let staker_address = cfg.test_info.staker_address;
 
     // Catch STAKER_NOT_EXISTS.
-    let result = staking_rewards_safe_dispatcher.update_rewards(:staker_address);
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 
     stake_for_testing_using_dispatcher(:cfg);
     // Catch INVALID_STAKER - before staker has balance.
-    let result = staking_rewards_safe_dispatcher.update_rewards(:staker_address);
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
     assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
 
     advance_epoch_global();
-    staking_rewards_dispatcher.update_rewards(:staker_address);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
     // Catch REWARDS_ALREADY_UPDATED.
-    let result = staking_rewards_safe_dispatcher.update_rewards(:staker_address);
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_UPDATED.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_UPDATED.describe());
+
+    advance_epoch_global();
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
+    // Catch REWARDS_ALREADY_UPDATE - with distribute = false.
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_UPDATED.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
     assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_UPDATED.describe());
 
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
     advance_epoch_global();
     // TODO: Catch INVALID_STAKER - unstake intent.
+}
+
+#[test]
+fn test_update_rewards_without_distribute() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_rewards_dispatcher = IStakingRewardsManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    stake_for_testing_using_dispatcher(:cfg);
+    advance_epoch_global();
+    let staker_address = cfg.test_info.staker_address;
+    let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_before);
 }
 
 #[test]

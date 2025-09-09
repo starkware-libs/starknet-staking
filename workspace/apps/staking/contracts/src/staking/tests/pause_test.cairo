@@ -345,5 +345,5 @@ fn test_update_rewards_when_paused() {
     let staking_dispatcher = IStakingRewardsManagerDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.update_rewards(staker_address: DUMMY_ADDRESS());
+    staking_dispatcher.update_rewards(staker_address: DUMMY_ADDRESS(), disable_rewards: true);
 }

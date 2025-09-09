@@ -233,7 +233,11 @@ pub trait IStakingAttestation<TContractState> {
 #[starknet::interface]
 pub trait IStakingRewardsManager<TContractState> {
     /// Update current block rewards for the given `staker_address`.
-    fn update_rewards(ref self: TContractState, staker_address: ContractAddress);
+    /// Distribute rewards only if `disable_rewards` is `false`.
+    // TODO: Emit event also if `disable_rewards` is `true`? Return value?
+    fn update_rewards(
+        ref self: TContractState, staker_address: ContractAddress, disable_rewards: bool,
+    );
 }
 
 pub mod Events {
