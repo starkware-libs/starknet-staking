@@ -1301,7 +1301,6 @@ pub mod Staking {
         ) {
             self.general_prerequisites();
             // TODO: Add v3 flag checking.
-            // TODO: Assert caller is starkware sequencer.
             let current_block_number = starknet::get_block_number();
             assert!(
                 current_block_number > self.last_reward_block.read(),
