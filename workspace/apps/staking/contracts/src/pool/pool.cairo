@@ -138,10 +138,8 @@ pub mod Pool {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.staker_address.write(staker_address);
-        self
-            .staking_pool_dispatcher
-            .write(IStakingPoolDispatcher { contract_address: staking_contract });
-        self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
+        self.staking_pool_dispatcher.contract_address.write(staking_contract);
+        self.token_dispatcher.contract_address.write(token_address);
         self.staker_removed.write(false);
         self.cumulative_rewards_trace.insert(key: Zero::zero(), value: Zero::zero());
         let config = self.get_token_rewards_config(:token_address);

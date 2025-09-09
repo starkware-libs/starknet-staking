@@ -233,9 +233,7 @@ pub mod Staking {
         self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.min_stake.write(min_stake);
         self.pool_contract_class_hash.write(pool_contract_class_hash);
-        self
-            .reward_supplier_dispatcher
-            .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
+        self.reward_supplier_dispatcher.contract_address.write(reward_supplier);
         self.pool_contract_admin.write(pool_contract_admin);
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
@@ -1173,9 +1171,7 @@ pub mod Staking {
         fn set_reward_supplier(ref self: ContractState, reward_supplier: ContractAddress) {
             self.roles.only_token_admin();
             let old_reward_supplier = self.reward_supplier_dispatcher.contract_address.read();
-            self
-                .reward_supplier_dispatcher
-                .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
+            self.reward_supplier_dispatcher.contract_address.write(reward_supplier);
             self
                 .emit(
                     ConfigEvents::RewardSupplierChanged {

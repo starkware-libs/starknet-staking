@@ -95,15 +95,13 @@ pub mod RewardSupplier {
         let token_address = STRK_TOKEN_ADDRESS;
         self.roles.initialize(:governance_admin);
         self.staking_contract.write(staking_contract);
-        self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
+        self.token_dispatcher.contract_address.write(token_address);
         // Initialize unclaimed_rewards with 1 STRK to make up for round ups of pool rewards
         // calculation in the staking contract.
         self.unclaimed_rewards.write(STRK_IN_FRIS);
         self.l1_pending_requested_amount.write(Zero::zero());
         self.base_mint_amount.write(base_mint_amount);
-        self
-            .minting_curve_dispatcher
-            .write(IMintingCurveDispatcher { contract_address: minting_curve_contract });
+        self.minting_curve_dispatcher.contract_address.write(minting_curve_contract);
         self.l1_reward_supplier.write(l1_reward_supplier);
         self.starkgate_address.write(starkgate_address);
     }

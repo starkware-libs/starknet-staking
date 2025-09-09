@@ -77,7 +77,7 @@ pub mod MintingCurve {
         governance_admin: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
-        self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
+        self.staking_dispatcher.contract_address.write(staking_contract);
         self.total_supply.write(total_supply);
         self.l1_reward_supplier.write(l1_reward_supplier);
         self.c_num.write(DEFAULT_C_NUM);
