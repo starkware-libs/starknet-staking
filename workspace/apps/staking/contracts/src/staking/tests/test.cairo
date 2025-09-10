@@ -52,7 +52,8 @@ use staking::staking::interface::{
     CommissionCommitment, IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
     IStakingAttestationSafeDispatcher, IStakingAttestationSafeDispatcherTrait,
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingConfigSafeDispatcher,
-    IStakingConfigSafeDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
+    IStakingConfigSafeDispatcherTrait, IStakingConsensusDispatcher,
+    IStakingConsensusDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
     IStakingRewardsManagerDispatcher, IStakingRewardsManagerDispatcherTrait,
@@ -5203,11 +5204,14 @@ fn test_get_current_epoch_data() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
 
     // Test epoch 0.
-    let (epoch_id, starting_block, epoch_length) = staking_dispatcher.get_current_epoch_data();
+    let (epoch_id, starting_block, epoch_length) = staking_consensus_dispatcher
+        .get_current_epoch_data();
     assert!(epoch_id == 0);
     assert!(starting_block == get_block_number());
     assert!(epoch_length == EPOCH_LENGTH);
@@ -5215,7 +5219,8 @@ fn test_get_current_epoch_data() {
     // Test epoch 1.
     advance_epoch_global();
     let actual_epoch_starting_block = get_block_number();
-    let (epoch_id, starting_block, epoch_length) = staking_dispatcher.get_current_epoch_data();
+    let (epoch_id, starting_block, epoch_length) = staking_consensus_dispatcher
+        .get_current_epoch_data();
     assert!(epoch_id == 1);
     assert!(starting_block == actual_epoch_starting_block);
     assert!(epoch_length == EPOCH_LENGTH);
@@ -5228,7 +5233,8 @@ fn test_get_current_epoch_data() {
         .set_epoch_info(epoch_duration: EPOCH_DURATION, epoch_length: EPOCH_LENGTH * 2);
 
     // Test same epoch.
-    let (epoch_id, starting_block, epoch_length) = staking_dispatcher.get_current_epoch_data();
+    let (epoch_id, starting_block, epoch_length) = staking_consensus_dispatcher
+        .get_current_epoch_data();
     assert!(epoch_id == 1);
     assert!(starting_block == actual_epoch_starting_block);
     assert!(epoch_length == EPOCH_LENGTH);
@@ -5236,14 +5242,16 @@ fn test_get_current_epoch_data() {
     // Test before next epoch.
     let block_diff = epoch_length.into() - 1;
     advance_block_number_global(blocks: block_diff);
-    let (epoch_id, starting_block, epoch_length) = staking_dispatcher.get_current_epoch_data();
+    let (epoch_id, starting_block, epoch_length) = staking_consensus_dispatcher
+        .get_current_epoch_data();
     assert!(epoch_id == 1);
     assert!(starting_block == actual_epoch_starting_block);
     assert!(epoch_length == EPOCH_LENGTH);
 
     // Test epoch 2.
     advance_block_number_global(blocks: 1);
-    let (epoch_id, starting_block, epoch_length) = staking_dispatcher.get_current_epoch_data();
+    let (epoch_id, starting_block, epoch_length) = staking_consensus_dispatcher
+        .get_current_epoch_data();
     let actual_epoch_starting_block = get_block_number();
     assert!(epoch_id == 2);
     assert!(starting_block == actual_epoch_starting_block);
@@ -5251,14 +5259,16 @@ fn test_get_current_epoch_data() {
 
     // Test epoch length changed.
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
-    let (epoch_id, starting_block, epoch_length) = staking_dispatcher.get_current_epoch_data();
+    let (epoch_id, starting_block, epoch_length) = staking_consensus_dispatcher
+        .get_current_epoch_data();
     assert!(epoch_id == 2);
     assert!(starting_block == actual_epoch_starting_block);
     assert!(epoch_length == EPOCH_LENGTH * 2);
 
     // Test epoch 3.
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
-    let (epoch_id, starting_block, epoch_length) = staking_dispatcher.get_current_epoch_data();
+    let (epoch_id, starting_block, epoch_length) = staking_consensus_dispatcher
+        .get_current_epoch_data();
     assert!(epoch_id == 3);
     assert!(starting_block == get_block_number());
     assert!(epoch_length == EPOCH_LENGTH * 2);

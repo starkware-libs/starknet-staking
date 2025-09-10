@@ -59,6 +59,10 @@ pub trait IStaking<TContractState> {
     fn set_public_key(ref self: TContractState, public_key: PublicKey);
     /// Get the current public key for the given `staker_address`.
     fn get_current_public_key(self: @TContractState, staker_address: ContractAddress) -> PublicKey;
+}
+
+#[starknet::interface]
+pub trait IStakingConsensus<TContractState> {
     /// Returns (epoch_id, epoch_starting_block, epoch_length) for the current epoch.
     fn get_current_epoch_data(self: @TContractState) -> (Epoch, BlockNumber, u32);
 }

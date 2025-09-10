@@ -24,7 +24,7 @@ pub mod Staking {
     use staking::staking::errors::Error;
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
-        IStakingMigration, IStakingPause, IStakingPool, IStakingRewardsManager,
+        IStakingConsensus, IStakingMigration, IStakingPause, IStakingPool, IStakingRewardsManager,
         IStakingTokenManager, PauseEvents, PoolInfo, StakerInfoV1, StakerPoolInfoV1,
         StakerPoolInfoV2, StakingContractInfoV1, TokenManagerEvents,
     };
@@ -820,7 +820,10 @@ pub mod Staking {
                 .get_public_key_at_epoch(:staker_address, epoch_id: self.get_current_epoch())
                 .expect_with_err(Error::PUBLIC_KEY_NOT_SET)
         }
+    }
 
+    #[abi(embed_v0)]
+    impl StakingConsensusImpl of IStakingConsensus<ContractState> {
         fn get_current_epoch_data(self: @ContractState) -> (Epoch, BlockNumber, u32) {
             let epoch_info = self.epoch_info.read();
             (
