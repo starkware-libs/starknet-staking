@@ -25,19 +25,19 @@ use snforge_std::{
     cheat_caller_address, set_balance, start_cheat_block_hash_global,
     start_cheat_block_number_global, test_address,
 };
+use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{
-    C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
-    STRK_CONFIG, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
-};
+use staking::constants::{STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
     IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
 };
 use staking::minting_curve::minting_curve::MintingCurve;
+use staking::minting_curve::minting_curve::MintingCurve::{C_DENOM, DEFAULT_C_NUM};
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
+use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::errors::Error as StakingError;
@@ -51,6 +51,7 @@ use staking::staking::objects::{
     NormalizedAmountTrait,
 };
 use staking::staking::staking::Staking;
+use staking::staking::staking::Staking::DEFAULT_EXIT_WAIT_WINDOW;
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
     InternalStakerPoolInfoLatest, PublicKey,

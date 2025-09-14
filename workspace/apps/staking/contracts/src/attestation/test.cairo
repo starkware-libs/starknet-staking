@@ -3,13 +3,13 @@ use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::attestation::attestation::Attestation;
 use staking::attestation::attestation::Attestation::{
     CONTRACT_IDENTITY as attestation_identity, CONTRACT_VERSION as attestation_version,
+    MIN_ATTESTATION_WINDOW,
 };
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
-use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::errors::GenericError;
 use staking::event_test_utils::{
     assert_attestation_window_changed_event, assert_staker_attestation_successful_event,

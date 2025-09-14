@@ -1,7 +1,8 @@
 use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
 use snforge_std::{TokenImpl, start_cheat_block_number_global};
-use staking::constants::{BTC_18D_CONFIG, MIN_ATTESTATION_WINDOW, STRK_IN_FRIS};
+use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
+use staking::constants::STRK_IN_FRIS;
 use staking::errors::GenericError;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
@@ -12,6 +13,7 @@ use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
+use staking::pool::pool::Pool::BTC_18D_CONFIG;
 use staking::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{

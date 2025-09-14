@@ -5,8 +5,9 @@
 #[starknet::contract]
 mod StakingEICV0toV1 {
     use core::num::traits::Zero;
-    use staking::constants::{STARTING_EPOCH, V1_PREV_CONTRACT_VERSION};
+    use staking::constants::STARTING_EPOCH;
     use staking::errors::GenericError;
+    use staking::pool::pool::Pool::V1_PREV_CONTRACT_VERSION;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
     use starknet::class_hash::ClassHash;

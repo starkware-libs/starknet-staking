@@ -11,10 +11,7 @@ pub mod Staking {
         IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
         IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::{
-        DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STAKING_V2_PREV_CONTRACT_VERSION,
-        STARTING_EPOCH, STRK_TOKEN_ADDRESS,
-    };
+    use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -56,6 +53,7 @@ pub mod Staking {
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
+    use starkware_utils::constants::WEEK;
     use starkware_utils::errors::{Describable, OptionAuxTrait};
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::mul_wide_and_div;
@@ -70,6 +68,12 @@ pub mod Staking {
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
     pub(crate) const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3;
+    pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: WEEK };
+    pub(crate) const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };
+    /// Prev contract version for V2 (BTC) staking contract.
+    /// This is the key for `prev_class_hash` (class hash of V1) in staking contract.
+    /// Note: The key for `prev_class_hash` for class hash of V0 is '0'.
+    pub(crate) const STAKING_V2_PREV_CONTRACT_VERSION: Version = '1';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);

@@ -12,19 +12,21 @@ use snforge_std::{
     cheat_caller_address, start_cheat_block_hash_global, start_cheat_block_number_global,
     start_cheat_block_timestamp_global,
 };
+use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
-use staking::constants::{BTC_18D_CONFIG, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
 };
+use staking::minting_curve::minting_curve::MintingCurve::DEFAULT_C_NUM;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
     IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfoV1, PoolMemberInfoV1,
 };
 use staking::pool::interface_v0::{IPoolV0Dispatcher, IPoolV0DispatcherTrait, PoolMemberInfo};
+use staking::pool::pool::Pool::BTC_18D_CONFIG;
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };

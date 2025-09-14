@@ -8,7 +8,7 @@ pub mod Attestation {
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
     use staking::attestation::interface::{Events, IAttestation};
-    use staking::constants::{MIN_ATTESTATION_WINDOW, STARTING_EPOCH};
+    use staking::constants::STARTING_EPOCH;
     use staking::staking::interface::{
         IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
         IStakingDispatcherTrait,
@@ -27,6 +27,8 @@ pub mod Attestation {
     use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Attestation';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
+
+    pub(crate) const MIN_ATTESTATION_WINDOW: u16 = 11;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);

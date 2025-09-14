@@ -3,8 +3,8 @@
 #[starknet::contract]
 mod PoolEICV0toV1 {
     use core::num::traits::Zero;
-    use staking::constants::V1_PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
+    use staking::pool::pool::Pool::V1_PREV_CONTRACT_VERSION;
     use staking::staking::tests::interface_v1::{
         IStakingPoolV1ForTestsDispatcher, IStakingPoolV1ForTestsDispatcherTrait,
     };

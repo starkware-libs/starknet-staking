@@ -1,13 +1,12 @@
 use core::num::traits::{Sqrt, WideMul};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use staking::constants::MAX_C_NUM;
 use staking::event_test_utils::assert_minting_cap_changed_event;
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
     IMintingCurveDispatcherTrait, MintingCurveContractInfo,
 };
 use staking::minting_curve::minting_curve::MintingCurve::{
-    CONTRACT_IDENTITY as mint_curve_identity, CONTRACT_VERSION as mint_curve_version,
+    CONTRACT_IDENTITY as mint_curve_identity, CONTRACT_VERSION as mint_curve_version, MAX_C_NUM,
 };
 use staking::test_utils::constants::NON_TOKEN_ADMIN;
 use staking::test_utils::{

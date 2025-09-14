@@ -4,7 +4,6 @@ pub mod MintingCurve {
     use core::num::traits::{Sqrt, WideMul};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use staking::constants::{C_DENOM, DEFAULT_C_NUM, MAX_C_NUM};
     use staking::minting_curve::errors::Error;
     use staking::minting_curve::interface::{
         ConfigEvents, Events, IMintingCurve, IMintingCurveConfig, MintingCurveContractInfo,
@@ -18,6 +17,24 @@ pub mod MintingCurve {
     use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
     pub const CONTRACT_VERSION: felt252 = '2.0.0';
+
+    // === Reward Distribution - Important Note ===
+    //
+    // Previous version:
+    // - Minting coefficient C = 1.60 (160 / 10,000).
+    // - 100% of minted rewards allocated to STRK stakers.
+    //
+    // Current version:
+    // - Rewards split: 75% to STRK stakers, 25% to BTC stakers, using alpha = 0.25 (25 / 100).
+    // - To keep STRK rewards nearly unchanged, minting increased to C = 2.13 (213 / 10,000)
+    //   — slightly less than 2.13333... for an exact match.
+    //
+    // Implications:
+    // - STRK stakers receive ~1/40,000 (0.00333...% * 0.75) less rewards than before.
+    // - Additional minor rounding differences may occur in reward calculations.
+    pub(crate) const DEFAULT_C_NUM: Inflation = 213;
+    pub(crate) const MAX_C_NUM: Inflation = 500;
+    pub(crate) const C_DENOM: Inflation = 10_000;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);

@@ -1,6 +1,7 @@
 #[starknet::contract]
 pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
+    use core::num::traits::Pow;
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use core::panics::panic_with_byte_array;
@@ -11,9 +12,7 @@ pub mod Pool {
         IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
         IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::{
-        BTC_18D_CONFIG, BTC_8D_CONFIG, STRK_CONFIG, STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
-    };
+    use staking::constants::STRK_TOKEN_ADDRESS;
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{
@@ -50,6 +49,27 @@ pub mod Pool {
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
+
+    /// Token configuration for rewards calculation.
+    ///
+    /// - STRK: Token with 18 decimals
+    /// - BTC_8D: Bitcoin with native 8 decimals
+    /// - BTC_18D: Wrapped Bitcoin with 18 decimals
+    ///
+    /// The `min_for_rewards` is the minimum delegated stake required to earn rewards.
+    /// The `base_value` is used for precision in reward calculations.
+    pub(crate) const STRK_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+        decimals: 18, min_for_rewards: 10_u128.pow(18), base_value: 10_u128.pow(28),
+    };
+    pub(crate) const BTC_8D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+        decimals: 8, min_for_rewards: 10_u128.pow(3), base_value: 10_u128.pow(13),
+    };
+    pub(crate) const BTC_18D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+        decimals: 18, min_for_rewards: 10_u128.pow(13), base_value: 10_u128.pow(23),
+    };
+    /// This var was used as the prev contract version in V1.
+    /// This is the key for `prev_class_hash` (class hash of V0).
+    pub(crate) const V1_PREV_CONTRACT_VERSION: Version = '0';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
