@@ -231,7 +231,7 @@ fn test_send_rewards_to_staker() {
     // Setup staker_info and expected results before sending rewards.
     let unclaimed_rewards_own = STAKER_UNCLAIMED_REWARDS;
     cfg.staker_info.unclaimed_rewards_own = unclaimed_rewards_own;
-    let mut expected_staker_info = cfg.staker_info.clone();
+    let mut expected_staker_info = cfg.staker_info;
     expected_staker_info.unclaimed_rewards_own = Zero::zero();
     cheat_reward_for_reward_supplier(
         :reward_supplier, expected_reward: unclaimed_rewards_own, :token,
