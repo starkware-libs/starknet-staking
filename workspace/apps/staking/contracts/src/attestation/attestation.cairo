@@ -81,6 +81,7 @@ pub mod Attestation {
         AttestationWindowChanged: Events::AttestationWindowChanged,
     }
 
+    /// **Note**: `attestation_window` must be smaller than the epoch length.
     #[constructor]
     pub fn constructor(
         ref self: ContractState,
