@@ -10,8 +10,6 @@ use snforge_std::{TokenTrait, start_cheat_block_timestamp_global, test_address};
 use staking::constants::STRK_IN_FRIS;
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
-use staking::minting_curve::minting_curve::MintingCurve;
-use staking::pool::pool::Pool;
 use staking::reward_supplier::interface::{
     IRewardSupplier, IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfoV1,
@@ -19,7 +17,6 @@ use staking::reward_supplier::interface::{
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
-use staking::staking::staking::Staking;
 use staking::test_utils;
 use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use staking::types::Amount;
