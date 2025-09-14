@@ -4339,7 +4339,7 @@ fn test_staking_eic_without_pause() {
 
 #[test]
 #[should_panic(expected: "EIC_LIB_CALL_FAILED")]
-fn test_staking_eic_with_wrong_number_of_data_elemnts() {
+fn test_staking_eic_with_wrong_number_of_data_elements() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
