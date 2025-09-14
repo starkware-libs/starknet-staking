@@ -73,7 +73,7 @@ pub mod Staking {
     /// Prev contract version for V2 (BTC) staking contract.
     /// This is the key for `prev_class_hash` (class hash of V1) in staking contract.
     /// Note: The key for `prev_class_hash` for class hash of V0 is '0'.
-    pub(crate) const STAKING_V2_PREV_CONTRACT_VERSION: Version = '1';
+    pub(crate) const V2_PREV_CONTRACT_VERSION: Version = '1';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -238,7 +238,7 @@ pub mod Staking {
         self.pool_contract_admin.write(pool_contract_admin);
         self.exit_wait_window.write(DEFAULT_EXIT_WAIT_WINDOW);
         self.is_paused.write(false);
-        self.prev_class_hash.write(STAKING_V2_PREV_CONTRACT_VERSION, prev_class_hash);
+        self.prev_class_hash.write(V2_PREV_CONTRACT_VERSION, prev_class_hash);
         self.epoch_info.write(epoch_info);
         self.attestation_contract.write(attestation_contract);
         self
@@ -1361,7 +1361,7 @@ pub mod Staking {
         ///
         /// **Note**: This function must be reimplemented in the next version of the contract.
         fn get_prev_class_hash(self: @ContractState) -> ClassHash {
-            self.prev_class_hash.read(STAKING_V2_PREV_CONTRACT_VERSION)
+            self.prev_class_hash.read(V2_PREV_CONTRACT_VERSION)
         }
     }
 

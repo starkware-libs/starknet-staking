@@ -71,7 +71,7 @@ use staking::staking::objects::{
 use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::{
     DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, MAX_MIGRATION_TRACE_ENTRIES,
-    STAKING_V2_PREV_CONTRACT_VERSION,
+    V2_PREV_CONTRACT_VERSION,
 };
 use staking::types::{Amount, InternalStakerInfoLatest, VecIndex};
 use staking::{event_test_utils, test_utils};
@@ -139,7 +139,7 @@ fn test_constructor() {
     assert!(pool_contract_admin == cfg.test_info.pool_contract_admin);
     let prev_class_hash: ClassHash = load_from_simple_map(
         map_selector: selector!("prev_class_hash"),
-        key: STAKING_V2_PREV_CONTRACT_VERSION,
+        key: V2_PREV_CONTRACT_VERSION,
         contract: staking_contract,
     );
     assert!(prev_class_hash == cfg.staking_contract_info.prev_staking_contract_class_hash);
@@ -4150,7 +4150,7 @@ fn test_staking_eic() {
     let staking_contract = cfg.test_info.staking_contract;
     let upgrade_governor = cfg.test_info.upgrade_governor;
     let security_agent = cfg.test_info.security_agent;
-    let v1_prev_contract_version = STAKING_V2_PREV_CONTRACT_VERSION - 1;
+    let v1_prev_contract_version = V2_PREV_CONTRACT_VERSION - 1;
     // Store the exist prev_class_hash.
     let storage_address = snforge_std::map_entry_address(
         map_selector: selector!("prev_class_hash"), keys: [v1_prev_contract_version].span(),
@@ -4196,7 +4196,7 @@ fn test_staking_eic() {
     // Test prev_class_hash.
     let map_selector = selector!("prev_class_hash");
     let storage_address = snforge_std::map_entry_address(
-        :map_selector, keys: [STAKING_V2_PREV_CONTRACT_VERSION].span(),
+        :map_selector, keys: [V2_PREV_CONTRACT_VERSION].span(),
     );
     let prev_class_hash = *snforge_std::load(
         target: staking_contract, :storage_address, size: Store::<ClassHash>::size().into(),

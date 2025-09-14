@@ -6,9 +6,7 @@ mod StakingEICV1toV2 {
     use core::num::traits::Zero;
     use staking::constants::STRK_TOKEN_ADDRESS;
     use staking::errors::GenericError;
-    use staking::staking::staking::Staking::{
-        MAX_MIGRATION_TRACE_ENTRIES, STAKING_V2_PREV_CONTRACT_VERSION,
-    };
+    use staking::staking::staking::Staking::{MAX_MIGRATION_TRACE_ENTRIES, V2_PREV_CONTRACT_VERSION};
     use staking::types::Version;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
@@ -48,7 +46,7 @@ mod StakingEICV1toV2 {
 
             // 1. Set previous class hash.
             assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
-            self.prev_class_hash.write(STAKING_V2_PREV_CONTRACT_VERSION, prev_class_hash);
+            self.prev_class_hash.write(V2_PREV_CONTRACT_VERSION, prev_class_hash);
 
             // 2. Replace pool contract class hash.
             assert!(pool_contract_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
