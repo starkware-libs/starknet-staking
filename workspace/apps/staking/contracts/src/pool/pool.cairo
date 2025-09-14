@@ -37,7 +37,9 @@ pub mod Pool {
     use staking::utils::{CheckedIERC20DispatcherTrait, compute_rewards_rounded_down};
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
-    use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
+    use starknet::storage::{
+        Map, StorageBase, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess,
+    };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
@@ -882,21 +884,54 @@ pub mod Pool {
             let cumulative_rewards_trace_idx = pool_member_checkpoint
                 .cumulative_rewards_trace_idx();
 
-            // Pool member enter delegation before any rewards given to the pool.
-            if cumulative_rewards_trace_idx == 0 {
-                return Zero::zero();
-            }
-
-            // Next rewards idx was written, and no rewards given to pool from that moment.
-            if cumulative_rewards_trace_vec.length() == cumulative_rewards_trace_idx {
-                let (_, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
+            if let Some(sigma) = self
+                .find_sigma_edge_cases(
+                    :cumulative_rewards_trace_vec, :cumulative_rewards_trace_idx,
+                ) {
                 return sigma;
             }
 
+            self
+                .find_sigma_standard_case(
+                    :cumulative_rewards_trace_vec,
+                    :cumulative_rewards_trace_idx,
+                    target_epoch: pool_member_checkpoint.epoch(),
+                )
+        }
+
+        /// Returns the sigma for edge cases of `find_sigma`.
+        fn find_sigma_edge_cases(
+            self: @ContractState,
+            cumulative_rewards_trace_vec: StorageBase<Trace>,
+            cumulative_rewards_trace_idx: VecIndex,
+        ) -> Option<Amount> {
+            // Edge case 1: Pool member enter delegation before any rewards given to the pool.
+            if cumulative_rewards_trace_idx == 0 {
+                return Some(Zero::zero());
+            }
+            // Edge case 2: Next rewards idx was written, and no rewards given to pool from that
+            // moment.
+            if cumulative_rewards_trace_vec.length() == cumulative_rewards_trace_idx {
+                let (_, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
+                return Some(sigma);
+            }
+            None
+        }
+
+        /// Returns the sigma for the standard case of `find_sigma`.
+        /// Looks at up to 2 checkpoints in `cumulative_rewards_trace_vec`,
+        /// `cumulative_rewards_trace_idx` and `cumulative_rewards_trace_idx - 1`, and takes the
+        /// latest one (among these checkpoints) whose epoch < `target_epoch`.
+        fn find_sigma_standard_case(
+            self: @ContractState,
+            cumulative_rewards_trace_vec: StorageBase<Trace>,
+            cumulative_rewards_trace_idx: VecIndex,
+            target_epoch: Epoch,
+        ) -> Amount {
             // Pool member changed balance in epoch j, so j+1 written to pool member checkpoint.
             let (epoch_at_index, sigma_at_index) = cumulative_rewards_trace_vec
                 .at(cumulative_rewards_trace_idx);
-            if pool_member_checkpoint.epoch() > epoch_at_index {
+            if target_epoch > epoch_at_index {
                 // If pool rewards for epoch j given after pool member balance changed, then pool
                 // member is not eligible in this `rewards_info_idx` and it is infact the latest one
                 // before the staking power change.
