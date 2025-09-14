@@ -24,7 +24,7 @@ use staking::test_utils;
 use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use staking::types::Amount;
 use staking::utils::compute_threshold;
-use starknet::Store;
+use starknet::{ContractAddress, Store};
 use starkware_utils::errors::Describable;
 use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
 use starkware_utils::time::time::Time;
@@ -33,9 +33,8 @@ use starkware_utils_testing::test_utils::{
     assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
 use test_utils::{
-    StakingInitConfig, advance_epoch_global, deploy_minting_curve_contract, deploy_staking_contract,
-    fund, general_contract_system_deployment, initialize_reward_supplier_state_from_cfg,
-    stake_for_testing_using_dispatcher,
+    StakingInitConfig, advance_epoch_global, fund, general_contract_system_deployment,
+    initialize_reward_supplier_state_from_cfg, load_one_felt, stake_for_testing_using_dispatcher,
 };
 
 
@@ -53,53 +52,71 @@ fn test_identity() {
 #[test]
 fn test_reward_supplier_constructor() {
     let mut cfg: StakingInitConfig = Default::default();
-    let token_address = cfg.test_info.strk_token.contract_address();
-    // Deploy the staking contract, stake, and enter delegation pool.
-    let staking_contract = deploy_staking_contract(:cfg);
-    cfg.test_info.staking_contract = staking_contract;
-    let state = @initialize_reward_supplier_state_from_cfg(:cfg);
-    assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
-    assert!(state.token_dispatcher.read().contract_address == token_address);
-    assert!(state.l1_pending_requested_amount.read() == Zero::zero());
-    assert!(state.base_mint_amount.read() == cfg.reward_supplier.base_mint_amount);
-    assert!(
-        state
-            .minting_curve_dispatcher
-            .read()
-            .contract_address == cfg
-            .reward_supplier
-            .minting_curve_contract,
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let contract_parameters = reward_supplier_dispatcher.contract_parameters_v1();
+    let staking_contract: ContractAddress = load_one_felt(
+        target: reward_supplier, storage_address: selector!("staking_contract"),
+    )
+        .try_into()
+        .unwrap();
+    let token_address: ContractAddress = load_one_felt(
+        target: reward_supplier, storage_address: selector!("token_dispatcher"),
+    )
+        .try_into()
+        .unwrap();
+    let base_mint_amount: Amount = load_one_felt(
+        target: reward_supplier, storage_address: selector!("base_mint_amount"),
+    )
+        .try_into()
+        .unwrap();
+    let minting_curve_contract: ContractAddress = load_one_felt(
+        target: reward_supplier, storage_address: selector!("minting_curve_dispatcher"),
+    )
+        .try_into()
+        .unwrap();
+    let l1_reward_supplier = load_one_felt(
+        target: reward_supplier, storage_address: selector!("l1_reward_supplier"),
     );
-    assert!(state.l1_reward_supplier.read() == cfg.reward_supplier.l1_reward_supplier);
-    assert!(state.unclaimed_rewards.read() == STRK_IN_FRIS);
+    assert!(staking_contract == cfg.test_info.staking_contract);
+    assert!(token_address == cfg.test_info.strk_token.contract_address());
+    assert!(contract_parameters.l1_pending_requested_amount == Zero::zero());
+    assert!(base_mint_amount == cfg.reward_supplier.base_mint_amount);
+    assert!(minting_curve_contract == cfg.reward_supplier.minting_curve_contract);
+    assert!(l1_reward_supplier == cfg.reward_supplier.l1_reward_supplier);
+    assert!(contract_parameters.unclaimed_rewards == STRK_IN_FRIS);
 }
 
 #[test]
 fn test_claim_rewards() {
     let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
     let token = cfg.test_info.strk_token;
     let token_address = token.contract_address();
-    // Deploy the staking contract and stake.
-    let staking_contract = deploy_staking_contract(:cfg);
-    cfg.test_info.staking_contract = staking_contract;
-    let amount = (cfg.test_info.initial_supply / 2).try_into().expect('amount does not fit in');
-    cfg.test_info.staker_initial_balance = amount;
-    cfg.test_info.stake_amount = amount;
+    let staking_contract = cfg.test_info.staking_contract;
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let amount = cfg.test_info.stake_amount;
     stake_for_testing_using_dispatcher(:cfg);
-    // Deploy the minting curve contract.
-    let minting_curve_contract = deploy_minting_curve_contract(:cfg);
-    cfg.reward_supplier.minting_curve_contract = minting_curve_contract;
-    // Use the reward supplier contract state to claim rewards.
-    let mut state = initialize_reward_supplier_state_from_cfg(:cfg);
     // Fund the the reward supplier contract.
-    fund(target: test_address(), :amount, :token);
+    fund(target: reward_supplier, :amount, :token);
     // Update the unclaimed rewards for testing purposes.
-    state.unclaimed_rewards.write(amount);
+    snforge_std::store(
+        target: reward_supplier,
+        storage_address: selector!("unclaimed_rewards"),
+        serialized_value: [amount.into()].span(),
+    );
     // Claim the rewards from the reward supplier contract.
-    cheat_caller_address_once(contract_address: test_address(), caller_address: staking_contract);
-    state.claim_rewards(:amount);
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
+    reward_supplier_dispatcher.claim_rewards(:amount);
     // Validate that the rewards were claimed.
-    assert!(state.unclaimed_rewards.read() == Zero::zero());
+    let contract_parameters = reward_supplier_dispatcher.contract_parameters_v1();
+    assert!(contract_parameters.unclaimed_rewards == Zero::zero());
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_balance = token_dispatcher.balance_of(account: staking_contract);
     assert!(staking_balance == amount.into() * 2);

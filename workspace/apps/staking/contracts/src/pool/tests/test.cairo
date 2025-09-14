@@ -1,7 +1,4 @@
-use Pool::{
-    CONTRACT_IDENTITY as pool_identity, CONTRACT_VERSION as pool_version,
-    InternalPoolFunctionsTrait,
-};
+use Pool::{CONTRACT_IDENTITY as pool_identity, CONTRACT_VERSION as pool_version};
 use constants::{
     DUMMY_ADDRESS, NON_POOL_MEMBER_ADDRESS, NOT_STAKING_CONTRACT_ADDRESS, OTHER_OPERATIONAL_ADDRESS,
     OTHER_REWARD_ADDRESS, OTHER_STAKER_ADDRESS, POOL_MEMBER_ADDRESS,
@@ -306,52 +303,24 @@ fn test_add_to_delegation_pool_from_reward_address() {
 }
 
 #[test]
-fn test_assert_staker_is_active() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let mut state = initialize_pool_state(
-        staker_address: cfg.test_info.staker_address,
-        staking_contract: cfg.test_info.staking_contract,
-        token_address: cfg.test_info.strk_token.contract_address(),
-        governance_admin: cfg.test_info.pool_contract_admin,
-    );
-    assert!(!state.staker_removed.read());
-    state.assert_staker_is_active();
-}
-
-#[test]
-#[should_panic(expected: "Staker inactive")]
-fn test_assert_staker_is_active_panic() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let mut state = initialize_pool_state(
-        staker_address: cfg.test_info.staker_address,
-        staking_contract: cfg.test_info.staking_contract,
-        token_address: cfg.test_info.strk_token.contract_address(),
-        governance_admin: cfg.test_info.pool_contract_admin,
-    );
-    state.staker_removed.write(true);
-    state.assert_staker_is_active();
-}
-
-#[test]
 fn test_set_staker_removed() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    let mut state = initialize_pool_state(
-        staker_address: cfg.test_info.staker_address,
-        staking_contract: cfg.test_info.staking_contract,
-        token_address: cfg.test_info.strk_token.contract_address(),
-        governance_admin: cfg.test_info.pool_contract_admin,
-    );
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+
+    let contract_parameters = pool_dispatcher.contract_parameters_v1();
+    assert!(!contract_parameters.staker_removed);
+
     cheat_caller_address_once(
-        contract_address: test_address(), caller_address: cfg.test_info.staking_contract,
+        contract_address: pool_contract, caller_address: cfg.test_info.staking_contract,
     );
     let mut spy = snforge_std::spy_events();
-    state.set_staker_removed();
-    assert!(state.staker_removed.read());
+    pool_dispatcher.set_staker_removed();
+    let contract_parameters = pool_dispatcher.contract_parameters_v1();
+    assert!(contract_parameters.staker_removed);
     // Validate the single StakerRemoved event.
-    let events = spy.get_events().emitted_by(contract_address: test_address()).events;
+    let events = spy.get_events().emitted_by(contract_address: pool_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "set_staker_removed");
     assert_staker_removed_event(
         spied_event: events[0], staker_address: cfg.test_info.staker_address,

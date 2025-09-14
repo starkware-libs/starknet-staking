@@ -1,13 +1,12 @@
 use Staking::{
     COMMISSION_DENOMINATOR, CONTRACT_IDENTITY as staking_identity,
-    CONTRACT_VERSION as staking_version, InternalStakingFunctionsTrait,
+    CONTRACT_VERSION as staking_version,
 };
 use constants::{
     BTC_STAKER_ADDRESS, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, CALLER_ADDRESS,
     DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
     NON_APP_GOVERNOR, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
-    OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS,
-    STAKER_UNCLAIMED_REWARDS, UNPOOL_TIME,
+    OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, UNPOOL_TIME,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -94,12 +93,11 @@ use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
     approve, calculate_staker_btc_pool_rewards, calculate_staker_btc_pool_rewards_v3,
     calculate_staker_strk_rewards, calculate_staker_strk_rewards_with_balances_v3,
-    cheat_reward_for_reward_supplier, cheat_target_attestation_block_hash, constants,
-    custom_decimals_token, declare_pool_contract, declare_staking_eic_contract_v1_v2,
-    deploy_mock_erc20_decimals_contract, deploy_reward_supplier_contract, deploy_staking_contract,
-    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    initialize_staking_state_from_cfg, load_from_simple_map, load_from_trace, load_trace_length,
-    setup_btc_token, stake_for_testing_using_dispatcher, stake_from_zero_address,
+    cheat_target_attestation_block_hash, constants, custom_decimals_token, declare_pool_contract,
+    declare_staking_eic_contract_v1_v2, deploy_mock_erc20_decimals_contract,
+    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
+    general_contract_system_deployment, load_from_simple_map, load_from_trace, load_one_felt,
+    load_trace_length, setup_btc_token, stake_for_testing_using_dispatcher, stake_from_zero_address,
     stake_with_strk_pool_enabled, store_internal_staker_info_v0_to_map, store_to_simple_map,
     to_amount_18_decimals,
 };
@@ -118,33 +116,33 @@ fn test_identity() {
 #[test]
 fn test_constructor() {
     let mut cfg: StakingInitConfig = Default::default();
-    let mut state = initialize_staking_state_from_cfg(ref :cfg);
-    assert!(state.min_stake.read() == cfg.staking_contract_info.min_stake);
-    let staker_address = state
-        .operational_address_to_staker_address
-        .read(cfg.staker_info.operational_address);
-    assert!(staker_address == Zero::zero());
-    let staker_info = state.staker_info.read(staker_address);
-    assert!(staker_info.is_none());
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let contract_parameters = staking_dispatcher.contract_parameters_v1();
+    assert!(contract_parameters.min_stake == cfg.staking_contract_info.min_stake);
     assert!(
-        state.pool_contract_class_hash.read() == cfg.staking_contract_info.pool_contract_class_hash,
-    );
-    assert!(
-        state
-            .reward_supplier_dispatcher
-            .read()
-            .contract_address == cfg
+        contract_parameters
+            .pool_contract_class_hash == cfg
             .staking_contract_info
-            .reward_supplier,
+            .pool_contract_class_hash,
     );
-    assert!(state.pool_contract_admin.read() == cfg.test_info.pool_contract_admin);
-    assert!(
-        state
-            .prev_class_hash
-            .read(STAKING_V2_PREV_CONTRACT_VERSION) == cfg
-            .staking_contract_info
-            .prev_staking_contract_class_hash,
+    assert!(contract_parameters.reward_supplier == cfg.staking_contract_info.reward_supplier);
+    assert!(contract_parameters.exit_wait_window == cfg.staking_contract_info.exit_wait_window);
+    assert!(contract_parameters.token_address == cfg.test_info.strk_token.contract_address());
+    assert!(contract_parameters.attestation_contract == cfg.test_info.attestation_contract);
+    let pool_contract_admin: ContractAddress = load_one_felt(
+        target: staking_contract, storage_address: selector!("pool_contract_admin"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(pool_contract_admin == cfg.test_info.pool_contract_admin);
+    let prev_class_hash: ClassHash = load_from_simple_map(
+        map_selector: selector!("prev_class_hash"),
+        key: STAKING_V2_PREV_CONTRACT_VERSION,
+        contract: staking_contract,
     );
+    assert!(prev_class_hash == cfg.staking_contract_info.prev_staking_contract_class_hash);
 }
 
 #[test]
@@ -226,47 +224,6 @@ fn test_stake() {
 }
 
 // TODO: Test staker vec after stake with more than one staker.
-
-#[test]
-fn test_send_rewards_to_staker() {
-    // Initialize staking state.
-    let mut cfg: StakingInitConfig = Default::default();
-    let mut state = initialize_staking_state_from_cfg(ref :cfg);
-    cfg.test_info.staking_contract = snforge_std::test_address();
-    let token = cfg.test_info.strk_token;
-    let token_dispatcher = IERC20Dispatcher { contract_address: token.contract_address() };
-    // Deploy reward supplier contract.
-    let reward_supplier = deploy_reward_supplier_contract(:cfg);
-    cfg.staking_contract_info.reward_supplier = reward_supplier;
-    state
-        .reward_supplier_dispatcher
-        .write(IRewardSupplierDispatcher { contract_address: reward_supplier });
-    // Setup staker_info and expected results before sending rewards.
-    let unclaimed_rewards_own = STAKER_UNCLAIMED_REWARDS;
-    cfg.staker_info.unclaimed_rewards_own = unclaimed_rewards_own;
-    let mut expected_staker_info = cfg.staker_info;
-    expected_staker_info.unclaimed_rewards_own = Zero::zero();
-    cheat_reward_for_reward_supplier(
-        :reward_supplier, expected_reward: unclaimed_rewards_own, :token,
-    );
-    let staker_balance_before_rewards = token_dispatcher
-        .balance_of(account: cfg.staker_info.reward_address);
-    // Send rewards to staker's reward address.
-    state
-        .send_rewards_to_staker(
-            staker_address: cfg.test_info.staker_address,
-            ref staker_info: cfg.staker_info,
-            :token_dispatcher,
-        );
-    // Check that unclaimed_rewards_own is set to zero and that the staker received the rewards.
-    assert!(expected_staker_info == cfg.staker_info);
-    let staker_balance_after_rewards = token_dispatcher
-        .balance_of(account: cfg.staker_info.reward_address);
-    assert!(
-        staker_balance_after_rewards == staker_balance_before_rewards
-            + unclaimed_rewards_own.into(),
-    );
-}
 
 #[test]
 #[should_panic(expected: "Staker already exists, use increase_stake instead")]

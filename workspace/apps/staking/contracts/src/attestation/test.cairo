@@ -18,7 +18,7 @@ use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils;
-use starknet::get_block_number;
+use starknet::{ContractAddress, get_block_number};
 use starkware_utils::components::replaceability::interface::{
     IReplaceableDispatcher, IReplaceableDispatcherTrait,
 };
@@ -32,7 +32,7 @@ use test_utils::constants::DUMMY_ADDRESS;
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
     calculate_block_offset, cheat_target_attestation_block_hash, general_contract_system_deployment,
-    stake_for_testing_using_dispatcher,
+    load_one_felt, stake_for_testing_using_dispatcher,
 };
 
 #[test]
@@ -306,15 +306,15 @@ fn test_get_last_epoch_attestation_done() {
 
 #[test]
 fn test_constructor() {
-    let cfg: StakingInitConfig = Default::default();
-    let mut state = Attestation::contract_state_for_testing();
-    Attestation::constructor(
-        ref state,
-        staking_contract: cfg.test_info.staking_contract,
-        governance_admin: cfg.test_info.governance_admin,
-        attestation_window: MIN_ATTESTATION_WINDOW,
-    );
-    assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let staking_contract: ContractAddress = load_one_felt(
+        target: attestation_contract, storage_address: selector!("staking_contract"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(staking_contract == cfg.test_info.staking_contract);
 }
 
 #[test]
