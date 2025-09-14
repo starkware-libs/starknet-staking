@@ -1,4 +1,7 @@
-use Staking::{COMMISSION_DENOMINATOR, InternalStakingFunctionsTrait};
+use Staking::{
+    COMMISSION_DENOMINATOR, CONTRACT_IDENTITY as staking_identity,
+    CONTRACT_VERSION as staking_version, InternalStakingFunctionsTrait,
+};
 use constants::{
     BTC_STAKER_ADDRESS, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, CALLER_ADDRESS,
     DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
@@ -86,7 +89,7 @@ use starkware_utils::storage::iterable_map::{
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::{
-    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
+    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
@@ -101,6 +104,17 @@ use test_utils::{
     stake_with_strk_pool_enabled, store_internal_staker_info_v0_to_map, store_to_simple_map,
     to_amount_18_decimals,
 };
+
+#[test]
+fn test_identity() {
+    assert!(staking_identity == 'Staking Core Contract');
+    assert!(staking_version == '3.0.0');
+
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    check_identity(staking_contract, staking_identity, staking_version);
+}
 
 #[test]
 fn test_constructor() {

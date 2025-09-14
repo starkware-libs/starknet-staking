@@ -1,12 +1,7 @@
-use MintingCurve::{
-    CONTRACT_IDENTITY as mint_curve_identity, CONTRACT_VERSION as mint_curve_version,
-};
-use Pool::{CONTRACT_IDENTITY as pool_identity, CONTRACT_VERSION as pool_version};
 use RewardSupplier::{
     ALPHA, CONTRACT_IDENTITY as reward_supplier_identity,
     CONTRACT_VERSION as reward_supplier_version,
 };
-use Staking::{CONTRACT_IDENTITY as staking_identity, CONTRACT_VERSION as staking_version};
 use core::num::traits::Zero;
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -46,28 +41,13 @@ use test_utils::{
 
 #[test]
 fn test_identity() {
-    assert!(staking_identity == 'Staking Core Contract');
     assert!(reward_supplier_identity == 'Reward Supplier');
-    assert!(mint_curve_identity == 'Minting Curve');
-    assert!(pool_identity == 'Staking Delegation Pool');
-
-    assert!(staking_version == '3.0.0');
     assert!(reward_supplier_version == '3.0.0');
-    assert!(mint_curve_version == '2.0.0');
-    assert!(pool_version == '3.0.0');
 
-    // Test identity on deployed instances.
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-
-    let minting_curve = cfg.reward_supplier.minting_curve_contract;
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
-    let staking = cfg.test_info.staking_contract;
-
-    check_identity(staking, staking_identity, staking_version);
     check_identity(reward_supplier, reward_supplier_identity, reward_supplier_version);
-    check_identity(minting_curve, mint_curve_identity, mint_curve_version);
-    // Pool contract identity checked elsewhere.
 }
 
 #[test]

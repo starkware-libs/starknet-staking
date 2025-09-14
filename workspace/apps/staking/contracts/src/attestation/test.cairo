@@ -1,6 +1,9 @@
 use core::num::traits::Zero;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::attestation::attestation::Attestation;
+use staking::attestation::attestation::Attestation::{
+    CONTRACT_IDENTITY as attestation_identity, CONTRACT_VERSION as attestation_version,
+};
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
@@ -23,7 +26,7 @@ use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDisp
 use starkware_utils::errors::Describable;
 use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::{
-    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
+    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
 use test_utils::constants::DUMMY_ADDRESS;
 use test_utils::{
@@ -32,6 +35,16 @@ use test_utils::{
     stake_for_testing_using_dispatcher,
 };
 
+#[test]
+fn test_identity() {
+    assert!(attestation_identity == 'Attestation');
+    assert!(attestation_version == '1.0.0');
+
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    check_identity(attestation_contract, attestation_identity, attestation_version);
+}
 #[test]
 fn test_attest() {
     /// this test is a lie. it runs through the code but doesn't check the block hash correctly.

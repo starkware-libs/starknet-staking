@@ -63,6 +63,9 @@ use test_utils::{
 
 #[test]
 fn test_identity() {
+    assert!(pool_identity == 'Staking Delegation Pool');
+    assert!(pool_version == '3.0.0');
+
     let mut cfg: StakingInitConfig = Default::default();
     // Deploy the staking contract, stake, and enter delegation pool.
     let staking_contract = deploy_staking_contract(:cfg);
