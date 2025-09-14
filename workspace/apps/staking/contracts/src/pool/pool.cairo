@@ -93,19 +93,21 @@ pub mod Pool {
         src5: SRC5Component::Storage,
         #[substorage(v0)]
         roles: RolesComponent::Storage,
+        // ------ Deprecated fields ------
+        // Deprecated field from V0. Stores the final global index of staking contract if the
+        // staker was active during the upgrade to V1. If the staker was removed in V0, it retains
+        // the final staker index.
+        // final_staker_index: Option<Index>,
+        // Deprecated commission field, was used in V0.
+        // commission: Commission,
+        // -------------------------------
         staker_address: ContractAddress,
         /// Map pool member to their pool member info.
         pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
-        // Deprecated field from V0. Stores the final global index of staking contract if the staker
-        // was active during the upgrade to V1. If the staker was removed in V0, it retains the
-        // final staker index.
-        // final_staker_index: Option<Index>,
         /// Dispatcher for the staking contract's pool functions.
         staking_pool_dispatcher: IStakingPoolDispatcher,
         /// Dispatcher for the token contract.
         token_dispatcher: IERC20Dispatcher,
-        // Deprecated commission field, was used in V0.
-        // commission: Commission,
         /// Map pool member to their epoch-balance info.
         pool_member_epoch_balance: Map<ContractAddress, PoolMemberBalanceTrace>,
         /// Map version to class hash of the contract.

@@ -97,13 +97,19 @@ pub mod Staking {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        // ------ Deprecated fields ------
         // Deprecated global index of the staking system.
         // Was used in V0, to calculate the accrued interest.
         // global_index: Index,
-
         // Deprecated timestamp of the last global index update, used in V0.
         // global_index_last_update_timestamp: Timestamp,
-
+        // Deprecated field of a dispatcher of the token contract, used in V1.
+        // token_dispatcher: IERC20Dispatcher,
+        // Deprecated field of the total stake, used in V0.
+        // total_stake: Amount,
+        // Deprecated field of the total stake, used in V1.
+        // total_stake_trace: Trace,
+        // -------------------------------
         /// Minimum amount of initial stake.
         min_stake: Amount,
         /// Map staker address to their staker info.
@@ -112,12 +118,6 @@ pub mod Staking {
         operational_address_to_staker_address: Map<ContractAddress, ContractAddress>,
         /// Map potential operational address to eligible staker address.
         eligible_operational_addresses: Map<ContractAddress, ContractAddress>,
-        // Deprecated field of a dispatcher of the token contract, used in V1.
-        // token_dispatcher: IERC20Dispatcher,
-
-        // Deprecated field of the total stake, used in V0.
-        // total_stake: Amount,
-
         /// The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
         /// Undelegate intents from pool contracts.
@@ -136,9 +136,6 @@ pub mod Staking {
         attestation_contract: ContractAddress,
         /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
-        // Deprecated field of the total stake, used in V1.
-        // total_stake_trace: Trace,
-
         /// Map token address to checkpoints tracking total stake changes over time, with each
         /// checkpoint mapping an epoch to the updated stake. Stakers that performed unstake_intent
         /// are not included.

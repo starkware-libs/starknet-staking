@@ -51,8 +51,10 @@ pub mod RewardSupplier {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        // ------ Deprecated fields ------
         // Deprecated last_timestamp field, used in V0.
         // last_timestamp: Timestamp,
+        // -------------------------------
         /// The amount of unclaimed rewards owed to the staking contract.
         unclaimed_rewards: Amount,
         /// The amount of tokens requested from L1.
