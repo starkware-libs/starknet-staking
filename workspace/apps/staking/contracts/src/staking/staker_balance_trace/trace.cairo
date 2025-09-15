@@ -75,8 +75,8 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
     ///
     /// # Returns
     /// A tuple containing:
-    /// - `Epoch`: Timestamp/key of the latest checkpoint
-    /// - `StakerBalance`: Value stored in the latest checkpoint
+    /// - `Epoch`: Timestamp/key of the last checkpoint
+    /// - `StakerBalance`: Value stored in the last checkpoint
     ///
     /// # Panics
     /// If the trace structure is empty (no checkpoints exist)
@@ -84,20 +84,19 @@ pub impl StakerBalanceTraceImpl of StakerBalanceTraceTrait {
     /// # Note
     /// This will return the last inserted checkpoint that maintains the structure's
     /// invariant of non-decreasing keys.
-    fn latest(self: StoragePath<StakerBalanceTrace>) -> (Epoch, StakerBalance) {
+    fn last(self: StoragePath<StakerBalanceTrace>) -> (Epoch, StakerBalance) {
         let checkpoints = self.checkpoints;
         let len = checkpoints.len();
-        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
+        assert!(len > 0, "{}", TraceErrors::INDEX_OUT_OF_BOUNDS);
         let checkpoint = checkpoints[len - 1].read();
         (checkpoint.key, checkpoint.value)
     }
 
-    /// Retrieves the penultimate checkpoint from the trace structure.
-    /// Penultimate checkpoint is the second last checkpoint in the trace.
-    fn penultimate(self: StoragePath<StakerBalanceTrace>) -> (Epoch, StakerBalance) {
+    /// Retrieves the second last checkpoint from the trace structure.
+    fn second_last(self: StoragePath<StakerBalanceTrace>) -> (Epoch, StakerBalance) {
         let checkpoints = self.checkpoints;
         let len = checkpoints.len();
-        assert!(len > 1, "{}", TraceErrors::PENULTIMATE_NOT_EXIST);
+        assert!(len > 1, "{}", TraceErrors::INDEX_OUT_OF_BOUNDS);
         let checkpoint = checkpoints[len - 2].read();
         (checkpoint.key, checkpoint.value)
     }
@@ -146,8 +145,8 @@ pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
     ///
     /// # Returns
     /// A tuple containing:
-    /// - `Epoch`: Timestamp/key of the latest checkpoint
-    /// - `StakerBalance`: Value stored in the latest checkpoint
+    /// - `Epoch`: Timestamp/key of the last checkpoint
+    /// - `StakerBalance`: Value stored in the last checkpoint
     ///
     /// # Panics
     /// If the trace structure is empty (no checkpoints exist)
@@ -155,10 +154,10 @@ pub impl MutableStakerBalanceTraceImpl of MutableStakerBalanceTraceTrait {
     /// # Note
     /// This will return the last inserted checkpoint that maintains the structure's
     /// invariant of non-decreasing keys.
-    fn latest(self: StoragePath<Mutable<StakerBalanceTrace>>) -> (Epoch, StakerBalance) {
+    fn last(self: StoragePath<Mutable<StakerBalanceTrace>>) -> (Epoch, StakerBalance) {
         let checkpoints = self.checkpoints;
         let len = checkpoints.len();
-        assert!(len > 0, "{}", TraceErrors::EMPTY_TRACE);
+        assert!(len > 0, "{}", TraceErrors::INDEX_OUT_OF_BOUNDS);
         let checkpoint = checkpoints[len - 1].read();
         (checkpoint.key, checkpoint.value)
     }

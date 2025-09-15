@@ -11,17 +11,17 @@ fn test_insert() {
 
     let staker_balance = StakerBalanceTrait::new(amount_own: 1000);
     mock_trace.insert(key: 100, value: staker_balance);
-    assert!(mock_trace.latest() == (100, staker_balance));
+    assert!(mock_trace.last() == (100, staker_balance));
     assert!(mock_trace.length() == 1);
 
     let staker_balance = StakerBalanceTrait::new(amount_own: 2000);
     mock_trace.insert(key: 200, value: staker_balance);
-    assert!(mock_trace.latest() == (200, staker_balance));
+    assert!(mock_trace.last() == (200, staker_balance));
     assert!(mock_trace.length() == 2);
 
     let staker_balance = StakerBalanceTrait::new(amount_own: 500);
     mock_trace.insert(key: 200, value: staker_balance);
-    assert!(mock_trace.latest() == (200, staker_balance));
+    assert!(mock_trace.last() == (200, staker_balance));
     assert!(mock_trace.length() == 2);
 }
 
@@ -35,43 +35,43 @@ fn test_insert_unordered_insertion() {
 }
 
 #[test]
-#[should_panic(expected: "Empty trace")]
-fn test_latest_empty_trace() {
+#[should_panic(expected: "Index out of bounds")]
+fn test_last_empty_trace() {
     let mut mock_trace = CONTRACT_STATE();
 
-    let _ = mock_trace.latest();
+    let _ = mock_trace.last();
 }
 
 #[test]
-fn test_latest() {
+fn test_last() {
     let mut mock_trace = CONTRACT_STATE();
 
     mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
     mock_trace.insert(200, StakerBalanceTrait::new(amount_own: 200));
 
-    let (key, value) = mock_trace.latest();
+    let (key, value) = mock_trace.last();
     assert!(key == 200);
     assert!(value == StakerBalanceTrait::new(amount_own: 200));
 }
 
 #[test]
-fn test_penultimate() {
+fn test_second_last() {
     let mut mock_trace = CONTRACT_STATE();
 
     mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
     mock_trace.insert(200, StakerBalanceTrait::new(amount_own: 200));
 
-    let (key, value) = mock_trace.penultimate();
+    let (key, value) = mock_trace.second_last();
     assert!(key == 100);
     assert!(value == StakerBalanceTrait::new(amount_own: 100));
 }
 
 #[test]
-#[should_panic(expected: "Penultimate does not exist")]
-fn test_penultimate_not_exist() {
+#[should_panic(expected: "Index out of bounds")]
+fn test_second_last_not_exist() {
     let mut mock_trace = CONTRACT_STATE();
 
-    let _ = mock_trace.penultimate();
+    let _ = mock_trace.second_last();
 }
 
 #[test]
@@ -101,13 +101,13 @@ fn test_length_mutable() {
 }
 
 #[test]
-fn test_latest_mutable() {
+fn test_last_mutable() {
     let mut mock_trace = CONTRACT_STATE();
 
     mock_trace.insert(100, StakerBalanceTrait::new(amount_own: 100));
     mock_trace.insert(200, StakerBalanceTrait::new(amount_own: 200));
 
-    let (key, value) = mock_trace.latest_mutable();
+    let (key, value) = mock_trace.last_mutable();
     assert!(key == 200);
     assert!(value == StakerBalanceTrait::new(amount_own: 200));
 }

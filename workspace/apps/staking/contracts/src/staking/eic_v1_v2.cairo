@@ -12,7 +12,6 @@ mod StakingEICV1toV2 {
     use starknet::class_hash::ClassHash;
     use starknet::storage::{Map, StoragePathEntry, StoragePointerReadAccess};
     use starkware_utils::components::replaceability::interface::IEICInitializable;
-    use starkware_utils::trace::errors::TraceErrors;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 
     #[storage]
@@ -63,10 +62,10 @@ mod StakingEICV1toV2 {
     #[generate_trait]
     impl EICHelper of IEICHelper {
         /// Migrate the deprecated total stake trace to tokens_total_stake_trace.
-        /// Migrate up to MAX_MIGRATION_TRACE_ENTRIES latest checkpoints.
+        /// Migrate up to MAX_MIGRATION_TRACE_ENTRIES last checkpoints.
         fn migrate_total_stake_trace(ref self: ContractState) {
             let deprecated_trace = self.total_stake_trace;
-            assert!(!deprecated_trace.is_empty(), "{}", TraceErrors::EMPTY_TRACE);
+            assert!(!deprecated_trace.is_empty(), "EMPTY_TRACE");
             let len = deprecated_trace.length();
             let entries_to_migrate = min(len, MAX_MIGRATION_TRACE_ENTRIES);
             let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);

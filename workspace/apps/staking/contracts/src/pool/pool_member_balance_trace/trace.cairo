@@ -95,8 +95,8 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
     ///
     /// # Returns
     /// A tuple containing:
-    /// - `Epoch`: Timestamp/key of the latest checkpoint
-    /// - `PoolMemberBalance`: Value stored in the latest checkpoint
+    /// - `Epoch`: Timestamp/key of the last checkpoint
+    /// - `PoolMemberBalance`: Value stored in the last checkpoint
     ///
     /// # Panics
     /// If the trace structure is empty (no checkpoints exist)
@@ -104,19 +104,17 @@ pub impl PoolMemberBalanceTraceImpl of PoolMemberBalanceTraceTrait {
     /// # Note
     /// This will return the last inserted checkpoint that maintains the structure's
     /// invariant of non-decreasing keys.
-    fn latest(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
+    fn last(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
         self._nth_back(0)
     }
 
-    /// Retrieves the penultimate checkpoint from the trace structure.
-    /// Penultimate checkpoint is the second last checkpoint in the trace.
-    fn penultimate(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
+    /// Retrieves the second last checkpoint from the trace structure.
+    fn second_last(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
         self._nth_back(1)
     }
 
-    /// Retrieves the antepenultimate checkpoint from the trace structure.
-    /// Antepenultimate checkpoint is the third last checkpoint in the trace.
-    fn antepenultimate(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
+    /// Retrieves the third last checkpoint from the trace structure.
+    fn third_last(self: StoragePath<PoolMemberBalanceTrace>) -> (Epoch, PoolMemberBalance) {
         self._nth_back(2)
     }
 
@@ -180,8 +178,8 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     ///
     /// # Returns
     /// A tuple containing:
-    /// - `Epoch`: Timestamp/key of the latest checkpoint
-    /// - `PoolMemberBalance`: Value stored in the latest checkpoint
+    /// - `Epoch`: Timestamp/key of the last checkpoint
+    /// - `PoolMemberBalance`: Value stored in the last checkpoint
     ///
     /// # Panics
     /// If the trace structure is empty (no checkpoints exist)
@@ -189,8 +187,8 @@ pub impl MutablePoolMemberBalanceTraceImpl of MutablePoolMemberBalanceTraceTrait
     /// # Note
     /// This will return the last inserted checkpoint that maintains the structure's
     /// invariant of non-decreasing keys.
-    fn latest(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> (Epoch, PoolMemberBalance) {
-        self.as_non_mut().latest()
+    fn last(self: StoragePath<Mutable<PoolMemberBalanceTrace>>) -> (Epoch, PoolMemberBalance) {
+        self.as_non_mut().last()
     }
 
     /// Returns whether the trace is non empty.

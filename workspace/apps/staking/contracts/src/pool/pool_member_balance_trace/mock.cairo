@@ -6,15 +6,15 @@ pub trait IMockTrace<TContractState> {
     fn insert(
         ref self: TContractState, key: Epoch, value: PoolMemberBalance,
     ) -> (PoolMemberBalance, PoolMemberBalance);
-    fn latest(self: @TContractState) -> (Epoch, PoolMemberBalance);
-    fn penultimate(self: @TContractState) -> (Epoch, PoolMemberBalance);
+    fn last(self: @TContractState) -> (Epoch, PoolMemberBalance);
+    fn second_last(self: @TContractState) -> (Epoch, PoolMemberBalance);
     fn length(self: @TContractState) -> u64;
-    fn latest_mutable(ref self: TContractState) -> (Epoch, PoolMemberBalance);
+    fn last_mutable(ref self: TContractState) -> (Epoch, PoolMemberBalance);
     fn is_non_empty(self: @TContractState) -> bool;
     fn is_non_empty_mutable(ref self: TContractState) -> bool;
     fn length_mutable(ref self: TContractState) -> u64;
     fn at(self: @TContractState, pos: u64) -> PoolMemberCheckpoint;
-    fn antepenultimate(self: @TContractState) -> (Epoch, PoolMemberBalance);
+    fn third_last(self: @TContractState) -> (Epoch, PoolMemberBalance);
 }
 
 #[starknet::contract]
@@ -37,20 +37,20 @@ pub mod MockTrace {
             self.trace.insert(:key, :value)
         }
 
-        fn latest(self: @ContractState) -> (Epoch, PoolMemberBalance) {
-            self.trace.latest()
+        fn last(self: @ContractState) -> (Epoch, PoolMemberBalance) {
+            self.trace.last()
         }
 
-        fn penultimate(self: @ContractState) -> (Epoch, PoolMemberBalance) {
-            self.trace.penultimate()
+        fn second_last(self: @ContractState) -> (Epoch, PoolMemberBalance) {
+            self.trace.second_last()
         }
 
         fn length(self: @ContractState) -> u64 {
             self.trace.length()
         }
 
-        fn latest_mutable(ref self: ContractState) -> (Epoch, PoolMemberBalance) {
-            self.trace.latest()
+        fn last_mutable(ref self: ContractState) -> (Epoch, PoolMemberBalance) {
+            self.trace.last()
         }
 
         fn length_mutable(ref self: ContractState) -> u64 {
@@ -69,8 +69,8 @@ pub mod MockTrace {
             self.trace.at(:pos)
         }
 
-        fn antepenultimate(self: @ContractState) -> (Epoch, PoolMemberBalance) {
-            self.trace.antepenultimate()
+        fn third_last(self: @ContractState) -> (Epoch, PoolMemberBalance) {
+            self.trace.third_last()
         }
     }
 }

@@ -54,14 +54,14 @@ fn test_insert_unordered_insertion() {
 
 #[test]
 #[should_panic(expected: "Index out of bounds")]
-fn test_latest_empty_trace() {
+fn test_last_empty_trace() {
     let mut mock_trace = CONTRACT_STATE();
 
-    let _ = mock_trace.latest();
+    let _ = mock_trace.last();
 }
 
 #[test]
-fn test_latest() {
+fn test_last() {
     let mut mock_trace = CONTRACT_STATE();
 
     mock_trace
@@ -69,13 +69,13 @@ fn test_latest() {
     mock_trace
         .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 
-    let (key, value) = mock_trace.latest();
+    let (key, value) = mock_trace.last();
     assert!(key == 200);
     assert!(value == PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 }
 
 #[test]
-fn test_penultimate() {
+fn test_second_last() {
     let mut mock_trace = CONTRACT_STATE();
 
     mock_trace
@@ -83,17 +83,17 @@ fn test_penultimate() {
     mock_trace
         .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 
-    let (key, value) = mock_trace.penultimate();
+    let (key, value) = mock_trace.second_last();
     assert!(key == 100);
     assert!(value == PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
 }
 
 #[test]
 #[should_panic(expected: "Index out of bounds")]
-fn test_penultimate_not_exist() {
+fn test_second_last_not_exist() {
     let mut mock_trace = CONTRACT_STATE();
 
-    let _ = mock_trace.penultimate();
+    let _ = mock_trace.second_last();
 }
 
 #[test]
@@ -112,7 +112,7 @@ fn test_length() {
 }
 
 #[test]
-fn test_latest_mutable() {
+fn test_last_mutable() {
     let mut mock_trace = CONTRACT_STATE();
 
     mock_trace
@@ -120,7 +120,7 @@ fn test_latest_mutable() {
     mock_trace
         .insert(200, PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 
-    let (key, value) = mock_trace.latest();
+    let (key, value) = mock_trace.last();
     assert!(key == 200);
     assert!(value == PoolMemberBalanceTrait::new(balance: 2000, cumulative_rewards_trace_idx: 2));
 }
@@ -209,7 +209,7 @@ fn test_pool_member_checkpoint_getters() {
 }
 
 #[test]
-fn test_antepenultimate() {
+fn test_third_last() {
     let mut mock_trace = CONTRACT_STATE();
 
     mock_trace
@@ -219,15 +219,15 @@ fn test_antepenultimate() {
     mock_trace
         .insert(300, PoolMemberBalanceTrait::new(balance: 3000, cumulative_rewards_trace_idx: 3));
 
-    let (key, value) = mock_trace.antepenultimate();
+    let (key, value) = mock_trace.third_last();
     assert!(key == 100);
     assert!(value == PoolMemberBalanceTrait::new(balance: 1000, cumulative_rewards_trace_idx: 1));
 }
 
 #[test]
 #[should_panic(expected: "Index out of bounds")]
-fn test_antepenultimate_not_exist() {
+fn test_third_last_not_exist() {
     let mut mock_trace = CONTRACT_STATE();
 
-    let _ = mock_trace.antepenultimate();
+    let _ = mock_trace.third_last();
 }

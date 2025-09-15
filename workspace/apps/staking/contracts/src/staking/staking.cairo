@@ -1394,7 +1394,7 @@ pub mod Staking {
             let total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
             // Trace is initialized with a zero stake at the first valid epoch, so it is safe to
             // unwrap.
-            let (_, total_stake) = total_stake_trace.latest().unwrap();
+            let (_, total_stake) = total_stake_trace.last().unwrap();
             NormalizedAmountTrait::from_amount_18_decimals(total_stake)
         }
 
@@ -1408,7 +1408,7 @@ pub mod Staking {
             (strk_rewards / epoch_len_in_blocks.into(), btc_rewards / epoch_len_in_blocks.into())
         }
 
-        /// Migrate the latest checkpoints of the staker balance trace.
+        /// Migrate the last checkpoints of the staker balance trace.
         fn migrate_staker_balance_trace(
             ref self: ContractState,
             staker_address: ContractAddress,
@@ -1978,17 +1978,17 @@ pub mod Staking {
             trace.insert(key: STARTING_EPOCH, value: Zero::zero());
         }
 
-        /// Return the latest own balance recorded in the `staker_own_balance_trace`.
+        /// Return the last own balance recorded in the `staker_own_balance_trace`.
         fn get_own_balance(
             self: @ContractState, staker_address: ContractAddress,
         ) -> NormalizedAmount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
             // Unwrap is safe since the trace must already be initialized.
-            let (_, own_balance) = trace.latest().unwrap();
+            let (_, own_balance) = trace.last().unwrap();
             NormalizedAmountTrait::from_strk_native_amount(amount: own_balance)
         }
 
-        /// Return the latest delegated balance recorded in the `staker_delegated_balance_trace` of
+        /// Return the last delegated balance recorded in the `staker_delegated_balance_trace` of
         /// the given `pool_contract`.
         fn get_delegated_balance(
             self: @ContractState, staker_address: ContractAddress, pool_contract: ContractAddress,
@@ -1998,7 +1998,7 @@ pub mod Staking {
                 .entry(key: staker_address)
                 .entry(key: pool_contract);
             // Unwrap is safe since the trace must already be initialized.
-            let (_, delegated_balance) = trace.latest().unwrap();
+            let (_, delegated_balance) = trace.last().unwrap();
             NormalizedAmountTrait::from_amount_18_decimals(amount: delegated_balance)
         }
 
@@ -2082,12 +2082,12 @@ pub mod Staking {
         fn balance_at_epoch(
             self: @ContractState, trace: StoragePath<Trace>, epoch_id: Epoch,
         ) -> NormalizedAmount {
-            let (epoch, balance) = trace.latest().unwrap_or_else(|err| panic!("{err}"));
+            let (epoch, balance) = trace.last().unwrap_or_else(|err| panic!("{err}"));
             let current_balance = if epoch <= epoch_id {
                 balance
             } else {
-                let (epoch, balance) = trace.penultimate().unwrap_or_else(|err| panic!("{err}"));
-                assert!(epoch <= epoch_id, "{}", GenericError::INVALID_PENULTIMATE);
+                let (epoch, balance) = trace.second_last().unwrap_or_else(|err| panic!("{err}"));
+                assert!(epoch <= epoch_id, "{}", GenericError::INVALID_SECOND_LAST);
                 balance
             };
             NormalizedAmountTrait::from_amount_18_decimals(amount: current_balance)

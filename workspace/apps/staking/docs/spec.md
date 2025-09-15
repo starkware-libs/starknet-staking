@@ -1129,7 +1129,7 @@ Return general parameters of the contract.
 get_total_stake(self: @ContractState) -> Amount
 ```
 #### description <!-- omit from toc -->
-Return the latest total STRK stake amount (which could be of the next epoch).
+Return the last total STRK stake amount (which could be of epoch plus k).
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->

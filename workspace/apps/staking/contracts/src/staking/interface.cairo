@@ -37,7 +37,7 @@ pub trait IStaking<TContractState> {
         self: @TContractState, staker_address: ContractAddress,
     ) -> CommissionCommitment;
     fn contract_parameters_v1(self: @TContractState) -> StakingContractInfoV1;
-    /// Returns the latest total stake for the STRK token only.
+    /// Returns the last total stake for the STRK token only.
     /// Note: The function name does not specify STRK for backwards compatibility.
     fn get_total_stake(self: @TContractState) -> Amount;
     /// Returns the current epoch's (strk_total_stake, btc_total_stake), where both use 18 decimals.

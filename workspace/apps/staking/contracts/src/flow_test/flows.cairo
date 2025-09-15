@@ -2977,7 +2977,7 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
         );
         assert!(own_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
         assert!(delegated_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
-        // Test latest: staker balance trace: epoch 3, stake_amount*2 + delegate_amount.
+        // Test last: staker balance trace: epoch 3, stake_amount*2 + delegate_amount.
         let (own_key, own_value) = load_from_trace(
             contract_address: system.staking.address, trace_address: own_trace_storage, index: 2,
         );
@@ -2990,7 +2990,7 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
         assert!(delegated_key == 3);
         assert!(own_value == stake_amount * 2);
         assert!(delegated_value == delegated_amount);
-        // Test penultimate: staker balance trace: epoch 2, stake_amount*2.
+        // Test second_last: staker balance trace: epoch 2, stake_amount*2.
         let (own_key, own_value) = load_from_trace(
             contract_address: system.staking.address, trace_address: own_trace_storage, index: 1,
         );

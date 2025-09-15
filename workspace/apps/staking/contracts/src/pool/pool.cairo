@@ -261,7 +261,7 @@ pub mod Pool {
             // Asserts.
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
-            let old_delegated_stake = self.get_latest_member_balance(:pool_member);
+            let old_delegated_stake = self.get_last_member_balance(:pool_member);
             let total_amount = old_delegated_stake + pool_member_info.unpool_amount;
             assert!(amount <= total_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
 
@@ -481,7 +481,7 @@ pub mod Pool {
             // Create the pool member record.
             self.pool_member_info.write(pool_member, pool_member_info);
 
-            let new_delegated_stake = self.get_latest_member_balance(:pool_member);
+            let new_delegated_stake = self.get_last_member_balance(:pool_member);
 
             // Emit event.
             self
@@ -537,7 +537,7 @@ pub mod Pool {
                 );
             let external_pool_member_info = PoolMemberInfoV1 {
                 reward_address: pool_member_info.reward_address,
-                amount: self.get_latest_member_balance(:pool_member),
+                amount: self.get_last_member_balance(:pool_member),
                 unclaimed_rewards: pool_member_info._unclaimed_rewards_from_v0 + rewards,
                 commission: self.get_commission_from_staking_contract(),
                 unpool_amount: pool_member_info.unpool_amount,
@@ -572,12 +572,12 @@ pub mod Pool {
 
             // `rewards_info` is initialized in the constructor or in the upgrade proccess,
             // so unwrapping should be safe.
-            let (_, latest) = self.cumulative_rewards_trace.latest().unwrap();
+            let (_, last) = self.cumulative_rewards_trace.last().unwrap();
             self
                 .cumulative_rewards_trace
                 .insert(
                     key: self.get_current_epoch(),
-                    value: latest
+                    value: last
                         + self
                             .compute_rewards_per_unit(
                                 staking_rewards: rewards, total_stake: pool_balance,
@@ -715,15 +715,15 @@ pub mod Pool {
             self.get_current_epoch() + 1
         }
 
-        fn get_latest_member_balance(self: @ContractState, pool_member: ContractAddress) -> Amount {
+        fn get_last_member_balance(self: @ContractState, pool_member: ContractAddress) -> Amount {
             // After upgrading to V1, `pool_member_epoch_balance` remains uninitialized
             // until the pool member's balance is modified for the first time. If initialized,
-            // return the `amount` recorded in the trace, which reflects the latest delegated
+            // return the `amount` recorded in the trace, which reflects the last delegated
             // amount.
             // Otherwise, return `pool_member_info._deprecated_amount`.
             let trace = self.pool_member_epoch_balance.entry(key: pool_member);
             if trace.is_non_empty() {
-                let (_, pool_member_balance) = trace.latest();
+                let (_, pool_member_balance) = trace.last();
                 pool_member_balance.balance()
             } else {
                 self.internal_pool_member_info(:pool_member)._deprecated_amount
@@ -746,7 +746,7 @@ pub mod Pool {
         fn increase_member_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) -> Amount {
-            let current_balance = self.get_latest_member_balance(:pool_member);
+            let current_balance = self.get_last_member_balance(:pool_member);
             self.set_member_balance(:pool_member, amount: current_balance + amount);
             current_balance
         }
@@ -764,15 +764,15 @@ pub mod Pool {
                 return self.internal_pool_member_info(:pool_member)._deprecated_amount;
             }
 
-            let (latest_epoch, latest_value) = trace.latest();
+            let (last_epoch, last_value) = trace.last();
             let current_epoch = self.get_current_epoch();
 
-            // If the latest balance change is before the current epoch, return its balance.
-            if latest_epoch <= current_epoch {
-                return latest_value.balance();
+            // If the last balance change is before the current epoch, return its balance.
+            if last_epoch <= current_epoch {
+                return last_value.balance();
             }
-            // Assert latest balance change is in the current epoch.
-            assert!(latest_epoch == current_epoch + 1, "{}", Error::INVALID_LATEST_EPOCH);
+            // Assert last balance change is in the current epoch.
+            assert!(last_epoch == current_epoch + 1, "{}", Error::INVALID_LAST_EPOCH);
 
             // Otherwise, if it's the only change, return the initial value (the value before the
             // migration).
@@ -780,11 +780,11 @@ pub mod Pool {
                 return self.internal_pool_member_info(:pool_member)._deprecated_amount;
             }
 
-            // Otherwise, the penultimate balance change is the relevant one.
-            let (penultimate_epoch, penultimate_value) = trace.penultimate();
-            assert!(penultimate_epoch <= current_epoch, "{}", GenericError::INVALID_PENULTIMATE);
+            // Otherwise, the second last balance change is the relevant one.
+            let (second_last_epoch, second_last_value) = trace.second_last();
+            assert!(second_last_epoch <= current_epoch, "{}", GenericError::INVALID_SECOND_LAST);
 
-            penultimate_value.balance()
+            second_last_value.balance()
         }
 
         /// Returns the checkpoint for the current epoch.

@@ -215,9 +215,9 @@ fn test_attest_assertions() {
     let result = attestation_safe_dispatcher.attest(:block_hash);
     assert_panic_with_error(:result, expected_error: Error::ATTEST_IS_DONE.describe());
 
-    // Catch INVALID_PENULTIMATE.
+    // Catch INVALID_SECOND_LAST.
     // Append two checkpoints whose epochs are greater than the current epoch so that both
-    // `latest` and `penultimate` exceed `curr_epoch`.
+    // `last` and `second_last` exceed `curr_epoch`.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let curr_epoch = staking_dispatcher.get_current_epoch();
     let trace_address = snforge_std::map_entry_address(
@@ -241,7 +241,7 @@ fn test_attest_assertions() {
         contract_address: attestation_contract, caller_address: operational_address,
     );
     let result = attestation_safe_dispatcher.attest(:block_hash);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_PENULTIMATE.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_SECOND_LAST.describe());
 }
 
 #[test]
