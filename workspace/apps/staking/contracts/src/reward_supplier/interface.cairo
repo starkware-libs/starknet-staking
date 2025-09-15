@@ -9,6 +9,7 @@ pub trait IRewardSupplier<TContractState> {
     fn update_unclaimed_rewards_from_staking_contract(ref self: TContractState, rewards: Amount);
     /// Transfers rewards to the staking contract.
     fn claim_rewards(ref self: TContractState, amount: Amount);
+    /// Callback function for StarkGate deposit.
     fn on_receive(
         ref self: TContractState,
         l2_token: ContractAddress,

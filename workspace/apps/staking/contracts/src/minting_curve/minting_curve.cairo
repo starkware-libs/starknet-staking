@@ -133,16 +133,6 @@ pub mod MintingCurve {
 
     #[abi(embed_v0)]
     impl MintingImpl of IMintingCurve<ContractState> {
-        /// Return yearly mint amount (M * total_supply).
-        /// To calculate the amount, we utilize the minting curve formula (which is in percentage):
-        ///   M = (C / 10) * sqrt(S),
-        /// where:
-        /// - M: Yearly mint rate (%)
-        /// - C: Max theoretical inflation (%)
-        /// - S: Staking rate of total supply (%)
-        ///
-        /// If C, S and M are given as a fractions (instead of percentages), we get:
-        ///   M = C * sqrt(S).
         fn yearly_mint(self: @ContractState) -> Amount {
             let total_supply = self.total_supply.read();
             let staking_dispatcher = self.staking_dispatcher.read();
@@ -161,9 +151,6 @@ pub mod MintingCurve {
 
     #[abi(embed_v0)]
     impl IMintingCurveConfigImpl of IMintingCurveConfig<ContractState> {
-        /// Set the maximum inflation rate that can be minted in a year.
-        /// c_num is the numerator of the fraction c_num / C_DENOM (currently C_DENOM = 10,000).
-        /// If you wish to set the inflation rate to 1.7%, you should set c_num to 170.
         fn set_c_num(ref self: ContractState, c_num: Inflation) {
             self.roles.only_token_admin();
             assert!(c_num <= MAX_C_NUM, "{}", Error::C_NUM_OUT_OF_RANGE);

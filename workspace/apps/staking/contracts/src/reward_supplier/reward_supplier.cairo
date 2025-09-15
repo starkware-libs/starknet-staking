@@ -151,7 +151,7 @@ pub mod RewardSupplier {
             self.request_funds(:unclaimed_rewards);
         }
 
-        /// This function is called by the staking contract, claiming an amount of owed rewards.
+        // This function is called by the staking contract, claiming an amount of owed rewards.
         fn claim_rewards(ref self: ContractState, amount: Amount) {
             // Asserts.
             let staking_contract = self.staking_contract.read();
@@ -169,7 +169,6 @@ pub mod RewardSupplier {
             token_dispatcher.checked_transfer(recipient: staking_contract, amount: amount.into());
         }
 
-        /// Callback function for StarkGate deposit.
         fn on_receive(
             ref self: ContractState,
             l2_token: ContractAddress,

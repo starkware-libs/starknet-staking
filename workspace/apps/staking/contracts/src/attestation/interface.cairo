@@ -10,6 +10,8 @@ pub trait IAttestation<TContractState> {
     fn get_last_epoch_attestation_done(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Epoch;
+    /// This function is used to help integration partners test the correct
+    /// computation of the target attestation block.
     fn get_current_epoch_target_attestation_block(
         self: @TContractState, operational_address: ContractAddress,
     ) -> BlockNumber;

@@ -147,8 +147,6 @@ pub mod Attestation {
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
 
-        /// This function is used to help integration partners test the correct
-        /// computation of the target attestation block.
         fn get_current_epoch_target_attestation_block(
             self: @ContractState, operational_address: ContractAddress,
         ) -> BlockNumber {

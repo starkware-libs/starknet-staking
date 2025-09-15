@@ -26,8 +26,12 @@ pub trait IStaking<TContractState> {
     fn set_open_for_delegation(
         ref self: TContractState, token_address: ContractAddress,
     ) -> ContractAddress;
+    /// This function provides the staker info (with projected rewards).
+    /// If the staker does not exist, it panics.
     fn staker_info_v1(self: @TContractState, staker_address: ContractAddress) -> StakerInfoV1;
     fn staker_pool_info(self: @TContractState, staker_address: ContractAddress) -> StakerPoolInfoV2;
+    /// This function provides the staker info (with projected rewards) wrapped in an Option.
+    /// If the staker does not exist, it returns None.
     fn get_staker_info_v1(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Option<StakerInfoV1>;

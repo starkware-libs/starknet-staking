@@ -428,7 +428,7 @@ pub mod Pool {
             pool_member_info.unpool_amount
         }
 
-        /// This function is called by the staking contract to enter the pool during a pool switch.
+        // This function is called by the staking contract to enter the pool during a pool switch.
         fn enter_delegation_pool_from_staking_contract(
             ref self: ContractState, amount: Amount, data: Span<felt252>,
         ) {
@@ -494,8 +494,8 @@ pub mod Pool {
                 );
         }
 
-        /// This function is called by the staking contract to notify the pool that the staker has
-        /// been removed from the staking contract.
+        // This function is called by the staking contract to notify the pool that the staker has
+        // been removed from the staking contract.
         fn set_staker_removed(ref self: ContractState) {
             // Asserts.
             self.assert_caller_is_staking_contract();
@@ -523,7 +523,7 @@ pub mod Pool {
                 );
         }
 
-        /// This function provides the pool member info (with projected rewards).
+        // This function provides the pool member info (with projected rewards).
         fn pool_member_info_v1(
             self: @ContractState, pool_member: ContractAddress,
         ) -> PoolMemberInfoV1 {

@@ -534,10 +534,7 @@ pub mod Staking {
             pool_contract
         }
 
-        /// This function provides the staker info (with projected rewards).
-        /// If the staker does not exist, it panics.
-        /// This function assumes the staker trace is initialized.
-        ///
+        /// *Note*: This function assumes the staker trace is initialized.
         /// *Note*: V1 pool contracts use this function to get the commission. Breaking this
         /// function will require upgrading the V1 pool contracts.
         fn staker_info_v1(self: @ContractState, staker_address: ContractAddress) -> StakerInfoV1 {
@@ -563,8 +560,6 @@ pub mod Staking {
             staker_info
         }
 
-        /// This function provides the staker info (with projected rewards) wrapped in an Option.
-        /// If the staker does not exist, it returns None.
         fn get_staker_info_v1(
             self: @ContractState, staker_address: ContractAddress,
         ) -> Option<StakerInfoV1> {
@@ -850,8 +845,6 @@ pub mod Staking {
             internal_staker_info
         }
 
-        /// Migrate staker pool info and balance trace.
-        ///
         /// **Note**: This function should be called only once per staker during upgrade.
         fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
             // Assert the staker is not migrated yet.
