@@ -11,7 +11,9 @@ mod PoolEICV0toV1 {
     use staking::types::{Index, Version};
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
-    use starknet::storage::Map;
+    use starknet::storage::{
+        Map, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
     use starkware_utils::components::replaceability::interface::IEICInitializable;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 

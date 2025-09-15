@@ -10,7 +10,10 @@ mod StakingEICV1toV2 {
     use staking::types::Version;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
-    use starknet::storage::{Map, StoragePathEntry, StoragePointerReadAccess};
+    use starknet::storage::{
+        Map, StorageMapWriteAccess, StoragePathEntry, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
+    };
     use starkware_utils::components::replaceability::interface::IEICInitializable;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 

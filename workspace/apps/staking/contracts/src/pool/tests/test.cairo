@@ -41,6 +41,7 @@ use staking::staking::objects::{
 };
 use staking::types::InternalPoolMemberInfoLatest;
 use staking::{event_test_utils, test_utils};
+use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
 use starkware_utils::errors::Describable;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::event_test_utils::assert_number_of_events;

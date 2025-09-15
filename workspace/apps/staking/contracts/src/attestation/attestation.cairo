@@ -17,7 +17,10 @@ pub mod Attestation {
         AttestationInfo as StakingAttestationInfo, AttestationInfoTrait,
     };
     use staking::types::{BlockNumber, Epoch};
-    use starknet::storage::Map;
+    use starknet::storage::{
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
+    };
     use starknet::syscalls::get_block_hash_syscall;
     use starknet::{ContractAddress, get_block_number, get_caller_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;

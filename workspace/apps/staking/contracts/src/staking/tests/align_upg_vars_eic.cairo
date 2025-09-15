@@ -5,6 +5,7 @@ pub(crate) mod AlignUpgVars {
     use core::num::traits::Zero;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starkware_utils::components::replaceability::interface::IEICInitializable;
 
     #[storage]

@@ -38,7 +38,8 @@ pub mod Pool {
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
     use starknet::storage::{
-        Map, StorageBase, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess,
+        Map, StorageBase, StorageMapReadAccess, StorageMapWriteAccess, StoragePathEntry,
+        StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;

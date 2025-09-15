@@ -12,6 +12,7 @@ pub mod MintingCurve {
     use staking::staking::objects::NormalizedAmountTrait;
     use staking::types::{Amount, Inflation};
     use starknet::ContractAddress;
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::interfaces::identity::Identity;

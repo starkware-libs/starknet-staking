@@ -5,7 +5,9 @@ use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
 use staking::types::{Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest};
-use starknet::storage::{Mutable, StoragePath, StoragePathMutableConversion};
+use starknet::storage::{
+    Mutable, StoragePath, StoragePathMutableConversion, StoragePointerReadAccess,
+};
 use starknet::{ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::storage::iterable_map::{

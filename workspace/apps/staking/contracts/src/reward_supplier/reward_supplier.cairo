@@ -15,6 +15,7 @@ pub mod RewardSupplier {
     use staking::staking::objects::EpochInfoTrait;
     use staking::types::Amount;
     use staking::utils::{CheckedIERC20DispatcherTrait, compute_threshold};
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::syscalls::send_message_to_l1_syscall;
     use starknet::{
         ContractAddress, EthAddress, SyscallResultTrait, get_caller_address, get_contract_address,
