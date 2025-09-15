@@ -57,6 +57,7 @@ pub(crate) enum Error {
     ATTEST_WITH_ZERO_BALANCE,
     REWARDS_ALREADY_UPDATED,
     INVALID_STAKER,
+    REWARDS_ALREADY_V3,
 }
 
 impl DescribableError of Describable<Error> {
@@ -118,6 +119,7 @@ impl DescribableError of Describable<Error> {
             Error::ATTEST_WITH_ZERO_BALANCE => "Cannot attest with zero balance",
             Error::REWARDS_ALREADY_UPDATED => "Rewards were already updated for the current block",
             Error::INVALID_STAKER => "Staker is invalid for getting rewards",
+            Error::REWARDS_ALREADY_V3 => "Rewards distribution is already V3",
         }
     }
 }

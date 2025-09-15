@@ -23,7 +23,7 @@ use event_test_utils::{
     assert_stake_own_balance_changed_event, assert_staker_exit_intent_event,
     assert_staker_reward_address_change_event, assert_staker_reward_claimed_event,
     assert_staker_rewards_updated_event, assert_token_added_event, assert_token_disabled_event,
-    assert_token_enabled_event,
+    assert_token_enabled_event, assert_v3_rewards_first_epoch_set_event,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
@@ -73,7 +73,7 @@ use staking::staking::staking::Staking::{
     DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, MAX_MIGRATION_TRACE_ENTRIES,
     V2_PREV_CONTRACT_VERSION,
 };
-use staking::types::{Amount, InternalStakerInfoLatest, VecIndex};
+use staking::types::{Amount, Epoch, InternalStakerInfoLatest, VecIndex};
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
@@ -4141,6 +4141,157 @@ fn test_set_epoch_info_assertions() {
     let result = staking_safe_dispatcher
         .set_epoch_info(epoch_duration: Zero::zero(), :epoch_length);
     assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH_DURATION.describe());
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_v3_rewards_first_epoch() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let staking_safe_config_dispatcher = IStakingConfigSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    let mut spy = snforge_std::spy_events();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    let v3_rewards_first_epoch: Epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("v3_rewards_first_epoch"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(v3_rewards_first_epoch == current_epoch + 2);
+    let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "set_v3_rewards_first_epoch",
+    );
+    assert_v3_rewards_first_epoch_set_event(
+        spied_event: events[0], v3_rewards_first_epoch: current_epoch + 2,
+    );
+
+    // Set v3 epoch again with later epoch.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 4);
+    let v3_rewards_first_epoch: Epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("v3_rewards_first_epoch"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(v3_rewards_first_epoch == current_epoch + 4);
+    // Set v3 epoch again with earlier epoch.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 3);
+    let v3_rewards_first_epoch: Epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("v3_rewards_first_epoch"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(v3_rewards_first_epoch == current_epoch + 3);
+    // Set v3 epoch again when currently set to current epoch + 1.
+    advance_epoch_global();
+    advance_epoch_global();
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    let v3_rewards_first_epoch: Epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("v3_rewards_first_epoch"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(v3_rewards_first_epoch == current_epoch + 2);
+    // Advance to V3 rewards and test that v3 epoch cannot be changed.
+    advance_epoch_global();
+    advance_epoch_global();
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    let result = staking_safe_config_dispatcher
+        .set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_V3.describe());
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_v3_rewards_first_epoch_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let staking_safe_config_dispatcher = IStakingConfigSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    let current_epoch = staking_dispatcher.get_current_epoch();
+
+    // Catch ONLY_APP_GOVERNOR.
+    let result = staking_safe_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch);
+    // TODO: Make AccessErrors public and use it here.
+    assert_panic_with_error(:result, expected_error: "ONLY_APP_GOVERNOR");
+
+    // Catch INVALID_EPOCH - current epoch.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    let result = staking_safe_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
+
+    // Catch INVALID_EPOCH - current epoch + 1.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    let result = staking_safe_config_dispatcher
+        .set_v3_rewards_first_epoch(epoch_id: current_epoch + 1);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
+
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+
+    advance_epoch_global();
+    let current_epoch = staking_dispatcher.get_current_epoch();
+
+    // Catch INVALID_EPOCH - before current epoch.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    let result = staking_safe_config_dispatcher
+        .set_v3_rewards_first_epoch(epoch_id: current_epoch - 1);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
+
+    advance_epoch_global();
+    let current_epoch = staking_dispatcher.get_current_epoch();
+
+    // Catch REWARDS_ALREADY_V3.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    let result = staking_safe_config_dispatcher
+        .set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_V3.describe());
+
+    advance_epoch_global();
+    let current_epoch = staking_dispatcher.get_current_epoch();
+
+    // Catch REWARDS_ALREADY_V3.
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    let result = staking_safe_config_dispatcher
+        .set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_V3.describe());
 }
 
 #[test]

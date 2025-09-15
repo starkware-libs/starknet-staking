@@ -47,6 +47,7 @@
     - [set\_exit\_wait\_window](#set_exit_wait_window)
     - [set\_reward\_supplier](#set_reward_supplier)
     - [set\_epoch\_info](#set_epoch_info)
+    - [set\_v3\_rewards\_first\_epoch](#set_v3_rewards_first_epoch)
     - [staker\_migration](#staker_migration)
     - [add\_token](#add_token)
     - [enable\_token](#enable_token)
@@ -87,6 +88,7 @@
     - [Token Enabled](#token-enabled)
     - [Token Disabled](#token-disabled)
     - [Public Key Set](#public-key-set)
+    - [V3 Rewards First Epoch Set](#v3-rewards-first-epoch-set)
 - [Pool contract](#pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -310,6 +312,7 @@ classDiagram
     set_exit_wait_window()
     set_reward_supplier()
     set_epoch_info()
+    set_v3_rewards_first_epoch()
     staker_migration()
     declare_operational_address()
     change_operational_address()
@@ -1330,6 +1333,26 @@ Set the epoch info.
 Only token admin.
 #### logic <!-- omit from toc -->
 
+
+### set_v3
+```rust
+fn set_v3_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch)
+```
+#### description <!-- omit from toc -->
+Sets the epoch number at which reward distribution begins under the V3 scheme.
+#### emits <!-- omit from toc -->
+1. [V3 Rewards First Epoch Set](#v3-rewards-first-epoch-set)
+#### errors <!-- omit from toc -->
+1. [ONLY\_APP_\_GOVERNOR](#only_app_governor)
+2. [INVALID\_EPOCH](#invalid_epoch)
+3. [REWARDS\_ALREADY\_V3](#rewards_already_v3)
+#### pre-condition <!-- omit from toc -->
+1. `epoch_id` >= current epoch + 2
+2. V3 rewards is not active yet.
+#### access control <!-- omit from toc -->
+Only app governor.
+#### logic <!-- omit from toc -->
+
 ### staker_migration
 ```rust
 fn staker_migration(
@@ -1710,6 +1733,11 @@ Only starkware sequencer.
 | -------------- | ------------------------ | ----- |
 | staker_address | address                  | ✅    |
 | public_key     | [PublicKey](#publickey)  | ❌    |
+
+### V3 Rewards First Epoch Set
+| data                   | type                     | keyed |
+| ---------------------- | ------------------------ | ----- |
+| v3_rewards_first_epoch | [Epoch](#epoch)          | ❌    |
 
 # Pool contract
 ## Functions

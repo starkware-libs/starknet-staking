@@ -195,6 +195,8 @@ pub trait IStakingConfig<TContractState> {
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
     fn set_epoch_info(ref self: TContractState, epoch_duration: u32, epoch_length: u32);
+    /// Sets the epoch number at which reward distribution begins under the V3 scheme.
+    fn set_v3_rewards_first_epoch(ref self: TContractState, epoch_id: Epoch);
 }
 
 #[starknet::interface]
@@ -436,7 +438,7 @@ pub mod PauseEvents {
 }
 
 pub mod ConfigEvents {
-    use staking::types::Amount;
+    use staking::types::{Amount, Epoch};
     use starknet::ContractAddress;
     use starkware_utils::time::time::TimeDelta;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
@@ -461,6 +463,11 @@ pub mod ConfigEvents {
     pub struct EpochInfoChanged {
         pub epoch_duration: u32,
         pub epoch_length: u32,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct V3RewardsFirstEpochSet {
+        pub v3_rewards_first_epoch: Epoch,
     }
 }
 

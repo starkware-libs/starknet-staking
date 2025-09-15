@@ -175,6 +175,8 @@ pub mod Staking {
         staker_unstake_intent_epoch: Map<ContractAddress, Epoch>,
         /// Last block number for which rewards were distributed.
         last_reward_block: BlockNumber,
+        /// First epoch of V3 rewards distribution.
+        v3_rewards_first_epoch: Epoch,
     }
 
     #[event]
@@ -206,6 +208,7 @@ pub mod Staking {
         ExitWaitWindowChanged: ConfigEvents::ExitWaitWindowChanged,
         RewardSupplierChanged: ConfigEvents::RewardSupplierChanged,
         EpochInfoChanged: ConfigEvents::EpochInfoChanged,
+        V3RewardsFirstEpochSet: ConfigEvents::V3RewardsFirstEpochSet,
         OperationalAddressDeclared: Events::OperationalAddressDeclared,
         RemoveFromDelegationPoolIntent: Events::RemoveFromDelegationPoolIntent,
         RemoveFromDelegationPoolAction: Events::RemoveFromDelegationPoolAction,
@@ -1183,6 +1186,14 @@ pub mod Staking {
             epoch_info.update(:epoch_duration, :epoch_length);
             self.epoch_info.write(epoch_info);
             self.emit(ConfigEvents::EpochInfoChanged { epoch_duration, epoch_length });
+        }
+
+        fn set_v3_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch) {
+            self.roles.only_app_governor();
+            assert!(epoch_id >= self.get_current_epoch() + 2, "{}", Error::INVALID_EPOCH);
+            assert!(!self.is_v3(), "{}", Error::REWARDS_ALREADY_V3);
+            self.v3_rewards_first_epoch.write(epoch_id);
+            self.emit(ConfigEvents::V3RewardsFirstEpochSet { v3_rewards_first_epoch: epoch_id });
         }
     }
 
@@ -2285,6 +2296,12 @@ pub mod Staking {
 
             // Write staker rewards to storage.
             self.write_staker_info(:staker_address, :staker_info);
+        }
+
+        fn is_v3(self: @ContractState) -> bool {
+            let v3_rewards_first_epoch = self.v3_rewards_first_epoch.read();
+            v3_rewards_first_epoch.is_non_zero()
+                && self.get_current_epoch() >= v3_rewards_first_epoch
         }
     }
 
