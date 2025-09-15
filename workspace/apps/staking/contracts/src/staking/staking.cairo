@@ -2299,9 +2299,8 @@ pub mod Staking {
         }
 
         fn is_v3(self: @ContractState) -> bool {
-            let v3_rewards_first_epoch = self.v3_rewards_first_epoch.read();
-            v3_rewards_first_epoch.is_non_zero()
-                && self.get_current_epoch() >= v3_rewards_first_epoch
+            let v3_epoch = self.v3_rewards_first_epoch.read();
+            v3_epoch.is_non_zero() && self.get_current_epoch() >= v3_epoch
         }
     }
 
