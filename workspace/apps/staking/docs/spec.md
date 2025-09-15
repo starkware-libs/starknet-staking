@@ -1085,9 +1085,10 @@ Send pool rewards to the pool.
 2. [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [CALLER\_IS\_NOT\_ATTESTAION\_CONTRACT](#caller_is_not_attestation_contract)
-3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
-4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+2. [REWARDS\_ALREADY\_V3](#rewards_already_v3)
+3. [CALLER\_IS\_NOT\_ATTESTAION\_CONTRACT](#caller_is_not_attestation_contract)
+4. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only attestation contract.
@@ -1524,7 +1525,7 @@ fn update_rewards(ref self: TContractState, staker_address: ContractAddress, dis
 #### description <!-- omit from toc -->
 Calculate and update the current block rewards for the for the given `staker_address`.
 Send pool rewards to the pools.
-Distribute rewards only if `disable_rewards` is False.
+Distribute rewards only if `disable_rewards` is False and V3 rewards already started.
 #### emits <!-- omit from toc -->
 1. [Staker Rewards Updated](#staker-rewards-updated)
 2. [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)

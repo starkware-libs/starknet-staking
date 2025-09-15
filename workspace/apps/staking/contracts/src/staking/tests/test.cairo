@@ -3201,6 +3201,7 @@ fn test_update_rewards_from_attestation_contract_assertions() {
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg);
 
     // Catch CALLER_IS_NOT_ATTESTATION_CONTRACT.
@@ -3225,6 +3226,21 @@ fn test_update_rewards_from_attestation_contract_assertions() {
     );
     let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
     assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
+
+    // Catch REWARDS_ALREADY_V3.
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start V3 rewards.
+    advance_epoch_global();
+    advance_epoch_global();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: attestation_contract,
+    );
+    let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_V3.describe());
 }
 
 #[test]
@@ -3236,10 +3252,19 @@ fn test_update_rewards_only_staker() {
     let staking_rewards_dispatcher = IStakingRewardsManagerDispatcher {
         contract_address: staking_contract,
     };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
         contract_address: reward_supplier,
     };
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start V3 rewards.
+    advance_epoch_global();
+    advance_epoch_global();
     stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
@@ -3274,10 +3299,19 @@ fn test_update_rewards_miss_blocks() {
     let staking_rewards_dispatcher = IStakingRewardsManagerDispatcher {
         contract_address: staking_contract,
     };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
         contract_address: reward_supplier,
     };
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start V3 rewards.
+    advance_epoch_global();
+    advance_epoch_global();
     stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
@@ -3304,11 +3338,20 @@ fn test_update_rewards_with_strk_pool() {
     let staking_rewards_dispatcher = IStakingRewardsManagerDispatcher {
         contract_address: staking_contract,
     };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let token = cfg.test_info.strk_token;
     let token_address = token.contract_address();
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start V3 rewards.
+    advance_epoch_global();
+    advance_epoch_global();
     let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
@@ -3383,6 +3426,7 @@ fn test_update_rewards_with_both_strk_and_btc() {
     let staking_rewards_dispatcher = IStakingRewardsManagerDispatcher {
         contract_address: staking_contract,
     };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let reward_supplier = cfg.staking_contract_info.reward_supplier;
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let token = cfg.test_info.strk_token;
@@ -3390,6 +3434,14 @@ fn test_update_rewards_with_both_strk_and_btc() {
     let btc_token = cfg.test_info.btc_token;
     let btc_token_address = btc_token.contract_address();
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start V3 rewards.
+    advance_epoch_global();
+    advance_epoch_global();
     // Stake and open pool for STRK.
     let strk_pool_contract = stake_with_strk_pool_enabled(:cfg);
     let staker_address = cfg.test_info.staker_address;
@@ -3554,7 +3606,7 @@ fn test_update_rewards_with_both_strk_and_btc() {
 
 #[test]
 #[feature("safe_dispatcher")]
-fn test_update_rewards_assertions() {
+fn test_update_rewards_assertions_before_v3() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
@@ -3611,6 +3663,73 @@ fn test_update_rewards_assertions() {
 }
 
 #[test]
+#[feature("safe_dispatcher")]
+fn test_update_rewards_assertions_already_v3() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_rewards_dispatcher = IStakingRewardsManagerDispatcher {
+        contract_address: staking_contract,
+    };
+    let staking_rewards_safe_dispatcher = IStakingRewardsManagerSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start V3 rewards.
+    advance_epoch_global();
+    advance_epoch_global();
+
+    // Catch STAKER_NOT_EXISTS.
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+
+    stake_for_testing_using_dispatcher(:cfg);
+    // Catch INVALID_STAKER - before staker has balance.
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
+
+    advance_epoch_global();
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
+    // Catch REWARDS_ALREADY_UPDATED.
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_UPDATED.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_UPDATED.describe());
+
+    advance_epoch_global();
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
+    // Catch REWARDS_ALREADY_UPDATE - with distribute = false.
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_UPDATED.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_UPDATED.describe());
+
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.unstake_intent();
+    advance_epoch_global();
+    // TODO: Catch INVALID_STAKER - unstake intent.
+}
+
+#[test]
 fn test_update_rewards_without_distribute() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -3619,13 +3738,62 @@ fn test_update_rewards_without_distribute() {
     let staking_rewards_dispatcher = IStakingRewardsManagerDispatcher {
         contract_address: staking_contract,
     };
+    let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
+    // `disable_rewards = true`, and !self.is_v3().
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_before);
+
+    // `disable_rewards = false`, and !self.is_v3().
+    advance_block_number_global(blocks: 1);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_before);
+
+    // Set V3 rewards.
+    let current_epoch = staking_dispatcher.get_current_epoch();
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
+    );
+    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+
+    // Still !self.is_v3(), test with `disable_rewards = true` and `disable_rewards = false`.
+    advance_block_number_global(blocks: 1);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_before);
+    advance_block_number_global(blocks: 1);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_before);
+
+    // Advance one epoch, still !self.is_v3(), test with `disable_rewards = true` and
+    // `disable_rewards = false`.
+    advance_epoch_global();
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_before);
+    advance_block_number_global(blocks: 1);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_before);
+
+    // After 2 epochs, self.is_v3().
+    advance_epoch_global();
+    // `disable_rewards = true`, and self.is_v3().
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_before);
+
+    // `disable_rewards = false`, and self.is_v3() - should distribute rewards.
+    advance_block_number_global(blocks: 1);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after.unclaimed_rewards_own > staker_info_before.unclaimed_rewards_own);
 }
 
 #[test]

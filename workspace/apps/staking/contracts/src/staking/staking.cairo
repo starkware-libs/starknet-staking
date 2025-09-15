@@ -1254,7 +1254,7 @@ pub mod Staking {
         ) {
             // Prerequisites and asserts.
             self.general_prerequisites();
-            // TODO: Add v3 flag checking.
+            assert!(!self.is_v3(), "{}", Error::REWARDS_ALREADY_V3);
             self.assert_caller_is_attestation_contract();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
@@ -1308,7 +1308,6 @@ pub mod Staking {
             ref self: ContractState, staker_address: ContractAddress, disable_rewards: bool,
         ) {
             self.general_prerequisites();
-            // TODO: Add v3 flag checking.
             let current_block_number = starknet::get_block_number();
             assert!(
                 current_block_number > self.last_reward_block.read(),
@@ -1332,7 +1331,7 @@ pub mod Staking {
             // Update last block rewards.
             self.last_reward_block.write(current_block_number);
 
-            if disable_rewards {
+            if disable_rewards || !self.is_v3() {
                 return;
             }
 
