@@ -174,6 +174,7 @@
     - [ONLY\_SECURITY\_AGENT](#only_security_agent)
     - [ONLY\_SECURITY\_ADMIN](#only_security_admin)
     - [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+    - [ONLY\_APP\_GOVERNOR](#only_app_governor)
     - [INVALID\_UNDELEGATE\_INTENT\_VALUE](#invalid_undelegate_intent_value)
     - [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
     - [OPERATIONAL\_IN\_USE](#operational_in_use)
@@ -1319,7 +1320,7 @@ Set the epoch info.
 #### emits <!-- omit from toc -->
 1. [Epoch Info Changed](#epoch-info-changed)
 #### errors <!-- omit from toc -->
-1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
+1. [ONLY\_APP\_GOVERNOR](#only_app_governor)
 2. [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
 3. [INVALID\_BLOCK\_DURATION](#invalid_block_duration)
 4. [EPOCH\_INFO\_ALREADY\_UPDATED](#epoch_info_already_updated)
@@ -1368,7 +1369,7 @@ Add a new token to the staking contract.
 5. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
-Only security admin.
+Only token admin.
 #### logic <!-- omit from toc -->
 
 ### enable_token
@@ -2485,6 +2486,9 @@ Only token admin.
 
 ### ONLY_TOKEN_ADMIN
 "ONLY_TOKEN_ADMIN"
+
+### ONLY_APP_GOVERNOR
+"ONLY_APP_GOVERNOR"
 
 ### INVALID_UNDELEGATE_INTENT_VALUE
 "Invalid undelegate intent value"
