@@ -281,6 +281,38 @@ fn test_stake_with_token_address() {
 }
 
 #[test]
+#[should_panic(expected: "Operational address is a token address")]
+fn test_stake_with_token_operational_address() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.test_info.strk_token.contract_address();
+    staking_dispatcher
+        .stake(
+            reward_address: DUMMY_ADDRESS(),
+            operational_address: token_address,
+            amount: cfg.test_info.stake_amount,
+        );
+}
+
+#[test]
+#[should_panic(expected: "Reward address is a token address")]
+fn test_stake_with_token_reward_address() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.test_info.strk_token.contract_address();
+    staking_dispatcher
+        .stake(
+            reward_address: token_address,
+            operational_address: DUMMY_ADDRESS(),
+            amount: cfg.test_info.stake_amount,
+        );
+}
+
+#[test]
 #[should_panic(expected: "Operational address already exists")]
 fn test_stake_with_same_operational_address() {
     let mut cfg: StakingInitConfig = Default::default();
@@ -547,6 +579,20 @@ fn test_change_reward_address_staker_not_exist() {
     cheat_caller_address_once(contract_address: staking_contract, :caller_address);
     // Reward address is arbitrary because it should fail because of the caller.
     staking_dispatcher.change_reward_address(reward_address: DUMMY_ADDRESS());
+}
+
+#[test]
+#[should_panic(expected: "Reward address is a token address")]
+fn test_change_reward_address_reward_is_token() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    stake_for_testing_using_dispatcher(:cfg);
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let caller_address = cfg.test_info.staker_address;
+    cheat_caller_address_once(contract_address: staking_contract, :caller_address);
+    staking_dispatcher.change_reward_address(reward_address: token_address);
 }
 
 #[test]
@@ -1843,6 +1889,18 @@ fn test_declare_operational_address_operational_address_exists() {
 }
 
 #[test]
+#[should_panic(expected: "Operational address is a token address")]
+fn test_declare_operational_address_operational_address_is_token() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.test_info.strk_token.contract_address();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: token_address);
+    staking_dispatcher.declare_operational_address(staker_address: DUMMY_ADDRESS());
+}
+
+#[test]
 fn test_change_operational_address() {
     let mut cfg: StakingInitConfig = Default::default();
     let staking_contract = deploy_staking_contract(:cfg);
@@ -1886,6 +1944,17 @@ fn test_change_operational_address_staker_doesnt_exist() {
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let operational_address = OTHER_OPERATIONAL_ADDRESS();
     staking_dispatcher.change_operational_address(:operational_address);
+}
+
+#[test]
+#[should_panic(expected: "Operational address is a token address")]
+fn test_change_operational_address_operational_address_is_token() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let token_address = cfg.test_info.strk_token.contract_address();
+    staking_dispatcher.change_operational_address(operational_address: token_address);
 }
 
 #[test]

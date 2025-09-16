@@ -220,6 +220,8 @@
     - [COMMISSION\_NOT\_SET](#commission_not_set)
     - [TOKEN\_MISMATCH](#token_mismatch)
     - [STAKER\_IS\_TOKEN](#staker_is_token)
+    - [REWARD\_ADDRESS\_IS\_TOKEN](#reward_address_is_token)
+    - [OPERATIONAL\_IS\_TOKEN](#operational_is_token)
     - [INTERNAL\_STAKER\_INFO\_OUTDATED\_VERSION](#internal_staker_info_outdated_version)
     - [STAKER\_NOT\_MIGRATED](#staker_not_migrated)
     - [PUBLIC\_KEY\_SET\_IN\_PROGRESS](#public_key_set_in_progress)
@@ -581,7 +583,9 @@ Add a new staker to the stake.
 3. [OPERATIONAL\_EXISTS](#operational_exists)
 4. [STAKER\_ADDRESS\_ALREADY\_USED](#staker_address_already_used)
 5. [STAKER\_IS\_TOKEN](#staker_is_token)
-6. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
+6. [REWARD\_ADDRESS\_IS\_TOKEN](#reward_address_is_token)
+7. [OPERATIONAL\_IS\_TOKEN](#operational_is_token)
+8. [AMOUNT\_LESS\_THAN\_MIN\_STAKE](#amount_less_than_min_stake)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) is not listed in the contract.
@@ -858,7 +862,8 @@ Change the reward address for a staker.
 1. [Staker Reward Address Changed](#staker-reward-address-changed)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [REWARD\_ADDRESS\_IS\_TOKEN](#reward_address_is_token)
+3. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) exist in the contract.
@@ -1170,6 +1175,7 @@ Allows `staker_address` to use the caller's address in the future, in `change_op
 1. [Operational Address Declared](#operational-address-declared)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [OPERATIONAL\_IS\_TOKEN](#operational_is_token)
 2. [OPERATIONAL\_IN\_USE](#operational_in_use)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
@@ -1193,8 +1199,9 @@ Change the operational address for a staker.
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 3. [OPERATIONAL\_EXISTS](#operational_exists)
-4. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-5. [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
+4. [OPERATIONAL\_IS\_TOKEN](#operational_is_token) 
+5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+6. [OPERATIONAL\_NOT\_ELIGIBLE](#operational_not_eligible)
 #### pre-condition <!-- omit from toc -->
 1. Staking contract is unpaused.
 2. Staker (caller) exist in the contract.
@@ -1763,11 +1770,12 @@ Add a new pool member to the delegation pool.
 1. [STAKER\_INACTIVE](#staker_inactive)
 2. [POOL\_MEMBER\_EXISTS](#pool_member_exists)
 3. [AMOUNT\_IS\_ZERO](#amount_is_zero)
-4. [POOL\_MEMBER\_IS\_TOKEN](#pool_member_is_token)
-5. [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
-6. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
-7. [INSUFFICIENT\_BALANCE](#insufficient_balance)
-8. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+4. [REWARD\_ADDRESS\_IS\_TOKEN](#reward_address_is_token)
+5. [POOL\_MEMBER\_IS\_TOKEN](#caller_is_token)
+6. [INSUFFICIENT\_ALLOWANCE](#insufficient_allowance)
+7. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+8. [INSUFFICIENT\_BALANCE](#insufficient_balance)
+9. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
 #### pre-condition <!-- omit from toc -->
 1. Staker is active and not in an exit window.
 2. `caller_address` is not listed in the contract as a pool member.
@@ -1997,6 +2005,7 @@ Change the reward address for a pool member.
 1. [Pool Member Reward Address Changed](#pool-member-reward-address-changed)
 #### errors <!-- omit from toc -->
 1. [POOL\_MEMBER\_DOES\_NOT\_EXIST](#pool_member_does_not_exist)
+2. [REWARD\_ADDRESS\_IS\_TOKEN](#reward_address_is_token)
 #### pre-condition <!-- omit from toc -->
 1. Pool member exist in the contract.
 #### access control <!-- omit from toc -->
@@ -2653,6 +2662,12 @@ Only token admin.
 
 ### STAKER_IS_TOKEN
 "Staker address is a token address"
+
+### REWARD_ADDRESS_IS_TOKEN
+"Reward address is a token address"
+
+### OPERATIONAL_IS_TOKEN
+"Operational address is a token address"
 
 ### INTERNAL_STAKER_INFO_OUTDATED_VERSION
 "Outdated version of Internal Staker Info"
