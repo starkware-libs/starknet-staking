@@ -1,37 +1,50 @@
 use core::num::traits::Zero;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use staking::attestation::attestation::Attestation;
+use staking::attestation::attestation::Attestation::{
+    CONTRACT_IDENTITY as attestation_identity, CONTRACT_VERSION as attestation_version,
+    MIN_ATTESTATION_WINDOW,
+};
 use staking::attestation::errors::Error;
 use staking::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
-use staking::constants::MIN_ATTESTATION_WINDOW;
 use staking::errors::GenericError;
 use staking::event_test_utils::{
-    assert_attestation_window_changed_event, assert_number_of_events,
-    assert_staker_attestation_successful_event,
+    assert_attestation_window_changed_event, assert_staker_attestation_successful_event,
 };
+use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils;
-use starknet::get_block_number;
+use starknet::{ContractAddress, get_block_number};
 use starkware_utils::components::replaceability::interface::{
     IReplaceableDispatcher, IReplaceableDispatcherTrait,
 };
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::errors::Describable;
-use starkware_utils::trace::errors::TraceErrors;
+use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::{
-    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
+    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
 use test_utils::constants::DUMMY_ADDRESS;
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
     calculate_block_offset, cheat_target_attestation_block_hash, general_contract_system_deployment,
-    stake_for_testing_using_dispatcher,
+    load_one_felt, stake_for_testing_using_dispatcher,
 };
 
+#[test]
+fn test_identity() {
+    assert!(attestation_identity == 'Attestation');
+    assert!(attestation_version == '1.0.0');
+
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    check_identity(attestation_contract, attestation_identity, attestation_version);
+}
 #[test]
 fn test_attest() {
     /// this test is a lie. it runs through the code but doesn't check the block hash correctly.
@@ -70,10 +83,28 @@ fn test_attest() {
 }
 
 #[test]
+#[should_panic(expected: "Attestation for starting epoch is not allowed")]
+fn test_attest_starting_epoch() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
+    let block_hash = Zero::zero();
+    stake_for_testing_using_dispatcher(:cfg);
+    advance_block_into_attestation_window(:cfg, stake: Zero::zero());
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: cfg.staker_info.operational_address,
+    );
+    attestation_dispatcher.attest(:block_hash);
+}
+
+#[test]
 #[feature("safe_dispatcher")]
 fn test_attest_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
+    advance_epoch_global();
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
@@ -88,14 +119,25 @@ fn test_attest_assertions() {
         contract_address: attestation_contract, caller_address: cfg.test_info.app_governor,
     );
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
-
-    // Catch PENULTIMATE_NOT_EXIST.
     let block_hash = Zero::zero();
+
+    // Catch ATTEST_WITH_ZERO_BALANCE.
+    let block_offset = calculate_block_offset(
+        stake: Zero::zero(),
+        epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
+        staker_address: cfg.test_info.staker_address.into(),
+        epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
+        attestation_window: new_attestation_window,
+    );
+    advance_block_number_global(blocks: block_offset + new_attestation_window.into());
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
     let result = attestation_safe_dispatcher.attest(:block_hash);
-    assert_panic_with_error(:result, expected_error: TraceErrors::PENULTIMATE_NOT_EXIST.describe());
+    assert_panic_with_error(
+        :result, expected_error: StakingError::ATTEST_WITH_ZERO_BALANCE.describe(),
+    );
 
     // advance epoch to make sure the staker has a balance.
     advance_epoch_global();
@@ -173,9 +215,9 @@ fn test_attest_assertions() {
     let result = attestation_safe_dispatcher.attest(:block_hash);
     assert_panic_with_error(:result, expected_error: Error::ATTEST_IS_DONE.describe());
 
-    // Catch INVALID_PENULTIMATE.
+    // Catch INVALID_SECOND_LAST.
     // Append two checkpoints whose epochs are greater than the current epoch so that both
-    // `latest` and `penultimate` exceed `curr_epoch`.
+    // `last` and `second_last` exceed `curr_epoch`.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let curr_epoch = staking_dispatcher.get_current_epoch();
     let trace_address = snforge_std::map_entry_address(
@@ -199,7 +241,7 @@ fn test_attest_assertions() {
         contract_address: attestation_contract, caller_address: operational_address,
     );
     let result = attestation_safe_dispatcher.attest(:block_hash);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_PENULTIMATE.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_SECOND_LAST.describe());
 }
 
 #[test]
@@ -264,15 +306,15 @@ fn test_get_last_epoch_attestation_done() {
 
 #[test]
 fn test_constructor() {
-    let cfg: StakingInitConfig = Default::default();
-    let mut state = Attestation::contract_state_for_testing();
-    Attestation::constructor(
-        ref state,
-        staking_contract: cfg.test_info.staking_contract,
-        governance_admin: cfg.test_info.governance_admin,
-        attestation_window: MIN_ATTESTATION_WINDOW,
-    );
-    assert!(state.staking_contract.read() == cfg.test_info.staking_contract);
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let attestation_contract = cfg.test_info.attestation_contract;
+    let staking_contract: ContractAddress = load_one_felt(
+        target: attestation_contract, storage_address: selector!("staking_contract"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(staking_contract == cfg.test_info.staking_contract);
 }
 
 #[test]

@@ -1,7 +1,8 @@
 use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
 use snforge_std::{TokenImpl, start_cheat_block_number_global};
-use staking::constants::{BTC_18D_CONFIG, MIN_ATTESTATION_WINDOW, STRK_IN_FRIS};
+use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
+use staking::constants::STRK_IN_FRIS;
 use staking::errors::GenericError;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
@@ -12,6 +13,7 @@ use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
+use staking::pool::pool::Pool::BTC_18D_CONFIG;
 use staking::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
@@ -2975,7 +2977,7 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
         );
         assert!(own_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
         assert!(delegated_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
-        // Test latest: staker balance trace: epoch 3, stake_amount*2 + delegate_amount.
+        // Test last: staker balance trace: epoch 3, stake_amount*2 + delegate_amount.
         let (own_key, own_value) = load_from_trace(
             contract_address: system.staking.address, trace_address: own_trace_storage, index: 2,
         );
@@ -2988,7 +2990,7 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
         assert!(delegated_key == 3);
         assert!(own_value == stake_amount * 2);
         assert!(delegated_value == delegated_amount);
-        // Test penultimate: staker balance trace: epoch 2, stake_amount*2.
+        // Test second_last: staker balance trace: epoch 2, stake_amount*2.
         let (own_key, own_value) = load_from_trace(
             contract_address: system.staking.address, trace_address: own_trace_storage, index: 1,
         );
@@ -6804,7 +6806,7 @@ pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
         system.staking.add_token(:token_address);
         system.staking.enable_token(:token_address);
         let res = system.staking.safe_disable_token(:token_address);
-        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
+        assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
         system.advance_epoch();
         system.staking.disable_token(:token_address);
         system.advance_epoch();
@@ -6830,7 +6832,7 @@ pub(crate) impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
         system.advance_epoch();
         system.staking.disable_token(:token_address);
         let res = system.staking.safe_enable_token(:token_address);
-        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
+        assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
         system.advance_epoch();
         system.staking.enable_token(:token_address);
 

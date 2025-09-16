@@ -4,10 +4,10 @@ use staking::types::Epoch;
 #[starknet::interface]
 pub trait IMockTrace<TContractState> {
     fn insert(ref self: TContractState, key: Epoch, value: StakerBalance);
-    fn latest(self: @TContractState) -> (Epoch, StakerBalance);
-    fn penultimate(self: @TContractState) -> (Epoch, StakerBalance);
+    fn last(self: @TContractState) -> (Epoch, StakerBalance);
+    fn second_last(self: @TContractState) -> (Epoch, StakerBalance);
     fn length(self: @TContractState) -> u64;
-    fn latest_mutable(ref self: TContractState) -> (Epoch, StakerBalance);
+    fn last_mutable(ref self: TContractState) -> (Epoch, StakerBalance);
     fn is_non_empty(self: @TContractState) -> bool;
     fn is_non_empty_mutable(ref self: TContractState) -> bool;
     fn is_empty(self: @TContractState) -> bool;
@@ -34,20 +34,20 @@ pub mod MockTrace {
             self.trace.insert(:key, :value);
         }
 
-        fn latest(self: @ContractState) -> (Epoch, StakerBalance) {
-            self.trace.latest()
+        fn last(self: @ContractState) -> (Epoch, StakerBalance) {
+            self.trace.last()
         }
 
-        fn penultimate(self: @ContractState) -> (Epoch, StakerBalance) {
-            self.trace.penultimate()
+        fn second_last(self: @ContractState) -> (Epoch, StakerBalance) {
+            self.trace.second_last()
         }
 
         fn length(self: @ContractState) -> u64 {
             self.trace.length()
         }
 
-        fn latest_mutable(ref self: ContractState) -> (Epoch, StakerBalance) {
-            self.trace.latest()
+        fn last_mutable(ref self: ContractState) -> (Epoch, StakerBalance) {
+            self.trace.last()
         }
 
         fn is_non_empty(self: @ContractState) -> bool {

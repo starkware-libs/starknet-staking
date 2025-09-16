@@ -1,13 +1,12 @@
 use core::num::traits::Zero;
 use snforge_std::TokenTrait;
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use staking::event_test_utils::{
-    assert_number_of_events, assert_paused_event, assert_unpaused_event,
-};
+use staking::event_test_utils::{assert_paused_event, assert_unpaused_event};
 use staking::staking::interface::{
     IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
-    IStakingPoolDispatcher, IStakingPoolDispatcherTrait,
+    IStakingPoolDispatcher, IStakingPoolDispatcherTrait, IStakingRewardsManagerDispatcher,
+    IStakingRewardsManagerDispatcherTrait,
 };
 use staking::test_utils::constants::{
     DUMMY_ADDRESS, DUMMY_IDENTIFIER, NON_SECURITY_ADMIN, NON_SECURITY_AGENT,
@@ -16,6 +15,7 @@ use staking::test_utils::{
     StakingInitConfig, general_contract_system_deployment, load_one_felt, pause_staking_contract,
     stake_for_testing_using_dispatcher,
 };
+use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]
@@ -334,4 +334,16 @@ fn test_set_public_key_when_paused() {
         contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.set_public_key(public_key: cfg.test_info.public_key);
+}
+
+#[test]
+#[should_panic(expected: "Contract is paused")]
+fn test_update_rewards_when_paused() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    pause_staking_contract(:cfg);
+    let staking_dispatcher = IStakingRewardsManagerDispatcher {
+        contract_address: cfg.test_info.staking_contract,
+    };
+    staking_dispatcher.update_rewards(staker_address: DUMMY_ADDRESS(), disable_rewards: true);
 }

@@ -8,7 +8,7 @@ pub mod Attestation {
     use openzeppelin::introspection::src5::SRC5Component;
     use staking::attestation::errors::Error;
     use staking::attestation::interface::{Events, IAttestation};
-    use staking::constants::{MIN_ATTESTATION_WINDOW, STARTING_EPOCH};
+    use staking::constants::STARTING_EPOCH;
     use staking::staking::interface::{
         IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait, IStakingDispatcher,
         IStakingDispatcherTrait,
@@ -16,8 +16,11 @@ pub mod Attestation {
     use staking::staking::objects::{
         AttestationInfo as StakingAttestationInfo, AttestationInfoTrait,
     };
-    use staking::types::Epoch;
-    use starknet::storage::Map;
+    use staking::types::{BlockNumber, Epoch};
+    use starknet::storage::{
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
+    };
     use starknet::syscalls::get_block_hash_syscall;
     use starknet::{ContractAddress, get_block_number, get_caller_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
@@ -27,6 +30,8 @@ pub mod Attestation {
     use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Attestation';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
+
+    pub(crate) const MIN_ATTESTATION_WINDOW: u16 = 11;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -51,16 +56,16 @@ pub mod Attestation {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staking_contract: ContractAddress,
-        // Maps staker address to the last epoch it attested.
+        /// Maps staker address to the last epoch it attested.
         staker_last_attested_epoch: Map<ContractAddress, Epoch>,
-        // Number of blocks where the staker can attest after the target attestation block.
-        // Note: that it still needs to be after the minimum attestation window.
-        //
-        // Example:
-        // - target attestation block = x,
-        // - minimum attestation window = 11,
-        // - attestation window = 20,
-        // - staker can attest in blocks [x+11, x+20].
+        /// Number of blocks where the staker can attest after the target attestation block.
+        /// Note: that it still needs to be after the minimum attestation window.
+        ///
+        /// Example:
+        /// - target attestation block = x,
+        /// - minimum attestation window = 11,
+        /// - attestation window = 20,
+        /// - staker can attest in blocks [x+11, x+20].
         attestation_window: u16,
     }
 
@@ -79,6 +84,7 @@ pub mod Attestation {
         AttestationWindowChanged: Events::AttestationWindowChanged,
     }
 
+    /// **Note**: `attestation_window` must be smaller than the epoch length.
     #[constructor]
     pub fn constructor(
         ref self: ContractState,
@@ -144,11 +150,9 @@ pub mod Attestation {
             self.get_last_epoch_attestation_done(:staker_address) == current_epoch
         }
 
-        /// This function is used to help integration partners test the correct
-        /// computation of the target attestation block.
         fn get_current_epoch_target_attestation_block(
             self: @ContractState, operational_address: ContractAddress,
-        ) -> u64 {
+        ) -> BlockNumber {
             let staking_dispatcher = IStakingAttestationDispatcher {
                 contract_address: self.staking_contract.read(),
             };
@@ -213,7 +217,7 @@ pub mod Attestation {
 
         fn _calculate_target_attestation_block(
             self: @ContractState, staking_attestation_info: StakingAttestationInfo,
-        ) -> u64 {
+        ) -> BlockNumber {
             // Compute staker hash for the attestation.
             let hash = PoseidonTrait::new()
                 .update(staking_attestation_info.stake().into())
@@ -231,7 +235,7 @@ pub mod Attestation {
             target_attestation_block
         }
 
-        fn _assert_attest_in_window(self: @ContractState, target_attestation_block: u64) {
+        fn _assert_attest_in_window(self: @ContractState, target_attestation_block: BlockNumber) {
             let attestation_window = self.attestation_window.read();
             let current_block_number = get_block_number();
             let min_block = target_attestation_block + MIN_ATTESTATION_WINDOW.into();
@@ -243,7 +247,9 @@ pub mod Attestation {
             );
         }
 
-        fn get_target_block_hash(self: @ContractState, target_attestation_block: u64) -> felt252 {
+        fn get_target_block_hash(
+            self: @ContractState, target_attestation_block: BlockNumber,
+        ) -> felt252 {
             match get_block_hash_syscall(block_number: target_attestation_block) {
                 Ok(x) => x,
                 Err(_) => panic!("{}", Error::BLOCK_HASH_UNWRAP_FAILED.describe()),

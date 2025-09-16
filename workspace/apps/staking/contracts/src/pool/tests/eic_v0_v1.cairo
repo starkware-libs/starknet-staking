@@ -1,38 +1,40 @@
-// An External Initializer Contract to upgrade a pool contract.
+/// An External Initializer Contract to upgrade a pool contract.
 #[cfg(test)]
 #[starknet::contract]
 mod PoolEICV0toV1 {
     use core::num::traits::Zero;
-    use staking::constants::V1_PREV_CONTRACT_VERSION;
     use staking::errors::GenericError;
+    use staking::pool::pool::Pool::V1_PREV_CONTRACT_VERSION;
     use staking::staking::tests::interface_v1::{
         IStakingPoolV1ForTestsDispatcher, IStakingPoolV1ForTestsDispatcherTrait,
     };
     use staking::types::{Index, Version};
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
-    use starknet::storage::Map;
+    use starknet::storage::{
+        Map, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
     use starkware_utils::components::replaceability::interface::IEICInitializable;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 
     #[storage]
     struct Storage {
         // --- New fields ---
-        // Map version to class hash of the contract.
+        /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
-        // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
-        // calculation.
+        /// Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
+        /// calculation.
         cumulative_rewards_trace: Trace,
-        // Indicates whether the staker has been removed from the staking contract.
+        /// Indicates whether the staker has been removed from the staking contract.
         staker_removed: bool,
         // --- Existing fields ---
-        // Stores the final global index of staking contract, used for updating pending rewards
-        // during PoolMemberInfo migration.
+        /// Stores the final global index of staking contract, used for updating pending rewards
+        /// during PoolMemberInfo migration.
         final_staker_index: Option<Index>,
-        // Dispatcher for the staking contract's pool functions, used for the final index and the
-        // StakerInfo migration.
+        /// Dispatcher for the staking contract's pool functions, used for the final index and the
+        /// StakerInfo migration.
         staking_pool_dispatcher: IStakingPoolV1ForTestsDispatcher,
-        // The staker address, used for the final index and the StakerInfo migration.
+        /// The staker address, used for the final index and the StakerInfo migration.
         staker_address: ContractAddress,
     }
 

@@ -1,18 +1,20 @@
-// An External Initializer Contract to upgrade a staking contract.
-// This EIC is used to upgrade the staking contract from V1 to V2 (BTC).
+/// An External Initializer Contract to upgrade a staking contract.
+/// This EIC is used to upgrade the staking contract from V1 to V2 (BTC).
 #[starknet::contract]
 mod StakingEICV1toV2 {
     use core::cmp::min;
     use core::num::traits::Zero;
-    use staking::constants::{STAKING_V2_PREV_CONTRACT_VERSION, STRK_TOKEN_ADDRESS};
+    use staking::constants::STRK_TOKEN_ADDRESS;
     use staking::errors::GenericError;
-    use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
+    use staking::staking::staking::Staking::{MAX_MIGRATION_TRACE_ENTRIES, V2_PREV_CONTRACT_VERSION};
     use staking::types::Version;
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
-    use starknet::storage::{Map, StoragePathEntry, StoragePointerReadAccess};
+    use starknet::storage::{
+        Map, StorageMapWriteAccess, StoragePathEntry, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
+    };
     use starkware_utils::components::replaceability::interface::IEICInitializable;
-    use starkware_utils::trace::errors::TraceErrors;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
 
     #[storage]
@@ -27,7 +29,7 @@ mod StakingEICV1toV2 {
         // --- Existing fields ---
         /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
-        // The class hash of the delegation pool contract.
+        /// The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
         /// Deprecated field of the total stake.
         total_stake_trace: Trace,
@@ -46,7 +48,7 @@ mod StakingEICV1toV2 {
 
             // 1. Set previous class hash.
             assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
-            self.prev_class_hash.write(STAKING_V2_PREV_CONTRACT_VERSION, prev_class_hash);
+            self.prev_class_hash.write(V2_PREV_CONTRACT_VERSION, prev_class_hash);
 
             // 2. Replace pool contract class hash.
             assert!(pool_contract_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
@@ -63,10 +65,10 @@ mod StakingEICV1toV2 {
     #[generate_trait]
     impl EICHelper of IEICHelper {
         /// Migrate the deprecated total stake trace to tokens_total_stake_trace.
-        /// Migrate up to MAX_MIGRATION_TRACE_ENTRIES latest checkpoints.
+        /// Migrate up to MAX_MIGRATION_TRACE_ENTRIES last checkpoints.
         fn migrate_total_stake_trace(ref self: ContractState) {
             let deprecated_trace = self.total_stake_trace;
-            assert!(!deprecated_trace.is_empty(), "{}", TraceErrors::EMPTY_TRACE);
+            assert!(!deprecated_trace.is_empty(), "EMPTY_TRACE");
             let len = deprecated_trace.length();
             let entries_to_migrate = min(len, MAX_MIGRATION_TRACE_ENTRIES);
             let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);

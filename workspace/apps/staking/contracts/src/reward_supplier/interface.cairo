@@ -3,12 +3,13 @@ use starknet::{ContractAddress, EthAddress};
 
 #[starknet::interface]
 pub trait IRewardSupplier<TContractState> {
-    // Calculates the rewards for the current epoch (for STRK and BTC).
+    /// Calculates the rewards for the current epoch (for STRK and BTC).
     fn calculate_current_epoch_rewards(self: @TContractState) -> (Amount, Amount);
-    // Updates the unclaimed rewards from the staking contract.
+    /// Updates the unclaimed rewards from the staking contract.
     fn update_unclaimed_rewards_from_staking_contract(ref self: TContractState, rewards: Amount);
-    // Transfers rewards to the staking contract.
+    /// Transfers rewards to the staking contract.
     fn claim_rewards(ref self: TContractState, amount: Amount);
+    /// Callback function for StarkGate deposit.
     fn on_receive(
         ref self: TContractState,
         l2_token: ContractAddress,
@@ -17,7 +18,7 @@ pub trait IRewardSupplier<TContractState> {
         message: Span<felt252>,
     ) -> bool;
     fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfoV1;
-    // Returns the alpha parameter, as percentage, used when computing BTC rewards.
+    /// Returns the alpha parameter, as percentage, used when computing BTC rewards.
     fn get_alpha(self: @TContractState) -> u128;
 }
 

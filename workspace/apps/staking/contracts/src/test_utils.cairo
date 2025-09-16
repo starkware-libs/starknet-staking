@@ -25,19 +25,19 @@ use snforge_std::{
     cheat_caller_address, set_balance, start_cheat_block_hash_global,
     start_cheat_block_number_global, test_address,
 };
+use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{
-    C_DENOM, DEFAULT_C_NUM, DEFAULT_EXIT_WAIT_WINDOW, MIN_ATTESTATION_WINDOW, STARTING_EPOCH,
-    STRK_CONFIG, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
-};
+use staking::constants::{STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
     IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
 };
 use staking::minting_curve::minting_curve::MintingCurve;
+use staking::minting_curve::minting_curve::MintingCurve::{C_DENOM, DEFAULT_C_NUM};
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
+use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::errors::Error as StakingError;
@@ -47,9 +47,11 @@ use staking::staking::interface::{
     IStakingTokenManagerDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV1,
 };
 use staking::staking::objects::{
-    EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait, NormalizedAmountTrait,
+    EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait, NormalizedAmount,
+    NormalizedAmountTrait,
 };
 use staking::staking::staking::Staking;
+use staking::staking::staking::Staking::DEFAULT_EXIT_WAIT_WINDOW;
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
     InternalStakerPoolInfoLatest, PublicKey,
@@ -74,21 +76,21 @@ pub(crate) mod constants {
     use core::num::traits::ops::pow::Pow;
     use staking::constants::STRK_IN_FRIS;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
-    use staking::types::{Amount, Commission, Index, PublicKey};
+    use staking::types::{Amount, BlockNumber, Commission, Index, PublicKey};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::time::time::Timestamp;
 
-    // STRK rewards constants.
+    /// STRK rewards constants.
     pub const STRK_BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
     pub const STRK_DECIMALS: u8 = 18;
 
-    // BTC (decimals = 8) rewards constants.
+    /// BTC (decimals = 8) rewards constants.
     pub const BTC_DECIMALS_8: u8 = 8;
     pub const MIN_BTC_FOR_REWARDS_8: Amount = 10_u128.pow(3);
     pub const BTC_BASE_VALUE_8: Index = 10_u128.pow(13);
 
-    // BTC (decimals = 18) rewards constants.
+    /// BTC (decimals = 18) rewards constants.
     pub const BTC_DECIMALS_18: u8 = 18;
     pub const MIN_BTC_FOR_REWARDS_18: Amount = 10_u128.pow(13);
     pub const BTC_BASE_VALUE_18: Index = 10_u128.pow(23);
@@ -111,10 +113,10 @@ pub(crate) mod constants {
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
     pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
     pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
-    // number of blocks in one epoch
+    /// number of blocks in one epoch
     pub const EPOCH_LENGTH: u32 = 300;
-    pub const EPOCH_STARTING_BLOCK: u64 = 463476;
-    // duration of  one epoch in seconds
+    pub const EPOCH_STARTING_BLOCK: BlockNumber = 463476;
+    /// duration of  one epoch in seconds
     pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
     pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
@@ -606,7 +608,7 @@ pub(crate) fn stake_from_zero_address(cfg: StakingInitConfig) {
         );
 }
 
-pub(crate) fn stake_with_pool_enabled(mut cfg: StakingInitConfig) -> ContractAddress {
+pub(crate) fn stake_with_strk_pool_enabled(mut cfg: StakingInitConfig) -> ContractAddress {
     cfg.test_info.strk_pool_enabled = true;
     stake_for_testing_using_dispatcher(:cfg);
     let staking_dispatcher = IStakingDispatcher {
@@ -723,7 +725,7 @@ pub(crate) fn store_to_simple_map<
     snforge_std::store(target: contract, :storage_address, :serialized_value);
 }
 
-// This only works for shallow Option. i.e. if within V there is an Option, this will fail.
+/// This only works for shallow Option. i.e. if within V there is an Option, this will fail.
 pub(crate) fn load_option_from_simple_map<
     K, +Serde<K>, +Copy<K>, +Drop<K>, V, +Serde<V>, +Store<Option<V>>,
 >(
@@ -744,7 +746,7 @@ pub(crate) fn load_option_from_simple_map<
     }
 }
 
-// Store internal staker info v0 with pool_info = None.
+/// Store internal staker info v0 with pool_info = None.
 pub(crate) fn store_internal_staker_info_v0_to_map(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
@@ -848,7 +850,7 @@ fn compute_unclaimed_rewards_member(
     return rewards_including_commission - commission_amount;
 }
 
-// Assumes the staking contract has already been deployed.
+/// Assumes the staking contract has already been deployed.
 pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
     let staking_contract = cfg.test_info.staking_contract;
     let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
@@ -1032,6 +1034,7 @@ pub struct StakingContractInfoCfg {
     pub epoch_info: EpochInfo,
 }
 
+// TODO: rename to v1.
 /// Update rewards for STRK pool.
 pub(crate) fn strk_pool_update_rewards(
     pool_member_info: PoolMemberInfo, updated_index: Index,
@@ -1056,6 +1059,7 @@ pub(crate) fn advance_epoch_global() {
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
 }
 
+// TODO: rename to v2.
 /// Return staker own rewards and STRK pool rewards.
 ///
 /// Precondition: `strk_curr_total_stake` is not zero.
@@ -1072,6 +1076,7 @@ pub(crate) fn calculate_staker_strk_rewards(
     )
 }
 
+// TODO: rename to v2.
 pub(crate) fn calculate_staker_strk_rewards_with_amount_and_pool_info(
     amount_own: Amount,
     pool_info: Option<StakerPoolInfoV1>,
@@ -1113,6 +1118,44 @@ pub(crate) fn calculate_staker_strk_rewards_with_amount_and_pool_info(
     (staker_rewards, pool_rewards)
 }
 
+/// Returns (staker_rewards, pool_rewards) for the given balances and commission.
+pub(crate) fn calculate_staker_strk_rewards_with_balances_v3(
+    amount_own: Amount,
+    pool_amount: Amount,
+    commission: Commission,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+) -> (Amount, Amount) {
+    let (strk_block_rewards, _) = calculate_current_block_rewards(
+        :staking_contract, :minting_curve_contract,
+    );
+    let total_stake = amount_own + pool_amount;
+    // Calculate staker own rewards.
+    let mut staker_rewards = mul_wide_and_div(
+        lhs: strk_block_rewards, rhs: amount_own, div: total_stake,
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    // Calculate staker STRK pool rewards.
+    let pool_rewards = {
+        if pool_amount.is_non_zero() {
+            let pool_rewards_including_commission = mul_wide_and_div(
+                lhs: strk_block_rewards, rhs: pool_amount, div: total_stake,
+            )
+                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+            let commission_rewards = compute_commission_amount_rounded_down(
+                rewards_including_commission: pool_rewards_including_commission, :commission,
+            );
+            let pool_rewards = pool_rewards_including_commission - commission_rewards;
+            staker_rewards += commission_rewards;
+            pool_rewards
+        } else {
+            Zero::zero()
+        }
+    };
+    (staker_rewards, pool_rewards)
+}
+
+// TODO: rename to v2.
 /// Return staker commission rewards and BTC pool rewards for the specified `pool_balance` and
 /// `commission`.
 /// This function expects the `pool_balance` to be in native decimals.
@@ -1146,6 +1189,36 @@ pub(crate) fn calculate_staker_btc_pool_rewards(
     (commission_rewards, pool_rewards)
 }
 
+/// Returns (staker_commission_rewards, BTC_pool_rewards) for the specified
+/// `normalized_pool_balance`, `normalized_staker_total_btc_balance` and `commission`.
+///
+/// Precondition: `normalized_pool_balance` and `normalized_staker_total_btc_balance` are not zero.
+pub(crate) fn calculate_staker_btc_pool_rewards_v3(
+    normalized_pool_balance: NormalizedAmount,
+    normalized_staker_total_btc_balance: NormalizedAmount,
+    commission: Commission,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+    token_address: ContractAddress,
+) -> (Amount, Amount) {
+    let (_, btc_block_rewards) = calculate_current_block_rewards(
+        :staking_contract, :minting_curve_contract,
+    );
+    // Calculate pool rewards including commission.
+    let pool_rewards_including_commission = mul_wide_and_div(
+        lhs: btc_block_rewards,
+        rhs: normalized_pool_balance.to_amount_18_decimals(),
+        div: normalized_staker_total_btc_balance.to_amount_18_decimals(),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    // Split rewards into commission and pool rewards.
+    let commission_rewards = compute_commission_amount_rounded_down(
+        rewards_including_commission: pool_rewards_including_commission, :commission,
+    );
+    let pool_rewards = pool_rewards_including_commission - commission_rewards;
+    (commission_rewards, pool_rewards)
+}
+
 fn calculate_current_epoch_rewards(
     staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
@@ -1163,6 +1236,19 @@ fn calculate_current_epoch_rewards(
     (strk_rewards, btc_rewards)
 }
 
+fn calculate_current_block_rewards(
+    staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
+) -> (Amount, Amount) {
+    let (strk_epoch_rewards, btc_epoch_rewards) = calculate_current_epoch_rewards(
+        :staking_contract, :minting_curve_contract,
+    );
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let epoch_len_in_blocks = staking_dispatcher.get_epoch_info().epoch_len_in_blocks();
+    let strk_block_rewards = strk_epoch_rewards / epoch_len_in_blocks.into();
+    let btc_block_rewards = btc_epoch_rewards / epoch_len_in_blocks.into();
+    (strk_block_rewards, btc_block_rewards)
+}
+
 fn calculate_btc_rewards(total_rewards: Amount) -> Amount {
     mul_wide_and_div(
         lhs: total_rewards, rhs: RewardSupplier::ALPHA, div: RewardSupplier::ALPHA_DENOMINATOR,
@@ -1170,6 +1256,7 @@ fn calculate_btc_rewards(total_rewards: Amount) -> Amount {
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
+// TODO: rename to v2.
 /// Calculate pool rewards for one epoch
 pub(crate) fn calculate_strk_pool_rewards(
     staker_address: ContractAddress,
@@ -1184,6 +1271,7 @@ pub(crate) fn calculate_strk_pool_rewards(
     )
 }
 
+// TODO: rename to v2.
 /// Calculate strk pool rewards for one epoch for the given pool balance and staker balance.
 pub(crate) fn calculate_strk_pool_rewards_with_pool_balance(
     staker_address: ContractAddress,

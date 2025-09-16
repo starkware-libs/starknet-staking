@@ -1,6 +1,7 @@
 #[starknet::contract]
 pub mod Pool {
     use RolesComponent::InternalTrait as RolesInternalTrait;
+    use core::num::traits::Pow;
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use core::panics::panic_with_byte_array;
@@ -11,9 +12,7 @@ pub mod Pool {
         IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
         IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::{
-        BTC_18D_CONFIG, BTC_8D_CONFIG, STRK_CONFIG, STRK_TOKEN_ADDRESS, V1_PREV_CONTRACT_VERSION,
-    };
+    use staking::constants::STRK_TOKEN_ADDRESS;
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{
@@ -38,7 +37,10 @@ pub mod Pool {
     use staking::utils::{CheckedIERC20DispatcherTrait, compute_rewards_rounded_down};
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
-    use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry, StoragePointerReadAccess};
+    use starknet::storage::{
+        Map, StorageBase, StorageMapReadAccess, StorageMapWriteAccess, StoragePathEntry,
+        StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
@@ -50,6 +52,27 @@ pub mod Pool {
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
+
+    /// Token configuration for rewards calculation.
+    ///
+    /// - STRK: Token with 18 decimals
+    /// - BTC_8D: Bitcoin with native 8 decimals
+    /// - BTC_18D: Wrapped Bitcoin with 18 decimals
+    ///
+    /// The `min_for_rewards` is the minimum delegated stake required to earn rewards.
+    /// The `base_value` is used for precision in reward calculations.
+    pub(crate) const STRK_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+        decimals: 18, min_for_rewards: 10_u128.pow(18), base_value: 10_u128.pow(28),
+    };
+    pub(crate) const BTC_8D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+        decimals: 8, min_for_rewards: 10_u128.pow(3), base_value: 10_u128.pow(13),
+    };
+    pub(crate) const BTC_18D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+        decimals: 18, min_for_rewards: 10_u128.pow(13), base_value: 10_u128.pow(23),
+    };
+    /// This var was used as the prev contract version in V1.
+    /// This is the key for `prev_class_hash` (class hash of V0).
+    pub(crate) const V1_PREV_CONTRACT_VERSION: Version = '0';
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -73,35 +96,37 @@ pub mod Pool {
         src5: SRC5Component::Storage,
         #[substorage(v0)]
         roles: RolesComponent::Storage,
-        staker_address: ContractAddress,
-        // Map pool member to their pool member info.
-        pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
-        // Deprecated field from V0. Stores the final global index of staking contract if the staker
-        // was active during the upgrade to V1. If the staker was removed in V0, it retains the
-        // final staker index.
+        // ------ Deprecated fields ------
+        // Deprecated field from V0. Stores the final global index of staking contract if the
+        // staker was active during the upgrade to V1. If the staker was removed in V0, it retains
+        // the final staker index.
         // final_staker_index: Option<Index>,
-        // Dispatcher for the staking contract's pool functions.
-        staking_pool_dispatcher: IStakingPoolDispatcher,
-        // Dispatcher for the token contract.
-        token_dispatcher: IERC20Dispatcher,
         // Deprecated commission field, was used in V0.
         // commission: Commission,
-        // Map pool member to their epoch-balance info.
+        // -------------------------------
+        staker_address: ContractAddress,
+        /// Map pool member to their pool member info.
+        pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
+        /// Dispatcher for the staking contract's pool functions.
+        staking_pool_dispatcher: IStakingPoolDispatcher,
+        /// Dispatcher for the token contract.
+        token_dispatcher: IERC20Dispatcher,
+        /// Map pool member to their epoch-balance info.
         pool_member_epoch_balance: Map<ContractAddress, PoolMemberBalanceTrace>,
-        // Map version to class hash of the contract.
+        /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
-        // Indicates whether the staker has been removed from the staking contract.
+        /// Indicates whether the staker has been removed from the staking contract.
         staker_removed: bool,
-        // Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
-        // calculation.
-        // Updated whenever rewards are received from the staking contract.
+        /// Maintains a cumulative sum of pool_rewards/pool_balance per epoch for member rewards
+        /// calculation.
+        /// Updated whenever rewards are received from the staking contract.
         cumulative_rewards_trace: Trace,
-        // Minimum amount of delegation required for rewards.
-        // Used to avoid overflow in the rewards calculation.
+        /// Minimum amount of delegation required for rewards.
+        /// Used to avoid overflow in the rewards calculation.
         min_delegation_for_rewards: Amount,
-        // Staking rewards base value.
-        // Used in rewards calculation: $$ rewards = amount * interest / base_value $$,
-        // Where `interest` scales with `base_value`.
+        /// Staking rewards base value.
+        /// Used in rewards calculation: $$ rewards = amount * interest / base_value $$,
+        /// Where `interest` scales with `base_value`.
         staking_rewards_base_value: Amount,
     }
 
@@ -138,10 +163,8 @@ pub mod Pool {
         self.roles.initialize(:governance_admin);
         self.replaceability.initialize(upgrade_delay: Zero::zero());
         self.staker_address.write(staker_address);
-        self
-            .staking_pool_dispatcher
-            .write(IStakingPoolDispatcher { contract_address: staking_contract });
-        self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
+        self.staking_pool_dispatcher.contract_address.write(staking_contract);
+        self.token_dispatcher.contract_address.write(token_address);
         self.staker_removed.write(false);
         self.cumulative_rewards_trace.insert(key: Zero::zero(), value: Zero::zero());
         let config = self.get_token_rewards_config(:token_address);
@@ -239,7 +262,7 @@ pub mod Pool {
             // Asserts.
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
-            let old_delegated_stake = self.get_latest_member_balance(:pool_member);
+            let old_delegated_stake = self.get_last_member_balance(:pool_member);
             let total_amount = old_delegated_stake + pool_member_info.unpool_amount;
             assert!(amount <= total_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
 
@@ -406,7 +429,7 @@ pub mod Pool {
             pool_member_info.unpool_amount
         }
 
-        /// This function is called by the staking contract to enter the pool during a pool switch.
+        // This function is called by the staking contract to enter the pool during a pool switch.
         fn enter_delegation_pool_from_staking_contract(
             ref self: ContractState, amount: Amount, data: Span<felt252>,
         ) {
@@ -459,7 +482,7 @@ pub mod Pool {
             // Create the pool member record.
             self.pool_member_info.write(pool_member, pool_member_info);
 
-            let new_delegated_stake = self.get_latest_member_balance(:pool_member);
+            let new_delegated_stake = self.get_last_member_balance(:pool_member);
 
             // Emit event.
             self
@@ -472,8 +495,8 @@ pub mod Pool {
                 );
         }
 
-        /// This function is called by the staking contract to notify the pool that the staker has
-        /// been removed from the staking contract.
+        // This function is called by the staking contract to notify the pool that the staker has
+        // been removed from the staking contract.
         fn set_staker_removed(ref self: ContractState) {
             // Asserts.
             self.assert_caller_is_staking_contract();
@@ -515,7 +538,7 @@ pub mod Pool {
                 );
             let external_pool_member_info = PoolMemberInfoV1 {
                 reward_address: pool_member_info.reward_address,
-                amount: self.get_latest_member_balance(:pool_member),
+                amount: self.get_last_member_balance(:pool_member),
                 unclaimed_rewards: pool_member_info._unclaimed_rewards_from_v0 + rewards,
                 commission: self.get_commission_from_staking_contract(),
                 unpool_amount: pool_member_info.unpool_amount,
@@ -537,8 +560,8 @@ pub mod Pool {
             PoolContractInfoV1 {
                 staker_address: self.staker_address.read(),
                 staker_removed: self.staker_removed.read(),
-                staking_contract: self.staking_pool_dispatcher.read().contract_address,
-                token_address: self.token_dispatcher.read().contract_address,
+                staking_contract: self.staking_pool_dispatcher.contract_address.read(),
+                token_address: self.token_dispatcher.contract_address.read(),
                 commission: self.get_commission_from_staking_contract(),
             }
         }
@@ -550,12 +573,12 @@ pub mod Pool {
 
             // `rewards_info` is initialized in the constructor or in the upgrade proccess,
             // so unwrapping should be safe.
-            let (_, latest) = self.cumulative_rewards_trace.latest().unwrap();
+            let (_, last) = self.cumulative_rewards_trace.last().unwrap();
             self
                 .cumulative_rewards_trace
                 .insert(
                     key: self.get_current_epoch(),
-                    value: latest
+                    value: last
                         + self
                             .compute_rewards_per_unit(
                                 staking_rewards: rewards, total_stake: pool_balance,
@@ -676,7 +699,7 @@ pub mod Pool {
 
         fn assert_caller_is_staking_contract(self: @ContractState) {
             assert!(
-                get_caller_address() == self.staking_pool_dispatcher.read().contract_address,
+                get_caller_address() == self.staking_pool_dispatcher.contract_address.read(),
                 "{}",
                 GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
             );
@@ -684,7 +707,7 @@ pub mod Pool {
 
         fn get_current_epoch(self: @ContractState) -> Epoch {
             let staking_dispatcher = IStakingDispatcher {
-                contract_address: self.staking_pool_dispatcher.read().contract_address,
+                contract_address: self.staking_pool_dispatcher.contract_address.read(),
             };
             staking_dispatcher.get_current_epoch()
         }
@@ -693,15 +716,15 @@ pub mod Pool {
             self.get_current_epoch() + 1
         }
 
-        fn get_latest_member_balance(self: @ContractState, pool_member: ContractAddress) -> Amount {
+        fn get_last_member_balance(self: @ContractState, pool_member: ContractAddress) -> Amount {
             // After upgrading to V1, `pool_member_epoch_balance` remains uninitialized
             // until the pool member's balance is modified for the first time. If initialized,
-            // return the `amount` recorded in the trace, which reflects the latest delegated
+            // return the `amount` recorded in the trace, which reflects the last delegated
             // amount.
             // Otherwise, return `pool_member_info._deprecated_amount`.
             let trace = self.pool_member_epoch_balance.entry(key: pool_member);
             if trace.is_non_empty() {
-                let (_, pool_member_balance) = trace.latest();
+                let (_, pool_member_balance) = trace.last();
                 pool_member_balance.balance()
             } else {
                 self.internal_pool_member_info(:pool_member)._deprecated_amount
@@ -724,7 +747,7 @@ pub mod Pool {
         fn increase_member_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) -> Amount {
-            let current_balance = self.get_latest_member_balance(:pool_member);
+            let current_balance = self.get_last_member_balance(:pool_member);
             self.set_member_balance(:pool_member, amount: current_balance + amount);
             current_balance
         }
@@ -742,15 +765,15 @@ pub mod Pool {
                 return self.internal_pool_member_info(:pool_member)._deprecated_amount;
             }
 
-            let (latest_epoch, latest_value) = trace.latest();
+            let (last_epoch, last_value) = trace.last();
             let current_epoch = self.get_current_epoch();
 
-            // If the latest balance change is before the current epoch, return its balance.
-            if latest_epoch <= current_epoch {
-                return latest_value.balance();
+            // If the last balance change is before the current epoch, return its balance.
+            if last_epoch <= current_epoch {
+                return last_value.balance();
             }
-            // Assert latest balance change is in the current epoch.
-            assert!(latest_epoch == current_epoch + 1, "{}", Error::INVALID_LATEST_EPOCH);
+            // Assert last balance change is in the current epoch.
+            assert!(last_epoch == current_epoch + 1, "{}", Error::INVALID_LAST_EPOCH);
 
             // Otherwise, if it's the only change, return the initial value (the value before the
             // migration).
@@ -758,11 +781,11 @@ pub mod Pool {
                 return self.internal_pool_member_info(:pool_member)._deprecated_amount;
             }
 
-            // Otherwise, the penultimate balance change is the relevant one.
-            let (penultimate_epoch, penultimate_value) = trace.penultimate();
-            assert!(penultimate_epoch <= current_epoch, "{}", GenericError::INVALID_PENULTIMATE);
+            // Otherwise, the second last balance change is the relevant one.
+            let (second_last_epoch, second_last_value) = trace.second_last();
+            assert!(second_last_epoch <= current_epoch, "{}", GenericError::INVALID_SECOND_LAST);
 
-            penultimate_value.balance()
+            second_last_value.balance()
         }
 
         /// Returns the checkpoint for the current epoch.
@@ -856,38 +879,69 @@ pub mod Pool {
             assert!(
                 pool_member_checkpoint.epoch() <= self.get_current_epoch(),
                 "{}",
-                Error::INVALID_EPOCH,
+                GenericError::INVALID_EPOCH,
             );
             let cumulative_rewards_trace_vec = self.cumulative_rewards_trace;
             let cumulative_rewards_trace_idx = pool_member_checkpoint
                 .cumulative_rewards_trace_idx();
 
-            // Pool member enter delegation before any rewards given to the pool.
-            if cumulative_rewards_trace_idx == 0 {
-                return Zero::zero();
-            }
-
-            // Next rewards idx was written, and no rewards given to pool from that moment.
-            if cumulative_rewards_trace_vec.length() == cumulative_rewards_trace_idx {
-                let (_, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
+            if let Some(sigma) = self
+                .find_sigma_edge_cases(
+                    :cumulative_rewards_trace_vec, :cumulative_rewards_trace_idx,
+                ) {
                 return sigma;
             }
 
+            self
+                .find_sigma_standard_case(
+                    :cumulative_rewards_trace_vec,
+                    :cumulative_rewards_trace_idx,
+                    target_epoch: pool_member_checkpoint.epoch(),
+                )
+        }
+
+        /// Returns the sigma for edge cases of `find_sigma`.
+        fn find_sigma_edge_cases(
+            self: @ContractState,
+            cumulative_rewards_trace_vec: StorageBase<Trace>,
+            cumulative_rewards_trace_idx: VecIndex,
+        ) -> Option<Amount> {
+            // Edge case 1: Pool member enter delegation before any rewards given to the pool.
+            if cumulative_rewards_trace_idx == 0 {
+                return Some(Zero::zero());
+            }
+            // Edge case 2: Next rewards idx was written, and no rewards given to pool from that
+            // moment.
+            if cumulative_rewards_trace_vec.length() == cumulative_rewards_trace_idx {
+                let (_, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
+                return Some(sigma);
+            }
+            None
+        }
+
+        /// Returns the sigma for the standard case of `find_sigma`.
+        /// Looks at up to 2 checkpoints in `cumulative_rewards_trace_vec`,
+        /// `cumulative_rewards_trace_idx` and `cumulative_rewards_trace_idx - 1`, and takes the
+        /// latest one (among these checkpoints) whose epoch < `target_epoch`.
+        fn find_sigma_standard_case(
+            self: @ContractState,
+            cumulative_rewards_trace_vec: StorageBase<Trace>,
+            cumulative_rewards_trace_idx: VecIndex,
+            target_epoch: Epoch,
+        ) -> Amount {
             // Pool member changed balance in epoch j, so j+1 written to pool member checkpoint.
-            let (epoch_at_index, sigma_at_index) = cumulative_rewards_trace_vec
-                .at(cumulative_rewards_trace_idx);
-            if pool_member_checkpoint.epoch() > epoch_at_index {
+            let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx);
+            if epoch < target_epoch {
                 // If pool rewards for epoch j given after pool member balance changed, then pool
                 // member is not eligible in this `rewards_info_idx` and it is infact the latest one
                 // before the staking power change.
-                sigma_at_index
+                sigma
             } else {
                 // Else, the pool rewards index given is for an epoch bigger than j, meaning pool
                 // member is eligible for sigma at `cumulative_rewards_trace_idx` and we should take
                 // the previous entry.
-                let (_, sigma_at_index_minus_one) = cumulative_rewards_trace_vec
-                    .at(cumulative_rewards_trace_idx - 1);
-                sigma_at_index_minus_one
+                let (_, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
+                sigma
             }
         }
 
@@ -896,7 +950,7 @@ pub mod Pool {
                 return Zero::zero();
             }
             let staking_dispatcher = IStakingDispatcher {
-                contract_address: self.staking_pool_dispatcher.read().contract_address,
+                contract_address: self.staking_pool_dispatcher.contract_address.read(),
             };
             // The staker must have commission since it has a pool (this contract). So unwrap is
             // safe.

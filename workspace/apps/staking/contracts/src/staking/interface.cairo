@@ -1,7 +1,7 @@
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::objects::{AttestationInfo, EpochInfo, NormalizedAmount};
-use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest, PublicKey};
+use staking::types::{Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
@@ -26,8 +26,12 @@ pub trait IStaking<TContractState> {
     fn set_open_for_delegation(
         ref self: TContractState, token_address: ContractAddress,
     ) -> ContractAddress;
+    /// This function provides the staker info (with projected rewards).
+    /// If the staker does not exist, it panics.
     fn staker_info_v1(self: @TContractState, staker_address: ContractAddress) -> StakerInfoV1;
     fn staker_pool_info(self: @TContractState, staker_address: ContractAddress) -> StakerPoolInfoV2;
+    /// This function provides the staker info (with projected rewards) wrapped in an Option.
+    /// If the staker does not exist, it returns None.
     fn get_staker_info_v1(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Option<StakerInfoV1>;
@@ -37,7 +41,7 @@ pub trait IStaking<TContractState> {
         self: @TContractState, staker_address: ContractAddress,
     ) -> CommissionCommitment;
     fn contract_parameters_v1(self: @TContractState) -> StakingContractInfoV1;
-    /// Returns the latest total stake for the STRK token only.
+    /// Returns the last total stake for the STRK token only.
     /// Note: The function name does not specify STRK for backwards compatibility.
     fn get_total_stake(self: @TContractState) -> Amount;
     /// Returns the current epoch's (strk_total_stake, btc_total_stake), where both use 18 decimals.
@@ -57,6 +61,14 @@ pub trait IStaking<TContractState> {
     fn get_total_stake_for_token(self: @TContractState, token_address: ContractAddress) -> Amount;
     /// Set the public key for the calling staker.
     fn set_public_key(ref self: TContractState, public_key: PublicKey);
+    /// Get the current public key for the given `staker_address`.
+    fn get_current_public_key(self: @TContractState, staker_address: ContractAddress) -> PublicKey;
+}
+
+#[starknet::interface]
+pub trait IStakingConsensus<TContractState> {
+    /// Returns (epoch_id, epoch_starting_block, epoch_length) for the current epoch.
+    fn get_current_epoch_data(self: @TContractState) -> (Epoch, BlockNumber, u32);
 }
 
 // **Note**: This trait must be reimplemented in the next version of the contract.
@@ -183,6 +195,8 @@ pub trait IStakingConfig<TContractState> {
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
     fn set_epoch_info(ref self: TContractState, epoch_duration: u32, epoch_length: u32);
+    /// Sets the epoch number at which reward distribution begins under the V3 scheme.
+    fn set_v3_rewards_first_epoch(ref self: TContractState, epoch_id: Epoch);
 }
 
 #[starknet::interface]
@@ -224,6 +238,15 @@ pub trait IStakingAttestation<TContractState> {
     fn get_attestation_info_by_operational_address(
         self: @TContractState, operational_address: ContractAddress,
     ) -> AttestationInfo;
+}
+
+#[starknet::interface]
+pub trait IStakingRewardsManager<TContractState> {
+    /// Update current block rewards for the given `staker_address`.
+    /// Distribute rewards only if `disable_rewards` is `false` and V3 rewards already started.
+    fn update_rewards(
+        ref self: TContractState, staker_address: ContractAddress, disable_rewards: bool,
+    );
 }
 
 pub mod Events {
@@ -415,7 +438,7 @@ pub mod PauseEvents {
 }
 
 pub mod ConfigEvents {
-    use staking::types::Amount;
+    use staking::types::{Amount, Epoch};
     use starknet::ContractAddress;
     use starkware_utils::time::time::TimeDelta;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
@@ -440,6 +463,11 @@ pub mod ConfigEvents {
     pub struct EpochInfoChanged {
         pub epoch_duration: u32,
         pub epoch_length: u32,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct V3RewardsFirstEpochSet {
+        pub v3_rewards_first_epoch: Epoch,
     }
 }
 

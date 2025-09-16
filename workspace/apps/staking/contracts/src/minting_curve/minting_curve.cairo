@@ -4,7 +4,6 @@ pub mod MintingCurve {
     use core::num::traits::{Sqrt, WideMul};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
-    use staking::constants::{C_DENOM, DEFAULT_C_NUM, MAX_C_NUM};
     use staking::minting_curve::errors::Error;
     use staking::minting_curve::interface::{
         ConfigEvents, Events, IMintingCurve, IMintingCurveConfig, MintingCurveContractInfo,
@@ -13,11 +12,30 @@ pub mod MintingCurve {
     use staking::staking::objects::NormalizedAmountTrait;
     use staking::types::{Amount, Inflation};
     use starknet::ContractAddress;
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Minting Curve';
     pub const CONTRACT_VERSION: felt252 = '2.0.0';
+
+    // === Reward Distribution - Important Note ===
+    //
+    // Previous version:
+    // - Minting coefficient C = 1.60 (160 / 10,000).
+    // - 100% of minted rewards allocated to STRK stakers.
+    //
+    // Current version:
+    // - Rewards split: 75% to STRK stakers, 25% to BTC stakers, using alpha = 0.25 (25 / 100).
+    // - To keep STRK rewards nearly unchanged, minting increased to C = 2.13 (213 / 10,000)
+    //   — slightly less than 2.13333... for an exact match.
+    //
+    // Implications:
+    // - STRK stakers receive ~1/40,000 (0.00333...% * 0.75) less rewards than before.
+    // - Additional minor rounding differences may occur in reward calculations.
+    pub(crate) const DEFAULT_C_NUM: Inflation = 213;
+    pub(crate) const MAX_C_NUM: Inflation = 500;
+    pub(crate) const C_DENOM: Inflation = 10_000;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -43,12 +61,12 @@ pub mod MintingCurve {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         staking_dispatcher: IStakingDispatcher,
-        // Total supply of the token in L1. This is updated by the L1 reward supplier.
+        /// Total supply of the token in L1. This is updated by the L1 reward supplier.
         total_supply: Amount,
-        // L1 reward supplier.
+        /// L1 reward supplier.
         l1_reward_supplier: felt252,
-        // The numerator of the inflation rate. The denominator is C_DENOM.
-        // Yearly mint is (C_NUM / C_DENOM) * sqrt(total_stake * total_supply).
+        /// The numerator of the inflation rate. The denominator is C_DENOM.
+        /// Yearly mint is (C_NUM / C_DENOM) * sqrt(total_stake * total_supply).
         c_num: Inflation,
     }
 
@@ -77,7 +95,7 @@ pub mod MintingCurve {
         governance_admin: ContractAddress,
     ) {
         self.roles.initialize(:governance_admin);
-        self.staking_dispatcher.write(IStakingDispatcher { contract_address: staking_contract });
+        self.staking_dispatcher.contract_address.write(staking_contract);
         self.total_supply.write(total_supply);
         self.l1_reward_supplier.write(l1_reward_supplier);
         self.c_num.write(DEFAULT_C_NUM);
@@ -94,7 +112,7 @@ pub mod MintingCurve {
         }
     }
 
-    // Message updating the total supply, sent by the L1 reward supplier.
+    /// Message updating the total supply, sent by the L1 reward supplier.
     #[l1_handler]
     fn update_total_supply(ref self: ContractState, from_address: felt252, total_supply: Amount) {
         assert!(
@@ -116,16 +134,6 @@ pub mod MintingCurve {
 
     #[abi(embed_v0)]
     impl MintingImpl of IMintingCurve<ContractState> {
-        /// Return yearly mint amount (M * total_supply).
-        /// To calculate the amount, we utilize the minting curve formula (which is in percentage):
-        ///   M = (C / 10) * sqrt(S),
-        /// where:
-        /// - M: Yearly mint rate (%)
-        /// - C: Max theoretical inflation (%)
-        /// - S: Staking rate of total supply (%)
-        ///
-        /// If C, S and M are given as a fractions (instead of percentages), we get:
-        ///   M = C * sqrt(S).
         fn yearly_mint(self: @ContractState) -> Amount {
             let total_supply = self.total_supply.read();
             let staking_dispatcher = self.staking_dispatcher.read();
@@ -144,9 +152,6 @@ pub mod MintingCurve {
 
     #[abi(embed_v0)]
     impl IMintingCurveConfigImpl of IMintingCurveConfig<ContractState> {
-        // Set the maximum inflation rate that can be minted in a year.
-        // c_num is the numerator of the fraction c_num / C_DENOM (currently C_DENOM = 10,000).
-        // If you wish to set the inflation rate to 1.7%, you should set c_num to 170.
         fn set_c_num(ref self: ContractState, c_num: Inflation) {
             self.roles.only_token_admin();
             assert!(c_num <= MAX_C_NUM, "{}", Error::C_NUM_OUT_OF_RANGE);

@@ -4,8 +4,10 @@ use core::ops::{AddAssign, SubAssign};
 use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
 use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
-use staking::types::{Amount, Commission, Epoch, InternalStakerInfoLatest};
-use starknet::storage::{Mutable, StoragePath, StoragePathMutableConversion};
+use staking::types::{Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest};
+use starknet::storage::{
+    Mutable, StoragePath, StoragePathMutableConversion, StoragePointerReadAccess,
+};
 use starknet::{ContractAddress, get_block_number};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::storage::iterable_map::{
@@ -19,8 +21,8 @@ const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct UndelegateIntentKey {
     pub pool_contract: ContractAddress,
-    // The identifier is generally the pool member address, but it can be any unique identifier,
-    // depending on the logic of the pool contract.
+    /// The identifier is generally the pool member address, but it can be any unique identifier,
+    /// depending on the logic of the pool contract.
     pub identifier: felt252,
 }
 
@@ -145,17 +147,17 @@ pub(crate) impl UndelegateIntentValueImpl of UndelegateIntentValueTrait {
 
 #[derive(Debug, Hash, Drop, Serde, Copy, PartialEq, starknet::Store)]
 pub(crate) struct EpochInfo {
-    // The duration of the epoch in seconds.
+    /// The duration of the epoch in seconds.
     epoch_duration: u32,
-    // The length of the epoch in blocks.
+    /// The length of the epoch in blocks.
     length: u32,
-    // The first block of the first epoch with this length.
-    starting_block: u64,
-    // The first epoch id with this length, changes by a call to update.
+    /// The first block of the first epoch with this length.
+    starting_block: BlockNumber,
+    /// The first epoch id with this length, changes by a call to update.
     starting_epoch: Epoch,
-    // The length of the epoch prior to the update.
+    /// The length of the epoch prior to the update.
     previous_length: u32,
-    // The duration of the epoch prior to the update.
+    /// The duration of the epoch prior to the update.
     previous_epoch_duration: u32,
 }
 
@@ -163,7 +165,7 @@ pub(crate) struct EpochInfo {
 pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     /// Create a new epoch info object. this should happen once, and is initializing the epoch info
     /// to the starting epoch.
-    fn new(epoch_duration: u32, epoch_length: u32, starting_block: u64) -> EpochInfo {
+    fn new(epoch_duration: u32, epoch_length: u32, starting_block: BlockNumber) -> EpochInfo {
         assert!(epoch_length.is_non_zero(), "{}", Error::INVALID_EPOCH_LENGTH);
         assert!(epoch_duration.is_non_zero(), "{}", Error::INVALID_EPOCH_DURATION);
         assert!(starting_block >= get_block_number(), "{}", Error::INVALID_STARTING_BLOCK);
@@ -225,7 +227,7 @@ pub(crate) impl EpochInfoImpl of EpochInfoTrait {
     }
 
     /// Get the starting block of the current epoch.
-    fn current_epoch_starting_block(self: @EpochInfo) -> u64 {
+    fn current_epoch_starting_block(self: @EpochInfo) -> BlockNumber {
         if self.update_done_in_this_epoch() {
             // The epoch info updated and the current block is before the starting block of the
             // next epoch with the new length.
@@ -496,9 +498,9 @@ mod epoch_info_tests {
 }
 
 #[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
-pub struct InternalStakerPoolInfoV1 {
-    pub _deprecated_pool_contract: ContractAddress,
-    pub _deprecated_commission: Commission,
+pub(crate) struct InternalStakerPoolInfoV1 {
+    pub(crate) _deprecated_pool_contract: ContractAddress,
+    pub(crate) _deprecated_commission: Commission,
 }
 
 #[starknet::storage_node]
@@ -529,6 +531,11 @@ pub(crate) impl InternalStakerPoolInfoV2Impl of InternalStakerPoolInfoV2Trait {
         }
         Option::None
     }
+
+    /// Returns true if the staker has a pool.
+    fn has_pool(self: StoragePath<InternalStakerPoolInfoV2>) -> bool {
+        self.pools.len() > 0
+    }
 }
 
 #[generate_trait]
@@ -553,7 +560,7 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
 
     /// Returns true if the staker has a pool.
     fn has_pool(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> bool {
-        self.pools.len() > 0
+        self.as_non_mut().has_pool()
     }
 
     fn has_pool_for_token(
@@ -581,7 +588,7 @@ pub(crate) struct InternalStakerInfoV1 {
 
 // **Note**: This struct should be updated in the next version of Internal Staker Info.
 #[derive(Debug, PartialEq, Drop, Copy, starknet::Store)]
-pub(crate) enum VersionedInternalStakerInfo {
+pub(crate) enum VInternalStakerInfo {
     #[default]
     None,
     V0: (),
@@ -589,15 +596,15 @@ pub(crate) enum VersionedInternalStakerInfo {
 }
 
 #[generate_trait]
-pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTrait {
-    fn wrap_latest(value: InternalStakerInfoV1) -> VersionedInternalStakerInfo nopanic {
-        VersionedInternalStakerInfo::V1(value)
+pub(crate) impl VInternalStakerInfoImpl of VInternalStakerInfoTrait {
+    fn wrap_latest(value: InternalStakerInfoV1) -> VInternalStakerInfo nopanic {
+        VInternalStakerInfo::V1(value)
     }
 
     fn new_latest(
         reward_address: ContractAddress, operational_address: ContractAddress,
-    ) -> VersionedInternalStakerInfo {
-        VersionedInternalStakerInfo::V1(
+    ) -> VInternalStakerInfo {
+        VInternalStakerInfo::V1(
             InternalStakerInfoV1 {
                 reward_address,
                 operational_address,
@@ -609,9 +616,9 @@ pub(crate) impl VersionedInternalStakerInfoImpl of VersionedInternalStakerInfoTr
         )
     }
 
-    fn is_none(self: @VersionedInternalStakerInfo) -> bool nopanic {
+    fn is_none(self: @VInternalStakerInfo) -> bool nopanic {
         match *self {
-            VersionedInternalStakerInfo::None => true,
+            VInternalStakerInfo::None => true,
             _ => false,
         }
     }
@@ -686,16 +693,16 @@ pub(crate) impl StakerInfoIntoInternalStakerInfoV1Impl of StakerInfoIntoInternal
 
 #[derive(Serde, Drop, Copy, Debug)]
 pub struct AttestationInfo {
-    // The address of the staker mapped to the operational address provided.
+    /// The address of the staker mapped to the operational address provided.
     staker_address: ContractAddress,
-    // The amount of stake the staker has in current epoch.
+    /// The amount of stake the staker has in current epoch.
     stake: Amount,
-    // The length of the epoch in blocks.
+    /// The length of the epoch in blocks.
     epoch_len: u32,
-    // The id of the current epoch.
+    /// The id of the current epoch.
     epoch_id: Epoch,
-    // The first block of the current epoch.
-    current_epoch_starting_block: u64,
+    /// The first block of the current epoch.
+    current_epoch_starting_block: BlockNumber,
 }
 
 #[generate_trait]
@@ -705,7 +712,7 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
         stake: Amount,
         epoch_len: u32,
         epoch_id: Epoch,
-        current_epoch_starting_block: u64,
+        current_epoch_starting_block: BlockNumber,
     ) -> AttestationInfo {
         AttestationInfo { staker_address, stake, epoch_len, epoch_id, current_epoch_starting_block }
     }
@@ -722,7 +729,7 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
     fn epoch_id(self: @AttestationInfo) -> Epoch {
         *self.epoch_id
     }
-    fn current_epoch_starting_block(self: @AttestationInfo) -> u64 {
+    fn current_epoch_starting_block(self: @AttestationInfo) -> BlockNumber {
         *self.current_epoch_starting_block
     }
 }

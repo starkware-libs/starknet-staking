@@ -12,19 +12,21 @@ use snforge_std::{
     cheat_caller_address, start_cheat_block_hash_global, start_cheat_block_number_global,
     start_cheat_block_timestamp_global,
 };
+use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
-use staking::constants::{BTC_18D_CONFIG, DEFAULT_C_NUM, MIN_ATTESTATION_WINDOW};
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
 };
+use staking::minting_curve::minting_curve::MintingCurve::DEFAULT_C_NUM;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
     IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfoV1, PoolMemberInfoV1,
 };
 use staking::pool::interface_v0::{IPoolV0Dispatcher, IPoolV0DispatcherTrait, PoolMemberInfo};
+use staking::pool::pool::Pool::BTC_18D_CONFIG;
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
@@ -55,7 +57,7 @@ use staking::test_utils::{
     declare_staking_eic_contract_v1_v2, deploy_mock_erc20_decimals_contract, fund,
 };
 use staking::types::{
-    Amount, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
+    Amount, BlockNumber, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
     InternalStakerInfoLatest, VecIndex,
 };
 use starknet::syscalls::deploy_syscall;
@@ -826,7 +828,7 @@ pub(crate) impl AttestationImpl of AttestationTrait {
 
     fn get_current_epoch_target_attestation_block(
         self: AttestationState, operational_address: ContractAddress,
-    ) -> u64 {
+    ) -> BlockNumber {
         self.dispatcher().get_current_epoch_target_attestation_block(:operational_address)
     }
 }
@@ -1867,13 +1869,13 @@ pub(crate) fn upgrade_implementation(
 #[generate_trait]
 /// System factory for creating system states used in flow and regression tests.
 pub(crate) impl SystemFactoryImpl of SystemFactoryTrait {
-    // System state used for flow tests.
+    /// System state used for flow tests.
     fn local_system() -> SystemState {
         let cfg: StakingInitConfig = Default::default();
         SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy()
     }
 
-    // System state used for regression tests.
+    /// System state used for regression tests.
     fn mainnet_system() -> SystemState {
         let mut cfg: StakingInitConfig = Default::default();
         cfg.staking_contract_info.pool_contract_class_hash = MAINNET_POOL_CLASS_HASH_V0();

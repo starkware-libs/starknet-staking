@@ -1,4 +1,4 @@
-use staking::constants::MAX_C_NUM;
+use staking::minting_curve::minting_curve::MintingCurve::MAX_C_NUM;
 use starkware_utils::errors::{Describable, ErrorDisplay};
 
 #[derive(Drop)]

@@ -1,10 +1,12 @@
 use core::num::traits::{Sqrt, WideMul};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use staking::constants::MAX_C_NUM;
-use staking::event_test_utils::{assert_minting_cap_changed_event, assert_number_of_events};
+use staking::event_test_utils::assert_minting_cap_changed_event;
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
     IMintingCurveDispatcherTrait, MintingCurveContractInfo,
+};
+use staking::minting_curve::minting_curve::MintingCurve::{
+    CONTRACT_IDENTITY as mint_curve_identity, CONTRACT_VERSION as mint_curve_version, MAX_C_NUM,
 };
 use staking::test_utils::constants::NON_TOKEN_ADMIN;
 use staking::test_utils::{
@@ -12,7 +14,19 @@ use staking::test_utils::{
     stake_for_testing_using_dispatcher,
 };
 use staking::types::Amount;
-use starkware_utils_testing::test_utils::cheat_caller_address_once;
+use starkware_utils_testing::event_test_utils::assert_number_of_events;
+use starkware_utils_testing::test_utils::{cheat_caller_address_once, check_identity};
+
+#[test]
+fn test_identity() {
+    assert!(mint_curve_identity == 'Minting Curve');
+    assert!(mint_curve_version == '2.0.0');
+
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+    check_identity(minting_curve_contract, mint_curve_identity, mint_curve_version);
+}
 
 #[test]
 fn test_yearly_mint() {

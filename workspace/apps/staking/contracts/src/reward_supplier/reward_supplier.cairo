@@ -15,6 +15,7 @@ pub mod RewardSupplier {
     use staking::staking::objects::EpochInfoTrait;
     use staking::types::Amount;
     use staking::utils::{CheckedIERC20DispatcherTrait, compute_threshold};
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::syscalls::send_message_to_l1_syscall;
     use starknet::{
         ContractAddress, EthAddress, SyscallResultTrait, get_caller_address, get_contract_address,
@@ -51,20 +52,22 @@ pub mod RewardSupplier {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        // ------ Deprecated fields ------
         // Deprecated last_timestamp field, used in V0.
         // last_timestamp: Timestamp,
-        // The amount of unclaimed rewards owed to the staking contract.
+        // -------------------------------
+        /// The amount of unclaimed rewards owed to the staking contract.
         unclaimed_rewards: Amount,
-        // The amount of tokens requested from L1.
+        /// The amount of tokens requested from L1.
         l1_pending_requested_amount: Amount,
-        // The amount of tokens that is requested from L1 in a single message.
+        /// The amount of tokens that is requested from L1 in a single message.
         base_mint_amount: Amount,
         minting_curve_dispatcher: IMintingCurveDispatcher,
         staking_contract: ContractAddress,
         token_dispatcher: IERC20Dispatcher,
-        // L1 reward supplier contract.
+        /// L1 reward supplier contract.
         l1_reward_supplier: felt252,
-        // Token bridge address.
+        /// Token bridge address.
         starkgate_address: ContractAddress,
     }
 
@@ -95,15 +98,13 @@ pub mod RewardSupplier {
         let token_address = STRK_TOKEN_ADDRESS;
         self.roles.initialize(:governance_admin);
         self.staking_contract.write(staking_contract);
-        self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
+        self.token_dispatcher.contract_address.write(token_address);
         // Initialize unclaimed_rewards with 1 STRK to make up for round ups of pool rewards
         // calculation in the staking contract.
         self.unclaimed_rewards.write(STRK_IN_FRIS);
         self.l1_pending_requested_amount.write(Zero::zero());
         self.base_mint_amount.write(base_mint_amount);
-        self
-            .minting_curve_dispatcher
-            .write(IMintingCurveDispatcher { contract_address: minting_curve_contract });
+        self.minting_curve_dispatcher.contract_address.write(minting_curve_contract);
         self.l1_reward_supplier.write(l1_reward_supplier);
         self.starkgate_address.write(starkgate_address);
     }
@@ -169,7 +170,6 @@ pub mod RewardSupplier {
             token_dispatcher.checked_transfer(recipient: staking_contract, amount: amount.into());
         }
 
-        // Callback function for StarkGate deposit.
         fn on_receive(
             ref self: ContractState,
             l2_token: ContractAddress,
@@ -188,7 +188,7 @@ pub mod RewardSupplier {
             );
             // The bridge may serve multiple tokens, only the correct token may be received.
             assert!(
-                l2_token == self.token_dispatcher.read().contract_address,
+                l2_token == self.token_dispatcher.contract_address.read(),
                 "{}",
                 Error::UNEXPECTED_TOKEN,
             );
@@ -219,7 +219,7 @@ pub mod RewardSupplier {
 
     #[generate_trait]
     impl InternalRewardSupplierFunctions of InternalRewardSupplierFunctionsTrait {
-        // Requests funds from L1 to account for new rewards, if the contract's balance is too low.
+        /// Requests funds from L1 to account for new rewards, if the contract's balance is too low.
         fn request_funds(ref self: ContractState, unclaimed_rewards: Amount) {
             // Read current balance.
             let token_dispatcher = self.token_dispatcher.read();

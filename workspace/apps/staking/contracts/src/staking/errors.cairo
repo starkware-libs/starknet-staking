@@ -35,7 +35,6 @@ pub(crate) enum Error {
     COMMISSION_COMMITMENT_NOT_SET,
     EXPIRATION_EPOCH_TOO_EARLY,
     INVALID_EPOCH_DURATION,
-    PENULTIMATE_NOT_EXIST,
     INVALID_STARTING_BLOCK,
     STAKER_ADDRESS_ALREADY_USED,
     STAKER_ADDRESS_ALREADY_USED_IN_V1,
@@ -49,11 +48,15 @@ pub(crate) enum Error {
     COMMISSION_NOT_SET,
     TOKEN_MISMATCH,
     TOKEN_NOT_ACTIVE,
-    INVALID_EPOCH,
     POOL_BALANCE_NOT_ZERO,
     PUBLIC_KEY_SET_IN_PROGRESS,
     PUBLIC_KEY_MUST_DIFFER,
     INVALID_PUBLIC_KEY,
+    PUBLIC_KEY_NOT_SET,
+    ATTEST_WITH_ZERO_BALANCE,
+    REWARDS_ALREADY_UPDATED,
+    INVALID_STAKER,
+    REWARDS_ALREADY_V3,
 }
 
 impl DescribableError of Describable<Error> {
@@ -93,7 +96,6 @@ impl DescribableError of Describable<Error> {
             Error::COMMISSION_COMMITMENT_NOT_SET => "Commission commitment not set",
             Error::EXPIRATION_EPOCH_TOO_EARLY => "Expiration epoch is too early, should be later then current epoch",
             Error::INVALID_EPOCH_DURATION => "Invalid epoch duration, must be greater than 0",
-            Error::PENULTIMATE_NOT_EXIST => "Penultimate balance does not exist, staker balance at this epoch is 0",
             Error::INVALID_STARTING_BLOCK => "Invalid starting block, must be greater than or equal to current block number",
             Error::STAKER_ADDRESS_ALREADY_USED => "Staker address is already used",
             Error::STAKER_ADDRESS_ALREADY_USED_IN_V1 => "Staker address is already used in V1",
@@ -107,11 +109,15 @@ impl DescribableError of Describable<Error> {
             Error::COMMISSION_NOT_SET => "Commission is not set",
             Error::TOKEN_MISMATCH => "Token mismatch",
             Error::TOKEN_NOT_ACTIVE => "Token is not active",
-            Error::INVALID_EPOCH => "Invalid epoch",
             Error::POOL_BALANCE_NOT_ZERO => "Staker has no pool, but `pool_amount` is not zero",
             Error::PUBLIC_KEY_SET_IN_PROGRESS => "Public key set is in progress",
             Error::PUBLIC_KEY_MUST_DIFFER => "Public key is already set to provided value",
             Error::INVALID_PUBLIC_KEY => "Public key is invalid",
+            Error::PUBLIC_KEY_NOT_SET => "Public key is not set",
+            Error::ATTEST_WITH_ZERO_BALANCE => "Cannot attest with zero balance",
+            Error::REWARDS_ALREADY_UPDATED => "Rewards were already updated for the current block",
+            Error::INVALID_STAKER => "Staker is invalid for getting rewards",
+            Error::REWARDS_ALREADY_V3 => "Rewards distribution is already V3",
         }
     }
 }

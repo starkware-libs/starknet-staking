@@ -1,16 +1,19 @@
-// An External Initializer Contract to upgrade a staking contract.
-// This EIC was used to upgrade the staking contract from V0 to V1.
-// This eic is now deprecated. Used only for flow tests.
+/// An External Initializer Contract to upgrade a staking contract.
+/// This EIC was used to upgrade the staking contract from V0 to V1.
+/// This eic is now deprecated. Used only for flow tests.
 #[cfg(test)]
 #[starknet::contract]
 mod StakingEICV0toV1 {
     use core::num::traits::Zero;
-    use staking::constants::{STARTING_EPOCH, V1_PREV_CONTRACT_VERSION};
+    use staking::constants::STARTING_EPOCH;
     use staking::errors::GenericError;
+    use staking::pool::pool::Pool::V1_PREV_CONTRACT_VERSION;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, Version};
     use starknet::class_hash::ClassHash;
-    use starknet::storage::Map;
+    use starknet::storage::{
+        Map, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::components::replaceability::interface::IEICInitializable;
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace};
@@ -18,26 +21,26 @@ mod StakingEICV0toV1 {
     #[storage]
     struct Storage {
         // --- New fields ---
-        // Map version to class hash of the contract.
+        /// Map version to class hash of the contract.
         prev_class_hash: Map<Version, ClassHash>,
-        // Epoch info.
+        /// Epoch info.
         epoch_info: EpochInfo,
-        // Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
-        // an epoch to the updated stake. Stakers that performed unstake_intent are not included.
+        /// Stores checkpoints tracking total stake changes over time, with each checkpoint mapping
+        /// an epoch to the updated stake. Stakers that performed unstake_intent are not included.
         total_stake_trace: Trace,
-        // The contract that staker sends attestation transaction to.
+        /// The contract that staker sends attestation transaction to.
         attestation_contract: ContractAddress,
         // --- Existing fields ---
-        // Deprecated field of the total stake.
+        /// Deprecated field of the total stake.
         total_stake: Amount,
-        // The class hash of the delegation pool contract.
+        /// The class hash of the delegation pool contract.
         pool_contract_class_hash: ClassHash,
-        // Governance admin of the delegation pool contract.
+        /// Governance admin of the delegation pool contract.
         pool_contract_admin: ContractAddress,
     }
 
-    // Expected data : [prev_class_hash, epoch_duration, epoch_length, starting_offset,
-    // pool_contract_class_hash, attestation_contract]
+    /// Expected data : [prev_class_hash, epoch_duration, epoch_length, starting_offset,
+    /// pool_contract_class_hash, attestation_contract]
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
