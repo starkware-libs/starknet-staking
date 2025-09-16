@@ -196,7 +196,9 @@ pub mod Pool {
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
             let token_dispatcher = self.token_dispatcher.read();
-            assert!(token_dispatcher.contract_address != pool_member, "{}", Error::CALLER_IS_TOKEN);
+            assert!(
+                token_dispatcher.contract_address != pool_member, "{}", Error::POOL_MEMBER_IS_TOKEN,
+            );
 
             // Transfer funds from the delegator to the staking contract.
             let staker_address = self.staker_address.read();
