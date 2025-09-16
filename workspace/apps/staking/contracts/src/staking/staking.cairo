@@ -1178,7 +1178,7 @@ pub mod Staking {
 
         fn set_v3_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch) {
             self.roles.only_app_governor();
-            assert!(epoch_id >= self.get_current_epoch() + 2, "{}", Error::INVALID_EPOCH);
+            assert!(epoch_id >= self.get_current_epoch() + 2, "{}", GenericError::INVALID_EPOCH);
             assert!(!self.is_v3(), "{}", Error::REWARDS_ALREADY_V3);
             self.v3_rewards_first_epoch.write(epoch_id);
             self.emit(ConfigEvents::V3RewardsFirstEpochSet { v3_rewards_first_epoch: epoch_id });
@@ -1214,7 +1214,7 @@ pub mod Staking {
             assert!(is_active_opt.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
             let (is_active_first_epoch, is_active) = is_active_opt.unwrap();
             let curr_epoch = self.get_current_epoch();
-            assert!(curr_epoch >= is_active_first_epoch, "{}", Error::INVALID_EPOCH);
+            assert!(curr_epoch >= is_active_first_epoch, "{}", GenericError::INVALID_EPOCH);
             assert!(!is_active, "{}", Error::TOKEN_ALREADY_ENABLED);
             let next_is_active_first_epoch = curr_epoch + 1;
             self.btc_tokens.write(token_address, (next_is_active_first_epoch, true));
@@ -1227,7 +1227,7 @@ pub mod Staking {
             assert!(is_active_opt.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
             let (is_active_first_epoch, is_active) = is_active_opt.unwrap();
             let curr_epoch = self.get_current_epoch();
-            assert!(curr_epoch >= is_active_first_epoch, "{}", Error::INVALID_EPOCH);
+            assert!(curr_epoch >= is_active_first_epoch, "{}", GenericError::INVALID_EPOCH);
             assert!(is_active, "{}", Error::TOKEN_ALREADY_DISABLED);
             let next_is_active_first_epoch = curr_epoch + 1;
             self.btc_tokens.write(token_address, (next_is_active_first_epoch, false));

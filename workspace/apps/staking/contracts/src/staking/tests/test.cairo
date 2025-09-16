@@ -4413,7 +4413,7 @@ fn test_set_v3_rewards_first_epoch_assertions() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     let result = staking_safe_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch);
-    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
 
     // Catch INVALID_EPOCH - current epoch + 1.
     cheat_caller_address_once(
@@ -4421,7 +4421,7 @@ fn test_set_v3_rewards_first_epoch_assertions() {
     );
     let result = staking_safe_config_dispatcher
         .set_v3_rewards_first_epoch(epoch_id: current_epoch + 1);
-    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
 
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -4437,7 +4437,7 @@ fn test_set_v3_rewards_first_epoch_assertions() {
     );
     let result = staking_safe_config_dispatcher
         .set_v3_rewards_first_epoch(epoch_id: current_epoch - 1);
-    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
 
     advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
@@ -5112,7 +5112,7 @@ fn test_enable_token_assertions() {
     let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: btc_token_address);
     let result = staking_token_manager_safe_dispatcher
         .enable_token(token_address: btc_token_address);
-    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
 
     // Catch TOKEN_ALREADY_ENABLED.
     advance_epoch_global();
@@ -5191,7 +5191,7 @@ fn test_disable_token_assertions() {
     );
     let result = staking_token_manager_safe_dispatcher
         .disable_token(token_address: btc_token_address);
-    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
 }
 
 #[test]

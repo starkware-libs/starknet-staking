@@ -182,6 +182,7 @@
     - [OPERATIONAL\_IN\_USE](#operational_in_use)
     - [INVALID\_EPOCH\_LENGTH](#invalid_epoch_length)
     - [INVALID\_EPOCH\_DURATION](#invalid_epoch_duration)
+    - [INVALID\_EPOCH](#invalid_epoch)
     - [INVALID\_COMMISSION](#invalid_commission)
     - [INVALID\_COMMISSION\_WITH\_COMMITMENT](#invalid_commission_with_commitment)
     - [COMMISSION\_COMMITMENT\_EXISTS](#commission_commitment_exists)
@@ -1407,7 +1408,8 @@ Enable a token for getting rewards.
 #### errors <!-- omit from toc -->
 1. [ONLY\_TOKEN\_ADMIN](#only_token_admin)
 2. [TOKEN\_NOT\_EXISTS](#token_not_exists)
-3. [TOKEN\_ALREADY\_ENABLED](#token_already_enabled)
+3. [INVALID\_EPOCH](#invalid_epoch)
+4. [TOKEN\_ALREADY\_ENABLED](#token_already_enabled)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only token admin.
@@ -1424,7 +1426,8 @@ Disable a token for getting rewards.
 #### errors <!-- omit from toc -->
 1. [ONLY\_SECURITY\_AGENT](#only_security_agent)
 2. [TOKEN\_NOT\_EXISTS](#token_not_exists)
-3. [TOKEN\_ALREADY\_DISABLED](#token_already_disabled)
+3. [INVALID\_EPOCH](#invalid_epoch)
+4. [TOKEN\_ALREADY\_DISABLED](#token_already_disabled)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only security agent.
@@ -2533,6 +2536,9 @@ Only token admin.
 
 ### INVALID_EPOCH_DURATION
 "Invalid epoch duration, must be greater than 0"
+
+### INVALID_EPOCH
+"Invalid epoch"
 
 ### INVALID_COMMISSION
 "Commission can only be decreased"

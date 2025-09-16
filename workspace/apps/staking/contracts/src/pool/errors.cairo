@@ -13,7 +13,6 @@ pub(crate) enum Error {
     REWARD_ADDRESS_MISMATCH,
     POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS,
     INVALID_LAST_EPOCH,
-    INVALID_EPOCH,
     CALLER_IS_TOKEN,
 }
 
@@ -31,7 +30,6 @@ impl DescribableError of Describable<Error> {
             Error::SWITCH_POOL_DATA_DESERIALIZATION_FAILED => "Switch pool data deserialization failed",
             Error::POOL_CLAIM_REWARDS_FROM_UNAUTHORIZED_ADDRESS => "Claim rewards must be called from pool member address or reward address",
             Error::INVALID_LAST_EPOCH => "Invalid last epoch",
-            Error::INVALID_EPOCH => "Invalid epoch",
             Error::CALLER_IS_TOKEN => "Caller is a token address",
         }
     }

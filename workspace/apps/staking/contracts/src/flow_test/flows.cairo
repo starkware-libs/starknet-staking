@@ -6806,7 +6806,7 @@ pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
         system.staking.add_token(:token_address);
         system.staking.enable_token(:token_address);
         let res = system.staking.safe_disable_token(:token_address);
-        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
+        assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
         system.advance_epoch();
         system.staking.disable_token(:token_address);
         system.advance_epoch();
@@ -6832,7 +6832,7 @@ pub(crate) impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
         system.advance_epoch();
         system.staking.disable_token(:token_address);
         let res = system.staking.safe_enable_token(:token_address);
-        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
+        assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
         system.advance_epoch();
         system.staking.enable_token(:token_address);
 

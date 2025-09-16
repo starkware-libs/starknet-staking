@@ -879,7 +879,7 @@ pub mod Pool {
             assert!(
                 pool_member_checkpoint.epoch() <= self.get_current_epoch(),
                 "{}",
-                Error::INVALID_EPOCH,
+                GenericError::INVALID_EPOCH,
             );
             let cumulative_rewards_trace_vec = self.cumulative_rewards_trace;
             let cumulative_rewards_trace_idx = pool_member_checkpoint
