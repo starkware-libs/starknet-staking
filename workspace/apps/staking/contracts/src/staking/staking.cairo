@@ -617,19 +617,7 @@ pub mod Staking {
         fn get_current_total_staking_power(
             self: @ContractState,
         ) -> (NormalizedAmount, NormalizedAmount) {
-            let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
-            let curr_epoch = self.get_current_epoch();
-            let strk_curr_total_stake = self
-                .balance_at_epoch(trace: strk_total_stake_trace, epoch_id: curr_epoch);
-            let mut btc_curr_total_stake: NormalizedAmount = Zero::zero();
-            for (token_address, active_status) in self.btc_tokens {
-                if self.is_btc_active(:active_status, epoch_id: curr_epoch) {
-                    let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
-                    btc_curr_total_stake += self
-                        .balance_at_epoch(trace: btc_total_stake_trace, epoch_id: curr_epoch);
-                }
-            }
-            (strk_curr_total_stake, btc_curr_total_stake)
+            self.get_total_staking_power_at_epoch(epoch_id: self.get_current_epoch())
         }
 
         fn change_operational_address(
@@ -2301,6 +2289,26 @@ pub mod Staking {
         fn is_v3(self: @ContractState) -> bool {
             let v3_epoch = self.v3_rewards_first_epoch.read();
             v3_epoch.is_non_zero() && self.get_current_epoch() >= v3_epoch
+        }
+
+        /// Returns the total stake for STRK and BTC at `epoch_id`.
+        /// `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`,
+        /// it's passed as a param to save storage reads.
+        fn get_total_staking_power_at_epoch(
+            self: @ContractState, epoch_id: Epoch,
+        ) -> (NormalizedAmount, NormalizedAmount) {
+            let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
+            let strk_curr_total_stake = self
+                .balance_at_epoch(trace: strk_total_stake_trace, :epoch_id);
+            let mut btc_curr_total_stake: NormalizedAmount = Zero::zero();
+            for (token_address, active_status) in self.btc_tokens {
+                if self.is_btc_active(:active_status, :epoch_id) {
+                    let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
+                    btc_curr_total_stake += self
+                        .balance_at_epoch(trace: btc_total_stake_trace, :epoch_id);
+                }
+            }
+            (strk_curr_total_stake, btc_curr_total_stake)
         }
     }
 
