@@ -175,8 +175,8 @@ pub mod Staking {
         staker_unstake_intent_epoch: Map<ContractAddress, Epoch>,
         /// Last block number for which rewards were distributed.
         last_reward_block: BlockNumber,
-        /// First epoch of V3 rewards distribution.
-        v3_rewards_first_epoch: Epoch,
+        /// First epoch of consensus rewards distribution.
+        consensus_rewards_first_epoch: Epoch,
     }
 
     #[event]
@@ -208,7 +208,7 @@ pub mod Staking {
         ExitWaitWindowChanged: ConfigEvents::ExitWaitWindowChanged,
         RewardSupplierChanged: ConfigEvents::RewardSupplierChanged,
         EpochInfoChanged: ConfigEvents::EpochInfoChanged,
-        V3RewardsFirstEpochSet: ConfigEvents::V3RewardsFirstEpochSet,
+        ConsensusRewardsFirstEpochSet: ConfigEvents::ConsensusRewardsFirstEpochSet,
         OperationalAddressDeclared: Events::OperationalAddressDeclared,
         RemoveFromDelegationPoolIntent: Events::RemoveFromDelegationPoolIntent,
         RemoveFromDelegationPoolAction: Events::RemoveFromDelegationPoolAction,
@@ -1201,12 +1201,17 @@ pub mod Staking {
             self.emit(ConfigEvents::EpochInfoChanged { epoch_duration, epoch_length });
         }
 
-        fn set_v3_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch) {
+        fn set_consensus_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch) {
             self.roles.only_app_governor();
             assert!(epoch_id >= self.get_current_epoch() + 2, "{}", GenericError::INVALID_EPOCH);
-            assert!(!self.is_v3(), "{}", Error::REWARDS_ALREADY_V3);
-            self.v3_rewards_first_epoch.write(epoch_id);
-            self.emit(ConfigEvents::V3RewardsFirstEpochSet { v3_rewards_first_epoch: epoch_id });
+            assert!(!self.is_consensus_rewards_active(), "{}", Error::CONSENSUS_REWARDS_IS_ACTIVE);
+            self.consensus_rewards_first_epoch.write(epoch_id);
+            self
+                .emit(
+                    ConfigEvents::ConsensusRewardsFirstEpochSet {
+                        consensus_rewards_first_epoch: epoch_id,
+                    },
+                );
         }
     }
 
@@ -1267,7 +1272,7 @@ pub mod Staking {
         ) {
             // Prerequisites and asserts.
             self.general_prerequisites();
-            assert!(!self.is_v3(), "{}", Error::REWARDS_ALREADY_V3);
+            assert!(!self.is_consensus_rewards_active(), "{}", Error::CONSENSUS_REWARDS_IS_ACTIVE);
             self.assert_caller_is_attestation_contract();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
@@ -1344,7 +1349,7 @@ pub mod Staking {
             // Update last block rewards.
             self.last_reward_block.write(current_block_number);
 
-            if disable_rewards || !self.is_v3() {
+            if disable_rewards || !self.is_consensus_rewards_active() {
                 return;
             }
 
@@ -1816,7 +1821,7 @@ pub mod Staking {
         /// - `strk_total_rewards` = STRK epoch rewards.
         /// - `strk_total_stake` = current total STRK staking power.
         ///
-        /// **In V3:**
+        /// **In V3 (consensus rewards):**
         /// - `strk_total_rewards` = STRK block rewards.
         /// - `strk_total_stake` = current total STRK staked for the given staker (own + delegated).
         ///
@@ -1856,7 +1861,7 @@ pub mod Staking {
         /// - `btc_total_rewards` = BTC epoch rewards.
         /// - `btc_total_stake` = current total BTC staking power.
         ///
-        /// **In V3:**
+        /// **In V3 (consensus rewards):**
         /// - `strk_total_rewards` = STRK block rewards.
         /// - `strk_total_stake` = current total STRK staked for the given staker (own + delegated).
         /// - `btc_total_rewards` = BTC block rewards.
@@ -2235,7 +2240,7 @@ pub mod Staking {
         /// - `strk_total_stake` = current total STRK staking power.
         /// - `btc_total_stake` = current total BTC staking power.
         ///
-        /// **In V3 - `update_rewards`:**
+        /// **In V3 (consensus rewards) - `update_rewards`:**
         /// Rewards are calculated as the relative share of the staker's own stake and each of his
         /// pools within the staker's total stake, multiplied by block rewards.
         /// - `strk_total_rewards` = STRK block rewards.
@@ -2311,9 +2316,9 @@ pub mod Staking {
             self.write_staker_info(:staker_address, :staker_info);
         }
 
-        fn is_v3(self: @ContractState) -> bool {
-            let v3_epoch = self.v3_rewards_first_epoch.read();
-            v3_epoch.is_non_zero() && self.get_current_epoch() >= v3_epoch
+        fn is_consensus_rewards_active(self: @ContractState) -> bool {
+            let first_epoch = self.consensus_rewards_first_epoch.read();
+            first_epoch.is_non_zero() && self.get_current_epoch() >= first_epoch
         }
 
         /// Returns the total stake for STRK and BTC at `epoch_id`.

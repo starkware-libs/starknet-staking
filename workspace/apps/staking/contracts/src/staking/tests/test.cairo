@@ -13,17 +13,17 @@ use core::option::OptionTrait;
 use event_test_utils::{
     assert_change_delegation_pool_intent_event, assert_change_operational_address_event,
     assert_commission_changed_event, assert_commission_commitment_set_event,
-    assert_commission_initialized_event, assert_declare_operational_address_event,
-    assert_delete_staker_event, assert_epoch_info_changed_event,
-    assert_exit_wait_window_changed_event, assert_minimum_stake_changed_event,
-    assert_new_delegation_pool_event, assert_new_staker_event, assert_public_key_set_event,
-    assert_remove_from_delegation_pool_action_event,
+    assert_commission_initialized_event, assert_consensus_rewards_first_epoch_set_event,
+    assert_declare_operational_address_event, assert_delete_staker_event,
+    assert_epoch_info_changed_event, assert_exit_wait_window_changed_event,
+    assert_minimum_stake_changed_event, assert_new_delegation_pool_event, assert_new_staker_event,
+    assert_public_key_set_event, assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
     assert_rewards_supplied_to_delegation_pool_event, assert_stake_delegated_balance_changed_event,
     assert_stake_own_balance_changed_event, assert_staker_exit_intent_event,
     assert_staker_reward_address_change_event, assert_staker_reward_claimed_event,
     assert_staker_rewards_updated_event, assert_token_added_event, assert_token_disabled_event,
-    assert_token_enabled_event, assert_v3_rewards_first_epoch_set_event,
+    assert_token_enabled_event,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
@@ -3296,20 +3296,20 @@ fn test_update_rewards_from_attestation_contract_assertions() {
     let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
     assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
 
-    // Catch REWARDS_ALREADY_V3.
+    // Catch CONSENSUS_REWARDS_IS_ACTIVE.
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start V3 rewards.
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start consensus rewards.
     advance_epoch_global();
     advance_epoch_global();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: attestation_contract,
     );
     let result = staking_safe_dispatcher.update_rewards_from_attestation_contract(:staker_address);
-    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_V3.describe());
+    assert_panic_with_error(:result, expected_error: Error::CONSENSUS_REWARDS_IS_ACTIVE.describe());
 }
 
 #[test]
@@ -3330,8 +3330,8 @@ fn test_update_rewards_only_staker() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start V3 rewards.
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start consensus rewards.
     advance_epoch_global();
     advance_epoch_global();
     stake_for_testing_using_dispatcher(:cfg);
@@ -3377,8 +3377,8 @@ fn test_update_rewards_miss_blocks() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start V3 rewards.
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start consensus rewards.
     advance_epoch_global();
     advance_epoch_global();
     stake_for_testing_using_dispatcher(:cfg);
@@ -3417,8 +3417,8 @@ fn test_update_rewards_with_strk_pool() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start V3 rewards.
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start consensus rewards.
     advance_epoch_global();
     advance_epoch_global();
     let pool_contract = stake_with_strk_pool_enabled(:cfg);
@@ -3507,8 +3507,8 @@ fn test_update_rewards_with_both_strk_and_btc() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start V3 rewards.
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start consensus rewards.
     advance_epoch_global();
     advance_epoch_global();
     // Stake and open pool for STRK.
@@ -3675,7 +3675,7 @@ fn test_update_rewards_with_both_strk_and_btc() {
 
 #[test]
 #[feature("safe_dispatcher")]
-fn test_update_rewards_assertions_before_v3() {
+fn test_update_rewards_assertions_before_consensus() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
@@ -3733,7 +3733,7 @@ fn test_update_rewards_assertions_before_v3() {
 
 #[test]
 #[feature("safe_dispatcher")]
-fn test_update_rewards_assertions_already_v3() {
+fn test_update_rewards_assertions_already_consensus() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
@@ -3750,8 +3750,8 @@ fn test_update_rewards_assertions_already_v3() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start V3 rewards.
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    // Advance 2 epochs to start consensus rewards.
     advance_epoch_global();
     advance_epoch_global();
 
@@ -3812,36 +3812,37 @@ fn test_update_rewards_without_distribute() {
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
-    // `disable_rewards = true`, and !self.is_v3().
+    // `disable_rewards = true`, and !self.is_consensus_rewards_active().
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_before);
 
-    // `disable_rewards = false`, and !self.is_v3().
+    // `disable_rewards = false`, and !self.is_consensus_rewards_active().
     advance_block_number_global(blocks: 1);
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_before);
 
-    // Set V3 rewards.
+    // Set consensus rewards.
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
 
-    // Still !self.is_v3(), test with `disable_rewards = true` and `disable_rewards = false`.
-    advance_block_number_global(blocks: 1);
-    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
-    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
-    assert!(staker_info_after == staker_info_before);
-    advance_block_number_global(blocks: 1);
-    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
-    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
-    assert!(staker_info_after == staker_info_before);
-
-    // Advance one epoch, still !self.is_v3(), test with `disable_rewards = true` and
+    // Still !self.is_consensus_rewards_active(), test with `disable_rewards = true` and
     // `disable_rewards = false`.
+    advance_block_number_global(blocks: 1);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_before);
+    advance_block_number_global(blocks: 1);
+    staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
+    let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
+    assert!(staker_info_after == staker_info_before);
+
+    // Advance one epoch, still !self.is_consensus_rewards_active(), test with `disable_rewards =
+    // true` and `disable_rewards = false`.
     advance_epoch_global();
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
@@ -3851,14 +3852,15 @@ fn test_update_rewards_without_distribute() {
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_before);
 
-    // After 2 epochs, self.is_v3().
+    // After 2 epochs, self.is_consensus_rewards_active().
     advance_epoch_global();
-    // `disable_rewards = true`, and self.is_v3().
+    // `disable_rewards = true`, and self.is_consensus_rewards_active().
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_before);
 
-    // `disable_rewards = false`, and self.is_v3() - should distribute rewards.
+    // `disable_rewards = false`, and self.is_consensus_rewards_active() - should distribute
+    // rewards.
     advance_block_number_global(blocks: 1);
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
@@ -4382,7 +4384,7 @@ fn test_set_epoch_info_assertions() {
 
 #[test]
 #[feature("safe_dispatcher")]
-fn test_set_v3_rewards_first_epoch() {
+fn test_set_consensus_rewards_first_epoch() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
@@ -4396,58 +4398,58 @@ fn test_set_v3_rewards_first_epoch() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    let v3_rewards_first_epoch: Epoch = load_one_felt(
-        target: staking_contract, storage_address: selector!("v3_rewards_first_epoch"),
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    let consensus_rewards_first_epoch: Epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("consensus_rewards_first_epoch"),
     )
         .try_into()
         .unwrap();
-    assert!(v3_rewards_first_epoch == current_epoch + 2);
+    assert!(consensus_rewards_first_epoch == current_epoch + 2);
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(
-        actual: events.len(), expected: 1, message: "set_v3_rewards_first_epoch",
+        actual: events.len(), expected: 1, message: "set_consensus_rewards_first_epoch",
     );
-    assert_v3_rewards_first_epoch_set_event(
-        spied_event: events[0], v3_rewards_first_epoch: current_epoch + 2,
+    assert_consensus_rewards_first_epoch_set_event(
+        spied_event: events[0], consensus_rewards_first_epoch: current_epoch + 2,
     );
 
-    // Set v3 epoch again with later epoch.
+    // Set consensus rewards epoch again with later epoch.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 4);
-    let v3_rewards_first_epoch: Epoch = load_one_felt(
-        target: staking_contract, storage_address: selector!("v3_rewards_first_epoch"),
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 4);
+    let consensus_rewards_first_epoch: Epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("consensus_rewards_first_epoch"),
     )
         .try_into()
         .unwrap();
-    assert!(v3_rewards_first_epoch == current_epoch + 4);
-    // Set v3 epoch again with earlier epoch.
+    assert!(consensus_rewards_first_epoch == current_epoch + 4);
+    // Set consensus rewards epoch again with earlier epoch.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 3);
-    let v3_rewards_first_epoch: Epoch = load_one_felt(
-        target: staking_contract, storage_address: selector!("v3_rewards_first_epoch"),
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 3);
+    let consensus_rewards_first_epoch: Epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("consensus_rewards_first_epoch"),
     )
         .try_into()
         .unwrap();
-    assert!(v3_rewards_first_epoch == current_epoch + 3);
-    // Set v3 epoch again when currently set to current epoch + 1.
+    assert!(consensus_rewards_first_epoch == current_epoch + 3);
+    // Set consensus rewards epoch again when currently set to current epoch + 1.
     advance_epoch_global();
     advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    let v3_rewards_first_epoch: Epoch = load_one_felt(
-        target: staking_contract, storage_address: selector!("v3_rewards_first_epoch"),
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    let consensus_rewards_first_epoch: Epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("consensus_rewards_first_epoch"),
     )
         .try_into()
         .unwrap();
-    assert!(v3_rewards_first_epoch == current_epoch + 2);
-    // Advance to V3 rewards and test that v3 epoch cannot be changed.
+    assert!(consensus_rewards_first_epoch == current_epoch + 2);
+    // Advance to consensus rewards and test that consensus rewards epoch cannot be changed.
     advance_epoch_global();
     advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
@@ -4455,13 +4457,13 @@ fn test_set_v3_rewards_first_epoch() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     let result = staking_safe_config_dispatcher
-        .set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_V3.describe());
+        .set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    assert_panic_with_error(:result, expected_error: Error::CONSENSUS_REWARDS_IS_ACTIVE.describe());
 }
 
 #[test]
 #[feature("safe_dispatcher")]
-fn test_set_v3_rewards_first_epoch_assertions() {
+fn test_set_consensus_rewards_first_epoch_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
@@ -4473,7 +4475,8 @@ fn test_set_v3_rewards_first_epoch_assertions() {
     let current_epoch = staking_dispatcher.get_current_epoch();
 
     // Catch ONLY_APP_GOVERNOR.
-    let result = staking_safe_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch);
+    let result = staking_safe_config_dispatcher
+        .set_consensus_rewards_first_epoch(epoch_id: current_epoch);
     // TODO: Make AccessErrors public and use it here.
     assert_panic_with_error(:result, expected_error: "ONLY_APP_GOVERNOR");
 
@@ -4481,7 +4484,8 @@ fn test_set_v3_rewards_first_epoch_assertions() {
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    let result = staking_safe_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch);
+    let result = staking_safe_config_dispatcher
+        .set_consensus_rewards_first_epoch(epoch_id: current_epoch);
     assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
 
     // Catch INVALID_EPOCH - current epoch + 1.
@@ -4489,13 +4493,13 @@ fn test_set_v3_rewards_first_epoch_assertions() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     let result = staking_safe_config_dispatcher
-        .set_v3_rewards_first_epoch(epoch_id: current_epoch + 1);
+        .set_consensus_rewards_first_epoch(epoch_id: current_epoch + 1);
     assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
 
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
-    staking_config_dispatcher.set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
+    staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
 
     advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
@@ -4505,30 +4509,30 @@ fn test_set_v3_rewards_first_epoch_assertions() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     let result = staking_safe_config_dispatcher
-        .set_v3_rewards_first_epoch(epoch_id: current_epoch - 1);
+        .set_consensus_rewards_first_epoch(epoch_id: current_epoch - 1);
     assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
 
     advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
 
-    // Catch REWARDS_ALREADY_V3.
+    // Catch CONSENSUS_REWARDS_IS_ACTIVE.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     let result = staking_safe_config_dispatcher
-        .set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_V3.describe());
+        .set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    assert_panic_with_error(:result, expected_error: Error::CONSENSUS_REWARDS_IS_ACTIVE.describe());
 
     advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
 
-    // Catch REWARDS_ALREADY_V3.
+    // Catch CONSENSUS_REWARDS_IS_ACTIVE.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     let result = staking_safe_config_dispatcher
-        .set_v3_rewards_first_epoch(epoch_id: current_epoch + 2);
-    assert_panic_with_error(:result, expected_error: Error::REWARDS_ALREADY_V3.describe());
+        .set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
+    assert_panic_with_error(:result, expected_error: Error::CONSENSUS_REWARDS_IS_ACTIVE.describe());
 }
 
 #[test]
