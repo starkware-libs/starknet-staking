@@ -57,7 +57,7 @@ pub(crate) enum Error {
     REWARDS_ALREADY_UPDATED,
     INVALID_STAKER,
     OPERATIONAL_IS_TOKEN,
-    REWARDS_ALREADY_V3,
+    CONSENSUS_REWARDS_IS_ACTIVE,
 }
 
 impl DescribableError of Describable<Error> {
@@ -119,7 +119,7 @@ impl DescribableError of Describable<Error> {
             Error::REWARDS_ALREADY_UPDATED => "Rewards were already updated for the current block",
             Error::INVALID_STAKER => "Staker is invalid for getting rewards",
             Error::OPERATIONAL_IS_TOKEN => "Operational address is a token address",
-            Error::REWARDS_ALREADY_V3 => "Rewards distribution is already V3",
+            Error::CONSENSUS_REWARDS_IS_ACTIVE => "Consensus rewards distribution is already active",
         }
     }
 }

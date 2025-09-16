@@ -47,7 +47,7 @@
     - [set\_exit\_wait\_window](#set_exit_wait_window)
     - [set\_reward\_supplier](#set_reward_supplier)
     - [set\_epoch\_info](#set_epoch_info)
-    - [set\_v3\_rewards\_first\_epoch](#set_v3_rewards_first_epoch)
+    - [set\_consensus\_rewards\_first\_epoch](#set_consensus_rewards_first_epoch)
     - [staker\_migration](#staker_migration)
     - [add\_token](#add_token)
     - [enable\_token](#enable_token)
@@ -88,7 +88,7 @@
     - [Token Enabled](#token-enabled)
     - [Token Disabled](#token-disabled)
     - [Public Key Set](#public-key-set)
-    - [V3 Rewards First Epoch Set](#v3-rewards-first-epoch-set)
+    - [Consensus Rewards First Epoch Set](#consensus-rewards-first-epoch-set)
 - [Pool contract](#pool-contract)
   - [Functions](#functions-1)
     - [enter\_delegation\_pool](#enter_delegation_pool)
@@ -230,6 +230,7 @@
     - [PUBLIC\_KEY\_NOT\_SET](#public_key_not_set)
     - [ATTEST\_WITH_ZERO_BALANCE](#attest_with_zero_balance)
     - [REWARDS\_ALREADY\_UPDATED](#rewards_already_updated)
+    - [CONSENSUS\_REWARDS\_IS\_ACTIVE](#consensus_rewards_is_active)
     - [INVALID\_STAKER](#invalid_staker)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
@@ -315,7 +316,7 @@ classDiagram
     set_exit_wait_window()
     set_reward_supplier()
     set_epoch_info()
-    set_v3_rewards_first_epoch()
+    set_consensus_rewards_first_epoch()
     staker_migration()
     declare_operational_address()
     change_operational_address()
@@ -1091,7 +1092,7 @@ Send pool rewards to the pool.
 2. [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
 #### errors <!-- omit from toc -->
 1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
-2. [REWARDS\_ALREADY\_V3](#rewards_already_v3)
+2. [CONSENSUS\_REWARDS\_IS\_ACTIVE](#consensus_rewards_is_active)
 3. [CALLER\_IS\_NOT\_ATTESTAION\_CONTRACT](#caller_is_not_attestation_contract)
 4. [STAKER\_NOT\_EXISTS](#staker_not_exists)
 5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
@@ -1343,21 +1344,21 @@ Only token admin.
 #### logic <!-- omit from toc -->
 
 
-### set_v3_rewards_first_epoch
+### set_consensus_rewards_first_epoch
 ```rust
-fn set_v3_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch)
+fn set_consensus_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch)
 ```
 #### description <!-- omit from toc -->
-Sets the epoch number at which reward distribution begins under the V3 scheme.
+Sets the epoch number at which reward distribution begins under the consensus scheme.
 #### emits <!-- omit from toc -->
-1. [V3 Rewards First Epoch Set](#v3-rewards-first-epoch-set)
+1. [Consensus Rewards First Epoch Set](#consensus-rewards-first-epoch-set)
 #### errors <!-- omit from toc -->
 1. [ONLY\_APP_\_GOVERNOR](#only_app_governor)
 2. [INVALID\_EPOCH](#invalid_epoch)
-3. [REWARDS\_ALREADY\_V3](#rewards_already_v3)
+3. [CONSENSUS\_REWARDS\_IS\_ACTIVE](#consensus_rewards_is_active)
 #### pre-condition <!-- omit from toc -->
 1. `epoch_id` >= current epoch + 2
-2. V3 rewards is not active yet.
+2. Consensus rewards is not active yet.
 #### access control <!-- omit from toc -->
 Only app governor.
 #### logic <!-- omit from toc -->
@@ -1535,7 +1536,7 @@ fn update_rewards(ref self: TContractState, staker_address: ContractAddress, dis
 #### description <!-- omit from toc -->
 Calculate and update the current block rewards for the for the given `staker_address`.
 Send pool rewards to the pools.
-Distribute rewards only if `disable_rewards` is False and V3 rewards already started.
+Distribute rewards only if `disable_rewards` is False and consensus rewards already started.
 #### emits <!-- omit from toc -->
 1. [Staker Rewards Updated](#staker-rewards-updated)
 2. [Rewards Supplied To Delegation Pool](#rewards-supplied-to-delegation-pool)
@@ -1745,10 +1746,10 @@ Only starkware sequencer.
 | staker_address | address                  | ✅    |
 | public_key     | [PublicKey](#publickey)  | ❌    |
 
-### V3 Rewards First Epoch Set
+### Consensus Rewards First Epoch Set
 | data                   | type                     | keyed |
 | ---------------------- | ------------------------ | ----- |
-| v3_rewards_first_epoch | [Epoch](#epoch)          | ❌    |
+| consensus_rewards_first_epoch | [Epoch](#epoch)          | ❌    |
 
 # Pool contract
 ## Functions
@@ -2692,6 +2693,9 @@ Only token admin.
 
 ### REWARDS_ALREADY_UPDATED
 "Rewards were already updated for the current block"
+
+### CONSENSUS_REWARDS_IS_ACTIVE
+"Consensus rewards distribution is already active"
 
 ### INVALID_STAKER
 "Staker is invalid for getting rewards"

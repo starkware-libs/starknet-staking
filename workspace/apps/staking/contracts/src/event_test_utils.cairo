@@ -637,14 +637,16 @@ pub(crate) fn assert_public_key_set_event(
     );
 }
 
-pub(crate) fn assert_v3_rewards_first_epoch_set_event(
-    spied_event: @(ContractAddress, Event), v3_rewards_first_epoch: Epoch,
+pub(crate) fn assert_consensus_rewards_first_epoch_set_event(
+    spied_event: @(ContractAddress, Event), consensus_rewards_first_epoch: Epoch,
 ) {
-    let expected_event = StakingConfigEvents::V3RewardsFirstEpochSet { v3_rewards_first_epoch };
+    let expected_event = StakingConfigEvents::ConsensusRewardsFirstEpochSet {
+        consensus_rewards_first_epoch,
+    };
     assert_expected_event_emitted(
         :spied_event,
         :expected_event,
-        expected_event_selector: @selector!("V3RewardsFirstEpochSet"),
-        expected_event_name: "V3RewardsFirstEpochSet",
+        expected_event_selector: @selector!("ConsensusRewardsFirstEpochSet"),
+        expected_event_name: "ConsensusRewardsFirstEpochSet",
     );
 }
