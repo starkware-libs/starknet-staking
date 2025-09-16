@@ -1335,7 +1335,7 @@ Only token admin.
 #### logic <!-- omit from toc -->
 
 
-### set_v3
+### set_v3_rewards_first_epoch
 ```rust
 fn set_v3_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch)
 ```
