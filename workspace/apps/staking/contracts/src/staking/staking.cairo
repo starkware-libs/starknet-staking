@@ -623,7 +623,7 @@ pub mod Staking {
                 .balance_at_epoch(trace: strk_total_stake_trace, epoch_id: curr_epoch);
             let mut btc_curr_total_stake: NormalizedAmount = Zero::zero();
             for (token_address, active_status) in self.btc_tokens {
-                if self.is_btc_active(:active_status, :curr_epoch) {
+                if self.is_btc_active(:active_status, epoch_id: curr_epoch) {
                     let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
                     btc_curr_total_stake += self
                         .balance_at_epoch(trace: btc_total_stake_trace, epoch_id: curr_epoch);
@@ -760,7 +760,7 @@ pub mod Staking {
             let mut active_tokens: Array<ContractAddress> = array![STRK_TOKEN_ADDRESS];
             let curr_epoch = self.get_current_epoch();
             for (token_address, active_status) in self.btc_tokens {
-                if self.is_btc_active(:active_status, :curr_epoch) {
+                if self.is_btc_active(:active_status, epoch_id: curr_epoch) {
                     active_tokens.append(token_address);
                 }
             }
@@ -771,7 +771,7 @@ pub mod Staking {
             let mut tokens: Array<(ContractAddress, bool)> = array![(STRK_TOKEN_ADDRESS, true)];
             let curr_epoch = self.get_current_epoch();
             for (token_address, active_status) in self.btc_tokens {
-                let is_btc_active = self.is_btc_active(:active_status, :curr_epoch);
+                let is_btc_active = self.is_btc_active(:active_status, epoch_id: curr_epoch);
                 tokens.append((token_address, is_btc_active));
             }
             tokens.span()
@@ -2171,19 +2171,20 @@ pub mod Staking {
             token_address == STRK_TOKEN_ADDRESS
                 || self
                     .is_btc_active(
-                        active_status: self.btc_tokens.read(token_address).unwrap(), :curr_epoch,
+                        active_status: self.btc_tokens.read(token_address).unwrap(),
+                        epoch_id: curr_epoch,
                     )
         }
 
-        /// Returns true if the BTC token is active in the current epoch.
+        /// Returns true if the BTC token is active in the given `epoch_id`.
         ///
-        /// **Note**: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
-        /// storage reads.
+        /// **Note**: `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`,
+        /// it's passed as a param to save storage reads.
         fn is_btc_active(
-            self: @ContractState, active_status: (Epoch, bool), curr_epoch: Epoch,
+            self: @ContractState, active_status: (Epoch, bool), epoch_id: Epoch,
         ) -> bool {
             let (epoch, is_active) = active_status;
-            (curr_epoch >= epoch) == is_active
+            (epoch_id >= epoch) == is_active
         }
 
         fn get_token_decimals(self: @ContractState, token_address: ContractAddress) -> u8 {
