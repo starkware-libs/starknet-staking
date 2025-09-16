@@ -930,20 +930,18 @@ pub mod Pool {
             target_epoch: Epoch,
         ) -> Amount {
             // Pool member changed balance in epoch j, so j+1 written to pool member checkpoint.
-            let (epoch_at_index, sigma_at_index) = cumulative_rewards_trace_vec
-                .at(cumulative_rewards_trace_idx);
-            if target_epoch > epoch_at_index {
+            let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx);
+            if epoch < target_epoch {
                 // If pool rewards for epoch j given after pool member balance changed, then pool
                 // member is not eligible in this `rewards_info_idx` and it is infact the latest one
                 // before the staking power change.
-                sigma_at_index
+                sigma
             } else {
                 // Else, the pool rewards index given is for an epoch bigger than j, meaning pool
                 // member is eligible for sigma at `cumulative_rewards_trace_idx` and we should take
                 // the previous entry.
-                let (_, sigma_at_index_minus_one) = cumulative_rewards_trace_vec
-                    .at(cumulative_rewards_trace_idx - 1);
-                sigma_at_index_minus_one
+                let (_, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
+                sigma
             }
         }
 
