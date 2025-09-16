@@ -1,6 +1,4 @@
 #[cfg(test)]
-mod align_upg_vars_eic;
-#[cfg(test)]
 mod eic_v0_v1;
 #[cfg(test)]
 pub(crate) mod interface_v0;
