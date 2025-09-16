@@ -168,6 +168,14 @@ fn test_enter_delegation_pool_assertions() {
     let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, amount: Zero::zero());
     assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_IS_ZERO.describe());
 
+    // Catch REWARD_ADDRESS_IS_TOKEN.
+    let token_address = token.contract_address();
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
+    let result = pool_safe_dispatcher.enter_delegation_pool(reward_address: token_address, :amount);
+    assert_panic_with_error(
+        :result, expected_error: GenericError::REWARD_ADDRESS_IS_TOKEN.describe(),
+    );
+
     // Catch POOL_MEMBER_EXISTS.
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
@@ -175,7 +183,6 @@ fn test_enter_delegation_pool_assertions() {
     assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_EXISTS.describe());
 
     // Catch POOL_MEMBER_IS_TOKEN.
-    let token_address = token.contract_address();
     cheat_caller_address_once(contract_address: pool_contract, caller_address: token_address);
     let result = pool_safe_dispatcher.enter_delegation_pool(:reward_address, :amount);
     assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_IS_TOKEN.describe());
@@ -420,6 +427,20 @@ fn test_change_reward_address_pool_member_not_exist() {
     );
     // Reward address is arbitrary because it should fail because of the caller.
     state.change_reward_address(reward_address: DUMMY_ADDRESS());
+}
+
+#[test]
+#[should_panic(expected: "Reward address is a token address")]
+fn test_change_reward_address_reward_is_token() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
+    let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
+    let pool_member = cfg.test_info.pool_member_address;
+    cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
+    pool_dispatcher.change_reward_address(reward_address: token_address);
 }
 
 #[test]

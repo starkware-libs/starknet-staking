@@ -196,10 +196,9 @@ pub mod Pool {
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
             let token_dispatcher = self.token_dispatcher.read();
-            assert!(
-                token_dispatcher.contract_address != pool_member, "{}", Error::POOL_MEMBER_IS_TOKEN,
-            );
-
+            let token_address = token_dispatcher.contract_address;
+            assert!(token_address != pool_member, "{}", Error::POOL_MEMBER_IS_TOKEN);
+            assert!(token_address != reward_address, "{}", GenericError::REWARD_ADDRESS_IS_TOKEN);
             // Transfer funds from the delegator to the staking contract.
             let staker_address = self.staker_address.read();
             self.transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
@@ -509,6 +508,11 @@ pub mod Pool {
         }
 
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
+            assert!(
+                self.token_dispatcher.contract_address.read() != reward_address,
+                "{}",
+                GenericError::REWARD_ADDRESS_IS_TOKEN,
+            );
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let old_address = pool_member_info.reward_address;

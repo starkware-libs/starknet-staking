@@ -285,6 +285,16 @@ pub mod Staking {
             assert!(
                 !self.does_token_exist(token_address: staker_address), "{}", Error::STAKER_IS_TOKEN,
             );
+            assert!(
+                !self.does_token_exist(token_address: reward_address),
+                "{}",
+                GenericError::REWARD_ADDRESS_IS_TOKEN,
+            );
+            assert!(
+                !self.does_token_exist(token_address: operational_address),
+                "{}",
+                Error::OPERATIONAL_IS_TOKEN,
+            );
             assert!(amount >= self.min_stake.read(), "{}", Error::AMOUNT_LESS_THAN_MIN_STAKE);
             let normalized_amount = NormalizedAmountTrait::from_strk_native_amount(:amount);
 
@@ -488,6 +498,11 @@ pub mod Staking {
         fn change_reward_address(ref self: ContractState, reward_address: ContractAddress) {
             // Prerequisites and asserts.
             self.general_prerequisites();
+            assert!(
+                !self.does_token_exist(token_address: reward_address),
+                "{}",
+                GenericError::REWARD_ADDRESS_IS_TOKEN,
+            );
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
             let old_address = staker_info.reward_address;
@@ -630,6 +645,11 @@ pub mod Staking {
                 "{}",
                 GenericError::OPERATIONAL_EXISTS,
             );
+            assert!(
+                !self.does_token_exist(token_address: operational_address),
+                "{}",
+                Error::OPERATIONAL_IS_TOKEN,
+            );
             let staker_address = get_caller_address();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
@@ -662,6 +682,11 @@ pub mod Staking {
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
                 "{}",
                 Error::OPERATIONAL_IN_USE,
+            );
+            assert!(
+                !self.does_token_exist(token_address: operational_address),
+                "{}",
+                Error::OPERATIONAL_IS_TOKEN,
             );
             if self.eligible_operational_addresses.read(operational_address) == staker_address {
                 return;
