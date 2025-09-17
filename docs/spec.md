@@ -30,6 +30,7 @@
     - [staker\_info\_v1](#staker_info_v1)
     - [get\_staker\_info\_v1](#get_staker_info_v1)
     - [staker\_info\_v3](#staker_info_v3)
+    - [get\_staker\_info\_v3](#get_staker_info_v3)
     - [staker\_pool\_info](#staker_pool_info)
     - [get\_current\_epoch](#get_current_epoch)
     - [get\_epoch\_info](#get_epoch_info)
@@ -1054,6 +1055,24 @@ If the staker does not exist, it panics.
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. Return Staker's info.
+
+### get_staker_info_v3
+```rust
+fn get_staker_info_v3(
+  self: @ContractState,
+  staker_address: ContractAddress
+) -> Option<StakerInfoV3>
+```
+#### description <!-- omit from toc -->
+This function provides the staker info for the current epoch (with projected rewards) wrapped in an Option.
+If the staker does not exist, it returns None.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Returns `Option::Some` with [StakerInfoV3](#stakerinfov3) if exists, otherwise `Option::None`.
 
 ### staker_pool_info
 ```rust
