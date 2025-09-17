@@ -608,19 +608,16 @@ pub mod Staking {
         fn staker_pool_info(
             self: @ContractState, staker_address: ContractAddress,
         ) -> StakerPoolInfoV2 {
-            // Assert that the staker exists.
-            self.internal_staker_info(:staker_address);
-            let staker_pool_info = self.staker_pool_info.entry(staker_address);
-            let commission = staker_pool_info.commission.read();
-            let mut pools: Array<PoolInfo> = array![];
-            for (pool_contract, token_address) in staker_pool_info.pools {
-                let decimals = self.get_token_decimals(:token_address);
-                let amount = self
-                    .get_delegated_balance(:staker_address, :pool_contract)
-                    .to_native_amount(:decimals);
-                pools.append(PoolInfo { pool_contract, token_address, amount });
-            }
-            StakerPoolInfoV2 { commission, pools: pools.span() }
+            self._staker_pool_info(:staker_address, epoch_id: Option::None)
+        }
+
+        fn staker_pool_info_v3(
+            self: @ContractState, staker_address: ContractAddress,
+        ) -> StakerPoolInfoV2 {
+            self
+                ._staker_pool_info(
+                    :staker_address, epoch_id: Option::Some(self.get_current_epoch()),
+                )
         }
 
         fn get_current_epoch(self: @ContractState) -> Epoch {
@@ -2357,6 +2354,34 @@ pub mod Staking {
                 }
             }
             (strk_curr_total_stake, btc_curr_total_stake)
+        }
+
+        /// Returns the staker pool info for the given `epoch_id`.
+        /// If `epoch_id` is `None`, returns the last updated pool info.
+        /// **Note**: If `epoch_id` is `Some`, it must be `get_current_epoch()` or
+        /// `get_current_epoch() + 1`, it's passed as a param to save storage reads.
+        fn _staker_pool_info(
+            self: @ContractState, staker_address: ContractAddress, epoch_id: Option<Epoch>,
+        ) -> StakerPoolInfoV2 {
+            // Assert that the staker exists.
+            self.internal_staker_info(:staker_address);
+            let staker_pool_info = self.staker_pool_info.entry(staker_address);
+            let commission = staker_pool_info.commission.read();
+            let mut pools: Array<PoolInfo> = array![];
+            for (pool_contract, token_address) in staker_pool_info.pools {
+                let decimals = self.get_token_decimals(:token_address);
+                let normalized_amount = if let Some(epoch_id) = epoch_id {
+                    self
+                        .get_staker_delegated_balance_at_epoch(
+                            :staker_address, :pool_contract, :epoch_id,
+                        )
+                } else {
+                    self.get_delegated_balance(:staker_address, :pool_contract)
+                };
+                let amount = normalized_amount.to_native_amount(:decimals);
+                pools.append(PoolInfo { pool_contract, token_address, amount });
+            }
+            StakerPoolInfoV2 { commission, pools: pools.span() }
         }
     }
 

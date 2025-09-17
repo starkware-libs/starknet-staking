@@ -2879,6 +2879,139 @@ fn test_staker_pool_info_staker_doesnt_exist() {
 }
 
 #[test]
+fn test_staker_pool_info_v3() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token_address = cfg.test_info.strk_token.contract_address();
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
+    let token = cfg.test_info.strk_token;
+
+    // Enter the pool.
+    enter_delegation_pool_for_testing_using_dispatcher(pool_contract: pool_contract, :cfg, :token);
+    let delegated_amount = cfg.pool_member_info._deprecated_amount;
+
+    // Test same epoch as delegation.
+    let expected_pool_info = PoolInfo { pool_contract, token_address, amount: Zero::zero() };
+    let expected_staker_pool_info = StakerPoolInfoV2 {
+        commission: Option::Some(
+            cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
+        ),
+        pools: [expected_pool_info].span(),
+    };
+    let staker_pool_info = staking_dispatcher.staker_pool_info_v3(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+
+    // Test next epoch.
+    advance_epoch_global();
+    let expected_pool_info = PoolInfo { pool_contract, token_address, amount: delegated_amount };
+    let expected_staker_pool_info = StakerPoolInfoV2 {
+        commission: Option::Some(
+            cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
+        ),
+        pools: [expected_pool_info].span(),
+    };
+    let staker_pool_info = staking_dispatcher.staker_pool_info_v3(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+}
+
+#[test]
+fn test_staker_pool_info_v3_with_multiple_pools() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let token = cfg.test_info.strk_token;
+    let token_address = token.contract_address();
+    let staking_contract = cfg.test_info.staking_contract;
+    let strk_pool_contract = stake_with_strk_pool_enabled(:cfg);
+    let strk_delegated_amount = cfg.pool_member_info._deprecated_amount;
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: strk_pool_contract, :cfg, :token,
+    );
+    let btc_token = cfg.test_info.btc_token;
+    let btc_token_address = btc_token.contract_address();
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let btc_pool_contract = staking_dispatcher
+        .set_open_for_delegation(token_address: btc_token_address);
+    let btc_delegated_amount = strk_delegated_amount * 2;
+    cfg.pool_member_info._deprecated_amount = btc_delegated_amount;
+    enter_delegation_pool_for_testing_using_dispatcher(
+        pool_contract: btc_pool_contract, :cfg, token: btc_token,
+    );
+
+    // Test same epoch as delegations.
+    let expected_strk_pool_info = PoolInfo {
+        pool_contract: strk_pool_contract, token_address, amount: Zero::zero(),
+    };
+    let expected_btc_pool_info = PoolInfo {
+        pool_contract: btc_pool_contract, token_address: btc_token_address, amount: Zero::zero(),
+    };
+    let expected_staker_pool_info = StakerPoolInfoV2 {
+        commission: Option::Some(
+            cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
+        ),
+        pools: [expected_strk_pool_info, expected_btc_pool_info].span(),
+    };
+    let staker_pool_info = staking_dispatcher.staker_pool_info_v3(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+
+    // Test next epoch.
+    advance_epoch_global();
+    let expected_strk_pool_info = PoolInfo {
+        pool_contract: strk_pool_contract, token_address, amount: strk_delegated_amount,
+    };
+    let expected_btc_pool_info = PoolInfo {
+        pool_contract: btc_pool_contract,
+        token_address: btc_token_address,
+        amount: btc_delegated_amount,
+    };
+    let expected_staker_pool_info = StakerPoolInfoV2 {
+        commission: Option::Some(
+            cfg.staker_info._deprecated_get_pool_info()._deprecated_commission,
+        ),
+        pools: [expected_strk_pool_info, expected_btc_pool_info].span(),
+    };
+    let staker_pool_info = staking_dispatcher.staker_pool_info_v3(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_staker_pool_info_v3_staker_doesnt_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher.staker_pool_info_v3(staker_address: NON_STAKER_ADDRESS());
+}
+
+#[test]
+fn test_staker_pool_info_v3_no_pools() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    stake_for_testing_using_dispatcher(:cfg);
+    let expected_staker_pool_info = StakerPoolInfoV2 {
+        commission: Option::None, pools: array![].span(),
+    };
+    let staker_pool_info = staking_dispatcher.staker_pool_info_v3(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_commission(commission: 0);
+    let expected_staker_pool_info = StakerPoolInfoV2 {
+        commission: Option::Some(0), pools: array![].span(),
+    };
+    let staker_pool_info = staking_dispatcher.staker_pool_info_v3(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+}
+
+#[test]
 fn test_get_staker_info() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
