@@ -36,6 +36,8 @@ pub trait IStaking<TContractState> {
     fn staker_info_v3(self: @TContractState, staker_address: ContractAddress) -> StakerInfoV3;
     fn staker_pool_info(self: @TContractState, staker_address: ContractAddress) -> StakerPoolInfoV2;
     /// This function provides the staker info (with projected rewards) wrapped in an Option.
+    /// **Note**: balances in the returned struct are the last updated balances,
+    /// which may not be in effect in the current epoch.
     /// If the staker does not exist, it returns None.
     fn get_staker_info_v1(
         self: @TContractState, staker_address: ContractAddress,

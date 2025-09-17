@@ -1026,7 +1026,10 @@ fn get_staker_info_v1(
 ) -> Option<StakerInfoV1>
 ```
 #### description <!-- omit from toc -->
-Returns Option<[StakerInfoV1](#stakerinfov1)> of the given staker without throwing an error or panicking.
+This function provides the staker info (with projected rewards) wrapped in an Option.
+**Note**: balances in the returned struct are the last updated balances,
+which may not be in effect in the current epoch.
+If the staker does not exist, it returns None.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 #### pre-condition <!-- omit from toc -->
