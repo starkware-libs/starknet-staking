@@ -32,6 +32,7 @@
     - [staker\_info\_v3](#staker_info_v3)
     - [get\_staker\_info\_v3](#get_staker_info_v3)
     - [staker\_pool\_info](#staker_pool_info)
+    - [staker\_pool\_info\_v3](#staker_pool_info_v3)
     - [get\_current\_epoch](#get_current_epoch)
     - [get\_epoch\_info](#get_epoch_info)
     - [update\_rewards\_from\_attestation\_contract](#update_rewards_from_attestation_contract)
@@ -1085,7 +1086,26 @@ fn staker_pool_info(
 ) -> StakerPoolInfoV2
 ```
 #### description <!-- omit from toc -->
-Return [StakerPoolInfoV2](#stakerpoolinfov2) of the given staker.
+This function returns the staker pool info.
+**Note**: In each pool, `amount` refers to the last updated delegated amount, which may not be in effect in the current epoch.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Return [StakerPoolInfoV2](#stakerpoolinfov2).
+
+### staker_pool_info_v3
+```rust
+fn staker_pool_info_v3(
+  self: @ContractState,
+  staker_address: ContractAddress
+) -> StakerPoolInfoV2
+```
+#### description <!-- omit from toc -->
+This function returns the staker pool info for the current epoch.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
