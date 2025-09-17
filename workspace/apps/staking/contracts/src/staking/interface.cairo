@@ -40,6 +40,12 @@ pub trait IStaking<TContractState> {
     fn get_staker_info_v1(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Option<StakerInfoV1>;
+    /// This function provides the staker info for the current epoch (with projected rewards)
+    /// wrapped in an Option.
+    /// If the staker does not exist, it returns None.
+    fn get_staker_info_v3(
+        self: @TContractState, staker_address: ContractAddress,
+    ) -> Option<StakerInfoV3>;
     fn get_current_epoch(self: @TContractState) -> Epoch;
     fn get_epoch_info(self: @TContractState) -> EpochInfo;
     fn get_staker_commission_commitment(

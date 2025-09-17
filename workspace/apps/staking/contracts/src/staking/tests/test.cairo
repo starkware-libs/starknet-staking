@@ -2897,6 +2897,30 @@ fn test_get_staker_info() {
     assert!(option_staker_info == Option::Some(expected_staker_info));
 }
 
+#[test]
+fn test_get_staker_info_v3() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    // Check before staker enters.
+    let option_staker_info = staking_dispatcher.get_staker_info_v3(:staker_address);
+    assert!(option_staker_info.is_none());
+    // Check after staker enters.
+    let mut expected_staker_info: StakerInfoV3 = StakerInfoV3Trait::new(
+        internal_staker_info: cfg.staker_info, amount_own: Zero::zero(),
+    );
+    stake_for_testing_using_dispatcher(:cfg);
+    let option_staker_info = staking_dispatcher.get_staker_info_v3(:staker_address);
+    assert!(option_staker_info == Option::Some(expected_staker_info));
+
+    advance_epoch_global();
+    expected_staker_info.amount_own = cfg.test_info.stake_amount;
+    let option_staker_info = staking_dispatcher.get_staker_info_v3(:staker_address);
+    assert!(option_staker_info == Option::Some(expected_staker_info));
+}
+
 
 #[test]
 #[should_panic(expected: "Zero address caller is not allowed")]
