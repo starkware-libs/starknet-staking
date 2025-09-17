@@ -29,6 +29,7 @@
     - [get\_staker\_commission\_commitment](#get_staker_commission_commitment)
     - [staker\_info\_v1](#staker_info_v1)
     - [get\_staker\_info\_v1](#get_staker_info_v1)
+    - [staker\_info\_v3](#staker_info_v3)
     - [staker\_pool\_info](#staker_pool_info)
     - [get\_current\_epoch](#get_current_epoch)
     - [get\_epoch\_info](#get_epoch_info)
@@ -235,6 +236,7 @@
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
+    - [StakerInfoV3](#stakerinfov3)
     - [PoolInfo](#poolinfo)
     - [StakerPoolInfoV2](#stakerpoolinfov2)
     - [StakingContractInfoV1](#stakingcontractinfov1)
@@ -1031,6 +1033,27 @@ Returns Option<[StakerInfoV1](#stakerinfov1)> of the given staker without throwi
 Any address can execute.
 #### logic <!-- omit from toc -->
 1. Returns `Option::Some` with [StakerInfoV1](#stakerinfov1) if exists, otherwise `Option::None`.
+
+### staker_info_v3
+```rust
+fn staker_info_v3(
+  self: @ContractState,
+  staker_address: ContractAddress
+) -> StakerInfoV3
+```
+#### description <!-- omit from toc -->
+This function provides the staker info (with projected rewards).
+**Note**: balances in the returned struct are the last updated balances, which may not be in effect in the current epoch.
+If the staker does not exist, it panics.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+#### pre-condition <!-- omit from toc -->
+1. Staker exist in the contract.
+#### access control <!-- omit from toc -->
+Any address can execute.
+#### logic <!-- omit from toc -->
+1. Return Staker's info.
 
 ### staker_pool_info
 ```rust
@@ -2717,6 +2740,15 @@ Only token admin.
 | amount_own            | [Amount](#amount)                         |
 | unclaimed_rewards_own | [Amount](#amount)                         |
 | pool_info             | Option<[StakerPoolInfoV1](#stakerpoolinfov1)> |
+
+### StakerInfoV3
+| name                  | type                                      |
+| --------------------- | ----------------------------------------- |
+| reward_address        | address                                   |
+| operational_address   | address                                   |
+| unstake_time          | Option<[TimeStamp](#timestamp)>           |
+| amount_own            | [Amount](#amount)                         |
+| unclaimed_rewards_own | [Amount](#amount)                         |
 
 ### PoolInfo
 | name              | type                      |

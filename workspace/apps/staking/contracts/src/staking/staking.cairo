@@ -22,15 +22,15 @@ pub mod Staking {
     use staking::staking::interface::{
         CommissionCommitment, ConfigEvents, Events, IStaking, IStakingAttestation, IStakingConfig,
         IStakingConsensus, IStakingMigration, IStakingPause, IStakingPool, IStakingRewardsManager,
-        IStakingTokenManager, PauseEvents, PoolInfo, StakerInfoV1, StakerPoolInfoV1,
+        IStakingTokenManager, PauseEvents, PoolInfo, StakerInfoV1, StakerInfoV3, StakerPoolInfoV1,
         StakerPoolInfoV2, StakingContractInfoV1, TokenManagerEvents,
     };
     use staking::staking::objects::{
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
         InternalStakerInfoLatestTrait, InternalStakerPoolInfoV2, InternalStakerPoolInfoV2MutTrait,
-        InternalStakerPoolInfoV2Trait, NormalizedAmount, NormalizedAmountTrait, UndelegateIntentKey,
-        UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
-        VInternalStakerInfo, VInternalStakerInfoTrait,
+        InternalStakerPoolInfoV2Trait, NormalizedAmount, NormalizedAmountTrait, StakerInfoV3Trait,
+        UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
+        UndelegateIntentValueZero, VInternalStakerInfo, VInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
         MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTraceTrait,
@@ -585,6 +585,15 @@ pub mod Staking {
                 return Option::None;
             }
             Option::Some(self.staker_info_v1(:staker_address))
+        }
+
+        fn staker_info_v3(self: @ContractState, staker_address: ContractAddress) -> StakerInfoV3 {
+            let internal_staker_info = self.internal_staker_info(:staker_address);
+            let amount_own = self
+                .get_staker_own_balance_at_epoch(
+                    :staker_address, epoch_id: self.get_current_epoch(),
+                );
+            StakerInfoV3Trait::new(:internal_staker_info, :amount_own)
         }
 
         fn staker_pool_info(

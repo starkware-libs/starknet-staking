@@ -59,14 +59,14 @@ use staking::staking::interface::{
     IStakingSafeDispatcher, IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
     IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
     IStakingTokenManagerSafeDispatcherTrait, PoolInfo, StakerInfoV1, StakerInfoV1Trait,
-    StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1,
+    StakerInfoV3, StakerPoolInfoV1, StakerPoolInfoV2, StakingContractInfoV1,
 };
 use staking::staking::objects::{
     AttestationInfoTrait, EpochInfoTrait, InternalStakerInfoLatestTestTrait,
     InternalStakerInfoLatestTrait, InternalStakerInfoV1, InternalStakerPoolInfoV1,
-    NormalizedAmountTrait, StakerInfoIntoInternalStakerInfoV1ITrait, UndelegateIntentKey,
-    UndelegateIntentValue, UndelegateIntentValueTrait, UndelegateIntentValueZero,
-    VInternalStakerInfo, VInternalStakerInfoTrait,
+    NormalizedAmountTrait, StakerInfoIntoInternalStakerInfoV1ITrait, StakerInfoV3Trait,
+    UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
+    UndelegateIntentValueZero, VInternalStakerInfo, VInternalStakerInfoTrait,
 };
 use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::{
@@ -2773,6 +2773,36 @@ fn test_staker_info_staker_doesnt_exist() {
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     staking_dispatcher.staker_info_v1(staker_address: NON_STAKER_ADDRESS());
+}
+
+#[test]
+fn test_staker_info_v3() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let mut expected_staker_info: StakerInfoV3 = StakerInfoV3Trait::new(
+        internal_staker_info: cfg.staker_info, amount_own: Zero::zero(),
+    );
+    stake_for_testing_using_dispatcher(:cfg);
+    let staker_info = staking_dispatcher.staker_info_v3(:staker_address);
+    assert!(staker_info == expected_staker_info);
+
+    advance_epoch_global();
+    expected_staker_info.amount_own = cfg.test_info.stake_amount;
+    let staker_info = staking_dispatcher.staker_info_v3(:staker_address);
+    assert!(staker_info == expected_staker_info);
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_staker_info_v3_staker_doesnt_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher.staker_info_v3(staker_address: NON_STAKER_ADDRESS());
 }
 
 #[test]
