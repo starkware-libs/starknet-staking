@@ -27,8 +27,13 @@ pub trait IStaking<TContractState> {
         ref self: TContractState, token_address: ContractAddress,
     ) -> ContractAddress;
     /// This function provides the staker info (with projected rewards).
+    /// **Note**: balances in the returned struct are the last updated balances,
+    /// which may not be in effect in the current epoch.
     /// If the staker does not exist, it panics.
     fn staker_info_v1(self: @TContractState, staker_address: ContractAddress) -> StakerInfoV1;
+    /// This function provides the staker info for the current epoch (with projected rewards).
+    /// If the staker does not exist, it panics.
+    fn staker_info_v3(self: @TContractState, staker_address: ContractAddress) -> StakerInfoV3;
     fn staker_pool_info(self: @TContractState, staker_address: ContractAddress) -> StakerPoolInfoV2;
     /// This function provides the staker info (with projected rewards) wrapped in an Option.
     /// If the staker does not exist, it returns None.
@@ -513,6 +518,17 @@ pub struct StakerInfoV1 {
     pub amount_own: Amount,
     pub unclaimed_rewards_own: Amount,
     pub pool_info: Option<StakerPoolInfoV1>,
+}
+
+/// `StakerInfo` struct used in V3.
+#[derive(Debug, PartialEq, Drop, Serde, Copy, starknet::Store)]
+pub struct StakerInfoV3 {
+    // TODO: Consider adding intent epoch.
+    pub reward_address: ContractAddress,
+    pub operational_address: ContractAddress,
+    pub unstake_time: Option<Timestamp>,
+    pub amount_own: Amount,
+    pub unclaimed_rewards_own: Amount,
 }
 
 /// `StakerPoolInfo` struct used in V1 as a part of `StakerInfoV1`.

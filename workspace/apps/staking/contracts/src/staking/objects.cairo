@@ -3,7 +3,9 @@ use core::num::traits::{Pow, Zero};
 use core::ops::{AddAssign, SubAssign};
 use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::staking::errors::Error;
-use staking::staking::interface::{CommissionCommitment, StakerInfoV1, StakerPoolInfoV1};
+use staking::staking::interface::{
+    CommissionCommitment, StakerInfoV1, StakerInfoV3, StakerPoolInfoV1,
+};
 use staking::types::{Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest};
 use starknet::storage::{
     Mutable, StoragePath, StoragePathMutableConversion, StoragePointerReadAccess,
@@ -641,6 +643,21 @@ pub(crate) impl InternalStakerInfoLatestImpl of InternalStakerInfoLatestTrait {
 pub(crate) impl InternalStakerInfoLatestTestImpl of InternalStakerInfoLatestTestTrait {
     fn _deprecated_get_pool_info(self: @InternalStakerInfoLatest) -> InternalStakerPoolInfoV1 {
         (*self._deprecated_pool_info).expect_with_err(Error::MISSING_POOL_CONTRACT)
+    }
+}
+
+#[generate_trait]
+pub(crate) impl StakerInfoV3Impl of StakerInfoV3Trait {
+    fn new(
+        internal_staker_info: InternalStakerInfoLatest, amount_own: NormalizedAmount,
+    ) -> StakerInfoV3 {
+        StakerInfoV3 {
+            reward_address: internal_staker_info.reward_address,
+            operational_address: internal_staker_info.operational_address,
+            unstake_time: internal_staker_info.unstake_time,
+            amount_own: amount_own.to_strk_native_amount(),
+            unclaimed_rewards_own: internal_staker_info.unclaimed_rewards_own,
+        }
     }
 }
 
