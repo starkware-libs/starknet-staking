@@ -23,6 +23,7 @@
 - update rewards for 2 different blocks in the same epoch - should be same rewards.
 - Change epoch len in blocks - rewards should be changed.
 - disable_rewards = true, advance block, disable_rewards = false, advance block, disable_rewards = true, test rewards.
+- update rewards for some different blocks in the same epoch, test rewards of pool member.
 
 ## v3 flag
 - update_rewards_from_attestation, update_rewards (not distribute), set_v3_epoch, update_rewards_from_attestation, update_rewards (not distribute), advance epoch to v3 epoch, update_rewards_from_attestation-panic, update_rewards-distribute, advance epoch, update_rewards_from_attestation-panic, update_rewards-distribute, advance epoch, update_rewards_from_attestation-panic, update_rewards with disable rewards-not distribute.

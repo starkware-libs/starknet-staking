@@ -28,6 +28,7 @@
   "pnpm": {
     "patchedDependencies": {},
     "overrides": {
+      "era-contracts": "github:matter-labs/era-contracts#446d391d34bdb48255d5f8fef8a8248925fc98b9",
       "ethereumjs-abi": "https://registry.npmjs.org/ethereumjs-abi/-/ethereumjs-abi-0.6.8.tgz"
     },
     "packageExtensions": {
