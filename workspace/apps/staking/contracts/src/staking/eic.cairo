@@ -1,7 +1,7 @@
 /// An External Initializer Contract to upgrade a staking contract.
 /// This EIC is used to upgrade the staking contract from V1 to V2 (BTC).
 #[starknet::contract]
-mod StakingEICV1toV2 {
+mod StakingEIC {
     use core::cmp::min;
     use core::num::traits::Zero;
     use staking::constants::STRK_TOKEN_ADDRESS;

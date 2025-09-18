@@ -1,8 +1,9 @@
 use MainnetClassHashes::{
     MAINNET_ATTESTATION_CLASS_HASH_V1, MAINNET_MINTING_CURVE_CLASS_HASH_V0,
-    MAINNET_POOL_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V1, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0,
-    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V0,
-    MAINNET_STAKING_CLASS_HASH_V1,
+    MAINNET_POOL_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V1, MAINNET_POOL_EIC_CLASS_HASH_V0_V1,
+    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1,
+    MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1,
+    MAINNET_STAKING_EIC_CLASS_HASH_V0_V1,
 };
 use core::num::traits::zero::Zero;
 use core::traits::Into;
@@ -53,8 +54,7 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
-    declare_pool_contract, declare_pool_eic_contract, declare_staking_eic_contract_v0_v1,
-    declare_staking_eic_contract_v1_v2, deploy_mock_erc20_decimals_contract, fund,
+    declare_pool_contract, declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, fund,
 };
 use staking::types::{
     Amount, BlockNumber, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
@@ -96,6 +96,11 @@ pub(crate) mod MainnetClassHashes {
         0x03f85b23fd3c13e55134f583f22f3046d0e2cc2e6a6c61431137cee9d55deaf7.try_into().unwrap()
     }
 
+    /// Class hash of the staking EIC contract used to upgrade the staking contract from V0 to V1.
+    pub(crate) fn MAINNET_STAKING_EIC_CLASS_HASH_V0_V1() -> ClassHash {
+        0x00ffcfa25f7693bd36217df9e1a13e3ab1ea46308012df885d91507c6aafa39f.try_into().unwrap()
+    }
+
     /// Class hash of the first reward supplier contract deployed on mainnet.
     pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash {
         0x7cbbebcdbbce7bd45611d8b679e524b63586429adee0f858b7f0994d709d648.try_into().unwrap()
@@ -119,6 +124,11 @@ pub(crate) mod MainnetClassHashes {
     /// Class hash of the second pool contract deployed on mainnet (upgraded in V1).
     pub(crate) fn MAINNET_POOL_CLASS_HASH_V1() -> ClassHash {
         0x05f6abc83b23af3af179388e1e2bf93096047ba6d8c480360d3c88f7d175bdef.try_into().unwrap()
+    }
+
+    /// Class hash of the pool EIC contract used to upgrade the pool contract from V0 to V1.
+    pub(crate) fn MAINNET_POOL_EIC_CLASS_HASH_V0_V1() -> ClassHash {
+        0x01db7b83e48c691d73dc354d21c3a8e072a54039c6fea993a8579ee6a3df52de.try_into().unwrap()
     }
 
     /// Class hash of the first attestation contract deployed on mainnet (deployed in V1).
@@ -1718,7 +1728,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     /// Upgrades the staking contract in the system state with V1 implementation.
     fn upgrade_staking_implementation_v1(self: SystemState) {
         let eic_data = EICData {
-            eic_hash: declare_staking_eic_contract_v0_v1(),
+            eic_hash: MAINNET_STAKING_EIC_CLASS_HASH_V0_V1(),
             eic_init_data: array![
                 MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_DURATION.into(), EPOCH_LENGTH.into(),
                 STARTING_BLOCK_OFFSET.into(), MAINNET_POOL_CLASS_HASH_V1().into(),
@@ -1755,7 +1765,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
     /// Upgrades the pool contract in the system state with V1 implementation.
     fn upgrade_pool_implementation_v1(self: SystemState, pool: PoolState) {
         let eic_data = EICData {
-            eic_hash: declare_pool_eic_contract(),
+            eic_hash: MAINNET_POOL_EIC_CLASS_HASH_V0_V1(),
             eic_init_data: array![MAINNET_POOL_CLASS_HASH_V0().into()].span(),
         };
         let implementation_data = ImplementationData {
@@ -1804,7 +1814,7 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
     /// Upgrades the staking contract in the system state with a local implementation.
     fn upgrade_staking_implementation_v2(self: SystemState) {
         let eic_data = EICData {
-            eic_hash: declare_staking_eic_contract_v1_v2(),
+            eic_hash: declare_staking_eic_contract(),
             eic_init_data: array![
                 MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
             ]

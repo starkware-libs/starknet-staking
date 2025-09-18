@@ -94,12 +94,11 @@ use test_utils::{
     approve, calculate_staker_btc_pool_rewards, calculate_staker_btc_pool_rewards_v3,
     calculate_staker_strk_rewards, calculate_staker_strk_rewards_with_balances_v3,
     cheat_target_attestation_block_hash, constants, custom_decimals_token, declare_pool_contract,
-    declare_staking_eic_contract_v1_v2, deploy_mock_erc20_decimals_contract,
-    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
-    general_contract_system_deployment, load_from_simple_map, load_from_trace, load_one_felt,
-    load_trace_length, setup_btc_token, stake_for_testing_using_dispatcher, stake_from_zero_address,
-    stake_with_strk_pool_enabled, store_internal_staker_info_v0_to_map, store_to_simple_map,
-    to_amount_18_decimals,
+    declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, deploy_staking_contract,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    load_from_simple_map, load_from_trace, load_one_felt, load_trace_length, setup_btc_token,
+    stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_strk_pool_enabled,
+    store_internal_staker_info_v0_to_map, store_to_simple_map, to_amount_18_decimals,
 };
 
 #[test]
@@ -4757,7 +4756,7 @@ fn test_staking_eic() {
     // Upgrade.
     let new_pool_contract_class_hash = declare_pool_contract();
     let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract_v1_v2(),
+        eic_hash: declare_staking_eic_contract(),
         eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), new_pool_contract_class_hash.into()]
             .span(),
     };
@@ -4829,7 +4828,7 @@ fn test_staking_eic() {
 // #[feature("safe_dispatcher")]
 // fn test_staking_eic_assertions() {
 //     let eic_library_safe_dispatcher = IEICInitializableSafeLibraryDispatcher {
-//         class_hash: declare_staking_eic_contract_v1_v2(),
+//         class_hash: declare_staking_eic_contract(),
 //     };
 //     // Catch EXPECTED_DATA_LENGTH_2.
 //     let result = eic_library_safe_dispatcher.eic_initialize(eic_init_data: [].span());
@@ -4858,7 +4857,7 @@ fn test_staking_eic_without_pause() {
     let upgrade_governor = cfg.test_info.upgrade_governor;
     // Upgrade.
     let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract_v1_v2(),
+        eic_hash: declare_staking_eic_contract(),
         eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into()]
             .span(),
     };
@@ -4896,9 +4895,7 @@ fn test_staking_eic_with_wrong_number_of_data_elements() {
     let upgrade_governor = cfg.test_info.upgrade_governor;
     let security_agent = cfg.test_info.security_agent;
     // Upgrade.
-    let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract_v1_v2(), eic_init_data: [].span(),
-    };
+    let eic_data = EICData { eic_hash: declare_staking_eic_contract(), eic_init_data: [].span() };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
     };
@@ -4923,7 +4920,7 @@ fn test_staking_eic_total_stake_trace_empty() {
     let security_agent = cfg.test_info.security_agent;
     // Upgrade.
     let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract_v1_v2(),
+        eic_hash: declare_staking_eic_contract(),
         eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into()]
             .span(),
     };
@@ -4950,7 +4947,7 @@ fn test_staking_eic_prev_class_hash_zero_class_hash() {
     let security_agent = cfg.test_info.security_agent;
     // Upgrade.
     let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract_v1_v2(),
+        eic_hash: declare_staking_eic_contract(),
         eic_init_data: [Zero::zero(), declare_pool_contract().into()].span(),
     };
     let implementation_data = ImplementationData {
@@ -4977,7 +4974,7 @@ fn test_staking_eic_pool_contract_zero_class_hash() {
     let security_agent = cfg.test_info.security_agent;
     // Upgrade.
     let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract_v1_v2(),
+        eic_hash: declare_staking_eic_contract(),
         eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), Zero::zero()].span(),
     };
     let implementation_data = ImplementationData {
