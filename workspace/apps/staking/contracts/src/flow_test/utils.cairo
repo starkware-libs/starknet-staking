@@ -1790,25 +1790,15 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         self.staking.pause();
         self.upgrade_staking_implementation_v2();
         self.upgrade_reward_supplier_implementation_v2();
+        self.upgrade_minting_curve_implementation_v2();
         if let Option::Some(staker_address) = self.staker_address {
             self.staker_migration(staker_address);
         }
-        self.staking.unpause();
         self.minting_curve.set_c_num(DEFAULT_C_NUM);
         // Add BTC token to the staking contract.
-        cheat_caller_address(
-            contract_address: self.staking.address,
-            caller_address: self.staking.roles.token_admin,
-            span: CheatSpan::TargetCalls(2),
-        );
-        self
-            .staking
-            .token_manager_dispatcher()
-            .add_token(token_address: self.btc_token.contract_address());
-        self
-            .staking
-            .token_manager_dispatcher()
-            .enable_token(token_address: self.btc_token.contract_address());
+        self.staking.add_token(token_address: self.btc_token.contract_address());
+        self.staking.unpause();
+        self.staking.enable_token(token_address: self.btc_token.contract_address());
     }
 
     /// Upgrades the staking contract in the system state with a local implementation.
@@ -1839,6 +1829,18 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
             contract_address: self.reward_supplier.address,
             :implementation_data,
             upgrade_governor: self.reward_supplier.roles.upgrade_governor,
+        );
+    }
+
+    /// Upgrades the minting curve contract in the system state with a local implementation.
+    fn upgrade_minting_curve_implementation_v2(self: SystemState) {
+        let implementation_data = ImplementationData {
+            impl_hash: declare_minting_curve_contract(), eic_data: Option::None, final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.minting_curve.address,
+            :implementation_data,
+            upgrade_governor: self.minting_curve.roles.upgrade_governor,
         );
     }
 }
