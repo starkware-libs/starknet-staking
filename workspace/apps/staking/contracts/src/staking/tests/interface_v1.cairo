@@ -1,5 +1,4 @@
-use staking::types::{Amount, Index};
-use starknet::ContractAddress;
+use staking::types::Amount;
 
 /// Staking V1 interface.
 /// Used for testing purposes.
@@ -7,12 +6,4 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait IStakingV1ForTests<TContractState> {
     fn get_current_total_staking_power(self: @TContractState) -> Amount;
-}
-
-/// Staking Pool V1 interface.
-/// Used for testing purposes.
-#[cfg(test)]
-#[starknet::interface]
-pub trait IStakingPoolV1ForTests<TContractState> {
-    fn pool_migration(ref self: TContractState, staker_address: ContractAddress) -> Index;
 }

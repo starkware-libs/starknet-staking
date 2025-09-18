@@ -1,6 +1,4 @@
 #[cfg(test)]
-mod eic_v0_v1;
-#[cfg(test)]
 pub(crate) mod interface_v0;
 #[cfg(test)]
 pub(crate) mod interface_v1;
