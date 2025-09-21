@@ -955,16 +955,13 @@ pub mod Pool {
                 // 1` implies `len - 1` was written, so `len > idx` and we never reach this point.
                 if epoch < target_epoch {
                     return Some(sigma);
-                } else {
-                    // Note: When handling a checkpoint from the old version, it never reaches here.
-                    assert!(
-                        cumulative_rewards_trace_idx > 1, "Invalid cumulative rewards trace idx",
-                    );
-                    let (epoch, sigma) = cumulative_rewards_trace_vec
-                        .at(cumulative_rewards_trace_idx - 2);
-                    assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
-                    return Some(sigma);
                 }
+                // Note: When handling a checkpoint from the old version, it never reaches here.
+                assert!(cumulative_rewards_trace_idx > 1, "Invalid cumulative rewards trace idx");
+                let (epoch, sigma) = cumulative_rewards_trace_vec
+                    .at(cumulative_rewards_trace_idx - 2);
+                assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+                return Some(sigma);
             }
 
             // Edge case 3: `idx = 1`.
@@ -979,12 +976,11 @@ pub mod Pool {
                 let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx);
                 if epoch < target_epoch {
                     return Some(sigma);
-                } else {
-                    let (epoch, sigma) = cumulative_rewards_trace_vec
-                        .at(cumulative_rewards_trace_idx - 1);
-                    assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
-                    return Some(sigma);
                 }
+                let (epoch, sigma) = cumulative_rewards_trace_vec
+                    .at(cumulative_rewards_trace_idx - 1);
+                assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+                return Some(sigma);
             }
 
             // Edge case 4: `idx = len + 1`.
@@ -1016,20 +1012,16 @@ pub mod Pool {
             // Three entries in the cumulative rewards trace are relevant (idx, idx - 1, idx - 2).
             let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx);
             if epoch < target_epoch {
-                sigma
-            } else {
-                let (epoch, sigma) = cumulative_rewards_trace_vec
-                    .at(cumulative_rewards_trace_idx - 1);
-                if epoch < target_epoch {
-                    sigma
-                } else {
-                    // Note: When handling a checkpoint from the old version, it never reaches here.
-                    let (epoch, sigma) = cumulative_rewards_trace_vec
-                        .at(cumulative_rewards_trace_idx - 2);
-                    assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
-                    sigma
-                }
+                return sigma;
             }
+            let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
+            if epoch < target_epoch {
+                return sigma;
+            }
+            // Note: When handling a checkpoint from the old version, it never reaches here.
+            let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 2);
+            assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+            sigma
         }
 
         fn get_commission_from_staking_contract(self: @ContractState) -> Commission {
