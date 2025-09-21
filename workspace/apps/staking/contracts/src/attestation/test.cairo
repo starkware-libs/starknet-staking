@@ -84,28 +84,10 @@ fn test_attest() {
 }
 
 #[test]
-#[should_panic(expected: "Attestation for starting epoch is not allowed")]
-fn test_attest_starting_epoch() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let attestation_contract = cfg.test_info.attestation_contract;
-    let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
-    let block_hash = Zero::zero();
-    stake_for_testing_using_dispatcher(:cfg);
-    advance_block_into_attestation_window(:cfg, stake: Zero::zero());
-    cheat_target_attestation_block_hash(:cfg, :block_hash);
-    cheat_caller_address_once(
-        contract_address: attestation_contract, caller_address: cfg.staker_info.operational_address,
-    );
-    attestation_dispatcher.attest(:block_hash);
-}
-
-#[test]
 #[feature("safe_dispatcher")]
 fn test_attest_assertions() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
-    advance_epoch_global();
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
@@ -122,9 +104,27 @@ fn test_attest_assertions() {
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
     let block_hash = Zero::zero();
 
-    // TODO: Catch ATTEST_STARTING_EPOCH here and delete test_attest_starting_epoch.
+    // Catch ATTEST_STARTING_EPOCH.
+    let block_offset = calculate_block_offset(
+        stake: Zero::zero(),
+        epoch_id: cfg.staking_contract_info.epoch_info.current_epoch().into(),
+        staker_address: cfg.test_info.staker_address.into(),
+        epoch_len: cfg.staking_contract_info.epoch_info.epoch_len_in_blocks().into(),
+        attestation_window: new_attestation_window,
+    );
+    advance_block_number_global(blocks: block_offset + new_attestation_window.into());
+    cheat_target_attestation_block_hash(:cfg, :block_hash);
+    cheat_caller_address_once(
+        contract_address: attestation_contract, caller_address: operational_address,
+    );
+    let result = attestation_safe_dispatcher.attest(:block_hash);
+    assert_panic_with_error(:result, expected_error: Error::ATTEST_STARTING_EPOCH.describe());
 
-    advance_epoch_global();
+    // advance to next epoch.
+    let epoch_info = IStakingDispatcher { contract_address: staking_contract }.get_epoch_info();
+    let next_epoch_starting_block = epoch_info.current_epoch_starting_block()
+        + epoch_info.epoch_len_in_blocks().into();
+    advance_block_number_global(blocks: next_epoch_starting_block - get_block_number());
     // Catch ATTEST_WITH_ZERO_BALANCE.
     let block_offset = calculate_block_offset(
         stake: Zero::zero(),
