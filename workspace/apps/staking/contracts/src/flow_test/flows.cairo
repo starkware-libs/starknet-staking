@@ -7,13 +7,13 @@ use staking::errors::GenericError;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
     SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait,
-    TokenHelperTrait,
+    TokenHelperTrait, upgrade_implementation,
 };
 use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
-use staking::pool::pool::Pool::BTC_18D_CONFIG;
+use staking::pool::pool::Pool::{BTC_18D_CONFIG, BTC_8D_CONFIG, STRK_CONFIG};
 use staking::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
@@ -29,13 +29,14 @@ use staking::test_utils::constants::{
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
     calculate_staker_strk_rewards_with_amount_and_pool_info, calculate_strk_pool_rewards,
-    calculate_strk_pool_rewards_with_pool_balance, compute_rewards_per_unit, deserialize_option,
-    load_from_iterable_map, load_from_trace, load_trace_length, strk_pool_update_rewards,
-    to_amount_18_decimals,
+    calculate_strk_pool_rewards_with_pool_balance, compute_rewards_per_unit, declare_pool_contract,
+    declare_pool_eic_contract, deserialize_option, load_from_iterable_map, load_from_trace,
+    load_one_felt, load_trace_length, strk_pool_update_rewards, to_amount_18_decimals,
 };
 use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
 use staking::utils::compute_rewards_rounded_down;
 use starknet::{ContractAddress, Store};
+use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::math::utils::mul_wide_and_div;
@@ -6877,6 +6878,190 @@ pub(crate) impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
 
         let active_tokens = system.staking.dispatcher().get_active_tokens();
         assert!(active_tokens == expected_active_tokens);
+    }
+}
+
+#[derive(Drop, Copy)]
+pub(crate) struct PoolEICFlow {
+    pub(crate) pool_v0: Option<ContractAddress>,
+    pub(crate) pool_v1: Option<ContractAddress>,
+    pub(crate) pool_v2: Option<ContractAddress>,
+    pub(crate) pool_btc_8d_v2: Option<ContractAddress>,
+    pub(crate) pool_btc_18d_v2: Option<ContractAddress>,
+}
+pub(crate) impl PoolEICFlowImpl of FlowTrait<PoolEICFlow> {
+    fn get_pool_address(self: PoolEICFlow) -> Option<ContractAddress> {
+        self.pool_v0
+    }
+
+    fn setup(ref self: PoolEICFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool_address = system.staking.get_pool(:staker);
+        self.pool_v0 = Option::Some(pool_address);
+    }
+
+    fn setup_v1(ref self: PoolEICFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool_address = system.staking.get_pool(:staker);
+        self.pool_v1 = Option::Some(pool_address);
+    }
+
+    fn setup_v2(ref self: PoolEICFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool_address = system.staking.get_pool(:staker);
+        self.pool_v2 = Option::Some(pool_address);
+        // Open BTC pool with 8 decimals.
+        let btc_8d_token = system.btc_token;
+        let btc_8d_token_address = btc_8d_token.contract_address();
+        let pool_btc_8d = system
+            .set_open_for_delegation(:staker, token_address: btc_8d_token_address);
+        self.pool_btc_8d_v2 = Option::Some(pool_btc_8d);
+        // Open BTC pool with 18 decimals.
+        let btc_18d_token = system.deploy_second_btc_token();
+        let btc_18d_token_address = btc_18d_token.contract_address();
+        system.staking.add_token(token_address: btc_18d_token_address);
+        system.staking.enable_token(token_address: btc_18d_token_address);
+        let pool_btc_18d = system
+            .set_open_for_delegation(:staker, token_address: btc_18d_token_address);
+        self.pool_btc_18d_v2 = Option::Some(pool_btc_18d);
+    }
+
+    fn test(self: PoolEICFlow, ref system: SystemState) {
+        let pools = [
+            self.pool_v0.unwrap(), self.pool_v1.unwrap(), self.pool_v2.unwrap(),
+            self.pool_btc_8d_v2.unwrap(), self.pool_btc_18d_v2.unwrap(),
+        ];
+
+        // Test storage variables before upgrade.
+        // Test storage variables of old STRK pools.
+        let strk_pools_before_v2 = [self.pool_v0.unwrap(), self.pool_v1.unwrap()];
+        for strk_pool in strk_pools_before_v2.span() {
+            let min_delegation_for_rewards: Amount = load_one_felt(
+                target: *strk_pool, storage_address: selector!("min_delegation_for_rewards"),
+            )
+                .try_into()
+                .unwrap();
+            assert!(min_delegation_for_rewards.is_zero());
+            let staking_rewards_base_value: Amount = load_one_felt(
+                target: *strk_pool, storage_address: selector!("staking_rewards_base_value"),
+            )
+                .try_into()
+                .unwrap();
+            assert!(staking_rewards_base_value.is_zero());
+        }
+        // Test storage variables of new STRK pool.
+        let strk_pool = self.pool_v2.unwrap();
+        let min_delegation_for_rewards: Amount = load_one_felt(
+            target: strk_pool, storage_address: selector!("min_delegation_for_rewards"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(min_delegation_for_rewards == STRK_CONFIG.min_for_rewards);
+        let staking_rewards_base_value: Amount = load_one_felt(
+            target: strk_pool, storage_address: selector!("staking_rewards_base_value"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(staking_rewards_base_value == STRK_CONFIG.base_value);
+        // Test storage variables of 8 decimals BTC pool.
+        let btc_8d_pool = self.pool_btc_8d_v2.unwrap();
+        let min_delegation_for_rewards: Amount = load_one_felt(
+            target: btc_8d_pool, storage_address: selector!("min_delegation_for_rewards"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(min_delegation_for_rewards == BTC_8D_CONFIG.min_for_rewards);
+        let staking_rewards_base_value: Amount = load_one_felt(
+            target: btc_8d_pool, storage_address: selector!("staking_rewards_base_value"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(staking_rewards_base_value == BTC_8D_CONFIG.base_value);
+        // Test storage variables of 18 decimals BTC pool.
+        let btc_18d_pool = self.pool_btc_18d_v2.unwrap();
+        let min_delegation_for_rewards: Amount = load_one_felt(
+            target: btc_18d_pool, storage_address: selector!("min_delegation_for_rewards"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(min_delegation_for_rewards == BTC_18D_CONFIG.min_for_rewards);
+        let staking_rewards_base_value: Amount = load_one_felt(
+            target: btc_18d_pool, storage_address: selector!("staking_rewards_base_value"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(staking_rewards_base_value == BTC_18D_CONFIG.base_value);
+
+        // Upgrade pools.
+        for pool in pools.span() {
+            // Upgrade pool using EIC.
+            let eic_data = EICData {
+                eic_hash: declare_pool_eic_contract(), eic_init_data: [].span(),
+            };
+            let implementation_data = ImplementationData {
+                impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+            };
+            upgrade_implementation(
+                contract_address: *pool,
+                :implementation_data,
+                upgrade_governor: system.staking.address,
+            );
+        }
+
+        // Test storage variables after upgrade.
+        // Test storage variables of STRK pools.
+        let strk_pools = [self.pool_v0.unwrap(), self.pool_v1.unwrap(), self.pool_v2.unwrap()];
+        for strk_pool in strk_pools.span() {
+            let min_delegation_for_rewards: Amount = load_one_felt(
+                target: *strk_pool, storage_address: selector!("min_delegation_for_rewards"),
+            )
+                .try_into()
+                .unwrap();
+            assert!(min_delegation_for_rewards == STRK_CONFIG.min_for_rewards);
+            let staking_rewards_base_value: Amount = load_one_felt(
+                target: *strk_pool, storage_address: selector!("staking_rewards_base_value"),
+            )
+                .try_into()
+                .unwrap();
+            assert!(staking_rewards_base_value == STRK_CONFIG.base_value);
+        }
+        // Test storage variables of 8 decimals BTC pool.
+        let btc_8d_pool = self.pool_btc_8d_v2.unwrap();
+        let min_delegation_for_rewards: Amount = load_one_felt(
+            target: btc_8d_pool, storage_address: selector!("min_delegation_for_rewards"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(min_delegation_for_rewards == BTC_8D_CONFIG.min_for_rewards);
+        let staking_rewards_base_value: Amount = load_one_felt(
+            target: btc_8d_pool, storage_address: selector!("staking_rewards_base_value"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(staking_rewards_base_value == BTC_8D_CONFIG.base_value);
+        // Test storage variables of 18 decimals BTC pool.
+        let btc_18d_pool = self.pool_btc_18d_v2.unwrap();
+        let min_delegation_for_rewards: Amount = load_one_felt(
+            target: btc_18d_pool, storage_address: selector!("min_delegation_for_rewards"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(min_delegation_for_rewards == BTC_18D_CONFIG.min_for_rewards);
+        let staking_rewards_base_value: Amount = load_one_felt(
+            target: btc_18d_pool, storage_address: selector!("staking_rewards_base_value"),
+        )
+            .try_into()
+            .unwrap();
+        assert!(staking_rewards_base_value == BTC_18D_CONFIG.base_value);
     }
 }
 // TODO: Implement this flow test.
