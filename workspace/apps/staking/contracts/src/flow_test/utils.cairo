@@ -273,6 +273,11 @@ pub(crate) impl StakingImpl of StakingTrait {
         class_hash == MAINNET_STAKING_CLASS_HASH_V1()
     }
 
+    fn is_v2(self: StakingState) -> bool {
+        let class_hash = snforge_std::get_class_hash(self.address);
+        class_hash == MAINNET_STAKING_CLASS_HASH_V2()
+    }
+
     fn safe_dispatcher(self: StakingState) -> IStakingSafeDispatcher nopanic {
         IStakingSafeDispatcher { contract_address: self.address }
     }
@@ -1126,11 +1131,15 @@ pub(crate) impl SystemImpl of SystemTrait {
 
     /// Advances the block timestamp by the exit wait window and advance epoch.
     ///
-    /// Note: This function is built on the assumption that exit window > k epochs
+    /// Note: This function is built on the assumption that exit window > `K` epochs.
     fn advance_exit_wait_window(ref self: SystemState) {
         self.advance_time(time: self.staking.get_exit_wait_window());
         if !self.staking.is_v0() {
-            self.advance_epoch();
+            if self.staking.is_v1() || self.staking.is_v2() {
+                self.advance_epoch();
+            } else {
+                self.advance_k_epochs();
+            }
         }
     }
 
