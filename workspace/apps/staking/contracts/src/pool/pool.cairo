@@ -12,7 +12,7 @@ pub mod Pool {
         IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
         IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::STRK_TOKEN_ADDRESS;
+    use staking::constants::{K, STRK_TOKEN_ADDRESS};
     use staking::errors::GenericError;
     use staking::pool::errors::Error;
     use staking::pool::interface::{
@@ -718,8 +718,8 @@ pub mod Pool {
             staking_dispatcher.get_current_epoch()
         }
 
-        fn get_next_epoch(self: @ContractState) -> Epoch {
-            self.get_current_epoch() + 1
+        fn get_epoch_plus_k(self: @ContractState) -> Epoch {
+            self.get_current_epoch() + K.into()
         }
 
         fn get_last_member_balance(self: @ContractState, pool_member: ContractAddress) -> Amount {
@@ -743,12 +743,13 @@ pub mod Pool {
             let trace = self.pool_member_epoch_balance.entry(pool_member);
             let pool_member_balance = PoolMemberBalanceTrait::new(
                 balance: amount,
-                cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length(),
+                cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length() + 1,
             );
-            trace.insert(key: self.get_next_epoch(), value: pool_member_balance);
+            trace.insert(key: self.get_epoch_plus_k(), value: pool_member_balance);
         }
 
-        /// Increase the next epoch balance of the pool member by the given `amount`.
+        /// Increase the pool member's balance for the current epoch + K by the given
+        /// `amount`.
         /// Returns the previous balance.
         fn increase_member_balance(
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
@@ -778,8 +779,12 @@ pub mod Pool {
             if last_epoch <= current_epoch {
                 return last_value.balance();
             }
-            // Assert last balance change is in the current epoch.
-            assert!(last_epoch == current_epoch + 1, "{}", Error::INVALID_LAST_EPOCH);
+            // Assert last epoch is valid.
+            assert!(
+                last_epoch == current_epoch + 1 || last_epoch == current_epoch + 2,
+                "{}",
+                Error::INVALID_LAST_EPOCH,
+            );
 
             // Otherwise, if it's the only change, return the initial value (the value before the
             // migration).
@@ -787,11 +792,28 @@ pub mod Pool {
                 return self.internal_pool_member_info(:pool_member)._deprecated_amount;
             }
 
-            // Otherwise, the second last balance change is the relevant one.
+            // Otherwise, the second last balance change is the relevant one for checking.
             let (second_last_epoch, second_last_value) = trace.second_last();
-            assert!(second_last_epoch <= current_epoch, "{}", GenericError::INVALID_SECOND_LAST);
 
-            second_last_value.balance()
+            // If the second last balance change is before the current epoch, return its balance.
+            if second_last_epoch <= current_epoch {
+                return second_last_value.balance();
+            }
+            // Assert second last epoch is valid.
+            assert!(second_last_epoch == current_epoch + 1, "{}", Error::INVALID_SECOND_LAST_EPOCH);
+
+            // Otherwise, if these are the only changes, return the initial value (the value before
+            // the migration).
+            if trace_len == 2 {
+                return self.internal_pool_member_info(:pool_member)._deprecated_amount;
+            }
+
+            // Otherwise, the third last balance change is the relevant one.
+            let (third_last_epoch, third_last_value) = trace.third_last();
+
+            assert!(third_last_epoch <= current_epoch, "{}", GenericError::INVALID_THIRD_LAST);
+
+            third_last_value.balance()
         }
 
         /// Returns the checkpoint for the current epoch.
@@ -882,8 +904,9 @@ pub mod Pool {
         fn find_sigma(
             self: @ContractState, pool_member_checkpoint: PoolMemberCheckpoint,
         ) -> Amount {
+            let pool_member_checkpoint_epoch = pool_member_checkpoint.epoch();
             assert!(
-                pool_member_checkpoint.epoch() <= self.get_current_epoch(),
+                pool_member_checkpoint_epoch <= self.get_current_epoch(),
                 "{}",
                 GenericError::INVALID_EPOCH,
             );
@@ -891,9 +914,20 @@ pub mod Pool {
             let cumulative_rewards_trace_idx = pool_member_checkpoint
                 .cumulative_rewards_trace_idx();
 
+            // **Reminder**:
+            // Let `len` be the length of `cumulative_rewards_trace_vec` at the time the checkpoint
+            // is written.
+            // In old version: `cumulative_rewards_trace_idx` = `len`.
+            // In this version: `cumulative_rewards_trace_idx` = `len + 1`.
+            // For current checkpoint in both versions: `cumulative_rewards_trace_idx` = `len - 1`.
+            // **Invariant**:
+            // 1. `cumulative_rewards_trace_vec.length() >= 1`.
+            // 2. `cumulative_rewards_trace_vec.length()` is only increased, never decreased.
             if let Some(sigma) = self
                 .find_sigma_edge_cases(
-                    :cumulative_rewards_trace_vec, :cumulative_rewards_trace_idx,
+                    :cumulative_rewards_trace_vec,
+                    :cumulative_rewards_trace_idx,
+                    target_epoch: pool_member_checkpoint_epoch,
                 ) {
                 return sigma;
             }
@@ -902,52 +936,115 @@ pub mod Pool {
                 .find_sigma_standard_case(
                     :cumulative_rewards_trace_vec,
                     :cumulative_rewards_trace_idx,
-                    target_epoch: pool_member_checkpoint.epoch(),
+                    target_epoch: pool_member_checkpoint_epoch,
                 )
         }
 
-        /// Returns the sigma for edge cases of `find_sigma`.
+        /// Handles edge cases for `find_sigma`.
+        ///
+        /// For edge cases, returns the `sigma` of the latest checkpoint whose `epoch` <
+        /// `target_epoch`. Otherwise, returns `None`.
         fn find_sigma_edge_cases(
             self: @ContractState,
             cumulative_rewards_trace_vec: StorageBase<Trace>,
             cumulative_rewards_trace_idx: VecIndex,
+            target_epoch: Epoch,
         ) -> Option<Amount> {
             // Edge case 1: Pool member enter delegation before any rewards given to the pool.
             if cumulative_rewards_trace_idx == 0 {
                 return Some(Zero::zero());
             }
-            // Edge case 2: Next rewards idx was written, and no rewards given to pool from that
+
+            let cumulative_rewards_trace_len = cumulative_rewards_trace_vec.length();
+
+            // Edge case 2: `idx = len`.
+            // In this version: `len + 1` was written, and rewards given to pool from that moment
+            // only once.
+            // In old version: `len` was written, and no rewards given to pool from that moment.
+            if cumulative_rewards_trace_idx == cumulative_rewards_trace_len {
+                // Two entries in the cumulative rewards trace are relevant (`idx - 1`, `idx - 2`).
+                let (epoch, sigma) = cumulative_rewards_trace_vec
+                    .at(cumulative_rewards_trace_idx - 1);
+                // In case `idx == 1`, `(epoch, sigma)` at `idx - 1` is `(0,0)` (the first trace
+                // entry), so always return here.
+                // This case only occurs in old-version checkpoints. In the current version, `idx =
+                // 1` implies `len - 1` was written, so `len > idx` and we never reach this point.
+                if epoch < target_epoch {
+                    return Some(sigma);
+                } else {
+                    // Note: When handling a checkpoint from the old version, it never reaches here.
+                    assert!(
+                        cumulative_rewards_trace_idx > 1, "Invalid cumulative rewards trace idx",
+                    );
+                    let (epoch, sigma) = cumulative_rewards_trace_vec
+                        .at(cumulative_rewards_trace_idx - 2);
+                    assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+                    return Some(sigma);
+                }
+            }
+
+            // Edge case 3: `idx = 1`.
+            // In this version: `len - 1` was written for the current checkpoint. (`len + 1` wasn't
+            // written since `len >= 1`).
+            // In old version: `len` was written, or `len - 1` was written for the current
+            // checkpoint.
+            // TODO: Use helper function that gets index and looks at two entries in the cumulative
+            // rewards trace here and in edge case 2.
+            if cumulative_rewards_trace_idx == 1 && cumulative_rewards_trace_len > 1 {
+                // Two entries in the cumulative rewards trace are relevant (`idx`, `idx - 1`).
+                let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx);
+                if epoch < target_epoch {
+                    return Some(sigma);
+                } else {
+                    let (epoch, sigma) = cumulative_rewards_trace_vec
+                        .at(cumulative_rewards_trace_idx - 1);
+                    assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+                    return Some(sigma);
+                }
+            }
+
+            // Edge case 4: `idx = len + 1`.
+            // In this version: `len + 1` was written, and no rewards given to pool from that
             // moment.
-            if cumulative_rewards_trace_vec.length() == cumulative_rewards_trace_idx {
-                let (_, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
+            // In old version: never reached here (`len` or `len - 1` was written).
+            if cumulative_rewards_trace_idx == cumulative_rewards_trace_len + 1 {
+                // Only one entry in the cumulative rewards trace is relevant (`idx - 2`).
+                let (epoch, sigma) = cumulative_rewards_trace_vec
+                    .at(cumulative_rewards_trace_len - 1);
+                assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
                 return Some(sigma);
             }
+
             None
         }
 
         /// Returns the sigma for the standard case of `find_sigma`.
-        /// Looks at up to 2 checkpoints in `cumulative_rewards_trace_vec`,
-        /// `cumulative_rewards_trace_idx` and `cumulative_rewards_trace_idx - 1`, and takes the
-        /// latest one (among these checkpoints) whose epoch < `target_epoch`.
+        /// Looks at up to 3 checkpoints in `cumulative_rewards_trace_vec`,
+        /// `cumulative_rewards_trace_idx`, `cumulative_rewards_trace_idx - 1` and
+        /// `cumulative_rewards_trace_idx - 2`, and takes the latest one (among these checkpoints)
+        /// whose `epoch` < `target_epoch`.
         fn find_sigma_standard_case(
             self: @ContractState,
             cumulative_rewards_trace_vec: StorageBase<Trace>,
             cumulative_rewards_trace_idx: VecIndex,
             target_epoch: Epoch,
         ) -> Amount {
-            // Pool member changed balance in epoch j, so j+1 written to pool member checkpoint.
+            // Three entries in the cumulative rewards trace are relevant (idx, idx - 1, idx - 2).
             let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx);
             if epoch < target_epoch {
-                // If pool rewards for epoch j given after pool member balance changed, then pool
-                // member is not eligible in this `rewards_info_idx` and it is infact the latest one
-                // before the staking power change.
                 sigma
             } else {
-                // Else, the pool rewards index given is for an epoch bigger than j, meaning pool
-                // member is eligible for sigma at `cumulative_rewards_trace_idx` and we should take
-                // the previous entry.
-                let (_, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 1);
-                sigma
+                let (epoch, sigma) = cumulative_rewards_trace_vec
+                    .at(cumulative_rewards_trace_idx - 1);
+                if epoch < target_epoch {
+                    sigma
+                } else {
+                    // Note: When handling a checkpoint from the old version, it never reaches here.
+                    let (epoch, sigma) = cumulative_rewards_trace_vec
+                        .at(cumulative_rewards_trace_idx - 2);
+                    assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+                    sigma
+                }
             }
         }
 

@@ -11,7 +11,7 @@ pub mod Staking {
         IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
         IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
+    use staking::constants::{K, STARTING_EPOCH, STRK_TOKEN_ADDRESS};
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -421,10 +421,7 @@ pub mod Staking {
             self.write_staker_info(:staker_address, :staker_info);
 
             // Write the unstake intent epoch.
-            // TODO: Change to 2 epoch with
-            // https://github.com/starkware-industries/starknet-apps/pull/5034
-            // (or in this PR if it's already merged)
-            self.staker_unstake_intent_epoch.write(staker_address, self.get_next_epoch());
+            self.staker_unstake_intent_epoch.write(staker_address, self.get_epoch_plus_k());
 
             // Write off the delegated stake from the total stake.
             for (pool_contract, token_address) in self
@@ -832,8 +829,7 @@ pub mod Staking {
             assert!(curr_epoch >= curr_activation_epoch, "{}", Error::PUBLIC_KEY_SET_IN_PROGRESS);
             assert!(prev_public_key != public_key, "{}", Error::PUBLIC_KEY_MUST_DIFFER);
 
-            // TODO: Use new method for calculating the change epoch.
-            let new_activation_epoch = curr_epoch + 2;
+            let new_activation_epoch = self.get_epoch_plus_k();
             self
                 .public_key
                 .write(staker_address, (new_activation_epoch, prev_public_key, public_key));
@@ -1725,7 +1721,9 @@ pub mod Staking {
             self
                 .tokens_total_stake_trace
                 .entry(token_address)
-                .insert(key: self.get_next_epoch(), value: new_total_stake.to_amount_18_decimals());
+                .insert(
+                    key: self.get_epoch_plus_k(), value: new_total_stake.to_amount_18_decimals(),
+                );
         }
 
         /// Wrap initial operations required in any public staking function.
@@ -1955,8 +1953,8 @@ pub mod Staking {
             (commission_rewards, pool_rewards)
         }
 
-        fn get_next_epoch(self: @ContractState) -> Epoch {
-            self.get_current_epoch() + 1
+        fn get_epoch_plus_k(self: @ContractState) -> Epoch {
+            self.get_current_epoch() + K.into()
         }
 
         fn insert_staker_own_balance(
@@ -1965,7 +1963,7 @@ pub mod Staking {
             self
                 .staker_own_balance_trace
                 .entry(staker_address)
-                .insert(key: self.get_next_epoch(), value: own_balance.to_strk_native_amount());
+                .insert(key: self.get_epoch_plus_k(), value: own_balance.to_strk_native_amount());
         }
 
         fn initialize_staker_own_balance_trace(
@@ -1995,7 +1993,7 @@ pub mod Staking {
                 .entry(staker_address)
                 .entry(pool_contract)
                 .insert(
-                    key: self.get_next_epoch(), value: delegated_balance.to_amount_18_decimals(),
+                    key: self.get_epoch_plus_k(), value: delegated_balance.to_amount_18_decimals(),
                 );
         }
 
@@ -2125,8 +2123,13 @@ pub mod Staking {
                 balance
             } else {
                 let (epoch, balance) = trace.second_last().unwrap_or_else(|err| panic!("{err}"));
-                assert!(epoch <= epoch_id, "{}", GenericError::INVALID_SECOND_LAST);
-                balance
+                if epoch <= epoch_id {
+                    balance
+                } else {
+                    let (epoch, balance) = trace.third_last().unwrap_or_else(|err| panic!("{err}"));
+                    assert!(epoch <= epoch_id, "{}", GenericError::INVALID_THIRD_LAST);
+                    balance
+                }
             };
             NormalizedAmountTrait::from_amount_18_decimals(amount: current_balance)
         }

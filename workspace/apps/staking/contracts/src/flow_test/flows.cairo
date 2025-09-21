@@ -1843,7 +1843,8 @@ pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelega
                 token: second_token,
             );
 
-        // Advance epoch so that attesting will be possible and the delegation will take effect.
+        // Advance k epochs so that attesting will be possible and the delegation will take effect.
+        system.advance_epoch();
         system.advance_epoch();
 
         // Disable token and attest.
@@ -2025,7 +2026,9 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl of FlowTrait<
 /// Add new btc token
 /// Staker open delegation pool for new token
 /// Delegator delegate
-/// Test staking power
+/// Test staking power (zero)
+/// Advance epoch
+/// Test staking power (still zero)
 /// Advance epoch
 /// Test staking power
 #[derive(Drop, Copy)]
@@ -2052,6 +2055,11 @@ pub(crate) impl NewTokenDelegationFlowImpl of FlowTrait<NewTokenDelegationFlow> 
         let delegator = system.new_btc_delegator(amount: delegated_amount, :token);
         system.delegate_btc(:delegator, :pool, amount: delegated_amount, :token);
 
+        // Test total staking power.
+        let total_staking_power = system.staking.get_current_total_staking_power_v2();
+        assert!(total_staking_power == (Zero::zero(), Zero::zero()));
+
+        system.advance_epoch();
         // Test total staking power.
         let total_staking_power = system.staking.get_current_total_staking_power_v2();
         assert!(total_staking_power == (Zero::zero(), Zero::zero()));
@@ -4323,6 +4331,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
         system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
 
         system.advance_epoch();
+        system.advance_epoch();
 
         delegated_amount_1 += stake_amount / 4;
         pool_balance += stake_amount / 4;
@@ -4344,11 +4353,13 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
             );
 
         system.advance_epoch();
+        system.advance_epoch();
         delegated_amount_1 += stake_amount / 4;
         pool_balance += stake_amount / 4;
 
         system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
 
+        system.advance_epoch();
         system.advance_epoch();
         delegated_amount_1 += stake_amount / 4;
         pool_balance += stake_amount / 4;
@@ -4432,6 +4443,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
+        system.advance_epoch();
         system.advance_epoch();
 
         delegator_2_rewards =
@@ -5353,6 +5365,7 @@ pub(crate) impl DelegateIntentSameEpochFlowImpl of FlowTrait<DelegateIntentSameE
         let commission = 200;
 
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch();
         system.advance_epoch();
         system.advance_block_into_attestation_window(:staker);
 
@@ -6330,6 +6343,7 @@ pub(crate) impl SetEpochInfoFlowImpl of FlowTrait<SetEpochInfoFlow> {
         let staker = system.new_staker(amount: stake_amount);
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
         system.advance_epoch();
+        system.advance_epoch();
 
         let target_block_before_set = system
             .attestation
@@ -6398,6 +6412,7 @@ pub(crate) impl AttestAfterDelegatorIntentFlowImpl of FlowTrait<AttestAfterDeleg
 
         let staker = system.new_staker(amount: stake_amount);
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        system.advance_epoch();
         system.advance_epoch();
 
         let pool = system.staking.get_pool(:staker);

@@ -1075,6 +1075,23 @@ pub(crate) fn calculate_staker_strk_rewards_with_amount_and_pool_info(
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
+    let (pool_amount, commission) = if let Option::Some(pool_info) = pool_info {
+        (pool_info.amount, pool_info.commission)
+    } else {
+        (Zero::zero(), Zero::zero())
+    };
+    calculate_staker_strk_rewards_with_balances_v2(
+        :amount_own, :pool_amount, :commission, :staking_contract, :minting_curve_contract,
+    )
+}
+
+pub(crate) fn calculate_staker_strk_rewards_with_balances_v2(
+    amount_own: Amount,
+    pool_amount: Amount,
+    commission: Commission,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+) -> (Amount, Amount) {
     let (strk_epoch_rewards, _) = calculate_current_epoch_rewards(
         :staking_contract, :minting_curve_contract,
     );
@@ -1089,16 +1106,15 @@ pub(crate) fn calculate_staker_strk_rewards_with_amount_and_pool_info(
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
     // Calculate staker STRK pool rewards.
     let pool_rewards = {
-        if let Option::Some(pool_info) = pool_info {
+        if pool_amount.is_non_zero() {
             let pool_rewards_including_commission = mul_wide_and_div(
                 lhs: strk_epoch_rewards,
-                rhs: pool_info.amount,
+                rhs: pool_amount,
                 div: strk_curr_total_stake.to_strk_native_amount(),
             )
                 .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
             let commission_rewards = compute_commission_amount_rounded_down(
-                rewards_including_commission: pool_rewards_including_commission,
-                commission: pool_info.commission,
+                rewards_including_commission: pool_rewards_including_commission, :commission,
             );
             let pool_rewards = pool_rewards_including_commission - commission_rewards;
             staker_rewards += commission_rewards;

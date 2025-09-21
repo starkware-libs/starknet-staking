@@ -53,7 +53,12 @@ fn test_yearly_mint() {
     let minted_tokens = minting_curve_dispatcher.yearly_mint();
     assert!(minted_tokens == 0);
 
-    // After advancing epoch, the stake power is not 0, so we expect minting.
+    // After advancing 1 epoch, the stake power is still 0, so no minting.
+    advance_epoch_global();
+    let minted_tokens = minting_curve_dispatcher.yearly_mint();
+    assert!(minted_tokens == 0);
+
+    // After advancing 2 epochs, the stake power is not 0, so we expect minting.
     advance_epoch_global();
     let minted_tokens = minting_curve_dispatcher.yearly_mint();
     assert!(minted_tokens == expected_minted_tokens);
