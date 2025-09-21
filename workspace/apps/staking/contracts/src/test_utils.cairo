@@ -27,7 +27,7 @@ use snforge_std::{
 };
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
+use staking::constants::{K, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
     IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
@@ -1049,6 +1049,13 @@ pub(crate) fn strk_pool_update_rewards(
 /// Advance one epoch.
 pub(crate) fn advance_epoch_global() {
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
+}
+
+/// Advance `K` epochs.
+pub(crate) fn advance_k_epochs_global() {
+    for _ in 0..K {
+        advance_epoch_global();
+    }
 }
 
 // TODO: rename to v2.

@@ -90,11 +90,12 @@ use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
 use test_utils::{
-    StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
-    approve, calculate_staker_btc_pool_rewards, calculate_staker_btc_pool_rewards_v3,
-    calculate_staker_strk_rewards, calculate_staker_strk_rewards_with_balances_v3,
-    cheat_target_attestation_block_hash, constants, custom_decimals_token, declare_pool_contract,
-    declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, deploy_staking_contract,
+    StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global,
+    advance_k_epochs_global, append_to_trace, approve, calculate_staker_btc_pool_rewards,
+    calculate_staker_btc_pool_rewards_v3, calculate_staker_strk_rewards,
+    calculate_staker_strk_rewards_with_balances_v3, cheat_target_attestation_block_hash, constants,
+    custom_decimals_token, declare_pool_contract, declare_staking_eic_contract,
+    deploy_mock_erc20_decimals_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     load_from_simple_map, load_from_trace, load_one_felt, load_trace_length, setup_btc_token,
     stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_strk_pool_enabled,
@@ -614,8 +615,7 @@ fn test_claim_rewards() {
 
     // Advance k epochs to ensure the total stake in the current epoch is nonzero, preventing a
     // division by zero when calculating rewards.
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
 
     // Calculate the expected staker rewards.
@@ -2055,8 +2055,7 @@ fn test_set_commission() {
 
     // Assert rewards is calculated correctly.
     let pool_balance_before = token_dispatcher.balance_of(account: pool_contract);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     advance_block_into_attestation_window(
         :cfg, stake: cfg.test_info.stake_amount + cfg.pool_member_info._deprecated_amount,
     );
@@ -3104,8 +3103,7 @@ fn test_get_attestation_info_by_operational_address() {
     let staking_contract = cfg.test_info.staking_contract;
     let staking_dispatcher = IStakingAttestationDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let operational_address = cfg.staker_info.operational_address;
     let mut attestation_info = staking_dispatcher
         .get_attestation_info_by_operational_address(:operational_address);
@@ -3196,8 +3194,7 @@ fn test_update_rewards_from_attestation_contract_only_staker() {
         contract_address: reward_supplier,
     };
     stake_for_testing_using_dispatcher(:cfg);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
@@ -3230,8 +3227,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
@@ -3353,8 +3349,7 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     enter_delegation_pool_for_testing_using_dispatcher(
         pool_contract: btc_pool_contract_2, :cfg, token: btc_token_2,
     );
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let pool_member = cfg.test_info.pool_member_address;
@@ -3508,9 +3503,8 @@ fn test_update_rewards_from_attestation_contract_assertions() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start consensus rewards.
-    advance_epoch_global();
-    advance_epoch_global();
+    // Advance `K` epochs to start consensus rewards.
+    advance_k_epochs_global();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: attestation_contract,
     );
@@ -3537,12 +3531,10 @@ fn test_update_rewards_only_staker() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start consensus rewards.
-    advance_epoch_global();
-    advance_epoch_global();
+    // Advance `K` epochs to start consensus rewards.
+    advance_k_epochs_global();
     stake_for_testing_using_dispatcher(:cfg);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let (strk_epoch_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
@@ -3585,12 +3577,10 @@ fn test_update_rewards_miss_blocks() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start consensus rewards.
-    advance_epoch_global();
-    advance_epoch_global();
+    // Advance `K` epochs to start consensus rewards.
+    advance_k_epochs_global();
     stake_for_testing_using_dispatcher(:cfg);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let (strk_epoch_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
@@ -3626,14 +3616,12 @@ fn test_update_rewards_with_strk_pool() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start consensus rewards.
-    advance_epoch_global();
-    advance_epoch_global();
+    // Advance `K` epochs to start consensus rewards.
+    advance_k_epochs_global();
     let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let pool_member = cfg.test_info.pool_member_address;
@@ -3717,9 +3705,8 @@ fn test_update_rewards_with_both_strk_and_btc() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start consensus rewards.
-    advance_epoch_global();
-    advance_epoch_global();
+    // Advance `K` epochs to start consensus rewards.
+    advance_k_epochs_global();
     // Stake and open pool for STRK.
     let strk_pool_contract = stake_with_strk_pool_enabled(:cfg);
     let staker_address = cfg.test_info.staker_address;
@@ -3766,8 +3753,7 @@ fn test_update_rewards_with_both_strk_and_btc() {
         pool_contract: btc_pool_contract_2, :cfg, token: btc_token_2,
     );
     let btc_delegated_amount = cfg.pool_member_info._deprecated_amount;
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let pool_member = cfg.test_info.pool_member_address;
     let strk_pool_dispatcher = IPoolDispatcher { contract_address: strk_pool_contract };
@@ -3970,9 +3956,8 @@ fn test_update_rewards_assertions_already_consensus() {
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
     );
     staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
-    // Advance 2 epochs to start consensus rewards.
-    advance_epoch_global();
-    advance_epoch_global();
+    // Advance `K` epochs to start consensus rewards.
+    advance_k_epochs_global();
 
     // Catch STAKER_NOT_EXISTS.
     let result = staking_rewards_safe_dispatcher
@@ -4037,8 +4022,7 @@ fn test_update_rewards_without_distribute() {
     };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     // `disable_rewards = true`, and !self.is_consensus_rewards_active().
@@ -4665,8 +4649,7 @@ fn test_set_consensus_rewards_first_epoch() {
         .unwrap();
     assert!(consensus_rewards_first_epoch == current_epoch + 3);
     // Set consensus rewards epoch again when currently set to current epoch + 1.
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -4679,8 +4662,7 @@ fn test_set_consensus_rewards_first_epoch() {
         .unwrap();
     assert!(consensus_rewards_first_epoch == current_epoch + 2);
     // Advance to consensus rewards and test that consensus rewards epoch cannot be changed.
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -5361,8 +5343,7 @@ fn test_enable_token() {
     );
     // Add and enable the BTC token.
     let token_admin = cfg.test_info.token_admin;
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(contract_address: staking_contract, caller_address: token_admin);
     staking_token_dispatcher.add_token(token_address: btc_token_address);
@@ -5409,8 +5390,7 @@ fn test_disable_token() {
         span: CheatSpan::TargetCalls(2),
     );
     staking_token_dispatcher.add_token(token_address: btc_token_address);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     staking_token_dispatcher.enable_token(token_address: btc_token_address);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     assert!(staking_dispatcher.get_active_tokens().len() == 2);
@@ -5541,14 +5521,12 @@ fn test_disable_token_assertions() {
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: btc_token_address);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
     let _ = staking_token_manager_safe_dispatcher.disable_token(token_address: btc_token_address);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
@@ -5588,8 +5566,7 @@ fn test_get_total_stake_for_token() {
     let btc_token_address = btc_token.contract_address();
     // Test when zero stake.
     let total_strk_stake = staking_dispatcher.get_total_stake_for_token(:token_address);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let total_btc_stake = staking_dispatcher
         .get_total_stake_for_token(token_address: btc_token_address);
     assert!(total_strk_stake.is_zero());
@@ -5638,11 +5615,9 @@ fn test_get_total_stake_for_token_not_active() {
     let staking_token_dispatcher = IStakingTokenManagerDispatcher {
         contract_address: staking_contract,
     };
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     staking_token_dispatcher.disable_token(token_address: btc_token_address);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     staking_dispatcher.get_total_stake_for_token(token_address: btc_token_address);
 }
 
@@ -5660,8 +5635,7 @@ fn test_set_public_key() {
     // Set and test.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.set_public_key(:public_key);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let returned_public_key = staking_dispatcher.get_current_public_key(:staker_address);
     assert!(returned_public_key == public_key);
 
@@ -5787,8 +5761,7 @@ fn test_set_public_key_while_public_key_set_in_progress() {
 
     advance_epoch_global();
     staking_dispatcher.set_public_key(public_key: public_key_2);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let returned_public_key = staking_dispatcher.get_current_public_key(:staker_address);
     assert!(returned_public_key == public_key_2);
 }
@@ -5807,8 +5780,7 @@ fn test_set_public_key_same_public_key() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.set_public_key(:public_key);
 
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.set_public_key(:public_key);
 }

@@ -50,7 +50,7 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
-    advance_block_into_attestation_window, advance_epoch_global, approve,
+    advance_block_into_attestation_window, advance_epoch_global, advance_k_epochs_global, approve,
     calculate_staker_btc_pool_rewards, calculate_strk_pool_rewards,
     cheat_target_attestation_block_hash, claim_rewards_for_pool_member, constants,
     deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
@@ -462,8 +462,7 @@ fn test_claim_rewards_strk_pool() {
             .pool_member_info_v1(cfg.test_info.pool_member_address) == expected_pool_member_info,
     );
 
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
 
     // Compute expected rewards.
@@ -535,8 +534,7 @@ fn test_claim_rewards_btc_pool() {
             .pool_member_info_v1(cfg.test_info.pool_member_address) == expected_pool_member_info,
     );
 
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
 
     // Compute expected rewards.
     let pool_balance = cfg.pool_member_info._deprecated_amount;
@@ -620,8 +618,7 @@ fn test_claim_rewards_with_balance_changes_strk_pool() {
     let pool_member = cfg.test_info.pool_member_address;
     let delegate_amount = cfg.pool_member_info._deprecated_amount;
 
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
 
     // Pool update rewards.
     let mut pool_balance = delegate_amount;
@@ -636,8 +633,7 @@ fn test_claim_rewards_with_balance_changes_strk_pool() {
     add_to_delegation_pool_with_pool_member(
         :pool_contract, :pool_member, amount: delegate_amount, :token_address,
     );
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     pool_balance += delegate_amount;
     let pool_member_info = pool_dispatcher.pool_member_info_v1(:pool_member);
     let rewards = claim_rewards_for_pool_member(:pool_contract, :pool_member);
@@ -672,8 +668,7 @@ fn test_claim_rewards_with_balance_changes_strk_pool() {
     );
 
     // Balance changes at current epoch & after current epoch.
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     pool_balance += delegate_amount;
     let pool_rewards_for_epoch = calculate_strk_pool_rewards(
         :staker_address, :staking_contract, :minting_curve_contract,
@@ -684,8 +679,7 @@ fn test_claim_rewards_with_balance_changes_strk_pool() {
     add_to_delegation_pool_with_pool_member(
         :pool_contract, :pool_member, amount: delegate_amount, :token_address,
     );
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     add_to_delegation_pool_with_pool_member(
         :pool_contract, :pool_member, amount: delegate_amount, :token_address,
     );
@@ -734,8 +728,7 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     let pool_member = cfg.test_info.pool_member_address;
     let delegate_amount = cfg.pool_member_info._deprecated_amount;
 
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
 
     // Pool update rewards.
     let mut pool_balance = delegate_amount;
@@ -755,8 +748,7 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     add_to_delegation_pool_with_pool_member(
         :pool_contract, :pool_member, amount: delegate_amount, token_address: btc_token_address,
     );
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     pool_balance += delegate_amount;
     let pool_member_info = pool_dispatcher.pool_member_info_v1(:pool_member);
     let rewards = claim_rewards_for_pool_member(:pool_contract, :pool_member);
@@ -796,8 +788,7 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     );
 
     // Balance changes at current epoch & after current epoch.
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     pool_balance += delegate_amount;
     let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
         :pool_balance,
@@ -813,8 +804,7 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     add_to_delegation_pool_with_pool_member(
         :pool_contract, :pool_member, amount: delegate_amount, token_address: btc_token_address,
     );
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     add_to_delegation_pool_with_pool_member(
         :pool_contract, :pool_member, amount: delegate_amount, token_address: btc_token_address,
     );
@@ -973,8 +963,7 @@ fn test_exit_delegation_pool_action() {
     fund(target: reward_supplier, amount: cfg.test_info.stake_amount, :token);
 
     // Attest.
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     advance_block_into_attestation_window(
         :cfg, stake: cfg.test_info.stake_amount + delegate_amount,
     );
@@ -1719,8 +1708,7 @@ fn test_update_rewards_from_staking_contract() {
     let pool_member = cfg.test_info.pool_member_address;
 
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
 
     let rewards = 12345;
     let pool_balance = pool_dispatcher.pool_member_info_v1(:pool_member).amount;

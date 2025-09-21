@@ -30,9 +30,10 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::constants::DUMMY_ADDRESS;
 use test_utils::{
-    StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global, append_to_trace,
-    calculate_block_offset, cheat_target_attestation_block_hash, general_contract_system_deployment,
-    load_one_felt, stake_for_testing_using_dispatcher,
+    StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global,
+    advance_k_epochs_global, append_to_trace, calculate_block_offset,
+    cheat_target_attestation_block_hash, general_contract_system_deployment, load_one_felt,
+    stake_for_testing_using_dispatcher,
 };
 
 #[test]
@@ -62,8 +63,7 @@ fn test_attest() {
     let staker_address = cfg.test_info.staker_address;
     let mut spy = snforge_std::spy_events();
     // advance k epochs to make sure the staker has a balance.
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     // advance into the attestation window.
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
 
@@ -264,8 +264,7 @@ fn test_is_attestation_done_in_curr_epoch() {
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address;
     // advance k epochs to make sure the staker has a balance.
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     // advance into the attestation window.
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
 
@@ -300,8 +299,7 @@ fn test_get_last_epoch_attestation_done() {
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address;
     // advance k epochs to make sure the staker has a balance.
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     // advance into the attestation window.
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
 
@@ -374,8 +372,7 @@ fn test_get_current_epoch_target_attestation_block() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg);
-    advance_epoch_global();
-    advance_epoch_global();
+    advance_k_epochs_global();
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
 
