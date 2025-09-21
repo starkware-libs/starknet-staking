@@ -554,8 +554,8 @@ pub(crate) impl InternalStakerPoolInfoV2MutImpl of InternalStakerPoolInfoV2MutTr
 
     fn get_pools(self: StoragePath<Mutable<InternalStakerPoolInfoV2>>) -> Span<ContractAddress> {
         let mut pools: Array<ContractAddress> = array![];
-        for (pool_contract, _) in self.pools {
-            pools.append(pool_contract);
+        for pool_contract_ptr in self.pools.keys_iter() {
+            pools.append(pool_contract_ptr.read());
         }
         pools.span()
     }
