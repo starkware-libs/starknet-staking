@@ -61,7 +61,8 @@ fn test_attest() {
     let operational_address = cfg.staker_info.operational_address;
     let staker_address = cfg.test_info.staker_address;
     let mut spy = snforge_std::spy_events();
-    // advance epoch to make sure the staker has a balance.
+    // advance k epochs to make sure the staker has a balance.
+    advance_epoch_global();
     advance_epoch_global();
     // advance into the attestation window.
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
@@ -121,6 +122,9 @@ fn test_attest_assertions() {
     attestation_dispatcher.set_attestation_window(attestation_window: new_attestation_window);
     let block_hash = Zero::zero();
 
+    // TODO: Catch ATTEST_STARTING_EPOCH here and delete test_attest_starting_epoch.
+
+    advance_epoch_global();
     // Catch ATTEST_WITH_ZERO_BALANCE.
     let block_offset = calculate_block_offset(
         stake: Zero::zero(),
@@ -215,9 +219,9 @@ fn test_attest_assertions() {
     let result = attestation_safe_dispatcher.attest(:block_hash);
     assert_panic_with_error(:result, expected_error: Error::ATTEST_IS_DONE.describe());
 
-    // Catch INVALID_SECOND_LAST.
-    // Append two checkpoints whose epochs are greater than the current epoch so that both
-    // `last` and `second_last` exceed `curr_epoch`.
+    // Catch INVALID_THIRD_LAST.
+    // Append 3 checkpoints whose epochs are greater than the current epoch so that
+    // `last`, `second_last` and `third_last` exceed `curr_epoch`.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let curr_epoch = staking_dispatcher.get_current_epoch();
     let trace_address = snforge_std::map_entry_address(
@@ -236,12 +240,18 @@ fn test_attest_assertions() {
         key: curr_epoch + 2,
         value: cfg.test_info.stake_amount,
     );
+    append_to_trace(
+        contract_address: staking_contract,
+        :trace_address,
+        key: curr_epoch + 3,
+        value: cfg.test_info.stake_amount,
+    );
 
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
     let result = attestation_safe_dispatcher.attest(:block_hash);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_SECOND_LAST.describe());
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_THIRD_LAST.describe());
 }
 
 #[test]
@@ -253,7 +263,8 @@ fn test_is_attestation_done_in_curr_epoch() {
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address;
-    // advance epoch to make sure the staker has a balance.
+    // advance k epochs to make sure the staker has a balance.
+    advance_epoch_global();
     advance_epoch_global();
     // advance into the attestation window.
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
@@ -288,7 +299,8 @@ fn test_get_last_epoch_attestation_done() {
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
     let staker_address = cfg.test_info.staker_address;
     let operational_address = cfg.staker_info.operational_address;
-    // advance epoch to make sure the staker has a balance.
+    // advance k epochs to make sure the staker has a balance.
+    advance_epoch_global();
     advance_epoch_global();
     // advance into the attestation window.
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
@@ -301,7 +313,7 @@ fn test_get_last_epoch_attestation_done() {
     attestation_dispatcher.attest(:block_hash);
     let last_epoch_attesation_done = attestation_dispatcher
         .get_last_epoch_attestation_done(:staker_address);
-    assert!(last_epoch_attesation_done == 1);
+    assert!(last_epoch_attesation_done == 2);
 }
 
 #[test]
@@ -362,6 +374,7 @@ fn test_get_current_epoch_target_attestation_block() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     stake_for_testing_using_dispatcher(:cfg);
+    advance_epoch_global();
     advance_epoch_global();
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };

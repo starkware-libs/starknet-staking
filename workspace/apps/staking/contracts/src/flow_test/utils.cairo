@@ -1446,6 +1446,7 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
 
     fn advance_epoch_and_attest(self: SystemState, staker: Staker) {
         self.advance_epoch();
+        self.advance_epoch();
         self.advance_block_into_attestation_window(:staker);
         self.attest(:staker);
     }

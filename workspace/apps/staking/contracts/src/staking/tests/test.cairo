@@ -612,8 +612,9 @@ fn test_claim_rewards() {
     // Stake.
     stake_for_testing_using_dispatcher(:cfg);
 
-    // Advance the epoch to ensure the total stake in the current epoch is nonzero, preventing a
+    // Advance k epochs to ensure the total stake in the current epoch is nonzero, preventing a
     // division by zero when calculating rewards.
+    advance_epoch_global();
     advance_epoch_global();
     advance_block_into_attestation_window(:cfg, stake: cfg.test_info.stake_amount);
 
@@ -2055,6 +2056,7 @@ fn test_set_commission() {
     // Assert rewards is calculated correctly.
     let pool_balance_before = token_dispatcher.balance_of(account: pool_contract);
     advance_epoch_global();
+    advance_epoch_global();
     advance_block_into_attestation_window(
         :cfg, stake: cfg.test_info.stake_amount + cfg.pool_member_info._deprecated_amount,
     );
@@ -2787,7 +2789,9 @@ fn test_staker_info_v3() {
     stake_for_testing_using_dispatcher(:cfg);
     let staker_info = staking_dispatcher.staker_info_v3(:staker_address);
     assert!(staker_info == expected_staker_info);
-
+    advance_epoch_global();
+    let staker_info = staking_dispatcher.staker_info_v3(:staker_address);
+    assert!(staker_info == expected_staker_info);
     advance_epoch_global();
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
     let staker_info = staking_dispatcher.staker_info_v3(:staker_address);
@@ -2905,6 +2909,11 @@ fn test_staker_pool_info_v3() {
 
     // Test next epoch.
     advance_epoch_global();
+    let staker_pool_info = staking_dispatcher.staker_pool_info_v3(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+
+    // Test epoch + 2.
+    advance_epoch_global();
     let expected_pool_info = PoolInfo { pool_contract, token_address, amount: delegated_amount };
     let expected_staker_pool_info = StakerPoolInfoV2 {
         commission: Option::Some(
@@ -2958,6 +2967,11 @@ fn test_staker_pool_info_v3_with_multiple_pools() {
     assert!(staker_pool_info == expected_staker_pool_info);
 
     // Test next epoch.
+    advance_epoch_global();
+    let staker_pool_info = staking_dispatcher.staker_pool_info_v3(:staker_address);
+    assert!(staker_pool_info == expected_staker_pool_info);
+
+    // Test epoch + 2.
     advance_epoch_global();
     let expected_strk_pool_info = PoolInfo {
         pool_contract: strk_pool_contract, token_address, amount: strk_delegated_amount,
@@ -3046,7 +3060,9 @@ fn test_get_staker_info_v3() {
     stake_for_testing_using_dispatcher(:cfg);
     let option_staker_info = staking_dispatcher.get_staker_info_v3(:staker_address);
     assert!(option_staker_info == Option::Some(expected_staker_info));
-
+    advance_epoch_global();
+    let option_staker_info = staking_dispatcher.get_staker_info_v3(:staker_address);
+    assert!(option_staker_info == Option::Some(expected_staker_info));
     advance_epoch_global();
     expected_staker_info.amount_own = cfg.test_info.stake_amount;
     let option_staker_info = staking_dispatcher.get_staker_info_v3(:staker_address);
@@ -3089,13 +3105,14 @@ fn test_get_attestation_info_by_operational_address() {
     let staking_dispatcher = IStakingAttestationDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
+    advance_epoch_global();
     let operational_address = cfg.staker_info.operational_address;
     let mut attestation_info = staking_dispatcher
         .get_attestation_info_by_operational_address(:operational_address);
     assert!(attestation_info.staker_address() == cfg.test_info.staker_address);
     assert!(attestation_info.stake() == cfg.test_info.stake_amount);
     assert!(attestation_info.epoch_len() == EPOCH_LENGTH);
-    assert!(attestation_info.epoch_id() == 1);
+    assert!(attestation_info.epoch_id() == 2);
     assert!(
         attestation_info
             .current_epoch_starting_block() == cfg
@@ -3180,6 +3197,7 @@ fn test_update_rewards_from_attestation_contract_only_staker() {
     };
     stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
+    advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
@@ -3212,6 +3230,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
+    advance_epoch_global();
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let attestation_contract = cfg.test_info.attestation_contract;
@@ -3334,6 +3353,7 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     enter_delegation_pool_for_testing_using_dispatcher(
         pool_contract: btc_pool_contract_2, :cfg, token: btc_token_2,
     );
+    advance_epoch_global();
     advance_epoch_global();
     let attestation_contract = cfg.test_info.attestation_contract;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
@@ -3522,6 +3542,7 @@ fn test_update_rewards_only_staker() {
     advance_epoch_global();
     stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
+    advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let (strk_epoch_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
@@ -3569,6 +3590,7 @@ fn test_update_rewards_miss_blocks() {
     advance_epoch_global();
     stake_for_testing_using_dispatcher(:cfg);
     advance_epoch_global();
+    advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let (strk_epoch_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
@@ -3610,6 +3632,7 @@ fn test_update_rewards_with_strk_pool() {
     let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
+    advance_epoch_global();
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
@@ -3743,6 +3766,7 @@ fn test_update_rewards_with_both_strk_and_btc() {
         pool_contract: btc_pool_contract_2, :cfg, token: btc_token_2,
     );
     let btc_delegated_amount = cfg.pool_member_info._deprecated_amount;
+    advance_epoch_global();
     advance_epoch_global();
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
     let pool_member = cfg.test_info.pool_member_address;
@@ -3883,7 +3907,16 @@ fn test_update_rewards_assertions_before_consensus() {
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 
     stake_for_testing_using_dispatcher(:cfg);
-    // Catch INVALID_STAKER - before staker has balance.
+    // Catch INVALID_STAKER - before staker has balance, same epoch of `stake`.
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
+
+    advance_epoch_global();
+    // Catch INVALID_STAKER - before staker has balance, one epoch after `stake`.
     let result = staking_rewards_safe_dispatcher
         .update_rewards(:staker_address, disable_rewards: true);
     assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
@@ -3950,7 +3983,16 @@ fn test_update_rewards_assertions_already_consensus() {
     assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
 
     stake_for_testing_using_dispatcher(:cfg);
-    // Catch INVALID_STAKER - before staker has balance.
+    // Catch INVALID_STAKER - before staker has balance, same epoch of `stake`.
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: true);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
+
+    advance_epoch_global();
+    // Catch INVALID_STAKER - before staker has balance, one epoch after `stake`.
     let result = staking_rewards_safe_dispatcher
         .update_rewards(:staker_address, disable_rewards: true);
     assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
@@ -3995,6 +4037,7 @@ fn test_update_rewards_without_distribute() {
     };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     stake_for_testing_using_dispatcher(:cfg);
+    advance_epoch_global();
     advance_epoch_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
@@ -5017,6 +5060,10 @@ fn test_get_current_total_staking_power() {
         amount: pool_dispatcher.pool_member_info_v1(:pool_member).amount,
         token_address: btc_token_address,
     );
+    // After advancing 1 epoch, the stake power is still 0.
+    advance_epoch_global();
+    assert!(staking_dispatcher.get_current_total_staking_power() == (Zero::zero(), Zero::zero()));
+    // After advancing 2 epochs, we expect to get the staking power.
     advance_epoch_global();
     assert!(
         staking_dispatcher

@@ -1,13 +1,21 @@
 use core::num::traits::Zero;
+use snforge_std::TokenImpl;
 use staking::constants::STRK_IN_FRIS;
 use staking::flow_test::flows;
 use staking::flow_test::utils::{
     RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemStakerTrait,
     SystemTrait, TokenHelperTrait, test_flow_local,
 };
-use staking::test_utils::StakingInitConfig;
+use staking::test_utils::constants::{STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS};
+use staking::test_utils::{
+    StakingInitConfig, calculate_staker_btc_pool_rewards,
+    calculate_staker_strk_rewards_with_balances_v2, calculate_strk_pool_rewards_with_pool_balance,
+    compute_rewards_per_unit,
+};
+use staking::utils::compute_rewards_rounded_down;
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::time::time::Time;
+use crate::types::Amount;
 
 #[test]
 fn basic_stake_flow_test() {
@@ -869,5 +877,632 @@ fn add_to_delegation_after_intent_flow_test() {
             + system.token.balance_of(account: staker.reward.address)
             + system.token.balance_of(account: delegator.reward.address)
             + system.token.balance_of(account: pool),
+    );
+}
+
+/// Test delegator claim rewards flow.
+#[test]
+fn delegator_claim_rewards_test_idx_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    let token_address = system.token.contract_address();
+    let base_value = STRK_BASE_VALUE;
+
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+    let pool = system.staking.get_pool(:staker);
+    let delegator_amount = stake_amount;
+    let delegate_amount = delegator_amount / 4;
+
+    let delegator = system.new_delegator(amount: delegator_amount);
+    system.delegate(:delegator, :pool, amount: delegate_amount);
+    system.advance_epoch();
+    system.advance_epoch();
+    let mut stake = stake_amount + delegate_amount;
+    let mut pool_balance = delegate_amount;
+    let mut sigma: Amount = 0;
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+
+    // cumulative_rewards_trace_idx is the right entry in find_sigma.
+
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+
+    system.advance_block_custom_and_attest(:staker, :stake);
+    sigma +=
+        compute_rewards_per_unit(
+            staking_rewards: pool_epoch_rewards, total_stake: pool_balance, :token_address,
+        );
+
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, :stake);
+    sigma +=
+        compute_rewards_per_unit(
+            staking_rewards: pool_epoch_rewards, total_stake: pool_balance, :token_address,
+        );
+
+    system.advance_epoch();
+    stake += delegate_amount;
+
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    let mut expected_unclaimed_rewards_no_round = pool_epoch_rewards * 2;
+    let mut expected_unclaimed_rewards = compute_rewards_rounded_down(
+        amount: pool_balance, interest: sigma, :base_value,
+    );
+    assert!(pool_member_info.unclaimed_rewards == expected_unclaimed_rewards);
+
+    // cumulative_rewards_trace_idx - 1 is the right entry in find_sigma.
+
+    pool_balance += delegate_amount;
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+
+    system.advance_block_custom_and_attest(:staker, :stake);
+    sigma =
+        compute_rewards_per_unit(
+            staking_rewards: pool_epoch_rewards, total_stake: pool_balance, :token_address,
+        );
+
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, :stake);
+    sigma +=
+        compute_rewards_per_unit(
+            staking_rewards: pool_epoch_rewards, total_stake: pool_balance, :token_address,
+        );
+
+    system.advance_epoch();
+    stake += delegate_amount;
+
+    system.advance_block_custom_and_attest(:staker, :stake);
+
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    expected_unclaimed_rewards_no_round += pool_epoch_rewards * 2;
+    expected_unclaimed_rewards +=
+        compute_rewards_rounded_down(amount: pool_balance, interest: sigma, :base_value);
+    assert!(pool_member_info.unclaimed_rewards == expected_unclaimed_rewards);
+
+    // cumulative_rewards_trace_idx - 2 is the right entry in find_sigma.
+
+    pool_balance += delegate_amount;
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+    sigma =
+        compute_rewards_per_unit(
+            staking_rewards: pool_epoch_rewards, total_stake: pool_balance, :token_address,
+        );
+
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+
+    system.advance_epoch();
+
+    system.advance_epoch();
+    stake += delegate_amount;
+
+    system.advance_block_custom_and_attest(:staker, :stake);
+
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, :stake);
+
+    expected_unclaimed_rewards_no_round += pool_epoch_rewards;
+    expected_unclaimed_rewards +=
+        compute_rewards_rounded_down(amount: pool_balance, interest: sigma, :base_value);
+
+    pool_balance += delegate_amount;
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+    sigma =
+        compute_rewards_per_unit(
+            staking_rewards: pool_epoch_rewards, total_stake: pool_balance, :token_address,
+        );
+
+    expected_unclaimed_rewards_no_round += pool_epoch_rewards;
+    expected_unclaimed_rewards +=
+        compute_rewards_rounded_down(amount: pool_balance, interest: sigma, :base_value);
+
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == expected_unclaimed_rewards);
+
+    system.advance_epoch();
+
+    expected_unclaimed_rewards_no_round += pool_epoch_rewards;
+    expected_unclaimed_rewards +=
+        compute_rewards_rounded_down(amount: pool_balance, interest: sigma, :base_value);
+
+    let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+
+    assert!(expected_unclaimed_rewards_no_round - actual_rewards <= 3);
+    assert!(actual_rewards == expected_unclaimed_rewards);
+    assert!(
+        system
+            .token
+            .balance_of(account: delegator.reward.address) == expected_unclaimed_rewards
+            .into(),
+    );
+}
+
+/// Test delegator claim rewards flow - less than 3 entries in cumulative_rewards_trace.
+#[test]
+fn delegator_claim_rewards_test_less_than_3_entries_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+
+    let pool = system.staking.get_pool(:staker);
+    let delegator_amount = stake_amount;
+    let delegate_amount = delegator_amount / 4;
+
+    let delegator = system.new_delegator(amount: delegator_amount);
+    system.delegate(:delegator, :pool, amount: delegate_amount);
+    // Test claim before have delegation.
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == 0);
+
+    system.advance_epoch();
+
+    // Test claim before have delegation.
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == 0);
+
+    system.advance_epoch();
+
+    // Test cumulative_rewards_trace_len = 1 (only zero entry).
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == 0);
+
+    // Test cumulative_rewards_trace_len = 2 without existing current checkpoint.
+    let mut stake = stake_amount + delegate_amount;
+    let mut pool_balance = delegate_amount;
+    system.advance_block_custom_and_attest(:staker, :stake);
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+
+    system.advance_epoch();
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards);
+    // Test cumulative_rewards_trace_len = 2 with existing current checkpoint.
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+    system.advance_epoch();
+    system.advance_epoch();
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards);
+    system.advance_epoch();
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards);
+
+    // Test cumulative_rewards_trace_len = 2 with existing after current checkpoint.
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+    system.advance_epoch();
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards);
+
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == pool_epoch_rewards);
+    assert!(
+        system.token.balance_of(account: delegator.reward.address) == pool_epoch_rewards.into(),
+    );
+}
+
+/// Test delegator claim rewards flow - cumulative_rewards_trace_idx >= length.
+#[test]
+fn delegator_claim_rewards_test_idx_greater_than_length_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_epoch();
+
+    let pool = system.staking.get_pool(:staker);
+    let delegator_amount = stake_amount;
+    let delegate_amount = delegator_amount / 4;
+
+    let delegator = system.new_delegator(amount: delegator_amount);
+    system.delegate(:delegator, :pool, amount: delegate_amount);
+    system.advance_epoch();
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount);
+    system.advance_epoch();
+    let mut stake = stake_amount + delegate_amount;
+    system.advance_block_custom_and_attest(:staker, :stake);
+    system.advance_epoch();
+    system.advance_block_custom_and_attest(:staker, :stake);
+    system.advance_epoch();
+    system.advance_epoch();
+    system.advance_block_custom_and_attest(:staker, :stake);
+
+    let mut pool_balance = delegate_amount;
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards * 2);
+
+    // idx == len + 1.
+    system.advance_epoch();
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards * 3);
+
+    system.advance_block_custom_and_attest(:staker, :stake);
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards * 3);
+    // idx == len.
+    system.advance_epoch();
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards * 4);
+    system.advance_epoch();
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards * 4);
+
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == pool_epoch_rewards * 4);
+    assert!(system.token.balance_of(account: delegator.reward.address) == rewards.into());
+}
+
+/// Test delegator claim rewards flow - cumulative_rewards_trace_idx == 1.
+#[test]
+fn delegator_claim_rewards_test_idx_is_one_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_epoch();
+
+    let pool = system.staking.get_pool(:staker);
+    let delegator_amount = stake_amount;
+    let delegate_amount = delegator_amount / 4;
+
+    let delegator = system.new_delegator(amount: delegator_amount);
+    system.delegate(:delegator, :pool, amount: delegate_amount);
+    system.advance_epoch();
+    system.advance_epoch();
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+    system.advance_epoch();
+    system.advance_epoch();
+    let mut stake = stake_amount + 2 * delegate_amount;
+    system.advance_block_custom_and_attest(:staker, :stake);
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == 0);
+
+    system.advance_epoch();
+    system.advance_block_custom_and_attest(:staker, :stake);
+    system.advance_epoch();
+    system.advance_block_custom_and_attest(:staker, :stake);
+    system.advance_epoch();
+
+    let pool_balance = delegate_amount * 2;
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+    let expected_rewards = pool_epoch_rewards * 3;
+    let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
+    assert!(pool_member_info.unclaimed_rewards == expected_rewards);
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == expected_rewards);
+    assert!(system.token.balance_of(account: delegator.reward.address) == rewards.into());
+}
+
+#[test]
+fn staker_claim_rewards_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let mut stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount * 2);
+    let commission = 200;
+    let staking_contract = system.staking.address;
+    let minting_curve_contract = system.minting_curve.address;
+    let mut total_staker_rewards: Amount = Zero::zero();
+    let mut total_strk_pool_rewards: Amount = Zero::zero();
+
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_epoch();
+
+    system.increase_stake(:staker, amount: stake_amount);
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount);
+    let (staker_rewards, pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_pool_rewards += pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    let delegator_amount = stake_amount;
+    let base_strk_delegate_amount = delegator_amount / 4;
+    let mut strk_delegate_amount = Zero::zero();
+    let strk_pool = system.staking.get_pool(:staker);
+    let strk_delegator = system.new_delegator(amount: delegator_amount);
+    system.delegate(delegator: strk_delegator, pool: strk_pool, amount: base_strk_delegate_amount);
+    system.advance_epoch();
+
+    stake_amount += stake_amount;
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount);
+    let (staker_rewards, pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_pool_rewards += pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    system
+        .increase_delegate(
+            delegator: strk_delegator, pool: strk_pool, amount: base_strk_delegate_amount,
+        );
+    system.advance_epoch();
+
+    strk_delegate_amount += base_strk_delegate_amount;
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + strk_delegate_amount);
+    let (staker_rewards, pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: strk_delegate_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_pool_rewards += pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    // Full intent.
+    system
+        .delegator_exit_intent(
+            delegator: strk_delegator, pool: strk_pool, amount: base_strk_delegate_amount * 2,
+        );
+    system.advance_epoch();
+
+    strk_delegate_amount += base_strk_delegate_amount;
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + strk_delegate_amount);
+    let (staker_rewards, pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: strk_delegate_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_pool_rewards += pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    // Partial intent.
+    system
+        .delegator_exit_intent(
+            delegator: strk_delegator, pool: strk_pool, amount: base_strk_delegate_amount,
+        );
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount);
+    let (staker_rewards, pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_pool_rewards += pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    // Add BTC stake.
+    let btc_token = system.btc_token;
+    let btc_token_address = btc_token.contract_address();
+    let btc_pool = system.set_open_for_delegation(:staker, token_address: btc_token_address);
+    let base_btc_delegate_amount = TEST_MIN_BTC_FOR_REWARDS * 16;
+    let mut btc_delegator_amount: Amount = Zero::zero();
+    let mut total_btc_pool_rewards: Amount = Zero::zero();
+    let btc_delegator = system
+        .new_btc_delegator(amount: base_btc_delegate_amount * 2, token: btc_token);
+    system
+        .delegate_btc(
+            delegator: btc_delegator,
+            pool: btc_pool,
+            amount: base_btc_delegate_amount,
+            token: btc_token,
+        );
+    system.advance_epoch();
+
+    strk_delegate_amount -= base_strk_delegate_amount;
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + strk_delegate_amount);
+    let (staker_rewards, pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: strk_delegate_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_pool_rewards += pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    system
+        .increase_delegate_btc(
+            delegator: btc_delegator,
+            pool: btc_pool,
+            amount: base_btc_delegate_amount,
+            token: btc_token,
+        );
+    system.advance_epoch();
+
+    btc_delegator_amount += base_btc_delegate_amount;
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + strk_delegate_amount);
+    let (staker_rewards, strk_pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: strk_delegate_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards(
+        pool_balance: btc_delegator_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
+    );
+    total_staker_rewards += staker_rewards + commission_rewards;
+    total_strk_pool_rewards += strk_pool_rewards;
+    total_btc_pool_rewards += btc_pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    // Full intent.
+    system
+        .delegator_exit_intent(
+            delegator: btc_delegator, pool: btc_pool, amount: base_btc_delegate_amount * 2,
+        );
+    system.advance_epoch();
+
+    btc_delegator_amount += base_btc_delegate_amount;
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + strk_delegate_amount);
+    let (staker_rewards, strk_pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: strk_delegate_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards(
+        pool_balance: btc_delegator_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
+    );
+    total_staker_rewards += staker_rewards + commission_rewards;
+    total_strk_pool_rewards += strk_pool_rewards;
+    total_btc_pool_rewards += btc_pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    system.advance_epoch();
+
+    // Partial intent.
+    system
+        .delegator_exit_intent(
+            delegator: btc_delegator, pool: btc_pool, amount: base_btc_delegate_amount,
+        );
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + strk_delegate_amount);
+    let (staker_rewards, strk_pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: strk_delegate_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_pool_rewards += strk_pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    system.advance_epoch();
+    btc_delegator_amount -= base_btc_delegate_amount;
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + strk_delegate_amount);
+    let (staker_rewards, strk_pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: strk_delegate_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards(
+        pool_balance: btc_delegator_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token_address,
+    );
+    total_staker_rewards += staker_rewards + commission_rewards;
+    total_strk_pool_rewards += strk_pool_rewards;
+    total_btc_pool_rewards += btc_pool_rewards;
+    let staker_info = system.staker_info_v1(:staker);
+    assert!(staker_info.unclaimed_rewards_own == total_staker_rewards);
+
+    system.advance_epoch();
+
+    let balance_before_claim = system.token.balance_of(account: staker.reward.address);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards == total_staker_rewards);
+    assert!(
+        system.token.balance_of(account: staker.reward.address) == balance_before_claim + rewards,
+    );
+
+    let balance_before_claim = system.token.balance_of(account: strk_delegator.reward.address);
+    let rewards = system.delegator_claim_rewards(delegator: strk_delegator, pool: strk_pool);
+    assert!(rewards == total_strk_pool_rewards);
+    assert!(
+        system.token.balance_of(account: strk_delegator.reward.address) == balance_before_claim
+            + rewards,
+    );
+
+    let balance_before_claim = system.token.balance_of(account: btc_delegator.reward.address);
+    let rewards = system.delegator_claim_rewards(delegator: btc_delegator, pool: btc_pool);
+    assert!(rewards == total_btc_pool_rewards);
+    assert!(
+        system.token.balance_of(account: btc_delegator.reward.address) == balance_before_claim
+            + rewards,
     );
 }
