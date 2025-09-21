@@ -900,8 +900,7 @@ fn delegator_claim_rewards_test_idx_flow_test() {
 
     let delegator = system.new_delegator(amount: delegator_amount);
     system.delegate(:delegator, :pool, amount: delegate_amount);
-    system.advance_epoch();
-    system.advance_epoch();
+    system.advance_k_epochs();
     let mut stake = stake_amount + delegate_amount;
     let mut pool_balance = delegate_amount;
     let mut sigma: Amount = 0;
@@ -993,9 +992,8 @@ fn delegator_claim_rewards_test_idx_flow_test() {
 
     system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
 
-    system.advance_epoch();
+    system.advance_k_epochs();
 
-    system.advance_epoch();
     stake += delegate_amount;
 
     system.advance_block_custom_and_attest(:staker, :stake);
@@ -1095,8 +1093,7 @@ fn delegator_claim_rewards_test_less_than_3_entries_flow_test() {
     assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards);
     // Test cumulative_rewards_trace_len = 2 with existing current checkpoint.
     system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
-    system.advance_epoch();
-    system.advance_epoch();
+    system.advance_k_epochs();
     let pool_member_info = system.pool_member_info_v1(:delegator, :pool);
     assert!(pool_member_info.unclaimed_rewards == pool_epoch_rewards);
     system.advance_epoch();
@@ -1198,11 +1195,9 @@ fn delegator_claim_rewards_test_idx_is_one_flow_test() {
 
     let delegator = system.new_delegator(amount: delegator_amount);
     system.delegate(:delegator, :pool, amount: delegate_amount);
-    system.advance_epoch();
-    system.advance_epoch();
+    system.advance_k_epochs();
     system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
-    system.advance_epoch();
-    system.advance_epoch();
+    system.advance_k_epochs();
     let mut stake = stake_amount + 2 * delegate_amount;
     system.advance_block_custom_and_attest(:staker, :stake);
     let rewards = system.delegator_claim_rewards(:delegator, :pool);

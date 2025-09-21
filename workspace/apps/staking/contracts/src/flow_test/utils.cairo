@@ -19,6 +19,7 @@ use staking::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
+use staking::constants::K;
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
 };
@@ -1113,6 +1114,13 @@ pub(crate) impl SystemImpl of SystemTrait {
             let next_epoch_starting_block = epoch_info.current_epoch_starting_block()
                 + epoch_info.epoch_len_in_blocks().into();
             advance_block_number_global(blocks: next_epoch_starting_block - current_block);
+        }
+    }
+
+    /// Advance `K` epochs.
+    fn advance_k_epochs(self: SystemState) {
+        for _ in 0..K {
+            self.advance_epoch();
         }
     }
 

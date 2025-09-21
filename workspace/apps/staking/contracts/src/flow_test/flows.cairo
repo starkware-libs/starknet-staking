@@ -1085,8 +1085,7 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
         system.staking.enable_token(token_address: third_btc_token.contract_address());
 
         // Stake and open pools.
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         system.stake(:staker, :amount, pool_enabled: false, :commission);
         system.set_commission(:staker, :commission);
         let first_btc_pool = system
@@ -1174,8 +1173,7 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
         total_third_pool_rewards += third_pool_rewards;
 
         // Enable 1 BTC token and attest.
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         system.staking.enable_token(token_address: second_btc_token.contract_address());
         system.advance_block_into_attestation_window(:staker);
         system.attest(:staker);
@@ -1190,8 +1188,7 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
         );
         total_first_pool_rewards += first_pool_rewards;
 
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         system.advance_block_into_attestation_window(:staker);
         system.attest(:staker);
 
@@ -1847,8 +1844,7 @@ pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelega
             );
 
         // Advance k epochs so that attesting will be possible and the delegation will take effect.
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
 
         // Disable token and attest.
         system.staking.disable_token(:token_address);
@@ -2770,8 +2766,7 @@ pub(crate) impl DisableBtcTokenSameAndNextEpochFlowImpl of FlowTrait<
     DisableBtcTokenSameAndNextEpochFlow,
 > {
     fn test(self: DisableBtcTokenSameAndNextEpochFlow, ref system: SystemState) {
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
         let token_address = system.deploy_second_btc_token().contract_address();
         let strk_token_address = system.token.contract_address();
@@ -4351,8 +4346,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
 
         system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
 
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
 
         delegated_amount_1 += stake_amount / 4;
         pool_balance += stake_amount / 4;
@@ -4373,15 +4367,13 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         delegated_amount_1 += stake_amount / 4;
         pool_balance += stake_amount / 4;
 
         system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
 
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         delegated_amount_1 += stake_amount / 4;
         pool_balance += stake_amount / 4;
 
@@ -4464,8 +4456,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
                 staking_rewards: pool_rewards, total_stake: pool_balance, :token_address,
             );
 
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
 
         delegator_2_rewards =
             compute_rewards_rounded_down(amount: delegated_amount_2, interest: sigma, :base_value);
@@ -5386,8 +5377,7 @@ pub(crate) impl DelegateIntentSameEpochFlowImpl of FlowTrait<DelegateIntentSameE
         let commission = 200;
 
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         system.advance_block_into_attestation_window(:staker);
 
         let pool = system.staking.get_pool(:staker);
@@ -6363,8 +6353,7 @@ pub(crate) impl SetEpochInfoFlowImpl of FlowTrait<SetEpochInfoFlow> {
 
         let staker = system.new_staker(amount: stake_amount);
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
 
         let target_block_before_set = system
             .attestation
@@ -6433,8 +6422,7 @@ pub(crate) impl AttestAfterDelegatorIntentFlowImpl of FlowTrait<AttestAfterDeleg
 
         let staker = system.new_staker(amount: stake_amount);
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
 
         let pool = system.staking.get_pool(:staker);
         let delegator = system.new_delegator(amount: stake_amount);
@@ -6844,8 +6832,7 @@ pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
     EnableDisableBtcTokenSameEpochFlow,
 > {
     fn test(self: EnableDisableBtcTokenSameEpochFlow, ref system: SystemState) {
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
 
         let token_address = system.deploy_second_btc_token().contract_address();
@@ -6858,8 +6845,7 @@ pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
         assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
         system.advance_epoch();
         system.staking.disable_token(:token_address);
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         let active_tokens = system.staking.dispatcher().get_active_tokens();
         assert!(active_tokens == expected_active_tokens);
     }
@@ -6879,8 +6865,7 @@ pub(crate) impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
     fn test(self: DisableEnableBtcTokenSameEpochFlow, ref system: SystemState) {
         let expected_active_tokens = system.staking.dispatcher().get_active_tokens();
         let token_address = system.btc_token.contract_address();
-        system.advance_epoch();
-        system.advance_epoch();
+        system.advance_k_epochs();
         system.staking.disable_token(:token_address);
         let res = system.staking.safe_enable_token(:token_address);
         assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
