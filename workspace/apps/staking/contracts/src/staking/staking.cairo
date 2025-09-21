@@ -811,7 +811,9 @@ pub mod Staking {
             let curr_epoch = self.get_current_epoch();
             assert!(self.does_token_exist(:token_address), "{}", Error::INVALID_TOKEN_ADDRESS);
             assert!(
-                self.is_active_token(:token_address, :curr_epoch), "{}", Error::TOKEN_NOT_ACTIVE,
+                self.is_active_token(:token_address, epoch_id: curr_epoch),
+                "{}",
+                Error::TOKEN_NOT_ACTIVE,
             );
             let decimals = self.get_token_decimals(:token_address);
             self._get_total_stake(:token_address).to_native_amount(:decimals)
@@ -1901,7 +1903,7 @@ pub mod Staking {
             let mut total_pools_rewards: Amount = Zero::zero();
             let commission = staker_pool_info.commission();
             for (pool_contract, token_address) in staker_pool_info.pools {
-                if !self.is_active_token(:token_address, :curr_epoch) {
+                if !self.is_active_token(:token_address, epoch_id: curr_epoch) {
                     continue;
                 }
                 let pool_balance_curr_epoch = self
@@ -2076,7 +2078,7 @@ pub mod Staking {
             for (pool_contract, token_address) in staker_pool_info.pools {
                 // TODO: Consider optimize here - `is_active_token` check again the STRK token.
                 if token_address != STRK_TOKEN_ADDRESS
-                    && self.is_active_token(:token_address, :curr_epoch) {
+                    && self.is_active_token(:token_address, epoch_id: curr_epoch) {
                     let pool_balance_curr_epoch = self
                         .get_staker_delegated_balance_at_epoch(
                             :staker_address, :pool_contract, epoch_id: curr_epoch,
@@ -2193,19 +2195,18 @@ pub mod Staking {
             token_address == STRK_TOKEN_ADDRESS || self.btc_tokens.read(token_address).is_some()
         }
 
-        /// Returns true if the token is active in the current epoch.
+        /// Returns true if the token is active in the given `epoch_id`.
         /// Assumes that the token exists.
         ///
-        /// **Note**: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
-        /// storage reads.
+        /// **Note**: `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`,
+        /// it's passed as a param to save storage reads.
         fn is_active_token(
-            self: @ContractState, token_address: ContractAddress, curr_epoch: Epoch,
+            self: @ContractState, token_address: ContractAddress, epoch_id: Epoch,
         ) -> bool {
             token_address == STRK_TOKEN_ADDRESS
                 || self
                     .is_btc_active(
-                        active_status: self.btc_tokens.read(token_address).unwrap(),
-                        epoch_id: curr_epoch,
+                        active_status: self.btc_tokens.read(token_address).unwrap(), :epoch_id,
                     )
         }
 
