@@ -39,7 +39,7 @@ use starknet::{ContractAddress, Store};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::math::utils::mul_wide_and_div;
-use starkware_utils::time::time::Time;
+use starkware_utils::time::time::{Time, TimeDelta};
 use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 
 /// Flow - Basic Stake:
@@ -2247,6 +2247,7 @@ pub(crate) struct DelegatorActionAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) staker: Option<Staker>,
+    pub(crate) exit_wait_window: Option<TimeDelta>,
 }
 pub(crate) impl DelegatorActionAfterUpgradeFlowImpl of FlowTrait<DelegatorActionAfterUpgradeFlow> {
     fn get_staker_address(self: DelegatorActionAfterUpgradeFlow) -> Option<ContractAddress> {
@@ -2274,6 +2275,7 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl of FlowTrait<DelegatorAction
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.staker = Option::Some(staker);
+        self.exit_wait_window = Option::Some(system.staking.get_exit_wait_window());
     }
 
     fn test(self: DelegatorActionAfterUpgradeFlow, ref system: SystemState) {
@@ -2285,7 +2287,8 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl of FlowTrait<DelegatorAction
             :result, expected_error: GenericError::INTENT_WINDOW_NOT_FINISHED.describe(),
         );
 
-        system.advance_time(time: system.staking.get_exit_wait_window());
+        let exit_wait_window = self.exit_wait_window.unwrap();
+        system.advance_time(time: exit_wait_window);
         system.delegator_exit_action(:delegator, :pool);
         system.delegator_claim_rewards(:delegator, :pool);
 
@@ -2397,6 +2400,7 @@ pub(crate) impl StakerIntentAfterUpgradeFlowImpl of FlowTrait<StakerIntentAfterU
 pub(crate) struct StakerActionAfterUpgradeFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) exit_wait_window: Option<TimeDelta>,
 }
 
 pub(crate) impl StakerActionAfterUpgradeFlowImpl of FlowTrait<StakerActionAfterUpgradeFlow> {
@@ -2420,6 +2424,7 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl of FlowTrait<StakerActionAfterU
         self.staker = Option::Some(staker);
         let pool = system.staking.get_pool(:staker);
         self.pool_address = Option::Some(pool);
+        self.exit_wait_window = Option::Some(system.staking.get_exit_wait_window());
     }
 
     fn test(self: StakerActionAfterUpgradeFlow, ref system: SystemState) {
@@ -2432,7 +2437,8 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl of FlowTrait<StakerActionAfterU
             :result, expected_error: GenericError::INTENT_WINDOW_NOT_FINISHED.describe(),
         );
 
-        system.advance_time(time: system.staking.get_exit_wait_window());
+        let exit_wait_window = self.exit_wait_window.unwrap();
+        system.advance_time(time: exit_wait_window);
         system.staker_exit_action(:staker);
 
         assert!(system.get_staker_info(:staker).is_none());
@@ -6689,6 +6695,7 @@ pub(crate) impl StakerWithPoolMigrationSetCommissionFlowImpl of FlowTrait<
 #[derive(Drop, Copy)]
 pub(crate) struct StakerExitFlow {
     pub(crate) staker: Option<Staker>,
+    pub(crate) exit_wait_window: Option<TimeDelta>,
 }
 pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
     fn setup_v1(ref self: StakerExitFlow, ref system: SystemState) {
@@ -6699,13 +6706,15 @@ pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
         system.staker_exit_intent(:staker);
 
         self.staker = Option::Some(staker);
+        self.exit_wait_window = Option::Some(system.staking.get_exit_wait_window());
     }
 
     #[feature("safe_dispatcher")]
     fn test(self: StakerExitFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
         system.staker_migration(staker_address: staker.staker.address);
-        system.advance_time(time: system.staking.get_exit_wait_window());
+        let exit_wait_window = self.exit_wait_window.unwrap();
+        system.advance_time(time: exit_wait_window);
         system.staker_exit_action(:staker);
 
         let res = system
