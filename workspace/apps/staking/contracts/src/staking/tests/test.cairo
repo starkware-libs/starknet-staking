@@ -5087,6 +5087,16 @@ fn test_get_current_total_staking_power() {
                 NormalizedAmountTrait::from_amount_18_decimals(btc_total_stake),
             ),
     );
+    // After one epoch, the BTC token is still active.
+    advance_epoch_global();
+    assert!(
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake),
+                NormalizedAmountTrait::from_amount_18_decimals(btc_total_stake),
+            ),
+    );
+    // After two epochs, the BTC token is not active.
     advance_epoch_global();
     assert!(
         staking_dispatcher
@@ -5105,6 +5115,15 @@ fn test_get_current_total_staking_power() {
                 NormalizedAmountTrait::from_strk_native_amount(strk_total_stake), Zero::zero(),
             ),
     );
+    // After one epoch, the BTC token is still not active.
+    advance_epoch_global();
+    assert!(
+        staking_dispatcher
+            .get_current_total_staking_power() == (
+                NormalizedAmountTrait::from_strk_native_amount(strk_total_stake), Zero::zero(),
+            ),
+    );
+    // After two epochs, the BTC token is active.
     advance_epoch_global();
     assert!(
         staking_dispatcher
@@ -5197,6 +5216,14 @@ fn test_get_active_tokens() {
     let strk_token_address = cfg.test_info.strk_token.contract_address();
     let btc_token_address = cfg.test_info.btc_token.contract_address();
 
+    // Test when only the STRK token is active.
+    let expected_active_tokens = [strk_token_address].span();
+    let active_tokens = staking_dispatcher.get_active_tokens();
+    assert!(active_tokens == expected_active_tokens);
+    advance_epoch_global();
+    let active_tokens = staking_dispatcher.get_active_tokens();
+    assert!(active_tokens == expected_active_tokens);
+
     // Test when both tokens are active.
     advance_epoch_global();
     let expected_active_tokens = [strk_token_address, btc_token_address].span();
@@ -5211,7 +5238,16 @@ fn test_get_active_tokens() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: security_agent);
     token_manager_dispatcher.disable_token(token_address: btc_token_address);
 
-    // Test when only the STRK token is active.
+    // Immediately after disabling the BTC token, it is still active.
+    let expected_active_tokens = [strk_token_address, btc_token_address].span();
+    let active_tokens = staking_dispatcher.get_active_tokens();
+    assert!(active_tokens == expected_active_tokens);
+    // After one epoch, the BTC token is still active.
+    advance_epoch_global();
+    let active_tokens = staking_dispatcher.get_active_tokens();
+    assert!(active_tokens == expected_active_tokens);
+
+    // After two epochs, only the STRK token is active.
     advance_epoch_global();
     let expected_active_tokens = [strk_token_address].span();
     let active_tokens = staking_dispatcher.get_active_tokens();
@@ -5232,13 +5268,27 @@ fn test_get_tokens() {
     assert!(tokens.len() == 2);
     assert!(*tokens[0] == (cfg.test_info.strk_token.contract_address(), true));
     assert!(*tokens[1] == (cfg.test_info.btc_token.contract_address(), false));
-    // Disable the BTC token.
     advance_epoch_global();
+    let tokens = staking_dispatcher.get_tokens();
+    assert!(tokens.len() == 2);
+    assert!(*tokens[0] == (cfg.test_info.strk_token.contract_address(), true));
+    assert!(*tokens[1] == (cfg.test_info.btc_token.contract_address(), false));
+    advance_epoch_global();
+    let tokens = staking_dispatcher.get_tokens();
+    assert!(tokens.len() == 2);
+    assert!(*tokens[0] == (cfg.test_info.strk_token.contract_address(), true));
+    assert!(*tokens[1] == (cfg.test_info.btc_token.contract_address(), true));
+    // Disable the BTC token.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
     staking_token_dispatcher
         .disable_token(token_address: cfg.test_info.btc_token.contract_address());
+    let tokens = staking_dispatcher.get_tokens();
+    assert!(tokens.len() == 2);
+    assert!(*tokens[0] == (cfg.test_info.strk_token.contract_address(), true));
+    assert!(*tokens[1] == (cfg.test_info.btc_token.contract_address(), true));
+    advance_epoch_global();
     let tokens = staking_dispatcher.get_tokens();
     assert!(tokens.len() == 2);
     assert!(*tokens[0] == (cfg.test_info.strk_token.contract_address(), true));
@@ -5264,12 +5314,14 @@ fn test_add_token() {
         name: BTC_TOKEN_NAME(),
         decimals: constants::TEST_BTC_DECIMALS,
     );
-    // The STRK token is active and test_info.btc_token will be active in the next epoch.
+    // The STRK token is active and test_info.btc_token will be active in two epochs.
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let active_tokens = staking_dispatcher.get_active_tokens();
     assert!(active_tokens.len() == 1);
 
-    // Advance epoch.
+    // Advance epochs.
+    advance_epoch_global();
+    assert!(active_tokens.len() == 1);
     advance_epoch_global();
     let active_tokens = staking_dispatcher.get_active_tokens();
     assert!(active_tokens.len() == 2);
@@ -5310,6 +5362,7 @@ fn test_enable_token() {
     // Add and enable the BTC token.
     let token_admin = cfg.test_info.token_admin;
     advance_epoch_global();
+    advance_epoch_global();
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     cheat_caller_address_once(contract_address: staking_contract, caller_address: token_admin);
     staking_token_dispatcher.add_token(token_address: btc_token_address);
@@ -5319,6 +5372,10 @@ fn test_enable_token() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: token_admin);
     staking_token_dispatcher.enable_token(token_address: btc_token_address);
     assert!(staking_dispatcher.get_active_tokens().len() == 2);
+    // After one epochs, the BTC token is not active yet.
+    advance_epoch_global();
+    assert!(staking_dispatcher.get_active_tokens().len() == 2);
+    // After two epochs, the BTC token is active.
     advance_epoch_global();
     let active_tokens = staking_dispatcher.get_active_tokens();
     assert!(active_tokens.len() == 3);
@@ -5353,11 +5410,15 @@ fn test_disable_token() {
     );
     staking_token_dispatcher.add_token(token_address: btc_token_address);
     advance_epoch_global();
+    advance_epoch_global();
     staking_token_dispatcher.enable_token(token_address: btc_token_address);
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     assert!(staking_dispatcher.get_active_tokens().len() == 2);
+    // After one epoch, the BTC token is not active yet.
     advance_epoch_global();
-    // Active tokens: STRK, BTC.
+    assert!(staking_dispatcher.get_active_tokens().len() == 2);
+    // After two epochs, the BTC token is active.
+    advance_epoch_global();
     assert!(staking_dispatcher.get_active_tokens().len() == 3);
     // Disable the BTC token.
     let mut spy = snforge_std::spy_events();
@@ -5367,8 +5428,10 @@ fn test_disable_token() {
     staking_token_dispatcher.disable_token(token_address: btc_token_address);
     assert!(staking_dispatcher.get_active_tokens().len() == 3);
     advance_epoch_global();
+    assert!(staking_dispatcher.get_active_tokens().len() == 3);
+    advance_epoch_global();
     let active_tokens = staking_dispatcher.get_active_tokens();
-    // Only the STRK token is active.
+    // Only the STRK token and BTC token from constructor are active.
     assert!(active_tokens.len() == 2);
     assert!(*active_tokens[0] == cfg.test_info.strk_token.contract_address());
     assert!(*active_tokens[1] == cfg.test_info.btc_token.contract_address());
@@ -5410,10 +5473,15 @@ fn test_enable_token_assertions() {
     cheat_caller_address(
         contract_address: staking_contract,
         caller_address: cfg.test_info.token_admin,
-        span: CheatSpan::TargetCalls(3),
+        span: CheatSpan::TargetCalls(4),
     );
     let _ = staking_token_manager_safe_dispatcher.add_token(token_address: btc_token_address);
     let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: btc_token_address);
+    let result = staking_token_manager_safe_dispatcher
+        .enable_token(token_address: btc_token_address);
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    // After one epoch its still invalid.
+    advance_epoch_global();
     let result = staking_token_manager_safe_dispatcher
         .enable_token(token_address: btc_token_address);
     assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
@@ -5474,10 +5542,12 @@ fn test_disable_token_assertions() {
     );
     let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: btc_token_address);
     advance_epoch_global();
+    advance_epoch_global();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
     let _ = staking_token_manager_safe_dispatcher.disable_token(token_address: btc_token_address);
+    advance_epoch_global();
     advance_epoch_global();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
@@ -5485,11 +5555,20 @@ fn test_disable_token_assertions() {
     let result = staking_token_manager_safe_dispatcher
         .disable_token(token_address: btc_token_address);
     assert_panic_with_error(:result, expected_error: Error::TOKEN_ALREADY_DISABLED.describe());
+
     // Catch INVALID_EPOCH.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.token_admin,
     );
     let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: btc_token_address);
+    cheat_caller_address_once(
+        contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
+    );
+    let result = staking_token_manager_safe_dispatcher
+        .disable_token(token_address: btc_token_address);
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    // After one epoch its still invalid.
+    advance_epoch_global();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
@@ -5509,6 +5588,7 @@ fn test_get_total_stake_for_token() {
     let btc_token_address = btc_token.contract_address();
     // Test when zero stake.
     let total_strk_stake = staking_dispatcher.get_total_stake_for_token(:token_address);
+    advance_epoch_global();
     advance_epoch_global();
     let total_btc_stake = staking_dispatcher
         .get_total_stake_for_token(token_address: btc_token_address);
@@ -5559,7 +5639,9 @@ fn test_get_total_stake_for_token_not_active() {
         contract_address: staking_contract,
     };
     advance_epoch_global();
+    advance_epoch_global();
     staking_token_dispatcher.disable_token(token_address: btc_token_address);
+    advance_epoch_global();
     advance_epoch_global();
     staking_dispatcher.get_total_stake_for_token(token_address: btc_token_address);
 }
