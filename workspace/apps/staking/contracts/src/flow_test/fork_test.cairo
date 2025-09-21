@@ -585,3 +585,16 @@ fn staker_exit_intent_attest_after_migration_flow_test() {
     let mut flow = flows::StakerExitIntentAttestAfterMigrationFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn pool_eic_flow_test() {
+    let mut flow = flows::PoolEICFlow {
+        pool_v0: Option::None,
+        pool_v1: Option::None,
+        pool_v2: Option::None,
+        pool_btc_8d_v2: Option::None,
+        pool_btc_18d_v2: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}

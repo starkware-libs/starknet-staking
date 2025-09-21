@@ -19,6 +19,7 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::errors::GenericError;
+use staking::flow_test::utils::upgrade_implementation;
 use staking::pool::errors::Error;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher,
@@ -42,6 +43,7 @@ use staking::staking::objects::{
 use staking::types::InternalPoolMemberInfoLatest;
 use staking::{event_test_utils, test_utils};
 use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
+use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::Describable;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::event_test_utils::assert_number_of_events;
@@ -53,10 +55,10 @@ use test_utils::{
     advance_block_into_attestation_window, advance_epoch_global, advance_k_epochs_global, approve,
     calculate_staker_btc_pool_rewards, calculate_strk_pool_rewards,
     cheat_target_attestation_block_hash, claim_rewards_for_pool_member, constants,
-    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
-    general_contract_system_deployment, initialize_pool_state, load_from_simple_map,
-    stake_for_testing_using_dispatcher, stake_with_strk_pool_enabled,
-    update_rewards_from_staking_contract_for_testing,
+    declare_pool_contract, declare_pool_eic_contract, deploy_staking_contract,
+    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
+    initialize_pool_state, load_from_simple_map, stake_for_testing_using_dispatcher,
+    stake_with_strk_pool_enabled, update_rewards_from_staking_contract_for_testing,
 };
 
 #[test]
@@ -1721,4 +1723,28 @@ fn test_update_rewards_from_staking_contract() {
     pool_dispatcher.update_rewards_from_staking_contract(:rewards, :pool_balance);
     advance_epoch_global();
     assert!(rewards * 2 == pool_dispatcher.pool_member_info_v1(:pool_member).unclaimed_rewards);
+}
+
+#[test]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
+fn test_pool_eic_with_wrong_number_of_data_elements() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let pool_contract = stake_with_strk_pool_enabled(:cfg);
+    // Upgrade.
+    let eic_data = EICData {
+        eic_hash: declare_pool_eic_contract(), eic_init_data: [Zero::zero()].span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+    };
+    // Cheat block timestamp to enable upgrade eligibility.
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: pool_contract,
+        :implementation_data,
+        upgrade_governor: cfg.test_info.staking_contract,
+    );
 }

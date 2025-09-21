@@ -525,6 +525,10 @@ pub(crate) fn declare_staking_eic_contract() -> ClassHash {
     *snforge_std::declare("StakingEIC").unwrap().contract_class().class_hash
 }
 
+pub(crate) fn declare_pool_eic_contract() -> ClassHash {
+    *snforge_std::declare("PoolEIC").unwrap().contract_class().class_hash
+}
+
 pub(crate) fn fund(target: ContractAddress, amount: Amount, token: Token) {
     let token_dispatcher = IERC20Dispatcher { contract_address: token.contract_address() };
     let curr_balance = token_dispatcher.balance_of(account: target);
