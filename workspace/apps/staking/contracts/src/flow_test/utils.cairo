@@ -72,8 +72,9 @@ use starkware_utils::constants::SYMBOL;
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     TokenConfig, advance_block_number_global, cheat_caller_address_once,
-    set_account_as_app_governor, set_account_as_app_role_admin, set_account_as_security_admin,
-    set_account_as_security_agent, set_account_as_token_admin, set_account_as_upgrade_governor,
+    set_account_as_app_governor, set_account_as_app_role_admin, set_account_as_governance_admin,
+    set_account_as_security_admin, set_account_as_security_agent, set_account_as_token_admin,
+    set_account_as_upgrade_governor,
 };
 
 mod MainnetAddresses {
@@ -754,6 +755,7 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
 /// It includes the address for the upgrade governor role.
 #[derive(Drop, Copy)]
 pub(crate) struct PoolRoles {
+    pub governance_admin: ContractAddress,
     pub upgrade_governor: ContractAddress,
 }
 
@@ -1138,7 +1140,9 @@ pub(crate) impl SystemImpl of SystemTrait {
                     PoolState {
                         address: pool_address,
                         governance_admin: pool_contract_admin,
-                        roles: PoolRoles { upgrade_governor },
+                        roles: PoolRoles {
+                            governance_admin: pool_contract_admin, upgrade_governor,
+                        },
                     },
                 );
     }
@@ -1800,6 +1804,18 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
             contract_address: pool.address,
             :implementation_data,
             upgrade_governor: pool.roles.upgrade_governor,
+        );
+        // Register staking contract as governance admin and upgrade governor.
+        let staking_contract = self.staking.address;
+        set_account_as_governance_admin(
+            contract: pool.address,
+            account: staking_contract,
+            governance_admin: pool.roles.governance_admin,
+        );
+        set_account_as_upgrade_governor(
+            contract: pool.address,
+            account: staking_contract,
+            governance_admin: pool.roles.governance_admin,
         );
     }
 }
