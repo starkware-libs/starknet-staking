@@ -41,6 +41,7 @@ use staking::staking::interface::{
     IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait, NormalizedAmount};
+use staking::staking::staking::Staking::DEFAULT_EXIT_WAIT_WINDOW;
 use staking::staking::tests::interface_v0::{
     IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
 };
@@ -403,6 +404,14 @@ pub(crate) impl StakingImpl of StakingTrait {
         );
         let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: self.address };
         staking_config_dispatcher.set_epoch_info(:epoch_duration, :epoch_length);
+    }
+
+    fn set_exit_wait_window(self: StakingState, exit_wait_window: TimeDelta) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.token_admin,
+        );
+        let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: self.address };
+        staking_config_dispatcher.set_exit_wait_window(:exit_wait_window);
     }
 
     fn update_global_index_if_needed(self: StakingState) -> bool {
@@ -1795,6 +1804,13 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
             self.staker_migration(staker_address);
         }
         self.minting_curve.set_c_num(DEFAULT_C_NUM);
+        // Sanity check that exit_wait_window is different from the default value.
+        assert!(
+            self.staking.get_exit_wait_window() != DEFAULT_EXIT_WAIT_WINDOW,
+            "Exit wait window is already set to the default value: {:?}",
+            DEFAULT_EXIT_WAIT_WINDOW,
+        );
+        self.staking.set_exit_wait_window(exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW);
         // Add BTC token to the staking contract.
         self.staking.add_token(token_address: self.btc_token.contract_address());
         self.staking.unpause();
