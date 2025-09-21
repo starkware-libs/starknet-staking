@@ -32,7 +32,7 @@
 - not disable rewards with v3 off - no rewards, same block - panic
 - not disable rewards with v3 on - rewards, same block - panic
 
-## k=1 -> k=2
+## k=1 -> k=2 balances
 - staker with stake, upgrade, increase stake - before upgrade after 1 epoch, after 2 epochs (check also total stake)
 - delegator delegate, upgrade, add delegation - same
 - delegator claim rewards when last change is in epoch + 2, then advance epochs and claim again to see no missing rewards
@@ -58,3 +58,10 @@
 - Member only enter before migration, only one rewards to pool, upgrade, claim rewards.
 - Member change balances before migration, upgrade, one rewards to pool, claim rewards.
 - TODO: Think of edge cases here in calculate rewards.
+
+## k=1 -> k=2 token
+- enable token, update rewards, advance epoch, update rewards, advance epoch, update rewards - token does not get rewards until after 2 epochs
+- same as above with disable (can be implemented together as one test)
+- token enabled, upgrade, disable
+- token disabled, upgrade, enable
+- token A enabled, next epoch token B enabled, next epoch token A disabled, next epoch token B disabled

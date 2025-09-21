@@ -1259,7 +1259,7 @@ pub mod Staking {
             let curr_epoch = self.get_current_epoch();
             assert!(curr_epoch >= is_active_first_epoch, "{}", GenericError::INVALID_EPOCH);
             assert!(!is_active, "{}", Error::TOKEN_ALREADY_ENABLED);
-            let next_is_active_first_epoch = curr_epoch + 1;
+            let next_is_active_first_epoch = self.get_epoch_plus_k();
             self.btc_tokens.write(token_address, (next_is_active_first_epoch, true));
             self.emit(TokenManagerEvents::TokenEnabled { token_address });
         }
@@ -1272,7 +1272,7 @@ pub mod Staking {
             let curr_epoch = self.get_current_epoch();
             assert!(curr_epoch >= is_active_first_epoch, "{}", GenericError::INVALID_EPOCH);
             assert!(is_active, "{}", Error::TOKEN_ALREADY_DISABLED);
-            let next_is_active_first_epoch = curr_epoch + 1;
+            let next_is_active_first_epoch = self.get_epoch_plus_k();
             self.btc_tokens.write(token_address, (next_is_active_first_epoch, false));
             self.emit(TokenManagerEvents::TokenDisabled { token_address });
         }

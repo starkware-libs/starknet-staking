@@ -232,11 +232,11 @@ pub trait IStakingTokenManager<TContractState> {
     /// 2. Token decimals are validated once upon addition (expected to be 8).
     /// Subsequent changes to the token's decimals are not supported and may lead to issues.
     fn add_token(ref self: TContractState, token_address: ContractAddress);
-    /// Enable token for getting rewards. Takes effect from the next epoch.
+    /// Enable token for getting rewards. Takes effect in K epochs.
     ///
-    /// **Note**: Once enabled, a token can only be disabled after at least one epoch.
+    /// **Note**: Once enabled, a token can only be disabled after at least K epochs.
     fn enable_token(ref self: TContractState, token_address: ContractAddress);
-    /// Disable token for getting rewards. Takes effect from the next epoch.
+    /// Disable token for getting rewards. Takes effect in K epochs.
     ///
     /// **Note**: disabled token is not eligible for rewards and has no staking power but still can
     /// be staked or unstaked.
