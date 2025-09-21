@@ -201,7 +201,7 @@ pub mod Pool {
             assert!(token_address != reward_address, "{}", GenericError::REWARD_ADDRESS_IS_TOKEN);
             // Transfer funds from the delegator to the staking contract.
             let staker_address = self.staker_address.read();
-            self.transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
+            transfer_from_delegator(:pool_member, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
             self.set_member_balance(:pool_member, :amount);
@@ -241,7 +241,7 @@ pub mod Pool {
             // Transfer funds from the delegator to the staking contract.
             let token_dispatcher = self.token_dispatcher.read();
             let staker_address = self.staker_address.read();
-            self.transfer_from_delegator(pool_member: caller_address, :amount, :token_dispatcher);
+            transfer_from_delegator(pool_member: caller_address, :amount, :token_dispatcher);
             self.transfer_to_staking_contract(:amount, :token_dispatcher, :staker_address);
 
             // Update the pool member's balance checkpoint.
@@ -666,22 +666,6 @@ pub mod Pool {
                 .remove_from_delegation_pool_intent(
                     :staker_address, identifier: pool_member.into(), :amount,
                 )
-        }
-
-        /// Transfer funds of the specified amount from the given delegator to the pool.
-        ///
-        /// Sufficient approvals of transfer is a pre-condition.
-        fn transfer_from_delegator(
-            self: @ContractState,
-            pool_member: ContractAddress,
-            amount: Amount,
-            token_dispatcher: IERC20Dispatcher,
-        ) {
-            let self_contract = get_contract_address();
-            token_dispatcher
-                .checked_transfer_from(
-                    sender: pool_member, recipient: self_contract, amount: amount.into(),
-                );
         }
 
         /// Transfer funds of the specified amount from the pool to the staking contract.
@@ -1112,5 +1096,18 @@ pub mod Pool {
                 }
             }
         }
+    }
+
+    /// Transfer funds of the specified amount from the given delegator to the pool.
+    ///
+    /// Sufficient approvals of transfer is a pre-condition.
+    fn transfer_from_delegator(
+        pool_member: ContractAddress, amount: Amount, token_dispatcher: IERC20Dispatcher,
+    ) {
+        let self_contract = get_contract_address();
+        token_dispatcher
+            .checked_transfer_from(
+                sender: pool_member, recipient: self_contract, amount: amount.into(),
+            );
     }
 }
