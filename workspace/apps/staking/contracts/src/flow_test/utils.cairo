@@ -1452,9 +1452,8 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
         self.attestation.unwrap().safe_dispatcher().attest(:block_hash)
     }
 
-    fn advance_epoch_and_attest(self: SystemState, staker: Staker) {
-        self.advance_epoch();
-        self.advance_epoch();
+    fn advance_k_epochs_and_attest(self: SystemState, staker: Staker) {
+        self.advance_k_epochs();
         self.advance_block_into_attestation_window(:staker);
         self.attest(:staker);
     }
