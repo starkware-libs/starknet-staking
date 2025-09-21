@@ -1,8 +1,9 @@
 use MainnetClassHashes::{
     MAINNET_ATTESTATION_CLASS_HASH_V1, MAINNET_MINTING_CURVE_CLASS_HASH_V0,
-    MAINNET_POOL_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V1, MAINNET_POOL_EIC_CLASS_HASH_V0_V1,
-    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1,
-    MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1,
+    MAINNET_MINTING_CURVE_CLASS_HASH_V2, MAINNET_POOL_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V1,
+    MAINNET_POOL_EIC_CLASS_HASH_V0_V1, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0,
+    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V2,
+    MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V2,
     MAINNET_STAKING_EIC_CLASS_HASH_V0_V1,
 };
 use core::num::traits::zero::Zero;
@@ -102,6 +103,11 @@ pub(crate) mod MainnetClassHashes {
         0x00ffcfa25f7693bd36217df9e1a13e3ab1ea46308012df885d91507c6aafa39f.try_into().unwrap()
     }
 
+    /// Class hash of the third staking contract deployed on mainnet (BTC).
+    pub(crate) fn MAINNET_STAKING_CLASS_HASH_V2() -> ClassHash {
+        0x05a93367d9e4fd00d9b17575cc52f70f8b48c3926da015cc7e87a3994f1c63a7.try_into().unwrap()
+    }
+
     /// Class hash of the first reward supplier contract deployed on mainnet.
     pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash {
         0x7cbbebcdbbce7bd45611d8b679e524b63586429adee0f858b7f0994d709d648.try_into().unwrap()
@@ -112,9 +118,19 @@ pub(crate) mod MainnetClassHashes {
         0x7dbce96b61d0195129103eca514936992f290062bcb95c7528f7383b062cde7.try_into().unwrap()
     }
 
+    /// Class hash of the third reward supplier contract deployed on mainnet (BTC).
+    pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V2() -> ClassHash {
+        0x05b312a712b50de7059ae1ad02f4445568ecc8ca49765989175a40f404cfceb9.try_into().unwrap()
+    }
+
     /// Class hash of the first minting curve contract deployed on mainnet.
     pub(crate) fn MAINNET_MINTING_CURVE_CLASS_HASH_V0() -> ClassHash {
         0xb00a4f0a3ba3f266837da66c0c3053c4676046a2d621e80d1f822fe9c9b5f6.try_into().unwrap()
+    }
+
+    /// Class hash of the second minting curve contract deployed on mainnet (BTC).
+    pub(crate) fn MAINNET_MINTING_CURVE_CLASS_HASH_V2() -> ClassHash {
+        0x0160a75d5bed7570e3eaab102286940d28242fc5211bd1503da7e7414b707f52.try_into().unwrap()
     }
 
     /// Class hash of the first pool contract deployed on mainnet.
@@ -1793,7 +1809,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
 /// regression test.
 /// This trait is used for the upgrade from V1 to V2 implementation.
 pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
-    /// Upgrades the contracts in the system state with local
+    /// Upgrades the contracts in the system state with V2 (BTC)
     /// implementations.
     fn upgrade_contracts_implementation_v2(self: SystemState) {
         self.staking.pause();
@@ -1817,7 +1833,7 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         self.staking.enable_token(token_address: self.btc_token.contract_address());
     }
 
-    /// Upgrades the staking contract in the system state with a local implementation.
+    /// Upgrades the staking contract in the system state with V2 (BTC) implementation.
     fn upgrade_staking_implementation_v2(self: SystemState) {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
@@ -1827,7 +1843,9 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
                 .span(),
         };
         let implementation_data = ImplementationData {
-            impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
+            impl_hash: MAINNET_STAKING_CLASS_HASH_V2(),
+            eic_data: Option::Some(eic_data),
+            final: false,
         };
         upgrade_implementation(
             contract_address: self.staking.address,
@@ -1836,10 +1854,12 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         );
     }
 
-    /// Upgrades the reward supplier contract in the system state with a local implementation.
+    /// Upgrades the reward supplier contract in the system state with V2 (BTC) implementation.
     fn upgrade_reward_supplier_implementation_v2(self: SystemState) {
         let implementation_data = ImplementationData {
-            impl_hash: declare_reward_supplier_contract(), eic_data: Option::None, final: false,
+            impl_hash: MAINNET_REWARD_SUPPLIER_CLASS_HASH_V2(),
+            eic_data: Option::None,
+            final: false,
         };
         upgrade_implementation(
             contract_address: self.reward_supplier.address,
@@ -1848,15 +1868,42 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         );
     }
 
-    /// Upgrades the minting curve contract in the system state with a local implementation.
+    /// Upgrades the minting curve contract in the system state with V2 (BTC) implementation.
     fn upgrade_minting_curve_implementation_v2(self: SystemState) {
         let implementation_data = ImplementationData {
-            impl_hash: declare_minting_curve_contract(), eic_data: Option::None, final: false,
+            impl_hash: MAINNET_MINTING_CURVE_CLASS_HASH_V2(), eic_data: Option::None, final: false,
         };
         upgrade_implementation(
             contract_address: self.minting_curve.address,
             :implementation_data,
             upgrade_governor: self.minting_curve.roles.upgrade_governor,
+        );
+    }
+}
+
+#[generate_trait]
+/// Replaceability utils for internal use of the system. Meant to be used before running a
+/// regression test.
+/// This trait is used for the upgrade from V2 (BTC) to V3 implementation.
+pub(crate) impl SystemReplaceabilityV3Impl of SystemReplaceabilityV3Trait {
+    /// Upgrades the contracts in the system state with local
+    /// implementations.
+    fn upgrade_contracts_implementation_v3(self: SystemState) {
+        self.staking.pause();
+        self.upgrade_staking_implementation_v3();
+        // TODO: Upgrade pool contracts.
+        self.staking.unpause();
+    }
+
+    /// Upgrades the staking contract in the system state with a local implementation.
+    fn upgrade_staking_implementation_v3(self: SystemState) {
+        let implementation_data = ImplementationData {
+            impl_hash: declare_staking_contract(), eic_data: Option::None, final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.staking.address,
+            :implementation_data,
+            upgrade_governor: self.staking.roles.upgrade_governor,
         );
     }
 }
@@ -1920,6 +1967,7 @@ pub(crate) trait FlowTrait<TFlow, +Drop<TFlow>> {
     }
     fn setup(ref self: TFlow, ref system: SystemState) {}
     fn setup_v1(ref self: TFlow, ref system: SystemState) {}
+    fn setup_v2(ref self: TFlow, ref system: SystemState) {}
     fn test(self: TFlow, ref system: SystemState);
 }
 
@@ -1946,6 +1994,8 @@ pub(crate) fn test_flow_mainnet<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TF
         system.set_staker_for_migration(staker_address);
     }
     system.upgrade_contracts_implementation_v2();
+    flow.setup_v2(ref :system);
+    system.upgrade_contracts_implementation_v3();
     flow.test(ref :system);
 }
 
