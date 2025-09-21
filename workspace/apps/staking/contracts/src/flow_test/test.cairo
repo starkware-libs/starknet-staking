@@ -324,13 +324,13 @@ fn delegator_claim_rewards_flow_test() {
     let commission = 200;
 
     system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     let pool = system.staking.get_pool(:staker);
     let delegated_amount = stake_amount;
     let delegator = system.new_delegator(amount: delegated_amount * 2);
     system.delegate(:delegator, :pool, amount: delegated_amount);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window().div(divider: 2));
@@ -385,34 +385,34 @@ fn two_delegators_full_intent_flow_test() {
     let commission = 200;
 
     system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     let pool = system.staking.get_pool(:staker);
     let delegated_amount = stake_amount;
 
     let delegator_x = system.new_delegator(amount: delegated_amount);
     system.delegate(delegator: delegator_x, :pool, amount: delegated_amount);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     let delegator_y = system.new_delegator(amount: delegated_amount);
     system.delegate(delegator: delegator_y, :pool, amount: delegated_amount);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system.delegator_exit_intent(delegator: delegator_x, :pool, amount: delegated_amount);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system.delegator_exit_action(delegator: delegator_x, :pool);
     system.delegator_claim_rewards(delegator: delegator_x, :pool);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system.delegator_exit_intent(delegator: delegator_y, :pool, amount: delegated_amount);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system.delegator_exit_action(delegator: delegator_y, :pool);
     system.delegator_claim_rewards(delegator: delegator_y, :pool);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system.staker_exit_intent(:staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
@@ -462,18 +462,18 @@ fn partial_switches_flow_test() {
 
     let first_staker = system.new_staker(amount: stake_amount);
     system.stake(staker: first_staker, amount: stake_amount, pool_enabled: true, :commission);
-    system.advance_epoch_and_attest(staker: first_staker);
+    system.advance_k_epochs_and_attest(staker: first_staker);
 
     let delegated_amount = stake_amount;
     let delegator = system.new_delegator(amount: delegated_amount);
     let first_pool = system.staking.get_pool(staker: first_staker);
     system.delegate(:delegator, pool: first_pool, amount: delegated_amount);
-    system.advance_epoch_and_attest(staker: first_staker);
+    system.advance_k_epochs_and_attest(staker: first_staker);
 
     let second_staker = system.new_staker(amount: stake_amount);
     system.stake(staker: second_staker, amount: stake_amount, pool_enabled: true, :commission);
-    system.advance_epoch_and_attest(staker: first_staker);
-    system.advance_epoch_and_attest(staker: second_staker);
+    system.advance_k_epochs_and_attest(staker: first_staker);
+    system.advance_k_epochs_and_attest(staker: second_staker);
 
     system.delegator_exit_intent(:delegator, pool: first_pool, amount: delegated_amount / 2);
     let second_pool = system.staking.get_pool(staker: second_staker);
@@ -486,13 +486,13 @@ fn partial_switches_flow_test() {
             amount: delegated_amount / 4,
         );
     system.advance_time(time: system.staking.get_exit_wait_window());
-    system.advance_epoch_and_attest(staker: first_staker);
-    system.advance_epoch_and_attest(staker: second_staker);
+    system.advance_k_epochs_and_attest(staker: first_staker);
+    system.advance_k_epochs_and_attest(staker: second_staker);
 
     system.delegator_exit_action(:delegator, pool: first_pool);
     system.delegator_claim_rewards(:delegator, pool: first_pool);
-    system.advance_epoch_and_attest(staker: first_staker);
-    system.advance_epoch_and_attest(staker: second_staker);
+    system.advance_k_epochs_and_attest(staker: first_staker);
+    system.advance_k_epochs_and_attest(staker: second_staker);
 
     system.delegator_exit_intent(:delegator, pool: second_pool, amount: delegated_amount / 8);
     system
@@ -503,24 +503,24 @@ fn partial_switches_flow_test() {
             to_pool: first_pool,
             amount: delegated_amount / 8,
         );
-    system.advance_epoch_and_attest(staker: first_staker);
-    system.advance_epoch_and_attest(staker: second_staker);
+    system.advance_k_epochs_and_attest(staker: first_staker);
+    system.advance_k_epochs_and_attest(staker: second_staker);
 
     let new_reward_address = system.new_account(amount: Zero::zero()).address;
     system
         .delegator_change_reward_address(
             :delegator, pool: second_pool, reward_address: new_reward_address,
         );
-    system.advance_epoch_and_attest(staker: first_staker);
-    system.advance_epoch_and_attest(staker: second_staker);
+    system.advance_k_epochs_and_attest(staker: first_staker);
+    system.advance_k_epochs_and_attest(staker: second_staker);
 
     system.delegator_claim_rewards(:delegator, pool: first_pool);
     system.delegator_claim_rewards(:delegator, pool: second_pool);
 
     system.delegator_exit_intent(:delegator, pool: first_pool, amount: (delegated_amount * 5 / 8));
     system.advance_time(time: system.staking.get_exit_wait_window());
-    system.advance_epoch_and_attest(staker: first_staker);
-    system.advance_epoch_and_attest(staker: second_staker);
+    system.advance_k_epochs_and_attest(staker: first_staker);
+    system.advance_k_epochs_and_attest(staker: second_staker);
     system.delegator_exit_action(:delegator, pool: first_pool);
     system.delegator_claim_rewards(:delegator, pool: first_pool);
 
@@ -528,12 +528,12 @@ fn partial_switches_flow_test() {
     system.advance_exit_wait_window();
     system.delegator_exit_action(:delegator, pool: second_pool);
     system.delegator_claim_rewards(:delegator, pool: second_pool);
-    system.advance_epoch_and_attest(staker: first_staker);
-    system.advance_epoch_and_attest(staker: second_staker);
+    system.advance_k_epochs_and_attest(staker: first_staker);
+    system.advance_k_epochs_and_attest(staker: second_staker);
 
     system.staker_exit_intent(staker: first_staker);
     system.advance_time(time: system.staking.get_exit_wait_window());
-    system.advance_epoch_and_attest(staker: second_staker);
+    system.advance_k_epochs_and_attest(staker: second_staker);
     system.staker_exit_action(staker: first_staker);
 
     system.staker_exit_intent(staker: second_staker);
@@ -597,12 +597,12 @@ fn flow_4_switch_member_back_and_forth_test() {
     system.stake(staker: staker_A, amount: stake_amount, pool_enabled: true, :commission);
     assert!(system.staking.get_total_stake() == stake_amount);
     let pool_A = system.staking.get_pool(staker: staker_A);
-    system.advance_epoch_and_attest(staker: staker_A);
+    system.advance_k_epochs_and_attest(staker: staker_A);
 
     let staker_B = system.new_staker(amount: stake_amount);
     system.stake(staker: staker_B, amount: stake_amount, pool_enabled: true, :commission);
-    system.advance_epoch_and_attest(staker: staker_B);
-    system.advance_epoch_and_attest(staker: staker_A);
+    system.advance_k_epochs_and_attest(staker: staker_B);
+    system.advance_k_epochs_and_attest(staker: staker_A);
     let pool_B = system.staking.get_pool(staker: staker_B);
 
     assert!(system.staking.get_total_stake() == 2 * stake_amount);
@@ -610,9 +610,9 @@ fn flow_4_switch_member_back_and_forth_test() {
     let delegator_Y = system.new_delegator(amount: delegated_amount);
     system.delegate(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
 
-    system.advance_epoch_and_attest(staker: staker_A);
+    system.advance_k_epochs_and_attest(staker: staker_A);
     assert!(system.token.balance_of(account: pool_B).is_zero());
-    system.advance_epoch_and_attest(staker: staker_B);
+    system.advance_k_epochs_and_attest(staker: staker_B);
     assert!(system.token.balance_of(account: pool_B).is_non_zero());
     assert!(system.staking.get_total_stake() == 2 * stake_amount + delegated_amount);
     assert!(
@@ -622,8 +622,8 @@ fn flow_4_switch_member_back_and_forth_test() {
 
     // DY intend to exit PB & switch to PA.
     system.delegator_exit_intent(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
-    system.advance_epoch_and_attest(staker: staker_A);
-    system.advance_epoch_and_attest(staker: staker_B);
+    system.advance_k_epochs_and_attest(staker: staker_A);
+    system.advance_k_epochs_and_attest(staker: staker_B);
     system
         .switch_delegation_pool(
             delegator: delegator_Y,
@@ -633,14 +633,14 @@ fn flow_4_switch_member_back_and_forth_test() {
             amount: delegated_amount,
         );
     assert!(system.token.balance_of(account: pool_A).is_zero());
-    system.advance_epoch_and_attest(staker: staker_A);
+    system.advance_k_epochs_and_attest(staker: staker_A);
     assert!(system.token.balance_of(account: pool_A).is_non_zero());
-    system.advance_epoch_and_attest(staker: staker_B);
+    system.advance_k_epochs_and_attest(staker: staker_B);
 
     // DY intend to exit PA & switch to PB.
     system.delegator_exit_intent(delegator: delegator_Y, pool: pool_A, amount: delegated_amount);
-    system.advance_epoch_and_attest(staker: staker_A);
-    system.advance_epoch_and_attest(staker: staker_B);
+    system.advance_k_epochs_and_attest(staker: staker_A);
+    system.advance_k_epochs_and_attest(staker: staker_B);
     system
         .switch_delegation_pool(
             delegator: delegator_Y,
@@ -649,8 +649,8 @@ fn flow_4_switch_member_back_and_forth_test() {
             to_pool: pool_B,
             amount: delegated_amount,
         );
-    system.advance_epoch_and_attest(staker: staker_A);
-    system.advance_epoch_and_attest(staker: staker_B);
+    system.advance_k_epochs_and_attest(staker: staker_A);
+    system.advance_k_epochs_and_attest(staker: staker_B);
 
     // Perform test end clearance - All stakers and delegators exit staking.
     system.delegator_exit_intent(delegator: delegator_Y, pool: pool_B, amount: delegated_amount);
@@ -720,30 +720,30 @@ fn delegators_add_to_delegation_pool_flow_test() {
     let commission = 200;
 
     system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     let pool = system.staking.get_pool(:staker);
     let delegator_amount = stake_amount;
 
     let first_delegator = system.new_delegator(amount: delegator_amount);
     system.delegate(delegator: first_delegator, :pool, amount: delegator_amount / 2);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     let second_delegator = system.new_delegator(amount: delegator_amount);
     system.delegate(delegator: second_delegator, :pool, amount: delegator_amount / 2);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system
         .add_to_delegation_pool(
             delegator: first_delegator, pool: pool, amount: delegator_amount / 2,
         );
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system
         .add_to_delegation_pool(
             delegator: second_delegator, pool: pool, amount: delegator_amount / 2,
         );
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
     system.advance_epoch();
 
     system.delegator_exit_intent(delegator: first_delegator, :pool, amount: delegator_amount);
@@ -819,28 +819,28 @@ fn add_to_delegation_after_intent_flow_test() {
     let commission = 200;
 
     system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     let pool = system.staking.get_pool(:staker);
     let delegator_amount = stake_amount;
 
     let delegator = system.new_delegator(amount: delegator_amount);
     system.delegate(:delegator, :pool, amount: delegator_amount / 2);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     // Partial intent.
     system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount / 4);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 4);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     // Full intent.
     system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount * 3 / 4);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
 
     system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 4);
-    system.advance_epoch_and_attest(:staker);
+    system.advance_k_epochs_and_attest(:staker);
     system.advance_epoch();
 
     system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount);
