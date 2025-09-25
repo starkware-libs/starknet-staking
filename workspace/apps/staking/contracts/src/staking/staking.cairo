@@ -1380,15 +1380,20 @@ pub mod Staking {
 
             // Assert staker exists.
             let staker_info = self.internal_staker_info(:staker_address);
-            // TODO: Assert staker is not in unstake intent.
+            let curr_epoch = self.get_current_epoch();
+            // TODO: Consider optimize `is_staker_active` to get `staker_info`.
+            assert!(
+                self.is_staker_active(:staker_address, epoch_id: curr_epoch),
+                "{}",
+                Error::INVALID_STAKER,
+            );
 
             let staker_pool_info = self.staker_pool_info.entry(staker_address).as_non_mut();
-            let curr_epoch = self.get_current_epoch();
             let staker_total_strk_balance = self
                 .get_staker_total_strk_balance_curr_epoch(
                     :staker_address, :staker_pool_info, :curr_epoch,
                 );
-            // Assert staker is active.
+            // Assert staker has balance.
             assert!(staker_total_strk_balance.is_non_zero(), "{}", Error::INVALID_STAKER);
 
             // Update last block rewards.
