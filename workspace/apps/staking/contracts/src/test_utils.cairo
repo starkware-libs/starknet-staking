@@ -13,7 +13,6 @@ use constants::{
 use core::hash::HashStateTrait;
 use core::num::traits::Pow;
 use core::num::traits::zero::Zero;
-use core::panics::panic_with_byte_array;
 use core::poseidon::PoseidonTrait;
 use core::traits::Into;
 use openzeppelin::token::erc20::interface::{
@@ -37,7 +36,6 @@ use staking::minting_curve::minting_curve::MintingCurve::{C_DENOM, DEFAULT_C_NUM
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
-use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::staking::errors::Error as StakingError;
@@ -62,7 +60,7 @@ use staking::utils::{
 };
 use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::constants::SYMBOL;
-use starkware_utils::errors::{Describable, OptionAuxTrait};
+use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
@@ -75,6 +73,7 @@ pub(crate) mod constants {
     use core::cmp::max;
     use core::num::traits::ops::pow::Pow;
     use staking::constants::STRK_IN_FRIS;
+    use staking::pool::objects::TokenRewardsConfig;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
     use staking::types::{Amount, BlockNumber, Commission, Index, PublicKey};
     use starknet::class_hash::ClassHash;
@@ -94,6 +93,17 @@ pub(crate) mod constants {
     pub const BTC_DECIMALS_18: u8 = 18;
     pub const MIN_BTC_FOR_REWARDS_18: Amount = 10_u128.pow(13);
     pub const BTC_BASE_VALUE_18: Index = 10_u128.pow(23);
+
+    /// BTC token configuration for rewards calculation.
+    pub const BTC_5D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+        decimals: 5, min_for_rewards: 10_u128.pow(0), base_value: 10_u128.pow(10),
+    };
+    pub const BTC_8D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+        decimals: 8, min_for_rewards: 10_u128.pow(3), base_value: 10_u128.pow(13),
+    };
+    pub const BTC_18D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
+        decimals: 18, min_for_rewards: 10_u128.pow(13), base_value: 10_u128.pow(23),
+    };
 
     pub const TEST_BTC_DECIMALS: u8 = BTC_DECIMALS_8;
     pub const TEST_BTC_BASE_VALUE: u128 = BTC_BASE_VALUE_8;
@@ -1347,13 +1357,7 @@ fn get_reward_calculation_params(token_address: ContractAddress) -> (Amount, Amo
         (STRK_IN_FRIS, STRK_BASE_VALUE)
     } else {
         let decimals = token_dispatcher.decimals();
-        if decimals == BTC_DECIMALS_8 {
-            (MIN_BTC_FOR_REWARDS_8, BTC_BASE_VALUE_8)
-        } else if decimals == BTC_DECIMALS_18 {
-            (MIN_BTC_FOR_REWARDS_18, BTC_BASE_VALUE_18)
-        } else {
-            panic_with_byte_array(err: @StakingError::INVALID_TOKEN_ADDRESS.describe())
-        }
+        (10_u128.pow(decimals.into() - 5), 10_u128.pow(decimals.into() + 5))
     }
 }
 
@@ -1571,10 +1575,10 @@ fn get_token_decimals(token_address: ContractAddress) -> u8 {
 
 pub(crate) fn to_amount_18_decimals(amount: Amount, token_address: ContractAddress) -> Amount {
     let decimals = get_token_decimals(:token_address);
-    amount * 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into())
+    amount * 10_u128.pow(18 - decimals.into())
 }
 
 pub(crate) fn to_native_amount(amount: Amount, token_address: ContractAddress) -> Amount {
     let decimals = get_token_decimals(:token_address);
-    amount / 10_u128.pow(STRK_CONFIG.decimals.into() - decimals.into())
+    amount / 10_u128.pow(18 - decimals.into())
 }

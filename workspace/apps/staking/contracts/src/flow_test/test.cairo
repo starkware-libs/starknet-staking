@@ -6,11 +6,14 @@ use staking::flow_test::utils::{
     RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemStakerTrait,
     SystemTrait, TokenHelperTrait, test_flow_local,
 };
-use staking::test_utils::constants::{STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS};
+use staking::pool::pool::Pool;
+use staking::test_utils::constants::{
+    BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS,
+};
 use staking::test_utils::{
     StakingInitConfig, calculate_staker_btc_pool_rewards,
     calculate_staker_strk_rewards_with_balances_v2, calculate_strk_pool_rewards_with_pool_balance,
-    compute_rewards_per_unit,
+    compute_rewards_per_unit, custom_decimals_token, deploy_mock_erc20_decimals_contract,
 };
 use staking::utils::compute_rewards_rounded_down;
 use starkware_utils::math::abs::wide_abs_diff;
@@ -1500,4 +1503,145 @@ fn staker_claim_rewards_flow_test() {
         system.token.balance_of(account: btc_delegator.reward.address) == balance_before_claim
             + rewards,
     );
+}
+
+/// Flow:
+/// Staker stake
+/// Delegator delegate btc with 5, 8, 18 decimals
+/// Attest and check rewards
+#[test]
+fn triple_btc_decimals_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+
+    // Set up tokens.
+    let btc_5d_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: "BTC 5D Token",
+        decimals: BTC_5D_CONFIG.decimals,
+    );
+    let btc_8d_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: "BTC 8D Token",
+        decimals: BTC_8D_CONFIG.decimals,
+    );
+    let btc_18d_token_address = deploy_mock_erc20_decimals_contract(
+        initial_supply: cfg.test_info.initial_supply,
+        owner_address: cfg.test_info.owner_address,
+        name: "BTC 18D Token",
+        decimals: BTC_18D_CONFIG.decimals,
+    );
+    let btc_5d_token = custom_decimals_token(token_address: btc_5d_token_address);
+    let btc_8d_token = custom_decimals_token(token_address: btc_8d_token_address);
+    let btc_18d_token = custom_decimals_token(token_address: btc_18d_token_address);
+    system.staking.add_token(token_address: btc_5d_token_address);
+    system.staking.add_token(token_address: btc_8d_token_address);
+    system.staking.add_token(token_address: btc_18d_token_address);
+    system.staking.enable_token(token_address: btc_5d_token_address);
+    system.staking.enable_token(token_address: btc_8d_token_address);
+    system.staking.enable_token(token_address: btc_18d_token_address);
+
+    // Staker stake.
+    let stake_amount = system.staking.get_min_stake();
+    let staker = system.new_staker(amount: stake_amount);
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: Zero::zero());
+
+    // Open pools.
+    system.set_commission(:staker, commission: Zero::zero());
+    let btc_5d_token_pool = system
+        .set_open_for_delegation(:staker, token_address: btc_5d_token_address);
+    let btc_8d_token_pool = system
+        .set_open_for_delegation(:staker, token_address: btc_8d_token_address);
+    let btc_18d_token_pool = system
+        .set_open_for_delegation(:staker, token_address: btc_18d_token_address);
+
+    // Delegators delegate.
+    let btc_5d_token_amount = BTC_5D_CONFIG.min_for_rewards;
+    let btc_8d_token_amount = BTC_8D_CONFIG.min_for_rewards;
+    let btc_18d_token_amount = BTC_18D_CONFIG.min_for_rewards;
+    let btc_5d_token_delegator = system
+        .new_btc_delegator(amount: btc_5d_token_amount, token: btc_5d_token);
+    let btc_8d_token_delegator = system
+        .new_btc_delegator(amount: btc_8d_token_amount, token: btc_8d_token);
+    let btc_18d_token_delegator = system
+        .new_btc_delegator(amount: btc_18d_token_amount, token: btc_18d_token);
+    system
+        .delegate_btc(
+            delegator: btc_5d_token_delegator,
+            pool: btc_5d_token_pool,
+            amount: btc_5d_token_amount,
+            token: btc_5d_token,
+        );
+    system
+        .delegate_btc(
+            delegator: btc_8d_token_delegator,
+            pool: btc_8d_token_pool,
+            amount: btc_8d_token_amount,
+            token: btc_8d_token,
+        );
+    system
+        .delegate_btc(
+            delegator: btc_18d_token_delegator,
+            pool: btc_18d_token_pool,
+            amount: btc_18d_token_amount,
+            token: btc_18d_token,
+        );
+
+    // Attest and check rewards.
+    system.advance_k_epochs_and_attest(:staker);
+    system.advance_epoch();
+
+    let btc_5d_token_rewards = system
+        .delegator_claim_rewards(delegator: btc_5d_token_delegator, pool: btc_5d_token_pool);
+    let btc_8d_token_rewards = system
+        .delegator_claim_rewards(delegator: btc_8d_token_delegator, pool: btc_8d_token_pool);
+    let btc_18d_token_rewards = system
+        .delegator_claim_rewards(delegator: btc_18d_token_delegator, pool: btc_18d_token_pool);
+    assert!(btc_5d_token_rewards == btc_8d_token_rewards);
+    assert!(btc_8d_token_rewards == btc_18d_token_rewards);
+}
+
+/// Flow:
+/// Staker stake
+/// Delegator delegate with less than min STRK for rewards
+/// Attest and check rewards
+/// Delegator add_to_delegation_pool exactly min STRK for rewards
+/// Attest and check rewards
+#[test]
+fn delegate_min_strk_for_rewards_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let staker = system.new_staker(amount: stake_amount);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: Zero::zero());
+    let pool = system.staking.get_pool(:staker);
+
+    // Setup delegator.
+    let delegate_amount = Pool::STRK_CONFIG.min_for_rewards;
+    let delegator = system.new_delegator(amount: delegate_amount);
+
+    // Enter pool with less than min STRK for rewards.
+    system.delegate(:delegator, :pool, amount: delegate_amount - 1);
+
+    // Attest.
+    system.advance_k_epochs_and_attest(:staker);
+    system.advance_epoch();
+
+    // Check rewards.
+    system.advance_epoch();
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == Zero::zero());
+
+    // Add to delegation.
+    system.add_to_delegation_pool(:delegator, :pool, amount: 1);
+
+    // Attest.
+    system.advance_k_epochs_and_attest(:staker);
+
+    // Check rewards.
+    system.advance_epoch();
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards > Zero::zero());
 }

@@ -53,22 +53,14 @@ pub mod Pool {
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Delegation Pool';
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
 
-    /// Token configuration for rewards calculation.
+    /// Token configuration for STRK pool rewards calculation.
     ///
     /// - STRK: Token with 18 decimals
-    /// - BTC_8D: Bitcoin with native 8 decimals
-    /// - BTC_18D: Wrapped Bitcoin with 18 decimals
     ///
     /// The `min_for_rewards` is the minimum delegated stake required to earn rewards.
     /// The `base_value` is used for precision in reward calculations.
     pub(crate) const STRK_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
         decimals: 18, min_for_rewards: 10_u128.pow(18), base_value: 10_u128.pow(28),
-    };
-    pub(crate) const BTC_8D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
-        decimals: 8, min_for_rewards: 10_u128.pow(3), base_value: 10_u128.pow(13),
-    };
-    pub(crate) const BTC_18D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
-        decimals: 18, min_for_rewards: 10_u128.pow(13), base_value: 10_u128.pow(23),
     };
     /// This var was used as the prev contract version in V1.
     /// This is the key for `prev_class_hash` (class hash of V0).
@@ -1079,12 +1071,13 @@ pub mod Pool {
                 // BTC token.
                 let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
                 let decimals = token_dispatcher.decimals();
-                if decimals == BTC_8D_CONFIG.decimals {
-                    BTC_8D_CONFIG
-                } else if decimals == BTC_18D_CONFIG.decimals {
-                    BTC_18D_CONFIG
-                } else {
-                    panic_with_byte_array(err: @StakingError::INVALID_TOKEN_ADDRESS.describe())
+                assert!(
+                    decimals >= 5 && decimals <= 18, "{}", GenericError::INVALID_TOKEN_DECIMALS,
+                );
+                TokenRewardsConfig {
+                    decimals,
+                    min_for_rewards: 10_u128.pow(decimals.into() - 5),
+                    base_value: 10_u128.pow(decimals.into() + 5),
                 }
             }
         }

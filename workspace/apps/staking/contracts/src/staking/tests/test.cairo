@@ -5166,7 +5166,9 @@ fn test_add_token_assertions() {
     );
     let result = staking_token_manager_safe_dispatcher
         .add_token(token_address: invalid_token_address);
-    assert_panic_with_error(:result, expected_error: Error::INVALID_TOKEN_ADDRESS.describe());
+    assert_panic_with_error(
+        :result, expected_error: GenericError::INVALID_TOKEN_DECIMALS.describe(),
+    );
     let invalid_token_address = deploy_mock_erc20_decimals_contract(
         initial_supply: cfg.test_info.initial_supply,
         owner_address: cfg.test_info.owner_address,
@@ -5178,7 +5180,9 @@ fn test_add_token_assertions() {
     );
     let result = staking_token_manager_safe_dispatcher
         .add_token(token_address: invalid_token_address);
-    assert_panic_with_error(:result, expected_error: Error::INVALID_TOKEN_ADDRESS.describe());
+    assert_panic_with_error(
+        :result, expected_error: GenericError::INVALID_TOKEN_DECIMALS.describe(),
+    );
 
     // Catch TOKEN_ALREADY_EXISTS.
     cheat_caller_address_once(
