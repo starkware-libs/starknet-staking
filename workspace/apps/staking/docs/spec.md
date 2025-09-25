@@ -235,6 +235,7 @@
     - [REWARDS\_ALREADY\_UPDATED](#rewards_already_updated)
     - [CONSENSUS\_REWARDS\_IS\_ACTIVE](#consensus_rewards_is_active)
     - [INVALID\_STAKER](#invalid_staker)
+    - [INVALID\_TOKEN\_DECIMALS](#invalid_token_decimals)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -1465,6 +1466,7 @@ Add a new token to the staking contract.
 3. [TOKEN\_IS\_STAKER](#token_is_staker)
 4. [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
 5. [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
+6. [INVALID\_TOKEN\_DECIMALS](#invalid_token_decimals)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only token admin.
@@ -2719,6 +2721,9 @@ Only token admin.
 
 ### TOKEN_ALREADY_EXISTS
 "Token already exists"
+
+### INVALID_TOKEN_DECIMALS
+"Invalid token decimals"
 
 ### TOKEN_IS_STAKER
 "Token is a staker address"

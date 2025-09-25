@@ -2,6 +2,7 @@ use core::cmp::max;
 use core::num::traits::{Pow, Zero};
 use core::ops::{AddAssign, SubAssign};
 use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
+use staking::errors::GenericError;
 use staking::staking::errors::Error;
 use staking::staking::interface::{
     CommissionCommitment, StakerInfoV1, StakerInfoV3, StakerPoolInfoV1,
@@ -49,7 +50,7 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
 
     /// Convert from `Amount` in the given `decimals` to `NormalizedAmount`.
     fn from_native_amount(amount: Amount, decimals: u8) -> NormalizedAmount {
-        assert!(decimals == 18 || decimals == 8, "Unsupported decimals");
+        assert!(decimals >= 5 && decimals <= 18, "{}", GenericError::INVALID_TOKEN_DECIMALS);
         NormalizedAmount { amount_18_decimals: amount * 10_u128.pow(18 - decimals.into()) }
     }
 
@@ -65,7 +66,7 @@ pub(crate) impl NormalizedAmountImpl of NormalizedAmountTrait {
 
     /// Convert from `NormalizedAmount` to `Amount` in the given `decimals`.
     fn to_native_amount(self: @NormalizedAmount, decimals: u8) -> Amount {
-        assert!(decimals == 18 || decimals == 8, "Unsupported decimals");
+        assert!(decimals >= 5 && decimals <= 18, "{}", GenericError::INVALID_TOKEN_DECIMALS);
         *self.amount_18_decimals / 10_u128.pow(18 - decimals.into())
     }
 

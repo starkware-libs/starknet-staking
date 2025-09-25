@@ -13,7 +13,7 @@ use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
-use staking::pool::pool::Pool::{BTC_18D_CONFIG, BTC_8D_CONFIG, STRK_CONFIG};
+use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
@@ -23,8 +23,8 @@ use staking::staking::interface::{
 use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait};
 use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
 use staking::test_utils::constants::{
-    BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, STRK_BASE_VALUE, TEST_BTC_DECIMALS,
-    TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
+    BTC_18D_CONFIG, BTC_8D_CONFIG, BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, STRK_BASE_VALUE,
+    TEST_BTC_DECIMALS, TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
 };
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,

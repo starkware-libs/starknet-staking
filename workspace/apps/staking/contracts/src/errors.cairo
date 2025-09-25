@@ -32,6 +32,7 @@ pub(crate) enum GenericError {
     ZERO_CLASS_HASH,
     ZERO_ADDRESS,
     REWARD_ADDRESS_IS_TOKEN,
+    INVALID_TOKEN_DECIMALS,
 }
 
 impl DescribableGenericError of Describable<GenericError> {
@@ -62,6 +63,7 @@ impl DescribableGenericError of Describable<GenericError> {
             GenericError::ZERO_CLASS_HASH => "Class hash is zero",
             GenericError::ZERO_ADDRESS => "Address is zero",
             GenericError::REWARD_ADDRESS_IS_TOKEN => "Reward address is a token address",
+            GenericError::INVALID_TOKEN_DECIMALS => "Invalid token decimals",
         }
     }
 }
