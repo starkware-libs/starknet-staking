@@ -3906,8 +3906,11 @@ fn test_update_rewards_assertions_before_consensus() {
 
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
-    advance_epoch_global();
-    // TODO: Catch INVALID_STAKER - unstake intent.
+    advance_k_epochs_global();
+    // Catch INVALID_STAKER - unstake intent.
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
 }
 
 #[test]
@@ -3981,8 +3984,11 @@ fn test_update_rewards_assertions_already_consensus() {
 
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     staking_dispatcher.unstake_intent();
-    advance_epoch_global();
-    // TODO: Catch INVALID_STAKER - unstake intent.
+    advance_k_epochs_global();
+    // Catch INVALID_STAKER - unstake intent.
+    let result = staking_rewards_safe_dispatcher
+        .update_rewards(:staker_address, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_STAKER.describe());
 }
 
 #[test]
