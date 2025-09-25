@@ -1,7 +1,9 @@
 use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::objects::{AttestationInfo, EpochInfo, NormalizedAmount};
-use staking::types::{Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey};
+use staking::types::{
+    Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey, StakingPower,
+};
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
@@ -83,6 +85,16 @@ pub trait IStaking<TContractState> {
 pub trait IStakingConsensus<TContractState> {
     /// Returns (epoch_id, epoch_starting_block, epoch_length) for the current epoch.
     fn get_current_epoch_data(self: @TContractState) -> (Epoch, BlockNumber, u32);
+    /// Returns a span of (staker_address, staking_power, Option<public_key>) for all stakers
+    /// for the given `epoch_id` (must be current or next epoch).
+    /// **Note**: The staking power is the relative weight of the staker's stake
+    /// out of the total stake, including pooled stake (STRK and BTC), multiplied by
+    /// `STAKING_POWER_BASE_VALUE`.
+    /// **Note**: Disregards stakers that either no staking power, which can be either new stakers
+    /// or stakers that called `exit_intent`.
+    fn get_stakers(
+        self: @TContractState, epoch_id: Epoch,
+    ) -> Span<(ContractAddress, StakingPower, Option<PublicKey>)>;
 }
 
 // **Note**: This trait must be reimplemented in the next version of the contract.

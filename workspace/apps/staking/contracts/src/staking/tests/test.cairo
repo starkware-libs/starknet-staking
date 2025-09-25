@@ -51,7 +51,8 @@ use staking::staking::interface::{
     IStakingAttestationSafeDispatcher, IStakingAttestationSafeDispatcherTrait,
     IStakingConfigDispatcher, IStakingConfigDispatcherTrait, IStakingConfigSafeDispatcher,
     IStakingConfigSafeDispatcherTrait, IStakingConsensusDispatcher,
-    IStakingConsensusDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
+    IStakingConsensusDispatcherTrait, IStakingConsensusSafeDispatcher,
+    IStakingConsensusSafeDispatcherTrait, IStakingDispatcher, IStakingDispatcherTrait,
     IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPoolDispatcher,
     IStakingPoolDispatcherTrait, IStakingPoolSafeDispatcher, IStakingPoolSafeDispatcherTrait,
     IStakingRewardsManagerDispatcher, IStakingRewardsManagerDispatcherTrait,
@@ -70,7 +71,7 @@ use staking::staking::objects::{
 };
 use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::{
-    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, MAX_MIGRATION_TRACE_ENTRIES,
+    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, MAX_MIGRATION_TRACE_ENTRIES, STRK_WEIGHT_FACTOR,
     V2_PREV_CONTRACT_VERSION,
 };
 use staking::types::{Amount, Epoch, InternalStakerInfoLatest, VecIndex};
@@ -5897,4 +5898,178 @@ fn test_get_current_epoch_data() {
     assert!(epoch_id == 3);
     assert!(starting_block == get_block_number());
     assert!(epoch_length == EPOCH_LENGTH * 2);
+}
+
+#[test]
+fn test_get_stakers() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key = cfg.test_info.public_key;
+
+    // Epoch 0 + 1.
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers.len() == 0);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers.len() == 0);
+
+    // Epoch 1 + 2.
+    advance_epoch_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    stake_for_testing_using_dispatcher(:cfg);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_public_key(:public_key);
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers.len() == 0);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers.len() == 0);
+
+    // Epoch 2 + 3.
+    advance_epoch_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers.len() == 0);
+
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    let expected_stakers = array![(staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key))]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Epoch 3 as current epoch.
+    advance_epoch_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+}
+
+#[test]
+fn test_get_stakers_before_after_set_public_key() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    let stake_amount = cfg.test_info.stake_amount;
+    let public_key = cfg.test_info.public_key;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    advance_k_epochs_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+
+    // Test before public key is set.
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    // TODO: Consider testing with staker amount when the view function is implemented.
+    let (strk_staking_power, _) = staking_dispatcher.get_current_total_staking_power();
+    let expected_stakers = array![(staker_address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    assert!(stakers == expected_stakers);
+    assert!(strk_staking_power == NormalizedAmountTrait::from_strk_native_amount(stake_amount));
+
+    // Set public key.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_public_key(:public_key);
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    advance_epoch_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    advance_epoch_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![(staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key))]
+        .span();
+    assert!(stakers == expected_stakers);
+}
+
+#[test]
+fn test_get_stakers_unstake_intent_action() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    // Set public key.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let public_key = cfg.test_info.public_key;
+    staking_dispatcher.set_public_key(:public_key);
+    advance_k_epochs_global();
+
+    // Intent and test.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let unstake_time = staking_dispatcher.unstake_intent();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers.len() == 1);
+
+    // Test after K epochs.
+    advance_k_epochs_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers.len() == 0);
+
+    // Unstake action.
+    start_cheat_block_timestamp_global(
+        block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into(),
+    );
+    staking_dispatcher.unstake_action(:staker_address);
+
+    // Test same epoch.
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers.len() == 0);
+
+    // Test next 2 epochs.
+    advance_epoch_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers.len() == 0);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers.len() == 0);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_get_stakers_invalid_epoch() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
+    let staking_consensus_safe_dispatcher = IStakingConsensusSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    staking_consensus_dispatcher.get_stakers(:epoch_id);
+    staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    let result = staking_consensus_safe_dispatcher.get_stakers(epoch_id: epoch_id + 2);
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+
+    advance_epoch_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    staking_consensus_dispatcher.get_stakers(:epoch_id);
+    staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    let result = staking_consensus_safe_dispatcher.get_stakers(epoch_id: epoch_id - 1);
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    let result = staking_consensus_safe_dispatcher.get_stakers(epoch_id: epoch_id + 2);
+    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
 }

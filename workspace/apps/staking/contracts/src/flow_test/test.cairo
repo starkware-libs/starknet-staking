@@ -7,6 +7,8 @@ use staking::flow_test::utils::{
     SystemTrait, TokenHelperTrait, test_flow_local,
 };
 use staking::pool::pool::Pool;
+use staking::staking::interface::{IStakingConsensusDispatcherTrait, IStakingDispatcherTrait};
+use staking::staking::staking::Staking::STRK_WEIGHT_FACTOR;
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS,
 };
@@ -18,6 +20,7 @@ use staking::test_utils::{
 use staking::utils::compute_rewards_rounded_down;
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::time::time::Time;
+use starkware_utils_testing::test_utils::cheat_caller_address_once;
 use crate::types::Amount;
 
 #[test]
@@ -1644,4 +1647,98 @@ fn delegate_min_strk_for_rewards_flow_test() {
     system.advance_epoch();
     let rewards = system.delegator_claim_rewards(:delegator, :pool);
     assert!(rewards > Zero::zero());
+}
+
+/// Flow:
+/// Staker 1 stake and set public key.
+/// Staker 2 stake.
+/// Advance epoch.
+/// Staker 2 set public key.
+/// Staker 3 stake and set public key.
+/// Test next few epochs.
+#[test]
+fn get_stakers_multiple_stakers_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let staking_contract = system.staking.address;
+    let staking_dispatcher = system.staking.dispatcher();
+    let staking_consensus_dispatcher = system.staking.consensus_dispatcher();
+    let stake_amount_1 = system.staking.get_min_stake();
+    let stake_amount_2 = stake_amount_1 * 2;
+    let stake_amount_3 = stake_amount_1 * 3;
+    let staker_1 = system.new_staker(amount: stake_amount_1);
+    let staker_2 = system.new_staker(amount: stake_amount_2);
+    let staker_3 = system.new_staker(amount: stake_amount_3);
+    let staker_address_1 = staker_1.staker.address;
+    let staker_address_2 = staker_2.staker.address;
+    let staker_address_3 = staker_3.staker.address;
+    let public_key_1 = 'PUBLIC_KEY_1';
+    let public_key_2 = 'PUBLIC_KEY_2';
+    let public_key_3 = 'PUBLIC_KEY_3';
+
+    // Staker 1 stake and set public key.
+    system.stake(staker: staker_1, amount: stake_amount_1, pool_enabled: false, commission: 200);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address_1);
+    staking_dispatcher.set_public_key(public_key: public_key_1);
+
+    // Staker 2 stake.
+    system.stake(staker: staker_2, amount: stake_amount_2, pool_enabled: false, commission: 200);
+
+    // Test first + second epoch.
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![].span();
+    assert!(stakers == expected_stakers);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    system.advance_epoch();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+
+    // Staker 2 set public key.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address_2);
+    staking_dispatcher.set_public_key(public_key: public_key_2);
+
+    // Staker 3 stake and set public key.
+    system.stake(staker: staker_3, amount: stake_amount_3, pool_enabled: false, commission: 200);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address_3);
+    staking_dispatcher.set_public_key(public_key: public_key_3);
+
+    // Test second + third epoch.
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    let expected_stakers = array![
+        (staker_address_1, STRK_WEIGHT_FACTOR * 1 / 3, Option::Some(public_key_1)),
+        (staker_address_2, STRK_WEIGHT_FACTOR * 2 / 3, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    system.advance_epoch();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+
+    // Test third + fourth epoch.
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    let expected_stakers = array![
+        (staker_address_1, STRK_WEIGHT_FACTOR * 1 / 6, Option::Some(public_key_1)),
+        (staker_address_2, STRK_WEIGHT_FACTOR * 2 / 6, Option::Some(public_key_2)),
+        (staker_address_3, STRK_WEIGHT_FACTOR * 3 / 6, Option::Some(public_key_3)),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    system.advance_epoch();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+
+    // Test fourth + fifth epoch.
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers == expected_stakers);
 }

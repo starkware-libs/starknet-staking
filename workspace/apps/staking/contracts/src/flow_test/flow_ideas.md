@@ -9,7 +9,15 @@
 - Upgrade, get public key.
 
 ## `get_stakers`
-- Get stakers with staker with zero balance (same epoch as stake).
+- Get stakers with staker with zero balance.
+- Staker exit action, get stakers.
+- Staker exit intent, get stakers.
+- Delegate STRK and/or BTC, get stakers.
+- Undelegate, get stakers.
+- Enable / disable tokens, get stakers.
+- Stake, get stakers, increase stake, get stakers.
+- Stake with delegation, get stakers, switch pool, get stakers.
+- Staker without public key.
 
 ## `get_current_staker_info` (name is WIP)
 - Get staker info while staker has zero balance.
