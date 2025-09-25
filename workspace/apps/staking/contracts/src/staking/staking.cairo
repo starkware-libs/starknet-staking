@@ -593,15 +593,6 @@ pub mod Staking {
             StakerInfoV3Trait::new(:internal_staker_info, :amount_own)
         }
 
-        fn get_staker_info_v3(
-            self: @ContractState, staker_address: ContractAddress,
-        ) -> Option<StakerInfoV3> {
-            if self.staker_info.read(staker_address).is_none() {
-                return Option::None;
-            }
-            Option::Some(self.staker_info_v3(:staker_address))
-        }
-
         fn staker_pool_info(
             self: @ContractState, staker_address: ContractAddress,
         ) -> StakerPoolInfoV2 {
