@@ -2,6 +2,7 @@
 pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
     use core::cmp::min;
+    use core::num::traits::Pow;
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use core::panics::panic_with_byte_array;
@@ -37,7 +38,8 @@ pub mod Staking {
         StakerBalanceTrait,
     };
     use staking::types::{
-        Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey, Version,
+        Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey, StakingPower,
+        Version,
     };
     use staking::utils::{
         CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
@@ -45,8 +47,8 @@ pub mod Staking {
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::{
-        Map, Mutable, MutableVecTrait, StoragePath, StoragePathEntry, StoragePathMutableConversion,
-        StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
+        IntoIterRange, Map, Mutable, MutableVecTrait, StoragePath, StoragePathEntry,
+        StoragePathMutableConversion, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
@@ -63,8 +65,14 @@ pub mod Staking {
     };
     use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
+    use crate::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
+    const STAKING_POWER_BASE_VALUE: u128 = 10_u128.pow(10);
+    pub(crate) const STRK_WEIGHT_FACTOR: u128 = STAKING_POWER_BASE_VALUE
+        * (ALPHA_DENOMINATOR - ALPHA)
+        / ALPHA_DENOMINATOR;
+    pub(crate) const BTC_WEIGHT_FACTOR: u128 = STAKING_POWER_BASE_VALUE * ALPHA / ALPHA_DENOMINATOR;
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
     pub(crate) const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3;
@@ -847,6 +855,39 @@ pub mod Staking {
                 epoch_info.current_epoch_starting_block(),
                 epoch_info.epoch_len_in_blocks(),
             )
+        }
+
+        fn get_stakers(
+            self: @ContractState, epoch_id: Epoch,
+        ) -> Span<(ContractAddress, StakingPower, Option<PublicKey>)> {
+            let curr_epoch = self.get_current_epoch();
+            assert!(
+                epoch_id == curr_epoch || epoch_id == curr_epoch + 1,
+                "{}",
+                GenericError::INVALID_EPOCH,
+            );
+
+            let (strk_total_stake, btc_total_stake) = self
+                .get_total_staking_power_at_epoch(:epoch_id);
+
+            let mut stakers: Array<(ContractAddress, StakingPower, Option<PublicKey>)> = array![];
+            for staker_address_ptr in self.stakers.into_iter_full_range() {
+                let staker_address = staker_address_ptr.read();
+                // TODO: Consider refactoring to read staker own balance only once (for
+                // is_staker_active and get_staker_staking_power_at_epoch).
+                if !self.is_staker_active(:staker_address, :epoch_id) {
+                    continue;
+                }
+
+                let staking_power = self
+                    .get_staker_staking_power_at_epoch(
+                        :staker_address, :epoch_id, :strk_total_stake, :btc_total_stake,
+                    );
+
+                let public_key = self.get_public_key_at_epoch(:staker_address, :epoch_id);
+                stakers.append((staker_address, staking_power, public_key));
+            }
+            stakers.span()
         }
     }
 
@@ -2331,6 +2372,76 @@ pub mod Staking {
             first_epoch.is_non_zero() && self.get_current_epoch() >= first_epoch
         }
 
+        /// Returns the staking power for `staker_address` at `epoch_id`.
+        /// `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`,
+        /// **Note**: Assumes the staker is active at `epoch_id`.
+        fn get_staker_staking_power_at_epoch(
+            self: @ContractState,
+            staker_address: ContractAddress,
+            epoch_id: Epoch,
+            strk_total_stake: NormalizedAmount,
+            btc_total_stake: NormalizedAmount,
+        ) -> StakingPower {
+            let mut staker_strk_total_amount = self
+                .get_staker_own_balance_at_epoch(:staker_address, :epoch_id);
+
+            let mut staker_btc_total_amount = Zero::zero();
+            let staker_pool_info = self.staker_pool_info.entry(staker_address);
+            for (pool_contract, token_address) in staker_pool_info.pools {
+                if !self.is_active_token(:token_address, :epoch_id) {
+                    continue;
+                }
+
+                let delegated_balance = self
+                    .get_staker_delegated_balance_at_epoch(
+                        :staker_address, :pool_contract, :epoch_id,
+                    );
+                if token_address == STRK_TOKEN_ADDRESS {
+                    staker_strk_total_amount += delegated_balance;
+                } else {
+                    staker_btc_total_amount += delegated_balance;
+                }
+            }
+
+            self
+                .calculate_staker_total_staking_power(
+                    :staker_strk_total_amount,
+                    :staker_btc_total_amount,
+                    :strk_total_stake,
+                    :btc_total_stake,
+                )
+        }
+
+        /// Returns the staking power for the given staker.
+        /// The staking power is calculated by:
+        /// ((staker_strk_total_amount / strk_total_amount) * (1 - ALPHA) +
+        /// (staker_btc_total_amount / btc_total_amount) * ALPHA) * STAKING_POWER_BASE_VALUE
+        fn calculate_staker_total_staking_power(
+            self: @ContractState,
+            staker_strk_total_amount: NormalizedAmount,
+            staker_btc_total_amount: NormalizedAmount,
+            strk_total_stake: NormalizedAmount,
+            btc_total_stake: NormalizedAmount,
+        ) -> StakingPower {
+            let strk_staking_power = mul_wide_and_div(
+                lhs: staker_strk_total_amount.to_amount_18_decimals(),
+                rhs: STRK_WEIGHT_FACTOR,
+                div: strk_total_stake.to_amount_18_decimals(),
+            )
+                .unwrap();
+            let btc_staking_power = if btc_total_stake.is_zero() {
+                Zero::zero()
+            } else {
+                mul_wide_and_div(
+                    lhs: staker_btc_total_amount.to_amount_18_decimals(),
+                    rhs: BTC_WEIGHT_FACTOR,
+                    div: btc_total_stake.to_amount_18_decimals(),
+                )
+                    .unwrap()
+            };
+            strk_staking_power + btc_staking_power
+        }
+
         /// Returns the total stake for STRK and BTC at `epoch_id`.
         /// `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`,
         /// it's passed as a param to save storage reads.
@@ -2377,6 +2488,27 @@ pub mod Staking {
                 pools.append(PoolInfo { pool_contract, token_address, amount });
             }
             StakerPoolInfoV2 { commission, pools: pools.span() }
+        }
+
+        /// Returns whether the staker is active at `epoch_id`.
+        /// A staker is considered active if:
+        /// - The staker has not exited the protocol.
+        /// - The staker did not call `exit_intent` at `epoch_id - K`.
+        /// - The staker has a non-zero balance at `epoch_id`.
+        fn is_staker_active(
+            self: @ContractState, staker_address: ContractAddress, epoch_id: Epoch,
+        ) -> bool {
+            match self.staker_info.read(staker_address) {
+                VInternalStakerInfo::V1(staker_info_v1) => {
+                    (staker_info_v1.unstake_time.is_none()
+                        // `intent_epoch` is zero if the intent exists from before V3.
+                        || epoch_id < self.staker_unstake_intent_epoch.read(staker_address))
+                        && self
+                            .get_staker_own_balance_at_epoch(:staker_address, :epoch_id)
+                            .is_non_zero()
+                },
+                _ => false,
+            }
         }
     }
 

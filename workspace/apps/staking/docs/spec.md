@@ -61,6 +61,7 @@
     - [get\_current\_public\_key](#get_current_public_key)
     - [get\_current\_epoch\_data](#get_current_epoch_data)
     - [update\_rewards](#update_rewards)
+    - [get\_stakers](#get_stakers)
   - [Events](#events)
     - [Stake Own Balance Changed](#stake-own-balance-changed)
     - [Stake Delegated Balance Changed](#stake-delegated-balance-changed)
@@ -1604,6 +1605,27 @@ Only starkware sequencer.
 4. Update and transfer rewards to the pools, if exist.
 5. Update Reward Supplier's `unclaimed_rewards`.
 6. Update `last_reward_block` to the current block.
+
+### get_stakers
+```rust
+fn get_stakers(self: @TContractState, epoch_id: Epoch) -> Span<(ContractAddress, StakingPower, Option<PublicKey>)>
+```
+#### description <!-- omit from toc -->
+Returns a span of (staker_address, staking_power, Option<public_key>) for all stakers
+for the given `epoch_id` (must be current or next epoch).
+**Note**: The staking power is the relative weight of the staker's stake
+out of the total stake, including pooled stake (STRK and BTC), multiplied by
+`STAKING_POWER_BASE_VALUE`.
+**Note**: Disregards stakers that either no staking power, which can be either new stakers
+or stakers that called `exit_intent`.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [INVALID\_EPOCH](#invalid_epoch)
+#### pre-condition <!-- omit from toc -->
+`epoch_id` is current or next epoch.
+#### access control <!-- omit from toc -->
+Any address.
+#### logic <!-- omit from toc -->
 
 ## Events
 ### Stake Own Balance Changed

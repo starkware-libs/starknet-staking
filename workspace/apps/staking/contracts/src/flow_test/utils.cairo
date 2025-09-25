@@ -34,10 +34,10 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::interface::{
     CommissionCommitment, IStakingConfigDispatcher, IStakingConfigDispatcherTrait,
-    IStakingDispatcher, IStakingDispatcherTrait, IStakingMigrationDispatcher,
-    IStakingMigrationDispatcherTrait, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
-    IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
+    IStakingConsensusDispatcher, IStakingDispatcher, IStakingDispatcherTrait,
+    IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPauseDispatcher,
+    IStakingPauseDispatcherTrait, IStakingPoolDispatcher, IStakingPoolSafeDispatcher,
+    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
     IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
     IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
@@ -250,6 +250,10 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn dispatcher(self: StakingState) -> IStakingDispatcher nopanic {
         IStakingDispatcher { contract_address: self.address }
+    }
+
+    fn consensus_dispatcher(self: StakingState) -> IStakingConsensusDispatcher nopanic {
+        IStakingConsensusDispatcher { contract_address: self.address }
     }
 
     fn token_manager_dispatcher(self: StakingState) -> IStakingTokenManagerDispatcher nopanic {
