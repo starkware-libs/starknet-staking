@@ -26,7 +26,9 @@ use snforge_std::{
 };
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{K, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
+use staking::constants::{
+    ALPHA, ALPHA_DENOMINATOR, K, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
+};
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
     IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
@@ -1279,9 +1281,7 @@ fn calculate_current_block_rewards(
 }
 
 fn calculate_btc_rewards(total_rewards: Amount) -> Amount {
-    mul_wide_and_div(
-        lhs: total_rewards, rhs: RewardSupplier::ALPHA, div: RewardSupplier::ALPHA_DENOMINATOR,
-    )
+    mul_wide_and_div(lhs: total_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR)
         .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 

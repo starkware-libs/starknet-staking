@@ -11,3 +11,8 @@ pub(crate) const STRK_TOKEN_ADDRESS: ContractAddress =
 
 /// Epoch delay before consensus-related changes (e.g. balances, token activations) take effect.
 pub(crate) const K: u8 = 2;
+
+/// Fractional weight for BTC relative to total (STRK+BTC), scaled by `ALPHA_DENOMINATOR`.
+pub(crate) const ALPHA: u128 = 25;
+/// Denominator used to scale `ALPHA` when computing BTC and STRK weights.
+pub(crate) const ALPHA_DENOMINATOR: u128 = 100;
