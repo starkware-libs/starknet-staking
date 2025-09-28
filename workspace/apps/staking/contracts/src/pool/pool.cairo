@@ -717,6 +717,8 @@ pub mod Pool {
             ref self: ContractState, pool_member: ContractAddress, amount: Amount,
         ) {
             let trace = self.pool_member_epoch_balance.entry(pool_member);
+            // `cumulative_rewards_trace_idx` should be set to
+            // `self.cumulative_rewards_trace_length() + (K - 1)`.
             let pool_member_balance = PoolMemberBalanceTrait::new(
                 balance: amount,
                 cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length() + 1,
@@ -736,6 +738,9 @@ pub mod Pool {
         }
 
         /// Returns the member's balance at the current epoch.
+        ///
+        /// This function looks at up to K + 1 of the most recent entries in the member's balance
+        /// trace.
         fn get_balance_at_current_epoch(
             self: @ContractState, pool_member: ContractAddress,
         ) -> Amount {

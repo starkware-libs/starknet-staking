@@ -1612,7 +1612,7 @@ fn get_stakers(self: @TContractState, epoch_id: Epoch) -> Span<(ContractAddress,
 ```
 #### description <!-- omit from toc -->
 Returns a span of (staker_address, staking_power, Option<public_key>) for all stakers
-for the given `epoch_id` (must be current or next epoch).
+for the given `epoch_id`.
 **Note**: The staking power is the relative weight of the staker's stake
 out of the total stake, including pooled stake (STRK and BTC), multiplied by
 `STAKING_POWER_BASE_VALUE`.
@@ -1622,7 +1622,7 @@ or stakers that called `exit_intent`.
 #### errors <!-- omit from toc -->
 1. [INVALID\_EPOCH](#invalid_epoch)
 #### pre-condition <!-- omit from toc -->
-`epoch_id` is current or next epoch.
+`curr_epoch <= epoch_id < curr_epoch + K`.
 #### access control <!-- omit from toc -->
 Any address.
 #### logic <!-- omit from toc -->
@@ -1892,7 +1892,7 @@ Only the pool member address or rewards address for which the change is requeste
 #### logic <!-- omit from toc -->
 1. Transfer funds from caller to the contract.
 2. Call staking contract's [add_stake_from_pool](#add_stake_from_pool).
-3. Update pool member balance for the next epoch.
+3. Update pool member balance for curr epoch + K.
 
 ### exit_delegation_pool_intent
 ```rust
@@ -1923,7 +1923,7 @@ Only the pool member address for which the operation is requested for.
 1. If staker is active, call [remove from delegation pool intent](#remove_from_delegation_pool_intent)
 2. If `amount` is zero, remove request for intent (if exists).
 3. If `amount` is not zero, set exit window timeout.
-4. Update delegator's next epoch balance.
+4. Update delegator's balance for curr_epoch + K.
 
 ### exit_delegation_pool_action
 ```rust

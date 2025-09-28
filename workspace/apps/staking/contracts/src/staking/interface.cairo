@@ -86,7 +86,7 @@ pub trait IStakingConsensus<TContractState> {
     /// Returns (epoch_id, epoch_starting_block, epoch_length) for the current epoch.
     fn get_current_epoch_data(self: @TContractState) -> (Epoch, BlockNumber, u32);
     /// Returns a span of (staker_address, staking_power, Option<public_key>) for all stakers
-    /// for the given `epoch_id` (must be current or next epoch).
+    /// for the given `epoch_id` (`curr_epoch <= epoch_id < curr_epoch + K`).
     /// **Note**: The staking power is the relative weight of the staker's stake
     /// out of the total stake, including pooled stake (STRK and BTC), multiplied by
     /// `STAKING_POWER_BASE_VALUE`.
