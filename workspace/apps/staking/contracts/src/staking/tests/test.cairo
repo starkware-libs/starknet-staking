@@ -4005,12 +4005,12 @@ fn test_update_rewards_without_distribute() {
     advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
-    // `disable_rewards = true`, and !self.is_consensus_rewards_active().
+    // `disable_rewards = true`, and self.is_pre_consensus().
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_before);
 
-    // `disable_rewards = false`, and !self.is_consensus_rewards_active().
+    // `disable_rewards = false`, and self.is_pre_consensus().
     advance_block_number_global(blocks: 1);
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
@@ -4023,7 +4023,7 @@ fn test_update_rewards_without_distribute() {
     );
     staking_config_dispatcher.set_consensus_rewards_first_epoch(epoch_id: current_epoch + 2);
 
-    // Still !self.is_consensus_rewards_active(), test with `disable_rewards = true` and
+    // Still self.is_pre_consensus(), test with `disable_rewards = true` and
     // `disable_rewards = false`.
     advance_block_number_global(blocks: 1);
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
@@ -4034,7 +4034,7 @@ fn test_update_rewards_without_distribute() {
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_before);
 
-    // Advance one epoch, still !self.is_consensus_rewards_active(), test with `disable_rewards =
+    // Advance one epoch, still self.is_pre_consensus(), test with `disable_rewards =
     // true` and `disable_rewards = false`.
     advance_epoch_global();
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
@@ -4045,14 +4045,14 @@ fn test_update_rewards_without_distribute() {
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_before);
 
-    // After 2 epochs, self.is_consensus_rewards_active().
+    // After 2 epochs, !self.is_pre_consensus().
     advance_epoch_global();
-    // `disable_rewards = true`, and self.is_consensus_rewards_active().
+    // `disable_rewards = true`, and !self.is_pre_consensus().
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: true);
     let staker_info_after = staking_dispatcher.staker_info_v1(:staker_address);
     assert!(staker_info_after == staker_info_before);
 
-    // `disable_rewards = false`, and self.is_consensus_rewards_active() - should distribute
+    // `disable_rewards = false`, and !self.is_pre_consensus() - should distribute
     // rewards.
     advance_block_number_global(blocks: 1);
     staking_rewards_dispatcher.update_rewards(:staker_address, disable_rewards: false);
