@@ -1,13 +1,12 @@
 use RewardSupplier::{
-    ALPHA, CONTRACT_IDENTITY as reward_supplier_identity,
-    CONTRACT_VERSION as reward_supplier_version,
+    CONTRACT_IDENTITY as reward_supplier_identity, CONTRACT_VERSION as reward_supplier_version,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
 use snforge_std::{TokenTrait, start_cheat_block_timestamp_global, test_address};
-use staking::constants::STRK_IN_FRIS;
+use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS};
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
 use staking::reward_supplier::interface::{
@@ -316,7 +315,7 @@ fn test_calculate_current_epoch_rewards() {
     let epochs_in_year = cfg.staking_contract_info.epoch_info.epochs_in_year();
     let expected_rewards = yearly_mint / epochs_in_year.into();
     let expected_btc_rewards = mul_wide_and_div(
-        lhs: expected_rewards, rhs: RewardSupplier::ALPHA, div: RewardSupplier::ALPHA_DENOMINATOR,
+        lhs: expected_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR,
     )
         .unwrap();
     let expected_strk_rewards = expected_rewards - expected_btc_rewards;

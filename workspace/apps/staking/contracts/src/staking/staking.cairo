@@ -12,7 +12,7 @@ pub mod Staking {
         IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
         IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::{K, STARTING_EPOCH, STRK_TOKEN_ADDRESS};
+    use staking::constants::{ALPHA, ALPHA_DENOMINATOR, K, STARTING_EPOCH, STRK_TOKEN_ADDRESS};
     use staking::errors::GenericError;
     use staking::pool::errors::Error as PoolError;
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
@@ -65,7 +65,6 @@ pub mod Staking {
     };
     use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
-    use crate::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
     const STAKING_POWER_BASE_VALUE: u128 = 10_u128.pow(10);

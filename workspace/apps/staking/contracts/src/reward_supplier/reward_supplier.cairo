@@ -6,7 +6,7 @@ pub mod RewardSupplier {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::{STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
+    use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
     use staking::errors::GenericError;
     use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking::reward_supplier::errors::Error;
@@ -27,8 +27,6 @@ pub mod RewardSupplier {
     use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
-    pub const ALPHA: u128 = 25;
-    pub const ALPHA_DENOMINATOR: u128 = 100;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);

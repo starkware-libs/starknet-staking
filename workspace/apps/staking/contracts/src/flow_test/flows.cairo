@@ -2,7 +2,7 @@ use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
 use snforge_std::{TokenImpl, start_cheat_block_number_global};
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
-use staking::constants::STRK_IN_FRIS;
+use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS};
 use staking::errors::GenericError;
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
@@ -14,7 +14,6 @@ use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
 use staking::pool::pool::Pool::STRK_CONFIG;
-use staking::reward_supplier::reward_supplier::RewardSupplier::{ALPHA, ALPHA_DENOMINATOR};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     CommissionCommitment, IStakingDispatcherTrait, IStakingSafeDispatcherTrait, PoolInfo,
