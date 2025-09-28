@@ -1249,7 +1249,7 @@ pub mod Staking {
         fn set_consensus_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch) {
             self.roles.only_app_governor();
             assert!(epoch_id >= self.get_current_epoch() + 2, "{}", GenericError::INVALID_EPOCH);
-            assert!(!self.is_consensus_rewards_active(), "{}", Error::CONSENSUS_REWARDS_IS_ACTIVE);
+            assert!(self.is_pre_consensus(), "{}", Error::CONSENSUS_REWARDS_IS_ACTIVE);
             self.consensus_rewards_first_epoch.write(epoch_id);
             self
                 .emit(
@@ -1317,7 +1317,7 @@ pub mod Staking {
         ) {
             // Prerequisites and asserts.
             self.general_prerequisites();
-            assert!(!self.is_consensus_rewards_active(), "{}", Error::CONSENSUS_REWARDS_IS_ACTIVE);
+            assert!(self.is_pre_consensus(), "{}", Error::CONSENSUS_REWARDS_IS_ACTIVE);
             self.assert_caller_is_attestation_contract();
             let mut staker_info = self.internal_staker_info(:staker_address);
             assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
@@ -1399,7 +1399,7 @@ pub mod Staking {
             // Update last block rewards.
             self.last_reward_block.write(current_block_number);
 
-            if disable_rewards || !self.is_consensus_rewards_active() {
+            if disable_rewards || self.is_pre_consensus() {
                 return;
             }
 
@@ -2368,9 +2368,9 @@ pub mod Staking {
             self.write_staker_info(:staker_address, :staker_info);
         }
 
-        fn is_consensus_rewards_active(self: @ContractState) -> bool {
+        fn is_pre_consensus(self: @ContractState) -> bool {
             let first_epoch = self.consensus_rewards_first_epoch.read();
-            first_epoch.is_non_zero() && self.get_current_epoch() >= first_epoch
+            first_epoch.is_zero() || self.get_current_epoch() < first_epoch
         }
 
         /// Returns the staking power for `staker_address` at `epoch_id`.
