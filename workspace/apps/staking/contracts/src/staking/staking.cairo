@@ -1354,8 +1354,8 @@ pub mod Staking {
             let epoch_id = epoch_info.current_epoch();
             let current_epoch_starting_block = epoch_info.current_epoch_starting_block();
             let stake = self
-                .get_staker_total_strk_balance_curr_epoch(
-                    :staker_address, :staker_pool_info, curr_epoch: epoch_id,
+                .get_staker_total_strk_balance_at_epoch(
+                    :staker_address, :staker_pool_info, :epoch_id,
                 )
                 .to_strk_native_amount();
             AttestationInfoTrait::new(
@@ -1389,8 +1389,8 @@ pub mod Staking {
 
             let staker_pool_info = self.staker_pool_info.entry(staker_address).as_non_mut();
             let staker_total_strk_balance = self
-                .get_staker_total_strk_balance_curr_epoch(
-                    :staker_address, :staker_pool_info, :curr_epoch,
+                .get_staker_total_strk_balance_at_epoch(
+                    :staker_address, :staker_pool_info, epoch_id: curr_epoch,
                 );
             // Assert staker has balance.
             assert!(staker_total_strk_balance.is_non_zero(), "{}", Error::INVALID_STAKER);
@@ -1407,8 +1407,8 @@ pub mod Staking {
             let (strk_block_rewards, btc_block_rewards) = self
                 .calculate_block_rewards(:reward_supplier_dispatcher);
             let staker_total_btc_balance = self
-                .get_staker_total_btc_balance_curr_epoch(
-                    :staker_address, :staker_pool_info, :curr_epoch,
+                .get_staker_total_btc_balance_at_epoch(
+                    :staker_address, :staker_pool_info, epoch_id: curr_epoch,
                 );
             self
                 ._update_rewards(
@@ -2076,21 +2076,19 @@ pub mod Staking {
 
         /// Return the total STRK balance of the staker in the current epoch.
         ///
-        /// **Note**: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
-        /// storage reads.
-        fn get_staker_total_strk_balance_curr_epoch(
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
+        fn get_staker_total_strk_balance_at_epoch(
             self: @ContractState,
             staker_address: ContractAddress,
             staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
-            curr_epoch: Epoch,
+            epoch_id: Epoch,
         ) -> NormalizedAmount {
-            let curr_own_balance = self
-                .get_staker_own_balance_at_epoch(:staker_address, epoch_id: curr_epoch);
+            let curr_own_balance = self.get_staker_own_balance_at_epoch(:staker_address, :epoch_id);
             let strk_pool = staker_pool_info.get_strk_pool();
             let curr_delegated_balance = if let Some(strk_pool) = strk_pool {
                 self
                     .get_staker_delegated_balance_at_epoch(
-                        :staker_address, pool_contract: strk_pool, epoch_id: curr_epoch,
+                        :staker_address, pool_contract: strk_pool, :epoch_id,
                     )
             } else {
                 Zero::zero()
@@ -2100,22 +2098,21 @@ pub mod Staking {
 
         /// Returns the total BTC balance of the staker in the current epoch.
         ///
-        /// **Note**: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
-        /// storage reads.
-        fn get_staker_total_btc_balance_curr_epoch(
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
+        fn get_staker_total_btc_balance_at_epoch(
             self: @ContractState,
             staker_address: ContractAddress,
             staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
-            curr_epoch: Epoch,
+            epoch_id: Epoch,
         ) -> NormalizedAmount {
             let mut total_btc_balance: NormalizedAmount = Zero::zero();
             for (pool_contract, token_address) in staker_pool_info.pools {
                 // TODO: Consider optimize here - `is_active_token` check again the STRK token.
                 if token_address != STRK_TOKEN_ADDRESS
-                    && self.is_active_token(:token_address, epoch_id: curr_epoch) {
+                    && self.is_active_token(:token_address, :epoch_id) {
                     let pool_balance_curr_epoch = self
                         .get_staker_delegated_balance_at_epoch(
-                            :staker_address, :pool_contract, epoch_id: curr_epoch,
+                            :staker_address, :pool_contract, :epoch_id,
                         );
                     total_btc_balance += pool_balance_curr_epoch;
                 }
