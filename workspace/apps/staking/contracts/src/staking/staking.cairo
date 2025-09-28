@@ -862,7 +862,7 @@ pub mod Staking {
         ) -> Span<(ContractAddress, StakingPower, Option<PublicKey>)> {
             let curr_epoch = self.get_current_epoch();
             assert!(
-                epoch_id == curr_epoch || epoch_id == curr_epoch + 1,
+                curr_epoch <= epoch_id && epoch_id < curr_epoch + K.into(),
                 "{}",
                 GenericError::INVALID_EPOCH,
             );
@@ -2124,8 +2124,7 @@ pub mod Staking {
             total_btc_balance
         }
 
-        /// Note that `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`.
-        /// This parameter exists to save calls to `get_current_epoch()`.
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn get_staker_own_balance_at_epoch(
             self: @ContractState, staker_address: ContractAddress, epoch_id: Epoch,
         ) -> NormalizedAmount {
@@ -2133,8 +2132,7 @@ pub mod Staking {
             self.balance_at_epoch(:trace, :epoch_id)
         }
 
-        /// Note that `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`.
-        /// This parameter exists to save calls to `get_current_epoch()`.
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn get_staker_delegated_balance_at_epoch(
             self: @ContractState,
             staker_address: ContractAddress,
@@ -2150,8 +2148,7 @@ pub mod Staking {
 
         /// Returns the balance at the specified epoch.
         ///
-        /// Note that `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`.
-        /// This parameter exists to save calls to `get_current_epoch()`.
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn balance_at_epoch(
             self: @ContractState, trace: StoragePath<Trace>, epoch_id: Epoch,
         ) -> NormalizedAmount {
@@ -2238,8 +2235,7 @@ pub mod Staking {
         /// Returns true if the token is active in the given `epoch_id`.
         /// Assumes that the token exists.
         ///
-        /// **Note**: `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`,
-        /// it's passed as a param to save storage reads.
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn is_active_token(
             self: @ContractState, token_address: ContractAddress, epoch_id: Epoch,
         ) -> bool {
@@ -2252,8 +2248,7 @@ pub mod Staking {
 
         /// Returns true if the BTC token is active in the given `epoch_id`.
         ///
-        /// **Note**: `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`,
-        /// it's passed as a param to save storage reads.
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn is_btc_active(
             self: @ContractState, active_status: (Epoch, bool), epoch_id: Epoch,
         ) -> bool {
@@ -2268,7 +2263,8 @@ pub mod Staking {
         /// Returns the public key for `staker_address` at `epoch_id`,
         /// or `None` if the public key is not set.
         /// **Note**: This function does not check if the staker exists.
-        /// **Note**: `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`.
+        ///
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn get_public_key_at_epoch(
             self: @ContractState, staker_address: ContractAddress, epoch_id: Epoch,
         ) -> Option<PublicKey> {
@@ -2378,8 +2374,9 @@ pub mod Staking {
         }
 
         /// Returns the staking power for `staker_address` at `epoch_id`.
-        /// `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`,
         /// **Note**: Assumes the staker is active at `epoch_id`.
+        ///
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn get_staker_staking_power_at_epoch(
             self: @ContractState,
             staker_address: ContractAddress,
@@ -2448,8 +2445,8 @@ pub mod Staking {
         }
 
         /// Returns the total stake for STRK and BTC at `epoch_id`.
-        /// `epoch_id` must be `get_current_epoch()` or `get_current_epoch() + 1`,
-        /// it's passed as a param to save storage reads.
+        ///
+        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn get_total_staking_power_at_epoch(
             self: @ContractState, epoch_id: Epoch,
         ) -> (NormalizedAmount, NormalizedAmount) {
@@ -2469,8 +2466,9 @@ pub mod Staking {
 
         /// Returns the staker pool info for the given `epoch_id`.
         /// If `epoch_id` is `None`, returns the last updated pool info.
-        /// **Note**: If `epoch_id` is `Some`, it must be `get_current_epoch()` or
-        /// `get_current_epoch() + 1`, it's passed as a param to save storage reads.
+        ///
+        /// Precondition: If `epoch_id` is `Some`, then `get_current_epoch() <= epoch_id <
+        /// get_current_epoch() + K`.
         fn _staker_pool_info(
             self: @ContractState, staker_address: ContractAddress, epoch_id: Option<Epoch>,
         ) -> StakerPoolInfoV2 {
