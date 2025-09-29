@@ -872,8 +872,6 @@ pub mod Staking {
             let mut stakers: Array<(ContractAddress, StakingPower, Option<PublicKey>)> = array![];
             for staker_address_ptr in self.stakers.into_iter_full_range() {
                 let staker_address = staker_address_ptr.read();
-                // TODO: Consider refactoring to read staker own balance only once (for
-                // is_staker_active and get_staker_staking_power_at_epoch).
                 if !self.is_staker_active(:staker_address, :epoch_id) {
                     continue;
                 }
@@ -882,6 +880,9 @@ pub mod Staking {
                     .get_staker_staking_power_at_epoch(
                         :staker_address, :epoch_id, :strk_total_stake, :btc_total_stake,
                     );
+                if staking_power.is_zero() {
+                    continue;
+                }
 
                 let public_key = self.get_public_key_at_epoch(:staker_address, :epoch_id);
                 stakers.append((staker_address, staking_power, public_key));
@@ -2084,6 +2085,9 @@ pub mod Staking {
             epoch_id: Epoch,
         ) -> NormalizedAmount {
             let curr_own_balance = self.get_staker_own_balance_at_epoch(:staker_address, :epoch_id);
+            if curr_own_balance.is_zero() {
+                return Zero::zero();
+            }
             let strk_pool = staker_pool_info.get_strk_pool();
             let curr_delegated_balance = if let Some(strk_pool) = strk_pool {
                 self
@@ -2385,6 +2389,9 @@ pub mod Staking {
                 .get_staker_total_strk_balance_at_epoch(
                     :staker_address, :staker_pool_info, :epoch_id,
                 );
+            if staker_strk_total_amount.is_zero() {
+                return Zero::zero();
+            }
             let staker_btc_total_amount = self
                 .get_staker_total_btc_balance_at_epoch(
                     :staker_address, :staker_pool_info, :epoch_id,
@@ -2482,18 +2489,14 @@ pub mod Staking {
         /// A staker is considered active if:
         /// - The staker has not exited the protocol.
         /// - The staker did not call `exit_intent` at `epoch_id - K`.
-        /// - The staker has a non-zero balance at `epoch_id`.
         fn is_staker_active(
             self: @ContractState, staker_address: ContractAddress, epoch_id: Epoch,
         ) -> bool {
             match self.staker_info.read(staker_address) {
                 VInternalStakerInfo::V1(staker_info_v1) => {
-                    (staker_info_v1.unstake_time.is_none()
-                        // `intent_epoch` is zero if the intent exists from before V3.
-                        || epoch_id < self.staker_unstake_intent_epoch.read(staker_address))
-                        && self
-                            .get_staker_own_balance_at_epoch(:staker_address, :epoch_id)
-                            .is_non_zero()
+                    // `intent_epoch` is zero if the intent exists from before V3.
+                    staker_info_v1.unstake_time.is_none()
+                        || epoch_id < self.staker_unstake_intent_epoch.read(staker_address)
                 },
                 _ => false,
             }
