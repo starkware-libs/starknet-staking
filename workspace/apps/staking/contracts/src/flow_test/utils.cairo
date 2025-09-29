@@ -1,10 +1,11 @@
 use MainnetClassHashes::{
     MAINNET_ATTESTATION_CLASS_HASH_V1, MAINNET_MINTING_CURVE_CLASS_HASH_V0,
     MAINNET_MINTING_CURVE_CLASS_HASH_V2, MAINNET_POOL_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V1,
-    MAINNET_POOL_EIC_CLASS_HASH_V0_V1, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0,
-    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V2,
-    MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V2,
-    MAINNET_STAKING_EIC_CLASS_HASH_V0_V1,
+    MAINNET_POOL_CLASS_HASH_V2, MAINNET_POOL_EIC_CLASS_HASH_V0_V1,
+    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0, MAINNET_REWARD_SUPPLIER_CLASS_HASH_V1,
+    MAINNET_REWARD_SUPPLIER_CLASS_HASH_V2, MAINNET_STAKING_CLASS_HASH_V0,
+    MAINNET_STAKING_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V2,
+    MAINNET_STAKING_EIC_CLASS_HASH_V0_V1, MAINNET_STAKING_EIC_CLASS_HASH_V1_V2,
 };
 use core::num::traits::zero::Zero;
 use core::traits::Into;
@@ -109,6 +110,12 @@ pub(crate) mod MainnetClassHashes {
         0x05a93367d9e4fd00d9b17575cc52f70f8b48c3926da015cc7e87a3994f1c63a7.try_into().unwrap()
     }
 
+    /// Class hash of the staking EIC contract used to upgrade the staking contract from V1 to V2
+    /// (BTC).
+    pub(crate) fn MAINNET_STAKING_EIC_CLASS_HASH_V1_V2() -> ClassHash {
+        0x0654a8e5b42b1fc0be09abec262bc26092c310b9647fff72074d7f93c1854e28.try_into().unwrap()
+    }
+
     /// Class hash of the first reward supplier contract deployed on mainnet.
     pub(crate) fn MAINNET_REWARD_SUPPLIER_CLASS_HASH_V0() -> ClassHash {
         0x7cbbebcdbbce7bd45611d8b679e524b63586429adee0f858b7f0994d709d648.try_into().unwrap()
@@ -142,6 +149,11 @@ pub(crate) mod MainnetClassHashes {
     /// Class hash of the second pool contract deployed on mainnet (upgraded in V1).
     pub(crate) fn MAINNET_POOL_CLASS_HASH_V1() -> ClassHash {
         0x05f6abc83b23af3af179388e1e2bf93096047ba6d8c480360d3c88f7d175bdef.try_into().unwrap()
+    }
+
+    /// Class hash of the third pool contract deployed on mainnet (BTC).
+    pub(crate) fn MAINNET_POOL_CLASS_HASH_V2() -> ClassHash {
+        0x069565cd9bd273116d8829ba461298a04bfe09adb0c4ac470e7bb66bcae84ab5.try_into().unwrap()
     }
 
     /// Class hash of the pool EIC contract used to upgrade the pool contract from V0 to V1.
@@ -1872,9 +1884,9 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
     /// Upgrades the staking contract in the system state with V2 (BTC) implementation.
     fn upgrade_staking_implementation_v2(self: SystemState) {
         let eic_data = EICData {
-            eic_hash: declare_staking_eic_contract(),
+            eic_hash: MAINNET_STAKING_EIC_CLASS_HASH_V1_V2(),
             eic_init_data: array![
-                MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into(),
+                MAINNET_STAKING_CLASS_HASH_V1().into(), MAINNET_POOL_CLASS_HASH_V2().into(),
             ]
                 .span(),
         };
