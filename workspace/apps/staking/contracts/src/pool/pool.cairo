@@ -741,8 +741,11 @@ pub mod Pool {
         ///
         /// This function looks at up to K + 1 of the most recent entries in the member's balance
         /// trace.
+        ///
+        /// Precondition: `current_epoch == self.get_current_epoch()` (it exists to avoid extra
+        /// calls).
         fn get_balance_at_current_epoch(
-            self: @ContractState, pool_member: ContractAddress,
+            self: @ContractState, pool_member: ContractAddress, current_epoch: Epoch,
         ) -> Amount {
             let trace = self.pool_member_epoch_balance.entry(pool_member);
             let trace_len = trace.length();
@@ -754,7 +757,6 @@ pub mod Pool {
             }
 
             let (last_epoch, last_value) = trace.last();
-            let current_epoch = self.get_current_epoch();
 
             // If the last balance change is before the current epoch, return its balance.
             if last_epoch <= current_epoch {
@@ -803,9 +805,10 @@ pub mod Pool {
         fn get_current_checkpoint(
             self: @ContractState, pool_member: ContractAddress,
         ) -> PoolMemberCheckpoint {
+            let current_epoch = self.get_current_epoch();
             PoolMemberCheckpointTrait::new(
-                epoch: self.get_current_epoch(),
-                balance: self.get_balance_at_current_epoch(:pool_member),
+                epoch: current_epoch,
+                balance: self.get_balance_at_current_epoch(:pool_member, :current_epoch),
                 cumulative_rewards_trace_idx: self.cumulative_rewards_trace_length() - 1,
             )
         }
@@ -818,7 +821,7 @@ pub mod Pool {
         /// `from_checkpoint.epoch`) to `until_checkpoint` (excluding).
         ///
         /// Assumptions:
-        /// 1. `from_checkpoint.epoch <= until_checkpoint.epoch <= current_epoch`.
+        /// 1. `from_checkpoint.epoch <= until_checkpoint.epoch == current_epoch`.
         /// 2. `entry_to_claim_from` is the index of the first entry in the member balance trace
         ///    for which:
         ///      `epoch >= from_checkpoint.epoch`,
@@ -833,13 +836,14 @@ pub mod Pool {
             mut entry_to_claim_from: VecIndex,
         ) -> (Amount, VecIndex) {
             let pool_member_trace = self.pool_member_epoch_balance.entry(pool_member);
+            // Note: `until_epoch` is the current epoch.
             let until_epoch = until_checkpoint.epoch();
 
             let mut rewards = 0;
 
             let pool_member_trace_length = pool_member_trace.length();
 
-            let mut from_sigma = self.find_sigma(from_checkpoint);
+            let mut from_sigma = self.find_sigma(from_checkpoint, curr_epoch: until_epoch);
             let mut from_balance = from_checkpoint.balance();
 
             let base_value = self.staking_rewards_base_value.read();
@@ -856,7 +860,7 @@ pub mod Pool {
 
                 // Compute rewards from (inclusive) the previous balance change (or from
                 // `from_checkpoint`) to (exclusive) the current entry.
-                let to_sigma = self.find_sigma(pool_member_checkpoint);
+                let to_sigma = self.find_sigma(pool_member_checkpoint, curr_epoch: until_epoch);
                 rewards +=
                     compute_rewards_rounded_down(
                         amount: from_balance, interest: to_sigma - from_sigma, :base_value,
@@ -868,7 +872,7 @@ pub mod Pool {
 
             // Compute the remaining rewards from (inclusive) the last visited balance change in
             // `pool_member_trace` (or from `from_checkpoint`) to (exclusive) `until_checkpoint`.
-            let to_sigma = self.find_sigma(until_checkpoint);
+            let to_sigma = self.find_sigma(until_checkpoint, curr_epoch: until_epoch);
             rewards +=
                 compute_rewards_rounded_down(
                     amount: from_balance, interest: to_sigma - from_sigma, :base_value,
@@ -882,15 +886,13 @@ pub mod Pool {
         ///  where `epoch = pool_member_checkpoint.epoch`.
         ///
         /// Assumption: `pool_member_checkpoint.epoch <= current_epoch`.
+        ///
+        /// Precondition: `curr_epoch == self.get_current_epoch()` (it exists to avoid extra calls).
         fn find_sigma(
-            self: @ContractState, pool_member_checkpoint: PoolMemberCheckpoint,
+            self: @ContractState, pool_member_checkpoint: PoolMemberCheckpoint, curr_epoch: Epoch,
         ) -> Amount {
             let pool_member_checkpoint_epoch = pool_member_checkpoint.epoch();
-            assert!(
-                pool_member_checkpoint_epoch <= self.get_current_epoch(),
-                "{}",
-                GenericError::INVALID_EPOCH,
-            );
+            assert!(pool_member_checkpoint_epoch <= curr_epoch, "{}", GenericError::INVALID_EPOCH);
             let cumulative_rewards_trace_vec = self.cumulative_rewards_trace;
             let cumulative_rewards_trace_idx = pool_member_checkpoint
                 .cumulative_rewards_trace_idx();
