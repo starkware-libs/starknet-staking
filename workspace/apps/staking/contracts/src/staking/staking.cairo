@@ -2380,26 +2380,15 @@ pub mod Staking {
             strk_total_stake: NormalizedAmount,
             btc_total_stake: NormalizedAmount,
         ) -> StakingPower {
-            let mut staker_strk_total_amount = self
-                .get_staker_own_balance_at_epoch(:staker_address, :epoch_id);
-
-            let mut staker_btc_total_amount = Zero::zero();
             let staker_pool_info = self.staker_pool_info.entry(staker_address);
-            for (pool_contract, token_address) in staker_pool_info.pools {
-                if !self.is_active_token(:token_address, :epoch_id) {
-                    continue;
-                }
-
-                let delegated_balance = self
-                    .get_staker_delegated_balance_at_epoch(
-                        :staker_address, :pool_contract, :epoch_id,
-                    );
-                if token_address == STRK_TOKEN_ADDRESS {
-                    staker_strk_total_amount += delegated_balance;
-                } else {
-                    staker_btc_total_amount += delegated_balance;
-                }
-            }
+            let staker_strk_total_amount = self
+                .get_staker_total_strk_balance_at_epoch(
+                    :staker_address, :staker_pool_info, :epoch_id,
+                );
+            let staker_btc_total_amount = self
+                .get_staker_total_btc_balance_at_epoch(
+                    :staker_address, :staker_pool_info, :epoch_id,
+                );
 
             self
                 .calculate_staker_total_staking_power(
