@@ -33,9 +33,6 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::errors::GenericError;
-use staking::flow_test::utils::MainnetClassHashes::{
-    MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1,
-};
 use staking::flow_test::utils::{
     declare_staking_contract, pause_staking_contract, upgrade_implementation,
 };
@@ -71,10 +68,9 @@ use staking::staking::objects::{
 };
 use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::{
-    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, MAX_MIGRATION_TRACE_ENTRIES, STRK_WEIGHT_FACTOR,
-    V2_PREV_CONTRACT_VERSION,
+    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STRK_WEIGHT_FACTOR, V3_PREV_CONTRACT_VERSION,
 };
-use staking::types::{Amount, Epoch, InternalStakerInfoLatest, VecIndex};
+use staking::types::{Epoch, InternalStakerInfoLatest, VecIndex};
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
@@ -92,15 +88,15 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global,
-    advance_k_epochs_global, append_to_trace, approve, calculate_staker_btc_pool_rewards,
+    advance_k_epochs_global, approve, calculate_staker_btc_pool_rewards,
     calculate_staker_btc_pool_rewards_v3, calculate_staker_strk_rewards,
     calculate_staker_strk_rewards_with_balances_v3, cheat_target_attestation_block_hash, constants,
     custom_decimals_token, declare_pool_contract, declare_staking_eic_contract,
     deploy_mock_erc20_decimals_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    load_from_simple_map, load_from_trace, load_one_felt, load_trace_length, setup_btc_token,
-    stake_for_testing_using_dispatcher, stake_from_zero_address, stake_with_strk_pool_enabled,
-    store_internal_staker_info_v0_to_map, store_to_simple_map, to_amount_18_decimals,
+    load_from_simple_map, load_one_felt, setup_btc_token, stake_for_testing_using_dispatcher,
+    stake_from_zero_address, stake_with_strk_pool_enabled, store_internal_staker_info_v0_to_map,
+    store_to_simple_map, to_amount_18_decimals,
 };
 
 #[test]
@@ -140,7 +136,7 @@ fn test_constructor() {
     assert!(pool_contract_admin == cfg.test_info.pool_contract_admin);
     let prev_class_hash: ClassHash = load_from_simple_map(
         map_selector: selector!("prev_class_hash"),
-        key: V2_PREV_CONTRACT_VERSION,
+        key: V3_PREV_CONTRACT_VERSION,
         contract: staking_contract,
     );
     assert!(prev_class_hash == cfg.staking_contract_info.prev_staking_contract_class_hash);
@@ -4733,37 +4729,13 @@ fn test_staking_eic() {
     let staking_contract = cfg.test_info.staking_contract;
     let upgrade_governor = cfg.test_info.upgrade_governor;
     let security_agent = cfg.test_info.security_agent;
-    let v1_prev_contract_version = V2_PREV_CONTRACT_VERSION - 1;
-    // Store the exist prev_class_hash.
-    let storage_address = snforge_std::map_entry_address(
-        map_selector: selector!("prev_class_hash"), keys: [v1_prev_contract_version].span(),
-    );
-    snforge_std::store(
-        target: staking_contract,
-        :storage_address,
-        serialized_value: [MAINNET_STAKING_CLASS_HASH_V0().into()].span(),
-    );
-    // Store `MAX_MIGRATION_TRACE_ENTRIES` checkpoints in total stake trace.
-    let trace_address = selector!("total_stake_trace");
-    let total_stake_0: Amount = cfg.test_info.stake_amount;
-    let total_stake_1: Amount = total_stake_0 + cfg.test_info.stake_amount;
-    let total_stake_2: Amount = total_stake_1 + cfg.test_info.stake_amount;
-    append_to_trace(
-        contract_address: staking_contract, :trace_address, key: 0, value: total_stake_0,
-    );
-    append_to_trace(
-        contract_address: staking_contract, :trace_address, key: 1, value: total_stake_1,
-    );
-    append_to_trace(
-        contract_address: staking_contract, :trace_address, key: 2, value: total_stake_2,
-    );
 
     // Upgrade.
+    let staking_prev_class_hash = snforge_std::get_class_hash(contract_address: staking_contract);
     let new_pool_contract_class_hash = declare_pool_contract();
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), new_pool_contract_class_hash.into()]
-            .span(),
+        eic_init_data: [new_pool_contract_class_hash.into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -4779,22 +4751,13 @@ fn test_staking_eic() {
     // Test prev_class_hash.
     let map_selector = selector!("prev_class_hash");
     let storage_address = snforge_std::map_entry_address(
-        :map_selector, keys: [V2_PREV_CONTRACT_VERSION].span(),
+        :map_selector, keys: [V3_PREV_CONTRACT_VERSION].span(),
     );
     let prev_class_hash = *snforge_std::load(
         target: staking_contract, :storage_address, size: Store::<ClassHash>::size().into(),
     )
         .at(0);
-    assert!(prev_class_hash.try_into().unwrap() == MAINNET_STAKING_CLASS_HASH_V1());
-    // Test prev_class_hash from v1.
-    let storage_address = snforge_std::map_entry_address(
-        :map_selector, keys: [v1_prev_contract_version].span(),
-    );
-    let v1_prev_class_hash = *snforge_std::load(
-        target: staking_contract, :storage_address, size: Store::<ClassHash>::size().into(),
-    )
-        .at(0);
-    assert!(v1_prev_class_hash.try_into().unwrap() == MAINNET_STAKING_CLASS_HASH_V0());
+    assert!(prev_class_hash.try_into().unwrap() == staking_prev_class_hash);
     // Test pool contract class hash.
     let pool_contract_class_hash = *snforge_std::load(
         target: staking_contract,
@@ -4803,29 +4766,6 @@ fn test_staking_eic() {
     )
         .at(0);
     assert!(pool_contract_class_hash.try_into().unwrap() == new_pool_contract_class_hash);
-    // Test total stake trace.
-    let strk_token_address = cfg.test_info.strk_token.contract_address();
-    let trace_address = snforge_std::map_entry_address(
-        map_selector: selector!("tokens_total_stake_trace"),
-        keys: [strk_token_address.into()].span(),
-    );
-    let trace_length = load_trace_length(contract_address: staking_contract, :trace_address);
-    assert!(trace_length == MAX_MIGRATION_TRACE_ENTRIES);
-    let (key_0, value_0) = load_from_trace(
-        contract_address: staking_contract, :trace_address, index: 0,
-    );
-    assert!(key_0 == 0);
-    assert!(value_0 == total_stake_0);
-    let (key_1, value_1) = load_from_trace(
-        contract_address: staking_contract, :trace_address, index: 1,
-    );
-    assert!(key_1 == 1);
-    assert!(value_1 == total_stake_1);
-    let (key_2, value_2) = load_from_trace(
-        contract_address: staking_contract, :trace_address, index: 2,
-    );
-    assert!(key_2 == 2);
-    assert!(value_2 == total_stake_2);
 }
 
 // TODO: Find another way to test specific errors in EIC.
@@ -4863,25 +4803,11 @@ fn test_staking_eic_without_pause() {
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into()]
-            .span(),
+        eic_init_data: [declare_pool_contract().into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
     };
-    let trace_address = selector!("total_stake_trace");
-    let total_stake_0: Amount = cfg.test_info.stake_amount;
-    let total_stake_1: Amount = total_stake_0 + cfg.test_info.stake_amount;
-    let total_stake_2: Amount = total_stake_1 + cfg.test_info.stake_amount;
-    append_to_trace(
-        contract_address: staking_contract, :trace_address, key: 0, value: total_stake_0,
-    );
-    append_to_trace(
-        contract_address: staking_contract, :trace_address, key: 1, value: total_stake_1,
-    );
-    append_to_trace(
-        contract_address: staking_contract, :trace_address, key: 2, value: total_stake_2,
-    );
     // Cheat block timestamp to enable upgrade eligibility.
     start_cheat_block_timestamp_global(
         block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
@@ -4917,60 +4843,6 @@ fn test_staking_eic_with_wrong_number_of_data_elements() {
 
 #[test]
 #[should_panic(expected: "EIC_LIB_CALL_FAILED")]
-fn test_staking_eic_total_stake_trace_empty() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let upgrade_governor = cfg.test_info.upgrade_governor;
-    let security_agent = cfg.test_info.security_agent;
-    // Upgrade.
-    let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), declare_pool_contract().into()]
-            .span(),
-    };
-    let implementation_data = ImplementationData {
-        impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
-    };
-    start_cheat_block_timestamp_global(
-        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
-    );
-    // Pause the staking contract.
-    pause_staking_contract(:staking_contract, :security_agent);
-    upgrade_implementation(
-        contract_address: staking_contract, :implementation_data, :upgrade_governor,
-    );
-}
-
-#[test]
-#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
-fn test_staking_eic_prev_class_hash_zero_class_hash() {
-    let mut cfg: StakingInitConfig = Default::default();
-    general_contract_system_deployment(ref :cfg);
-    let staking_contract = cfg.test_info.staking_contract;
-    let upgrade_governor = cfg.test_info.upgrade_governor;
-    let security_agent = cfg.test_info.security_agent;
-    // Upgrade.
-    let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [Zero::zero(), declare_pool_contract().into()].span(),
-    };
-    let implementation_data = ImplementationData {
-        impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
-    };
-    // Cheat block timestamp to enable upgrade eligibility.
-    start_cheat_block_timestamp_global(
-        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
-    );
-    // Pause the staking contract.
-    pause_staking_contract(:staking_contract, :security_agent);
-    upgrade_implementation(
-        contract_address: staking_contract, :implementation_data, :upgrade_governor,
-    );
-}
-
-#[test]
-#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
 fn test_staking_eic_pool_contract_zero_class_hash() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);
@@ -4979,8 +4851,7 @@ fn test_staking_eic_pool_contract_zero_class_hash() {
     let security_agent = cfg.test_info.security_agent;
     // Upgrade.
     let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [MAINNET_STAKING_CLASS_HASH_V1().into(), Zero::zero()].span(),
+        eic_hash: declare_staking_eic_contract(), eic_init_data: [Zero::zero()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,

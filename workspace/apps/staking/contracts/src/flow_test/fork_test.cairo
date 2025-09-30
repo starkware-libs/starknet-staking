@@ -598,3 +598,10 @@ fn pool_eic_flow_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staking_prev_class_hash_flow_test() {
+    let mut flow = flows::StakingPrevClassHashFlow {};
+    test_flow_mainnet(ref :flow);
+}
