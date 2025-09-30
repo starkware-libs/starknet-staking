@@ -1230,6 +1230,88 @@ fn delegator_claim_rewards_test_idx_is_one_flow_test() {
     assert!(system.token.balance_of(account: delegator.reward.address) == rewards.into());
 }
 
+/// Test balance_at_curr_epoch function in pool contract - cover all branches inside the function.
+///
+/// Flow:
+/// Staker stakes and enables pool.
+/// Delegator delegates to pool.
+/// Delegator claims rewards at various stages (before/after attestation, after enter/adding to
+/// pool, before/after advancing epochs).
+/// Add to delegation pool, attest, advance epochs (multiple times).
+/// Check that rewards (and balances) are as expected at each step.
+#[test]
+fn delegator_balance_at_curr_epoch_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_epoch();
+
+    let pool = system.staking.get_pool(:staker);
+    let delegator_initial_amount = stake_amount;
+    let delegate_amount = delegator_initial_amount / 4;
+
+    let delegator = system.new_delegator(amount: delegator_initial_amount);
+    system.delegate(:delegator, :pool, amount: delegate_amount);
+    // Balance is still zero so no rewards (balance applied 2 epochs ahead).
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards.is_zero());
+    system.advance_epoch();
+    // Balance is still zero so no rewards.
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards.is_zero());
+    let mut stake = stake_amount;
+    system.advance_block_custom_and_attest(:staker, :stake);
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+    // Same epoch of the attestation so no rewards.
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards.is_zero());
+    system.advance_epoch();
+    stake += delegate_amount;
+    let mut pool_balance = delegate_amount;
+    system.advance_block_custom_and_attest(:staker, :stake);
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+    system.advance_epoch();
+    stake += delegate_amount;
+    pool_balance += delegate_amount;
+    system.add_to_delegation_pool(:delegator, :pool, amount: delegate_amount);
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == pool_epoch_rewards);
+    system.advance_block_custom_and_attest(:staker, :stake);
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+    system.advance_epoch();
+    stake += delegate_amount;
+    pool_balance += delegate_amount;
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(rewards == pool_epoch_rewards);
+    system.advance_block_custom_and_attest(:staker, :stake);
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        staker_address: staker.staker.address,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+        :pool_balance,
+    );
+    system.advance_epoch();
+    let rewards = system.delegator_claim_rewards(:delegator, :pool);
+    // Allow small rounding errors in delegator rewards.
+    assert!(pool_epoch_rewards - rewards <= 1);
+}
+
 #[test]
 fn staker_claim_rewards_flow_test() {
     let cfg: StakingInitConfig = Default::default();
