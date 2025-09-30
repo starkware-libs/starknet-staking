@@ -4,6 +4,9 @@ use snforge_std::{TokenImpl, start_cheat_block_number_global};
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS};
 use staking::errors::GenericError;
+use staking::flow_test::utils::MainnetClassHashes::{
+    MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V2,
+};
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
     SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait,
@@ -20,7 +23,7 @@ use staking::staking::interface::{
     StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait};
-use staking::staking::staking::Staking::MAX_MIGRATION_TRACE_ENTRIES;
+use staking::staking::staking::Staking::{MAX_MIGRATION_TRACE_ENTRIES, V3_PREV_CONTRACT_VERSION};
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_8D_CONFIG, BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, STRK_BASE_VALUE,
     TEST_BTC_DECIMALS, TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
@@ -34,7 +37,7 @@ use staking::test_utils::{
 };
 use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
 use staking::utils::compute_rewards_rounded_down;
-use starknet::{ContractAddress, Store};
+use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
@@ -7081,4 +7084,40 @@ pub(crate) impl PoolEICFlowImpl of FlowTrait<PoolEICFlow> {
 // 4. Test switch between BTC 18 decimals and STRK (both 18 decimals).
 // 5. Test one delegator in 2 BTC pools with different decimals.
 
-
+#[derive(Drop, Copy)]
+pub(crate) struct StakingPrevClassHashFlow {}
+pub(crate) impl StakingPrevClassHashFlowImpl of FlowTrait<StakingPrevClassHashFlow> {
+    fn test(self: StakingPrevClassHashFlow, ref system: SystemState) {
+        let staking_contract = system.staking.address;
+        // Test prev_class_hash from v3.
+        let map_selector = selector!("prev_class_hash");
+        let storage_address = snforge_std::map_entry_address(
+            :map_selector, keys: [V3_PREV_CONTRACT_VERSION].span(),
+        );
+        let v3_prev_class_hash = *snforge_std::load(
+            target: staking_contract, :storage_address, size: Store::<ClassHash>::size().into(),
+        )
+            .at(0);
+        assert!(v3_prev_class_hash.try_into().unwrap() == MAINNET_STAKING_CLASS_HASH_V2());
+        // Test prev_class_hash from v2.
+        let v2_prev_contract_version = V3_PREV_CONTRACT_VERSION - 1;
+        let storage_address = snforge_std::map_entry_address(
+            :map_selector, keys: [v2_prev_contract_version].span(),
+        );
+        let v2_prev_class_hash = *snforge_std::load(
+            target: staking_contract, :storage_address, size: Store::<ClassHash>::size().into(),
+        )
+            .at(0);
+        assert!(v2_prev_class_hash.try_into().unwrap() == MAINNET_STAKING_CLASS_HASH_V1());
+        // Test prev_class_hash from v1.
+        let v1_prev_contract_version = v2_prev_contract_version - 1;
+        let storage_address = snforge_std::map_entry_address(
+            :map_selector, keys: [v1_prev_contract_version].span(),
+        );
+        let v1_prev_class_hash = *snforge_std::load(
+            target: staking_contract, :storage_address, size: Store::<ClassHash>::size().into(),
+        )
+            .at(0);
+        assert!(v1_prev_class_hash.try_into().unwrap() == MAINNET_STAKING_CLASS_HASH_V0());
+    }
+}

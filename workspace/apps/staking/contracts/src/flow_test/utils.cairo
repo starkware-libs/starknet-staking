@@ -1945,8 +1945,12 @@ pub(crate) impl SystemReplaceabilityV3Impl of SystemReplaceabilityV3Trait {
 
     /// Upgrades the staking contract in the system state with a local implementation.
     fn upgrade_staking_implementation_v3(self: SystemState) {
+        let eic_data = EICData {
+            eic_hash: declare_staking_eic_contract(),
+            eic_init_data: array![declare_pool_contract().into()].span(),
+        };
         let implementation_data = ImplementationData {
-            impl_hash: declare_staking_contract(), eic_data: Option::None, final: false,
+            impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
         };
         upgrade_implementation(
             contract_address: self.staking.address,
