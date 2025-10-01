@@ -13,6 +13,8 @@ assert_macros.workspace = true
 snforge_std.workspace = true
 starkware_utils_testing.workspace = true
 
+[lib]
+
 [scripts]
 test = "snforge test"
 
