@@ -88,11 +88,11 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global,
-    advance_k_epochs_global, approve, calculate_staker_btc_pool_rewards,
-    calculate_staker_btc_pool_rewards_v3, calculate_staker_strk_rewards,
-    calculate_staker_strk_rewards_with_balances_v3, cheat_target_attestation_block_hash, constants,
-    custom_decimals_token, declare_pool_contract, declare_staking_eic_contract,
-    deploy_mock_erc20_decimals_contract, deploy_staking_contract,
+    advance_k_epochs_global, approve, calculate_current_block_rewards_v3,
+    calculate_staker_btc_pool_rewards, calculate_staker_btc_pool_rewards_v3,
+    calculate_staker_strk_rewards, calculate_staker_strk_rewards_with_balances_v3,
+    cheat_target_attestation_block_hash, constants, custom_decimals_token, declare_pool_contract,
+    declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     load_from_simple_map, load_one_felt, setup_btc_token, stake_for_testing_using_dispatcher,
     stake_from_zero_address, stake_with_strk_pool_enabled, store_internal_staker_info_v0_to_map,
@@ -3492,10 +3492,7 @@ fn test_update_rewards_only_staker() {
         contract_address: staking_contract,
     };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
-    let reward_supplier = cfg.staking_contract_info.reward_supplier;
-    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
-        contract_address: reward_supplier,
-    };
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -3507,9 +3504,7 @@ fn test_update_rewards_only_staker() {
     advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
-    let (strk_epoch_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
-    let epoch_len_in_blocks = cfg.staking_contract_info.epoch_info.epoch_len_in_blocks();
-    let strk_block_rewards = strk_epoch_rewards / epoch_len_in_blocks.into();
+    let (strk_block_rewards, _) = calculate_current_block_rewards_v3(:minting_curve_contract);
     let staker_info_expected = StakerInfoV1 {
         unclaimed_rewards_own: strk_block_rewards, ..staker_info_before,
     };
@@ -3538,10 +3533,7 @@ fn test_update_rewards_miss_blocks() {
         contract_address: staking_contract,
     };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
-    let reward_supplier = cfg.staking_contract_info.reward_supplier;
-    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
-        contract_address: reward_supplier,
-    };
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -3553,9 +3545,7 @@ fn test_update_rewards_miss_blocks() {
     advance_k_epochs_global();
     let staker_address = cfg.test_info.staker_address;
     let staker_info_before = staking_dispatcher.staker_info_v1(:staker_address);
-    let (strk_epoch_rewards, _) = reward_supplier_dispatcher.calculate_current_epoch_rewards();
-    let epoch_len_in_blocks = cfg.staking_contract_info.epoch_info.epoch_len_in_blocks();
-    let strk_block_rewards = strk_epoch_rewards / epoch_len_in_blocks.into();
+    let (strk_block_rewards, _) = calculate_current_block_rewards_v3(:minting_curve_contract);
     let staker_info_expected = StakerInfoV1 {
         unclaimed_rewards_own: strk_block_rewards * 2, ..staker_info_before,
     };
@@ -3605,7 +3595,6 @@ fn test_update_rewards_with_strk_pool() {
         amount_own: stake_amount,
         pool_amount: delegated_amount,
         :commission,
-        :staking_contract,
         :minting_curve_contract,
     );
     // Assert staker rewards, delegator rewards, and pool balance before update.
@@ -3735,7 +3724,6 @@ fn test_update_rewards_with_both_strk_and_btc() {
         amount_own: stake_amount,
         pool_amount: strk_delegated_amount,
         :commission,
-        :staking_contract,
         :minting_curve_contract,
     );
     // Same calculation for both BTC pools (both have the same decimals).
@@ -3750,7 +3738,6 @@ fn test_update_rewards_with_both_strk_and_btc() {
         :normalized_pool_balance,
         :normalized_staker_total_btc_balance,
         :commission,
-        :staking_contract,
         :minting_curve_contract,
         token_address: btc_token_address,
     );

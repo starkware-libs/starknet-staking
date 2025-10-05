@@ -28,7 +28,7 @@ use snforge_std::{
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::constants::{
-    ALPHA, ALPHA_DENOMINATOR, K, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
+    ALPHA, ALPHA_DENOMINATOR, K, SECONDS_IN_YEAR, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
 };
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{
@@ -41,6 +41,7 @@ use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::reward_supplier::reward_supplier::RewardSupplier::BLOCK_TIME_SCALE;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
@@ -1162,12 +1163,9 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v3(
     amount_own: Amount,
     pool_amount: Amount,
     commission: Commission,
-    staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
-    let (strk_block_rewards, _) = calculate_current_block_rewards(
-        :staking_contract, :minting_curve_contract,
-    );
+    let (strk_block_rewards, _) = calculate_current_block_rewards_v3(:minting_curve_contract);
     let total_stake = amount_own + pool_amount;
     // Calculate staker own rewards.
     let mut staker_rewards = mul_wide_and_div(
@@ -1236,13 +1234,10 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v3(
     normalized_pool_balance: NormalizedAmount,
     normalized_staker_total_btc_balance: NormalizedAmount,
     commission: Commission,
-    staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
     token_address: ContractAddress,
 ) -> (Amount, Amount) {
-    let (_, btc_block_rewards) = calculate_current_block_rewards(
-        :staking_contract, :minting_curve_contract,
-    );
+    let (_, btc_block_rewards) = calculate_current_block_rewards_v3(:minting_curve_contract);
     // Calculate pool rewards including commission.
     let pool_rewards_including_commission = mul_wide_and_div(
         lhs: btc_block_rewards,
@@ -1275,17 +1270,33 @@ fn calculate_current_epoch_rewards(
     (strk_rewards, btc_rewards)
 }
 
-fn calculate_current_block_rewards(
-    staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
+/// Calculate block rewards for the current epoch. Use `AVG_BLOCK_TIME` (default value for testing)
+/// for `avg_block_time`.
+pub(crate) fn calculate_current_block_rewards_v3(
+    minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
-    let (strk_epoch_rewards, btc_epoch_rewards) = calculate_current_epoch_rewards(
-        :staking_contract, :minting_curve_contract,
-    );
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let epoch_len_in_blocks = staking_dispatcher.get_epoch_info().epoch_len_in_blocks();
-    let strk_block_rewards = strk_epoch_rewards / epoch_len_in_blocks.into();
-    let btc_block_rewards = btc_epoch_rewards / epoch_len_in_blocks.into();
-    (strk_block_rewards, btc_block_rewards)
+    calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: AVG_BLOCK_TIME * BLOCK_TIME_SCALE,
+    )
+}
+
+/// Calculate block rewards for the current epoch based on the given `avg_block_time`.
+pub(crate) fn calculate_current_block_rewards_with_avg_block_time_v3(
+    minting_curve_contract: ContractAddress, avg_block_time: u64,
+) -> (Amount, Amount) {
+    let minting_curve_dispatcher = IMintingCurveDispatcher {
+        contract_address: minting_curve_contract,
+    };
+    let yearly_mint = minting_curve_dispatcher.yearly_mint();
+    let total_rewards = mul_wide_and_div(
+        lhs: yearly_mint,
+        rhs: avg_block_time.into(),
+        div: BLOCK_TIME_SCALE.into() * SECONDS_IN_YEAR.into(),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    let btc_rewards = calculate_btc_rewards(:total_rewards);
+    let strk_rewards = total_rewards - btc_rewards;
+    (strk_rewards, btc_rewards)
 }
 
 fn calculate_btc_rewards(total_rewards: Amount) -> Amount {
