@@ -27,8 +27,9 @@ pub mod RewardSupplier {
     use starkware_utils::erc20::erc20_utils::CheckedIERC20DispatcherTrait;
     use starkware_utils::errors::OptionAuxTrait;
     use starkware_utils::interfaces::identity::Identity;
-    use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
+    use starkware_utils::math::utils::{Clamp, ceil_of_division, mul_wide_and_div};
     use starkware_utils::time::time::Timestamp;
+
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
     /// Scale factor for block duration measurements. 100 implies granularity of 100th of second.
@@ -367,11 +368,17 @@ pub mod RewardSupplier {
             // We calculate `num_blocks` instead of using the configured value to keep the average
             // accurate even if some calls are missed.
             let num_blocks = current_block_number - snapshot_block_number;
-            let calculated_block_duration = mul_wide_and_div(
+            let mut calculated_block_duration = mul_wide_and_div(
                 lhs: time_delta, rhs: BLOCK_DURATION_SCALE, div: num_blocks,
             )
                 .expect_with_err(err: Error::BLOCK_DURATION_OVERFLOW);
-            // TODO: Adjust calculated_block_duration with MIN_BLOCK_TIME and MAX_BLOCK_TIME.
+            // Adjust calculated_block_duration with min and max block duration.
+            let block_duration_config = self.block_duration_config.read();
+            calculated_block_duration = calculated_block_duration
+                .clamp(
+                    block_duration_config.min_block_duration,
+                    block_duration_config.max_block_duration,
+                );
             self.avg_block_duration.write(calculated_block_duration);
         }
     }
