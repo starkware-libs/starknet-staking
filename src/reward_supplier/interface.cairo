@@ -78,6 +78,28 @@ pub trait IRewardSupplier<TContractState> {
     fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfoV1;
     /// Returns the alpha parameter, as percentage, used when computing BTC rewards.
     fn get_alpha(self: @TContractState) -> u128;
+    /// Returns the block duration configuration.
+    fn get_block_duration_config(self: @TContractState) -> BlockDurationConfig;
+}
+
+#[starknet::interface]
+pub trait IRewardSupplierConfig<TContractState> {
+    /// Sets the block duration configuration.
+    ///
+    /// #### Preconditions:
+    /// - `block_duration_config.min_block_duration > 0`
+    /// - `block_duration_config.min_block_duration <= block_duration_config.max_block_duration`
+    ///
+    /// #### Errors:
+    /// - [`ONLY_APP_GOVERNOR`](AccessErrors::ONLY_APP_GOVERNOR)
+    /// -
+    /// [`INVALID_MIN_MAX_BLOCK_DURATION`](staking::reward_supplier::errors::Error::INVALID_MIN_MAX_BLOCK_DURATION)
+    ///
+    /// #### Access control:
+    /// Only app governor.
+    fn set_block_duration_config(
+        ref self: TContractState, block_duration_config: BlockDurationConfig,
+    );
 }
 
 pub mod Events {
@@ -94,4 +116,13 @@ pub mod Events {
 pub struct RewardSupplierInfoV1 {
     pub unclaimed_rewards: Amount,
     pub l1_pending_requested_amount: Amount,
+}
+
+/// Configuration for block duration calculation.
+#[derive(Debug, Copy, Drop, Serde, PartialEq, starknet::Store)]
+pub struct BlockDurationConfig {
+    /// Minimum block duration, in units of 1 / BLOCK_DURATION_SCALE seconds.
+    pub min_block_duration: u64,
+    /// Maximum block duration, in units of 1 / BLOCK_DURATION_SCALE seconds.
+    pub max_block_duration: u64,
 }
