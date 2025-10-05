@@ -188,6 +188,10 @@ pub mod Staking {
         pool_eic_class_hash: ClassHash,
         /// Map staker address to its version.
         staker_version: Map<ContractAddress, StakerVersion>,
+        /// Last epoch for which block rewards were calculated.
+        last_calculated_epoch: Epoch,
+        /// Block rewards (STRK, BTC) for the current epoch.
+        block_rewards: (Amount, Amount),
     }
 
     #[event]
@@ -1431,7 +1435,7 @@ pub mod Staking {
             // Get current block data and update rewards.
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             let (strk_block_rewards, btc_block_rewards) = self
-                .calculate_block_rewards(:reward_supplier_dispatcher);
+                .calculate_block_rewards(:reward_supplier_dispatcher, :curr_epoch);
             self
                 ._update_rewards(
                     :staker_address,
@@ -1490,13 +1494,24 @@ pub mod Staking {
         }
 
         /// Calculates the rewards for a block in the current epoch (for STRK and BTC).
+        ///
+        /// Precondition: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
+        /// storage reads.
+        // TODO: Consider view?
+        // TODO: Migration.
         fn calculate_block_rewards(
-            self: @ContractState, reward_supplier_dispatcher: IRewardSupplierDispatcher,
+            ref self: ContractState,
+            reward_supplier_dispatcher: IRewardSupplierDispatcher,
+            curr_epoch: Epoch,
         ) -> (Amount, Amount) {
-            let (strk_rewards, btc_rewards) = reward_supplier_dispatcher
-                .calculate_current_epoch_rewards();
-            let epoch_len_in_blocks = self.get_epoch_info().epoch_len_in_blocks();
-            (strk_rewards / epoch_len_in_blocks.into(), btc_rewards / epoch_len_in_blocks.into())
+            if curr_epoch > self.last_calculated_epoch.read() {
+                self.last_calculated_epoch.write(curr_epoch);
+                let block_rewards = reward_supplier_dispatcher.update_current_epoch_block_rewards();
+                self.block_rewards.write(block_rewards);
+                block_rewards
+            } else {
+                self.block_rewards.read()
+            }
         }
 
         fn update_commission(
