@@ -5,32 +5,41 @@ use core::num::traits::Zero;
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::cheatcodes::events::{EventSpyTrait, EventsFilterTrait};
-use snforge_std::{TokenTrait, start_cheat_block_timestamp_global, test_address};
-use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS};
+use snforge_std::{
+    CheatSpan, TokenTrait, cheat_caller_address, start_cheat_block_timestamp_global, test_address,
+};
+use staking::constants::{ALPHA, ALPHA_DENOMINATOR, SECONDS_IN_YEAR, STRK_IN_FRIS};
 use staking::errors::GenericError;
 use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
+use staking::reward_supplier::errors::Error;
 use staking::reward_supplier::interface::{
     IRewardSupplier, IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
     IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfoV1,
 };
 use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::reward_supplier::reward_supplier::RewardSupplier::{
+    BLOCK_TIME_SCALE, DEFAULT_AVG_BLOCK_TIME,
+};
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils;
-use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
-use staking::types::Amount;
+use staking::test_utils::constants::{
+    AVG_BLOCK_TIME, NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS,
+};
+use staking::types::{Amount, BlockNumber};
 use staking::utils::compute_threshold;
 use starknet::{ContractAddress, Store};
-use starkware_utils::errors::Describable;
+use starkware_utils::errors::{Describable, OptionAuxTrait};
 use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
-use starkware_utils::time::time::Time;
+use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::event_test_utils::assert_number_of_events;
 use starkware_utils_testing::test_utils::{
-    assert_panic_with_error, cheat_caller_address_once, check_identity,
+    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
 use test_utils::{
-    StakingInitConfig, advance_epoch_global, fund, general_contract_system_deployment,
-    initialize_reward_supplier_state_from_cfg, load_one_felt, stake_for_testing_using_dispatcher,
+    StakingInitConfig, advance_epoch_global, advance_k_epochs_global, advance_time_global, fund,
+    general_contract_system_deployment, initialize_reward_supplier_state_from_cfg, load_one_felt,
+    stake_for_testing_using_dispatcher,
 };
 
 
@@ -384,4 +393,141 @@ fn test_get_alpha() {
         contract_address: reward_supplier,
     };
     assert!(ALPHA == reward_supplier_dispatcher.get_alpha());
+}
+
+#[test]
+fn test_update_current_epoch_block_rewards() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    stake_for_testing_using_dispatcher(:cfg);
+    advance_k_epochs_global();
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let minting_curve_dispatcher = IMintingCurveDispatcher {
+        contract_address: cfg.reward_supplier.minting_curve_contract,
+    };
+    let staking_contract = cfg.test_info.staking_contract;
+    let current_block_number = starknet::get_block_number();
+    let current_timestamp = starknet::get_block_timestamp();
+    // First snapshot, not update avg_block_time. Rewards are calculated using the default avg block
+    // time.
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
+    let (strk_rewards, btc_rewards) = reward_supplier_dispatcher
+        .update_current_epoch_block_rewards();
+    // Test block snapshot.
+    let block_snapshot = snforge_std::load(
+        target: reward_supplier,
+        storage_address: selector!("block_snapshot"),
+        size: Store::<(BlockNumber, Timestamp)>::size().into(),
+    )
+        .span();
+    let snapshot_block_number = (*block_snapshot.at(0)).try_into().unwrap();
+    let snapshot_timestamp = (*block_snapshot.at(1)).try_into().unwrap();
+    assert!(snapshot_block_number == current_block_number);
+    assert!(snapshot_timestamp == current_timestamp);
+    // Test avg_block_time.
+    let avg_block_time = load_one_felt(
+        target: reward_supplier, storage_address: selector!("avg_block_time"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(avg_block_time == DEFAULT_AVG_BLOCK_TIME);
+    // Test rewards.
+    let yearly_mint = minting_curve_dispatcher.yearly_mint();
+    let expected_rewards = mul_wide_and_div(
+        lhs: yearly_mint,
+        rhs: DEFAULT_AVG_BLOCK_TIME.into(),
+        div: BLOCK_TIME_SCALE.into() * SECONDS_IN_YEAR.into(),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    let expected_btc_rewards = mul_wide_and_div(
+        lhs: expected_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR,
+    )
+        .unwrap();
+    let expected_strk_rewards = expected_rewards - expected_btc_rewards;
+    assert!(expected_strk_rewards.is_non_zero());
+    assert!(expected_btc_rewards.is_non_zero());
+    assert!(strk_rewards == expected_strk_rewards);
+    assert!(btc_rewards == expected_btc_rewards);
+    // Second snapshot, update avg_block_time.
+    advance_epoch_global();
+    assert!(current_block_number != starknet::get_block_number());
+    assert!(current_timestamp != starknet::get_block_timestamp());
+    let current_block_number = starknet::get_block_number();
+    let current_timestamp = starknet::get_block_timestamp();
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
+    let (strk_rewards, btc_rewards) = reward_supplier_dispatcher
+        .update_current_epoch_block_rewards();
+    // Test block snapshot.
+    let block_snapshot = snforge_std::load(
+        target: reward_supplier,
+        storage_address: selector!("block_snapshot"),
+        size: Store::<(BlockNumber, Timestamp)>::size().into(),
+    )
+        .span();
+    let snapshot_block_number = (*block_snapshot.at(0)).try_into().unwrap();
+    let snapshot_timestamp = (*block_snapshot.at(1)).try_into().unwrap();
+    assert!(snapshot_block_number == current_block_number);
+    assert!(snapshot_timestamp == current_timestamp);
+    // Test avg_block_time.
+    let avg_block_time = load_one_felt(
+        target: reward_supplier, storage_address: selector!("avg_block_time"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(avg_block_time == AVG_BLOCK_TIME * BLOCK_TIME_SCALE);
+    // Test rewards.
+    let expected_rewards = mul_wide_and_div(
+        lhs: yearly_mint,
+        rhs: avg_block_time.into(),
+        div: BLOCK_TIME_SCALE.into() * SECONDS_IN_YEAR.into(),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    let expected_btc_rewards = mul_wide_and_div(
+        lhs: expected_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR,
+    )
+        .unwrap();
+    let expected_strk_rewards = expected_rewards - expected_btc_rewards;
+    assert!(expected_strk_rewards.is_non_zero());
+    assert!(expected_btc_rewards.is_non_zero());
+    assert!(strk_rewards == expected_strk_rewards);
+    assert!(btc_rewards == expected_btc_rewards);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_update_current_epoch_block_rewards_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let reward_supplier_safe_dispatcher = IRewardSupplierSafeDispatcher {
+        contract_address: reward_supplier,
+    };
+    let staking_contract = cfg.test_info.staking_contract;
+    // Catch CALLER_IS_NOT_STAKING_CONTRACT.
+    let result = reward_supplier_safe_dispatcher.update_current_epoch_block_rewards();
+    assert_panic_with_error(
+        :result, expected_error: GenericError::CALLER_IS_NOT_STAKING_CONTRACT.describe(),
+    );
+    advance_time_global(time: TimeDelta { seconds: 1 });
+    // Catch INVALID_BLOCK_NUMBER.
+    cheat_caller_address(
+        contract_address: reward_supplier,
+        caller_address: staking_contract,
+        span: CheatSpan::TargetCalls(2),
+    );
+    reward_supplier_dispatcher.update_current_epoch_block_rewards();
+    let result = reward_supplier_safe_dispatcher.update_current_epoch_block_rewards();
+    assert_panic_with_error(:result, expected_error: Error::INVALID_BLOCK_NUMBER.describe());
+    // Catch INVALID_BLOCK_TIMESTAMP.
+    // Advance block without advancing time.
+    advance_block_number_global(blocks: 1);
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
+    let result = reward_supplier_safe_dispatcher.update_current_epoch_block_rewards();
+    assert_panic_with_error(:result, expected_error: Error::INVALID_BLOCK_TIMESTAMP.describe());
 }

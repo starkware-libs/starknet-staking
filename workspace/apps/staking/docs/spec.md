@@ -119,6 +119,7 @@
 - [L2 Reward supplier contract](#l2-reward-supplier-contract)
   - [Functions](#functions-2)
     - [calculate\_current\_epoch\_rewards](#calculate_current_epoch_rewards)
+    - [update\_current\_epoch\_block\_rewards](#update_current_epoch_block_rewards)
     - [update\_unclaimed\_rewards\_from\_staking\_contract](#update_unclaimed_rewards_from_staking_contract)
     - [claim\_rewards](#claim_rewards-2)
     - [contract\_parameters\_v1](#contract_parameters_v1-2)
@@ -395,6 +396,7 @@ classDiagram
     erc20_dispatcher,
     l1_reward_supplier,
     calculate_current_epoch_rewards()
+    update_current_epoch_block_rewards()
     update_unclaimed_rewards_from_staking_contract()
     claim_rewards()
     on_receive()
@@ -2215,7 +2217,8 @@ Only staking contract can execute.
 fn calculate_current_epoch_rewards(self: @TContractState) -> (Amount, Amount)
 ```
 #### description <!-- omit from toc -->
-Return the amount of rewards for the current epoch (for STRK and BTC).
+Returns the amount of rewards for the current epoch (for STRK and BTC). 
+Used only before the consensus rewards mechanism is activated.
 #### return <!-- omit from toc -->
 rewards: ([Amount](#amount), [Amount](#amount)) - the rewards for the current epoch, in FRI, for STRK and BTC (respectively).
 #### emits <!-- omit from toc -->
@@ -2228,6 +2231,27 @@ rewards: ([Amount](#amount), [Amount](#amount)) - the rewards for the current ep
 
 #### access control <!-- omit from toc -->
 Any address can execute.
+
+### update_current_epoch_block_rewards
+```rust
+fn update_current_epoch_block_rewards(ref self: TContractState) -> (Amount, Amount);
+```
+#### description <!-- omit from toc -->
+Returns the amount of block rewards for the current epoch (for STRK and BTC). 
+Used after the consensus rewards mechanism is activated.
+#### return <!-- omit from toc -->
+rewards: ([Amount](#amount), [Amount](#amount)) - the block rewards for the current epoch, in FRI, for STRK and BTC (respectively).
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [CALLER\_IS\_NOT\_STAKING\_CONTRACT](#caller_is_not_staking_contract)
+#### logic <!-- omit from toc -->
+1. Update average block time. 
+2. Invoke the Minting Curve's [yearly_mint](#yearly-mint) to receive the theoretic yearly amount of rewards.
+2. Calculate block total rewards according to the yearly mint and average block time.
+3. Calculate the fraction of the rewards dedicated to BTC pools.
+4. Subtract the BTC rewards from the total to get the STRK rewards.
+#### access control <!-- omit from toc -->
+Only staking contract.
 
 ### update_unclaimed_rewards_from_staking_contract
 ```rust
