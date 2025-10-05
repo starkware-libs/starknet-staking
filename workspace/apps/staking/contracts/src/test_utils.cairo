@@ -1,14 +1,15 @@
 use constants::{
-    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, BASE_MINT_AMOUNT, BTC_BASE_VALUE_18,
-    BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8, BTC_POOL_MEMBER_STAKE_AMOUNT,
-    BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION, DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH,
-    EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN, INITIAL_SUPPLY, L1_REWARD_SUPPLIER,
-    MINTING_CONTRACT_ADDRESS, MIN_BTC_FOR_REWARDS_18, MIN_BTC_FOR_REWARDS_8, MIN_STAKE,
-    OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS, POOL_CONTRACT_ADMIN,
-    POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE, POOL_MEMBER_REWARD_ADDRESS,
-    POOL_MEMBER_STAKE_AMOUNT, PUBLIC_KEY, REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN,
-    SECURITY_AGENT, STAKER_ADDRESS, STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT,
-    STAKING_CONTRACT_ADDRESS, STARKGATE_ADDRESS, STRK_BASE_VALUE, TOKEN_ADMIN, UPGRADE_GOVERNOR,
+    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, AVG_BLOCK_TIME, BASE_MINT_AMOUNT,
+    BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8,
+    BTC_POOL_MEMBER_STAKE_AMOUNT, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION,
+    DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN,
+    INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_BTC_FOR_REWARDS_18,
+    MIN_BTC_FOR_REWARDS_8, MIN_STAKE, OPERATIONAL_ADDRESS, OWNER_ADDRESS, POOL_CONTRACT_ADDRESS,
+    POOL_CONTRACT_ADMIN, POOL_MEMBER_ADDRESS, POOL_MEMBER_INITIAL_BALANCE,
+    POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, PUBLIC_KEY,
+    REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
+    STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
+    STARKGATE_ADDRESS, STRK_BASE_VALUE, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
 use core::num::traits::Pow;
@@ -22,7 +23,7 @@ use openzeppelin::token::erc20::interface::{
 use snforge_std::{
     CheatSpan, ContractClassTrait, CustomToken, DeclareResultTrait, Token, TokenImpl, TokenTrait,
     cheat_caller_address, set_balance, start_cheat_block_hash_global,
-    start_cheat_block_number_global, test_address,
+    start_cheat_block_number_global, start_cheat_block_timestamp_global, test_address,
 };
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
@@ -64,7 +65,7 @@ use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::mul_wide_and_div;
-use starkware_utils::time::time::{TimeDelta, Timestamp};
+use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
     set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
@@ -80,7 +81,7 @@ pub(crate) mod constants {
     use staking::types::{Amount, BlockNumber, Commission, Index, PublicKey};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
-    use starkware_utils::time::time::Timestamp;
+    use starkware_utils::time::time::{Seconds, Timestamp};
 
     /// STRK rewards constants.
     pub const STRK_BASE_VALUE: Index = 10_000_000_000_000_000_000_000_000_000; // 10**28
@@ -133,6 +134,7 @@ pub(crate) mod constants {
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
     pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
     pub(crate) const TEST_ONE_BTC: Amount = 10_u128.pow(TEST_BTC_DECIMALS.into());
+    pub(crate) const AVG_BLOCK_TIME: Seconds = 3;
 
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
@@ -1062,9 +1064,15 @@ pub(crate) fn strk_pool_update_rewards(
     }
 }
 
+/// Advance the time by the given `time`.
+pub(crate) fn advance_time_global(time: TimeDelta) {
+    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(delta: time).into())
+}
+
 /// Advance one epoch.
 pub(crate) fn advance_epoch_global() {
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
+    advance_time_global(time: TimeDelta { seconds: EPOCH_LENGTH.into() * AVG_BLOCK_TIME });
 }
 
 /// Advance `K` epochs.
