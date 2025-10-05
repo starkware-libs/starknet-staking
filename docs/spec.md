@@ -125,6 +125,8 @@
     - [contract\_parameters\_v1](#contract_parameters_v1-2)
     - [on\_receive](#on_receive)
     - [get\_alpha](#get_alpha)
+    - [get\_block\_duration\_config](#get_block_duration_config)
+    - [set\_block\_duration\_config](#set_block_duration_config)
   - [Events](#events-2)
     - [Mint Request](#mint-request)
 - [Minting Curve Contract](#minting-curve-contract)
@@ -237,6 +239,7 @@
     - [CONSENSUS\_REWARDS\_IS\_ACTIVE](#consensus_rewards_is_active)
     - [INVALID\_STAKER](#invalid_staker)
     - [INVALID\_TOKEN\_DECIMALS](#invalid_token_decimals)
+    - [INVALID\_MIN\_MAX\_BLOCK\_DURATION](#invalid_min_max_block_duration)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -254,6 +257,7 @@
     - [AttestationInfo](#attestationinfo)
     - [EpochInfo](#epochinfo)
     - [MintingCurveContractInfo](#mintingcurvecontractinfo)
+    - [BlockDurationConfig](#blockdurationconfig)
 - [Type aliases](#type-aliases)
     - [Amount](#amount)
     - [Commission](#commission)
@@ -2344,6 +2348,36 @@ Returns the alpha parameter, as percentage, used when computing BTC rewards.
 #### access control <!-- omit from toc -->
 Any address can execute.
 
+### get_block_duration_config
+```rust
+fn get_block_duration_config(self: @TContractState) -> BlockdurationConfig;
+```
+#### description <!-- omit from toc -->
+Returns [BlockdurationConfig](#blockdurationconfig).
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### get_block_duration_config
+```rust
+fn set_block_duration_config(ref self: TContractState, block_duration_config: BlockdurationConfig);
+```
+#### description <!-- omit from toc -->
+Set the block duration configuration.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [ONLY\_APP\_GOVERNOR](#only_app_governor)
+2. [INVALID\_MIN\_MAX\_BLOCK\_duration](#invalid_min_max_block_duration)
+#### pre-condition <!-- omit from toc -->
+1. 0 < `block_duration_config.weighted_avg_factor` <= 100
+2. 0 < `block_duration_config.min_block_duration` <= `block_duration_config.max_block_duration`
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only app governor.
+
 ## Events
 ### Mint Request
 | data         | type              | keyed |
@@ -2797,6 +2831,9 @@ Only token admin.
 ### INVALID_STAKER
 "Staker is invalid for getting rewards"
 
+### INVALID_MIN_MAX_BLOCK_DURATION
+"Invalid min/max block duration"
+
 # Structs
 ### StakerPoolInfoV1
 | name              | type                      |
@@ -2917,6 +2954,12 @@ Only token admin.
 | ------- | --------- |
 | c_num   | Inflation |
 | c_denom | Inflation |
+
+### BlockDurationConfig
+| name                | type |
+| ------------------- | ---- |
+| min_block_duration  | u64  |
+| max_block_duration  | u64  |
 
 # Type aliases
 ### Amount
