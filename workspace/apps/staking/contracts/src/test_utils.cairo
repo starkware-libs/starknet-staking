@@ -1093,6 +1093,13 @@ pub(crate) fn advance_k_epochs_global() {
     }
 }
 
+/// Advance one epoch with the given `block_time` per block.
+pub(crate) fn advance_epoch_global_custom_time(block_time: TimeDelta) {
+    advance_block_number_global(blocks: EPOCH_LENGTH.into());
+    let time = TimeDelta { seconds: block_time.seconds * EPOCH_LENGTH.into() };
+    advance_time_global(:time);
+}
+
 // TODO: rename to v2.
 /// Return staker own rewards and STRK pool rewards.
 ///

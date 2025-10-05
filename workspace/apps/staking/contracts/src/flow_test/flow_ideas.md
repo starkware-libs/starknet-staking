@@ -78,3 +78,7 @@
 - advance blocks with different block times and check the avg is calculated correctly
 - update_rewards for blocks in same epoch - same rewards, then advance epoch, different rewards, update rewards for blocks in same epoch - same rewards.
 - update rewards is not called every block, still rewards is updated correctly (miss block, miss first block in epoch, miss epoch)
+- block time less than min and block time more than max
+- set block time config and test rewards after
+- test with factor = 100
+- test with very small factor

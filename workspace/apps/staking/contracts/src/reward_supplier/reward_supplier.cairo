@@ -1,6 +1,7 @@
 #[starknet::contract]
 pub mod RewardSupplier {
     use RolesComponent::InternalTrait as RolesInternalTrait;
+    use core::cmp::{max, min};
     use core::num::traits::Zero;
     use core::traits::TryInto;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -364,14 +365,21 @@ pub mod RewardSupplier {
             }
             let time_delta = current_timestamp - snapshot_timestamp.into();
             let num_blocks = current_block_number - snapshot_block_number;
-            let calculated_block_time = mul_wide_and_div(
+            let mut calculated_block_time = mul_wide_and_div(
                 lhs: time_delta, rhs: BLOCK_TIME_SCALE, div: num_blocks,
             )
                 .expect_with_err(err: Error::BLOCK_TIME_OVERFLOW);
-            // TODO: Adjust calculated_block_time with MIN_BLOCK_TIME and MAX_BLOCK_TIME.
-            // TODO: Use weighted average between calculated_block_time and the current
-            // avg_block_time.
-            self.avg_block_time.write(calculated_block_time);
+            let block_time_config = self.block_time_config.read();
+            // Adjust calculated_block_time with min and max block time.
+            calculated_block_time = max(calculated_block_time, block_time_config.min_block_time);
+            calculated_block_time = min(calculated_block_time, block_time_config.max_block_time);
+            // Use weighted average between calculated_block_time and the current avg_block_time.
+            let old_avg_block_time = self.avg_block_time.read();
+            let weighted_avg_factor = block_time_config.weighted_avg_factor.into();
+            let new_avg_block_time = (weighted_avg_factor * calculated_block_time
+                + (100 - weighted_avg_factor) * old_avg_block_time)
+                / 100;
+            self.avg_block_time.write(new_avg_block_time);
         }
     }
 }

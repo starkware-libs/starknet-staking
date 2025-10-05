@@ -40,9 +40,9 @@ use starkware_utils_testing::test_utils::{
     advance_block_number_global, assert_panic_with_error, cheat_caller_address_once, check_identity,
 };
 use test_utils::{
-    StakingInitConfig, advance_epoch_global, advance_k_epochs_global, advance_time_global, fund,
-    general_contract_system_deployment, initialize_reward_supplier_state_from_cfg, load_one_felt,
-    stake_for_testing_using_dispatcher,
+    StakingInitConfig, advance_epoch_global, advance_epoch_global_custom_time,
+    advance_k_epochs_global, advance_time_global, fund, general_contract_system_deployment,
+    initialize_reward_supplier_state_from_cfg, load_one_felt, stake_for_testing_using_dispatcher,
 };
 
 
@@ -600,4 +600,99 @@ fn test_set_block_time_config_assertions() {
     cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
     let result = reward_supplier_config_safe_dispatcher.set_block_time_config(:block_time_config);
     assert_panic_with_error(:result, expected_error: Error::INVALID_MIN_MAX_BLOCK_TIME.describe());
+}
+
+#[test]
+fn test_update_current_epoch_block_rewards_with_adjustments() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    stake_for_testing_using_dispatcher(:cfg);
+    advance_k_epochs_global();
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let minting_curve_dispatcher = IMintingCurveDispatcher {
+        contract_address: cfg.reward_supplier.minting_curve_contract,
+    };
+    let staking_contract = cfg.test_info.staking_contract;
+    // First snapshot, not update avg_block_time. Rewards are calculated using the default avg block
+    // time.
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
+    let (_, _) = reward_supplier_dispatcher.update_current_epoch_block_rewards();
+    let mut curr_avg_block_time = DEFAULT_AVG_BLOCK_TIME;
+    // Adjust avg_block_time to MIN (avg is less than min).
+    let min_block_time = DEFAULT_BLOCK_TIME_CONFIG.min_block_time;
+    advance_epoch_global_custom_time(
+        block_time: TimeDelta { seconds: min_block_time / BLOCK_TIME_SCALE - 1 },
+    );
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
+    let (strk_rewards, btc_rewards) = reward_supplier_dispatcher
+        .update_current_epoch_block_rewards();
+    // Update the expected avg_block_time.
+    let weighted_avg_factor = DEFAULT_BLOCK_TIME_CONFIG.weighted_avg_factor;
+    curr_avg_block_time =
+        (weighted_avg_factor.into() * min_block_time
+            + (100 - weighted_avg_factor.into()) * curr_avg_block_time)
+        / 100;
+    // Test avg_block_time.
+    let avg_block_time = load_one_felt(
+        target: reward_supplier, storage_address: selector!("avg_block_time"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(avg_block_time == curr_avg_block_time);
+    // Test rewards.
+    let yearly_mint = minting_curve_dispatcher.yearly_mint();
+    let expected_rewards = mul_wide_and_div(
+        lhs: yearly_mint,
+        rhs: curr_avg_block_time.into(),
+        div: BLOCK_TIME_SCALE.into() * SECONDS_IN_YEAR.into(),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    let expected_btc_rewards = mul_wide_and_div(
+        lhs: expected_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR,
+    )
+        .unwrap();
+    let expected_strk_rewards = expected_rewards - expected_btc_rewards;
+    assert!(expected_strk_rewards.is_non_zero());
+    assert!(expected_btc_rewards.is_non_zero());
+    assert!(strk_rewards == expected_strk_rewards);
+    assert!(btc_rewards == expected_btc_rewards);
+    // Adjust avg_block_time to MAX (avg is more than max).
+    let max_block_time = DEFAULT_BLOCK_TIME_CONFIG.max_block_time;
+    advance_epoch_global_custom_time(
+        block_time: TimeDelta { seconds: max_block_time / BLOCK_TIME_SCALE + 1 },
+    );
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
+    let (strk_rewards, btc_rewards) = reward_supplier_dispatcher
+        .update_current_epoch_block_rewards();
+    // Update the expected avg_block_time.
+    curr_avg_block_time =
+        (weighted_avg_factor.into() * max_block_time
+            + (100 - weighted_avg_factor.into()) * curr_avg_block_time)
+        / 100;
+    // Test avg_block_time.
+    let avg_block_time = load_one_felt(
+        target: reward_supplier, storage_address: selector!("avg_block_time"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(avg_block_time == curr_avg_block_time);
+    // Test rewards.
+    let expected_rewards = mul_wide_and_div(
+        lhs: yearly_mint,
+        rhs: curr_avg_block_time.into(),
+        div: BLOCK_TIME_SCALE.into() * SECONDS_IN_YEAR.into(),
+    )
+        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+    let expected_btc_rewards = mul_wide_and_div(
+        lhs: expected_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR,
+    )
+        .unwrap();
+    let expected_strk_rewards = expected_rewards - expected_btc_rewards;
+    assert!(expected_strk_rewards.is_non_zero());
+    assert!(expected_btc_rewards.is_non_zero());
+    assert!(strk_rewards == expected_strk_rewards);
+    assert!(btc_rewards == expected_btc_rewards);
 }
