@@ -4,7 +4,13 @@ use starknet::{ContractAddress, EthAddress};
 #[starknet::interface]
 pub trait IRewardSupplier<TContractState> {
     /// Calculates the rewards for the current epoch (for STRK and BTC).
+    /// Used for attestation rewards.
     fn calculate_current_epoch_rewards(self: @TContractState) -> (Amount, Amount);
+    /// Calculates the block reward for the current epoch (for STRK and BTC).
+    /// Used for the consensus rewards.
+    /// This function is called once per epoch. It updates `avg_block_duration` and returns block
+    /// rewards (STRK, BTC) for the current epoch.
+    fn update_current_epoch_block_rewards(ref self: TContractState) -> (Amount, Amount);
     /// Updates the unclaimed rewards from the staking contract.
     fn update_unclaimed_rewards_from_staking_contract(ref self: TContractState, rewards: Amount);
     /// Transfers rewards to the staking contract.
