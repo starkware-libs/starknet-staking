@@ -125,6 +125,8 @@
     - [contract\_parameters\_v1](#contract_parameters_v1-2)
     - [on\_receive](#on_receive)
     - [get\_alpha](#get_alpha)
+    - [get\_block\_time\_config](#get_block_time_config)
+    - [set\_block\_time\_config](#set_block_time_config)
   - [Events](#events-2)
     - [Mint Request](#mint-request)
 - [Minting Curve Contract](#minting-curve-contract)
@@ -237,6 +239,8 @@
     - [CONSENSUS\_REWARDS\_IS\_ACTIVE](#consensus_rewards_is_active)
     - [INVALID\_STAKER](#invalid_staker)
     - [INVALID\_TOKEN\_DECIMALS](#invalid_token_decimals)
+    - [INVALID\_WEIGHTED\_AVG\_FACTOR](#invalid_weighted_avg_factor)
+    - [INVALID\_MIN\_MAX\_BLOCK\_TIME](#invalid_min_max_block_time)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -254,6 +258,7 @@
     - [AttestationInfo](#attestationinfo)
     - [EpochInfo](#epochinfo)
     - [MintingCurveContractInfo](#mintingcurvecontractinfo)
+    - [BlockTimeConfig](#blocktimeconfig)
 - [Type aliases](#type-aliases)
     - [Amount](#amount)
     - [Commission](#commission)
@@ -2344,6 +2349,37 @@ Returns the alpha parameter, as percentage, used when computing BTC rewards.
 #### access control <!-- omit from toc -->
 Any address can execute.
 
+### get_block_time_config
+```rust
+fn get_block_time_config(self: @TContractState) -> BlockTimeConfig;
+```
+#### description <!-- omit from toc -->
+Returns [BlockTimeConfig](#blocktimeconfig).
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### get_block_time_config
+```rust
+fn set_block_time_config(ref self: TContractState, block_time_config: BlockTimeConfig);
+```
+#### description <!-- omit from toc -->
+Set the block time configuration.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [ONLY\_APP\_GOVERNOR](#only_app_governor)
+2. [INVALID\_WEIGHTED\_AVG\_FACTOR](#invalid_weighted_avg_factor)
+3. [INVALID\_MIN\_MAX\_BLOCK\_TIME](#invalid_min_max_block_time)
+#### pre-condition <!-- omit from toc -->
+1. 0 < `block_time_config.weighted_avg_factor` <= 100
+2. 0 < `block_time_config.min_block_time` <= `block_time_config.max_block_time`
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only app governor.
+
 ## Events
 ### Mint Request
 | data         | type              | keyed |
@@ -2797,6 +2833,12 @@ Only token admin.
 ### INVALID_STAKER
 "Staker is invalid for getting rewards"
 
+### INVALID_WEIGHTED_AVG_FACTOR
+"Invalid weighted average factor"
+
+### INVALID_MIN_MAX_BLOCK_TIME
+"Invalid min/max block time"
+
 # Structs
 ### StakerPoolInfoV1
 | name              | type                      |
@@ -2917,6 +2959,13 @@ Only token admin.
 | ------- | --------- |
 | c_num   | Inflation |
 | c_denom | Inflation |
+
+### BlockTimeConfig
+| name                | type |
+| ------------------- | ---- |
+| min_block_time      | u64  |
+| max_block_time      | u64  |
+| weighted_avg_factor | u8   |
 
 # Type aliases
 ### Amount

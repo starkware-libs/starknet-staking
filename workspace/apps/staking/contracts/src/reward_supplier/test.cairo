@@ -13,12 +13,15 @@ use staking::errors::GenericError;
 use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
 use staking::reward_supplier::errors::Error;
 use staking::reward_supplier::interface::{
-    IRewardSupplier, IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
-    IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfoV1,
+    BlockTimeConfig, IRewardSupplier, IRewardSupplierConfigDispatcher,
+    IRewardSupplierConfigDispatcherTrait, IRewardSupplierConfigSafeDispatcher,
+    IRewardSupplierConfigSafeDispatcherTrait, IRewardSupplierDispatcher,
+    IRewardSupplierDispatcherTrait, IRewardSupplierSafeDispatcher,
+    IRewardSupplierSafeDispatcherTrait, RewardSupplierInfoV1,
 };
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::reward_supplier::reward_supplier::RewardSupplier::{
-    BLOCK_TIME_SCALE, DEFAULT_AVG_BLOCK_TIME,
+    BLOCK_TIME_SCALE, DEFAULT_AVG_BLOCK_TIME, DEFAULT_BLOCK_TIME_CONFIG,
 };
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
@@ -530,4 +533,71 @@ fn test_update_current_epoch_block_rewards_assertions() {
     cheat_caller_address_once(contract_address: reward_supplier, caller_address: staking_contract);
     let result = reward_supplier_safe_dispatcher.update_current_epoch_block_rewards();
     assert_panic_with_error(:result, expected_error: Error::INVALID_BLOCK_TIMESTAMP.describe());
+}
+
+#[test]
+fn test_get_block_time_config() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let block_time_config = reward_supplier_dispatcher.get_block_time_config();
+    assert!(block_time_config == DEFAULT_BLOCK_TIME_CONFIG);
+}
+
+#[test]
+fn test_set_block_time_config() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let reward_supplier_config_dispatcher = IRewardSupplierConfigDispatcher {
+        contract_address: reward_supplier,
+    };
+    let app_governor = cfg.test_info.app_governor;
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let block_time_config = BlockTimeConfig {
+        min_block_time: 90, max_block_time: 350, weighted_avg_factor: 40,
+    };
+    reward_supplier_config_dispatcher.set_block_time_config(:block_time_config);
+    assert!(reward_supplier_dispatcher.get_block_time_config() == block_time_config);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_block_time_config_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_config_safe_dispatcher = IRewardSupplierConfigSafeDispatcher {
+        contract_address: reward_supplier,
+    };
+    let app_governor = cfg.test_info.app_governor;
+    let mut block_time_config = DEFAULT_BLOCK_TIME_CONFIG;
+    // Catch ONLY_TOKEN_ADMIN.
+    let result = reward_supplier_config_safe_dispatcher.set_block_time_config(:block_time_config);
+    assert_panic_with_error(:result, expected_error: "ONLY_APP_GOVERNOR");
+    // Catch INVALID_WEIGHTED_AVG_FACTOR.
+    block_time_config.weighted_avg_factor = 101;
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let result = reward_supplier_config_safe_dispatcher.set_block_time_config(:block_time_config);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_WEIGHTED_AVG_FACTOR.describe());
+    block_time_config.weighted_avg_factor = 0;
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let result = reward_supplier_config_safe_dispatcher.set_block_time_config(:block_time_config);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_WEIGHTED_AVG_FACTOR.describe());
+    // Catch INVALID_MIN_MAX_BLOCK_TIME.
+    block_time_config.weighted_avg_factor = 100;
+    block_time_config.min_block_time = block_time_config.max_block_time + 1;
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let result = reward_supplier_config_safe_dispatcher.set_block_time_config(:block_time_config);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_MIN_MAX_BLOCK_TIME.describe());
+    block_time_config.min_block_time = 0;
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let result = reward_supplier_config_safe_dispatcher.set_block_time_config(:block_time_config);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_MIN_MAX_BLOCK_TIME.describe());
 }

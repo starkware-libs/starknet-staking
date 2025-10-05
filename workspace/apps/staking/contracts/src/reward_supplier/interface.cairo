@@ -27,6 +27,14 @@ pub trait IRewardSupplier<TContractState> {
     fn contract_parameters_v1(self: @TContractState) -> RewardSupplierInfoV1;
     /// Returns the alpha parameter, as percentage, used when computing BTC rewards.
     fn get_alpha(self: @TContractState) -> u128;
+    /// Returns the block time configuration.
+    fn get_block_time_config(self: @TContractState) -> BlockTimeConfig;
+}
+
+#[starknet::interface]
+pub trait IRewardSupplierConfig<TContractState> {
+    /// Sets the block time configuration.
+    fn set_block_time_config(ref self: TContractState, block_time_config: BlockTimeConfig);
 }
 
 pub mod Events {
@@ -43,4 +51,17 @@ pub mod Events {
 pub struct RewardSupplierInfoV1 {
     pub unclaimed_rewards: Amount,
     pub l1_pending_requested_amount: Amount,
+}
+
+/// Configuration for block time calculation.
+#[derive(Debug, Copy, Drop, Serde, PartialEq, starknet::Store)]
+pub struct BlockTimeConfig {
+    /// Minimum block time, in units of 1 / BLOCK_TIME_SCALE seconds.
+    pub min_block_time: u64,
+    /// Maximum block time, in units of 1 / BLOCK_TIME_SCALE seconds.
+    pub max_block_time: u64,
+    /// Weighting factor for updating the average block time, in percent.
+    /// The new average equals `weighted_avg_factor`% of the current calculated block time plus
+    /// the remaining (100 − `weighted_avg_factor`)% of the old `avg_block_time`.
+    pub weighted_avg_factor: u8,
 }

@@ -509,6 +509,16 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     cfg.test_info.governance_admin.serialize(ref calldata);
     let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap().contract_class();
     let (reward_supplier_contract_address, _) = reward_supplier_contract.deploy(@calldata).unwrap();
+    set_account_as_app_role_admin(
+        contract: reward_supplier_contract_address,
+        account: cfg.test_info.app_role_admin,
+        governance_admin: cfg.test_info.governance_admin,
+    );
+    set_account_as_app_governor(
+        contract: reward_supplier_contract_address,
+        account: cfg.test_info.app_governor,
+        app_role_admin: cfg.test_info.app_role_admin,
+    );
     reward_supplier_contract_address
 }
 

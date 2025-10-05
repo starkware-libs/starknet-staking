@@ -12,7 +12,9 @@ pub mod RewardSupplier {
     use staking::errors::GenericError;
     use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking::reward_supplier::errors::Error;
-    use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfoV1};
+    use staking::reward_supplier::interface::{
+        BlockTimeConfig, Events, IRewardSupplier, IRewardSupplierConfig, RewardSupplierInfoV1,
+    };
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use staking::staking::objects::EpochInfoTrait;
     use staking::types::{Amount, BlockNumber};
@@ -34,6 +36,12 @@ pub mod RewardSupplier {
     pub(crate) const BLOCK_TIME_SCALE: u64 = 100;
     /// Default avg block time.
     pub(crate) const DEFAULT_AVG_BLOCK_TIME: u64 = 3 * BLOCK_TIME_SCALE;
+    /// Default block time configuration.
+    pub(crate) const DEFAULT_BLOCK_TIME_CONFIG: BlockTimeConfig = BlockTimeConfig {
+        min_block_time: 2 * BLOCK_TIME_SCALE,
+        max_block_time: 5 * BLOCK_TIME_SCALE,
+        weighted_avg_factor: 80,
+    };
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -82,6 +90,9 @@ pub mod RewardSupplier {
         /// The latest block data used for average block time calculation.
         /// Updated at the start of each epoch.
         block_snapshot: (BlockNumber, Timestamp),
+        /// Configuration for block time calculation.
+        // TODO: Initial in EIC.
+        block_time_config: BlockTimeConfig,
     }
 
     #[event]
@@ -121,6 +132,7 @@ pub mod RewardSupplier {
         self.l1_reward_supplier.write(l1_reward_supplier);
         self.starkgate_address.write(starkgate_address);
         self.avg_block_time.write(DEFAULT_AVG_BLOCK_TIME);
+        self.block_time_config.write(DEFAULT_BLOCK_TIME_CONFIG);
     }
 
     #[abi(embed_v0)]
@@ -252,6 +264,36 @@ pub mod RewardSupplier {
 
         fn get_alpha(self: @ContractState) -> u128 {
             ALPHA
+        }
+
+        fn get_block_time_config(self: @ContractState) -> BlockTimeConfig {
+            self.block_time_config.read()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl RewardSupplierConfigImpl of IRewardSupplierConfig<ContractState> {
+        fn set_block_time_config(ref self: ContractState, block_time_config: BlockTimeConfig) {
+            // TODO: Is this the right role?
+            self.roles.only_app_governor();
+            // TODO: Emit event?
+            // Assert that block_time_config is valid.
+            // TODO: More validations?
+            assert!(
+                block_time_config.weighted_avg_factor > 0, "{}", Error::INVALID_WEIGHTED_AVG_FACTOR,
+            );
+            assert!(
+                block_time_config.weighted_avg_factor <= 100,
+                "{}",
+                Error::INVALID_WEIGHTED_AVG_FACTOR,
+            );
+            assert!(block_time_config.min_block_time > 0, "{}", Error::INVALID_MIN_MAX_BLOCK_TIME);
+            assert!(
+                block_time_config.min_block_time <= block_time_config.max_block_time,
+                "{}",
+                Error::INVALID_MIN_MAX_BLOCK_TIME,
+            );
+            self.block_time_config.write(block_time_config);
         }
     }
 
