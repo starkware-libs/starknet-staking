@@ -2030,6 +2030,7 @@ pub(crate) impl SystemReplaceabilityV3Impl of SystemReplaceabilityV3Trait {
     fn upgrade_contracts_implementation_v3(self: SystemState) {
         self.staking.pause();
         self.upgrade_staking_implementation_v3();
+        self.upgrade_reward_supplier_implementation_v3();
         for staker_address in self.staker_addresses {
             self.staker_migration(staker_address: *staker_address);
         }
@@ -2052,6 +2053,18 @@ pub(crate) impl SystemReplaceabilityV3Impl of SystemReplaceabilityV3Trait {
             contract_address: self.staking.address,
             :implementation_data,
             upgrade_governor: self.staking.roles.upgrade_governor,
+        );
+    }
+
+    /// Upgrades the reward supplier contract in the system state with a local implementation.
+    fn upgrade_reward_supplier_implementation_v3(self: SystemState) {
+        let implementation_data = ImplementationData {
+            impl_hash: declare_reward_supplier_contract(), eic_data: Option::None, final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.reward_supplier.address,
+            :implementation_data,
+            upgrade_governor: self.reward_supplier.roles.upgrade_governor,
         );
     }
 }

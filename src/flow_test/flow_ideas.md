@@ -21,3 +21,8 @@
 - Member from V0, change balance at V1, no action at V2, test curr balance
 - Member from V2, change balance, upgrade, test curr balance
 - Cover all ifs with migration from: V0, V1, V2.
+
+## block rewards by timestamp
+- advance blocks with different block times and check the avg is calculated correctly
+- update_rewards for blocks in same epoch - same rewards, then advance epoch, different rewards, update rewards for blocks in same epoch - same rewards.
+- update rewards is not called every block, still rewards is updated correctly (miss block, miss first block in epoch, miss epoch)
