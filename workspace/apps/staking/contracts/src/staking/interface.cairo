@@ -218,8 +218,10 @@ pub trait IStakingConfig<TContractState> {
     /// Note: Changing the exit wait window does not retroactively affect validators/delegators
     /// who already submitted an exit_intent call. They remain governed by
     /// the old exit wait window when calling exit_action.
+    /// Note: The exit wait window must be at least K epochs.
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
+    /// Note: K epochs duration must be <= exit wait window.
     fn set_epoch_info(ref self: TContractState, epoch_duration: u32, epoch_length: u32);
     /// Sets the epoch number at which reward distribution begins under the consensus scheme.
     fn set_consensus_rewards_first_epoch(ref self: TContractState, epoch_id: Epoch);
