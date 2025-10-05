@@ -51,7 +51,7 @@ use staking::staking::tests::interface_v1::{
     IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
 };
 use staking::test_utils::constants::{
-    BTC_18D_CONFIG, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, EPOCH_DURATION, EPOCH_LENGTH,
+    AVG_BLOCK_TIME, BTC_18D_CONFIG, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, EPOCH_DURATION, EPOCH_LENGTH,
     EPOCH_STARTING_BLOCK, INITIAL_SUPPLY, MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS,
     STARTING_BLOCK_OFFSET, TEST_BTC_DECIMALS, UPGRADE_GOVERNOR,
 };
@@ -1118,7 +1118,7 @@ pub(crate) impl SystemImpl of SystemTrait {
     }
 
     /// Advances the block timestamp by the specified amount of time.
-    fn advance_time(ref self: SystemState, time: TimeDelta) {
+    fn advance_time(self: SystemState, time: TimeDelta) {
         start_cheat_block_timestamp_global(block_timestamp: Time::now().add(delta: time).into())
     }
 
@@ -1126,14 +1126,18 @@ pub(crate) impl SystemImpl of SystemTrait {
     fn advance_epoch(self: SystemState) {
         let current_block = get_block_number();
         if current_block < EPOCH_STARTING_BLOCK {
-            advance_block_number_global(blocks: EPOCH_STARTING_BLOCK - current_block);
+            let blocks = EPOCH_STARTING_BLOCK - current_block;
+            advance_block_number_global(:blocks);
+            self.advance_time(time: TimeDelta { seconds: blocks * AVG_BLOCK_TIME });
         } else {
             let epoch_info = self.staking.get_epoch_info();
             /// Note: This calculation of the next epoch's starting block may be incorrect
             /// if executed within the same epoch in which the epoch length is updated.
             let next_epoch_starting_block = epoch_info.current_epoch_starting_block()
                 + epoch_info.epoch_len_in_blocks().into();
-            advance_block_number_global(blocks: next_epoch_starting_block - current_block);
+            let blocks = next_epoch_starting_block - current_block;
+            advance_block_number_global(:blocks);
+            self.advance_time(time: TimeDelta { seconds: blocks * AVG_BLOCK_TIME });
         }
     }
 
