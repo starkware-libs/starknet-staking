@@ -7066,6 +7066,188 @@ pub(crate) impl PoolEICFlowImpl of FlowTrait<PoolEICFlow> {
         assert!(staking_rewards_base_value == BTC_18D_CONFIG.base_value);
     }
 }
+
+#[derive(Drop, Copy)]
+pub(crate) struct FindSigmaMigrationFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) member_rewards: Option<Amount>,
+}
+pub(crate) impl FindSigmaMigrationFlowImpl of FlowTrait<FindSigmaMigrationFlow> {
+    fn get_pool_address(self: FindSigmaMigrationFlow) -> Option<ContractAddress> {
+        self.pool
+    }
+    fn setup_v2(ref self: FindSigmaMigrationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        self.pool = Option::Some(pool);
+        let delegator = system.new_delegator(amount: 2 * amount);
+        system.delegate(:delegator, :pool, amount: amount / 4);
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: amount + (amount / 4));
+        system.increase_delegate(:delegator, :pool, amount: amount / 4);
+
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: amount + (2 * amount / 4));
+        system.increase_delegate(:delegator, :pool, amount: amount / 4);
+
+        system.advance_epoch();
+        system.advance_epoch();
+        system.increase_delegate(:delegator, :pool, amount: amount / 4);
+        system.advance_block_custom_and_attest(:staker, stake: amount + (3 * amount / 4));
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: amount + amount);
+        system.advance_epoch();
+        system.increase_delegate(:delegator, :pool, amount: amount / 4);
+
+        system.advance_epoch();
+        let member_info = system.pool_member_info_v1(:delegator, :pool);
+        assert!(member_info.unclaimed_rewards.is_non_zero());
+        self.delegator = Option::Some(delegator);
+        self.member_rewards = Option::Some(member_info.unclaimed_rewards);
+    }
+
+    fn test(self: FindSigmaMigrationFlow, ref system: SystemState) {
+        // Upgrade pool using EIC.
+        // TODO: Delete this part once impl the upgrade in the flow utils.
+        let pool = self.pool.unwrap();
+        let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
+        let implementation_data = ImplementationData {
+            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+        };
+        upgrade_implementation(
+            contract_address: pool, :implementation_data, upgrade_governor: system.staking.address,
+        );
+
+        let delegator = self.delegator.unwrap();
+        let member_info = system.pool_member_info_v1(:delegator, :pool);
+        let expected_member_rewards = self.member_rewards.unwrap();
+        assert!(member_info.unclaimed_rewards == expected_member_rewards);
+        let balance_before = system.token.balance_of(account: delegator.reward.address);
+        let rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let balance_after = system.token.balance_of(account: delegator.reward.address);
+        assert!(rewards == expected_member_rewards);
+        assert!(balance_after == balance_before + expected_member_rewards);
+    }
+}
+
+#[derive(Drop, Copy)]
+pub(crate) struct FindSigmaEdgeCasesMigrationFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) member_rewards: Option<Amount>,
+}
+pub(crate) impl FindSigmaEdgeCasesMigrationFlowImpl of FlowTrait<FindSigmaEdgeCasesMigrationFlow> {
+    fn get_pool_address(self: FindSigmaEdgeCasesMigrationFlow) -> Option<ContractAddress> {
+        self.pool
+    }
+    fn setup_v2(ref self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        self.pool = Option::Some(pool);
+        let delegator = system.new_delegator(amount: 2 * amount);
+        system.delegate(:delegator, :pool, amount: amount / 4);
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: amount + (amount / 4));
+
+        system.advance_epoch();
+        system.delegator_claim_rewards(:delegator, :pool);
+
+        system.increase_delegate(:delegator, :pool, amount: amount / 4);
+        system.advance_epoch();
+        system.increase_delegate(:delegator, :pool, amount: amount / 4);
+
+        system.advance_epoch();
+        let member_info = system.pool_member_info_v1(:delegator, :pool);
+        self.delegator = Option::Some(delegator);
+        self.member_rewards = Option::Some(member_info.unclaimed_rewards);
+    }
+
+    fn test(self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState) {
+        // Upgrade pool using EIC.
+        // TODO: Delete this part once impl the upgrade in the flow utils.
+        let pool = self.pool.unwrap();
+        let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
+        let implementation_data = ImplementationData {
+            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+        };
+        upgrade_implementation(
+            contract_address: pool, :implementation_data, upgrade_governor: system.staking.address,
+        );
+
+        let delegator = self.delegator.unwrap();
+        let member_info = system.pool_member_info_v1(:delegator, :pool);
+        let expected_member_rewards = self.member_rewards.unwrap();
+        assert!(member_info.unclaimed_rewards == expected_member_rewards);
+        let balance_before = system.token.balance_of(account: delegator.reward.address);
+        let rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let balance_after = system.token.balance_of(account: delegator.reward.address);
+        assert!(rewards == expected_member_rewards);
+        assert!(balance_after == balance_before + expected_member_rewards);
+    }
+}
+
+#[derive(Drop, Copy)]
+pub(crate) struct FindSigmaMigrationIdxIsOneFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) member_rewards: Option<Amount>,
+}
+pub(crate) impl FindSigmaMigrationIdxIsOneFlowImpl of FlowTrait<FindSigmaMigrationIdxIsOneFlow> {
+    fn get_pool_address(self: FindSigmaMigrationIdxIsOneFlow) -> Option<ContractAddress> {
+        self.pool
+    }
+    fn setup_v2(ref self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        self.pool = Option::Some(pool);
+        let delegator = system.new_delegator(amount: 2 * amount);
+        system.delegate(:delegator, :pool, amount: amount / 4);
+        system.advance_epoch();
+        system.increase_delegate(:delegator, :pool, amount: amount / 4);
+        system.advance_epoch();
+        system.increase_delegate(:delegator, :pool, amount: amount / 4);
+
+        system.advance_epoch();
+        let member_info = system.pool_member_info_v1(:delegator, :pool);
+        self.delegator = Option::Some(delegator);
+        self.member_rewards = Option::Some(member_info.unclaimed_rewards);
+    }
+
+    fn test(self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState) {
+        // Upgrade pool using EIC.
+        // TODO: Delete this part once impl the upgrade in the flow utils.
+        let pool = self.pool.unwrap();
+        let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
+        let implementation_data = ImplementationData {
+            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
+        };
+        upgrade_implementation(
+            contract_address: pool, :implementation_data, upgrade_governor: system.staking.address,
+        );
+
+        let delegator = self.delegator.unwrap();
+        let member_info = system.pool_member_info_v1(:delegator, :pool);
+        let expected_member_rewards = self.member_rewards.unwrap();
+        assert!(member_info.unclaimed_rewards == expected_member_rewards);
+        let balance_before = system.token.balance_of(account: delegator.reward.address);
+        let rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let balance_after = system.token.balance_of(account: delegator.reward.address);
+        assert!(rewards == expected_member_rewards);
+        assert!(balance_after == balance_before + expected_member_rewards);
+    }
+}
+
+
 // TODO: Implement this flow test.
 // Stake
 // Upgrade

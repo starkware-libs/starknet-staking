@@ -605,3 +605,30 @@ fn staking_prev_class_hash_flow_test() {
     let mut flow = flows::StakingPrevClassHashFlow {};
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn find_sigma_migration_flow_test() {
+    let mut flow = flows::FindSigmaMigrationFlow {
+        pool: Option::None, delegator: Option::None, member_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn find_sigma_edge_cases_migration_flow_test() {
+    let mut flow = flows::FindSigmaEdgeCasesMigrationFlow {
+        pool: Option::None, delegator: Option::None, member_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn find_sigma_migration_idx_is_one_flow_test() {
+    let mut flow = flows::FindSigmaMigrationIdxIsOneFlow {
+        pool: Option::None, delegator: Option::None, member_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
