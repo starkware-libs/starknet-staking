@@ -4749,6 +4749,9 @@ fn test_staking_eic() {
     );
     // Test.
     // Test prev_class_hash.
+    // Note: We not test here that prev_class_hash is set to the correct value, because the class
+    // hash before the upgrade is the same as after the upgrade. We do test this in
+    // `staking_prev_class_hash_flow_test`.
     let map_selector = selector!("prev_class_hash");
     let storage_address = snforge_std::map_entry_address(
         :map_selector, keys: [V3_PREV_CONTRACT_VERSION].span(),
