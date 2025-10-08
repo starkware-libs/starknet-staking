@@ -82,3 +82,9 @@
 - set block time config and test rewards after
 - test with factor = 100
 - test with very small factor
+
+## rewards by timestamp - migration
+- set_consensus_rewards to future epoch, call update_rewards before consensus epoch and after, test rewards.
+- set_consensus_rewards to future epoch, call update_rewards only after consensus epoch, test rewards.
+- set_consensus_rewards to curr_epoch + 2. test rewards before and after. tets avg block time is update correctly.
+- set_consensus_rewards, update_rewards, then set_consensus_rewards to later epoch, update_rewards, then set_consensus_rewards to earlier epoch, update_rewards, test avg block time.

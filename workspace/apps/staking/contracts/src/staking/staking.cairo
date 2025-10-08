@@ -1253,8 +1253,22 @@ pub mod Staking {
 
         fn set_consensus_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch) {
             self.roles.only_app_governor();
-            assert!(epoch_id >= self.get_current_epoch() + 2, "{}", GenericError::INVALID_EPOCH);
+            let curr_epoch = self.get_current_epoch();
+            assert!(epoch_id >= curr_epoch + 2, "{}", GenericError::INVALID_EPOCH);
             assert!(self.is_pre_consensus(), "{}", Error::CONSENSUS_REWARDS_IS_ACTIVE);
+            // If it's the first time setting the consensus rewards first epoch, initialize block
+            // rewards.
+            // We use `curr_epoch + 1` to ensure the average is computed only after completing
+            // at least one full epoch. This prevents calculating the average over too few blocks,
+            // since we are currently mid-epoch. The next calculation will therefore occur after
+            // at least one complete epoch (the next epoch) has passed.
+            if self.consensus_rewards_first_epoch.read().is_zero() {
+                self
+                    .calculate_block_rewards(
+                        reward_supplier_dispatcher: self.reward_supplier_dispatcher.read(),
+                        curr_epoch: curr_epoch + 1,
+                    );
+            }
             self.consensus_rewards_first_epoch.write(epoch_id);
             self
                 .emit(
@@ -1477,9 +1491,9 @@ pub mod Staking {
         /// Calculates the rewards for a block in the current epoch (for STRK and BTC).
         ///
         /// Precondition: `curr_epoch` must be `get_current_epoch()`, it's passed as a param to save
-        /// storage reads.
+        /// storage reads. This precondition is only violated during the migration to consensus
+        /// rewards.
         // TODO: Consider view?
-        // TODO: Migration.
         fn calculate_block_rewards(
             ref self: ContractState,
             reward_supplier_dispatcher: IRewardSupplierDispatcher,

@@ -70,7 +70,7 @@ use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::{
     DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STRK_WEIGHT_FACTOR, V3_PREV_CONTRACT_VERSION,
 };
-use staking::types::{Epoch, InternalStakerInfoLatest, VecIndex};
+use staking::types::{Amount, Epoch, InternalStakerInfoLatest, VecIndex};
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
@@ -3442,6 +3442,7 @@ fn test_update_rewards_from_attestation_contract_assertions() {
     let attestation_contract = cfg.test_info.attestation_contract;
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
+    advance_epoch_global();
     stake_for_testing_using_dispatcher(:cfg);
 
     // Catch CALLER_IS_NOT_ATTESTATION_CONTRACT.
@@ -3493,6 +3494,7 @@ fn test_update_rewards_only_staker() {
     };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+    advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -3534,6 +3536,7 @@ fn test_update_rewards_miss_blocks() {
     };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+    advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -3571,6 +3574,7 @@ fn test_update_rewards_with_strk_pool() {
     let token = cfg.test_info.strk_token;
     let token_address = token.contract_address();
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -3659,6 +3663,7 @@ fn test_update_rewards_with_both_strk_and_btc() {
     let btc_token = cfg.test_info.btc_token;
     let btc_token_address = btc_token.contract_address();
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -3911,6 +3916,7 @@ fn test_update_rewards_assertions_already_consensus() {
     };
     let staking_config_dispatcher = IStakingConfigDispatcher { contract_address: staking_contract };
     let staker_address = cfg.test_info.staker_address;
+    advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -4569,6 +4575,9 @@ fn test_set_consensus_rewards_first_epoch() {
     let staking_safe_config_dispatcher = IStakingConfigSafeDispatcher {
         contract_address: staking_contract,
     };
+    let minting_curve_contract = cfg.reward_supplier.minting_curve_contract;
+    stake_for_testing_using_dispatcher(:cfg);
+    advance_k_epochs_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
@@ -4581,6 +4590,31 @@ fn test_set_consensus_rewards_first_epoch() {
         .try_into()
         .unwrap();
     assert!(consensus_rewards_first_epoch == current_epoch + 2);
+    // Test that block rewards are initialized.
+    let block_rewards = snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("block_rewards"),
+        size: Store::<(Amount, Amount)>::size().into(),
+    )
+        .span();
+    let strk_block_rewards = (*block_rewards.at(0)).try_into().unwrap();
+    let btc_block_rewards = (*block_rewards.at(1)).try_into().unwrap();
+    let (expected_strk_block_rewards, expected_btc_block_rewards) =
+        calculate_current_block_rewards_v3(
+        :minting_curve_contract,
+    );
+    assert!(expected_strk_block_rewards.is_non_zero());
+    assert!(expected_btc_block_rewards.is_non_zero());
+    assert!(strk_block_rewards == expected_strk_block_rewards);
+    assert!(btc_block_rewards == expected_btc_block_rewards);
+    let last_calculated_epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("last_calculated_epoch"),
+    )
+        .try_into()
+        .unwrap();
+    let expected_last_calculated_epoch = current_epoch + 1;
+    assert!(last_calculated_epoch == expected_last_calculated_epoch);
+    // Test that event is emitted.
     let events = spy.get_events().emitted_by(contract_address: staking_contract).events;
     assert_number_of_events(
         actual: events.len(), expected: 1, message: "set_consensus_rewards_first_epoch",
@@ -4600,6 +4634,23 @@ fn test_set_consensus_rewards_first_epoch() {
         .try_into()
         .unwrap();
     assert!(consensus_rewards_first_epoch == current_epoch + 4);
+    // Test that block rewards are initialized.
+    let block_rewards = snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("block_rewards"),
+        size: Store::<(Amount, Amount)>::size().into(),
+    )
+        .span();
+    let strk_block_rewards = (*block_rewards.at(0)).try_into().unwrap();
+    let btc_block_rewards = (*block_rewards.at(1)).try_into().unwrap();
+    assert!(strk_block_rewards == expected_strk_block_rewards);
+    assert!(btc_block_rewards == expected_btc_block_rewards);
+    let last_calculated_epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("last_calculated_epoch"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(last_calculated_epoch == expected_last_calculated_epoch);
     // Set consensus rewards epoch again with earlier epoch.
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -4611,6 +4662,23 @@ fn test_set_consensus_rewards_first_epoch() {
         .try_into()
         .unwrap();
     assert!(consensus_rewards_first_epoch == current_epoch + 3);
+    // Test that block rewards are initialized.
+    let block_rewards = snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("block_rewards"),
+        size: Store::<(Amount, Amount)>::size().into(),
+    )
+        .span();
+    let strk_block_rewards = (*block_rewards.at(0)).try_into().unwrap();
+    let btc_block_rewards = (*block_rewards.at(1)).try_into().unwrap();
+    assert!(strk_block_rewards == expected_strk_block_rewards);
+    assert!(btc_block_rewards == expected_btc_block_rewards);
+    let last_calculated_epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("last_calculated_epoch"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(last_calculated_epoch == expected_last_calculated_epoch);
     // Set consensus rewards epoch again when currently set to current epoch + 1.
     advance_k_epochs_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
@@ -4624,6 +4692,23 @@ fn test_set_consensus_rewards_first_epoch() {
         .try_into()
         .unwrap();
     assert!(consensus_rewards_first_epoch == current_epoch + 2);
+    // Test that block rewards are initialized.
+    let block_rewards = snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("block_rewards"),
+        size: Store::<(Amount, Amount)>::size().into(),
+    )
+        .span();
+    let strk_block_rewards = (*block_rewards.at(0)).try_into().unwrap();
+    let btc_block_rewards = (*block_rewards.at(1)).try_into().unwrap();
+    assert!(strk_block_rewards == expected_strk_block_rewards);
+    assert!(btc_block_rewards == expected_btc_block_rewards);
+    let last_calculated_epoch = load_one_felt(
+        target: staking_contract, storage_address: selector!("last_calculated_epoch"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(last_calculated_epoch == expected_last_calculated_epoch);
     // Advance to consensus rewards and test that consensus rewards epoch cannot be changed.
     advance_k_epochs_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
@@ -4646,6 +4731,7 @@ fn test_set_consensus_rewards_first_epoch_assertions() {
     let staking_safe_config_dispatcher = IStakingConfigSafeDispatcher {
         contract_address: staking_contract,
     };
+    advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
 
     // Catch ONLY_APP_GOVERNOR.
