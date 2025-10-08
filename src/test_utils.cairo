@@ -67,7 +67,7 @@ use starkware_utils::components::replaceability::interface::{
 use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::{mul_wide_and_ceil_div, mul_wide_and_div};
-use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
+use starkware_utils::time::time::{Seconds, Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
     set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
@@ -929,6 +929,13 @@ pub(crate) fn advance_epoch_global_custom_time(block_time: TimeDelta) {
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
     let time = TimeDelta { seconds: block_time.seconds * EPOCH_LENGTH.into() };
     advance_time_global(:time);
+}
+
+/// Advance the block number by the given `blocks` and the timestamp by the given `block_duration`
+/// in seconds * `blocks`.
+pub(crate) fn advance_blocks(blocks: u64, block_duration: Seconds) {
+    advance_block_number_global(:blocks);
+    advance_time_global(time: TimeDelta { seconds: block_duration * blocks });
 }
 
 // ---- Calculate Rewards - V0 (index based) -----

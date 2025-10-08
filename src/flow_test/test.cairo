@@ -18,11 +18,11 @@ use staking::staking::interface::{
 };
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
-    BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
+    AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
     TEST_MIN_BTC_FOR_REWARDS,
 };
 use staking::test_utils::{
-    StakingInitConfig, calculate_staker_btc_pool_rewards_v2,
+    StakingInitConfig, advance_blocks, calculate_staker_btc_pool_rewards_v2,
     calculate_staker_strk_rewards_with_balances_v2, calculate_staker_strk_rewards_with_balances_v3,
     calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
     custom_decimals_token, deploy_mock_erc20_decimals_contract,
@@ -2830,7 +2830,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
-    advance_block_number_global(blocks: 1);
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
 
     // Disable rewards = false before consensus epoch - no rewards
     system.update_rewards(:staker, disable_rewards: false);
@@ -2860,7 +2860,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
-    advance_block_number_global(blocks: 1);
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
 
     // Disable rewards = false with consensus on - rewards
     system.update_rewards(:staker, disable_rewards: false);
