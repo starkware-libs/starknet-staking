@@ -98,3 +98,9 @@ more ideas:
 - update_rewards for blocks in same epoch - same rewards, then advance epoch, different rewards, update rewards for blocks in same epoch - same rewards.
 - update rewards is not called every block, still rewards is updated correctly (miss block, miss first block in epoch, miss epoch)
 - set block time config and test rewards after
+
+## rewards by timestamp - migration
+- set_consensus_rewards to future epoch, call update_rewards before consensus epoch and after, test rewards.
+- set_consensus_rewards to future epoch, call update_rewards only after consensus epoch, test rewards.
+- set_consensus_rewards to curr_epoch + 2. test rewards before and after. tets avg block time is update correctly.
+- set_consensus_rewards, update_rewards, then set_consensus_rewards to later epoch, update_rewards, then set_consensus_rewards to earlier epoch, update_rewards, test avg block time.
