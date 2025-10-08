@@ -2833,7 +2833,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
-    advance_block_number_global(blocks: 1);
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
 
     // Disable rewards = false before consensus epoch - no rewards
     system.update_rewards(:staker, disable_rewards: false);
@@ -2863,7 +2863,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
-    advance_block_number_global(blocks: 1);
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
 
     // Disable rewards = false with consensus on - rewards
     system.update_rewards(:staker, disable_rewards: false);
