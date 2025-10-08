@@ -7,11 +7,11 @@ mod StakingEIC {
     use staking::staking::staking::Staking::V3_PREV_CONTRACT_VERSION;
     use staking::types::Version;
     use starknet::class_hash::ClassHash;
-    use starknet::get_contract_address;
     use starknet::storage::{
         Map, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::syscalls::get_class_hash_at_syscall;
+    use starknet::{SyscallResultTrait, get_contract_address};
     use starkware_utils::components::replaceability::interface::IEICInitializable;
 
     #[storage]
@@ -37,7 +37,7 @@ mod StakingEIC {
             let prev_class_hash: ClassHash = get_class_hash_at_syscall(
                 contract_address: get_contract_address(),
             )
-                .expect('FAILED_TO_GET_CLASS_HASH');
+                .unwrap_syscall();
             assert!(prev_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
             self.prev_class_hash.write(V3_PREV_CONTRACT_VERSION, prev_class_hash);
 

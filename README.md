@@ -56,26 +56,22 @@ Specs document found [here](docs/spec.md)
 ## Verify Class Hash
 To ensure that the on-chain class hash corresponds to the code in this repository, follow these steps:
 - :wrench: Environment Requirements
-  - scarb version:
-    - `scarb --version` -> `2.12.0`
-    - if not, install scarb:
-      - `asdf install scarb 2.12.0`
-      - `asdf global scarb 2.12.0`
-  - starkli version:
-    - `starkli --version` -> `0.4.2`
+  - sncast version:
+    - `sncast --version` -> `0.50.0`
+    - if not, install sncast:
+      - `asdf install starknet-foundry 0.50.0`
+      - `asdf global starknet-foundry 0.50.0`
+      - `asdf local starknet-foundry 0.50.0`
 - :mag: Verification Steps
   - Checkout the Correct Code Version
     - Make sure you're on the exact Git commit or tag used for deployment:
       - `git checkout <commit-hash-or-tag>`
       - commit_hash: `5c11a5689f2d2e08ffecebf30d3e49569accbfca`
       - tag: `@staking/contracts-v1.0.1-dev.854`
-  - Build the Contract
-    - Use Scarb to compile the contract:
-      - `scarb --release build`
   - Compute the Local Class Hash
-    - Use Starkli to calculate the class hash from the compiled contract:
-      - `starkli class-hash target/release/staking_X.contract_class.json`
-      - where `X` is the name of the contract (e.g. `Staking`, `RewardSupplier`)
+    - Use Sncast to calculate the class hash of the local contract:
+      - `sncast utils class-hash --contract-name <contract_name>`
+      - where `<contract_name>` is the name of the contract (e.g. `Staking`, `Attestation`)
   - Compare with On-Chain Class Hash
     - Look up the deployed class hash on a block explorer (e.g., [StarkScan](https://starkscan.io/) or [Voyager](https://voyager.online/))
     - Ensure it matches the one computed locally
