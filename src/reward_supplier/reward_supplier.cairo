@@ -84,7 +84,6 @@ pub mod RewardSupplier {
         /// Token bridge address.
         starkgate_address: ContractAddress,
         /// Average block duration in units of 1 / BLOCK_DURATION_SCALE seconds.
-        // TODO: Initial in EIC.
         // TODO: Setter.
         // TODO: View?
         avg_block_duration: u64,
@@ -92,7 +91,6 @@ pub mod RewardSupplier {
         /// Updated at the start of each epoch.
         block_snapshot: (BlockNumber, Timestamp),
         /// Configuration for block duration calculation.
-        // TODO: Initial in EIC.
         block_duration_config: BlockDurationConfig,
     }
 
