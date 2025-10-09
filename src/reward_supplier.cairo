@@ -1,3 +1,4 @@
+mod eic;
 pub mod errors;
 pub mod interface;
 pub mod reward_supplier;
