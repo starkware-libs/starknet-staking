@@ -32,6 +32,7 @@ use staking::test_utils::constants::{
 };
 use staking::types::{Amount, BlockNumber};
 use starknet::{ContractAddress, Store};
+use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::{Describable, OptionAuxTrait};
 use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
@@ -41,8 +42,10 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::{
     StakingInitConfig, advance_epoch_global, advance_epoch_global_custom_time,
-    advance_k_epochs_global, advance_time_global, fund, general_contract_system_deployment,
+    advance_k_epochs_global, advance_time_global, declare_reward_supplier_contract,
+    declare_reward_supplier_eic_contract, fund, general_contract_system_deployment,
     initialize_reward_supplier_state_from_cfg, load_one_felt, stake_for_testing_using_dispatcher,
+    upgrade_implementation,
 };
 
 #[test]
@@ -687,4 +690,212 @@ fn test_update_current_epoch_block_rewards_with_adjustments() {
     assert!(expected_btc_rewards.is_non_zero());
     assert!(strk_rewards == expected_strk_rewards);
     assert!(btc_rewards == expected_btc_rewards);
+}
+
+#[test]
+fn test_reward_supplier_eic() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    let avg_block_duration = load_one_felt(
+        target: reward_supplier, storage_address: selector!("avg_block_duration"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(avg_block_duration == DEFAULT_AVG_BLOCK_DURATION);
+    assert!(
+        reward_supplier_dispatcher.get_block_duration_config() == DEFAULT_BLOCK_DURATION_CONFIG,
+    );
+
+    // Upgrade.
+    let avg_block_duration = DEFAULT_AVG_BLOCK_DURATION - 10;
+    let min_block_duration = DEFAULT_BLOCK_DURATION_CONFIG.min_block_duration - 10;
+    let max_block_duration = DEFAULT_BLOCK_DURATION_CONFIG.max_block_duration - 10;
+    let eic_data = EICData {
+        eic_hash: declare_reward_supplier_eic_contract(),
+        eic_init_data: [
+            avg_block_duration.into(), min_block_duration.into(), max_block_duration.into(),
+        ]
+            .span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_reward_supplier_contract(),
+        eic_data: Option::Some(eic_data),
+        final: false,
+    };
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: reward_supplier, :implementation_data, :upgrade_governor,
+    );
+
+    // Test.
+    let new_avg_block_duration = load_one_felt(
+        target: reward_supplier, storage_address: selector!("avg_block_duration"),
+    )
+        .try_into()
+        .unwrap();
+    assert!(new_avg_block_duration == avg_block_duration);
+    assert!(
+        reward_supplier_dispatcher
+            .get_block_duration_config() == BlockDurationConfig {
+                min_block_duration, max_block_duration,
+            },
+    );
+}
+
+#[test]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
+fn test_reward_supplier_eic_with_wrong_number_of_data_elements() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    let eic_data = EICData {
+        eic_hash: declare_reward_supplier_eic_contract(), eic_init_data: [].span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_reward_supplier_contract(),
+        eic_data: Option::Some(eic_data),
+        final: false,
+    };
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: reward_supplier, :implementation_data, :upgrade_governor,
+    );
+}
+
+#[test]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
+fn test_reward_supplier_eic_invalid_avg_block_duration_less_than_min() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    let avg_block_duration = 4;
+    let min_block_time = 5;
+    let max_block_time = 10;
+    let weighted_avg_factor = 100;
+    let eic_data = EICData {
+        eic_hash: declare_reward_supplier_eic_contract(),
+        eic_init_data: [
+            avg_block_duration.into(), min_block_time.into(), max_block_time.into(),
+            weighted_avg_factor.into(),
+        ]
+            .span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_reward_supplier_contract(),
+        eic_data: Option::Some(eic_data),
+        final: false,
+    };
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: reward_supplier, :implementation_data, :upgrade_governor,
+    );
+}
+
+#[test]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
+fn test_reward_supplier_eic_invalid_avg_block_duration_greater_than_max() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    let avg_block_duration = 14;
+    let min_block_time = 5;
+    let max_block_time = 10;
+    let weighted_avg_factor = 100;
+    let eic_data = EICData {
+        eic_hash: declare_reward_supplier_eic_contract(),
+        eic_init_data: [
+            avg_block_duration.into(), min_block_time.into(), max_block_time.into(),
+            weighted_avg_factor.into(),
+        ]
+            .span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_reward_supplier_contract(),
+        eic_data: Option::Some(eic_data),
+        final: false,
+    };
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: reward_supplier, :implementation_data, :upgrade_governor,
+    );
+}
+
+#[test]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
+fn test_reward_supplier_eic_invalid_min_zero() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    let avg_block_duration = 5;
+    let min_block_time = 0;
+    let max_block_time = 10;
+    let weighted_avg_factor = 100;
+    let eic_data = EICData {
+        eic_hash: declare_reward_supplier_eic_contract(),
+        eic_init_data: [
+            avg_block_duration.into(), min_block_time.into(), max_block_time.into(),
+            weighted_avg_factor.into(),
+        ]
+            .span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_reward_supplier_contract(),
+        eic_data: Option::Some(eic_data),
+        final: false,
+    };
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: reward_supplier, :implementation_data, :upgrade_governor,
+    );
+}
+
+#[test]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
+fn test_reward_supplier_eic_invalid_min_max() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    let avg_block_duration = 5;
+    let min_block_time = 10;
+    let max_block_time = 9;
+    let weighted_avg_factor = 100;
+    let eic_data = EICData {
+        eic_hash: declare_reward_supplier_eic_contract(),
+        eic_init_data: [
+            avg_block_duration.into(), min_block_time.into(), max_block_time.into(),
+            weighted_avg_factor.into(),
+        ]
+            .span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_reward_supplier_contract(),
+        eic_data: Option::Some(eic_data),
+        final: false,
+    };
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    upgrade_implementation(
+        contract_address: reward_supplier, :implementation_data, :upgrade_governor,
+    );
 }
