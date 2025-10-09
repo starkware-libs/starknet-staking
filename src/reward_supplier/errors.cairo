@@ -8,6 +8,7 @@ pub enum Error {
     INVALID_BLOCK_NUMBER,
     INVALID_BLOCK_TIMESTAMP,
     INVALID_MIN_MAX_BLOCK_DURATION,
+    INVALID_AVG_BLOCK_DURATION,
 }
 
 impl DescribableError of Describable<Error> {
@@ -19,6 +20,7 @@ impl DescribableError of Describable<Error> {
             Error::INVALID_BLOCK_NUMBER => "Invalid block number",
             Error::INVALID_BLOCK_TIMESTAMP => "Invalid block timestamp",
             Error::INVALID_MIN_MAX_BLOCK_DURATION => "Invalid min/max block duration",
+            Error::INVALID_AVG_BLOCK_DURATION => "Invalid avg block duration",
         }
     }
 }
