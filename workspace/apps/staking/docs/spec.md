@@ -127,6 +127,8 @@
     - [get\_alpha](#get_alpha)
     - [get\_block\_time\_config](#get_block_time_config)
     - [set\_block\_time\_config](#set_block_time_config)
+    - [get\_avg\_block\_duration](#get_avg_block_duration)
+    - [set\_avg\_block\_duration](#set_avg_block_duration)
   - [Events](#events-2)
     - [Mint Request](#mint-request)
 - [Minting Curve Contract](#minting-curve-contract)
@@ -241,6 +243,7 @@
     - [INVALID\_TOKEN\_DECIMALS](#invalid_token_decimals)
     - [INVALID\_WEIGHTED\_AVG\_FACTOR](#invalid_weighted_avg_factor)
     - [INVALID\_MIN\_MAX\_BLOCK\_TIME](#invalid_min_max_block_time)
+    - [INVALID\_BLOCK\_TIME\_DURATION](#invalid_block_time_duration)
 - [Structs](#structs)
     - [StakerPoolInfoV1](#stakerpoolinfov1)
     - [StakerInfoV1](#stakerinfov1)
@@ -2362,7 +2365,7 @@ Returns [BlockTimeConfig](#blocktimeconfig).
 #### access control <!-- omit from toc -->
 Any address can execute.
 
-### get_block_time_config
+### set_block_time_config
 ```rust
 fn set_block_time_config(ref self: TContractState, block_time_config: BlockTimeConfig);
 ```
@@ -2376,6 +2379,36 @@ Set the block time configuration.
 #### pre-condition <!-- omit from toc -->
 1. 0 < `block_time_config.weighted_avg_factor` <= 100
 2. 0 < `block_time_config.min_block_time` <= `block_time_config.max_block_time`
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only app governor.
+
+
+### get_avg_block_duration
+```rust
+fn get_avg_block_duration(self: @TContractState) -> u64;
+```
+#### description <!-- omit from toc -->
+Returns the avg block duration that calculated in the contract.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+#### pre-condition <!-- omit from toc -->
+#### logic <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address can execute.
+
+### set_avg_block_duration
+```rust
+fn set_avg_block_duration(ref self: TContractState, avg_block_duration: u64);
+```
+#### description <!-- omit from toc -->
+Set the average block duration.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [ONLY\_APP\_GOVERNOR](#only_app_governor)
+2. [INVALID\_AVG\_BLOCK\_DURATION](#invalid_avg_block_duration)
+#### pre-condition <!-- omit from toc -->
+1. `block_time_config.min_block_time` <= `avg_block_duration` <= `block_time_config.max_block_time`
 #### logic <!-- omit from toc -->
 #### access control <!-- omit from toc -->
 Only app governor.
@@ -2838,6 +2871,9 @@ Only token admin.
 
 ### INVALID_MIN_MAX_BLOCK_TIME
 "Invalid min/max block time"
+
+### INVALID_AVG_BLOCK_DURATION
+"Invalid average block duration"
 
 # Structs
 ### StakerPoolInfoV1

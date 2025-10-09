@@ -88,3 +88,7 @@
 - set_consensus_rewards to future epoch, call update_rewards only after consensus epoch, test rewards.
 - set_consensus_rewards to curr_epoch + 2. test rewards before and after. tets avg block time is update correctly.
 - set_consensus_rewards, update_rewards, then set_consensus_rewards to later epoch, update_rewards, then set_consensus_rewards to earlier epoch, update_rewards, test avg block time.
+
+## set avg block duration
+- set avg, update_block_rewards, test avg, set block time config, test avg, set avg again to a number that was invalid before, test avg.
+- set block time config, set avg again to a number that was valid before but now is invalid, should panic.

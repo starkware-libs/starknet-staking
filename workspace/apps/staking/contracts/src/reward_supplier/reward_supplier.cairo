@@ -85,8 +85,6 @@ pub mod RewardSupplier {
         starkgate_address: ContractAddress,
         /// Average block time in units of 1 / BLOCK_TIME_SCALE seconds.
         // TODO: Initial in EIC.
-        // TODO: Setter.
-        // TODO: View?
         avg_block_time: u64,
         /// The latest block data used for average block time calculation.
         /// Updated at the start of each epoch.
@@ -270,6 +268,10 @@ pub mod RewardSupplier {
         fn get_block_time_config(self: @ContractState) -> BlockTimeConfig {
             self.block_time_config.read()
         }
+
+        fn get_avg_block_duration(self: @ContractState) -> u64 {
+            self.avg_block_time.read()
+        }
     }
 
     #[abi(embed_v0)]
@@ -295,6 +297,19 @@ pub mod RewardSupplier {
                 Error::INVALID_MIN_MAX_BLOCK_TIME,
             );
             self.block_time_config.write(block_time_config);
+        }
+
+        fn set_avg_block_duration(ref self: ContractState, avg_block_duration: u64) {
+            // TODO: Is this the right role?
+            self.roles.only_app_governor();
+            let block_time_config = self.block_time_config.read();
+            assert!(
+                avg_block_duration >= block_time_config.min_block_time
+                    && avg_block_duration <= block_time_config.max_block_time,
+                "{}",
+                Error::INVALID_AVG_BLOCK_DURATION,
+            );
+            self.avg_block_time.write(avg_block_duration);
         }
     }
 

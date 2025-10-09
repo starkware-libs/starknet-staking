@@ -431,11 +431,7 @@ fn test_update_current_epoch_block_rewards() {
     assert!(snapshot_block_number == current_block_number);
     assert!(snapshot_timestamp == current_timestamp);
     // Test avg_block_time.
-    let avg_block_time = load_one_felt(
-        target: reward_supplier, storage_address: selector!("avg_block_time"),
-    )
-        .try_into()
-        .unwrap();
+    let avg_block_time = reward_supplier_dispatcher.get_avg_block_duration();
     assert!(avg_block_time == DEFAULT_AVG_BLOCK_TIME);
     // Test rewards.
     let yearly_mint = minting_curve_dispatcher.yearly_mint();
@@ -475,11 +471,7 @@ fn test_update_current_epoch_block_rewards() {
     assert!(snapshot_block_number == current_block_number);
     assert!(snapshot_timestamp == current_timestamp);
     // Test avg_block_time.
-    let avg_block_time = load_one_felt(
-        target: reward_supplier, storage_address: selector!("avg_block_time"),
-    )
-        .try_into()
-        .unwrap();
+    let avg_block_time = reward_supplier_dispatcher.get_avg_block_duration();
     assert!(avg_block_time == AVG_BLOCK_TIME * BLOCK_TIME_SCALE);
     // Test rewards.
     let expected_rewards = mul_wide_and_div(
@@ -636,11 +628,7 @@ fn test_update_current_epoch_block_rewards_with_adjustments() {
             + (100 - weighted_avg_factor.into()) * curr_avg_block_time)
         / 100;
     // Test avg_block_time.
-    let avg_block_time = load_one_felt(
-        target: reward_supplier, storage_address: selector!("avg_block_time"),
-    )
-        .try_into()
-        .unwrap();
+    let avg_block_time = reward_supplier_dispatcher.get_avg_block_duration();
     assert!(avg_block_time == curr_avg_block_time);
     // Test rewards.
     let yearly_mint = minting_curve_dispatcher.yearly_mint();
@@ -673,11 +661,7 @@ fn test_update_current_epoch_block_rewards_with_adjustments() {
             + (100 - weighted_avg_factor.into()) * curr_avg_block_time)
         / 100;
     // Test avg_block_time.
-    let avg_block_time = load_one_felt(
-        target: reward_supplier, storage_address: selector!("avg_block_time"),
-    )
-        .try_into()
-        .unwrap();
+    let avg_block_time = reward_supplier_dispatcher.get_avg_block_duration();
     assert!(avg_block_time == curr_avg_block_time);
     // Test rewards.
     let expected_rewards = mul_wide_and_div(
@@ -695,4 +679,81 @@ fn test_update_current_epoch_block_rewards_with_adjustments() {
     assert!(expected_btc_rewards.is_non_zero());
     assert!(strk_rewards == expected_strk_rewards);
     assert!(btc_rewards == expected_btc_rewards);
+}
+
+#[test]
+fn test_get_avg_block_duration() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    assert!(reward_supplier_dispatcher.get_avg_block_duration() == DEFAULT_AVG_BLOCK_TIME);
+}
+
+#[test]
+fn test_set_avg_block_duration() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let reward_supplier_config_dispatcher = IRewardSupplierConfigDispatcher {
+        contract_address: reward_supplier,
+    };
+    let app_governor = cfg.test_info.app_governor;
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let avg_block_duration = 250;
+    reward_supplier_config_dispatcher.set_avg_block_duration(:avg_block_duration);
+    assert!(reward_supplier_dispatcher.get_avg_block_duration() == avg_block_duration);
+    // Set to min and max.
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    reward_supplier_config_dispatcher
+        .set_avg_block_duration(avg_block_duration: DEFAULT_BLOCK_TIME_CONFIG.min_block_time);
+    assert!(
+        reward_supplier_dispatcher
+            .get_avg_block_duration() == DEFAULT_BLOCK_TIME_CONFIG
+            .min_block_time,
+    );
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    reward_supplier_config_dispatcher
+        .set_avg_block_duration(avg_block_duration: DEFAULT_BLOCK_TIME_CONFIG.max_block_time);
+    assert!(
+        reward_supplier_dispatcher
+            .get_avg_block_duration() == DEFAULT_BLOCK_TIME_CONFIG
+            .max_block_time,
+    );
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_avg_block_duration_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_config_safe_dispatcher = IRewardSupplierConfigSafeDispatcher {
+        contract_address: reward_supplier,
+    };
+    let app_governor = cfg.test_info.app_governor;
+    let avg_block_duration = (DEFAULT_BLOCK_TIME_CONFIG.min_block_time
+        + DEFAULT_BLOCK_TIME_CONFIG.max_block_time)
+        / 2;
+    // Catch ONLY_APP_GOVERNOR.
+    let result = reward_supplier_config_safe_dispatcher.set_avg_block_duration(:avg_block_duration);
+    assert_panic_with_error(:result, expected_error: "ONLY_APP_GOVERNOR");
+    // Catch INVALID_AVG_BLOCK_DURATION.
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let result = reward_supplier_config_safe_dispatcher
+        .set_avg_block_duration(avg_block_duration: 0);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_AVG_BLOCK_DURATION.describe());
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let result = reward_supplier_config_safe_dispatcher
+        .set_avg_block_duration(avg_block_duration: DEFAULT_BLOCK_TIME_CONFIG.min_block_time - 1);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_AVG_BLOCK_DURATION.describe());
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let result = reward_supplier_config_safe_dispatcher
+        .set_avg_block_duration(avg_block_duration: DEFAULT_BLOCK_TIME_CONFIG.max_block_time + 1);
+    assert_panic_with_error(:result, expected_error: Error::INVALID_AVG_BLOCK_DURATION.describe());
 }

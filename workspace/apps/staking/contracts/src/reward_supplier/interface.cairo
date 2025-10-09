@@ -29,12 +29,16 @@ pub trait IRewardSupplier<TContractState> {
     fn get_alpha(self: @TContractState) -> u128;
     /// Returns the block time configuration.
     fn get_block_time_config(self: @TContractState) -> BlockTimeConfig;
+    /// Returns the average block duration.
+    fn get_avg_block_duration(self: @TContractState) -> u64;
 }
 
 #[starknet::interface]
 pub trait IRewardSupplierConfig<TContractState> {
     /// Sets the block time configuration.
     fn set_block_time_config(ref self: TContractState, block_time_config: BlockTimeConfig);
+    /// Sets the average block duration.
+    fn set_avg_block_duration(ref self: TContractState, avg_block_duration: u64);
 }
 
 pub mod Events {
