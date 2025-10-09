@@ -519,6 +519,11 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
         account: cfg.test_info.app_governor,
         app_role_admin: cfg.test_info.app_role_admin,
     );
+    set_account_as_upgrade_governor(
+        contract: reward_supplier_contract_address,
+        account: cfg.test_info.upgrade_governor,
+        governance_admin: cfg.test_info.governance_admin,
+    );
     reward_supplier_contract_address
 }
 
@@ -552,6 +557,10 @@ pub(crate) fn declare_staking_eic_contract() -> ClassHash {
 
 pub(crate) fn declare_pool_eic_contract() -> ClassHash {
     *snforge_std::declare("PoolEIC").unwrap().contract_class().class_hash
+}
+
+pub(crate) fn declare_reward_supplier_eic_contract() -> ClassHash {
+    *snforge_std::declare("RewardSupplierEIC").unwrap().contract_class().class_hash
 }
 
 pub(crate) fn fund(target: ContractAddress, amount: Amount, token: Token) {

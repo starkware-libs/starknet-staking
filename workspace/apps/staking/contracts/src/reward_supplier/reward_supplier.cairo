@@ -84,13 +84,11 @@ pub mod RewardSupplier {
         /// Token bridge address.
         starkgate_address: ContractAddress,
         /// Average block time in units of 1 / BLOCK_TIME_SCALE seconds.
-        // TODO: Initial in EIC.
         avg_block_time: u64,
         /// The latest block data used for average block time calculation.
         /// Updated at the start of each epoch.
         block_snapshot: (BlockNumber, Timestamp),
         /// Configuration for block time calculation.
-        // TODO: Initial in EIC.
         block_time_config: BlockTimeConfig,
     }
 
@@ -283,10 +281,8 @@ pub mod RewardSupplier {
             // Assert that block_time_config is valid.
             // TODO: More validations?
             assert!(
-                block_time_config.weighted_avg_factor > 0, "{}", Error::INVALID_WEIGHTED_AVG_FACTOR,
-            );
-            assert!(
-                block_time_config.weighted_avg_factor <= 100,
+                block_time_config.weighted_avg_factor > 0
+                    && block_time_config.weighted_avg_factor <= 100,
                 "{}",
                 Error::INVALID_WEIGHTED_AVG_FACTOR,
             );
