@@ -29,11 +29,12 @@ use staking::test_utils::constants::{
     TEST_BTC_DECIMALS, TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
 };
 use staking::test_utils::{
-    calculate_pool_member_rewards, calculate_staker_btc_pool_rewards, calculate_staker_strk_rewards,
-    calculate_staker_strk_rewards_with_amount_and_pool_info, calculate_strk_pool_rewards,
-    calculate_strk_pool_rewards_with_pool_balance, compute_rewards_per_unit, declare_pool_contract,
-    declare_pool_eic_contract, deserialize_option, load_from_iterable_map, load_from_trace,
-    load_one_felt, load_trace_length, strk_pool_update_rewards, to_amount_18_decimals,
+    calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
+    calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_amount_and_pool_info_v2,
+    calculate_strk_pool_rewards_v2, calculate_strk_pool_rewards_with_pool_balance_v2,
+    compute_rewards_per_unit, declare_pool_contract, declare_pool_eic_contract, deserialize_option,
+    load_from_iterable_map, load_from_trace, load_one_felt, load_trace_length,
+    strk_pool_update_rewards_v1, to_amount_18_decimals,
 };
 use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
 use staking::utils::compute_rewards_rounded_down;
@@ -1139,21 +1140,21 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
         let mut total_first_pool_rewards = Zero::zero();
         let mut total_second_pool_rewards = Zero::zero();
         let mut total_third_pool_rewards = Zero::zero();
-        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards(
+        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
             pool_balance: first_btc_delegator_amount,
             :commission,
             :staking_contract,
             :minting_curve_contract,
             token_address: first_btc_token.contract_address(),
         );
-        let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards(
+        let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
             pool_balance: second_btc_delegator_amount,
             :commission,
             :staking_contract,
             :minting_curve_contract,
             token_address: second_btc_token.contract_address(),
         );
-        let (_, third_pool_rewards) = calculate_staker_btc_pool_rewards(
+        let (_, third_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
             pool_balance: third_btc_delegator_amount,
             :commission,
             :staking_contract,
@@ -1182,7 +1183,7 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
         system.attest(:staker);
 
         // Calculate rewards.
-        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards(
+        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
             pool_balance: first_btc_delegator_amount,
             :commission,
             :staking_contract,
@@ -1196,14 +1197,14 @@ pub(crate) impl MultipleTokensDelegationFlowImpl of FlowTrait<MultipleTokensDele
         system.attest(:staker);
 
         // Calculate rewards.
-        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards(
+        let (_, first_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
             pool_balance: first_btc_delegator_amount,
             :commission,
             :staking_contract,
             :minting_curve_contract,
             token_address: first_btc_token.contract_address(),
         );
-        let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards(
+        let (_, second_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
             pool_balance: second_btc_delegator_amount,
             :commission,
             :staking_contract,
@@ -1282,7 +1283,7 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl of FlowTrait<PoolMemberInfoAf
             .internal_pool_member_info(:delegator, :pool);
         let get_internal_pool_member_info_after_upgrade = system
             .get_internal_pool_member_info(:delegator, :pool);
-        let expected_pool_member_info = strk_pool_update_rewards(
+        let expected_pool_member_info = strk_pool_update_rewards_v1(
             pool_member_info: self.delegator_info.unwrap(),
             updated_index: system.staking.get_global_index(),
         );
@@ -1379,7 +1380,7 @@ pub(crate) impl MultipleStakersMigrationAttestFlowImpl of FlowTrait<
         system.advance_epoch();
 
         // Test rewards.
-        let (expected_rewards1, _) = calculate_staker_strk_rewards(
+        let (expected_rewards1, _) = calculate_staker_strk_rewards_v2(
             staker_info: staker_info1, :staking_contract, :minting_curve_contract,
         );
         let actual_rewards1 = system.staker_claim_rewards(staker: staker1);
@@ -1600,7 +1601,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl of FlowTrait<DelegatorExitAnd
         system.delegate(:delegator, :pool, amount: delegated_amount);
         system.advance_k_epochs_and_attest(:staker);
         // Calculate pool rewards.
-        let pool_rewards_epoch = calculate_strk_pool_rewards(
+        let pool_rewards_epoch = calculate_strk_pool_rewards_v2(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
         system.advance_k_epochs_and_attest(:staker);
@@ -1878,7 +1879,7 @@ pub(crate) impl DisabledTokenDelegationFlowImpl of FlowTrait<DisabledTokenDelega
         system.advance_epoch();
 
         // Test rewards in 2 epochs after we disabled the token.
-        let (_, expected_rewards) = calculate_staker_btc_pool_rewards(
+        let (_, expected_rewards) = calculate_staker_btc_pool_rewards_v2(
             pool_balance: delegated_amount_18,
             :commission,
             staking_contract: system.staking.address,
@@ -1947,7 +1948,7 @@ pub(crate) impl DelegatorExitAndEnterAgainWithSwitchFlowImpl of FlowTrait<
         system.delegate(:delegator, pool: pool1, amount: delegated_amount);
         system.advance_k_epochs_and_attest(staker: staker1);
         // Calculate pool rewards.
-        let pool_rewards_epoch = calculate_strk_pool_rewards(
+        let pool_rewards_epoch = calculate_strk_pool_rewards_v2(
             staker_address: staker1.staker.address, :staking_contract, :minting_curve_contract,
         );
         system.advance_k_epochs_and_attest(staker: staker1);
@@ -2233,7 +2234,8 @@ pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
         system.attest(:staker);
 
         // Second stake does not count towards rewards (since we attest in the same epoch).
-        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_amount_and_pool_info(
+        let (expected_staker_rewards, _) =
+            calculate_staker_strk_rewards_with_amount_and_pool_info_v2(
             amount_own: amount, pool_info: Option::None, :staking_contract, :minting_curve_contract,
         );
 
@@ -2246,7 +2248,8 @@ pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
 
         // Advance epoch and test rewards.
         system.advance_epoch();
-        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_amount_and_pool_info(
+        let (expected_staker_rewards, _) =
+            calculate_staker_strk_rewards_with_amount_and_pool_info_v2(
             amount_own: amount * 2,
             pool_info: Option::None,
             :staking_contract,
@@ -3819,14 +3822,14 @@ pub(crate) impl SetCommissionMultiplePoolsFlowImpl of FlowTrait<SetCommissionMul
         system.advance_k_epochs_and_attest(:staker);
         system.advance_epoch();
 
-        let expected_strk_pool_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        let expected_strk_pool_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
             staker_address: staker.staker.address,
             :staking_contract,
             :minting_curve_contract,
             pool_balance: amount,
         );
         let (expected_btc_commission_rewards, expected_btc_pool_rewards) =
-            calculate_staker_btc_pool_rewards(
+            calculate_staker_btc_pool_rewards_v2(
             pool_balance: btc_amount,
             commission: final_commission,
             :staking_contract,
@@ -3834,7 +3837,7 @@ pub(crate) impl SetCommissionMultiplePoolsFlowImpl of FlowTrait<SetCommissionMul
             token_address: btc_token_address,
         );
         let staker_info = system.staker_info_v1(:staker);
-        let (expected_staker_rewards, _) = calculate_staker_strk_rewards(
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_v2(
             :staker_info, :staking_contract, :minting_curve_contract,
         );
 
@@ -3998,7 +4001,7 @@ pub(crate) impl ClaimRewardsMultipleDelegatorsFlowImpl of FlowTrait<
         system.advance_k_epochs_and_attest(:staker);
 
         // Compute pool rewards.
-        let pool_rewards = calculate_strk_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards_v2(
             staker_address: staker.staker.address,
             staking_contract: system.staking.address,
             minting_curve_contract: system.minting_curve.address,
@@ -4105,7 +4108,7 @@ pub(crate) impl ClaimRewardsMultipleDelegatorsBtcFlowImpl of FlowTrait<
         system.advance_k_epochs_and_attest(:staker);
 
         // Compute pool rewards.
-        let (_, pool_rewards) = calculate_staker_btc_pool_rewards(
+        let (_, pool_rewards) = calculate_staker_btc_pool_rewards_v2(
             :pool_balance,
             :commission,
             :staking_contract,
@@ -4325,7 +4328,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
         // Delelgator 1 is the only delegator in the pool.
         pool_balance += delegated_amount_1;
         delegator_1_rewards +=
-            calculate_strk_pool_rewards(
+            calculate_strk_pool_rewards_v2(
                 :staker_address, :staking_contract, :minting_curve_contract,
             );
 
@@ -4335,7 +4338,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
 
         system.advance_k_epochs_and_attest(:staker);
         pool_balance += delegated_amount_2;
-        let pool_rewards = calculate_strk_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards_v2(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         delegator_1_rewards +=
@@ -4358,7 +4361,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
         system.increase_delegate(delegator: delegator_1, :pool, amount: stake_amount / 4);
 
         system.attest(:staker);
-        let pool_rewards = calculate_strk_pool_rewards_with_pool_balance(
+        let pool_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
             :staker_address, :staking_contract, :minting_curve_contract, :pool_balance,
         );
         delegator_1_rewards +=
@@ -4381,7 +4384,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
         pool_balance += stake_amount / 4;
 
         system.advance_k_epochs_and_attest(:staker);
-        let pool_rewards = calculate_strk_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards_v2(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         delegator_1_rewards +=
@@ -4402,7 +4405,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
         delegated_amount_1 = 0;
         pool_balance -= stake_amount;
 
-        let pool_rewards = calculate_strk_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards_v2(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         sigma +=
@@ -4420,7 +4423,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
         delegated_amount_1 += 3 * stake_amount / 4;
         pool_balance += 3 * stake_amount / 4;
 
-        let pool_rewards = calculate_strk_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards_v2(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         let from_sigma = sigma;
@@ -4447,7 +4450,7 @@ pub(crate) impl ChangeBalanceClaimRewardsFlowImpl of FlowTrait<ChangeBalanceClai
         delegated_amount_1 += stake_amount / 4;
         pool_balance += stake_amount / 4;
 
-        let pool_rewards = calculate_strk_pool_rewards(
+        let pool_rewards = calculate_strk_pool_rewards_v2(
             :staker_address, :staking_contract, :minting_curve_contract,
         );
         delegator_1_rewards +=
@@ -4556,7 +4559,7 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
         let minting_curve_contract = system.minting_curve.address;
 
         // Calculate pool rewards
-        let pool_rewards_one_epoch = calculate_strk_pool_rewards(
+        let pool_rewards_one_epoch = calculate_strk_pool_rewards_v2(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
         let pool_total_rewards = pool_rewards_one_epoch * 3;
@@ -4616,7 +4619,7 @@ pub(crate) impl PoolWithMinBtcFlowImpl of FlowTrait<PoolWithMinBtcFlow> {
         system.advance_epoch();
 
         let (expected_commission_rewards, expected_pool_rewards) =
-            calculate_staker_btc_pool_rewards(
+            calculate_staker_btc_pool_rewards_v2(
             pool_balance: delegate_amount,
             :commission,
             :staking_contract,
@@ -4707,7 +4710,7 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
         system.advance_k_epochs_and_attest(:staker);
 
         // Calculate pool rewards
-        let pool_rewards_first_epoch = calculate_strk_pool_rewards(
+        let pool_rewards_first_epoch = calculate_strk_pool_rewards_v2(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
         assert!(pool_rewards_first_epoch.is_non_zero());
@@ -4718,7 +4721,7 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
         system.advance_k_epochs_and_attest(:staker);
 
         // Calculate pool rewards
-        let pool_rewards_second_epoch = calculate_strk_pool_rewards(
+        let pool_rewards_second_epoch = calculate_strk_pool_rewards_v2(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
         assert!(pool_rewards_second_epoch > pool_rewards_first_epoch);
@@ -4929,7 +4932,7 @@ pub(crate) impl PoolWithLotsOfBtcFlowImpl of FlowTrait<PoolWithLotsOfBtcFlow> {
         system.advance_epoch();
 
         let (expected_commission_rewards, expected_pool_rewards) =
-            calculate_staker_btc_pool_rewards(
+            calculate_staker_btc_pool_rewards_v2(
             pool_balance: delegate_amount,
             :commission,
             :staking_contract,
@@ -5065,18 +5068,18 @@ pub(crate) impl StakerMultiplePoolsAttestFlowImpl of FlowTrait<StakerMultiplePoo
         system.advance_epoch();
 
         // Calculate expected rewards.
-        let expected_strk_pool_rewards = calculate_strk_pool_rewards(
+        let expected_strk_pool_rewards = calculate_strk_pool_rewards_v2(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
         let (expected_btc_commission_rewards, expected_btc_pool_rewards) =
-            calculate_staker_btc_pool_rewards(
+            calculate_staker_btc_pool_rewards_v2(
             pool_balance: btc_amount,
             :commission,
             :staking_contract,
             :minting_curve_contract,
             token_address: first_btc_token.contract_address(),
         );
-        let (expected_staker_strk_rewards, _) = calculate_staker_strk_rewards(
+        let (expected_staker_strk_rewards, _) = calculate_staker_strk_rewards_v2(
             staker_info: system.staker_info_v1(:staker), :staking_contract, :minting_curve_contract,
         );
         let actual_strk_pool_rewards = system
@@ -5249,7 +5252,7 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
         // Test pool rewards.
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
-        let (btc_commission_rewards, _) = calculate_staker_btc_pool_rewards(
+        let (btc_commission_rewards, _) = calculate_staker_btc_pool_rewards_v2(
             pool_balance: btc_amount,
             :commission,
             :staking_contract,
@@ -6295,7 +6298,7 @@ pub(crate) impl AddTokenWithoutEnableFlowImpl of FlowTrait<AddTokenWithoutEnable
         let delegator_rewards = system.delegator_claim_rewards(:delegator, :pool);
         let unclaimed_rewards = system.reward_supplier.get_unclaimed_rewards();
         let staker_info = system.staker_info_v1(:staker);
-        let (expected_staker_rewards, _) = calculate_staker_strk_rewards(
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_v2(
             :staker_info, :staking_contract, :minting_curve_contract,
         );
         assert!(delegator_rewards == Zero::zero());
@@ -6472,7 +6475,7 @@ pub(crate) impl PoolCalculateRewardsTwiceFlowImpl of FlowTrait<PoolCalculateRewa
         system.advance_k_epochs_and_attest(:staker);
         system.advance_k_epochs_and_attest(:staker);
 
-        let pool_rewards_one_epoch = calculate_strk_pool_rewards(
+        let pool_rewards_one_epoch = calculate_strk_pool_rewards_v2(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
         );
 

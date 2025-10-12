@@ -13,9 +13,10 @@ use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS,
 };
 use staking::test_utils::{
-    StakingInitConfig, calculate_staker_btc_pool_rewards,
-    calculate_staker_strk_rewards_with_balances_v2, calculate_strk_pool_rewards_with_pool_balance,
-    compute_rewards_per_unit, custom_decimals_token, deploy_mock_erc20_decimals_contract,
+    StakingInitConfig, calculate_staker_btc_pool_rewards_v2,
+    calculate_staker_strk_rewards_with_balances_v2,
+    calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
+    custom_decimals_token, deploy_mock_erc20_decimals_contract,
 };
 use staking::utils::compute_rewards_rounded_down;
 use starkware_utils::math::abs::wide_abs_diff;
@@ -910,7 +911,7 @@ fn delegator_claim_rewards_test_idx_flow_test() {
     let mut stake = stake_amount + delegate_amount;
     let mut pool_balance = delegate_amount;
     let mut sigma: Amount = 0;
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -948,7 +949,7 @@ fn delegator_claim_rewards_test_idx_flow_test() {
     // cumulative_rewards_trace_idx - 1 is the right entry in find_sigma.
 
     pool_balance += delegate_amount;
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -985,7 +986,7 @@ fn delegator_claim_rewards_test_idx_flow_test() {
     // cumulative_rewards_trace_idx - 2 is the right entry in find_sigma.
 
     pool_balance += delegate_amount;
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -1013,7 +1014,7 @@ fn delegator_claim_rewards_test_idx_flow_test() {
         compute_rewards_rounded_down(amount: pool_balance, interest: sigma, :base_value);
 
     pool_balance += delegate_amount;
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -1087,7 +1088,7 @@ fn delegator_claim_rewards_test_less_than_3_entries_flow_test() {
     let mut stake = stake_amount + delegate_amount;
     let mut pool_balance = delegate_amount;
     system.advance_block_custom_and_attest(:staker, :stake);
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -1150,7 +1151,7 @@ fn delegator_claim_rewards_test_idx_greater_than_length_flow_test() {
     system.advance_block_custom_and_attest(:staker, :stake);
 
     let mut pool_balance = delegate_amount;
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -1216,7 +1217,7 @@ fn delegator_claim_rewards_test_idx_is_one_flow_test() {
     system.advance_epoch();
 
     let pool_balance = delegate_amount * 2;
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -1274,7 +1275,7 @@ fn delegator_balance_at_curr_epoch_flow_test() {
     stake += delegate_amount;
     let mut pool_balance = delegate_amount;
     system.advance_block_custom_and_attest(:staker, :stake);
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -1288,7 +1289,7 @@ fn delegator_balance_at_curr_epoch_flow_test() {
     let rewards = system.delegator_claim_rewards(:delegator, :pool);
     assert!(rewards == pool_epoch_rewards);
     system.advance_block_custom_and_attest(:staker, :stake);
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -1300,7 +1301,7 @@ fn delegator_balance_at_curr_epoch_flow_test() {
     let rewards = system.delegator_claim_rewards(:delegator, :pool);
     assert!(rewards == pool_epoch_rewards);
     system.advance_block_custom_and_attest(:staker, :stake);
-    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance(
+    let pool_epoch_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
         staker_address: staker.staker.address,
         staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
@@ -1477,7 +1478,7 @@ fn staker_claim_rewards_flow_test() {
         :staking_contract,
         :minting_curve_contract,
     );
-    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards(
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
         pool_balance: btc_delegator_amount,
         :commission,
         :staking_contract,
@@ -1506,7 +1507,7 @@ fn staker_claim_rewards_flow_test() {
         :staking_contract,
         :minting_curve_contract,
     );
-    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards(
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
         pool_balance: btc_delegator_amount,
         :commission,
         :staking_contract,
@@ -1551,7 +1552,7 @@ fn staker_claim_rewards_flow_test() {
         :staking_contract,
         :minting_curve_contract,
     );
-    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards(
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
         pool_balance: btc_delegator_amount,
         :commission,
         :staking_contract,
