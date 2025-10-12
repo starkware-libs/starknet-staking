@@ -983,8 +983,6 @@ pub mod Pool {
             // written since `len >= 1`).
             // In old version: `len` was written, or `len - 1` was written for the current
             // checkpoint.
-            // TODO: Use helper function that gets index and looks at two entries in the cumulative
-            // rewards trace here and in edge case 2.
             if cumulative_rewards_trace_idx == 1 && cumulative_rewards_trace_len > 1 {
                 // Two entries in the cumulative rewards trace are relevant (`idx`, `idx - 1`).
                 let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx);
