@@ -13,8 +13,7 @@ pub mod Staking {
         IERC20MetadataDispatcherTrait,
     };
     use staking::constants::{ALPHA, ALPHA_DENOMINATOR, K, STARTING_EPOCH, STRK_TOKEN_ADDRESS};
-    use staking::errors::GenericError;
-    use staking::pool::errors::Error as PoolError;
+    use staking::errors::{GenericError, InternalError};
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
     use staking::reward_supplier::interface::{
         IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
@@ -281,13 +280,11 @@ pub mod Staking {
             // Prerequisites and asserts.
             self.general_prerequisites();
             let staker_address = get_caller_address();
-            assert!(
-                self.staker_info.read(staker_address).is_none(), "{}", GenericError::STAKER_EXISTS,
-            );
+            assert!(self.staker_info.read(staker_address).is_none(), "{}", Error::STAKER_EXISTS);
             assert!(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
                 "{}",
-                GenericError::OPERATIONAL_EXISTS,
+                Error::OPERATIONAL_EXISTS,
             );
             self.assert_staker_address_not_reused(:staker_address);
             assert!(
@@ -362,7 +359,7 @@ pub mod Staking {
             assert!(
                 caller_address == staker_address || caller_address == staker_info.reward_address,
                 "{}",
-                GenericError::CALLER_CANNOT_INCREASE_STAKE,
+                Error::CALLER_CANNOT_INCREASE_STAKE,
             );
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
             let normalized_amount = NormalizedAmountTrait::from_strk_native_amount(:amount);
@@ -654,7 +651,7 @@ pub mod Staking {
             assert!(
                 self.operational_address_to_staker_address.read(operational_address).is_zero(),
                 "{}",
-                GenericError::OPERATIONAL_EXISTS,
+                Error::OPERATIONAL_EXISTS,
             );
             assert!(
                 !self.does_token_exist(token_address: operational_address),
@@ -864,7 +861,7 @@ pub mod Staking {
             assert!(
                 curr_epoch <= epoch_id && epoch_id < curr_epoch + K.into(),
                 "{}",
-                GenericError::INVALID_EPOCH,
+                Error::INVALID_EPOCH,
             );
 
             let (strk_total_stake, btc_total_stake) = self
@@ -1103,7 +1100,9 @@ pub mod Staking {
             };
             let mut undelegate_intent_value = self.get_pool_exit_intent(:undelegate_intent_key);
             assert!(
-                undelegate_intent_value.is_non_zero(), "{}", PoolError::MISSING_UNDELEGATE_INTENT,
+                undelegate_intent_value.is_non_zero(),
+                "{}",
+                GenericError::MISSING_UNDELEGATE_INTENT,
             );
             // Extract the token address of the `from_pool` contract.
             let token_address = self
@@ -1249,7 +1248,7 @@ pub mod Staking {
 
         fn set_consensus_rewards_first_epoch(ref self: ContractState, epoch_id: Epoch) {
             self.roles.only_app_governor();
-            assert!(epoch_id >= self.get_current_epoch() + 2, "{}", GenericError::INVALID_EPOCH);
+            assert!(epoch_id >= self.get_current_epoch() + 2, "{}", Error::INVALID_EPOCH);
             assert!(self.is_pre_consensus(), "{}", Error::CONSENSUS_REWARDS_IS_ACTIVE);
             self.consensus_rewards_first_epoch.write(epoch_id);
             self
@@ -1290,7 +1289,7 @@ pub mod Staking {
             assert!(is_active_opt.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
             let (is_active_first_epoch, is_active) = is_active_opt.unwrap();
             let curr_epoch = self.get_current_epoch();
-            assert!(curr_epoch >= is_active_first_epoch, "{}", GenericError::INVALID_EPOCH);
+            assert!(curr_epoch >= is_active_first_epoch, "{}", Error::INVALID_EPOCH);
             assert!(!is_active, "{}", Error::TOKEN_ALREADY_ENABLED);
             let next_is_active_first_epoch = self.get_epoch_plus_k();
             self.btc_tokens.write(token_address, (next_is_active_first_epoch, true));
@@ -1303,7 +1302,7 @@ pub mod Staking {
             assert!(is_active_opt.is_some(), "{}", Error::TOKEN_NOT_EXISTS);
             let (is_active_first_epoch, is_active) = is_active_opt.unwrap();
             let curr_epoch = self.get_current_epoch();
-            assert!(curr_epoch >= is_active_first_epoch, "{}", GenericError::INVALID_EPOCH);
+            assert!(curr_epoch >= is_active_first_epoch, "{}", Error::INVALID_EPOCH);
             assert!(is_active, "{}", Error::TOKEN_ALREADY_DISABLED);
             let next_is_active_first_epoch = self.get_epoch_plus_k();
             self.btc_tokens.write(token_address, (next_is_active_first_epoch, false));
@@ -1451,7 +1450,7 @@ pub mod Staking {
             let versioned_internal_staker_info = self.staker_info.read(staker_address);
             match versioned_internal_staker_info {
                 VInternalStakerInfo::None => panic_with_byte_array(
-                    err: @GenericError::STAKER_NOT_EXISTS.describe(),
+                    err: @Error::STAKER_NOT_EXISTS.describe(),
                 ),
                 VInternalStakerInfo::V0(_) => panic_with_byte_array(
                     err: @Error::INTERNAL_STAKER_INFO_OUTDATED_VERSION.describe(),
@@ -1503,7 +1502,9 @@ pub mod Staking {
                     delegated_balance_trace.insert(key: epoch, value: delegated_balance);
                 } else {
                     assert!(
-                        staker_balance.pool_amount().is_zero(), "{}", Error::POOL_BALANCE_NOT_ZERO,
+                        staker_balance.pool_amount().is_zero(),
+                        "{}",
+                        InternalError::POOL_BALANCE_NOT_ZERO,
                     )
                 }
             }
@@ -1536,20 +1537,16 @@ pub mod Staking {
                     assert!(
                         commission <= commission_commitment.max_commission,
                         "{}",
-                        GenericError::INVALID_COMMISSION_WITH_COMMITMENT,
+                        Error::INVALID_COMMISSION_WITH_COMMITMENT,
                     );
-                    assert!(
-                        commission != old_commission, "{}", GenericError::INVALID_SAME_COMMISSION,
-                    );
+                    assert!(commission != old_commission, "{}", Error::INVALID_SAME_COMMISSION);
                 } else {
                     assert!(
-                        commission < old_commission,
-                        "{}",
-                        GenericError::COMMISSION_COMMITMENT_EXPIRED,
+                        commission < old_commission, "{}", Error::COMMISSION_COMMITMENT_EXPIRED,
                     );
                 }
             } else {
-                assert!(commission < old_commission, "{}", GenericError::INVALID_COMMISSION);
+                assert!(commission < old_commission, "{}", Error::INVALID_COMMISSION);
             }
 
             // Update commission in storage.
@@ -1820,7 +1817,7 @@ pub mod Staking {
             } else {
                 let unpool_time = staker_info
                     .compute_unpool_time(exit_wait_window: self.exit_wait_window.read());
-                assert!(token_address.is_non_zero(), "{}", Error::TOKEN_IS_ZERO_ADDRESS);
+                assert!(token_address.is_non_zero(), "{}", InternalError::TOKEN_IS_ZERO_ADDRESS);
                 UndelegateIntentValue { amount: new_intent_amount, unpool_time, token_address }
             };
             self.pool_exit_intents.write(undelegate_intent_key, undelegate_intent_value);
@@ -1896,7 +1893,7 @@ pub mod Staking {
                 rhs: own_balance_curr_epoch.to_strk_native_amount(),
                 div: strk_total_stake.to_strk_native_amount(),
             )
-                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+                .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
         }
 
         /// This function calculates the rewards for the staker's pools.
@@ -1958,7 +1955,7 @@ pub mod Staking {
                         rhs: pool_balance_curr_epoch.to_amount_18_decimals(),
                         div: total_stake.to_amount_18_decimals(),
                     )
-                        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+                        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
                 } else {
                     Zero::zero()
                 };
@@ -2162,7 +2159,7 @@ pub mod Staking {
                     balance
                 } else {
                     let (epoch, balance) = trace.third_last().unwrap_or_else(|err| panic!("{err}"));
-                    assert!(epoch <= epoch_id, "{}", GenericError::INVALID_THIRD_LAST);
+                    assert!(epoch <= epoch_id, "{}", InternalError::INVALID_THIRD_LAST);
                     balance
                 }
             };
@@ -2192,7 +2189,7 @@ pub mod Staking {
             let staker_address = self
                 .operational_address_to_staker_address
                 .read(operational_address);
-            assert!(staker_address.is_non_zero(), "{}", GenericError::STAKER_NOT_EXISTS);
+            assert!(staker_address.is_non_zero(), "{}", Error::STAKER_NOT_EXISTS);
             staker_address
         }
 

@@ -10,7 +10,7 @@ use staking::attestation::interface::{
     IAttestationDispatcher, IAttestationDispatcherTrait, IAttestationSafeDispatcher,
     IAttestationSafeDispatcherTrait,
 };
-use staking::errors::GenericError;
+use staking::errors::InternalError;
 use staking::event_test_utils::{
     assert_attestation_window_changed_event, assert_staker_attestation_successful_event,
 };
@@ -251,7 +251,7 @@ fn test_attest_assertions() {
         contract_address: attestation_contract, caller_address: operational_address,
     );
     let result = attestation_safe_dispatcher.attest(:block_hash);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_THIRD_LAST.describe());
+    assert_panic_with_error(:result, expected_error: InternalError::INVALID_THIRD_LAST.describe());
 }
 
 #[test]

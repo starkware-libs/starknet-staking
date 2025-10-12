@@ -7,7 +7,7 @@ pub mod RewardSupplier {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
-    use staking::errors::GenericError;
+    use staking::errors::{GenericError, InternalError};
     use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking::reward_supplier::errors::Error;
     use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfoV1};
@@ -224,7 +224,7 @@ pub mod RewardSupplier {
             let balance: Amount = token_dispatcher
                 .balance_of(account: get_contract_address())
                 .try_into()
-                .expect_with_err(GenericError::BALANCE_ISNT_AMOUNT_TYPE);
+                .expect_with_err(InternalError::BALANCE_ISNT_AMOUNT_TYPE);
 
             // Calculate credit, which is the contract's balance plus the amount already requested
             // from L1, and the debit, which is the unclaimed rewards.
@@ -258,7 +258,7 @@ pub mod RewardSupplier {
 
         fn calculate_btc_rewards(self: @ContractState, total_rewards: Amount) -> Amount {
             mul_wide_and_div(lhs: total_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR)
-                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+                .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
         }
     }
 }

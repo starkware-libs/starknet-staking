@@ -13,7 +13,7 @@ pub mod Pool {
         IERC20MetadataDispatcherTrait,
     };
     use staking::constants::{K, STRK_TOKEN_ADDRESS};
-    use staking::errors::GenericError;
+    use staking::errors::{GenericError, InternalError};
     use staking::pool::errors::Error;
     use staking::pool::interface::{
         Events, IPool, IPoolMigration, PoolContractInfoV1, PoolMemberInfoV1,
@@ -26,7 +26,6 @@ pub mod Pool {
         MutablePoolMemberBalanceTraceTrait, PoolMemberBalanceTrace, PoolMemberBalanceTraceTrait,
         PoolMemberBalanceTrait, PoolMemberCheckpoint, PoolMemberCheckpointTrait,
     };
-    use staking::staking::errors::Error as StakingError;
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
         IStakingPoolDispatcherTrait,
@@ -297,7 +296,7 @@ pub mod Pool {
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
             let unpool_time = pool_member_info
                 .unpool_time
-                .expect_with_err(Error::MISSING_UNDELEGATE_INTENT);
+                .expect_with_err(GenericError::MISSING_UNDELEGATE_INTENT);
             assert!(Time::now() >= unpool_time, "{}", GenericError::INTENT_WINDOW_NOT_FINISHED);
 
             // Emit event.
@@ -384,7 +383,11 @@ pub mod Pool {
             assert!(amount.is_non_zero(), "{}", GenericError::AMOUNT_IS_ZERO);
             let pool_member = get_caller_address();
             let mut pool_member_info = self.internal_pool_member_info(:pool_member);
-            assert!(pool_member_info.unpool_time.is_some(), "{}", Error::MISSING_UNDELEGATE_INTENT);
+            assert!(
+                pool_member_info.unpool_time.is_some(),
+                "{}",
+                GenericError::MISSING_UNDELEGATE_INTENT,
+            );
             assert!(amount <= pool_member_info.unpool_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
             let reward_address = pool_member_info.reward_address;
 
@@ -766,7 +769,7 @@ pub mod Pool {
             assert!(
                 last_epoch == current_epoch + 1 || last_epoch == current_epoch + 2,
                 "{}",
-                Error::INVALID_LAST_EPOCH,
+                InternalError::INVALID_LAST_EPOCH,
             );
 
             // Otherwise, if it's the only change, return the initial value (the value before the
@@ -783,7 +786,11 @@ pub mod Pool {
                 return second_last_value.balance();
             }
             // Assert second last epoch is valid.
-            assert!(second_last_epoch == current_epoch + 1, "{}", Error::INVALID_SECOND_LAST_EPOCH);
+            assert!(
+                second_last_epoch == current_epoch + 1,
+                "{}",
+                InternalError::INVALID_SECOND_LAST_EPOCH,
+            );
 
             // Otherwise, if these are the only changes, return the initial value (the value before
             // the migration).
@@ -794,7 +801,7 @@ pub mod Pool {
             // Otherwise, the third last balance change is the relevant one.
             let (third_last_epoch, third_last_value) = trace.third_last();
 
-            assert!(third_last_epoch <= current_epoch, "{}", GenericError::INVALID_THIRD_LAST);
+            assert!(third_last_epoch <= current_epoch, "{}", InternalError::INVALID_THIRD_LAST);
 
             third_last_value.balance()
         }
@@ -892,7 +899,11 @@ pub mod Pool {
             self: @ContractState, pool_member_checkpoint: PoolMemberCheckpoint, curr_epoch: Epoch,
         ) -> Amount {
             let pool_member_checkpoint_epoch = pool_member_checkpoint.epoch();
-            assert!(pool_member_checkpoint_epoch <= curr_epoch, "{}", GenericError::INVALID_EPOCH);
+            assert!(
+                pool_member_checkpoint_epoch <= curr_epoch,
+                "{}",
+                InternalError::INVALID_EPOCH_IN_TRACE,
+            );
             let cumulative_rewards_trace_vec = self.cumulative_rewards_trace;
             let cumulative_rewards_trace_idx = pool_member_checkpoint
                 .cumulative_rewards_trace_idx();
@@ -956,10 +967,14 @@ pub mod Pool {
                     return Some(sigma);
                 }
                 // Note: When handling a checkpoint from the old version, it never reaches here.
-                assert!(cumulative_rewards_trace_idx > 1, "Invalid cumulative rewards trace idx");
+                assert!(
+                    cumulative_rewards_trace_idx > 1,
+                    "{}",
+                    InternalError::INVALID_REWARDS_TRACE_IDX,
+                );
                 let (epoch, sigma) = cumulative_rewards_trace_vec
                     .at(cumulative_rewards_trace_idx - 2);
-                assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+                assert!(epoch < target_epoch, "{}", InternalError::INVALID_EPOCH_IN_TRACE);
                 return Some(sigma);
             }
 
@@ -978,7 +993,7 @@ pub mod Pool {
                 }
                 let (epoch, sigma) = cumulative_rewards_trace_vec
                     .at(cumulative_rewards_trace_idx - 1);
-                assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+                assert!(epoch < target_epoch, "{}", InternalError::INVALID_EPOCH_IN_TRACE);
                 return Some(sigma);
             }
 
@@ -990,7 +1005,7 @@ pub mod Pool {
                 // Only one entry in the cumulative rewards trace is relevant (`idx - 2`).
                 let (epoch, sigma) = cumulative_rewards_trace_vec
                     .at(cumulative_rewards_trace_len - 1);
-                assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+                assert!(epoch < target_epoch, "{}", InternalError::INVALID_EPOCH_IN_TRACE);
                 return Some(sigma);
             }
 
@@ -1019,7 +1034,7 @@ pub mod Pool {
             }
             // Note: When handling a checkpoint from the old version, it never reaches here.
             let (epoch, sigma) = cumulative_rewards_trace_vec.at(cumulative_rewards_trace_idx - 2);
-            assert!(epoch < target_epoch, "{}", GenericError::INVALID_EPOCH);
+            assert!(epoch < target_epoch, "{}", InternalError::INVALID_EPOCH_IN_TRACE);
             sigma
         }
 
@@ -1065,7 +1080,7 @@ pub mod Pool {
             mul_wide_and_div(
                 lhs: staking_rewards, rhs: self.staking_rewards_base_value.read(), div: total_stake,
             )
-                .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
+                .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
         }
 
         /// Get token rewards configuration based on address and decimals.

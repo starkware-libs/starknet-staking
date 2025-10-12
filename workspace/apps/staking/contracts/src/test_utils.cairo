@@ -30,7 +30,7 @@ use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispat
 use staking::constants::{
     ALPHA, ALPHA_DENOMINATOR, K, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
 };
-use staking::errors::GenericError;
+use staking::errors::InternalError;
 use staking::minting_curve::interface::{
     IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
 };
@@ -41,7 +41,6 @@ use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
-use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, IStakingTokenManagerDispatcher,
@@ -1134,7 +1133,7 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v2(
         rhs: amount_own,
         div: strk_curr_total_stake.to_strk_native_amount(),
     )
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
     // Calculate staker STRK pool rewards.
     let pool_rewards = {
         if pool_amount.is_non_zero() {
@@ -1143,7 +1142,7 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v2(
                 rhs: pool_amount,
                 div: strk_curr_total_stake.to_strk_native_amount(),
             )
-                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+                .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
             let commission_rewards = compute_commission_amount_rounded_down(
                 rewards_including_commission: pool_rewards_including_commission, :commission,
             );
@@ -1173,14 +1172,14 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v3(
     let mut staker_rewards = mul_wide_and_div(
         lhs: strk_block_rewards, rhs: amount_own, div: total_stake,
     )
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
     // Calculate staker STRK pool rewards.
     let pool_rewards = {
         if pool_amount.is_non_zero() {
             let pool_rewards_including_commission = mul_wide_and_div(
                 lhs: strk_block_rewards, rhs: pool_amount, div: total_stake,
             )
-                .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+                .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
             let commission_rewards = compute_commission_amount_rounded_down(
                 rewards_including_commission: pool_rewards_including_commission, :commission,
             );
@@ -1219,7 +1218,7 @@ pub(crate) fn calculate_staker_btc_pool_rewards(
         rhs: pool_balance,
         div: btc_curr_total_stake.to_amount_18_decimals(),
     )
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
     // Split rewards into commission and pool rewards.
     let commission_rewards = compute_commission_amount_rounded_down(
         rewards_including_commission: pool_rewards_including_commission, :commission,
@@ -1249,7 +1248,7 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v3(
         rhs: normalized_pool_balance.to_amount_18_decimals(),
         div: normalized_staker_total_btc_balance.to_amount_18_decimals(),
     )
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
     // Split rewards into commission and pool rewards.
     let commission_rewards = compute_commission_amount_rounded_down(
         rewards_including_commission: pool_rewards_including_commission, :commission,
@@ -1290,7 +1289,7 @@ fn calculate_current_block_rewards(
 
 fn calculate_btc_rewards(total_rewards: Amount) -> Amount {
     mul_wide_and_div(lhs: total_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR)
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
 // TODO: rename to v2.
@@ -1330,7 +1329,7 @@ pub(crate) fn calculate_strk_pool_rewards_with_pool_balance(
         rhs: pool_balance,
         div: strk_curr_total_stake.to_strk_native_amount(),
     )
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
     let commission_rewards = compute_commission_amount_rounded_down(
         rewards_including_commission: pool_rewards_including_commission, :commission,
     );
@@ -1342,7 +1341,7 @@ pub(crate) fn calculate_pool_member_rewards(
     pool_rewards: Amount, pool_member_balance: Amount, pool_balance: Amount,
 ) -> Amount {
     mul_wide_and_div(lhs: pool_member_balance, rhs: pool_rewards, div: pool_balance)
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
 /// Compute the rewards for the pool trace.
@@ -1356,7 +1355,7 @@ pub(crate) fn compute_rewards_per_unit(
         return Zero::zero();
     }
     mul_wide_and_div(lhs: staking_rewards, rhs: base_value, div: total_stake)
-        .expect_with_err(err: StakingError::REWARDS_COMPUTATION_OVERFLOW)
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
 }
 
 fn get_reward_calculation_params(token_address: ContractAddress) -> (Amount, Amount) {
