@@ -2073,7 +2073,7 @@ pub mod Staking {
             NormalizedAmountTrait::from_amount_18_decimals(amount: delegated_balance)
         }
 
-        /// Return the total STRK balance of the staker in the current epoch.
+        /// Return the total STRK balance of the staker in the given `epoch_id`.
         ///
         /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn get_staker_total_strk_balance_at_epoch(
@@ -2082,12 +2082,12 @@ pub mod Staking {
             staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
             epoch_id: Epoch,
         ) -> NormalizedAmount {
-            let curr_own_balance = self.get_staker_own_balance_at_epoch(:staker_address, :epoch_id);
-            if curr_own_balance.is_zero() {
+            let own_balance = self.get_staker_own_balance_at_epoch(:staker_address, :epoch_id);
+            if own_balance.is_zero() {
                 return Zero::zero();
             }
             let strk_pool = staker_pool_info.get_strk_pool();
-            let curr_delegated_balance = if let Some(strk_pool) = strk_pool {
+            let delegated_balance = if let Some(strk_pool) = strk_pool {
                 self
                     .get_staker_delegated_balance_at_epoch(
                         :staker_address, pool_contract: strk_pool, :epoch_id,
@@ -2095,10 +2095,10 @@ pub mod Staking {
             } else {
                 Zero::zero()
             };
-            curr_own_balance + curr_delegated_balance
+            own_balance + delegated_balance
         }
 
-        /// Returns the total BTC balance of the staker in the current epoch.
+        /// Returns the total BTC balance of the staker in the given `epoch_id`.
         ///
         /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn get_staker_total_btc_balance_at_epoch(
