@@ -91,8 +91,8 @@ use test_utils::{
     advance_k_epochs_global, approve, calculate_staker_btc_pool_rewards_v2,
     calculate_staker_btc_pool_rewards_v3, calculate_staker_strk_rewards_v2,
     calculate_staker_strk_rewards_with_balances_v3, cheat_target_attestation_block_hash, constants,
-    custom_decimals_token, declare_pool_contract, declare_staking_eic_contract,
-    deploy_mock_erc20_decimals_contract, deploy_staking_contract,
+    custom_decimals_token, declare_pool_contract, declare_pool_eic_contract,
+    declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     load_from_simple_map, load_one_felt, setup_btc_token, stake_for_testing_using_dispatcher,
     stake_from_zero_address, stake_with_strk_pool_enabled, store_internal_staker_info_v0_to_map,
@@ -4731,9 +4731,10 @@ fn test_staking_eic() {
     // Upgrade.
     let staking_prev_class_hash = snforge_std::get_class_hash(contract_address: staking_contract);
     let new_pool_contract_class_hash = declare_pool_contract();
+    let new_pool_eic_class_hash = declare_pool_eic_contract();
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [new_pool_contract_class_hash.into()].span(),
+        eic_init_data: [new_pool_contract_class_hash.into(), new_pool_eic_class_hash.into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -4759,14 +4760,21 @@ fn test_staking_eic() {
     )
         .at(0);
     assert!(prev_class_hash.try_into().unwrap() == staking_prev_class_hash);
-    // Test pool contract class hash.
+    // Test pool contract and pool EIC class hashes.
     let pool_contract_class_hash = *snforge_std::load(
         target: staking_contract,
         storage_address: selector!("pool_contract_class_hash"),
         size: Store::<ClassHash>::size().into(),
     )
         .at(0);
+    let pool_eic_class_hash = *snforge_std::load(
+        target: staking_contract,
+        storage_address: selector!("pool_eic_class_hash"),
+        size: Store::<ClassHash>::size().into(),
+    )
+        .at(0);
     assert!(pool_contract_class_hash.try_into().unwrap() == new_pool_contract_class_hash);
+    assert!(pool_eic_class_hash.try_into().unwrap() == new_pool_eic_class_hash);
 }
 
 // TODO: Find another way to test specific errors in EIC.
@@ -4804,7 +4812,7 @@ fn test_staking_eic_without_pause() {
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
-        eic_init_data: [declare_pool_contract().into()].span(),
+        eic_init_data: [declare_pool_contract().into(), declare_pool_eic_contract().into()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
@@ -4852,7 +4860,35 @@ fn test_staking_eic_pool_contract_zero_class_hash() {
     let security_agent = cfg.test_info.security_agent;
     // Upgrade.
     let eic_data = EICData {
-        eic_hash: declare_staking_eic_contract(), eic_init_data: [Zero::zero()].span(),
+        eic_hash: declare_staking_eic_contract(),
+        eic_init_data: [Zero::zero(), declare_pool_eic_contract().into()].span(),
+    };
+    let implementation_data = ImplementationData {
+        impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
+    };
+    // Cheat block timestamp to enable upgrade eligibility.
+    start_cheat_block_timestamp_global(
+        block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
+    );
+    // Pause the staking contract.
+    pause_staking_contract(:staking_contract, :security_agent);
+    upgrade_implementation(
+        contract_address: staking_contract, :implementation_data, :upgrade_governor,
+    );
+}
+
+#[test]
+#[should_panic(expected: "EIC_LIB_CALL_FAILED")]
+fn test_staking_eic_pool_eic_zero_class_hash() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let upgrade_governor = cfg.test_info.upgrade_governor;
+    let security_agent = cfg.test_info.security_agent;
+    // Upgrade.
+    let eic_data = EICData {
+        eic_hash: declare_staking_eic_contract(),
+        eic_init_data: [declare_pool_contract().into(), Zero::zero()].span(),
     };
     let implementation_data = ImplementationData {
         impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,
