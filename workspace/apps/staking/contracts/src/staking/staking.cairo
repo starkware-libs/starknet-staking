@@ -177,7 +177,6 @@ pub mod Staking {
         public_key: Map<ContractAddress, (Epoch, PublicKey, PublicKey)>,
         /// Map staker address to the epoch when the unstake intent takes effect.
         /// **Note**: Stakers that called `unstake_intent` before V3 will not have this record.
-        // TODO: Consider adding to InternalStakerInfoV1.
         // TODO: Consider view function.
         staker_unstake_intent_epoch: Map<ContractAddress, Epoch>,
         /// Last block number for which rewards were distributed.
@@ -1381,7 +1380,6 @@ pub mod Staking {
             // Assert staker exists.
             let staker_info = self.internal_staker_info(:staker_address);
             let curr_epoch = self.get_current_epoch();
-            // TODO: Consider optimize `is_staker_active` to get `staker_info`.
             assert!(
                 self.is_staker_active(:staker_address, epoch_id: curr_epoch),
                 "{}",
@@ -2109,7 +2107,6 @@ pub mod Staking {
         ) -> NormalizedAmount {
             let mut total_btc_balance: NormalizedAmount = Zero::zero();
             for (pool_contract, token_address) in staker_pool_info.pools {
-                // TODO: Consider optimize here - `is_active_token` check again the STRK token.
                 if token_address != STRK_TOKEN_ADDRESS
                     && self.is_active_token(:token_address, :epoch_id) {
                     let pool_balance_curr_epoch = self
