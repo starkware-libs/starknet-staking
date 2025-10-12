@@ -1043,9 +1043,8 @@ pub struct StakingContractInfoCfg {
     pub epoch_info: EpochInfo,
 }
 
-// TODO: rename to v1.
 /// Update rewards for STRK pool.
-pub(crate) fn strk_pool_update_rewards(
+pub(crate) fn strk_pool_update_rewards_v1(
     pool_member_info: PoolMemberInfo, updated_index: Index,
 ) -> PoolMemberInfo {
     let interest: Index = updated_index - pool_member_info.index;
@@ -1081,16 +1080,15 @@ pub(crate) fn advance_k_epochs_global() {
     }
 }
 
-// TODO: rename to v2.
 /// Return staker own rewards and STRK pool rewards.
 ///
 /// Precondition: `strk_curr_total_stake` is not zero.
-pub(crate) fn calculate_staker_strk_rewards(
+pub(crate) fn calculate_staker_strk_rewards_v2(
     staker_info: StakerInfoV1,
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
-    calculate_staker_strk_rewards_with_amount_and_pool_info(
+    calculate_staker_strk_rewards_with_amount_and_pool_info_v2(
         amount_own: staker_info.amount_own,
         pool_info: staker_info.pool_info,
         :staking_contract,
@@ -1098,8 +1096,7 @@ pub(crate) fn calculate_staker_strk_rewards(
     )
 }
 
-// TODO: rename to v2.
-pub(crate) fn calculate_staker_strk_rewards_with_amount_and_pool_info(
+pub(crate) fn calculate_staker_strk_rewards_with_amount_and_pool_info_v2(
     amount_own: Amount,
     pool_info: Option<StakerPoolInfoV1>,
     staking_contract: ContractAddress,
@@ -1193,13 +1190,12 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v3(
     (staker_rewards, pool_rewards)
 }
 
-// TODO: rename to v2.
 /// Return staker commission rewards and BTC pool rewards for the specified `pool_balance` and
 /// `commission`.
 /// This function expects the `pool_balance` to be in native decimals.
 ///
 /// Precondition: `pool_balance` and `btc_curr_total_stake` are not zero.
-pub(crate) fn calculate_staker_btc_pool_rewards(
+pub(crate) fn calculate_staker_btc_pool_rewards_v2(
     pool_balance: Amount,
     commission: Commission,
     staking_contract: ContractAddress,
@@ -1292,9 +1288,8 @@ fn calculate_btc_rewards(total_rewards: Amount) -> Amount {
         .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
-// TODO: rename to v2.
 /// Calculate pool rewards for one epoch
-pub(crate) fn calculate_strk_pool_rewards(
+pub(crate) fn calculate_strk_pool_rewards_v2(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
@@ -1302,14 +1297,13 @@ pub(crate) fn calculate_strk_pool_rewards(
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
     let pool_balance = staker_info.pool_info.unwrap().amount;
-    calculate_strk_pool_rewards_with_pool_balance(
+    calculate_strk_pool_rewards_with_pool_balance_v2(
         :staker_address, :staking_contract, :minting_curve_contract, :pool_balance,
     )
 }
 
-// TODO: rename to v2.
 /// Calculate strk pool rewards for one epoch for the given pool balance and staker balance.
-pub(crate) fn calculate_strk_pool_rewards_with_pool_balance(
+pub(crate) fn calculate_strk_pool_rewards_with_pool_balance_v2(
     staker_address: ContractAddress,
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,

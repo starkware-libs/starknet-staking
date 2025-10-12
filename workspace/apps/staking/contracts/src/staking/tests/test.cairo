@@ -87,8 +87,8 @@ use starkware_utils_testing::test_utils::{
 };
 use test_utils::{
     StakingInitConfig, advance_block_into_attestation_window, advance_epoch_global,
-    advance_k_epochs_global, approve, calculate_staker_btc_pool_rewards,
-    calculate_staker_btc_pool_rewards_v3, calculate_staker_strk_rewards,
+    advance_k_epochs_global, approve, calculate_staker_btc_pool_rewards_v2,
+    calculate_staker_btc_pool_rewards_v3, calculate_staker_strk_rewards_v2,
     calculate_staker_strk_rewards_with_balances_v3, cheat_target_attestation_block_hash, constants,
     custom_decimals_token, declare_pool_contract, declare_staking_eic_contract,
     deploy_mock_erc20_decimals_contract, deploy_staking_contract,
@@ -616,7 +616,7 @@ fn test_claim_rewards() {
 
     // Calculate the expected staker rewards.
     let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
-    let (expected_staker_rewards, expected_pool_rewards) = calculate_staker_strk_rewards(
+    let (expected_staker_rewards, expected_pool_rewards) = calculate_staker_strk_rewards_v2(
         :staker_info, :staking_contract, :minting_curve_contract,
     );
     assert!(expected_pool_rewards.is_zero());
@@ -2056,7 +2056,7 @@ fn test_set_commission() {
         :cfg, stake: cfg.test_info.stake_amount + cfg.pool_member_info._deprecated_amount,
     );
     // Calculate rewards.
-    let (expected_staker_rewards, expected_pool_rewards) = calculate_staker_strk_rewards(
+    let (expected_staker_rewards, expected_pool_rewards) = calculate_staker_strk_rewards_v2(
         :staker_info,
         :staking_contract,
         minting_curve_contract: cfg.reward_supplier.minting_curve_contract,
@@ -3201,7 +3201,7 @@ fn test_update_rewards_from_attestation_contract_with_pool_member() {
     let pool_member = cfg.test_info.pool_member_address;
 
     // Calculate rewards.
-    let (expected_staker_rewards, expected_pool_rewards) = calculate_staker_strk_rewards(
+    let (expected_staker_rewards, expected_pool_rewards) = calculate_staker_strk_rewards_v2(
         staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
     );
     // Assert staker rewards, delegator rewards, and pool balance before update.
@@ -3324,12 +3324,13 @@ fn test_update_rewards_from_attestation_contract_with_both_strk_and_btc() {
     let btc_pool_dispatcher = IPoolDispatcher { contract_address: btc_pool_contract };
     let btc_pool_dispatcher_2 = IPoolDispatcher { contract_address: btc_pool_contract_2 };
     // Calculate rewards.
-    let (expected_staker_strk_rewards, expected_strk_pool_rewards) = calculate_staker_strk_rewards(
+    let (expected_staker_strk_rewards, expected_strk_pool_rewards) =
+        calculate_staker_strk_rewards_v2(
         staker_info: staker_info_before, :staking_contract, :minting_curve_contract,
     );
     // Same calculation for both BTC pools (both have the same decimals).
     let (expected_staker_btc_rewards_for_pool, expected_btc_pool_rewards) =
-        calculate_staker_btc_pool_rewards(
+        calculate_staker_btc_pool_rewards_v2(
         pool_balance: cfg.pool_member_info._deprecated_amount,
         :commission,
         :staking_contract,

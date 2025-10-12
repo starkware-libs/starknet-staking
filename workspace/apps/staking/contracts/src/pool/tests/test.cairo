@@ -53,7 +53,7 @@ use starkware_utils_testing::test_utils::{
 use test_utils::{
     StakingInitConfig, add_to_delegation_pool_with_pool_member,
     advance_block_into_attestation_window, advance_epoch_global, advance_k_epochs_global, approve,
-    calculate_staker_btc_pool_rewards, calculate_strk_pool_rewards,
+    calculate_staker_btc_pool_rewards_v2, calculate_strk_pool_rewards_v2,
     cheat_target_attestation_block_hash, claim_rewards_for_pool_member, constants,
     declare_pool_contract, declare_pool_eic_contract, deploy_staking_contract,
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
@@ -468,7 +468,7 @@ fn test_claim_rewards_strk_pool() {
     let staker_address = cfg.test_info.staker_address;
 
     // Compute expected rewards.
-    let expected_pool_rewards = calculate_strk_pool_rewards(
+    let expected_pool_rewards = calculate_strk_pool_rewards_v2(
         :staker_address, :staking_contract, :minting_curve_contract,
     );
 
@@ -540,7 +540,7 @@ fn test_claim_rewards_btc_pool() {
 
     // Compute expected rewards.
     let pool_balance = cfg.pool_member_info._deprecated_amount;
-    let (expected_commission_rewards, expected_pool_rewards) = calculate_staker_btc_pool_rewards(
+    let (expected_commission_rewards, expected_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
         :pool_balance,
         :commission,
         :staking_contract,
@@ -624,7 +624,7 @@ fn test_claim_rewards_with_balance_changes_strk_pool() {
 
     // Pool update rewards.
     let mut pool_balance = delegate_amount;
-    let pool_rewards_for_epoch = calculate_strk_pool_rewards(
+    let pool_rewards_for_epoch = calculate_strk_pool_rewards_v2(
         :staker_address, :staking_contract, :minting_curve_contract,
     );
     update_rewards_from_staking_contract_for_testing(
@@ -649,7 +649,7 @@ fn test_claim_rewards_with_balance_changes_strk_pool() {
 
     // Balance changes after current epoch and there is no balance change at current epoch.
     advance_epoch_global();
-    let pool_rewards_for_epoch = calculate_strk_pool_rewards(
+    let pool_rewards_for_epoch = calculate_strk_pool_rewards_v2(
         :staker_address, :staking_contract, :minting_curve_contract,
     );
     update_rewards_from_staking_contract_for_testing(
@@ -672,7 +672,7 @@ fn test_claim_rewards_with_balance_changes_strk_pool() {
     // Balance changes at current epoch & after current epoch.
     advance_k_epochs_global();
     pool_balance += delegate_amount;
-    let pool_rewards_for_epoch = calculate_strk_pool_rewards(
+    let pool_rewards_for_epoch = calculate_strk_pool_rewards_v2(
         :staker_address, :staking_contract, :minting_curve_contract,
     );
     update_rewards_from_staking_contract_for_testing(
@@ -734,7 +734,7 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
 
     // Pool update rewards.
     let mut pool_balance = delegate_amount;
-    let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
+    let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards_v2(
         :pool_balance,
         :commission,
         :staking_contract,
@@ -764,7 +764,7 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
 
     // Balance changes after current epoch and there is no balance change at current epoch.
     advance_epoch_global();
-    let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
+    let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards_v2(
         :pool_balance,
         :commission,
         :staking_contract,
@@ -792,7 +792,7 @@ fn test_claim_rewards_with_balance_changes_btc_pool() {
     // Balance changes at current epoch & after current epoch.
     advance_k_epochs_global();
     pool_balance += delegate_amount;
-    let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards(
+    let (commission_rewards, pool_rewards_for_epoch) = calculate_staker_btc_pool_rewards_v2(
         :pool_balance,
         :commission,
         :staking_contract,
