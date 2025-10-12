@@ -191,12 +191,12 @@ fn test_attest_assertions() {
     );
     advance_block_number_global(blocks: block_offset + MIN_ATTESTATION_WINDOW.into());
 
-    // Catch BLOCK_HASH_UNWRAP_FAILED.
+    // Catch unwrap syscall failed.
     cheat_caller_address_once(
         contract_address: attestation_contract, caller_address: operational_address,
     );
     let result = attestation_safe_dispatcher.attest(:block_hash);
-    assert_panic_with_error(:result, expected_error: Error::BLOCK_HASH_UNWRAP_FAILED.describe());
+    assert!(result.is_err());
 
     // Catch ATTEST_WRONG_BLOCK_HASH.
     cheat_target_attestation_block_hash(:cfg, :block_hash);

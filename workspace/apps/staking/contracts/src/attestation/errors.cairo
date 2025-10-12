@@ -6,7 +6,6 @@ pub(crate) enum Error {
     ATTEST_WRONG_BLOCK_HASH,
     ATTEST_WINDOW_TOO_SMALL,
     ATTEST_STARTING_EPOCH,
-    BLOCK_HASH_UNWRAP_FAILED,
 }
 
 impl DescribableError of Describable<Error> {
@@ -17,7 +16,6 @@ impl DescribableError of Describable<Error> {
             Error::ATTEST_WRONG_BLOCK_HASH => "Attestation with wrong block hash",
             Error::ATTEST_WINDOW_TOO_SMALL => "Attestation window is too small, must be larger then 10 blocks",
             Error::ATTEST_STARTING_EPOCH => "Attestation for starting epoch is not allowed",
-            Error::BLOCK_HASH_UNWRAP_FAILED => "Block hash unwrap failed",
         }
     }
 }

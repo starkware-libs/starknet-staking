@@ -22,11 +22,11 @@ pub mod Attestation {
         StoragePointerWriteAccess,
     };
     use starknet::syscalls::get_block_hash_syscall;
-    use starknet::{ContractAddress, get_block_number, get_caller_address};
+    use starknet::{ContractAddress, SyscallResultTrait, get_block_number, get_caller_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use starkware_utils::components::roles::RolesComponent;
-    use starkware_utils::errors::{Describable, ErrorDisplay};
+    use starkware_utils::errors::ErrorDisplay;
     use starkware_utils::interfaces::identity::Identity;
     pub const CONTRACT_IDENTITY: felt252 = 'Attestation';
     pub const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -250,10 +250,7 @@ pub mod Attestation {
         fn get_target_block_hash(
             self: @ContractState, target_attestation_block: BlockNumber,
         ) -> felt252 {
-            match get_block_hash_syscall(block_number: target_attestation_block) {
-                Ok(x) => x,
-                Err(_) => panic!("{}", Error::BLOCK_HASH_UNWRAP_FAILED.describe()),
-            }
+            get_block_hash_syscall(block_number: target_attestation_block).unwrap_syscall()
         }
     }
 }
