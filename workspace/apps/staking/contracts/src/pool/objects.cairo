@@ -1,5 +1,6 @@
 use core::num::traits::Zero;
 use staking::constants::STARTING_EPOCH;
+use staking::errors::InternalError;
 #[cfg(test)]
 use staking::pool::interface::PoolMemberInfoV1;
 use staking::pool::interface_v0::{IPoolV0DispatcherTrait, IPoolV0LibraryDispatcher, PoolMemberInfo};
@@ -10,6 +11,7 @@ use staking::pool::pool_member_balance_trace::trace::{
 use staking::types::InternalPoolMemberInfoLatest;
 use staking::types::{Amount, Commission, Index, VecIndex};
 use starknet::{ClassHash, ContractAddress};
+use starkware_utils::errors::Describable;
 use starkware_utils::time::time::Timestamp;
 
 #[derive(Debug, Drop, Serde, Copy)]
@@ -218,7 +220,7 @@ pub(crate) impl VInternalPoolMemberInfoTestImpl of VInternalPoolMemberInfoTestTr
     fn unwrap_latest(self: VInternalPoolMemberInfo) -> InternalPoolMemberInfoLatest {
         match self {
             VInternalPoolMemberInfo::V1(value) => value,
-            _ => panic!("Unexpected VInternalPoolMemberInfo version"),
+            _ => panic!("{}", InternalError::UNEXPECTED_INTERNAL_MEMBER_INFO_VERSION.describe()),
         }
     }
 }

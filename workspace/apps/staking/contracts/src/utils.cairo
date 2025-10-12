@@ -1,5 +1,5 @@
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use staking::errors::{Erc20Error, GenericError};
+use staking::errors::{Erc20Error, GenericError, InternalError};
 use staking::staking::objects::NormalizedAmount;
 use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use staking::types::{Amount, Commission, Index};
@@ -50,7 +50,7 @@ pub(crate) fn compute_commission_amount_rounded_down(
         rhs: commission.into(),
         div: COMMISSION_DENOMINATOR.into(),
     )
-        .expect_with_err(err: GenericError::COMMISSION_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: InternalError::COMMISSION_ISNT_AMOUNT_TYPE)
 }
 
 /// Compute the commission amount of the staker from the pool rewards.
@@ -65,7 +65,7 @@ pub(crate) fn compute_commission_amount_rounded_up(
         rhs: commission.into(),
         div: COMMISSION_DENOMINATOR.into(),
     )
-        .expect_with_err(err: GenericError::COMMISSION_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: InternalError::COMMISSION_ISNT_AMOUNT_TYPE)
 }
 
 /// Compute the rewards from the amount and interest.
@@ -79,7 +79,7 @@ pub(crate) fn compute_rewards_rounded_down(
     amount: Amount, interest: Index, base_value: Index,
 ) -> Amount {
     mul_wide_and_div(lhs: amount, rhs: interest, div: base_value)
-        .expect_with_err(err: GenericError::REWARDS_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
 }
 
 /// Compute the threshold for requesting funds from L1 Reward Supplier.

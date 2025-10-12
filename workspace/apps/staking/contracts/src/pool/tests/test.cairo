@@ -1050,7 +1050,9 @@ fn test_exit_delegation_pool_action_assertions() {
 
     // Catch MISSING_UNDELEGATE_INTENT.
     let result = pool_safe_dispatcher.exit_delegation_pool_action(:pool_member);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.describe());
+    assert_panic_with_error(
+        :result, expected_error: GenericError::MISSING_UNDELEGATE_INTENT.describe(),
+    );
 
     // Catch INTENT_WINDOW_NOT_FINISHED.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
@@ -1159,7 +1161,9 @@ fn test_switch_delegation_pool_assertions() {
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
     let result = pool_safe_dispatcher
         .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: switch_amount);
-    assert_panic_with_error(:result, expected_error: Error::MISSING_UNDELEGATE_INTENT.describe());
+    assert_panic_with_error(
+        :result, expected_error: GenericError::MISSING_UNDELEGATE_INTENT.describe(),
+    );
 
     // Catch AMOUNT_TOO_HIGH.
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);

@@ -36,7 +36,6 @@ use staking::errors::GenericError;
 use staking::flow_test::utils::{
     declare_staking_contract, pause_staking_contract, upgrade_implementation,
 };
-use staking::pool::errors::Error as PoolError;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfoV1};
 use staking::pool::objects::SwitchPoolData;
 use staking::reward_supplier::interface::{
@@ -1013,7 +1012,7 @@ fn test_unstake_action_assertions() {
 
     // Catch STAKER_NOT_EXISTS.
     let result = staking_safe_dispatcher.unstake_action(:staker_address);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
     stake_with_strk_pool_enabled(:cfg);
 
     // Catch MISSING_UNSTAKE_INTENT.
@@ -1132,7 +1131,7 @@ fn test_add_stake_from_pool_assertions() {
     // Should catch STAKER_NOT_EXISTS.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_pool_safe_dispatcher.add_stake_from_pool(:staker_address, :amount);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 
     // Should catch UNSTAKE_IN_PROGRESS.
     let token_address = cfg.test_info.strk_token.contract_address();
@@ -1342,7 +1341,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
     // Should catch STAKER_NOT_EXISTS.
     let result = staking_pool_safe_dispatcher
         .remove_from_delegation_pool_intent(:staker_address, :identifier, :amount);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 
     // Should catch CALLER_IS_NOT_POOL_CONTRACT.
     let token_address = cfg.test_info.strk_token.contract_address();
@@ -1682,7 +1681,7 @@ fn test_switch_staking_delegation_pool_assertions() {
             identifier: pool_member.into(),
         );
     assert_panic_with_error(
-        :result, expected_error: PoolError::MISSING_UNDELEGATE_INTENT.describe(),
+        :result, expected_error: GenericError::MISSING_UNDELEGATE_INTENT.describe(),
     );
 
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
@@ -2145,7 +2144,7 @@ fn test_set_commission_assertions_with_commitment() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_safe_dispatcher.set_commission(:commission);
     assert_panic_with_error(
-        :result, expected_error: GenericError::INVALID_COMMISSION_WITH_COMMITMENT.describe(),
+        :result, expected_error: Error::INVALID_COMMISSION_WITH_COMMITMENT.describe(),
     );
 
     // Should catch INVALID_SAME_COMMISSION.
@@ -2154,9 +2153,7 @@ fn test_set_commission_assertions_with_commitment() {
     staking_dispatcher.set_commission(:commission);
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_safe_dispatcher.set_commission(:commission);
-    assert_panic_with_error(
-        :result, expected_error: GenericError::INVALID_SAME_COMMISSION.describe(),
-    );
+    assert_panic_with_error(:result, expected_error: Error::INVALID_SAME_COMMISSION.describe());
 
     // Advance to the expiration epoch.
     advance_epoch_global();
@@ -2166,7 +2163,7 @@ fn test_set_commission_assertions_with_commitment() {
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
     let result = staking_safe_dispatcher.set_commission(:commission);
     assert_panic_with_error(
-        :result, expected_error: GenericError::COMMISSION_COMMITMENT_EXPIRED.describe(),
+        :result, expected_error: Error::COMMISSION_COMMITMENT_EXPIRED.describe(),
     );
 }
 
@@ -2342,7 +2339,7 @@ fn test_set_commission_commitment_assertions() {
     // Should catch STAKER_NOT_EXISTS.
     let result = staking_safe_dispatcher
         .set_commission_commitment(max_commission: Zero::zero(), expiration_epoch: Zero::zero());
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 
     // Should catch MISSING_POOL_CONTRACT.
     stake_for_testing_using_dispatcher(:cfg);
@@ -3063,7 +3060,7 @@ fn test_get_attestation_info_by_operational_address_assertions() {
     let operational_address = DUMMY_ADDRESS();
     let result = staking_safe_dispatcher
         .get_attestation_info_by_operational_address(:operational_address);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 }
 
 #[test]
@@ -3456,7 +3453,7 @@ fn test_update_rewards_from_attestation_contract_assertions() {
     );
     let result = staking_safe_dispatcher
         .update_rewards_from_attestation_contract(staker_address: DUMMY_ADDRESS());
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 
     // Catch UNSTAKE_IN_PROGRESS.
     cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
@@ -3857,10 +3854,10 @@ fn test_update_rewards_assertions_before_consensus() {
     // Catch STAKER_NOT_EXISTS.
     let result = staking_rewards_safe_dispatcher
         .update_rewards(:staker_address, disable_rewards: true);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
     let result = staking_rewards_safe_dispatcher
         .update_rewards(:staker_address, disable_rewards: false);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 
     stake_for_testing_using_dispatcher(:cfg);
     // Catch INVALID_STAKER - before staker has balance, same epoch of `stake`.
@@ -3935,10 +3932,10 @@ fn test_update_rewards_assertions_already_consensus() {
     // Catch STAKER_NOT_EXISTS.
     let result = staking_rewards_safe_dispatcher
         .update_rewards(:staker_address, disable_rewards: true);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
     let result = staking_rewards_safe_dispatcher
         .update_rewards(:staker_address, disable_rewards: false);
-    assert_panic_with_error(:result, expected_error: GenericError::STAKER_NOT_EXISTS.describe());
+    assert_panic_with_error(:result, expected_error: Error::STAKER_NOT_EXISTS.describe());
 
     stake_for_testing_using_dispatcher(:cfg);
     // Catch INVALID_STAKER - before staker has balance, same epoch of `stake`.
@@ -4673,7 +4670,7 @@ fn test_set_consensus_rewards_first_epoch_assertions() {
     );
     let result = staking_safe_config_dispatcher
         .set_consensus_rewards_first_epoch(epoch_id: current_epoch);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
 
     // Catch INVALID_EPOCH - current epoch + 1.
     cheat_caller_address_once(
@@ -4681,7 +4678,7 @@ fn test_set_consensus_rewards_first_epoch_assertions() {
     );
     let result = staking_safe_config_dispatcher
         .set_consensus_rewards_first_epoch(epoch_id: current_epoch + 1);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
 
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: cfg.test_info.app_governor,
@@ -4697,7 +4694,7 @@ fn test_set_consensus_rewards_first_epoch_assertions() {
     );
     let result = staking_safe_config_dispatcher
         .set_consensus_rewards_first_epoch(epoch_id: current_epoch - 1);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
 
     advance_epoch_global();
     let current_epoch = staking_dispatcher.get_current_epoch();
@@ -5317,12 +5314,12 @@ fn test_enable_token_assertions() {
     let _ = staking_token_manager_safe_dispatcher.enable_token(token_address: btc_token_address);
     let result = staking_token_manager_safe_dispatcher
         .enable_token(token_address: btc_token_address);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
     // After one epoch its still invalid.
     advance_epoch_global();
     let result = staking_token_manager_safe_dispatcher
         .enable_token(token_address: btc_token_address);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
 
     // Catch TOKEN_ALREADY_ENABLED.
     advance_epoch_global();
@@ -5402,7 +5399,7 @@ fn test_disable_token_assertions() {
     );
     let result = staking_token_manager_safe_dispatcher
         .disable_token(token_address: btc_token_address);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
     // After one epoch its still invalid.
     advance_epoch_global();
     cheat_caller_address_once(
@@ -5410,7 +5407,7 @@ fn test_disable_token_assertions() {
     );
     let result = staking_token_manager_safe_dispatcher
         .disable_token(token_address: btc_token_address);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
 }
 
 #[test]
@@ -5942,14 +5939,14 @@ fn test_get_stakers_invalid_epoch() {
     staking_consensus_dispatcher.get_stakers(:epoch_id);
     staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
     let result = staking_consensus_safe_dispatcher.get_stakers(epoch_id: epoch_id + 2);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
 
     advance_epoch_global();
     let epoch_id = staking_dispatcher.get_current_epoch();
     staking_consensus_dispatcher.get_stakers(:epoch_id);
     staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
     let result = staking_consensus_safe_dispatcher.get_stakers(epoch_id: epoch_id - 1);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
     let result = staking_consensus_safe_dispatcher.get_stakers(epoch_id: epoch_id + 2);
-    assert_panic_with_error(:result, expected_error: GenericError::INVALID_EPOCH.describe());
+    assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
 }

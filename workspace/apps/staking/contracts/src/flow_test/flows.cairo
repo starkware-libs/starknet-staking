@@ -3457,7 +3457,7 @@ pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
         system.delegator_exit_action(delegator: delegator_full_intent, :pool);
         system.delegator_exit_action(delegator: delegator_half_intent, :pool);
         let res = system.safe_delegator_exit_action(delegator: delegator_zero_intent, :pool);
-        assert_panic_with_error(res, PoolError::MISSING_UNDELEGATE_INTENT.describe());
+        assert_panic_with_error(res, GenericError::MISSING_UNDELEGATE_INTENT.describe());
 
         // Test pool.
         let expected_pool_info = StakerPoolInfoV2 {
@@ -4797,7 +4797,7 @@ pub(crate) impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
         system.delegator_exit_action(delegator: delegator2, :pool);
         let result = system.safe_delegator_exit_action(delegator: delegator3, :pool);
         assert_panic_with_error(
-            :result, expected_error: PoolError::MISSING_UNDELEGATE_INTENT.describe(),
+            :result, expected_error: GenericError::MISSING_UNDELEGATE_INTENT.describe(),
         );
 
         let delegator1_balance = system.token.balance_of(account: delegator1.delegator.address);
@@ -4880,7 +4880,7 @@ pub(crate) impl DelegatorIntentInV0ChangeIntentActionInV2FlowImpl of FlowTrait<
         system.delegator_exit_action(delegator: delegator1, :pool);
         let result = system.safe_delegator_exit_action(delegator: delegator2, :pool);
         assert_panic_with_error(
-            :result, expected_error: PoolError::MISSING_UNDELEGATE_INTENT.describe(),
+            :result, expected_error: GenericError::MISSING_UNDELEGATE_INTENT.describe(),
         );
         system.delegator_exit_action(delegator: delegator3, :pool);
 
@@ -6748,7 +6748,7 @@ pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
             .staking
             .safe_dispatcher()
             .staker_info_v1(staker_address: staker.staker.address);
-        assert_panic_with_error(res, GenericError::STAKER_NOT_EXISTS.describe());
+        assert_panic_with_error(res, StakingError::STAKER_NOT_EXISTS.describe());
     }
 }
 
@@ -6842,10 +6842,10 @@ pub(crate) impl EnableDisableBtcTokenSameEpochFlowImpl of FlowTrait<
         system.staking.add_token(:token_address);
         system.staking.enable_token(:token_address);
         let res = system.staking.safe_disable_token(:token_address);
-        assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
+        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
         system.advance_epoch();
         let res = system.staking.safe_disable_token(:token_address);
-        assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
+        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
         system.advance_epoch();
         system.staking.disable_token(:token_address);
         system.advance_k_epochs();
@@ -6871,10 +6871,10 @@ pub(crate) impl DisableEnableBtcTokenSameEpochFlowImpl of FlowTrait<
         system.advance_k_epochs();
         system.staking.disable_token(:token_address);
         let res = system.staking.safe_enable_token(:token_address);
-        assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
+        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
         system.advance_epoch();
         let res = system.staking.safe_enable_token(:token_address);
-        assert_panic_with_error(res, GenericError::INVALID_EPOCH.describe());
+        assert_panic_with_error(res, StakingError::INVALID_EPOCH.describe());
         system.advance_epoch();
         system.staking.enable_token(:token_address);
 

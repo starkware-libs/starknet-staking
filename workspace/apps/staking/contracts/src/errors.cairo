@@ -12,27 +12,15 @@ pub(crate) enum GenericError {
     MintingError: MintingError,
     RewardsSupplierError: RewardsSupplierError,
     // Shared errors
-    STAKER_EXISTS,
-    STAKER_NOT_EXISTS,
-    OPERATIONAL_EXISTS,
-    CALLER_CANNOT_INCREASE_STAKE,
     INTENT_WINDOW_NOT_FINISHED,
-    INVALID_COMMISSION,
-    INVALID_COMMISSION_WITH_COMMITMENT,
-    COMMISSION_COMMITMENT_EXPIRED,
-    INVALID_SAME_COMMISSION,
-    INVALID_EPOCH,
     CALLER_IS_NOT_STAKING_CONTRACT,
-    REWARDS_ISNT_AMOUNT_TYPE,
-    BALANCE_ISNT_AMOUNT_TYPE,
-    COMMISSION_ISNT_AMOUNT_TYPE,
     AMOUNT_TOO_HIGH,
     AMOUNT_IS_ZERO,
-    INVALID_THIRD_LAST,
     ZERO_CLASS_HASH,
     ZERO_ADDRESS,
     REWARD_ADDRESS_IS_TOKEN,
     INVALID_TOKEN_DECIMALS,
+    MISSING_UNDELEGATE_INTENT,
 }
 
 impl DescribableGenericError of Describable<GenericError> {
@@ -43,31 +31,53 @@ impl DescribableGenericError of Describable<GenericError> {
             GenericError::PoolError(err) => err.describe(),
             GenericError::MintingError(err) => err.describe(),
             GenericError::RewardsSupplierError(err) => err.describe(),
-            GenericError::STAKER_EXISTS => "Staker already exists, use increase_stake instead",
-            GenericError::STAKER_NOT_EXISTS => "Staker does not exist",
-            GenericError::CALLER_CANNOT_INCREASE_STAKE => "Caller address should be staker address or reward address",
             GenericError::INTENT_WINDOW_NOT_FINISHED => "Intent window is not finished",
-            GenericError::OPERATIONAL_EXISTS => "Operational address already exists",
-            GenericError::INVALID_COMMISSION => "Commission can only be decreased",
-            GenericError::INVALID_COMMISSION_WITH_COMMITMENT => "Commission can be set below the maximum specified in the commission commitment",
-            GenericError::INVALID_SAME_COMMISSION => "  Commission can't be set to the same value",
-            GenericError::INVALID_EPOCH => "Invalid epoch",
-            GenericError::COMMISSION_COMMITMENT_EXPIRED => "Commission commitment has expired, can only decrease or set a new commitment",
             GenericError::CALLER_IS_NOT_STAKING_CONTRACT => "Caller is not staking contract",
-            GenericError::REWARDS_ISNT_AMOUNT_TYPE => "Rewards is too large, expected to fit in u128",
-            GenericError::BALANCE_ISNT_AMOUNT_TYPE => "Balance is too large, expected to fit in u128",
-            GenericError::COMMISSION_ISNT_AMOUNT_TYPE => "Commission is too large, expected to fit in u128",
             GenericError::AMOUNT_TOO_HIGH => "Amount is too high",
             GenericError::AMOUNT_IS_ZERO => "Amount is zero",
-            GenericError::INVALID_THIRD_LAST => "Invalid third last epoch, must be lower than or equal to current epoch",
             GenericError::ZERO_CLASS_HASH => "Class hash is zero",
             GenericError::ZERO_ADDRESS => "Address is zero",
             GenericError::REWARD_ADDRESS_IS_TOKEN => "Reward address is a token address",
             GenericError::INVALID_TOKEN_DECIMALS => "Invalid token decimals",
+            GenericError::MISSING_UNDELEGATE_INTENT => "Undelegate intent is missing",
         }
     }
 }
 
+#[derive(Drop)]
+pub(crate) enum InternalError {
+    INVALID_EPOCH_IN_TRACE,
+    REWARDS_ISNT_AMOUNT_TYPE,
+    REWARDS_COMPUTATION_OVERFLOW,
+    BALANCE_ISNT_AMOUNT_TYPE,
+    COMMISSION_ISNT_AMOUNT_TYPE,
+    INVALID_LAST_EPOCH,
+    INVALID_SECOND_LAST_EPOCH,
+    INVALID_THIRD_LAST,
+    TOKEN_IS_ZERO_ADDRESS,
+    POOL_BALANCE_NOT_ZERO,
+    UNEXPECTED_INTERNAL_MEMBER_INFO_VERSION,
+    INVALID_REWARDS_TRACE_IDX,
+}
+
+impl DescribableInternalError of Describable<InternalError> {
+    fn describe(self: @InternalError) -> ByteArray {
+        match self {
+            InternalError::INVALID_EPOCH_IN_TRACE => "Invalid epoch in trace",
+            InternalError::REWARDS_ISNT_AMOUNT_TYPE => "Rewards is too large, expected to fit in u128",
+            InternalError::REWARDS_COMPUTATION_OVERFLOW => "Overflow during computation rewards",
+            InternalError::BALANCE_ISNT_AMOUNT_TYPE => "Balance is too large, expected to fit in u128",
+            InternalError::COMMISSION_ISNT_AMOUNT_TYPE => "Commission is too large, expected to fit in u128",
+            InternalError::INVALID_LAST_EPOCH => "Invalid last epoch",
+            InternalError::INVALID_SECOND_LAST_EPOCH => "Invalid second last epoch",
+            InternalError::INVALID_THIRD_LAST => "Invalid third last epoch, must be lower than or equal to current epoch",
+            InternalError::TOKEN_IS_ZERO_ADDRESS => "Zero address token is not allowed",
+            InternalError::POOL_BALANCE_NOT_ZERO => "Staker has no pool, but `pool_amount` is not zero",
+            InternalError::UNEXPECTED_INTERNAL_MEMBER_INFO_VERSION => "Unexpected VInternalPoolMemberInfo version",
+            InternalError::INVALID_REWARDS_TRACE_IDX => "Invalid cumulative rewards trace idx",
+        }
+    }
+}
 #[derive(Drop)]
 pub(crate) enum Erc20Error {
     INSUFFICIENT_BALANCE,
