@@ -74,6 +74,7 @@ use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;
 use starknet::{ContractAddress, Store, get_block_number};
 use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
+use starkware_utils::components::roles::errors::AccessErrors;
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::constants::DAY;
 use starkware_utils::errors::Describable;
@@ -4662,8 +4663,7 @@ fn test_set_consensus_rewards_first_epoch_assertions() {
     // Catch ONLY_APP_GOVERNOR.
     let result = staking_safe_config_dispatcher
         .set_consensus_rewards_first_epoch(epoch_id: current_epoch);
-    // TODO: Make AccessErrors public and use it here.
-    assert_panic_with_error(:result, expected_error: "ONLY_APP_GOVERNOR");
+    assert_panic_with_error(:result, expected_error: AccessErrors::ONLY_APP_GOVERNOR.describe());
 
     // Catch INVALID_EPOCH - current epoch.
     cheat_caller_address_once(
@@ -4979,10 +4979,10 @@ fn test_add_token_assertions() {
     let staking_token_manager_safe_dispatcher = IStakingTokenManagerSafeDispatcher {
         contract_address: staking_contract,
     };
-    // Catch ONLY_SECURITY_ADMIN.
+    // Catch ONLY_TOKEN_ADMIN.
     let result = staking_token_manager_safe_dispatcher
         .add_token(token_address: BTC_TOKEN_ADDRESS());
-    assert_panic_with_error(:result, expected_error: "ONLY_TOKEN_ADMIN");
+    assert_panic_with_error(:result, expected_error: AccessErrors::ONLY_TOKEN_ADMIN.describe());
 
     // Catch ZERO_ADDRESS.
     cheat_caller_address_once(
@@ -5289,7 +5289,7 @@ fn test_enable_token_assertions() {
     // Catch ONLY_TOKEN_ADMIN.
     let result = staking_token_manager_safe_dispatcher
         .enable_token(token_address: BTC_TOKEN_ADDRESS());
-    assert_panic_with_error(:result, expected_error: "ONLY_TOKEN_ADMIN");
+    assert_panic_with_error(:result, expected_error: AccessErrors::ONLY_TOKEN_ADMIN.describe());
 
     // Catch TOKEN_NOT_EXISTS.
     cheat_caller_address_once(
@@ -5344,7 +5344,7 @@ fn test_disable_token_assertions() {
     // Catch ONLY_SECURITY_AGENT.
     let result = staking_token_manager_safe_dispatcher
         .disable_token(token_address: BTC_TOKEN_ADDRESS());
-    assert_panic_with_error(:result, expected_error: "ONLY_SECURITY_AGENT");
+    assert_panic_with_error(:result, expected_error: AccessErrors::ONLY_SECURITY_AGENT.describe());
 
     // Catch TOKEN_NOT_EXISTS.
     cheat_caller_address_once(
