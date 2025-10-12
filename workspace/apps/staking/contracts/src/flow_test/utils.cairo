@@ -57,7 +57,8 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
-    declare_pool_contract, declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, fund,
+    declare_pool_contract, declare_pool_eic_contract, declare_staking_eic_contract,
+    deploy_mock_erc20_decimals_contract, fund,
 };
 use staking::types::{
     Amount, BlockNumber, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
@@ -1951,7 +1952,10 @@ pub(crate) impl SystemReplaceabilityV3Impl of SystemReplaceabilityV3Trait {
     fn upgrade_staking_implementation_v3(self: SystemState) {
         let eic_data = EICData {
             eic_hash: declare_staking_eic_contract(),
-            eic_init_data: array![declare_pool_contract().into()].span(),
+            eic_init_data: array![
+                declare_pool_contract().into(), declare_pool_eic_contract().into(),
+            ]
+                .span(),
         };
         let implementation_data = ImplementationData {
             impl_hash: declare_staking_contract(), eic_data: Option::Some(eic_data), final: false,

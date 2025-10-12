@@ -23,15 +23,21 @@ mod StakingEIC {
         pool_contract_class_hash: ClassHash,
         /// Storage of the `pause` flag state.
         is_paused: bool,
+        // --- New fields ---
+        /// The class hash of the pool EIC contract.
+        /// The EIC contract is used while upgrading pool contracts from V1 / V2 (BTC) to V3.
+        /// Only used in `upgrade_staker_pools`.
+        pool_eic_class_hash: ClassHash,
     }
 
-    /// Expected data : [pool_contract_class_hash]
+    /// Expected data : [pool_contract_class_hash, pool_eic_class_hash]
     #[abi(embed_v0)]
     impl EICInitializable of IEICInitializable<ContractState> {
         fn eic_initialize(ref self: ContractState, eic_init_data: Span<felt252>) {
             assert(self.is_paused.read(), 'CONTRACT_IS_NOT_PAUSED');
-            assert(eic_init_data.len() == 1, 'EXPECTED_DATA_LENGTH_1');
+            assert(eic_init_data.len() == 2, 'EXPECTED_DATA_LENGTH_2');
             let pool_contract_class_hash: ClassHash = (*eic_init_data[0]).try_into().unwrap();
+            let pool_eic_class_hash: ClassHash = (*eic_init_data[1]).try_into().unwrap();
 
             // 1. Set previous class hash.
             let prev_class_hash: ClassHash = get_class_hash_at_syscall(
@@ -44,6 +50,10 @@ mod StakingEIC {
             // 2. Replace pool contract class hash.
             assert!(pool_contract_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
             self.pool_contract_class_hash.write(pool_contract_class_hash);
+
+            // 3. Save pool EIC class hash.
+            assert!(pool_eic_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
+            self.pool_eic_class_hash.write(pool_eic_class_hash);
         }
     }
 }

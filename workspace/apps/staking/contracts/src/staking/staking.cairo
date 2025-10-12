@@ -183,6 +183,9 @@ pub mod Staking {
         last_reward_block: BlockNumber,
         /// First epoch of consensus rewards distribution.
         consensus_rewards_first_epoch: Epoch,
+        /// The class hash of the pool EIC contract.
+        /// The EIC contract is used while upgrading pool contracts from V1 / V2 (BTC) to V3.
+        pool_eic_class_hash: ClassHash,
     }
 
     #[event]
