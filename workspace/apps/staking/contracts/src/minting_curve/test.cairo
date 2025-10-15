@@ -77,7 +77,7 @@ fn test_set_c_num() {
     };
     let old_c = cfg.minting_curve_contract_info.c_num;
     assert!(old_c == minting_curve_dispatcher.contract_parameters().c_num);
-    let new_c = old_c * 2;
+    let new_c = old_c + 50;
     let mut spy = snforge_std::spy_events();
     cheat_caller_address_once(
         contract_address: minting_curve_contract, caller_address: cfg.test_info.token_admin,
