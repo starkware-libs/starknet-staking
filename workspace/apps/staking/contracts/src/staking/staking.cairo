@@ -1892,7 +1892,7 @@ pub mod Staking {
                 rhs: own_balance_curr_epoch.to_strk_native_amount(),
                 div: strk_total_stake.to_strk_native_amount(),
             )
-                .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
+                .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
         }
 
         /// This function calculates the rewards for the staker's pools.
@@ -1954,7 +1954,7 @@ pub mod Staking {
                         rhs: pool_balance_curr_epoch.to_amount_18_decimals(),
                         div: total_stake.to_amount_18_decimals(),
                     )
-                        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
+                        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
                 } else {
                     Zero::zero()
                 };

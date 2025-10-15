@@ -258,7 +258,7 @@ pub mod RewardSupplier {
 
         fn calculate_btc_rewards(self: @ContractState, total_rewards: Amount) -> Amount {
             mul_wide_and_div(lhs: total_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR)
-                .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
+                .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
         }
     }
 }
