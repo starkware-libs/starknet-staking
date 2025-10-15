@@ -23,8 +23,8 @@ use staking::attestation::interface::{
 use staking::constants::K;
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
+    IMintingCurveDispatcherTrait,
 };
-use staking::minting_curve::minting_curve::MintingCurve::DEFAULT_C_NUM;
 use staking::pool::interface::{
     IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher, IPoolMigrationDispatcherTrait,
     IPoolSafeDispatcher, IPoolSafeDispatcherTrait, PoolContractInfoV1, PoolMemberInfoV1,
@@ -53,7 +53,7 @@ use staking::staking::tests::interface_v1::{
 use staking::test_utils::constants::{
     AVG_BLOCK_TIME, BTC_18D_CONFIG, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, EPOCH_DURATION, EPOCH_LENGTH,
     EPOCH_STARTING_BLOCK, INITIAL_SUPPLY, MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS,
-    STARTING_BLOCK_OFFSET, TEST_BTC_DECIMALS, UPGRADE_GOVERNOR,
+    STARTING_BLOCK_OFFSET, TESTING_C_NUM, TEST_BTC_DECIMALS, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
@@ -1872,7 +1872,13 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         if let Option::Some(staker_address) = self.staker_address {
             self.staker_migration(staker_address);
         }
-        self.minting_curve.set_c_num(DEFAULT_C_NUM);
+        // Sanity check that c_num is different from TESTING_C_NUM.
+        assert!(
+            self.minting_curve.dispatcher().contract_parameters().c_num != TESTING_C_NUM,
+            "C_num is already set to the testing value: {:?}",
+            TESTING_C_NUM,
+        );
+        self.minting_curve.set_c_num(TESTING_C_NUM);
         // Sanity check that exit_wait_window is different from the default value.
         assert!(
             self.staking.get_exit_wait_window() != DEFAULT_EXIT_WAIT_WINDOW,

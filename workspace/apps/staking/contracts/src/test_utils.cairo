@@ -9,7 +9,7 @@ use constants::{
     POOL_MEMBER_REWARD_ADDRESS, POOL_MEMBER_STAKE_AMOUNT, PUBLIC_KEY,
     REWARD_SUPPLIER_CONTRACT_ADDRESS, SECURITY_ADMIN, SECURITY_AGENT, STAKER_ADDRESS,
     STAKER_INITIAL_BALANCE, STAKER_REWARD_ADDRESS, STAKE_AMOUNT, STAKING_CONTRACT_ADDRESS,
-    STARKGATE_ADDRESS, STRK_BASE_VALUE, TOKEN_ADMIN, UPGRADE_GOVERNOR,
+    STARKGATE_ADDRESS, STRK_BASE_VALUE, TESTING_C_NUM, TOKEN_ADMIN, UPGRADE_GOVERNOR,
 };
 use core::hash::HashStateTrait;
 use core::num::traits::Pow;
@@ -32,10 +32,11 @@ use staking::constants::{
 };
 use staking::errors::InternalError;
 use staking::minting_curve::interface::{
-    IMintingCurveDispatcher, IMintingCurveDispatcherTrait, MintingCurveContractInfo,
+    IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
+    IMintingCurveDispatcherTrait, MintingCurveContractInfo,
 };
 use staking::minting_curve::minting_curve::MintingCurve;
-use staking::minting_curve::minting_curve::MintingCurve::{C_DENOM, DEFAULT_C_NUM};
+use staking::minting_curve::minting_curve::MintingCurve::C_DENOM;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
@@ -77,7 +78,7 @@ pub(crate) mod constants {
     use staking::constants::STRK_IN_FRIS;
     use staking::pool::objects::TokenRewardsConfig;
     use staking::staking::objects::{EpochInfo, EpochInfoTrait};
-    use staking::types::{Amount, BlockNumber, Commission, Index, PublicKey};
+    use staking::types::{Amount, BlockNumber, Commission, Index, Inflation, PublicKey};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
     use starkware_utils::time::time::{Seconds, Timestamp};
@@ -134,6 +135,7 @@ pub(crate) mod constants {
     pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
     pub(crate) const TEST_ONE_BTC: Amount = 10_u128.pow(TEST_BTC_DECIMALS.into());
     pub(crate) const AVG_BLOCK_TIME: Seconds = 3;
+    pub(crate) const TESTING_C_NUM: Inflation = 400;
 
 
     pub fn CALLER_ADDRESS() -> ContractAddress {
@@ -494,6 +496,14 @@ pub(crate) fn deploy_minting_curve_contract(cfg: StakingInitConfig) -> ContractA
         account: cfg.test_info.token_admin,
         app_role_admin: cfg.test_info.app_role_admin,
     );
+    // Set the c_num for testing.
+    let minting_curve_config_dispatcher = IMintingCurveConfigDispatcher {
+        contract_address: minting_curve_contract_address,
+    };
+    cheat_caller_address_once(
+        contract_address: minting_curve_contract_address, caller_address: cfg.test_info.token_admin,
+    );
+    minting_curve_config_dispatcher.set_c_num(c_num: TESTING_C_NUM);
     minting_curve_contract_address
 }
 
@@ -986,7 +996,7 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
             epoch_info: DEFAULT_EPOCH_INFO(),
         };
         let minting_curve_contract_info = MintingCurveContractInfo {
-            c_num: DEFAULT_C_NUM, c_denom: C_DENOM,
+            c_num: TESTING_C_NUM, c_denom: C_DENOM,
         };
         let test_info = TestInfo {
             staker_address: STAKER_ADDRESS(),
