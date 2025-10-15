@@ -1390,8 +1390,8 @@ pub mod Staking {
             );
 
             let staker_pool_info = self.staker_pool_info.entry(staker_address).as_non_mut();
-            let staker_total_strk_balance = self
-                .get_staker_total_strk_balance_at_epoch(
+            let (staker_total_strk_balance, staker_total_btc_balance) = self
+                .get_staker_total_strk_btc_balance_at_epoch(
                     :staker_address, :staker_pool_info, epoch_id: curr_epoch,
                 );
             // Assert staker has balance.
@@ -1408,10 +1408,6 @@ pub mod Staking {
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
             let (strk_block_rewards, btc_block_rewards) = self
                 .calculate_block_rewards(:reward_supplier_dispatcher);
-            let staker_total_btc_balance = self
-                .get_staker_total_btc_balance_at_epoch(
-                    :staker_address, :staker_pool_info, epoch_id: curr_epoch,
-                );
             self
                 ._update_rewards(
                     :staker_address,
@@ -2101,27 +2097,35 @@ pub mod Staking {
             own_balance + delegated_balance
         }
 
-        /// Returns the total BTC balance of the staker in the given `epoch_id`.
+        /// Returns the (total STRK, total BTC) balance of the staker in the given `epoch_id`.
         ///
         /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
-        fn get_staker_total_btc_balance_at_epoch(
+        fn get_staker_total_strk_btc_balance_at_epoch(
             self: @ContractState,
             staker_address: ContractAddress,
             staker_pool_info: StoragePath<InternalStakerPoolInfoV2>,
             epoch_id: Epoch,
-        ) -> NormalizedAmount {
-            let mut total_btc_balance: NormalizedAmount = Zero::zero();
+        ) -> (NormalizedAmount, NormalizedAmount) {
+            let own_balance = self.get_staker_own_balance_at_epoch(:staker_address, :epoch_id);
+            if own_balance.is_zero() {
+                return (Zero::zero(), Zero::zero());
+            }
+            let mut total_strk_balance = own_balance;
+            let mut total_btc_balance = Zero::zero();
             for (pool_contract, token_address) in staker_pool_info.pools {
-                if token_address != STRK_TOKEN_ADDRESS
-                    && self.is_active_token(:token_address, :epoch_id) {
-                    let pool_balance_curr_epoch = self
+                if token_address == STRK_TOKEN_ADDRESS {
+                    total_strk_balance += self
                         .get_staker_delegated_balance_at_epoch(
                             :staker_address, :pool_contract, :epoch_id,
                         );
-                    total_btc_balance += pool_balance_curr_epoch;
+                } else if self.is_active_token(:token_address, :epoch_id) {
+                    total_btc_balance += self
+                        .get_staker_delegated_balance_at_epoch(
+                            :staker_address, :pool_contract, :epoch_id,
+                        );
                 }
             }
-            total_btc_balance
+            (total_strk_balance, total_btc_balance)
         }
 
         /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
@@ -2385,17 +2389,13 @@ pub mod Staking {
             btc_total_stake: NormalizedAmount,
         ) -> StakingPower {
             let staker_pool_info = self.staker_pool_info.entry(staker_address);
-            let staker_strk_total_amount = self
-                .get_staker_total_strk_balance_at_epoch(
+            let (staker_strk_total_amount, staker_btc_total_amount) = self
+                .get_staker_total_strk_btc_balance_at_epoch(
                     :staker_address, :staker_pool_info, :epoch_id,
                 );
             if staker_strk_total_amount.is_zero() {
                 return Zero::zero();
             }
-            let staker_btc_total_amount = self
-                .get_staker_total_btc_balance_at_epoch(
-                    :staker_address, :staker_pool_info, :epoch_id,
-                );
 
             self
                 .calculate_staker_total_staking_power(
