@@ -1130,7 +1130,7 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v2(
         rhs: amount_own,
         div: strk_curr_total_stake.to_strk_native_amount(),
     )
-        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
     // Calculate staker STRK pool rewards.
     let pool_rewards = {
         if pool_amount.is_non_zero() {
@@ -1139,7 +1139,7 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v2(
                 rhs: pool_amount,
                 div: strk_curr_total_stake.to_strk_native_amount(),
             )
-                .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
+                .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
             let commission_rewards = compute_commission_amount_rounded_down(
                 rewards_including_commission: pool_rewards_including_commission, :commission,
             );
@@ -1169,14 +1169,14 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v3(
     let mut staker_rewards = mul_wide_and_div(
         lhs: strk_block_rewards, rhs: amount_own, div: total_stake,
     )
-        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
     // Calculate staker STRK pool rewards.
     let pool_rewards = {
         if pool_amount.is_non_zero() {
             let pool_rewards_including_commission = mul_wide_and_div(
                 lhs: strk_block_rewards, rhs: pool_amount, div: total_stake,
             )
-                .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
+                .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
             let commission_rewards = compute_commission_amount_rounded_down(
                 rewards_including_commission: pool_rewards_including_commission, :commission,
             );
@@ -1214,7 +1214,7 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v2(
         rhs: pool_balance,
         div: btc_curr_total_stake.to_amount_18_decimals(),
     )
-        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
     // Split rewards into commission and pool rewards.
     let commission_rewards = compute_commission_amount_rounded_down(
         rewards_including_commission: pool_rewards_including_commission, :commission,
@@ -1244,7 +1244,7 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v3(
         rhs: normalized_pool_balance.to_amount_18_decimals(),
         div: normalized_staker_total_btc_balance.to_amount_18_decimals(),
     )
-        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
     // Split rewards into commission and pool rewards.
     let commission_rewards = compute_commission_amount_rounded_down(
         rewards_including_commission: pool_rewards_including_commission, :commission,
@@ -1285,7 +1285,7 @@ fn calculate_current_block_rewards(
 
 fn calculate_btc_rewards(total_rewards: Amount) -> Amount {
     mul_wide_and_div(lhs: total_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR)
-        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
 }
 
 /// Calculate pool rewards for one epoch
@@ -1323,7 +1323,7 @@ pub(crate) fn calculate_strk_pool_rewards_with_pool_balance_v2(
         rhs: pool_balance,
         div: strk_curr_total_stake.to_strk_native_amount(),
     )
-        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE);
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
     let commission_rewards = compute_commission_amount_rounded_down(
         rewards_including_commission: pool_rewards_including_commission, :commission,
     );
@@ -1335,7 +1335,7 @@ pub(crate) fn calculate_pool_member_rewards(
     pool_rewards: Amount, pool_member_balance: Amount, pool_balance: Amount,
 ) -> Amount {
     mul_wide_and_div(lhs: pool_member_balance, rhs: pool_rewards, div: pool_balance)
-        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
 }
 
 /// Compute the rewards for the pool trace.

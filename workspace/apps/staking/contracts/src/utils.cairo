@@ -79,7 +79,7 @@ pub(crate) fn compute_rewards_rounded_down(
     amount: Amount, interest: Index, base_value: Index,
 ) -> Amount {
     mul_wide_and_div(lhs: amount, rhs: interest, div: base_value)
-        .expect_with_err(err: InternalError::REWARDS_ISNT_AMOUNT_TYPE)
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
 }
 
 /// Compute the threshold for requesting funds from L1 Reward Supplier.

@@ -47,7 +47,6 @@ impl DescribableGenericError of Describable<GenericError> {
 #[derive(Drop)]
 pub(crate) enum InternalError {
     INVALID_EPOCH_IN_TRACE,
-    REWARDS_ISNT_AMOUNT_TYPE,
     REWARDS_COMPUTATION_OVERFLOW,
     BALANCE_ISNT_AMOUNT_TYPE,
     COMMISSION_ISNT_AMOUNT_TYPE,
@@ -64,7 +63,6 @@ impl DescribableInternalError of Describable<InternalError> {
     fn describe(self: @InternalError) -> ByteArray {
         match self {
             InternalError::INVALID_EPOCH_IN_TRACE => "Invalid epoch in trace",
-            InternalError::REWARDS_ISNT_AMOUNT_TYPE => "Rewards is too large, expected to fit in u128",
             InternalError::REWARDS_COMPUTATION_OVERFLOW => "Overflow during computation rewards",
             InternalError::BALANCE_ISNT_AMOUNT_TYPE => "Balance is too large, expected to fit in u128",
             InternalError::COMMISSION_ISNT_AMOUNT_TYPE => "Commission is too large, expected to fit in u128",
