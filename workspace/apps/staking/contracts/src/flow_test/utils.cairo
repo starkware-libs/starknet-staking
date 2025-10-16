@@ -777,7 +777,6 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
 /// It includes the address for the upgrade governor role.
 #[derive(Drop, Copy)]
 pub(crate) struct PoolRoles {
-    pub governance_admin: ContractAddress,
     pub upgrade_governor: ContractAddress,
 }
 
@@ -913,10 +912,12 @@ pub(crate) struct SystemState {
     pub staking: StakingState,
     pub minting_curve: MintingCurveState,
     pub reward_supplier: RewardSupplierState,
-    pub pool: Option<PoolState>,
     pub(crate) attestation: Option<AttestationState>,
     pub base_account: felt252,
-    staker_address: Option<ContractAddress>,
+    /// Stakers to migrate.
+    pub staker_addresses: Span<ContractAddress>,
+    /// Pool to upgrade to V1 implementation.
+    pub pool: Option<PoolState>,
 }
 
 #[generate_trait]
@@ -1020,10 +1021,10 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             staking,
             minting_curve,
             reward_supplier,
-            pool: Option::None,
             attestation: Option::Some(attestation),
             base_account: 0x100000,
-            staker_address: Option::None,
+            staker_addresses: [].span(),
+            pool: Option::None,
         };
         system_state.advance_epoch();
         // Add BTC token to the staking contract.
@@ -1072,10 +1073,10 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             staking,
             minting_curve,
             reward_supplier,
-            pool: Option::None,
             attestation: Option::None,
             base_account: 0x100000,
-            staker_address: Option::None,
+            staker_addresses: [].span(),
+            pool: Option::None,
         }
     }
 }
@@ -1177,15 +1178,15 @@ pub(crate) impl SystemImpl of SystemTrait {
                     PoolState {
                         address: pool_address,
                         governance_admin: pool_contract_admin,
-                        roles: PoolRoles {
-                            governance_admin: pool_contract_admin, upgrade_governor,
-                        },
+                        roles: PoolRoles { upgrade_governor },
                     },
                 );
     }
 
     fn set_staker_for_migration(ref self: SystemState, staker_address: ContractAddress) {
-        self.staker_address = Option::Some(staker_address);
+        let mut staker_addresses: Array<ContractAddress> = self.staker_addresses.into();
+        staker_addresses.append(staker_address);
+        self.staker_addresses = staker_addresses.span();
     }
 
     /// Advances the required block number into the attestation window.
@@ -1784,9 +1785,11 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         self.upgrade_reward_supplier_implementation_v1();
         if let Option::Some(pool) = self.pool {
             self.upgrade_pool_implementation_v1(:pool);
-        }
-        if let Option::Some(staker_address) = self.staker_address {
-            self.staker_migration(staker_address);
+        } // Migrate staker only if it has no pool.
+        else {
+            for staker_address in self.staker_addresses {
+                self.staker_migration(staker_address: *staker_address);
+            }
         }
         self.staking.unpause();
     }
@@ -1847,12 +1850,12 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
         set_account_as_governance_admin(
             contract: pool.address,
             account: staking_contract,
-            governance_admin: pool.roles.governance_admin,
+            governance_admin: pool.governance_admin,
         );
         set_account_as_upgrade_governor(
             contract: pool.address,
             account: staking_contract,
-            governance_admin: pool.roles.governance_admin,
+            governance_admin: pool.governance_admin,
         );
     }
 }
@@ -1869,8 +1872,8 @@ pub(crate) impl SystemReplaceabilityV2Impl of SystemReplaceabilityV2Trait {
         self.upgrade_staking_implementation_v2();
         self.upgrade_reward_supplier_implementation_v2();
         self.upgrade_minting_curve_implementation_v2();
-        if let Option::Some(staker_address) = self.staker_address {
-            self.staker_migration(staker_address);
+        for staker_address in self.staker_addresses {
+            self.staker_migration(staker_address: *staker_address);
         }
         // Sanity check that c_num is different from TESTING_C_NUM.
         assert!(
@@ -2025,12 +2028,6 @@ pub(crate) impl SystemFactoryImpl of SystemFactoryTrait {
 }
 
 pub(crate) trait FlowTrait<TFlow, +Drop<TFlow>> {
-    fn get_pool_address(self: TFlow) -> Option<ContractAddress> {
-        Option::None
-    }
-    fn get_staker_address(self: TFlow) -> Option<ContractAddress> {
-        Option::None
-    }
     fn setup(ref self: TFlow, ref system: SystemState) {}
     fn setup_v1(ref self: TFlow, ref system: SystemState) {}
     fn setup_v2(ref self: TFlow, ref system: SystemState) {}
@@ -2047,18 +2044,8 @@ pub(crate) fn test_flow_mainnet<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TF
 ) {
     let mut system = SystemFactoryTrait::mainnet_system();
     flow.setup(ref :system);
-    if let Option::Some(pool_address) = flow.get_pool_address() {
-        // Pool upgrade handles the migration of internal staker info.
-        system.set_pool_for_upgrade(pool_address);
-    } else if let Option::Some(staker_address) = flow.get_staker_address() {
-        // Need to migrate internal staker info only if there is no pool to upgrade.
-        system.set_staker_for_migration(staker_address);
-    }
     system.deploy_attestation_and_upgrade_contracts_implementation_v1();
     flow.setup_v1(ref :system);
-    if let Option::Some(staker_address) = flow.get_staker_address() {
-        system.set_staker_for_migration(staker_address);
-    }
     system.upgrade_contracts_implementation_v2();
     flow.setup_v2(ref :system);
     system.upgrade_contracts_implementation_v3();
