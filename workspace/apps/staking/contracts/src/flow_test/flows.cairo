@@ -1014,17 +1014,8 @@ pub(crate) struct PoolUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Amount,
-    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl PoolUpgradeFlowImpl of FlowTrait<PoolUpgradeFlow> {
-    fn get_staker_address(self: PoolUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: PoolUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: PoolUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -1041,7 +1032,8 @@ pub(crate) impl PoolUpgradeFlowImpl of FlowTrait<PoolUpgradeFlow> {
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = delegated_amount;
-        self.staker = Option::Some(staker);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: PoolUpgradeFlow, ref system: SystemState) {
@@ -1240,17 +1232,8 @@ pub(crate) struct PoolMemberInfoAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegator_info: Option<PoolMemberInfo>,
-    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl of FlowTrait<PoolMemberInfoAfterUpgradeFlow> {
-    fn get_staker_address(self: PoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: PoolMemberInfoAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: PoolMemberInfoAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -1270,9 +1253,10 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl of FlowTrait<PoolMemberInfoAf
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegator_info = Option::Some(delegator_info);
-        self.staker = Option::Some(staker);
         system.advance_time(time: one_week);
         system.staking.update_global_index_if_needed();
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: PoolMemberInfoAfterUpgradeFlow, ref system: SystemState) {
@@ -1403,21 +1387,10 @@ pub(crate) struct PoolMemberInfoUndelegateAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegator_info: Option<PoolMemberInfo>,
-    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl of FlowTrait<
     PoolMemberInfoUndelegateAfterUpgradeFlow,
 > {
-    fn get_staker_address(
-        self: PoolMemberInfoUndelegateAfterUpgradeFlow,
-    ) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: PoolMemberInfoUndelegateAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: PoolMemberInfoUndelegateAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -1441,8 +1414,9 @@ pub(crate) impl PoolMemberInfoUndelegateAfterUpgradeFlowImpl of FlowTrait<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegator_info = Option::Some(delegator_info);
-        self.staker = Option::Some(staker);
         system.advance_time(time: one_week);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: PoolMemberInfoUndelegateAfterUpgradeFlow, ref system: SystemState) {
@@ -1475,19 +1449,10 @@ pub(crate) struct IncreaseDelegationAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl of FlowTrait<
     IncreaseDelegationAfterUpgradeFlow,
 > {
-    fn get_staker_address(self: IncreaseDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: IncreaseDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: IncreaseDelegationAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -1503,7 +1468,8 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl of FlowTrait<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
-        self.staker = Option::Some(staker);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: IncreaseDelegationAfterUpgradeFlow, ref system: SystemState) {
@@ -1525,17 +1491,8 @@ pub(crate) impl IncreaseDelegationAfterUpgradeFlowImpl of FlowTrait<
 pub(crate) struct IncreaseStakeAfterUpgradeFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) stake_amount: Option<Amount>,
-    pub(crate) pool_address: Option<ContractAddress>,
 }
 pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl of FlowTrait<IncreaseStakeAfterUpgradeFlow> {
-    fn get_staker_address(self: IncreaseStakeAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: IncreaseStakeAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: IncreaseStakeAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -1547,7 +1504,8 @@ pub(crate) impl IncreaseStakeAfterUpgradeFlowImpl of FlowTrait<IncreaseStakeAfte
         self.staker = Option::Some(staker);
         self.stake_amount = Option::Some(stake_amount);
         let pool = system.staking.get_pool(:staker);
-        self.pool_address = Option::Some(pool);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: IncreaseStakeAfterUpgradeFlow, ref system: SystemState) {
@@ -2270,18 +2228,9 @@ pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
 pub(crate) struct DelegatorActionAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
-    pub(crate) staker: Option<Staker>,
     pub(crate) exit_wait_window: Option<TimeDelta>,
 }
 pub(crate) impl DelegatorActionAfterUpgradeFlowImpl of FlowTrait<DelegatorActionAfterUpgradeFlow> {
-    fn get_staker_address(self: DelegatorActionAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: DelegatorActionAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: DelegatorActionAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -2298,8 +2247,9 @@ pub(crate) impl DelegatorActionAfterUpgradeFlowImpl of FlowTrait<DelegatorAction
 
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
-        self.staker = Option::Some(staker);
         self.exit_wait_window = Option::Some(system.staking.get_exit_wait_window());
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: DelegatorActionAfterUpgradeFlow, ref system: SystemState) {
@@ -2334,17 +2284,8 @@ pub(crate) struct DelegatorIntentAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl of FlowTrait<DelegatorIntentAfterUpgradeFlow> {
-    fn get_staker_address(self: DelegatorIntentAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: DelegatorIntentAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: DelegatorIntentAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -2359,7 +2300,8 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl of FlowTrait<DelegatorIntent
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(stake_amount);
-        self.staker = Option::Some(staker);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: DelegatorIntentAfterUpgradeFlow, ref system: SystemState) {
@@ -2382,17 +2324,8 @@ pub(crate) impl DelegatorIntentAfterUpgradeFlowImpl of FlowTrait<DelegatorIntent
 #[derive(Drop, Copy)]
 pub(crate) struct StakerIntentAfterUpgradeFlow {
     pub(crate) staker: Option<Staker>,
-    pub(crate) pool_address: Option<ContractAddress>,
 }
 pub(crate) impl StakerIntentAfterUpgradeFlowImpl of FlowTrait<StakerIntentAfterUpgradeFlow> {
-    fn get_staker_address(self: StakerIntentAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: StakerIntentAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: StakerIntentAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -2403,7 +2336,8 @@ pub(crate) impl StakerIntentAfterUpgradeFlowImpl of FlowTrait<StakerIntentAfterU
 
         self.staker = Option::Some(staker);
         let pool = system.staking.get_pool(:staker);
-        self.pool_address = Option::Some(pool);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: StakerIntentAfterUpgradeFlow, ref system: SystemState) {
@@ -2428,14 +2362,6 @@ pub(crate) struct StakerActionAfterUpgradeFlow {
 }
 
 pub(crate) impl StakerActionAfterUpgradeFlowImpl of FlowTrait<StakerActionAfterUpgradeFlow> {
-    fn get_staker_address(self: StakerActionAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: StakerActionAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: StakerActionAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -2447,8 +2373,9 @@ pub(crate) impl StakerActionAfterUpgradeFlowImpl of FlowTrait<StakerActionAfterU
 
         self.staker = Option::Some(staker);
         let pool = system.staking.get_pool(:staker);
-        self.pool_address = Option::Some(pool);
         self.exit_wait_window = Option::Some(system.staking.get_exit_wait_window());
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: StakerActionAfterUpgradeFlow, ref system: SystemState) {
@@ -2480,10 +2407,6 @@ pub(crate) struct StakerAttestAfterIntentFlow {
 }
 
 pub(crate) impl StakerAttestAfterIntentFlowImpl of FlowTrait<StakerAttestAfterIntentFlow> {
-    fn get_staker_address(self: StakerAttestAfterIntentFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
     fn setup(ref self: StakerAttestAfterIntentFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -2493,6 +2416,7 @@ pub(crate) impl StakerAttestAfterIntentFlowImpl of FlowTrait<StakerAttestAfterIn
         system.staker_exit_intent(:staker);
 
         self.staker = Option::Some(staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: StakerAttestAfterIntentFlow, ref system: SystemState) {
@@ -2593,19 +2517,10 @@ pub(crate) struct DelegatorPartialIntentAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl of FlowTrait<
     DelegatorPartialIntentAfterUpgradeFlow,
 > {
-    fn get_staker_address(self: DelegatorPartialIntentAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: DelegatorPartialIntentAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: DelegatorPartialIntentAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -2620,7 +2535,8 @@ pub(crate) impl DelegatorPartialIntentAfterUpgradeFlowImpl of FlowTrait<
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
-        self.staker = Option::Some(staker);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: DelegatorPartialIntentAfterUpgradeFlow, ref system: SystemState) {
@@ -2666,14 +2582,6 @@ pub(crate) struct ChangeCommissionAfterUpgradeFlow {
 pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl of FlowTrait<
     ChangeCommissionAfterUpgradeFlow,
 > {
-    fn get_staker_address(self: ChangeCommissionAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: ChangeCommissionAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: ChangeCommissionAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -2690,6 +2598,8 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl of FlowTrait<
         self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.commission = Option::Some(commission);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: ChangeCommissionAfterUpgradeFlow, ref system: SystemState) {
@@ -2711,19 +2621,10 @@ pub(crate) impl ChangeCommissionAfterUpgradeFlowImpl of FlowTrait<
 pub(crate) struct DelegatorClaimRewardsAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
-    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
     DelegatorClaimRewardsAfterUpgradeFlow,
 > {
-    fn get_staker_address(self: DelegatorClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: DelegatorClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: DelegatorClaimRewardsAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -2740,10 +2641,11 @@ pub(crate) impl DelegatorClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
 
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
-        self.staker = Option::Some(staker);
 
         system.advance_time(time: one_week);
         system.staking.update_global_index_if_needed();
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: DelegatorClaimRewardsAfterUpgradeFlow, ref system: SystemState) {
@@ -2832,17 +2734,8 @@ pub(crate) struct DelegatorSwitchAfterUpgradeFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl of FlowTrait<DelegatorSwitchAfterUpgradeFlow> {
-    fn get_staker_address(self: DelegatorSwitchAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: DelegatorSwitchAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: DelegatorSwitchAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -2860,7 +2753,8 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl of FlowTrait<DelegatorSwitch
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
-        self.staker = Option::Some(staker);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: DelegatorSwitchAfterUpgradeFlow, ref system: SystemState) {
@@ -3914,10 +3808,6 @@ pub(crate) struct StakerMigrationCalledTwiceFlow {
     pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl StakerMigrationCalledTwiceFlowImpl of FlowTrait<StakerMigrationCalledTwiceFlow> {
-    fn get_staker_address(self: StakerMigrationCalledTwiceFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker?.staker.address)
-    }
-
     fn setup_v1(ref self: StakerMigrationCalledTwiceFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -3928,6 +3818,7 @@ pub(crate) impl StakerMigrationCalledTwiceFlowImpl of FlowTrait<StakerMigrationC
         system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
 
         self.staker = Option::Some(staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: StakerMigrationCalledTwiceFlow, ref system: SystemState) {
@@ -3946,12 +3837,6 @@ pub(crate) struct InternalStakerInfoWithoutStakerMigrationFlow {
 pub(crate) impl InternalStakerInfoWithoutStakerMigrationFlowImpl of FlowTrait<
     InternalStakerInfoWithoutStakerMigrationFlow,
 > {
-    fn get_staker_address(
-        self: InternalStakerInfoWithoutStakerMigrationFlow,
-    ) -> Option<ContractAddress> {
-        Option::None
-    }
-
     fn setup_v1(ref self: InternalStakerInfoWithoutStakerMigrationFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -4512,14 +4397,6 @@ pub(crate) struct PoolClaimRewardsAfterUpgradeFlow {
 pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
     PoolClaimRewardsAfterUpgradeFlow,
 > {
-    fn get_staker_address(self: PoolClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: PoolClaimRewardsAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: PoolClaimRewardsAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -4542,6 +4419,8 @@ pub(crate) impl PoolClaimRewardsAfterUpgradeFlowImpl of FlowTrait<
         self.staker = Option::Some(staker);
         self.delegator = Option::Some(delegator);
         self.delegator_info = Option::Some(delegator_info);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: PoolClaimRewardsAfterUpgradeFlow, ref system: SystemState) {
@@ -4666,14 +4545,6 @@ pub(crate) struct PoolChangeBalanceAfterUpgradeFlow {
 pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
     PoolChangeBalanceAfterUpgradeFlow,
 > {
-    fn get_staker_address(self: PoolChangeBalanceAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: PoolChangeBalanceAfterUpgradeFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: PoolChangeBalanceAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -4697,6 +4568,8 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
         self.delegator = Option::Some(delegator);
         self.delegator_info = Option::Some(delegator_info);
         self.delegated_amount = delegated_amount;
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: PoolChangeBalanceAfterUpgradeFlow, ref system: SystemState) {
@@ -4750,7 +4623,6 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
 /// Test balances
 #[derive(Drop, Copy)]
 pub(crate) struct DelegatorIntentInV0ActionInV2Flow {
-    pub(crate) staker: Option<Staker>,
     pub(crate) delegators: Option<(Delegator, Delegator, Delegator)>,
     pub(crate) amount: Option<Amount>,
     pub(crate) pool_address: Option<ContractAddress>,
@@ -4758,14 +4630,6 @@ pub(crate) struct DelegatorIntentInV0ActionInV2Flow {
 pub(crate) impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
     DelegatorIntentInV0ActionInV2Flow,
 > {
-    fn get_staker_address(self: DelegatorIntentInV0ActionInV2Flow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: DelegatorIntentInV0ActionInV2Flow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: DelegatorIntentInV0ActionInV2Flow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -4785,10 +4649,11 @@ pub(crate) impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
         system.delegator_exit_intent(delegator: delegator3, :pool, amount: 0);
         system.advance_exit_wait_window();
 
-        self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.delegators = Option::Some((delegator1, delegator2, delegator3));
         self.amount = Option::Some(amount);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: DelegatorIntentInV0ActionInV2Flow, ref system: SystemState) {
@@ -4826,7 +4691,6 @@ pub(crate) impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
 /// Test balances
 #[derive(Drop, Copy)]
 pub(crate) struct DelegatorIntentInV0ChangeIntentActionInV2Flow {
-    pub(crate) staker: Option<Staker>,
     pub(crate) delegators: Option<(Delegator, Delegator, Delegator)>,
     pub(crate) amount: Option<Amount>,
     pub(crate) pool_address: Option<ContractAddress>,
@@ -4834,18 +4698,6 @@ pub(crate) struct DelegatorIntentInV0ChangeIntentActionInV2Flow {
 pub(crate) impl DelegatorIntentInV0ChangeIntentActionInV2FlowImpl of FlowTrait<
     DelegatorIntentInV0ChangeIntentActionInV2Flow,
 > {
-    fn get_staker_address(
-        self: DelegatorIntentInV0ChangeIntentActionInV2Flow,
-    ) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(
-        self: DelegatorIntentInV0ChangeIntentActionInV2Flow,
-    ) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: DelegatorIntentInV0ChangeIntentActionInV2Flow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -4865,10 +4717,11 @@ pub(crate) impl DelegatorIntentInV0ChangeIntentActionInV2FlowImpl of FlowTrait<
         system.delegator_exit_intent(delegator: delegator3, :pool, amount: 0);
         system.advance_exit_wait_window();
 
-        self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.delegators = Option::Some((delegator1, delegator2, delegator3));
         self.amount = Option::Some(amount);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: DelegatorIntentInV0ChangeIntentActionInV2Flow, ref system: SystemState) {
@@ -4975,18 +4828,6 @@ pub(crate) struct DelegatorIntentBeforeClaimRewardsAfterFlow {
 pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl of FlowTrait<
     DelegatorIntentBeforeClaimRewardsAfterFlow,
 > {
-    fn get_staker_address(
-        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
-    ) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(
-        self: DelegatorIntentBeforeClaimRewardsAfterFlow,
-    ) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: DelegatorIntentBeforeClaimRewardsAfterFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -5002,6 +4843,8 @@ pub(crate) impl DelegatorIntentBeforeClaimRewardsAfterFlowImpl of FlowTrait<
         self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: DelegatorIntentBeforeClaimRewardsAfterFlow, ref system: SystemState) {
@@ -5113,10 +4956,6 @@ pub(crate) struct SetOpenForDelegationAfterUpgradeFlow {
 pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl of FlowTrait<
     SetOpenForDelegationAfterUpgradeFlow,
 > {
-    fn get_staker_address(self: SetOpenForDelegationAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
     fn setup(ref self: SetOpenForDelegationAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -5124,6 +4963,7 @@ pub(crate) impl SetOpenForDelegationAfterUpgradeFlowImpl of FlowTrait<
         let staker = system.new_staker(amount: stake_amount);
         system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
         self.staker = Option::Some(staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: SetOpenForDelegationAfterUpgradeFlow, ref system: SystemState) {
@@ -5304,14 +5144,8 @@ pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl of FlowTrait<
 pub(crate) struct TotalStakeAfterUpgradeFlow {
     pub(crate) total_stake: Option<Amount>,
     pub(crate) current_total_stake: Option<Amount>,
-    pub(crate) staker: Option<Staker>,
-    pub(crate) staker2: Option<Staker>,
 }
 pub(crate) impl TotalStakeAfterUpgradeFlowImpl of FlowTrait<TotalStakeAfterUpgradeFlow> {
-    fn get_staker_address(self: TotalStakeAfterUpgradeFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker?.staker.address)
-    }
-
     fn setup_v1(ref self: TotalStakeAfterUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -5343,14 +5177,11 @@ pub(crate) impl TotalStakeAfterUpgradeFlowImpl of FlowTrait<TotalStakeAfterUpgra
 
         self.total_stake = Option::Some(total_stake);
         self.current_total_stake = Option::Some(current_total_stake);
-        self.staker = Option::Some(staker1);
-        self.staker2 = Option::Some(staker2);
+        system.set_staker_for_migration(staker_address: staker1.staker.address);
+        system.set_staker_for_migration(staker_address: staker2.staker.address);
     }
 
     fn test(self: TotalStakeAfterUpgradeFlow, ref system: SystemState) {
-        // TODO: upgrade more then one staker in utils. for now upgrade the second staker manually.
-        let staker2 = self.staker2.unwrap();
-        system.staker_migration(staker_address: staker2.staker.address);
         // Test total stake after upgrade
         assert!(system.staking.get_total_stake() == self.total_stake.unwrap());
         let (strk_current_total_stake, btc_current_total_stake) = system
@@ -6059,19 +5890,10 @@ pub(crate) impl SwitchWithNonUpgradedPoolFlowImpl of FlowTrait<SwitchWithNonUpgr
 pub(crate) struct DelegatorExitBeforeEnterAfterFlow {
     pub(crate) pool_address: Option<ContractAddress>,
     pub(crate) delegator: Option<Delegator>,
-    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl of FlowTrait<
     DelegatorExitBeforeEnterAfterFlow,
 > {
-    fn get_staker_address(self: DelegatorExitBeforeEnterAfterFlow) -> Option<ContractAddress> {
-        Option::Some(self.staker.unwrap().staker.address)
-    }
-
-    fn get_pool_address(self: DelegatorExitBeforeEnterAfterFlow) -> Option<ContractAddress> {
-        self.pool_address
-    }
-
     fn setup(ref self: DelegatorExitBeforeEnterAfterFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -6092,7 +5914,8 @@ pub(crate) impl DelegatorExitBeforeEnterAfterFlowImpl of FlowTrait<
 
         self.pool_address = Option::Some(pool);
         self.delegator = Option::Some(delegator);
-        self.staker = Option::Some(staker);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: DelegatorExitBeforeEnterAfterFlow, ref system: SystemState) {
@@ -6895,10 +6718,6 @@ pub(crate) struct PoolEICFlow {
     pub(crate) pool_btc_18d_v2: Option<ContractAddress>,
 }
 pub(crate) impl PoolEICFlowImpl of FlowTrait<PoolEICFlow> {
-    fn get_pool_address(self: PoolEICFlow) -> Option<ContractAddress> {
-        self.pool_v0
-    }
-
     fn setup(ref self: PoolEICFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -6906,6 +6725,7 @@ pub(crate) impl PoolEICFlowImpl of FlowTrait<PoolEICFlow> {
         system.stake(:staker, :amount, pool_enabled: true, :commission);
         let pool_address = system.staking.get_pool(:staker);
         self.pool_v0 = Option::Some(pool_address);
+        system.set_pool_for_upgrade(pool_address: pool_address);
     }
 
     fn setup_v1(ref self: PoolEICFlow, ref system: SystemState) {
@@ -7077,9 +6897,6 @@ pub(crate) struct FindSigmaMigrationFlow {
     pub(crate) member_rewards: Option<Amount>,
 }
 pub(crate) impl FindSigmaMigrationFlowImpl of FlowTrait<FindSigmaMigrationFlow> {
-    fn get_pool_address(self: FindSigmaMigrationFlow) -> Option<ContractAddress> {
-        self.pool
-    }
     fn setup_v2(ref self: FindSigmaMigrationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -7144,9 +6961,6 @@ pub(crate) struct FindSigmaEdgeCasesMigrationFlow {
     pub(crate) member_rewards: Option<Amount>,
 }
 pub(crate) impl FindSigmaEdgeCasesMigrationFlowImpl of FlowTrait<FindSigmaEdgeCasesMigrationFlow> {
-    fn get_pool_address(self: FindSigmaEdgeCasesMigrationFlow) -> Option<ContractAddress> {
-        self.pool
-    }
     fn setup_v2(ref self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
@@ -7203,9 +7017,6 @@ pub(crate) struct FindSigmaMigrationIdxIsOneFlow {
     pub(crate) member_rewards: Option<Amount>,
 }
 pub(crate) impl FindSigmaMigrationIdxIsOneFlowImpl of FlowTrait<FindSigmaMigrationIdxIsOneFlow> {
-    fn get_pool_address(self: FindSigmaMigrationIdxIsOneFlow) -> Option<ContractAddress> {
-        self.pool
-    }
     fn setup_v2(ref self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
