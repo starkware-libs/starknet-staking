@@ -1,5 +1,5 @@
 mod eic;
-pub(crate) mod errors;
+pub mod errors;
 pub mod interface;
 pub(crate) mod objects;
 pub(crate) mod staker_balance_trace;

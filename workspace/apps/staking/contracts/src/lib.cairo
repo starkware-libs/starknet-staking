@@ -1,6 +1,6 @@
 pub mod attestation;
 pub(crate) mod constants;
-pub(crate) mod errors;
+pub mod errors;
 #[cfg(test)]
 pub(crate) mod event_test_utils;
 #[cfg(test)]
