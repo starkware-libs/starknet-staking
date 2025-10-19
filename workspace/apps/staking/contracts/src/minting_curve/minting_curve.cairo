@@ -60,13 +60,14 @@ pub mod MintingCurve {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        /// The dispatcher for the staking contract.
         staking_dispatcher: IStakingDispatcher,
         /// Total supply of the token in L1. This is updated by the L1 reward supplier.
         total_supply: Amount,
         /// L1 reward supplier.
         l1_reward_supplier: felt252,
-        /// The numerator of the inflation rate. The denominator is C_DENOM.
-        /// Yearly mint is (C_NUM / C_DENOM) * sqrt(total_stake * total_supply).
+        /// The numerator of the inflation rate. The denominator is `C_DENOM`.
+        /// Yearly mint is `(C_NUM / C_DENOM) * sqrt(total_stake * total_supply)`.
         c_num: Inflation,
     }
 
@@ -87,6 +88,7 @@ pub mod MintingCurve {
 
 
     #[constructor]
+    #[doc(hidden)]
     pub fn constructor(
         ref self: ContractState,
         staking_contract: ContractAddress,
