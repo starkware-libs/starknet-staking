@@ -11,20 +11,27 @@ use starkware_utils::time::time::{TimeDelta, Timestamp};
 /// Public interface for the staking contract.
 #[starknet::interface]
 pub trait IStaking<TContractState> {
+    /// Enter the staking contract as a staker with the given `amount` of STRK.
     fn stake(
         ref self: TContractState,
         reward_address: ContractAddress,
         operational_address: ContractAddress,
         amount: Amount,
     );
+    /// Increase the staker's stake by the given `amount` of STRK.
     fn increase_stake(
         ref self: TContractState, staker_address: ContractAddress, amount: Amount,
     ) -> Amount;
+    /// Claim rewards for the given `staker_address` to their reward address.
     fn claim_rewards(ref self: TContractState, staker_address: ContractAddress) -> Amount;
+    /// Initiate an unstake process for the calling staker.
     fn unstake_intent(ref self: TContractState) -> Timestamp;
+    /// Complete the unstake process for the staker.
     /// **Note**: Staker cannot stake again after `unstake_action`.
     fn unstake_action(ref self: TContractState, staker_address: ContractAddress) -> Amount;
+    /// Change the reward address for the calling staker.
     fn change_reward_address(ref self: TContractState, reward_address: ContractAddress);
+    /// Open a new delegation pool for the given `token_address` for the calling staker.
     fn set_open_for_delegation(
         ref self: TContractState, token_address: ContractAddress,
     ) -> ContractAddress;
@@ -51,11 +58,16 @@ pub trait IStaking<TContractState> {
     fn get_staker_info_v1(
         self: @TContractState, staker_address: ContractAddress,
     ) -> Option<StakerInfoV1>;
+    /// Returns the current epoch for the staking contract.
     fn get_current_epoch(self: @TContractState) -> Epoch;
+    /// Returns the epoch info for the staking contract.
     fn get_epoch_info(self: @TContractState) -> EpochInfo;
+    /// Returns the commission commitment for the given `staker_address`.
+    /// Panics if the staker has no commission commitment set.
     fn get_staker_commission_commitment(
         self: @TContractState, staker_address: ContractAddress,
     ) -> CommissionCommitment;
+    /// Returns the parameters of the staking contract.
     fn contract_parameters_v1(self: @TContractState) -> StakingContractInfoV1;
     /// Returns the last total stake for the STRK token only.
     /// Note: The function name does not specify STRK for backwards compatibility.
@@ -64,14 +76,21 @@ pub trait IStaking<TContractState> {
     fn get_current_total_staking_power(
         self: @TContractState,
     ) -> (NormalizedAmount, NormalizedAmount);
+    /// Declare the caller address as the operational address for the given `staker_address`.
     fn declare_operational_address(ref self: TContractState, staker_address: ContractAddress);
+    /// Change the operational address for the calling staker.
     fn change_operational_address(ref self: TContractState, operational_address: ContractAddress);
+    /// Set the commission for all pools of the calling staker.
     fn set_commission(ref self: TContractState, commission: Commission);
+    /// Set the commission commitment for all pools of the calling staker.
     fn set_commission_commitment(
         ref self: TContractState, max_commission: Commission, expiration_epoch: Epoch,
     );
+    /// Returns whether the staking contract is paused.
     fn is_paused(self: @TContractState) -> bool;
+    /// Returns a span of all the active tokens' addresses.
     fn get_active_tokens(self: @TContractState) -> Span<ContractAddress>;
+    /// Returns a span of (token_address, is_active) for all tokens added to the contract.
     fn get_tokens(self: @TContractState) -> Span<(ContractAddress, bool)>;
     /// Returns the total stake for the given `token_address` in its native decimals.
     fn get_total_stake_for_token(self: @TContractState, token_address: ContractAddress) -> Amount;
@@ -205,7 +224,11 @@ pub trait IStakingPool<TContractState> {
 
 #[starknet::interface]
 pub trait IStakingPause<TContractState> {
+    /// Pause the staking contract.
+    /// Pausing the staking contract prevents any state changes (balance changes, staker settings,
+    /// etc.)
     fn pause(ref self: TContractState);
+    /// Unpause the staking contract.
     fn unpause(ref self: TContractState);
 }
 
@@ -220,7 +243,9 @@ pub trait IStakingConfig<TContractState> {
     /// the old exit wait window when calling exit_action.
     /// Note: The exit wait window must be at least K epochs.
     fn set_exit_wait_window(ref self: TContractState, exit_wait_window: TimeDelta);
+    /// Set the reward supplier contract for the staking contract.
     fn set_reward_supplier(ref self: TContractState, reward_supplier: ContractAddress);
+    /// Set the epoch info for the staking contract.
     /// Note: K epochs duration must be <= exit wait window.
     fn set_epoch_info(ref self: TContractState, epoch_duration: u32, epoch_length: u32);
     /// Sets the epoch number at which reward distribution begins under the consensus scheme.
@@ -263,6 +288,7 @@ pub trait IStakingAttestation<TContractState> {
     fn update_rewards_from_attestation_contract(
         ref self: TContractState, staker_address: ContractAddress,
     );
+    /// Returns the attestation info for the given `operational_address`.
     fn get_attestation_info_by_operational_address(
         self: @TContractState, operational_address: ContractAddress,
     ) -> AttestationInfo;
