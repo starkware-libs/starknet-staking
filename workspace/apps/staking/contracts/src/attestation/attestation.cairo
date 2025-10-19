@@ -55,11 +55,12 @@ pub mod Attestation {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        /// Address of the staking contract.
         staking_contract: ContractAddress,
         /// Maps staker address to the last epoch it attested.
         staker_last_attested_epoch: Map<ContractAddress, Epoch>,
         /// Number of blocks where the staker can attest after the target attestation block.
-        /// Note: that it still needs to be after the minimum attestation window.
+        /// Note: it still needs to be after the minimum attestation window.
         ///
         /// Example:
         /// - target attestation block = x,
