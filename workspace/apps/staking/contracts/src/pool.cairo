@@ -1,5 +1,5 @@
 mod eic;
-pub(crate) mod errors;
+pub mod errors;
 pub mod interface;
 pub(crate) mod interface_v0;
 pub(crate) mod objects;
