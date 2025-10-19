@@ -60,8 +60,11 @@ pub mod RewardSupplier {
         l1_pending_requested_amount: Amount,
         /// The amount of tokens that is requested from L1 in a single message.
         base_mint_amount: Amount,
+        /// Minting curve contract dispatcher. Used to get the yearly mint.
         minting_curve_dispatcher: IMintingCurveDispatcher,
+        /// Staking contract address.
         staking_contract: ContractAddress,
+        /// STRK token dispatcher.
         token_dispatcher: IERC20Dispatcher,
         /// L1 reward supplier contract.
         l1_reward_supplier: felt252,
