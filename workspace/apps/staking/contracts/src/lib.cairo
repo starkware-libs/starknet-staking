@@ -11,5 +11,5 @@ pub mod reward_supplier;
 pub mod staking;
 #[cfg(test)]
 pub(crate) mod test_utils;
-pub(crate) mod types;
+pub mod types;
 pub(crate) mod utils;
