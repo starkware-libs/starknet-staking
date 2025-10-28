@@ -95,12 +95,13 @@ pub mod Pool {
         // Deprecated commission field, was used in V0.
         // commission: Commission,
         // -------------------------------
+        /// Address of the staker that the pool is associated with.
         staker_address: ContractAddress,
         /// Map pool member to their pool member info.
         pool_member_info: Map<ContractAddress, VInternalPoolMemberInfo>,
         /// Dispatcher for the staking contract's pool functions.
         staking_pool_dispatcher: IStakingPoolDispatcher,
-        /// Dispatcher for the token contract.
+        /// Pool's token dispatcher.
         token_dispatcher: IERC20Dispatcher,
         /// Map pool member to their epoch-balance info.
         pool_member_epoch_balance: Map<ContractAddress, PoolMemberBalanceTrace>,
@@ -144,6 +145,7 @@ pub mod Pool {
 
 
     #[constructor]
+    #[doc(hidden)]
     pub fn constructor(
         ref self: ContractState,
         staker_address: ContractAddress,
@@ -425,7 +427,6 @@ pub mod Pool {
             pool_member_info.unpool_amount
         }
 
-        // This function is called by the staking contract to enter the pool during a pool switch.
         fn enter_delegation_pool_from_staking_contract(
             ref self: ContractState, amount: Amount, data: Span<felt252>,
         ) {
@@ -491,8 +492,6 @@ pub mod Pool {
                 );
         }
 
-        // This function is called by the staking contract to notify the pool that the staker has
-        // been removed from the staking contract.
         fn set_staker_removed(ref self: ContractState) {
             // Asserts.
             self.assert_caller_is_staking_contract();
@@ -525,7 +524,6 @@ pub mod Pool {
                 );
         }
 
-        // This function provides the pool member info (with projected rewards).
         fn pool_member_info_v1(
             self: @ContractState, pool_member: ContractAddress,
         ) -> PoolMemberInfoV1 {
