@@ -131,6 +131,7 @@ pub(crate) impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: true, :commission);
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.stake_amount = Option::Some(amount);
         self.initial_reward_supplier_balance = Option::Some(initial_reward_supplier_balance);
@@ -138,8 +139,6 @@ pub(crate) impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
 
     fn test(self: PoolUpgradeBasicFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        system.staker_migration(:staker_address);
         let stake_amount = self.stake_amount.unwrap();
         let initial_reward_supplier_balance = self.initial_reward_supplier_balance.unwrap();
 
@@ -1310,6 +1309,8 @@ pub(crate) impl MultipleStakersMigrationAttestFlowImpl of FlowTrait<
         system.stake(staker: staker2, :amount, pool_enabled: true, :commission);
         system.advance_epoch();
 
+        system.set_staker_for_migration(staker_address: staker1.staker.address);
+        system.set_staker_for_migration(staker_address: staker2.staker.address);
         self.staker1 = Option::Some(staker1);
         self.staker2 = Option::Some(staker2);
         self.staker_info1 = Option::Some(system.staker_info_v1(staker: staker1));
@@ -1321,8 +1322,6 @@ pub(crate) impl MultipleStakersMigrationAttestFlowImpl of FlowTrait<
     fn test(self: MultipleStakersMigrationAttestFlow, ref system: SystemState) {
         let staker1 = self.staker1.unwrap();
         let staker2 = self.staker2.unwrap();
-        system.staker_migration(staker_address: staker1.staker.address);
-        system.staker_migration(staker_address: staker2.staker.address);
         let staker_info1 = self.staker_info1.unwrap();
         let staker_info2 = self.staker_info2.unwrap();
         let commission = self.commission.unwrap();
@@ -1681,6 +1680,7 @@ pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
         system.advance_k_epochs_and_attest(:staker);
         system.advance_exit_wait_window();
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.delegator = Option::Some(delegator);
         self.delegated_amount = Option::Some(delegated_amount);
@@ -1690,7 +1690,6 @@ pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
 
     fn test(self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        system.staker_migration(staker_address: staker.staker.address);
         let delegator = self.delegator.unwrap();
         let initial_stake_amount = self.initial_stake_amount.unwrap();
         let pool = system.staking.get_pool(:staker);
@@ -2157,6 +2156,7 @@ pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
         system.advance_epoch();
         system.increase_stake(:staker, :amount);
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.amount = Option::Some(amount);
     }
@@ -2164,7 +2164,6 @@ pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
     fn test(self: StakerMultipleEntriesMigrationAttestFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
         let staker_address = staker.staker.address;
-        system.staker_migration(:staker_address);
         let amount = self.amount.unwrap();
         let staking_contract = system.staking.address;
         let minting_curve_contract = system.minting_curve.address;
@@ -2823,6 +2822,7 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
                 :staker, max_commission: commission + 100, expiration_epoch: current_epoch + 100,
             );
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         let staker_info = system.staker_info_v1(:staker);
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(staker_info);
@@ -2835,7 +2835,6 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
     fn test(self: StakerMigrationFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
         let staker_address = staker.staker.address;
-        system.staker_migration(staker_address);
         // Test staker_info did not change.
         let staker_info = system.staker_info_v1(:staker);
         assert!(staker_info == self.staker_info.unwrap());
@@ -3117,6 +3116,7 @@ pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
 
         system.advance_exit_wait_window();
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.delegator_full_intent = Option::Some(delegator_full_intent);
@@ -3128,8 +3128,6 @@ pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
 
     fn test(self: IntentDelegatorUpgradeSwitchFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        system.staker_migration(:staker_address);
         let pool = self.pool_address.unwrap();
         let delegator_full_intent = self.delegator_full_intent.unwrap();
         let delegator_half_intent = self.delegator_half_intent.unwrap();
@@ -3238,6 +3236,7 @@ pub(crate) impl StakerWithoutPoolMigrationBalanceTracesFlowImpl of FlowTrait<
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: false, :commission);
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(system.staker_info_v1(:staker));
     }
@@ -3247,7 +3246,6 @@ pub(crate) impl StakerWithoutPoolMigrationBalanceTracesFlowImpl of FlowTrait<
         let staker = self.staker.unwrap();
         let staker_address = staker.staker.address;
         let strk_token_address = system.staking.get_token_address();
-        system.staker_migration(:staker_address);
 
         // Test staker_pool_info
         let expected_pool_info = StakerPoolInfoV2 {
@@ -3330,6 +3328,7 @@ pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
 
         system.advance_exit_wait_window();
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.delegator_full_intent = Option::Some(delegator_full_intent);
@@ -3341,8 +3340,6 @@ pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
 
     fn test(self: IntentDelegatorUpgradeActionFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        system.staker_migration(:staker_address);
         let pool = self.pool_address.unwrap();
         let delegator_full_intent = self.delegator_full_intent.unwrap();
         let delegator_half_intent = self.delegator_half_intent.unwrap();
@@ -3420,13 +3417,13 @@ pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
         system.stake(:staker, :amount, pool_enabled: true, :commission);
         system.staker_exit_intent(:staker);
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(system.staker_info_v1(:staker));
     }
 
     fn test(self: StakerWithPoolInIntentMigrationFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
         let old_staker_info = self.staker_info.unwrap();
         let old_pool_info = old_staker_info.get_pool_info();
         let expected_pool_info = StakerPoolInfoV2 {
@@ -3441,7 +3438,6 @@ pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
                 .span(),
         };
 
-        system.staker_migration(:staker_address);
         let new_staker_info = system.staker_info_v1(:staker);
         let new_pool_info = system.staker_pool_info(:staker);
 
@@ -3495,6 +3491,7 @@ pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of FlowTrait<
 
         system.advance_exit_wait_window();
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.delegator_full_intent = Option::Some(delegator_full_intent);
@@ -3506,8 +3503,6 @@ pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of FlowTrait<
 
     fn test(self: IntentDelegatorUpgradeIntentFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        system.staker_migration(:staker_address);
         let pool = self.pool_address.unwrap();
         let delegator_full_intent = self.delegator_full_intent.unwrap();
         let delegator_half_intent = self.delegator_half_intent.unwrap();
@@ -3584,14 +3579,13 @@ pub(crate) impl StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlowImpl of Fl
         system.advance_epoch();
         system.increase_stake(:staker, :amount);
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
     }
 
     fn test(self: StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
         let commission = 200;
-        system.staker_migration(:staker_address);
 
         let pool_contract = system.set_open_for_strk_delegation(:staker, :commission);
 
@@ -3632,6 +3626,7 @@ pub(crate) impl StakerWithPoolWithoutCommissionCommitmentMigrationFlowImpl of Fl
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: true, :commission);
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(system.staker_info_v1(:staker));
     }
@@ -3639,8 +3634,6 @@ pub(crate) impl StakerWithPoolWithoutCommissionCommitmentMigrationFlowImpl of Fl
     #[feature("safe_dispatcher")]
     fn test(self: StakerWithPoolWithoutCommissionCommitmentMigrationFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        system.staker_migration(:staker_address);
 
         // Test staker_info did not change.
         let old_staker_info = system.staker_info_v1(:staker);
@@ -3771,19 +3764,18 @@ pub(crate) impl StakerWithoutPoolInIntentMigrationFlowImpl of FlowTrait<
         system.stake(:staker, :amount, pool_enabled: false, :commission);
         system.staker_exit_intent(:staker);
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(system.staker_info_v1(:staker));
     }
 
     fn test(self: StakerWithoutPoolInIntentMigrationFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
         let old_staker_info = self.staker_info.unwrap();
         let expected_pool_info = StakerPoolInfoV2 {
             commission: Option::None, pools: array![].span(),
         };
 
-        system.staker_migration(:staker_address);
         let new_staker_info = system.staker_info_v1(:staker);
         let new_pool_info = system.staker_pool_info(:staker);
 
@@ -5049,6 +5041,7 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
 
         let pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
         let staker_rewards = system.staker_claim_rewards(:staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.delegator = Option::Some(delegator);
         self.pool_rewards = Option::Some(pool_rewards);
@@ -5058,7 +5051,6 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
 
     fn test(self: PoolAttestFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        system.staker_migration(staker_address: staker.staker.address);
         let pool = system.staking.get_pool(:staker);
         let delegator = self.delegator.unwrap();
         let pool_rewards = self.pool_rewards.unwrap();
@@ -6383,15 +6375,15 @@ pub(crate) impl MultipleStakersMigrationVecFlowImpl of FlowTrait<MultipleStakers
         let commission = 200;
         system.stake(staker: staker1, :amount, pool_enabled: false, :commission);
         system.stake(staker: staker2, :amount, pool_enabled: false, :commission);
+
+        system.set_staker_for_migration(staker_address: staker1.staker.address);
+        system.set_staker_for_migration(staker_address: staker2.staker.address);
         self.old_stakers = Option::Some((staker1, staker2));
     }
 
     fn test(self: MultipleStakersMigrationVecFlow, ref system: SystemState) {
         let old_stakers = self.old_stakers.unwrap();
         let (staker1, staker2) = old_stakers;
-
-        system.staker_migration(staker_address: staker1.staker.address);
-        system.staker_migration(staker_address: staker2.staker.address);
 
         let actual_stakers = system.staking.get_stakers();
         assert!(actual_stakers == array![staker1.staker.address, staker2.staker.address].span());
@@ -6432,13 +6424,13 @@ pub(crate) impl StakerWithoutPoolMigrationOpenPoolsFlowImpl of FlowTrait<
         let staker = system.new_staker(:amount);
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: false, :commission);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
     }
     fn test(self: StakerWithoutPoolMigrationOpenPoolsFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
         let commission = 100;
-        system.staker_migration(:staker_address);
         system.set_commission(:staker, :commission);
 
         // Open pools.
@@ -6494,12 +6486,13 @@ pub(crate) impl StakerInIntentMigrationVecFlowImpl of FlowTrait<StakerInIntentMi
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: false, :commission);
         system.staker_exit_intent(:staker);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
     }
 
     fn test(self: StakerInIntentMigrationVecFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        system.staker_migration(staker_address: staker.staker.address);
 
         let actual_stakers = system.staking.get_stakers();
         assert!(actual_stakers == array![staker.staker.address].span());
@@ -6524,12 +6517,12 @@ pub(crate) impl StakerWithPoolMigrationSetCommissionFlowImpl of FlowTrait<
         let staker = system.new_staker(:amount);
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
     }
     fn test(self: StakerWithPoolMigrationSetCommissionFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        system.staker_migration(:staker_address);
 
         system.set_commission(:staker, commission: 100);
         let staker_pool_info = system.staker_pool_info(:staker);
@@ -6558,6 +6551,7 @@ pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
         system.stake(:staker, :amount, pool_enabled: false, :commission);
         system.staker_exit_intent(:staker);
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.exit_wait_window = Option::Some(system.staking.get_exit_wait_window());
     }
@@ -6565,7 +6559,6 @@ pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
     #[feature("safe_dispatcher")]
     fn test(self: StakerExitFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        system.staker_migration(staker_address: staker.staker.address);
         let exit_wait_window = self.exit_wait_window.unwrap();
         system.advance_time(time: exit_wait_window);
         system.staker_exit_action(:staker);
@@ -6599,14 +6592,13 @@ pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
         system.advance_epoch();
         system.staker_exit_intent(:staker);
 
+        system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
     }
 
     #[feature("safe_dispatcher")]
     fn test(self: StakerExitIntentAttestAfterMigrationFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        system.staker_migration(:staker_address);
 
         system.advance_block_into_attestation_window(:staker);
         let res = system.safe_attest(:staker);
