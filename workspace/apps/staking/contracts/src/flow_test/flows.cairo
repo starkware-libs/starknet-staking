@@ -5066,10 +5066,9 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
         // Test pool rewards.
         let mid_pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
         let mid_staker_rewards = system.staker_claim_rewards(:staker);
-        // Allow 1% difference.
-        // TODO: new rewards are lower , change C.
-        assert!(pool_rewards - mid_pool_rewards < (pool_rewards / 100).into());
-        assert!(staker_rewards - mid_staker_rewards < (staker_rewards / 100).into());
+        // Verify rewards increase after upgrade due to C parameter rising to 4%.
+        assert!(mid_pool_rewards > pool_rewards);
+        assert!(mid_staker_rewards > staker_rewards);
 
         // Open BTC pool.
         let btc_pool = system
