@@ -1388,7 +1388,7 @@ Set the epoch info.
 5. [EPOCH\_INFO\_UPDATED\_IN\_FIRST\_EPOCH](#epoch_info_updated_in_first_epoch)
 #### pre-condition <!-- omit from toc -->
 #### access control <!-- omit from toc -->
-Only token admin.
+Only app governor.
 #### logic <!-- omit from toc -->
 
 
