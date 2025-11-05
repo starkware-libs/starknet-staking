@@ -2981,7 +2981,6 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
 /// Test total_stake
 /// Staker exit action
 /// Test delegations and rewards transferred to pools
-
 #[derive(Drop, Copy)]
 pub(crate) struct MultiPoolExitIntentFlow {}
 pub(crate) impl MultiPoolExitIntentFlowImpl of FlowTrait<MultiPoolExitIntentFlow> {
