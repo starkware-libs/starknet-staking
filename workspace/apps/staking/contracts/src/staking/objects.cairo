@@ -594,7 +594,7 @@ pub(crate) struct InternalStakerInfoV1 {
 pub(crate) enum VInternalStakerInfo {
     #[default]
     None,
-    V0: (),
+    V0,
     V1: InternalStakerInfoV1,
 }
 

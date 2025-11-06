@@ -1436,7 +1436,6 @@ pub mod Staking {
         }
     }
 
-    /// **Note**: This function doesn't verify that the token actually exists.
     #[generate_trait]
     pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         /// This function differs from `internal_staker_info` function in that it doesn't assert
@@ -2238,9 +2237,10 @@ pub mod Staking {
 
         /// Returns the public key for `staker_address` at `epoch_id`,
         /// or `None` if the public key is not set.
-        /// **Note**: This function does not check if the staker exists.
         ///
-        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
+        /// Preconditions:
+        /// 1. The staker exists.
+        /// 2. `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn get_public_key_at_epoch(
             self: @ContractState, staker_address: ContractAddress, epoch_id: Epoch,
         ) -> Option<PublicKey> {
@@ -2350,9 +2350,10 @@ pub mod Staking {
         }
 
         /// Returns the staking power for `staker_address` at `epoch_id`.
-        /// **Note**: Assumes the staker is active at `epoch_id`.
         ///
-        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
+        /// Preconditions:
+        /// 1. staker is active at `epoch_id`.
+        /// 2. `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
         fn get_staker_staking_power_at_epoch(
             self: @ContractState,
             staker_address: ContractAddress,
