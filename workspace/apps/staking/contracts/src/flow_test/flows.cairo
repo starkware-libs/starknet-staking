@@ -1,11 +1,12 @@
 use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
-use snforge_std::{TokenImpl, start_cheat_block_number_global};
+use snforge_std::{TokenImpl, get_class_hash, start_cheat_block_number_global};
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS};
 use staking::errors::GenericError;
 use staking::flow_test::utils::MainnetClassHashes::{
-    MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V2,
+    MAINNET_POOL_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1,
+    MAINNET_STAKING_CLASS_HASH_V2,
 };
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
@@ -19,8 +20,8 @@ use staking::pool::interface_v0::{
 use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
-    CommissionCommitment, IStakingDispatcherTrait, IStakingSafeDispatcherTrait, PoolInfo,
-    StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+    IStakingDispatcherTrait, IStakingMigrationSafeDispatcherTrait, IStakingSafeDispatcherTrait,
+    PoolInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait};
 use staking::staking::staking::Staking::{MAX_MIGRATION_TRACE_ENTRIES, V3_PREV_CONTRACT_VERSION};
@@ -32,11 +33,10 @@ use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
     calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_amount_and_pool_info_v2,
     calculate_strk_pool_rewards_v2, calculate_strk_pool_rewards_with_pool_balance_v2,
-    compute_rewards_per_unit, declare_pool_contract, declare_pool_eic_contract, deserialize_option,
-    load_from_iterable_map, load_from_trace, load_one_felt, load_trace_length,
-    strk_pool_update_rewards_v1, to_amount_18_decimals,
+    compute_rewards_per_unit, declare_pool_contract, declare_pool_eic_contract, load_from_trace,
+    load_one_felt, load_trace_length, strk_pool_update_rewards_v1, to_amount_18_decimals,
 };
-use staking::types::{Amount, Commission, InternalStakerInfoLatest, VecIndex};
+use staking::types::{Amount, Commission};
 use staking::utils::compute_rewards_rounded_down;
 use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
@@ -2788,186 +2788,166 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl of FlowTrait<DelegatorSwitch
     }
 }
 
-/// Test staker_migration - with pool, with commission commitment.
+/// Test `staker_migration`.
+/// Flow:
+/// Stake with pool in V2.
+/// Upgrade to V3.
+/// Test pool contract has been upgraded to V3.
 #[derive(Drop, Copy)]
 pub(crate) struct StakerMigrationFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) staker_info: Option<StakerInfoV1>,
-    pub(crate) internal_staker_info: Option<InternalStakerInfoLatest>,
-    pub(crate) commission_commitment: Option<CommissionCommitment>,
+    pub(crate) pool_address: Option<ContractAddress>,
 }
 pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
-    fn setup_v1(ref self: StakerMigrationFlow, ref system: SystemState) {
-        let min_stake = system.staking.get_min_stake();
-        let stake_amount = min_stake * 2;
-        let staker = system.new_staker(amount: stake_amount * 2);
+    fn setup_v2(ref self: StakerMigrationFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
         let commission = 200;
-
-        /// Staker balance trace: epoch 1, stake_amount.
-        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_epoch();
-        /// Staker balance trace: epoch 2, stake_amount*2.
-        system.increase_stake(:staker, amount: stake_amount);
-        system.advance_epoch();
-
-        let delegate_amount = stake_amount / 2;
-        let delegator = system.new_delegator(amount: delegate_amount);
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let delegator = system.new_delegator(:amount);
         let pool = system.staking.get_pool(:staker);
-        /// Staker balance trace: epoch 3, stake_amount*2 + delegate_amount.
-        system.delegate(:delegator, :pool, amount: delegate_amount);
-
-        let current_epoch = system.staking.get_current_epoch();
-        system
-            .set_commission_commitment(
-                :staker, max_commission: commission + 100, expiration_epoch: current_epoch + 100,
-            );
+        system.delegate(:delegator, :pool, :amount);
 
         system.set_staker_for_migration(staker_address: staker.staker.address);
-        let staker_info = system.staker_info_v1(:staker);
-        self.staker = Option::Some(staker);
-        self.staker_info = Option::Some(staker_info);
-        let internal_staker_info = system.internal_staker_info(:staker);
-        self.internal_staker_info = Option::Some(internal_staker_info);
-        let commission_commitment = system.get_staker_commission_commitment(:staker);
-        self.commission_commitment = Option::Some(commission_commitment);
+        self.pool_address = Option::Some(pool);
     }
 
     fn test(self: StakerMigrationFlow, ref system: SystemState) {
-        let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        // Test staker_info did not change.
-        let staker_info = system.staker_info_v1(:staker);
-        assert!(staker_info == self.staker_info.unwrap());
-        // Test internal_staker_info did not change.
-        let internal_staker_info = system.internal_staker_info(:staker);
-        assert!(internal_staker_info == self.internal_staker_info.unwrap());
-        // Test commission commitment did not change.
-        let commission_commitment = system.get_staker_commission_commitment(:staker);
-        assert!(commission_commitment == self.commission_commitment.unwrap());
+        let pool_address = self.pool_address.unwrap();
+        let pool_class_hash = get_class_hash(contract_address: pool_address);
+        let expected_pool_class_hash = declare_pool_contract();
+        assert!(pool_class_hash == expected_pool_class_hash);
 
-        // Test storage of internal_staker_pool_info.
-        let internal_staker_pool_info_storage = snforge_std::map_entry_address(
-            map_selector: selector!("staker_pool_info"), keys: [staker_address.into()].span(),
-        );
-        // Test pools.
-        let pools_storage = snforge_std::map_entry_address(
-            map_selector: internal_staker_pool_info_storage, keys: [selector!("pools")].span(),
-        );
-        let pool_contract = staker_info.get_pool_info().pool_contract;
-        let token_address = load_from_iterable_map(
-            contract_address: system.staking.address,
-            map_address: pools_storage,
-            key: pool_contract,
-        );
-        let strk_token_address = system.staking.get_token_address();
-        assert!(token_address == Option::Some(strk_token_address));
-        // Test commission.
-        let commission_storage = snforge_std::map_entry_address(
-            map_selector: internal_staker_pool_info_storage, keys: [selector!("commission")].span(),
-        );
-        let mut commission_span = snforge_std::load(
-            target: system.staking.address,
-            storage_address: commission_storage,
-            size: Store::<Option<Commission>>::size().into(),
+        let min_delegation_for_rewards: Amount = load_one_felt(
+            target: pool_address, storage_address: selector!("min_delegation_for_rewards"),
         )
-            .span();
-        let commission = deserialize_option(ref commission_span);
-        assert!(commission == Option::Some(staker_info.get_pool_info().commission));
-        // Test commission commitment.
-        let commission_commitment_storage = snforge_std::map_entry_address(
-            map_selector: internal_staker_pool_info_storage,
-            keys: [selector!("commission_commitment")].span(),
-        );
-        let mut commission_commitment_span = snforge_std::load(
-            target: system.staking.address,
-            storage_address: commission_commitment_storage,
-            size: Store::<Option<CommissionCommitment>>::size().into(),
-        )
-            .span();
-        let commission_commitment = deserialize_option(ref commission_commitment_span);
-        assert!(commission_commitment == self.commission_commitment);
-
-        // Test staker balance trace.
-        let stake_amount = staker_info.amount_own / 2;
-        let delegated_amount = staker_info.get_pool_info().amount;
-        let own_trace_storage = snforge_std::map_entry_address(
-            map_selector: selector!("staker_own_balance_trace"),
-            keys: [staker_address.into()].span(),
-        );
-        let delegated_trace_storage = snforge_std::map_entry_address(
-            map_selector: selector!("staker_delegated_balance_trace"),
-            keys: [staker_address.into(), pool_contract.into()].span(),
-        );
-        let own_trace_length = load_trace_length(
-            contract_address: system.staking.address, trace_address: own_trace_storage,
-        );
-        let delegated_trace_length = load_trace_length(
-            contract_address: system.staking.address, trace_address: delegated_trace_storage,
-        );
-        assert!(own_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
-        assert!(delegated_trace_length == MAX_MIGRATION_TRACE_ENTRIES);
-        // Test last: staker balance trace: epoch 3, stake_amount*2 + delegate_amount.
-        let (own_key, own_value) = load_from_trace(
-            contract_address: system.staking.address, trace_address: own_trace_storage, index: 2,
-        );
-        let (delegated_key, delegated_value) = load_from_trace(
-            contract_address: system.staking.address,
-            trace_address: delegated_trace_storage,
-            index: 2,
-        );
-        assert!(own_key == 3);
-        assert!(delegated_key == 3);
-        assert!(own_value == stake_amount * 2);
-        assert!(delegated_value == delegated_amount);
-        // Test second_last: staker balance trace: epoch 2, stake_amount*2.
-        let (own_key, own_value) = load_from_trace(
-            contract_address: system.staking.address, trace_address: own_trace_storage, index: 1,
-        );
-        let (delegated_key, delegated_value) = load_from_trace(
-            contract_address: system.staking.address,
-            trace_address: delegated_trace_storage,
-            index: 1,
-        );
-        assert!(own_key == 2);
-        assert!(delegated_key == 2);
-        assert!(own_value == stake_amount * 2);
-        assert!(delegated_value == Zero::zero());
-        // Test first entry: staker balance trace: epoch 1, stake_amount.
-        let (own_key, own_value) = load_from_trace(
-            contract_address: system.staking.address, trace_address: own_trace_storage, index: 0,
-        );
-        let (delegated_key, delegated_value) = load_from_trace(
-            contract_address: system.staking.address,
-            trace_address: delegated_trace_storage,
-            index: 0,
-        );
-        assert!(own_key == 1);
-        assert!(delegated_key == 1);
-        assert!(own_value == stake_amount);
-        assert!(delegated_value == Zero::zero());
-        // Test staker in stakers vector.
-        let vec_storage = selector!("stakers");
-        let vec_len: VecIndex = (*snforge_std::load(
-            target: system.staking.address,
-            storage_address: vec_storage,
-            size: Store::<VecIndex>::size().into(),
-        )
-            .at(0))
             .try_into()
             .unwrap();
-        assert!(vec_len == 1);
-        let staker_vec_storage = snforge_std::map_entry_address(
-            map_selector: vec_storage, keys: [0.into()].span(),
-        );
-        let staker_in_vec: ContractAddress = (*snforge_std::load(
-            target: system.staking.address,
-            storage_address: staker_vec_storage,
-            size: Store::<ContractAddress>::size().into(),
+        assert!(min_delegation_for_rewards == STRK_CONFIG.min_for_rewards);
+        let staking_rewards_base_value: Amount = load_one_felt(
+            target: pool_address, storage_address: selector!("staking_rewards_base_value"),
         )
-            .at(0))
             .try_into()
             .unwrap();
-        assert!(staker_in_vec == staker_address);
+        assert!(staking_rewards_base_value == STRK_CONFIG.base_value);
+    }
+}
+
+/// Test `staker_migration` with multiple pools.
+/// Flow:
+/// Open STRK pool and 2 BTC pools in V2.
+/// Upgrade to V3.
+/// Test pool contracts have been upgraded to V3.
+#[derive(Drop, Copy)]
+pub(crate) struct StakerMigrationMultiplePoolsFlow {
+    pub(crate) pool_addresses: Option<Span<ContractAddress>>,
+    pub(crate) staker_pool_info: Option<StakerPoolInfoV2>,
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerMigrationMultiplePoolsFlowImpl of FlowTrait<
+    StakerMigrationMultiplePoolsFlow,
+> {
+    fn setup_v2(ref self: StakerMigrationMultiplePoolsFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let strk_pool = system.staking.get_pool(:staker);
+        let btc_8d_token = system
+            .deploy_new_btc_token(name: "BTC_8D_TOKEN", decimals: BTC_DECIMALS_8);
+        let btc_18d_token = system
+            .deploy_new_btc_token(name: "BTC_18D_TOKEN", decimals: BTC_DECIMALS_18);
+        system.staking.add_token(token_address: btc_8d_token.contract_address());
+        system.staking.add_token(token_address: btc_18d_token.contract_address());
+        let btc_8d_pool = system
+            .set_open_for_delegation(:staker, token_address: btc_8d_token.contract_address());
+        let btc_18d_pool = system
+            .set_open_for_delegation(:staker, token_address: btc_18d_token.contract_address());
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.pool_addresses = Option::Some([strk_pool, btc_8d_pool, btc_18d_pool].span());
+        self.staker_pool_info = Option::Some(system.staker_pool_info(:staker));
+        self.staker = Option::Some(staker);
+    }
+
+    fn test(self: StakerMigrationMultiplePoolsFlow, ref system: SystemState) {
+        assert!(
+            system.staker_pool_info(staker: self.staker.unwrap()) == self.staker_pool_info.unwrap(),
+        );
+        let expected_class_hash = declare_pool_contract();
+        for pool_address in self.pool_addresses.unwrap() {
+            assert!(get_class_hash(contract_address: *pool_address) == expected_class_hash);
+        }
+    }
+}
+
+/// Test `staker_migration` with multiple versions.
+/// Flow:
+/// Stake with pool in V0.
+/// Upgrade to V1.
+/// Stake with pool in V1.
+/// Upgrade to V2.
+/// Stake with pool in V2.
+/// Upgrade to V3.
+/// Test pool contracts have been upgraded to V3.
+#[derive(Drop, Copy)]
+pub(crate) struct StakerMigrationMultipleVersionsFlow {
+    pub(crate) stakers: Option<Span<Staker>>,
+}
+pub(crate) impl StakerMigrationMultipleVersionsFlowImpl of FlowTrait<
+    StakerMigrationMultipleVersionsFlow,
+> {
+    fn setup(ref self: StakerMigrationMultipleVersionsFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool_address = system.staking.get_pool(:staker);
+
+        system.set_pool_for_upgrade(:pool_address);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.stakers = Option::Some([staker].span());
+    }
+
+    fn setup_v1(ref self: StakerMigrationMultipleVersionsFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        let mut stakers: Array<Staker> = self.stakers.unwrap().into();
+        stakers.append(staker);
+        self.stakers = Option::Some(stakers.span());
+    }
+
+    fn setup_v2(ref self: StakerMigrationMultipleVersionsFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        let stakers = self.stakers.unwrap();
+        for staker in stakers {
+            let pool = system.staker_pool_info(staker: *staker).pools[0].pool_contract;
+            assert!(get_class_hash(*pool) == MAINNET_POOL_CLASS_HASH_V1());
+        }
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        let mut stakers: Array<Staker> = stakers.into();
+        stakers.append(staker);
+        self.stakers = Option::Some(stakers.span());
+    }
+
+    fn test(self: StakerMigrationMultipleVersionsFlow, ref system: SystemState) {
+        let stakers = self.stakers.unwrap();
+        for staker in stakers {
+            let pools = system.staker_pool_info(staker: *staker).pools;
+            assert!(pools.len() == 1);
+            let expected_class_hash = declare_pool_contract();
+            assert!(
+                get_class_hash(contract_address: *pools[0].pool_contract) == expected_class_hash,
+            );
+        }
     }
 }
 
@@ -3214,22 +3194,19 @@ pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
 }
 
 /// Flow:
-/// Staker stake
+/// Staker stake without pool
 /// Upgrade
 /// Staker migration
-/// Test staker_pool_info
+/// Test staker_pool_info did not change
 /// Test staker_info did not change
-/// Test staker balance trace is empty
-/// Test staker pool trace is empty
 #[derive(Drop, Copy)]
-pub(crate) struct StakerWithoutPoolMigrationBalanceTracesFlow {
+pub(crate) struct StakerWithoutPoolMigrationFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) staker_info: Option<StakerInfoV1>,
+    pub(crate) staker_pool_info: Option<StakerPoolInfoV2>,
 }
-pub(crate) impl StakerWithoutPoolMigrationBalanceTracesFlowImpl of FlowTrait<
-    StakerWithoutPoolMigrationBalanceTracesFlow,
-> {
-    fn setup_v1(ref self: StakerWithoutPoolMigrationBalanceTracesFlow, ref system: SystemState) {
+pub(crate) impl StakerWithoutPoolMigrationFlowImpl of FlowTrait<StakerWithoutPoolMigrationFlow> {
+    fn setup_v2(ref self: StakerWithoutPoolMigrationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -3238,46 +3215,19 @@ pub(crate) impl StakerWithoutPoolMigrationBalanceTracesFlowImpl of FlowTrait<
         system.set_staker_for_migration(staker_address: staker.staker.address);
         self.staker = Option::Some(staker);
         self.staker_info = Option::Some(system.staker_info_v1(:staker));
+        self.staker_pool_info = Option::Some(system.staker_pool_info(:staker));
     }
 
-    fn test(self: StakerWithoutPoolMigrationBalanceTracesFlow, ref system: SystemState) {
-        // Migrate staker
+    fn test(self: StakerWithoutPoolMigrationFlow, ref system: SystemState) {
         let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        let strk_token_address = system.staking.get_token_address();
 
-        // Test staker_pool_info
-        let expected_pool_info = StakerPoolInfoV2 {
-            commission: Option::None, pools: array![].span(),
-        };
+        // Test staker_pool_info did not change.
         let staker_pool_info = system.staker_pool_info(:staker);
-        assert!(staker_pool_info == expected_pool_info);
+        assert!(staker_pool_info == self.staker_pool_info.unwrap());
 
         // Test staker_info did not change.
         let staker_info = system.staker_info_v1(:staker);
         assert!(staker_info == self.staker_info.unwrap());
-
-        // Test trace
-        let own_trace_storage = snforge_std::map_entry_address(
-            map_selector: selector!("staker_own_balance_trace"),
-            keys: [staker_address.into()].span(),
-        );
-        let delegated_trace_storage = snforge_std::map_entry_address(
-            map_selector: selector!("staker_delegated_balance_trace"),
-            keys: [staker_address.into(), strk_token_address.into()].span(),
-        );
-        let own_trace_length = load_trace_length(
-            contract_address: system.staking.address, trace_address: own_trace_storage,
-        );
-        let (_, own_value) = load_from_trace(
-            contract_address: system.staking.address, trace_address: own_trace_storage, index: 0,
-        );
-        let delegated_trace_length = load_trace_length(
-            contract_address: system.staking.address, trace_address: delegated_trace_storage,
-        );
-        assert!(own_trace_length == 1);
-        assert!(own_value == staker_info.amount_own);
-        assert!(delegated_trace_length == 0);
     }
 }
 
@@ -6918,20 +6868,11 @@ pub(crate) impl FindSigmaMigrationFlowImpl of FlowTrait<FindSigmaMigrationFlow> 
         assert!(member_info.unclaimed_rewards.is_non_zero());
         self.delegator = Option::Some(delegator);
         self.member_rewards = Option::Some(member_info.unclaimed_rewards);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: FindSigmaMigrationFlow, ref system: SystemState) {
-        // Upgrade pool using EIC.
-        // TODO: Delete this part once impl the upgrade in the flow utils.
         let pool = self.pool.unwrap();
-        let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
-        let implementation_data = ImplementationData {
-            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
-        };
-        upgrade_implementation(
-            contract_address: pool, :implementation_data, upgrade_governor: system.staking.address,
-        );
-
         let delegator = self.delegator.unwrap();
         let member_info = system.pool_member_info_v1(:delegator, :pool);
         let expected_member_rewards = self.member_rewards.unwrap();
@@ -6974,20 +6915,11 @@ pub(crate) impl FindSigmaEdgeCasesMigrationFlowImpl of FlowTrait<FindSigmaEdgeCa
         let member_info = system.pool_member_info_v1(:delegator, :pool);
         self.delegator = Option::Some(delegator);
         self.member_rewards = Option::Some(member_info.unclaimed_rewards);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState) {
-        // Upgrade pool using EIC.
-        // TODO: Delete this part once impl the upgrade in the flow utils.
         let pool = self.pool.unwrap();
-        let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
-        let implementation_data = ImplementationData {
-            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
-        };
-        upgrade_implementation(
-            contract_address: pool, :implementation_data, upgrade_governor: system.staking.address,
-        );
-
         let delegator = self.delegator.unwrap();
         let member_info = system.pool_member_info_v1(:delegator, :pool);
         let expected_member_rewards = self.member_rewards.unwrap();
@@ -7025,20 +6957,11 @@ pub(crate) impl FindSigmaMigrationIdxIsOneFlowImpl of FlowTrait<FindSigmaMigrati
         let member_info = system.pool_member_info_v1(:delegator, :pool);
         self.delegator = Option::Some(delegator);
         self.member_rewards = Option::Some(member_info.unclaimed_rewards);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
     fn test(self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState) {
-        // Upgrade pool using EIC.
-        // TODO: Delete this part once impl the upgrade in the flow utils.
         let pool = self.pool.unwrap();
-        let eic_data = EICData { eic_hash: declare_pool_eic_contract(), eic_init_data: [].span() };
-        let implementation_data = ImplementationData {
-            impl_hash: declare_pool_contract(), eic_data: Option::Some(eic_data), final: false,
-        };
-        upgrade_implementation(
-            contract_address: pool, :implementation_data, upgrade_governor: system.staking.address,
-        );
-
         let delegator = self.delegator.unwrap();
         let member_info = system.pool_member_info_v1(:delegator, :pool);
         let expected_member_rewards = self.member_rewards.unwrap();
@@ -7105,5 +7028,36 @@ pub(crate) impl StakingPrevClassHashFlowImpl of FlowTrait<StakingPrevClassHashFl
         )
             .at(0);
         assert!(v1_prev_class_hash.try_into().unwrap() == MAINNET_STAKING_CLASS_HASH_V0());
+    }
+}
+
+/// Flow:
+/// Stake in V1
+/// Upgrade to V3 without migrating staker
+/// Attempt to migrate staker
+/// Catch STAKER_NOT_MIGRATED.
+#[derive(Drop, Copy)]
+pub(crate) struct StakerMigrationSkipVersionFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerMigrationSkipVersionFlowImpl of FlowTrait<StakerMigrationSkipVersionFlow> {
+    fn setup_v1(ref self: StakerMigrationSkipVersionFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let amount = min_stake * 2;
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: StakerMigrationSkipVersionFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        let migration_safe_dispatcher = system.staking.migration_safe_dispatcher();
+
+        let result = migration_safe_dispatcher.staker_migration(staker_address: staker_address);
+        assert_panic_with_error(result, StakingError::STAKER_NOT_MIGRATED.describe());
     }
 }

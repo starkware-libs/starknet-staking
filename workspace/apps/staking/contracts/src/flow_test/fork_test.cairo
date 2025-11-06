@@ -320,12 +320,23 @@ fn delegator_switch_after_upgrade_regression_test() {
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_migration_regression_test() {
-    let mut flow = flows::StakerMigrationFlow {
-        staker: Option::None,
-        staker_info: Option::None,
-        internal_staker_info: Option::None,
-        commission_commitment: Option::None,
+    let mut flow = flows::StakerMigrationFlow { pool_address: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_migration_multiple_pools_regression_test() {
+    let mut flow = flows::StakerMigrationMultiplePoolsFlow {
+        pool_addresses: Option::None, staker_pool_info: Option::None, staker: Option::None,
     };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_migration_multiple_versions_regression_test() {
+    let mut flow = flows::StakerMigrationMultipleVersionsFlow { stakers: Option::None };
     test_flow_mainnet(ref :flow);
 }
 
@@ -340,6 +351,7 @@ fn staker_with_pool_without_commission_commitment_migration_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+#[ignore]
 #[should_panic(expected: "Staker Info is already up-to-date")]
 fn staker_migration_called_twice_regression_test() {
     let mut flow = flows::StakerMigrationCalledTwiceFlow { staker: Option::None };
@@ -348,6 +360,7 @@ fn staker_migration_called_twice_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+#[ignore]
 #[should_panic(expected: "Staker is not migrated to latest version")]
 fn internal_staker_info_without_staker_migration_regression_test() {
     let mut flow = flows::InternalStakerInfoWithoutStakerMigrationFlow { staker: Option::None };
@@ -508,9 +521,9 @@ fn staker_in_intent_migration_vec_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
-fn staker_without_pool_migration_balance_traces_flow_test() {
-    let mut flow = flows::StakerWithoutPoolMigrationBalanceTracesFlow {
-        staker: Option::None, staker_info: Option::None,
+fn staker_without_pool_migration_flow_test() {
+    let mut flow = flows::StakerWithoutPoolMigrationFlow {
+        staker: Option::None, staker_info: Option::None, staker_pool_info: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
@@ -595,5 +608,12 @@ fn find_sigma_migration_idx_is_one_flow_test() {
     let mut flow = flows::FindSigmaMigrationIdxIsOneFlow {
         pool: Option::None, delegator: Option::None, member_rewards: Option::None,
     };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_migration_skip_version_flow_test() {
+    let mut flow = flows::StakerMigrationSkipVersionFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }

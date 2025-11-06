@@ -127,15 +127,14 @@ pub trait IStakingMigration<TContractState> {
         self: @TContractState, staker_address: ContractAddress,
     ) -> InternalStakerInfoLatest;
 
-
-    /// Reads the internal staker information for the given `staker_address` from storage
-    /// and converts it to V1. Writes the updated version to storage and initializes the staker's
-    /// balance trace.
+    /// Upgrades all of `staker_address`'s pools.
     ///
-    /// Precondition: The staker exists, does not have a pool and its version is V0.
+    /// Preconditions:
+    /// * The staker exists and is already migrated to V2.
+    /// * The staker's pools haven't been upgraded to V3 yet.
     ///
-    /// This function is used only during migration.
-    /// **Note**: All stakers are migrated during the upgrade process, no user action is required.
+    /// This function is used only during the upgrade process.
+    /// **Note**: All pools are upgraded during the upgrade process, no user action is required.
     fn staker_migration(ref self: TContractState, staker_address: ContractAddress);
 }
 

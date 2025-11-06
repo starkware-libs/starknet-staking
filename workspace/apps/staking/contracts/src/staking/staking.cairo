@@ -1,7 +1,6 @@
 #[starknet::contract]
 pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use core::cmp::min;
     use core::num::traits::Pow;
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
@@ -33,8 +32,7 @@ pub mod Staking {
         UndelegateIntentValueZero, VInternalStakerInfo, VInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
-        MutableStakerBalanceTraceTrait, StakerBalanceTrace, StakerBalanceTraceTrait,
-        StakerBalanceTrait,
+        StakerBalanceTrace, StakerBalanceTraceTrait,
     };
     use staking::types::{
         Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey, StakingPower,
@@ -52,6 +50,9 @@ pub mod Staking {
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
+    use starkware_utils::components::replaceability::interface::{
+        EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
+    };
     use starkware_utils::components::roles::RolesComponent;
     use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
     use starkware_utils::constants::WEEK;
@@ -59,8 +60,8 @@ pub mod Staking {
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::mul_wide_and_div;
     use starkware_utils::storage::iterable_map::{
-        IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
-        MutableIterableMapTrait,
+        IterableMap, IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapTrait,
+        IterableMapWriteAccessImpl, MutableIterableMapTrait,
     };
     use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
@@ -73,7 +74,7 @@ pub mod Staking {
     pub(crate) const BTC_WEIGHT_FACTOR: u128 = STAKING_POWER_BASE_VALUE * ALPHA / ALPHA_DENOMINATOR;
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
-    pub(crate) const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3;
+    pub(crate) const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3; //TODO: Remove
     pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: WEEK };
     pub(crate) const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };
     /// Prev contract version for V3 staking contract.
@@ -185,6 +186,7 @@ pub mod Staking {
         consensus_rewards_first_epoch: Epoch,
         /// The class hash of the pool EIC contract.
         /// The EIC contract is used while upgrading pool contracts from V1 / V2 (BTC) to V3.
+        /// Only used in `staker_migration`.
         pool_eic_class_hash: ClassHash,
     }
 
@@ -897,42 +899,44 @@ pub mod Staking {
             self: @ContractState, staker_address: ContractAddress,
         ) -> InternalStakerInfoLatest {
             let internal_staker_info = self._internal_staker_info(:staker_address);
+            // TODO: Assert staker already migrated to V3.
+            internal_staker_info
+        }
+
+        fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
+            // Assert the staker exists.
+            self._internal_staker_info(:staker_address);
+
             // Assert staker already migrated to V2.
             assert!(
                 !self.staker_own_balance_trace.entry(staker_address).is_empty(),
                 "{}",
                 Error::STAKER_NOT_MIGRATED,
             );
-            internal_staker_info
-        }
 
-        /// **Note**: This function should be called only once per staker during upgrade.
-        fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
-            // Assert the staker is not migrated yet.
-            assert!(
-                self.staker_own_balance_trace.entry(staker_address).is_empty(),
-                "{}",
-                Error::STAKER_INFO_ALREADY_UPDATED,
-            );
-            // Migrate staker pool info.
-            let internal_staker_info = self._internal_staker_info(:staker_address);
-            let staker_pool_info = self.staker_pool_info.entry(staker_address);
-            let mut pool_contract = Option::None;
-            if let Option::Some(pool_info) = internal_staker_info._deprecated_pool_info {
-                pool_contract = Option::Some(pool_info._deprecated_pool_contract);
-                let token_address = STRK_TOKEN_ADDRESS;
-                let commission = pool_info._deprecated_commission;
-                staker_pool_info.commission.write(Option::Some(commission));
-                staker_pool_info.pools.write(pool_contract.unwrap(), token_address);
+            // TODO: Assert the staker is not migrated yet.
+
+            // Prepare the implementation data.
+            let pool_class_hash = self.pool_contract_class_hash.read();
+            let pool_eic_class_hash = self.pool_eic_class_hash.read();
+            // Sanity checks.
+            assert!(pool_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
+            assert!(pool_eic_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
+            let eic_data = EICData { eic_hash: pool_eic_class_hash, eic_init_data: [].span() };
+            let implementation_data = ImplementationData {
+                impl_hash: pool_class_hash, eic_data: Option::Some(eic_data), final: false,
+            };
+
+            // Upgrade pools.
+            let pools = self.staker_pool_info.entry(staker_address).pools;
+            for pool_contract_ptr in pools.keys_iter() {
+                let pool_contract = pool_contract_ptr.read();
+                let pool_replaceable_dispatcher = IReplaceableDispatcher {
+                    contract_address: pool_contract,
+                };
+                pool_replaceable_dispatcher.add_new_implementation(:implementation_data);
+                pool_replaceable_dispatcher.replace_to(:implementation_data);
             }
-            // Note: Staker might have a commission commitment only if he has a pool.
-            staker_pool_info
-                .commission_commitment
-                .write(internal_staker_info._deprecated_commission_commitment);
-            // Migrate staker balance trace.
-            self.migrate_staker_balance_trace(:staker_address, :pool_contract);
-            // Add staker address to the stakers vector.
-            self.stakers.push(staker_address);
         }
     }
 
@@ -1474,37 +1478,6 @@ pub mod Staking {
                 .calculate_current_epoch_rewards();
             let epoch_len_in_blocks = self.get_epoch_info().epoch_len_in_blocks();
             (strk_rewards / epoch_len_in_blocks.into(), btc_rewards / epoch_len_in_blocks.into())
-        }
-
-        /// Migrate the last checkpoints of the staker balance trace.
-        fn migrate_staker_balance_trace(
-            ref self: ContractState,
-            staker_address: ContractAddress,
-            pool_contract: Option<ContractAddress>,
-        ) {
-            let deprecated_trace = self.staker_balance_trace.entry(staker_address);
-            let len = deprecated_trace.length();
-            let entries_to_migrate = min(len, MAX_MIGRATION_TRACE_ENTRIES);
-            assert(entries_to_migrate > 0, 'No entries to migrate');
-            let own_balance_trace = self.staker_own_balance_trace.entry(staker_address);
-            let staker_pool_traces = self.staker_delegated_balance_trace.entry(staker_address);
-            let delegated_balance_trace = pool_contract
-                .map(|contract_address| staker_pool_traces.entry(contract_address));
-            for i in (len - entries_to_migrate)..len {
-                let (epoch, staker_balance) = deprecated_trace.at(i);
-                let own_balance = staker_balance.amount_own();
-                own_balance_trace.insert(key: epoch, value: own_balance);
-                if let Option::Some(delegated_balance_trace) = delegated_balance_trace {
-                    let delegated_balance = staker_balance.pool_amount();
-                    delegated_balance_trace.insert(key: epoch, value: delegated_balance);
-                } else {
-                    assert!(
-                        staker_balance.pool_amount().is_zero(),
-                        "{}",
-                        InternalError::POOL_BALANCE_NOT_ZERO,
-                    )
-                }
-            }
         }
 
         /// Returns the token address for the given `undelegate_intent`.
