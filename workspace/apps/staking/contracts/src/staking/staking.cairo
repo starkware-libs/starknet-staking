@@ -919,8 +919,8 @@ pub mod Staking {
             let pool_class_hash = self.pool_contract_class_hash.read();
             let pool_eic_class_hash = self.pool_eic_class_hash.read();
             // Sanity checks.
-            assert!(pool_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
-            assert!(pool_eic_class_hash.is_non_zero(), "{}", GenericError::ZERO_CLASS_HASH);
+            assert!(pool_class_hash.is_non_zero(), "{}", InternalError::MISSING_CLASS_HASH);
+            assert!(pool_eic_class_hash.is_non_zero(), "{}", InternalError::MISSING_CLASS_HASH);
             let eic_data = EICData { eic_hash: pool_eic_class_hash, eic_init_data: [].span() };
             let implementation_data = ImplementationData {
                 impl_hash: pool_class_hash, eic_data: Option::Some(eic_data), final: false,

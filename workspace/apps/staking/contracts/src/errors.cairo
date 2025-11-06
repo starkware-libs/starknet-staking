@@ -56,6 +56,7 @@ pub(crate) enum InternalError {
     TOKEN_IS_ZERO_ADDRESS,
     UNEXPECTED_INTERNAL_MEMBER_INFO_VERSION,
     INVALID_REWARDS_TRACE_IDX,
+    MISSING_CLASS_HASH,
 }
 
 impl DescribableInternalError of Describable<InternalError> {
@@ -71,6 +72,7 @@ impl DescribableInternalError of Describable<InternalError> {
             InternalError::TOKEN_IS_ZERO_ADDRESS => "Zero address token is not allowed",
             InternalError::UNEXPECTED_INTERNAL_MEMBER_INFO_VERSION => "Unexpected VInternalPoolMemberInfo version",
             InternalError::INVALID_REWARDS_TRACE_IDX => "Invalid cumulative rewards trace idx",
+            InternalError::MISSING_CLASS_HASH => "Missing class hash",
         }
     }
 }
