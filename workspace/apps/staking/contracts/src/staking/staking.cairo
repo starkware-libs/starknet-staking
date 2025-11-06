@@ -74,7 +74,6 @@ pub mod Staking {
     pub(crate) const BTC_WEIGHT_FACTOR: u128 = STAKING_POWER_BASE_VALUE * ALPHA / ALPHA_DENOMINATOR;
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
-    pub(crate) const MAX_MIGRATION_TRACE_ENTRIES: u64 = 3; //TODO: Remove
     pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: WEEK };
     pub(crate) const MAX_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: 12 * WEEK };
     /// Prev contract version for V3 staking contract.
