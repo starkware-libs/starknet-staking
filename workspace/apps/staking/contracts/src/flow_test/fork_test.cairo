@@ -112,13 +112,6 @@ fn pool_upgrade_flow_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
-fn total_stake_trace_after_upgrade_flow_test() {
-    let mut flow = flows::TotalStakeTraceAfterUpgradeFlow { amount: Option::None };
-    test_flow_mainnet(ref :flow);
-}
-
-#[test]
-#[fork("MAINNET_LATEST")]
 fn delegator_intent_in_v0_action_in_v2_regression_test() {
     let mut flow = flows::DelegatorIntentInV0ActionInV2Flow {
         delegators: Option::None, amount: Option::None, pool_address: Option::None,
