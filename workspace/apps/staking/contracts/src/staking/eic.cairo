@@ -26,7 +26,7 @@ mod StakingEIC {
         // --- New fields ---
         /// The class hash of the pool EIC contract.
         /// The EIC contract is used while upgrading pool contracts from V1 / V2 (BTC) to V3.
-        /// Only used in `upgrade_staker_pools`.
+        /// Only used in `staker_migration`.
         pool_eic_class_hash: ClassHash,
     }
 

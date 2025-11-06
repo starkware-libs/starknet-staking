@@ -54,7 +54,6 @@ pub(crate) enum InternalError {
     INVALID_SECOND_LAST_EPOCH,
     INVALID_THIRD_LAST,
     TOKEN_IS_ZERO_ADDRESS,
-    POOL_BALANCE_NOT_ZERO,
     UNEXPECTED_INTERNAL_MEMBER_INFO_VERSION,
     INVALID_REWARDS_TRACE_IDX,
 }
@@ -70,7 +69,6 @@ impl DescribableInternalError of Describable<InternalError> {
             InternalError::INVALID_SECOND_LAST_EPOCH => "Invalid second last epoch",
             InternalError::INVALID_THIRD_LAST => "Invalid third last epoch, must be lower than or equal to current epoch",
             InternalError::TOKEN_IS_ZERO_ADDRESS => "Zero address token is not allowed",
-            InternalError::POOL_BALANCE_NOT_ZERO => "Staker has no pool, but `pool_amount` is not zero",
             InternalError::UNEXPECTED_INTERNAL_MEMBER_INFO_VERSION => "Unexpected VInternalPoolMemberInfo version",
             InternalError::INVALID_REWARDS_TRACE_IDX => "Invalid cumulative rewards trace idx",
         }

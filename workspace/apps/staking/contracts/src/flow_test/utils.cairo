@@ -36,11 +36,12 @@ use staking::reward_supplier::interface::{
 use staking::staking::interface::{
     CommissionCommitment, IStakingConfigDispatcher, IStakingConfigDispatcherTrait,
     IStakingConsensusDispatcher, IStakingDispatcher, IStakingDispatcherTrait,
-    IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingPauseDispatcher,
-    IStakingPauseDispatcherTrait, IStakingPoolDispatcher, IStakingPoolSafeDispatcher,
-    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
-    IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
-    IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+    IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingMigrationSafeDispatcher,
+    IStakingPauseDispatcher, IStakingPauseDispatcherTrait, IStakingPoolDispatcher,
+    IStakingPoolSafeDispatcher, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
+    IStakingTokenManagerDispatcher, IStakingTokenManagerDispatcherTrait,
+    IStakingTokenManagerSafeDispatcher, IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1,
+    StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::{EpochInfo, EpochInfoTrait, NormalizedAmount};
 use staking::staking::staking::Staking::DEFAULT_EXIT_WAIT_WINDOW;
@@ -308,6 +309,10 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn migration_dispatcher(self: StakingState) -> IStakingMigrationDispatcher nopanic {
         IStakingMigrationDispatcher { contract_address: self.address }
+    }
+
+    fn migration_safe_dispatcher(self: StakingState) -> IStakingMigrationSafeDispatcher nopanic {
+        IStakingMigrationSafeDispatcher { contract_address: self.address }
     }
 
     fn pause_dispatcher(self: StakingState) -> IStakingPauseDispatcher nopanic {
@@ -1953,7 +1958,9 @@ pub(crate) impl SystemReplaceabilityV3Impl of SystemReplaceabilityV3Trait {
     fn upgrade_contracts_implementation_v3(self: SystemState) {
         self.staking.pause();
         self.upgrade_staking_implementation_v3();
-        // TODO: Upgrade pool contracts.
+        for staker_address in self.staker_addresses {
+            self.staker_migration(staker_address: *staker_address);
+        }
         self.staking.unpause();
     }
 
