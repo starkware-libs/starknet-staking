@@ -610,3 +610,10 @@ fn staker_migration_skip_version_flow_test() {
     let mut flow = flows::StakerMigrationSkipVersionFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_migration_missing_class_hash_flow_test() {
+    let mut flow = flows::StakerMigrationMissingClassHashFlow {};
+    test_flow_mainnet(ref :flow);
+}

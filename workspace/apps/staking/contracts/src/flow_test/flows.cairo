@@ -3,7 +3,7 @@ use core::num::traits::ops::pow::Pow;
 use snforge_std::{TokenImpl, get_class_hash, start_cheat_block_number_global};
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS};
-use staking::errors::GenericError;
+use staking::errors::{GenericError, InternalError};
 use staking::flow_test::utils::MainnetClassHashes::{
     MAINNET_POOL_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1,
     MAINNET_STAKING_CLASS_HASH_V2,
@@ -11,7 +11,7 @@ use staking::flow_test::utils::MainnetClassHashes::{
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
     SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait,
-    TokenHelperTrait, upgrade_implementation,
+    TokenHelperTrait, declare_staking_contract, upgrade_implementation,
 };
 use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
@@ -6980,4 +6980,42 @@ pub(crate) impl StakerMigrationSkipVersionFlowImpl of FlowTrait<StakerMigrationS
         let result = migration_safe_dispatcher.staker_migration(staker_address: staker_address);
         assert_panic_with_error(result, StakingError::STAKER_NOT_MIGRATED.describe());
     }
+}
+
+/// Flow:
+/// Stake in V2.
+/// Upgrade staking contract to V3 without EIC.
+/// Attempt to migrate staker.
+/// Catch MISSING_CLASS_HASH.
+#[derive(Drop, Copy)]
+pub(crate) struct StakerMigrationMissingClassHashFlow {}
+pub(crate) impl StakerMigrationMissingClassHashFlowImpl of FlowTrait<
+    StakerMigrationMissingClassHashFlow,
+> {
+    #[feature("safe_dispatcher")]
+    fn setup_v2(ref self: StakerMigrationMissingClassHashFlow, ref system: SystemState) {
+        let min_stake = system.staking.get_min_stake();
+        let amount = min_stake * 2;
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        // Upgrade staking contract to V3 without EIC.
+        let implementation_data = ImplementationData {
+            impl_hash: declare_staking_contract(), eic_data: Option::None, final: false,
+        };
+        upgrade_implementation(
+            contract_address: system.staking.address,
+            :implementation_data,
+            upgrade_governor: system.staking.roles.upgrade_governor,
+        );
+
+        // Staker migration.
+        let staker_address = staker.staker.address;
+        let migration_safe_dispatcher = system.staking.migration_safe_dispatcher();
+        let result = migration_safe_dispatcher.staker_migration(staker_address: staker_address);
+        assert_panic_with_error(result, InternalError::MISSING_CLASS_HASH.describe());
+    }
+
+    fn test(self: StakerMigrationMissingClassHashFlow, ref system: SystemState) {}
 }
