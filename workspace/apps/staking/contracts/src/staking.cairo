@@ -6,3 +6,4 @@ pub(crate) mod staker_balance_trace;
 pub mod staking;
 #[cfg(test)]
 pub(crate) mod tests;
+pub(crate) mod utils;
