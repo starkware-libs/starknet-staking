@@ -213,7 +213,7 @@
     - [ILLEGAL\_EXIT\_DURATION](#illegal_exit_duration)
     - [ATTEST\_IS\_DONE](#attest_is_done)
     - [ATTEST\_OUT\_OF\_WINDOW](#attest_out_of_window)
-    - [STAKER\_INFO\_ALREADY\_UPDATED](#staker_info_already_updated)
+    - [STAKER\_ALREADY\MIGRATED](#staker_already_migrated)
     - [INVALID\_TOKEN\_ADDRESS](#invalid_token_address)
     - [TOKEN\_ALREADY\_EXISTS](#token_already_exists)
     - [TOKEN\_IS\_STAKER](#token_is_staker)
@@ -1284,7 +1284,7 @@ fn internal_staker_info(
 ```
 #### description <!-- omit from toc -->
 Return the latest version of the internal staker info for the given staker.
-This function is used for migration purposes. It converts legacy staker info types to the latest version.
+This function panics if the staker hasn't been migrated to V3.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
 1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
@@ -1419,20 +1419,20 @@ fn staker_migration(
     );
 ```
 #### description <!-- omit from toc -->
-Migrate staker pool info to the new storage variable staker_pool_info and migrate staker balance trace.
+Upgrade all of `staker_address`'s pools.
+This function is only used during the upgrade process, no user action is required.
 #### emits <!-- omit from toc -->
 #### errors <!-- omit from toc -->
-1. [STAKER\_INFO\_ALREADY\_UPDATED](#staker_info_already_updated)
+1. [STAKER\_ALREADY\_MIGRATED](#staker_already_migrated)
 2. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+3. [STAKER\_NOT\_MIGRATED](#staker_not_migrated)
 #### pre-condition <!-- omit from toc -->
 1. Staker exist in the contract.
-2. Staker version is V1.
-3. Staker balance trace is initialized.
+2. Staker version is V2.
 #### access control <!-- omit from toc -->
 Any address can execute.
 #### logic <!-- omit from toc -->
-1. Migrate staker pool info.
-2. Migrate staker balance trace.
+1. Upgrade staker pools.
 
 ### add_token
 ```rust
@@ -2704,8 +2704,8 @@ Only token admin.
 ### ATTEST_OUT_OF_WINDOW
 "Attestation is out of window"
 
-### STAKER_INFO_ALREADY_UPDATED
-"Staker Info is already up-to-date"
+### STAKER_ALREADY_MIGRATED
+"Staker is already migrated to latest version"
 
 ### TOKEN_NOT_EXISTS
 "Token does not exist"

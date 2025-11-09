@@ -28,8 +28,9 @@ pub mod Staking {
         AttestationInfo, AttestationInfoTrait, EpochInfo, EpochInfoTrait,
         InternalStakerInfoLatestTrait, InternalStakerPoolInfoV2, InternalStakerPoolInfoV2MutTrait,
         InternalStakerPoolInfoV2Trait, NormalizedAmount, NormalizedAmountTrait, StakerInfoV3Trait,
-        UndelegateIntentKey, UndelegateIntentValue, UndelegateIntentValueTrait,
-        UndelegateIntentValueZero, VInternalStakerInfo, VInternalStakerInfoTrait,
+        StakerVersion, StakerVersionTrait, UndelegateIntentKey, UndelegateIntentValue,
+        UndelegateIntentValueTrait, UndelegateIntentValueZero, VInternalStakerInfo,
+        VInternalStakerInfoTrait,
     };
     use staking::staking::staker_balance_trace::trace::{
         StakerBalanceTrace, StakerBalanceTraceTrait,
@@ -81,6 +82,8 @@ pub mod Staking {
     /// Note: The key for `prev_class_hash` for class hash of V0 is '0', and for class hash of V1 is
     /// '1'.
     pub(crate) const V3_PREV_CONTRACT_VERSION: Version = '2';
+    // **Note:** Should be updated with each staker version.
+    pub(crate) const LATEST_STAKER_VERSION: StakerVersion = StakerVersion::V3;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -187,6 +190,8 @@ pub mod Staking {
         /// The EIC contract is used while upgrading pool contracts from V1 / V2 (BTC) to V3.
         /// Only used in `staker_migration`.
         pool_eic_class_hash: ClassHash,
+        /// Map staker address to its version.
+        staker_version: Map<ContractAddress, StakerVersion>,
     }
 
     #[event]
@@ -335,6 +340,9 @@ pub mod Staking {
 
             // Add staker address to the stakers vector.
             self.stakers.push(staker_address);
+
+            // Mark the staker's version.
+            self.staker_version.write(staker_address, LATEST_STAKER_VERSION);
 
             // Emit events.
             self
@@ -898,10 +906,16 @@ pub mod Staking {
             self: @ContractState, staker_address: ContractAddress,
         ) -> InternalStakerInfoLatest {
             let internal_staker_info = self._internal_staker_info(:staker_address);
-            // TODO: Assert staker already migrated to V3.
+            // Assert staker already migrated to V3.
+            assert!(
+                self.staker_version.read(staker_address).is_latest(),
+                "{}",
+                Error::STAKER_NOT_MIGRATED,
+            );
             internal_staker_info
         }
 
+        // **Note**: When this function is updated, `LATEST_STAKER_VERSION` should also be updated.
         fn staker_migration(ref self: ContractState, staker_address: ContractAddress) {
             // Assert the staker exists.
             self._internal_staker_info(:staker_address);
@@ -913,7 +927,12 @@ pub mod Staking {
                 Error::STAKER_NOT_MIGRATED,
             );
 
-            // TODO: Assert the staker is not migrated yet.
+            // Assert the staker is not migrated to V3 yet.
+            assert!(
+                !self.staker_version.read(staker_address).is_latest(),
+                "{}",
+                Error::STAKER_ALREADY_MIGRATED,
+            );
 
             // Prepare the implementation data.
             let pool_class_hash = self.pool_contract_class_hash.read();
@@ -936,6 +955,9 @@ pub mod Staking {
                 pool_replaceable_dispatcher.add_new_implementation(:implementation_data);
                 pool_replaceable_dispatcher.replace_to(:implementation_data);
             }
+
+            // Mark the staker's version.
+            self.staker_version.write(staker_address, LATEST_STAKER_VERSION);
         }
     }
 
@@ -1439,7 +1461,7 @@ pub mod Staking {
     #[generate_trait]
     pub(crate) impl InternalStakingFunctions of InternalStakingFunctionsTrait {
         /// This function differs from `internal_staker_info` function in that it doesn't assert
-        /// that the staker has already migrated to V2.
+        /// that the staker has already migrated to the latest version.
         ///
         /// Use `_internal_staker_info` only within `staker_migration`.
         /// For all other cases, call `internal_staker_info`.

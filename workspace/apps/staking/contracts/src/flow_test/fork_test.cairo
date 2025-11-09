@@ -313,7 +313,7 @@ fn delegator_switch_after_upgrade_regression_test() {
 #[test]
 #[fork("MAINNET_LATEST")]
 fn staker_migration_regression_test() {
-    let mut flow = flows::StakerMigrationFlow { pool_address: Option::None };
+    let mut flow = flows::StakerMigrationFlow { pool_address: Option::None, staker: Option::None };
     test_flow_mainnet(ref :flow);
 }
 
@@ -344,8 +344,7 @@ fn staker_with_pool_without_commission_commitment_migration_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
-#[ignore]
-#[should_panic(expected: "Staker Info is already up-to-date")]
+#[should_panic(expected: "Staker is already migrated to latest version")]
 fn staker_migration_called_twice_regression_test() {
     let mut flow = flows::StakerMigrationCalledTwiceFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
@@ -353,7 +352,6 @@ fn staker_migration_called_twice_regression_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
-#[ignore]
 #[should_panic(expected: "Staker is not migrated to latest version")]
 fn internal_staker_info_without_staker_migration_regression_test() {
     let mut flow = flows::InternalStakerInfoWithoutStakerMigrationFlow { staker: Option::None };
@@ -615,5 +613,12 @@ fn staker_migration_skip_version_flow_test() {
 #[fork("MAINNET_LATEST")]
 fn staker_migration_missing_class_hash_flow_test() {
     let mut flow = flows::StakerMigrationMissingClassHashFlow {};
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn pre_v3_staker_version_flow_test() {
+    let mut flow = flows::StakerVersionFlow { stakers: Option::None };
     test_flow_mainnet(ref :flow);
 }

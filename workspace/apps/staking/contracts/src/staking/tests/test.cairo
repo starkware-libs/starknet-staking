@@ -4217,8 +4217,7 @@ fn test_staker_migration_staker_not_exist() {
 }
 
 #[test]
-#[ignore]
-#[should_panic(expected: "Staker Info is already up-to-date")]
+#[should_panic(expected: "Staker is already migrated to latest version")]
 fn test_staker_migration_up_to_date_new_staker() {
     let mut cfg: StakingInitConfig = Default::default();
     general_contract_system_deployment(ref :cfg);

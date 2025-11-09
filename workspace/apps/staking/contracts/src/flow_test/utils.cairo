@@ -43,7 +43,9 @@ use staking::staking::interface::{
     IStakingTokenManagerSafeDispatcher, IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1,
     StakerInfoV1Trait, StakerPoolInfoV2,
 };
-use staking::staking::objects::{EpochInfo, EpochInfoTrait, NormalizedAmount};
+use staking::staking::objects::{
+    EpochInfo, EpochInfoTrait, NormalizedAmount, StakerVersion, StakerVersionTrait,
+};
 use staking::staking::staking::Staking::DEFAULT_EXIT_WAIT_WINDOW;
 use staking::staking::tests::interface_v0::{
     IStakingV0ForTestsDispatcher, IStakingV0ForTestsDispatcherTrait, StakerInfo, StakerInfoTrait,
@@ -59,7 +61,8 @@ use staking::test_utils::constants::{
 use staking::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
     declare_pool_contract, declare_pool_eic_contract, declare_staking_contract,
-    declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, fund, upgrade_implementation,
+    declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, fund, load_from_simple_map,
+    upgrade_implementation,
 };
 use staking::types::{
     Amount, BlockNumber, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
@@ -1511,6 +1514,15 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
             contract_address: self.staking.address, caller_address: staker.staker.address,
         );
         self.staking.dispatcher().change_reward_address(:reward_address)
+    }
+
+    fn is_staker_up_to_date(self: SystemState, staker: Staker) -> bool {
+        let staker_version: StakerVersion = load_from_simple_map(
+            map_selector: selector!("staker_version"),
+            key: staker.staker.address,
+            contract: self.staking.address,
+        );
+        staker_version.is_latest()
     }
 }
 
