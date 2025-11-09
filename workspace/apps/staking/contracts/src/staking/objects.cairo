@@ -7,6 +7,7 @@ use staking::staking::errors::Error;
 use staking::staking::interface::{
     CommissionCommitment, StakerInfoV1, StakerInfoV3, StakerPoolInfoV1,
 };
+use staking::staking::staking::Staking::LATEST_STAKER_VERSION;
 use staking::types::{Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest};
 use starknet::storage::{
     Mutable, StoragePath, StoragePathMutableConversion, StoragePointerReadAccess,
@@ -749,5 +750,19 @@ pub impl AttestationInfoImpl of AttestationInfoTrait {
     }
     fn current_epoch_starting_block(self: @AttestationInfo) -> BlockNumber {
         *self.current_epoch_starting_block
+    }
+}
+
+#[derive(starknet::Store, PartialEq, Copy, Drop, Serde)]
+pub(crate) enum StakerVersion {
+    #[default]
+    PreV3,
+    V3,
+}
+
+#[generate_trait]
+pub(crate) impl StakerVersionImpl of StakerVersionTrait {
+    fn is_latest(self: @StakerVersion) -> bool {
+        *self == LATEST_STAKER_VERSION
     }
 }

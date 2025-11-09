@@ -23,7 +23,7 @@ use staking::staking::interface::{
     IStakingDispatcherTrait, IStakingMigrationSafeDispatcherTrait, IStakingSafeDispatcherTrait,
     PoolInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
-use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait};
+use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait, StakerVersion};
 use staking::staking::staking::Staking::V3_PREV_CONTRACT_VERSION;
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_8D_CONFIG, BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, STRK_BASE_VALUE,
@@ -34,8 +34,8 @@ use staking::test_utils::{
     calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_amount_and_pool_info_v2,
     calculate_strk_pool_rewards_v2, calculate_strk_pool_rewards_with_pool_balance_v2,
     compute_rewards_per_unit, declare_pool_contract, declare_pool_eic_contract,
-    declare_staking_contract, load_from_trace, load_one_felt, load_trace_length,
-    strk_pool_update_rewards_v1, to_amount_18_decimals, upgrade_implementation,
+    declare_staking_contract, load_from_simple_map, load_from_trace, load_one_felt,
+    load_trace_length, strk_pool_update_rewards_v1, to_amount_18_decimals, upgrade_implementation,
 };
 use staking::types::{Amount, Commission};
 use staking::utils::compute_rewards_rounded_down;
@@ -2717,6 +2717,7 @@ pub(crate) impl DelegatorSwitchAfterUpgradeFlowImpl of FlowTrait<DelegatorSwitch
 #[derive(Drop, Copy)]
 pub(crate) struct StakerMigrationFlow {
     pub(crate) pool_address: Option<ContractAddress>,
+    pub(crate) staker: Option<Staker>,
 }
 pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
     fn setup_v2(ref self: StakerMigrationFlow, ref system: SystemState) {
@@ -2730,10 +2731,12 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
 
         system.set_staker_for_migration(staker_address: staker.staker.address);
         self.pool_address = Option::Some(pool);
+        self.staker = Option::Some(staker);
     }
 
     fn test(self: StakerMigrationFlow, ref system: SystemState) {
         let pool_address = self.pool_address.unwrap();
+        let staker = self.staker.unwrap();
         let pool_class_hash = get_class_hash(contract_address: pool_address);
         let expected_pool_class_hash = declare_pool_contract();
         assert!(pool_class_hash == expected_pool_class_hash);
@@ -2750,6 +2753,7 @@ pub(crate) impl StakerMigrationFlowImpl of FlowTrait<StakerMigrationFlow> {
             .try_into()
             .unwrap();
         assert!(staking_rewards_base_value == STRK_CONFIG.base_value);
+        assert!(system.is_staker_up_to_date(:staker));
     }
 }
 
@@ -2791,13 +2795,13 @@ pub(crate) impl StakerMigrationMultiplePoolsFlowImpl of FlowTrait<
     }
 
     fn test(self: StakerMigrationMultiplePoolsFlow, ref system: SystemState) {
-        assert!(
-            system.staker_pool_info(staker: self.staker.unwrap()) == self.staker_pool_info.unwrap(),
-        );
+        let staker = self.staker.unwrap();
+        assert!(system.staker_pool_info(:staker) == self.staker_pool_info.unwrap());
         let expected_class_hash = declare_pool_contract();
         for pool_address in self.pool_addresses.unwrap() {
             assert!(get_class_hash(contract_address: *pool_address) == expected_class_hash);
         }
+        system.is_staker_up_to_date(:staker);
     }
 }
 
@@ -2868,6 +2872,7 @@ pub(crate) impl StakerMigrationMultipleVersionsFlowImpl of FlowTrait<
             assert!(
                 get_class_hash(contract_address: *pools[0].pool_contract) == expected_class_hash,
             );
+            system.is_staker_up_to_date(staker: *staker);
         }
     }
 }
@@ -7019,4 +7024,61 @@ pub(crate) impl StakerMigrationMissingClassHashFlowImpl of FlowTrait<
     }
 
     fn test(self: StakerMigrationMissingClassHashFlow, ref system: SystemState) {}
+}
+
+/// Flow:
+/// Staker 1 stake
+/// Upgrade to V1 (without migration)
+/// Staker 2 stake
+/// Upgrade to V2 (without migration)
+/// Staker 3 stake
+/// Upgrade to V3 (without migration)
+/// Check version for each staker.
+#[derive(Drop, Copy)]
+pub(crate) struct StakerVersionFlow {
+    pub(crate) stakers: Option<Span<Staker>>,
+}
+pub(crate) impl StakerVersionFlowImpl of FlowTrait<StakerVersionFlow> {
+    fn setup(ref self: StakerVersionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        self.stakers = Option::Some([staker].span());
+    }
+
+    fn setup_v1(ref self: StakerVersionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        let mut stakers: Array<Staker> = self.stakers.unwrap().into();
+        stakers.append(staker);
+        self.stakers = Option::Some(stakers.span());
+    }
+
+    fn setup_v2(ref self: StakerVersionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+
+        let mut stakers: Array<Staker> = self.stakers.unwrap().into();
+        stakers.append(staker);
+        self.stakers = Option::Some(stakers.span());
+    }
+
+    fn test(self: StakerVersionFlow, ref system: SystemState) {
+        let stakers = self.stakers.unwrap();
+        for staker in stakers {
+            let staker_version: StakerVersion = load_from_simple_map(
+                map_selector: selector!("staker_version"),
+                key: *staker.staker.address,
+                contract: system.staking.address,
+            );
+            assert!(staker_version == StakerVersion::PreV3);
+        }
+    }
 }
