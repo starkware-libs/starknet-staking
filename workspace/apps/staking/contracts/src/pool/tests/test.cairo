@@ -19,7 +19,6 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::errors::GenericError;
-use staking::flow_test::utils::upgrade_implementation;
 use staking::pool::errors::Error;
 use staking::pool::interface::{
     IPool, IPoolDispatcher, IPoolDispatcherTrait, IPoolMigrationDispatcher,
@@ -59,6 +58,7 @@ use test_utils::{
     enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
     initialize_pool_state, load_from_simple_map, stake_for_testing_using_dispatcher,
     stake_with_strk_pool_enabled, update_rewards_from_staking_contract_for_testing,
+    upgrade_implementation,
 };
 
 #[test]

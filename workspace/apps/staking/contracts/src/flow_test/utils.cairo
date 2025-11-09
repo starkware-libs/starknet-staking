@@ -58,8 +58,8 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
-    declare_pool_contract, declare_pool_eic_contract, declare_staking_eic_contract,
-    deploy_mock_erc20_decimals_contract, fund,
+    declare_pool_contract, declare_pool_eic_contract, declare_staking_contract,
+    declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, fund, upgrade_implementation,
 };
 use staking::types::{
     Amount, BlockNumber, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
@@ -67,9 +67,7 @@ use staking::types::{
 };
 use starknet::syscalls::deploy_syscall;
 use starknet::{ClassHash, ContractAddress, Store, SyscallResultTrait, get_block_number};
-use starkware_utils::components::replaceability::interface::{
-    EICData, IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
-};
+use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::components::roles::interface::{IRolesDispatcher, IRolesDispatcherTrait};
 use starkware_utils::constants::SYMBOL;
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
@@ -1984,37 +1982,12 @@ pub(crate) impl SystemReplaceabilityV3Impl of SystemReplaceabilityV3Trait {
     }
 }
 
-pub(crate) fn declare_staking_contract() -> ClassHash {
-    *snforge_std::declare("Staking").unwrap().contract_class().class_hash
-}
-
 fn declare_reward_supplier_contract() -> ClassHash {
     *snforge_std::declare("RewardSupplier").unwrap().contract_class().class_hash
 }
 
 fn declare_minting_curve_contract() -> ClassHash {
     *snforge_std::declare("MintingCurve").unwrap().contract_class().class_hash
-}
-
-pub(crate) fn pause_staking_contract(
-    staking_contract: ContractAddress, security_agent: ContractAddress,
-) {
-    cheat_caller_address_once(contract_address: staking_contract, caller_address: security_agent);
-    let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
-    staking_pause_dispatcher.pause();
-}
-
-/// Upgrades implementation of the given contract.
-pub(crate) fn upgrade_implementation(
-    contract_address: ContractAddress,
-    implementation_data: ImplementationData,
-    upgrade_governor: ContractAddress,
-) {
-    let replaceability_dispatcher = IReplaceableDispatcher { contract_address };
-    cheat_caller_address_once(:contract_address, caller_address: upgrade_governor);
-    replaceability_dispatcher.add_new_implementation(:implementation_data);
-    cheat_caller_address_once(:contract_address, caller_address: upgrade_governor);
-    replaceability_dispatcher.replace_to(:implementation_data);
 }
 
 #[generate_trait]

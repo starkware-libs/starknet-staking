@@ -62,6 +62,9 @@ use staking::utils::{
     compute_rewards_rounded_down,
 };
 use starknet::{ClassHash, ContractAddress, Store};
+use starkware_utils::components::replaceability::interface::{
+    IReplaceableDispatcher, IReplaceableDispatcherTrait, ImplementationData,
+};
 use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::mul_wide_and_div;
@@ -540,6 +543,10 @@ pub(crate) fn deploy_attestation_contract(cfg: StakingInitConfig) -> ContractAdd
     attestation_contract_address
 }
 
+pub(crate) fn declare_staking_contract() -> ClassHash {
+    *snforge_std::declare("Staking").unwrap().contract_class().class_hash
+}
+
 pub(crate) fn declare_pool_contract() -> ClassHash {
     *snforge_std::declare("Pool").unwrap().contract_class().class_hash
 }
@@ -550,6 +557,19 @@ pub(crate) fn declare_staking_eic_contract() -> ClassHash {
 
 pub(crate) fn declare_pool_eic_contract() -> ClassHash {
     *snforge_std::declare("PoolEIC").unwrap().contract_class().class_hash
+}
+
+/// Upgrades implementation of the given contract.
+pub(crate) fn upgrade_implementation(
+    contract_address: ContractAddress,
+    implementation_data: ImplementationData,
+    upgrade_governor: ContractAddress,
+) {
+    let replaceability_dispatcher = IReplaceableDispatcher { contract_address };
+    cheat_caller_address_once(:contract_address, caller_address: upgrade_governor);
+    replaceability_dispatcher.add_new_implementation(:implementation_data);
+    cheat_caller_address_once(:contract_address, caller_address: upgrade_governor);
+    replaceability_dispatcher.replace_to(:implementation_data);
 }
 
 pub(crate) fn fund(target: ContractAddress, amount: Amount, token: Token) {

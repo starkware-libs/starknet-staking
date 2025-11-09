@@ -33,9 +33,6 @@ use snforge_std::{
 };
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
 use staking::errors::GenericError;
-use staking::flow_test::utils::{
-    declare_staking_contract, pause_staking_contract, upgrade_implementation,
-};
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait, PoolContractInfoV1};
 use staking::pool::objects::SwitchPoolData;
 use staking::reward_supplier::interface::{
@@ -92,11 +89,12 @@ use test_utils::{
     calculate_staker_btc_pool_rewards_v3, calculate_staker_strk_rewards_v2,
     calculate_staker_strk_rewards_with_balances_v3, cheat_target_attestation_block_hash, constants,
     custom_decimals_token, declare_pool_contract, declare_pool_eic_contract,
-    declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, deploy_staking_contract,
-    enter_delegation_pool_for_testing_using_dispatcher, fund, general_contract_system_deployment,
-    load_from_simple_map, load_one_felt, setup_btc_token, stake_for_testing_using_dispatcher,
-    stake_from_zero_address, stake_with_strk_pool_enabled, store_internal_staker_info_v0_to_map,
-    store_to_simple_map, to_amount_18_decimals,
+    declare_staking_contract, declare_staking_eic_contract, deploy_mock_erc20_decimals_contract,
+    deploy_staking_contract, enter_delegation_pool_for_testing_using_dispatcher, fund,
+    general_contract_system_deployment, load_from_simple_map, load_one_felt, pause_staking_contract,
+    setup_btc_token, stake_for_testing_using_dispatcher, stake_from_zero_address,
+    stake_with_strk_pool_enabled, store_internal_staker_info_v0_to_map, store_to_simple_map,
+    to_amount_18_decimals, upgrade_implementation,
 };
 
 #[test]
@@ -4725,8 +4723,6 @@ fn test_staking_eic() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let upgrade_governor = cfg.test_info.upgrade_governor;
-    let security_agent = cfg.test_info.security_agent;
-
     // Upgrade.
     let staking_prev_class_hash = snforge_std::get_class_hash(contract_address: staking_contract);
     let new_pool_contract_class_hash = declare_pool_contract();
@@ -4741,7 +4737,7 @@ fn test_staking_eic() {
     start_cheat_block_timestamp_global(
         block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
     );
-    pause_staking_contract(:staking_contract, :security_agent);
+    pause_staking_contract(:cfg);
     upgrade_implementation(
         contract_address: staking_contract, :implementation_data, :upgrade_governor,
     );
@@ -4832,7 +4828,6 @@ fn test_staking_eic_with_wrong_number_of_data_elements() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let upgrade_governor = cfg.test_info.upgrade_governor;
-    let security_agent = cfg.test_info.security_agent;
     // Upgrade.
     let eic_data = EICData { eic_hash: declare_staking_eic_contract(), eic_init_data: [].span() };
     let implementation_data = ImplementationData {
@@ -4843,7 +4838,7 @@ fn test_staking_eic_with_wrong_number_of_data_elements() {
         block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
     );
     // Pause the staking contract.
-    pause_staking_contract(:staking_contract, :security_agent);
+    pause_staking_contract(:cfg);
     upgrade_implementation(
         contract_address: staking_contract, :implementation_data, :upgrade_governor,
     );
@@ -4856,7 +4851,6 @@ fn test_staking_eic_pool_contract_zero_class_hash() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let upgrade_governor = cfg.test_info.upgrade_governor;
-    let security_agent = cfg.test_info.security_agent;
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
@@ -4870,7 +4864,7 @@ fn test_staking_eic_pool_contract_zero_class_hash() {
         block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
     );
     // Pause the staking contract.
-    pause_staking_contract(:staking_contract, :security_agent);
+    pause_staking_contract(:cfg);
     upgrade_implementation(
         contract_address: staking_contract, :implementation_data, :upgrade_governor,
     );
@@ -4883,7 +4877,6 @@ fn test_staking_eic_pool_eic_zero_class_hash() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let upgrade_governor = cfg.test_info.upgrade_governor;
-    let security_agent = cfg.test_info.security_agent;
     // Upgrade.
     let eic_data = EICData {
         eic_hash: declare_staking_eic_contract(),
@@ -4897,7 +4890,7 @@ fn test_staking_eic_pool_eic_zero_class_hash() {
         block_timestamp: Time::now().add(delta: Time::days(count: 1)).into(),
     );
     // Pause the staking contract.
-    pause_staking_contract(:staking_contract, :security_agent);
+    pause_staking_contract(:cfg);
     upgrade_implementation(
         contract_address: staking_contract, :implementation_data, :upgrade_governor,
     );
