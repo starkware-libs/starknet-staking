@@ -11,7 +11,7 @@ use staking::flow_test::utils::MainnetClassHashes::{
 use staking::flow_test::utils::{
     AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
     SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait,
-    TokenHelperTrait, declare_staking_contract, upgrade_implementation,
+    TokenHelperTrait,
 };
 use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
@@ -33,8 +33,9 @@ use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
     calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_amount_and_pool_info_v2,
     calculate_strk_pool_rewards_v2, calculate_strk_pool_rewards_with_pool_balance_v2,
-    compute_rewards_per_unit, declare_pool_contract, declare_pool_eic_contract, load_from_trace,
-    load_one_felt, load_trace_length, strk_pool_update_rewards_v1, to_amount_18_decimals,
+    compute_rewards_per_unit, declare_pool_contract, declare_pool_eic_contract,
+    declare_staking_contract, load_from_trace, load_one_felt, load_trace_length,
+    strk_pool_update_rewards_v1, to_amount_18_decimals, upgrade_implementation,
 };
 use staking::types::{Amount, Commission};
 use staking::utils::compute_rewards_rounded_down;
