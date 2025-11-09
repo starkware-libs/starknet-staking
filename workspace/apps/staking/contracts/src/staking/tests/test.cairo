@@ -64,8 +64,9 @@ use staking::staking::objects::{
 };
 use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::{
-    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, STRK_WEIGHT_FACTOR, V3_PREV_CONTRACT_VERSION,
+    DEFAULT_EXIT_WAIT_WINDOW, MAX_EXIT_WAIT_WINDOW, V3_PREV_CONTRACT_VERSION,
 };
+use staking::staking::utils::STRK_WEIGHT_FACTOR;
 use staking::types::{Epoch, InternalStakerInfoLatest, VecIndex};
 use staking::{event_test_utils, test_utils};
 use starknet::class_hash::ClassHash;

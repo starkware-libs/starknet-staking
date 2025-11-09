@@ -8,7 +8,7 @@ use staking::flow_test::utils::{
 };
 use staking::pool::pool::Pool;
 use staking::staking::interface::{IStakingConsensusDispatcherTrait, IStakingDispatcherTrait};
-use staking::staking::staking::Staking::STRK_WEIGHT_FACTOR;
+use staking::staking::utils::STRK_WEIGHT_FACTOR;
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS,
 };

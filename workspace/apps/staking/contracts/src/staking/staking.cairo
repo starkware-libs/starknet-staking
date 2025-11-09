@@ -1,17 +1,15 @@
 #[starknet::contract]
 pub mod Staking {
     use RolesComponent::InternalTrait as RolesInternalTrait;
-    use core::num::traits::Pow;
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use core::panics::panic_with_byte_array;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{
-        IERC20Dispatcher, IERC20DispatcherTrait, IERC20MetadataDispatcher,
-        IERC20MetadataDispatcherTrait,
+        IERC20Dispatcher, IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait,
     };
-    use staking::constants::{ALPHA, ALPHA_DENOMINATOR, K, STARTING_EPOCH, STRK_TOKEN_ADDRESS};
+    use staking::constants::{K, STARTING_EPOCH, STRK_TOKEN_ADDRESS};
     use staking::errors::{GenericError, InternalError};
     use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
     use staking::reward_supplier::interface::{
@@ -35,13 +33,17 @@ pub mod Staking {
     use staking::staking::staker_balance_trace::trace::{
         StakerBalanceTrace, StakerBalanceTraceTrait,
     };
+    use staking::staking::utils::{
+        assert_caller_is_not_zero, balance_at_epoch, calculate_staker_total_staking_power,
+        claim_from_reward_supplier, get_undelegate_intent_token, is_btc_active,
+        split_rewards_with_commission, strk_token_dispatcher,
+    };
     use staking::types::{
         Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey, StakingPower,
         Version,
     };
     use staking::utils::{
-        CheckedIERC20DispatcherTrait, compute_commission_amount_rounded_down,
-        compute_new_delegated_stake, deploy_delegation_pool_contract,
+        CheckedIERC20DispatcherTrait, compute_new_delegated_stake, deploy_delegation_pool_contract,
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::{
@@ -68,11 +70,6 @@ pub mod Staking {
     use starkware_utils::trace::trace::{MutableTraceTrait, Trace, TraceTrait};
     pub const CONTRACT_IDENTITY: felt252 = 'Staking Core Contract';
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
-    const STAKING_POWER_BASE_VALUE: u128 = 10_u128.pow(10);
-    pub(crate) const STRK_WEIGHT_FACTOR: u128 = STAKING_POWER_BASE_VALUE
-        * (ALPHA_DENOMINATOR - ALPHA)
-        / ALPHA_DENOMINATOR;
-    pub(crate) const BTC_WEIGHT_FACTOR: u128 = STAKING_POWER_BASE_VALUE * ALPHA / ALPHA_DENOMINATOR;
 
     pub const COMMISSION_DENOMINATOR: Commission = 10000;
     pub(crate) const DEFAULT_EXIT_WAIT_WINDOW: TimeDelta = TimeDelta { seconds: WEEK };
@@ -792,7 +789,7 @@ pub mod Staking {
             let mut active_tokens: Array<ContractAddress> = array![STRK_TOKEN_ADDRESS];
             let curr_epoch = self.get_current_epoch();
             for (token_address, active_status) in self.btc_tokens {
-                if self.is_btc_active(:active_status, epoch_id: curr_epoch) {
+                if is_btc_active(:active_status, epoch_id: curr_epoch) {
                     active_tokens.append(token_address);
                 }
             }
@@ -803,7 +800,7 @@ pub mod Staking {
             let mut tokens: Array<(ContractAddress, bool)> = array![(STRK_TOKEN_ADDRESS, true)];
             let curr_epoch = self.get_current_epoch();
             for (token_address, active_status) in self.btc_tokens {
-                let is_btc_active = self.is_btc_active(:active_status, epoch_id: curr_epoch);
+                let is_btc_active = is_btc_active(:active_status, epoch_id: curr_epoch);
                 tokens.append((token_address, is_btc_active));
             }
             tokens.span()
@@ -1091,7 +1088,7 @@ pub mod Staking {
             // Clear the intent.
             self.clear_undelegate_intent(:undelegate_intent_key);
             // Extract the token address of the pool contract.
-            let token_address = self.get_undelegate_intent_token(:undelegate_intent);
+            let token_address = get_undelegate_intent_token(:undelegate_intent);
             let decimals = self.get_token_decimals(:token_address);
             // Transfer the intent amount to the pool contract.
             let native_amount = undelegate_intent.amount.to_native_amount(:decimals);
@@ -1132,8 +1129,9 @@ pub mod Staking {
                 GenericError::MISSING_UNDELEGATE_INTENT,
             );
             // Extract the token address of the `from_pool` contract.
-            let token_address = self
-                .get_undelegate_intent_token(undelegate_intent: undelegate_intent_value);
+            let token_address = get_undelegate_intent_token(
+                undelegate_intent: undelegate_intent_value,
+            );
             let old_intent_amount = undelegate_intent_value.amount;
             assert!(to_pool != from_pool, "{}", Error::SELF_SWITCH_NOT_ALLOWED);
             let decimals = self.get_token_decimals(:token_address);
@@ -1500,19 +1498,6 @@ pub mod Staking {
             (strk_rewards / epoch_len_in_blocks.into(), btc_rewards / epoch_len_in_blocks.into())
         }
 
-        /// Returns the token address for the given `undelegate_intent`.
-        fn get_undelegate_intent_token(
-            self: @ContractState, undelegate_intent: UndelegateIntentValue,
-        ) -> ContractAddress {
-            // If undelegate_intent.token_address is zero, it means the intent is for the STRK
-            // token (it was created before the BTC version).
-            if undelegate_intent.token_address.is_zero() {
-                STRK_TOKEN_ADDRESS
-            } else {
-                undelegate_intent.token_address
-            }
-        }
-
         fn update_commission(
             ref self: ContractState,
             staker_address: ContractAddress,
@@ -1551,21 +1536,6 @@ pub mod Staking {
                 );
         }
 
-        fn claim_from_reward_supplier(
-            ref self: ContractState,
-            reward_supplier_dispatcher: IRewardSupplierDispatcher,
-            amount: Amount,
-            token_dispatcher: IERC20Dispatcher,
-        ) {
-            let staking_contract = get_contract_address();
-            let balance_before = token_dispatcher.balance_of(account: staking_contract);
-            reward_supplier_dispatcher.claim_rewards(:amount);
-            let balance_after = token_dispatcher.balance_of(account: staking_contract);
-            assert!(
-                balance_after - balance_before == amount.into(), "{}", Error::UNEXPECTED_BALANCE,
-            );
-        }
-
         /// Sends the rewards to `staker_address`'s reward address.
         /// Important note:
         /// After calling this function, one must write the updated staker_info to the storage.
@@ -1579,10 +1549,7 @@ pub mod Staking {
             let amount = staker_info.unclaimed_rewards_own;
             let reward_supplier_dispatcher = self.reward_supplier_dispatcher.read();
 
-            self
-                .claim_from_reward_supplier(
-                    :reward_supplier_dispatcher, :amount, :token_dispatcher,
-                );
+            claim_from_reward_supplier(:reward_supplier_dispatcher, :amount, :token_dispatcher);
             token_dispatcher.checked_transfer(recipient: reward_address, amount: amount.into());
             staker_info.unclaimed_rewards_own = Zero::zero();
 
@@ -1754,11 +1721,7 @@ pub mod Staking {
         /// Wrap initial operations required in any public staking function.
         fn general_prerequisites(ref self: ContractState) {
             self.assert_is_unpaused();
-            self.assert_caller_is_not_zero();
-        }
-
-        fn assert_caller_is_not_zero(self: @ContractState) {
-            assert!(get_caller_address().is_non_zero(), "{}", Error::CALLER_IS_ZERO_ADDRESS);
+            assert_caller_is_not_zero();
         }
 
         /// Updates the delegated stake amount in the given `staker_balance` according to changes
@@ -1951,11 +1914,9 @@ pub mod Staking {
                 } else {
                     Zero::zero()
                 };
-                let (commission_rewards, pool_rewards) = self
-                    .split_rewards_with_commission(
-                        rewards_including_commission: pool_rewards_including_commission,
-                        :commission,
-                    );
+                let (commission_rewards, pool_rewards) = split_rewards_with_commission(
+                    rewards_including_commission: pool_rewards_including_commission, :commission,
+                );
                 total_commission_rewards += commission_rewards;
                 total_pools_rewards += pool_rewards;
                 if pool_rewards.is_non_zero() {
@@ -1966,18 +1927,6 @@ pub mod Staking {
                 }
             }
             (total_commission_rewards, total_pools_rewards, pool_rewards_array)
-        }
-
-        /// Split rewards into pool's rewards and commission rewards.
-        /// Return a tuple of (commission_rewards, pool_rewards).
-        fn split_rewards_with_commission(
-            self: @ContractState, rewards_including_commission: Amount, commission: Commission,
-        ) -> (Amount, Amount) {
-            let commission_rewards = compute_commission_amount_rounded_down(
-                :rewards_including_commission, :commission,
-            );
-            let pool_rewards = rewards_including_commission - commission_rewards;
-            (commission_rewards, pool_rewards)
         }
 
         fn get_epoch_plus_k(self: @ContractState) -> Epoch {
@@ -2126,7 +2075,7 @@ pub mod Staking {
             self: @ContractState, staker_address: ContractAddress, epoch_id: Epoch,
         ) -> NormalizedAmount {
             let trace = self.staker_own_balance_trace.entry(key: staker_address);
-            self.balance_at_epoch(:trace, :epoch_id)
+            balance_at_epoch(:trace, :epoch_id)
         }
 
         /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
@@ -2140,29 +2089,7 @@ pub mod Staking {
                 .staker_delegated_balance_trace
                 .entry(key: staker_address)
                 .entry(key: pool_contract);
-            self.balance_at_epoch(:trace, :epoch_id)
-        }
-
-        /// Returns the balance at the specified epoch.
-        ///
-        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
-        fn balance_at_epoch(
-            self: @ContractState, trace: StoragePath<Trace>, epoch_id: Epoch,
-        ) -> NormalizedAmount {
-            let (epoch, balance) = trace.last().unwrap_or_else(|err| panic!("{err}"));
-            let current_balance = if epoch <= epoch_id {
-                balance
-            } else {
-                let (epoch, balance) = trace.second_last().unwrap_or_else(|err| panic!("{err}"));
-                if epoch <= epoch_id {
-                    balance
-                } else {
-                    let (epoch, balance) = trace.third_last().unwrap_or_else(|err| panic!("{err}"));
-                    assert!(epoch <= epoch_id, "{}", InternalError::INVALID_THIRD_LAST);
-                    balance
-                }
-            };
-            NormalizedAmountTrait::from_amount_18_decimals(amount: current_balance)
+            balance_at_epoch(:trace, :epoch_id)
         }
 
         /// Returns (old_own_balance, new_own_balance).
@@ -2237,20 +2164,9 @@ pub mod Staking {
             self: @ContractState, token_address: ContractAddress, epoch_id: Epoch,
         ) -> bool {
             token_address == STRK_TOKEN_ADDRESS
-                || self
-                    .is_btc_active(
-                        active_status: self.btc_tokens.read(token_address).unwrap(), :epoch_id,
-                    )
-        }
-
-        /// Returns true if the BTC token is active in the given `epoch_id`.
-        ///
-        /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
-        fn is_btc_active(
-            self: @ContractState, active_status: (Epoch, bool), epoch_id: Epoch,
-        ) -> bool {
-            let (epoch, is_active) = active_status;
-            (epoch_id >= epoch) == is_active
+                || is_btc_active(
+                    active_status: self.btc_tokens.read(token_address).unwrap(), :epoch_id,
+                )
         }
 
         fn get_token_decimals(self: @ContractState, token_address: ContractAddress) -> u8 {
@@ -2343,12 +2259,11 @@ pub mod Staking {
                     rewards: staker_rewards + total_pools_rewards,
                 );
             // Claim pools rewards.
-            self
-                .claim_from_reward_supplier(
-                    :reward_supplier_dispatcher,
-                    amount: total_pools_rewards,
-                    token_dispatcher: strk_token_dispatcher(),
-                );
+            claim_from_reward_supplier(
+                :reward_supplier_dispatcher,
+                amount: total_pools_rewards,
+                token_dispatcher: strk_token_dispatcher(),
+            );
             // Update staker rewards.
             staker_info.unclaimed_rewards_own += staker_rewards;
 
@@ -2392,43 +2307,12 @@ pub mod Staking {
                 return Zero::zero();
             }
 
-            self
-                .calculate_staker_total_staking_power(
-                    :staker_strk_total_amount,
-                    :staker_btc_total_amount,
-                    :strk_total_stake,
-                    :btc_total_stake,
-                )
-        }
-
-        /// Returns the staking power for the given staker.
-        /// The staking power is calculated by:
-        /// ((staker_strk_total_amount / strk_total_amount) * (1 - ALPHA) +
-        /// (staker_btc_total_amount / btc_total_amount) * ALPHA) * STAKING_POWER_BASE_VALUE
-        fn calculate_staker_total_staking_power(
-            self: @ContractState,
-            staker_strk_total_amount: NormalizedAmount,
-            staker_btc_total_amount: NormalizedAmount,
-            strk_total_stake: NormalizedAmount,
-            btc_total_stake: NormalizedAmount,
-        ) -> StakingPower {
-            let strk_staking_power = mul_wide_and_div(
-                lhs: staker_strk_total_amount.to_amount_18_decimals(),
-                rhs: STRK_WEIGHT_FACTOR,
-                div: strk_total_stake.to_amount_18_decimals(),
+            calculate_staker_total_staking_power(
+                :staker_strk_total_amount,
+                :staker_btc_total_amount,
+                :strk_total_stake,
+                :btc_total_stake,
             )
-                .unwrap();
-            let btc_staking_power = if btc_total_stake.is_zero() {
-                Zero::zero()
-            } else {
-                mul_wide_and_div(
-                    lhs: staker_btc_total_amount.to_amount_18_decimals(),
-                    rhs: BTC_WEIGHT_FACTOR,
-                    div: btc_total_stake.to_amount_18_decimals(),
-                )
-                    .unwrap()
-            };
-            strk_staking_power + btc_staking_power
         }
 
         /// Returns the total stake for STRK and BTC at `epoch_id`.
@@ -2438,14 +2322,13 @@ pub mod Staking {
             self: @ContractState, epoch_id: Epoch,
         ) -> (NormalizedAmount, NormalizedAmount) {
             let strk_total_stake_trace = self.tokens_total_stake_trace.entry(STRK_TOKEN_ADDRESS);
-            let strk_curr_total_stake = self
-                .balance_at_epoch(trace: strk_total_stake_trace, :epoch_id);
+            let strk_curr_total_stake = balance_at_epoch(trace: strk_total_stake_trace, :epoch_id);
             let mut btc_curr_total_stake: NormalizedAmount = Zero::zero();
             for (token_address, active_status) in self.btc_tokens {
-                if self.is_btc_active(:active_status, :epoch_id) {
+                if is_btc_active(:active_status, :epoch_id) {
                     let btc_total_stake_trace = self.tokens_total_stake_trace.entry(token_address);
-                    btc_curr_total_stake += self
-                        .balance_at_epoch(trace: btc_total_stake_trace, :epoch_id);
+                    btc_curr_total_stake +=
+                        balance_at_epoch(trace: btc_total_stake_trace, :epoch_id);
                 }
             }
             (strk_curr_total_stake, btc_curr_total_stake)
@@ -2496,10 +2379,5 @@ pub mod Staking {
                 _ => false,
             }
         }
-    }
-
-    /// Return the token dispatcher for STRK.
-    fn strk_token_dispatcher() -> IERC20Dispatcher {
-        IERC20Dispatcher { contract_address: STRK_TOKEN_ADDRESS }
     }
 }
