@@ -2026,6 +2026,12 @@ pub(crate) trait FlowTrait<TFlow, +Drop<TFlow>> {
     fn test(self: TFlow, ref system: SystemState);
 }
 
+pub(crate) trait MultiVersionFlowTrait<TFlow, +Drop<TFlow>> {
+    fn versions(self: TFlow) -> Span<ReleaseVersion>;
+    fn setup(ref self: TFlow, ref system: SystemState);
+    fn test(self: TFlow, ref system: SystemState, version: ReleaseVersion);
+}
+
 pub(crate) fn test_flow_local<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TFlow>>(flow: TFlow) {
     let mut system = SystemFactoryTrait::local_system();
     flow.test(ref :system);
@@ -2042,6 +2048,49 @@ pub(crate) fn test_flow_mainnet<TFlow, +Drop<TFlow>, +Copy<TFlow>, +FlowTrait<TF
     flow.setup_v2(ref :system);
     system.upgrade_contracts_implementation_v3();
     flow.test(ref :system);
+}
+
+#[derive(PartialEq, Drop, Copy, Debug)]
+pub(crate) enum ReleaseVersion {
+    V0,
+    V1,
+    V2,
+}
+
+pub(crate) fn test_multi_version_flow_mainnet<
+    TFlow, +Drop<TFlow>, +Copy<TFlow>, +MultiVersionFlowTrait<TFlow>,
+>(
+    ref flow: TFlow,
+) {
+    let init_flow_state = flow;
+    let mut base_account = 0x100000;
+    for version in flow.versions() {
+        let mut system = SystemFactoryTrait::mainnet_system();
+        // Advance time so the contract deployment salt is different for each version.
+        system.advance_time(time: TimeDelta { seconds: 1 });
+        system.base_account = base_account;
+
+        // Run setup in the requested version.
+        if *version == ReleaseVersion::V0 {
+            flow.setup(ref :system);
+        }
+        system.deploy_attestation_and_upgrade_contracts_implementation_v1();
+        if *version == ReleaseVersion::V1 {
+            flow.setup(ref :system);
+        }
+        system.upgrade_contracts_implementation_v2();
+        if *version == ReleaseVersion::V2 {
+            flow.setup(ref :system);
+        }
+        system.upgrade_contracts_implementation_v3();
+
+        // Run test in latest version.
+        flow.test(ref :system, version: *version);
+
+        // Reset flow state.
+        flow = init_flow_state;
+        base_account = system.base_account;
+    }
 }
 
 #[test]
