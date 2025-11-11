@@ -1524,6 +1524,21 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
         );
         staker_version.is_latest()
     }
+
+    fn accrue_rewards(self: SystemState, staker: Staker) {
+        if self.staking.is_v0() {
+            self.advance_time(time: Time::weeks(count: 1));
+            self.staking.update_global_index_if_needed();
+        } else if self.staking.is_v1() || self.staking.is_v2() {
+            self.advance_epoch();
+            self.advance_block_into_attestation_window(:staker);
+            self.attest(:staker);
+            self.advance_epoch();
+        } else {
+            self.advance_k_epochs_and_attest(:staker);
+            self.advance_epoch();
+        }
+    }
 }
 
 /// The `Delegator` struct represents a delegator in the staking system.
@@ -1736,6 +1751,16 @@ pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
         let pool_migration_dispatcher = IPoolMigrationDispatcher { contract_address: pool };
         pool_migration_dispatcher
             .get_internal_pool_member_info(pool_member: delegator.delegator.address)
+    }
+
+    fn delegator_unclaimed_rewards(
+        self: SystemState, delegator: Delegator, pool: ContractAddress,
+    ) -> Amount {
+        if self.staking.is_v0() {
+            self.pool_member_info(:delegator, :pool).unclaimed_rewards
+        } else {
+            self.pool_member_info_v1(:delegator, :pool).unclaimed_rewards
+        }
     }
 }
 
