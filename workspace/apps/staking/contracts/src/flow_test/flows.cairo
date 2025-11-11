@@ -31,7 +31,7 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
-    calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_amount_and_pool_info_v2,
+    calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_balances_v2,
     calculate_strk_pool_rewards_v2, calculate_strk_pool_rewards_with_pool_balance_v2,
     compute_rewards_per_unit, declare_pool_contract, declare_pool_eic_contract,
     declare_staking_contract, load_from_simple_map, load_from_trace, load_one_felt,
@@ -2192,9 +2192,12 @@ pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
         system.attest(:staker);
 
         // Second stake does not count towards rewards (since we attest in the same epoch).
-        let (expected_staker_rewards, _) =
-            calculate_staker_strk_rewards_with_amount_and_pool_info_v2(
-            amount_own: amount, pool_info: Option::None, :staking_contract, :minting_curve_contract,
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: amount,
+            pool_amount: Zero::zero(),
+            commission: Zero::zero(),
+            :staking_contract,
+            :minting_curve_contract,
         );
 
         // Test rewards.
@@ -2206,10 +2209,10 @@ pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
 
         // Advance epoch and test rewards.
         system.advance_epoch();
-        let (expected_staker_rewards, _) =
-            calculate_staker_strk_rewards_with_amount_and_pool_info_v2(
+        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
             amount_own: amount * 2,
-            pool_info: Option::None,
+            pool_amount: Zero::zero(),
+            commission: Zero::zero(),
             :staking_contract,
             :minting_curve_contract,
         );
