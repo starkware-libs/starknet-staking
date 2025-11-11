@@ -1,3 +1,4 @@
+use ReleaseVersion::{V0, V1, V2};
 use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
 use snforge_std::{TokenImpl, get_class_hash, start_cheat_block_number_global};
@@ -9,9 +10,9 @@ use staking::flow_test::utils::MainnetClassHashes::{
     MAINNET_STAKING_CLASS_HASH_V2,
 };
 use staking::flow_test::utils::{
-    AttestationTrait, Delegator, FlowTrait, RewardSupplierTrait, Staker, StakingTrait,
-    SystemDelegatorTrait, SystemPoolTrait, SystemStakerTrait, SystemState, SystemTrait,
-    TokenHelperTrait,
+    AttestationTrait, Delegator, FlowTrait, MultiVersionFlowTrait, ReleaseVersion,
+    RewardSupplierTrait, Staker, StakingTrait, SystemDelegatorTrait, SystemPoolTrait,
+    SystemStakerTrait, SystemState, SystemTrait, TokenHelperTrait,
 };
 use staking::pool::errors::Error as PoolError;
 use staking::pool::interface_v0::{
@@ -31,11 +32,11 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
-    calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_balances_v2,
-    calculate_strk_pool_rewards_v2, calculate_strk_pool_rewards_with_pool_balance_v2,
-    compute_rewards_per_unit, declare_pool_contract, declare_pool_eic_contract,
-    declare_staking_contract, load_from_simple_map, load_from_trace, load_one_felt,
-    load_trace_length, strk_pool_update_rewards_v1, to_amount_18_decimals, upgrade_implementation,
+    calculate_staker_strk_rewards_v2, calculate_strk_pool_rewards_v2,
+    calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
+    declare_pool_contract, declare_pool_eic_contract, declare_staking_contract,
+    load_from_simple_map, load_one_felt, strk_pool_update_rewards_v1, to_amount_18_decimals,
+    upgrade_implementation,
 };
 use staking::types::{Amount, Commission};
 use staking::utils::compute_rewards_rounded_down;
@@ -122,8 +123,12 @@ pub(crate) struct PoolUpgradeBasicFlow {
     pub(crate) stake_amount: Option<Amount>,
     pub(crate) initial_reward_supplier_balance: Option<Amount>,
 }
-pub(crate) impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
-    fn setup_v1(ref self: PoolUpgradeBasicFlow, ref system: SystemState) {
+pub(crate) impl PoolUpgradeBasicFlowImpl of MultiVersionFlowTrait<PoolUpgradeBasicFlow> {
+    fn versions(self: PoolUpgradeBasicFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(ref self: PoolUpgradeBasicFlow, ref system: SystemState) {
         let initial_reward_supplier_balance = system
             .token
             .balance_of(account: system.reward_supplier.address);
@@ -138,7 +143,7 @@ pub(crate) impl PoolUpgradeBasicFlowImpl of FlowTrait<PoolUpgradeBasicFlow> {
         self.initial_reward_supplier_balance = Option::Some(initial_reward_supplier_balance);
     }
 
-    fn test(self: PoolUpgradeBasicFlow, ref system: SystemState) {
+    fn test(self: PoolUpgradeBasicFlow, ref system: SystemState, version: ReleaseVersion) {
         let staker = self.staker.unwrap();
         let stake_amount = self.stake_amount.unwrap();
         let initial_reward_supplier_balance = self.initial_reward_supplier_balance.unwrap();
@@ -1015,7 +1020,11 @@ pub(crate) struct PoolUpgradeFlow {
     pub(crate) delegator: Option<Delegator>,
     pub(crate) delegated_amount: Amount,
 }
-pub(crate) impl PoolUpgradeFlowImpl of FlowTrait<PoolUpgradeFlow> {
+pub(crate) impl PoolUpgradeFlowImpl of MultiVersionFlowTrait<PoolUpgradeFlow> {
+    fn versions(self: PoolUpgradeFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
     fn setup(ref self: PoolUpgradeFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
@@ -1036,7 +1045,7 @@ pub(crate) impl PoolUpgradeFlowImpl of FlowTrait<PoolUpgradeFlow> {
         system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
-    fn test(self: PoolUpgradeFlow, ref system: SystemState) {
+    fn test(self: PoolUpgradeFlow, ref system: SystemState, version: ReleaseVersion) {
         let pool = self.pool_address.unwrap();
         let delegator = self.delegator.unwrap();
         let delegated_amount = self.delegated_amount;
@@ -1637,6 +1646,7 @@ pub(crate) impl DelegatorExitAndEnterAgainFlowImpl of FlowTrait<DelegatorExitAnd
 /// Attest
 /// Attest
 /// Delagator exit intent
+/// Upgrade to V3
 /// Delegator exit action
 /// Delegator delegate with the same address
 /// Attest
@@ -1654,10 +1664,14 @@ pub(crate) struct DelegatorExitIntentUpgradeSwitchFlow {
     pub(crate) initial_reward_supplier_balance: Option<Amount>,
     pub(crate) initial_stake_amount: Option<Amount>,
 }
-pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
+pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of MultiVersionFlowTrait<
     DelegatorExitIntentUpgradeSwitchFlow,
 > {
-    fn setup_v1(ref self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
+    fn versions(self: DelegatorExitIntentUpgradeSwitchFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(ref self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
         let min_stake = system.staking.get_min_stake();
         let initial_stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: initial_stake_amount * 2);
@@ -1689,7 +1703,11 @@ pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of FlowTrait<
         self.initial_stake_amount = Option::Some(initial_stake_amount);
     }
 
-    fn test(self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
+    fn test(
+        self: DelegatorExitIntentUpgradeSwitchFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
         let staker = self.staker.unwrap();
         let delegator = self.delegator.unwrap();
         let initial_stake_amount = self.initial_stake_amount.unwrap();
@@ -2126,98 +2144,6 @@ pub(crate) impl MultipleBTCPoolsDifferentDecimalsFlowImpl of FlowTrait<
                 amount: delegated_amount_18, decimals: BTC_DECIMALS_18,
             );
         assert!(btc_staking_power == expected_btc_staking_power);
-    }
-}
-
-/// Flow:
-/// Staker stake
-/// Advance epoch
-/// Staker increase stake
-/// Upgrade
-/// Staker migration
-/// Test balance trace
-/// Staker attest
-/// Advance epoch
-/// Staker attest
-/// Test rewards
-/// Advance epoch
-/// Test rewards
-#[derive(Drop, Copy)]
-pub(crate) struct StakerMultipleEntriesMigrationAttestFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) amount: Option<Amount>,
-}
-pub(crate) impl StakerMultipleEntriesMigrationAttestFlowImpl of FlowTrait<
-    StakerMultipleEntriesMigrationAttestFlow,
-> {
-    fn setup_v1(ref self: StakerMultipleEntriesMigrationAttestFlow, ref system: SystemState) {
-        let amount = system.staking.get_min_stake();
-        let staker = system.new_staker(amount: amount * 2);
-        system.stake(:staker, :amount, pool_enabled: false, commission: 200);
-        system.advance_epoch();
-        system.increase_stake(:staker, :amount);
-
-        system.set_staker_for_migration(staker_address: staker.staker.address);
-        self.staker = Option::Some(staker);
-        self.amount = Option::Some(amount);
-    }
-
-    fn test(self: StakerMultipleEntriesMigrationAttestFlow, ref system: SystemState) {
-        let staker = self.staker.unwrap();
-        let staker_address = staker.staker.address;
-        let amount = self.amount.unwrap();
-        let staking_contract = system.staking.address;
-        let minting_curve_contract = system.minting_curve.address;
-
-        // Test balance trace.
-        let own_trace_storage = snforge_std::map_entry_address(
-            map_selector: selector!("staker_own_balance_trace"),
-            keys: [staker_address.into()].span(),
-        );
-        let own_trace_length = load_trace_length(
-            contract_address: system.staking.address, trace_address: own_trace_storage,
-        );
-        assert!(own_trace_length == 2);
-        let (_, own_value) = load_from_trace(
-            contract_address: system.staking.address, trace_address: own_trace_storage, index: 0,
-        );
-        assert!(own_value == amount);
-        let (_, own_value) = load_from_trace(
-            contract_address: system.staking.address, trace_address: own_trace_storage, index: 1,
-        );
-        assert!(own_value == amount * 2);
-
-        // Attest.
-        system.advance_block_into_attestation_window_custom_stake(:staker_address, stake: amount);
-        system.attest(:staker);
-
-        // Second stake does not count towards rewards (since we attest in the same epoch).
-        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
-            amount_own: amount,
-            pool_amount: Zero::zero(),
-            commission: Zero::zero(),
-            :staking_contract,
-            :minting_curve_contract,
-        );
-
-        // Test rewards.
-        let actual_staker_rewards = system.staker_claim_rewards(:staker);
-        assert!(actual_staker_rewards == expected_staker_rewards);
-
-        // Attest again.
-        system.advance_k_epochs_and_attest(:staker);
-
-        // Advance epoch and test rewards.
-        system.advance_epoch();
-        let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
-            amount_own: amount * 2,
-            pool_amount: Zero::zero(),
-            commission: Zero::zero(),
-            :staking_contract,
-            :minting_curve_contract,
-        );
-        let actual_staker_rewards = system.staker_claim_rewards(:staker);
-        assert!(actual_staker_rewards == expected_staker_rewards);
     }
 }
 
@@ -3000,10 +2926,14 @@ pub(crate) struct IntentDelegatorUpgradeSwitchFlow {
     pub(crate) amount: Option<Amount>,
     pub(crate) commission: Option<Commission>,
 }
-pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
+pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of MultiVersionFlowTrait<
     IntentDelegatorUpgradeSwitchFlow,
 > {
-    fn setup_v1(ref self: IntentDelegatorUpgradeSwitchFlow, ref system: SystemState) {
+    fn versions(self: IntentDelegatorUpgradeSwitchFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
+    fn setup(ref self: IntentDelegatorUpgradeSwitchFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -3025,6 +2955,7 @@ pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
         system.advance_exit_wait_window();
 
         system.set_staker_for_migration(staker_address: staker.staker.address);
+        system.set_pool_for_upgrade(pool_address: pool);
         self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.delegator_full_intent = Option::Some(delegator_full_intent);
@@ -3034,7 +2965,9 @@ pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of FlowTrait<
         self.commission = Option::Some(commission);
     }
 
-    fn test(self: IntentDelegatorUpgradeSwitchFlow, ref system: SystemState) {
+    fn test(
+        self: IntentDelegatorUpgradeSwitchFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let staker = self.staker.unwrap();
         let pool = self.pool_address.unwrap();
         let delegator_full_intent = self.delegator_full_intent.unwrap();
@@ -3182,10 +3115,14 @@ pub(crate) struct IntentDelegatorUpgradeActionFlow {
     pub(crate) amount: Option<Amount>,
     pub(crate) commission: Option<Commission>,
 }
-pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
+pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of MultiVersionFlowTrait<
     IntentDelegatorUpgradeActionFlow,
 > {
-    fn setup_v1(ref self: IntentDelegatorUpgradeActionFlow, ref system: SystemState) {
+    fn versions(self: IntentDelegatorUpgradeActionFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
+    fn setup(ref self: IntentDelegatorUpgradeActionFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -3207,6 +3144,7 @@ pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
         system.advance_exit_wait_window();
 
         system.set_staker_for_migration(staker_address: staker.staker.address);
+        system.set_pool_for_upgrade(pool_address: pool);
         self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.delegator_full_intent = Option::Some(delegator_full_intent);
@@ -3216,7 +3154,9 @@ pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of FlowTrait<
         self.commission = Option::Some(commission);
     }
 
-    fn test(self: IntentDelegatorUpgradeActionFlow, ref system: SystemState) {
+    fn test(
+        self: IntentDelegatorUpgradeActionFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let staker = self.staker.unwrap();
         let pool = self.pool_address.unwrap();
         let delegator_full_intent = self.delegator_full_intent.unwrap();
@@ -3285,10 +3225,14 @@ pub(crate) struct StakerWithPoolInIntentMigrationFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) staker_info: Option<StakerInfoV1>,
 }
-pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
+pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of MultiVersionFlowTrait<
     StakerWithPoolInIntentMigrationFlow,
 > {
-    fn setup_v1(ref self: StakerWithPoolInIntentMigrationFlow, ref system: SystemState) {
+    fn versions(self: StakerWithPoolInIntentMigrationFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(ref self: StakerWithPoolInIntentMigrationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -3300,15 +3244,18 @@ pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
         self.staker_info = Option::Some(system.staker_info_v1(:staker));
     }
 
-    fn test(self: StakerWithPoolInIntentMigrationFlow, ref system: SystemState) {
+    fn test(
+        self: StakerWithPoolInIntentMigrationFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let staker = self.staker.unwrap();
         let old_staker_info = self.staker_info.unwrap();
         let old_pool_info = old_staker_info.get_pool_info();
+        let pool_contract = old_pool_info.pool_contract;
         let expected_pool_info = StakerPoolInfoV2 {
             commission: Option::Some(old_pool_info.commission),
             pools: array![
                 PoolInfo {
-                    pool_contract: old_pool_info.pool_contract,
+                    pool_contract,
                     amount: old_pool_info.amount,
                     token_address: system.staking.get_token_address(),
                 },
@@ -3321,6 +3268,7 @@ pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of FlowTrait<
 
         assert!(new_pool_info == expected_pool_info);
         assert!(new_staker_info == old_staker_info);
+        assert!(get_class_hash(contract_address: pool_contract) == declare_pool_contract());
     }
 }
 
@@ -3345,10 +3293,14 @@ pub(crate) struct IntentDelegatorUpgradeIntentFlow {
     pub(crate) amount: Option<Amount>,
     pub(crate) commission: Option<Commission>,
 }
-pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of FlowTrait<
+pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of MultiVersionFlowTrait<
     IntentDelegatorUpgradeIntentFlow,
 > {
-    fn setup_v1(ref self: IntentDelegatorUpgradeIntentFlow, ref system: SystemState) {
+    fn versions(self: IntentDelegatorUpgradeIntentFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
+    fn setup(ref self: IntentDelegatorUpgradeIntentFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -3370,6 +3322,7 @@ pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of FlowTrait<
         system.advance_exit_wait_window();
 
         system.set_staker_for_migration(staker_address: staker.staker.address);
+        system.set_pool_for_upgrade(pool_address: pool);
         self.staker = Option::Some(staker);
         self.pool_address = Option::Some(pool);
         self.delegator_full_intent = Option::Some(delegator_full_intent);
@@ -3379,7 +3332,9 @@ pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of FlowTrait<
         self.commission = Option::Some(commission);
     }
 
-    fn test(self: IntentDelegatorUpgradeIntentFlow, ref system: SystemState) {
+    fn test(
+        self: IntentDelegatorUpgradeIntentFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let staker = self.staker.unwrap();
         let pool = self.pool_address.unwrap();
         let delegator_full_intent = self.delegator_full_intent.unwrap();
@@ -3430,114 +3385,6 @@ pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of FlowTrait<
         assert!(delegator_full_intent_info.unpool_amount == full_delegator_new_intent);
         assert!(delegator_half_intent_info.unpool_amount == half_delegator_new_intent);
         assert!(delegator_zero_intent_info.unpool_amount == zero_delegator_new_intent);
-    }
-}
-
-/// Flow:
-/// Staker stake
-/// Advance epoch
-/// Upgrade
-/// Staker migration
-/// Open strk pool
-/// Test staker pool info
-#[derive(Drop, Copy)]
-pub(crate) struct StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow {
-    pub(crate) staker: Option<Staker>,
-}
-pub(crate) impl StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlowImpl of FlowTrait<
-    StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow,
-> {
-    fn setup_v1(
-        ref self: StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow, ref system: SystemState,
-    ) {
-        let amount = system.staking.get_min_stake();
-        let staker = system.new_staker(amount: amount * 2);
-        let commission = 200;
-        system.stake(:staker, :amount, pool_enabled: false, :commission);
-        system.advance_epoch();
-        system.increase_stake(:staker, :amount);
-
-        system.set_staker_for_migration(staker_address: staker.staker.address);
-        self.staker = Option::Some(staker);
-    }
-
-    fn test(self: StakerWithoutPoolAdvanceEpochMigrationOpenStrkPoolFlow, ref system: SystemState) {
-        let staker = self.staker.unwrap();
-        let commission = 200;
-
-        let pool_contract = system.set_open_for_strk_delegation(:staker, :commission);
-
-        let expected_pool_info = StakerPoolInfoV2 {
-            commission: Option::Some(commission),
-            pools: array![
-                PoolInfo {
-                    pool_contract, amount: 0, token_address: system.staking.get_token_address(),
-                },
-            ]
-                .span(),
-        };
-        let staker_pool_info = system.staker_pool_info(:staker);
-        assert!(staker_pool_info == expected_pool_info);
-    }
-}
-
-/// Flow:
-/// Staker stake with pool
-/// Upgrade
-/// Staker migration
-/// Test staker_info did not change
-/// Test staker_pool_info
-/// Test commission commitment not set
-#[derive(Drop, Copy)]
-pub(crate) struct StakerWithPoolWithoutCommissionCommitmentMigrationFlow {
-    pub(crate) staker: Option<Staker>,
-    pub(crate) staker_info: Option<StakerInfoV1>,
-}
-pub(crate) impl StakerWithPoolWithoutCommissionCommitmentMigrationFlowImpl of FlowTrait<
-    StakerWithPoolWithoutCommissionCommitmentMigrationFlow,
-> {
-    fn setup_v1(
-        ref self: StakerWithPoolWithoutCommissionCommitmentMigrationFlow, ref system: SystemState,
-    ) {
-        let amount = system.staking.get_min_stake();
-        let staker = system.new_staker(:amount);
-        let commission = 200;
-        system.stake(:staker, :amount, pool_enabled: true, :commission);
-
-        system.set_staker_for_migration(staker_address: staker.staker.address);
-        self.staker = Option::Some(staker);
-        self.staker_info = Option::Some(system.staker_info_v1(:staker));
-    }
-
-    #[feature("safe_dispatcher")]
-    fn test(self: StakerWithPoolWithoutCommissionCommitmentMigrationFlow, ref system: SystemState) {
-        let staker = self.staker.unwrap();
-
-        // Test staker_info did not change.
-        let old_staker_info = system.staker_info_v1(:staker);
-        assert!(old_staker_info == self.staker_info.unwrap());
-
-        // Test staker_pool_info
-        let old_pool_info = old_staker_info.get_pool_info();
-        let expected_pool_info = StakerPoolInfoV2 {
-            commission: Option::Some(old_pool_info.commission),
-            pools: array![
-                PoolInfo {
-                    pool_contract: old_pool_info.pool_contract,
-                    amount: old_pool_info.amount,
-                    token_address: system.staking.get_token_address(),
-                },
-            ]
-                .span(),
-        };
-        let staker_pool_info = system.staker_pool_info(:staker);
-        assert!(staker_pool_info == expected_pool_info);
-
-        // Test commission commitment not set.
-        let commission_commitment = system.safe_get_staker_commission_commitment(:staker);
-        assert_panic_with_error(
-            commission_commitment, StakingError::COMMISSION_COMMITMENT_NOT_SET.describe(),
-        );
     }
 }
 
@@ -3661,16 +3508,6 @@ pub(crate) impl StakerWithoutPoolInIntentMigrationFlowImpl of FlowTrait<
         assert!(new_staker_info == old_staker_info);
     }
 }
-
-// TODO: Test staker_migration with pool, without commission commitment.
-// TODO: Test staker_migration with no pool.
-// TODO: Test staker_migration with pool and delegator.
-// TODO: Test staker_migration with one entry in the trace.
-// TODO: Test staker_migration with 2 entries in the trace.
-// TODO: Test staker_migration with staker in intent with pool.
-// TODO: Test staker_migration with staker in intent without pool.
-// TODO: Test staker vec after migration with more than one staker.
-// TODO: Test staker vec after migration + new stake.
 
 // Test staker_migration called twice.
 #[derive(Drop, Copy)]
@@ -4482,146 +4319,6 @@ pub(crate) impl PoolChangeBalanceAfterUpgradeFlowmpl of FlowTrait<
     }
 }
 
-/// Test delegator intent in v0 action in v2
-/// Flow:
-/// Staker stake with pool
-/// Delegators delegate
-/// Delegators exit intent (full, half, none)
-/// Upgrade
-/// Upgrade
-/// Delegators exit action
-/// Test balances
-#[derive(Drop, Copy)]
-pub(crate) struct DelegatorIntentInV0ActionInV2Flow {
-    pub(crate) delegators: Option<(Delegator, Delegator, Delegator)>,
-    pub(crate) amount: Option<Amount>,
-    pub(crate) pool_address: Option<ContractAddress>,
-}
-pub(crate) impl DelegatorIntentInV0ActionInV2FlowImpl of FlowTrait<
-    DelegatorIntentInV0ActionInV2Flow,
-> {
-    fn setup(ref self: DelegatorIntentInV0ActionInV2Flow, ref system: SystemState) {
-        let amount = system.staking.get_min_stake();
-        let staker = system.new_staker(:amount);
-        let commission = 200;
-
-        system.stake(:staker, :amount, pool_enabled: true, :commission);
-        let pool = system.staking.get_pool(:staker);
-        let delegator1 = system.new_delegator(:amount);
-        let delegator2 = system.new_delegator(:amount);
-        let delegator3 = system.new_delegator(:amount);
-
-        system.delegate(delegator: delegator1, :pool, :amount);
-        system.delegate(delegator: delegator2, :pool, :amount);
-        system.delegate(delegator: delegator3, :pool, :amount);
-        system.delegator_exit_intent(delegator: delegator1, :pool, :amount);
-        system.delegator_exit_intent(delegator: delegator2, :pool, amount: amount / 2);
-        system.delegator_exit_intent(delegator: delegator3, :pool, amount: 0);
-        system.advance_exit_wait_window();
-
-        self.pool_address = Option::Some(pool);
-        self.delegators = Option::Some((delegator1, delegator2, delegator3));
-        self.amount = Option::Some(amount);
-        system.set_pool_for_upgrade(pool_address: pool);
-        system.set_staker_for_migration(staker_address: staker.staker.address);
-    }
-
-    fn test(self: DelegatorIntentInV0ActionInV2Flow, ref system: SystemState) {
-        let pool = self.pool_address.unwrap();
-        let (delegator1, delegator2, delegator3) = self.delegators.unwrap();
-        let amount = self.amount.unwrap();
-
-        system.delegator_exit_action(delegator: delegator1, :pool);
-        system.delegator_exit_action(delegator: delegator2, :pool);
-        let result = system.safe_delegator_exit_action(delegator: delegator3, :pool);
-        assert_panic_with_error(
-            :result, expected_error: GenericError::MISSING_UNDELEGATE_INTENT.describe(),
-        );
-
-        let delegator1_balance = system.token.balance_of(account: delegator1.delegator.address);
-        let delegator2_balance = system.token.balance_of(account: delegator2.delegator.address);
-        let delegator3_balance = system.token.balance_of(account: delegator3.delegator.address);
-        let staking_balance = system.token.balance_of(account: system.staking.address);
-        assert!(delegator1_balance == amount);
-        assert!(delegator2_balance == amount / 2);
-        assert!(delegator3_balance == 0);
-        assert!(staking_balance == amount * 5 / 2);
-    }
-}
-
-/// Test delegator full intent before double upgrade
-/// Flow:
-/// Staker stake with pool
-/// Delegators delegate
-/// Delegators exit intent (full, half, none)
-/// Upgrade
-/// Upgrade
-/// Delegators change intent
-/// Delegators exit action
-/// Test balances
-#[derive(Drop, Copy)]
-pub(crate) struct DelegatorIntentInV0ChangeIntentActionInV2Flow {
-    pub(crate) delegators: Option<(Delegator, Delegator, Delegator)>,
-    pub(crate) amount: Option<Amount>,
-    pub(crate) pool_address: Option<ContractAddress>,
-}
-pub(crate) impl DelegatorIntentInV0ChangeIntentActionInV2FlowImpl of FlowTrait<
-    DelegatorIntentInV0ChangeIntentActionInV2Flow,
-> {
-    fn setup(ref self: DelegatorIntentInV0ChangeIntentActionInV2Flow, ref system: SystemState) {
-        let amount = system.staking.get_min_stake();
-        let staker = system.new_staker(:amount);
-        let commission = 200;
-
-        system.stake(:staker, :amount, pool_enabled: true, :commission);
-        let pool = system.staking.get_pool(:staker);
-        let delegator1 = system.new_delegator(:amount);
-        let delegator2 = system.new_delegator(:amount);
-        let delegator3 = system.new_delegator(:amount);
-
-        system.delegate(delegator: delegator1, :pool, :amount);
-        system.delegate(delegator: delegator2, :pool, :amount);
-        system.delegate(delegator: delegator3, :pool, :amount);
-        system.delegator_exit_intent(delegator: delegator1, :pool, :amount);
-        system.delegator_exit_intent(delegator: delegator2, :pool, amount: amount / 2);
-        system.delegator_exit_intent(delegator: delegator3, :pool, amount: 0);
-        system.advance_exit_wait_window();
-
-        self.pool_address = Option::Some(pool);
-        self.delegators = Option::Some((delegator1, delegator2, delegator3));
-        self.amount = Option::Some(amount);
-        system.set_pool_for_upgrade(pool_address: pool);
-        system.set_staker_for_migration(staker_address: staker.staker.address);
-    }
-
-    fn test(self: DelegatorIntentInV0ChangeIntentActionInV2Flow, ref system: SystemState) {
-        let pool = self.pool_address.unwrap();
-        let (delegator1, delegator2, delegator3) = self.delegators.unwrap();
-        let amount = self.amount.unwrap();
-
-        system.delegator_exit_intent(delegator: delegator1, :pool, amount: amount / 2);
-        system.delegator_exit_intent(delegator: delegator2, :pool, amount: Zero::zero());
-        system.delegator_exit_intent(delegator: delegator3, :pool, :amount);
-        system.advance_exit_wait_window();
-        system.delegator_exit_action(delegator: delegator1, :pool);
-        let result = system.safe_delegator_exit_action(delegator: delegator2, :pool);
-        assert_panic_with_error(
-            :result, expected_error: GenericError::MISSING_UNDELEGATE_INTENT.describe(),
-        );
-        system.delegator_exit_action(delegator: delegator3, :pool);
-
-        let delegator1_balance = system.token.balance_of(account: delegator1.delegator.address);
-        let delegator2_balance = system.token.balance_of(account: delegator2.delegator.address);
-        let delegator3_balance = system.token.balance_of(account: delegator3.delegator.address);
-        let staking_balance = system.token.balance_of(account: system.staking.address);
-        assert!(delegator1_balance == amount / 2);
-        assert!(delegator2_balance == Zero::zero());
-        assert!(delegator3_balance == amount);
-        assert!(staking_balance == amount * 5 / 2);
-    }
-}
-
-
 /// Pool with lots of btc
 /// Flow:
 /// Staker stake
@@ -4905,8 +4602,12 @@ pub(crate) struct PoolAttestFlow {
     pub(crate) staker_rewards: Option<Amount>,
     pub(crate) commission: Option<u16>,
 }
-pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
-    fn setup_v1(ref self: PoolAttestFlow, ref system: SystemState) {
+pub(crate) impl PoolAttestFlowImpl of MultiVersionFlowTrait<PoolAttestFlow> {
+    fn versions(self: PoolAttestFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(ref self: PoolAttestFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -4927,7 +4628,7 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
         self.commission = Option::Some(commission);
     }
 
-    fn test(self: PoolAttestFlow, ref system: SystemState) {
+    fn test(self: PoolAttestFlow, ref system: SystemState, version: ReleaseVersion) {
         let staker = self.staker.unwrap();
         let pool = system.staking.get_pool(:staker);
         let delegator = self.delegator.unwrap();
@@ -4945,8 +4646,13 @@ pub(crate) impl PoolAttestFlowImpl of FlowTrait<PoolAttestFlow> {
         let mid_pool_rewards = system.delegator_claim_rewards(:delegator, :pool);
         let mid_staker_rewards = system.staker_claim_rewards(:staker);
         // Verify rewards increase after upgrade due to C parameter rising to 4%.
-        assert!(mid_pool_rewards > pool_rewards);
-        assert!(mid_staker_rewards > staker_rewards);
+        if (version == V1) {
+            assert!(mid_pool_rewards > pool_rewards);
+            assert!(mid_staker_rewards > staker_rewards);
+        } else {
+            assert!(mid_pool_rewards == pool_rewards);
+            assert!(mid_staker_rewards == staker_rewards);
+        }
 
         // Open BTC pool.
         let btc_pool = system
@@ -5005,63 +4711,6 @@ pub(crate) impl AssertTotalStakeAfterMultiStakeFlowImpl of FlowTrait<
         system.delegate(delegator: second_delegator, pool: second_pool, amount: stake_amount);
 
         assert!(system.staking.get_total_stake() == stake_amount * 4);
-    }
-}
-
-/// Test total_stake after upgrade
-#[derive(Drop, Copy)]
-pub(crate) struct TotalStakeAfterUpgradeFlow {
-    pub(crate) total_stake: Option<Amount>,
-    pub(crate) current_total_stake: Option<Amount>,
-}
-pub(crate) impl TotalStakeAfterUpgradeFlowImpl of FlowTrait<TotalStakeAfterUpgradeFlow> {
-    fn setup_v1(ref self: TotalStakeAfterUpgradeFlow, ref system: SystemState) {
-        let min_stake = system.staking.get_min_stake();
-        let stake_amount = min_stake * 2;
-        let commission = 200;
-        let staker1 = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker1, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_epoch();
-        let pool1 = system.staking.get_pool(staker: staker1);
-        let delegator1 = system.new_delegator(amount: 2 * stake_amount);
-        system.delegate(delegator: delegator1, pool: pool1, amount: stake_amount);
-        system.advance_epoch();
-        let delegator2 = system.new_delegator(amount: 2 * stake_amount);
-        system.delegate(delegator: delegator2, pool: pool1, amount: stake_amount);
-        system.advance_epoch();
-        system.delegator_exit_intent(delegator: delegator1, pool: pool1, amount: stake_amount);
-        system.advance_epoch();
-
-        let staker2 = system.new_staker(amount: stake_amount);
-        system.stake(staker: staker2, amount: stake_amount, pool_enabled: true, :commission);
-        system.advance_epoch();
-        let pool2 = system.staking.get_pool(staker: staker2);
-        system.delegate(delegator: delegator1, pool: pool2, amount: stake_amount);
-        system.advance_epoch();
-        system.staker_exit_intent(staker: staker2);
-
-        let total_stake = system.staking.get_total_stake();
-        let current_total_stake = system.staking.get_current_total_staking_power();
-        assert!(total_stake != current_total_stake);
-
-        self.total_stake = Option::Some(total_stake);
-        self.current_total_stake = Option::Some(current_total_stake);
-        system.set_staker_for_migration(staker_address: staker1.staker.address);
-        system.set_staker_for_migration(staker_address: staker2.staker.address);
-    }
-
-    fn test(self: TotalStakeAfterUpgradeFlow, ref system: SystemState) {
-        // Test total stake after upgrade
-        assert!(system.staking.get_total_stake() == self.total_stake.unwrap());
-        let (strk_current_total_stake, btc_current_total_stake) = system
-            .staking
-            .get_current_total_staking_power_v2();
-        assert!(
-            strk_current_total_stake == NormalizedAmountTrait::from_strk_native_amount(
-                self.current_total_stake.unwrap(),
-            ),
-        );
-        assert!(btc_current_total_stake.is_zero())
     }
 }
 
@@ -6342,37 +5991,9 @@ pub(crate) impl StakerWithoutPoolMigrationOpenPoolsFlowImpl of FlowTrait<
         };
         let staker_pool_info = system.staker_pool_info(:staker);
         assert!(staker_pool_info == expected_pool_info);
-    }
-}
-
-/// Test staker vector with staker in intent
-/// Flow:
-/// Staker stake
-/// Staker exit intent
-/// Upgrade
-/// Staker migration
-/// Test staker in staker vector
-#[derive(Drop, Copy)]
-pub(crate) struct StakerInIntentMigrationVecFlow {
-    pub(crate) staker: Option<Staker>,
-}
-pub(crate) impl StakerInIntentMigrationVecFlowImpl of FlowTrait<StakerInIntentMigrationVecFlow> {
-    fn setup_v1(ref self: StakerInIntentMigrationVecFlow, ref system: SystemState) {
-        let amount = system.staking.get_min_stake();
-        let staker = system.new_staker(:amount);
-        let commission = 200;
-        system.stake(:staker, :amount, pool_enabled: false, :commission);
-        system.staker_exit_intent(:staker);
-
-        system.set_staker_for_migration(staker_address: staker.staker.address);
-        self.staker = Option::Some(staker);
-    }
-
-    fn test(self: StakerInIntentMigrationVecFlow, ref system: SystemState) {
-        let staker = self.staker.unwrap();
-
-        let actual_stakers = system.staking.get_stakers();
-        assert!(actual_stakers == array![staker.staker.address].span());
+        let expected_class_hash = declare_pool_contract();
+        assert!(get_class_hash(contract_address: btc_pool_contract) == expected_class_hash);
+        assert!(get_class_hash(contract_address: strk_pool_contract) == expected_class_hash);
     }
 }
 
@@ -6404,6 +6025,7 @@ pub(crate) impl StakerWithPoolMigrationSetCommissionFlowImpl of FlowTrait<
         system.set_commission(:staker, commission: 100);
         let staker_pool_info = system.staker_pool_info(:staker);
         assert!(staker_pool_info.commission == Option::Some(100));
+        // TODO: Test rewards with commission, and use multiversion.
     }
 }
 
@@ -6420,8 +6042,12 @@ pub(crate) struct StakerExitFlow {
     pub(crate) staker: Option<Staker>,
     pub(crate) exit_wait_window: Option<TimeDelta>,
 }
-pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
-    fn setup_v1(ref self: StakerExitFlow, ref system: SystemState) {
+pub(crate) impl StakerExitFlowImpl of MultiVersionFlowTrait<StakerExitFlow> {
+    fn versions(self: StakerExitFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(ref self: StakerExitFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6434,7 +6060,7 @@ pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
     }
 
     #[feature("safe_dispatcher")]
-    fn test(self: StakerExitFlow, ref system: SystemState) {
+    fn test(self: StakerExitFlow, ref system: SystemState, version: ReleaseVersion) {
         let staker = self.staker.unwrap();
         let exit_wait_window = self.exit_wait_window.unwrap();
         system.advance_time(time: exit_wait_window);
@@ -6458,10 +6084,14 @@ pub(crate) impl StakerExitFlowImpl of FlowTrait<StakerExitFlow> {
 pub(crate) struct StakerExitIntentAttestAfterMigrationFlow {
     pub(crate) staker: Option<Staker>,
 }
-pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
+pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of MultiVersionFlowTrait<
     StakerExitIntentAttestAfterMigrationFlow,
 > {
-    fn setup_v1(ref self: StakerExitIntentAttestAfterMigrationFlow, ref system: SystemState) {
+    fn versions(self: StakerExitIntentAttestAfterMigrationFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(ref self: StakerExitIntentAttestAfterMigrationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6474,7 +6104,11 @@ pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
     }
 
     #[feature("safe_dispatcher")]
-    fn test(self: StakerExitIntentAttestAfterMigrationFlow, ref system: SystemState) {
+    fn test(
+        self: StakerExitIntentAttestAfterMigrationFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
         let staker = self.staker.unwrap();
 
         system.advance_block_into_attestation_window(:staker);
@@ -6487,11 +6121,15 @@ pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of FlowTrait<
 /// Flow:
 /// Stake
 /// Staker exit
-/// Upgrade
-/// Attempt stake
+/// Upgrade to V2
+/// Stake
+/// Staker exit
+/// Upgrade to V3
+/// Attempt stake both stakers
 #[derive(Drop, Copy)]
 pub(crate) struct StakerAddressAlreadyUsedInOlderVersionFlow {
-    pub(crate) staker: Option<Staker>,
+    pub(crate) staker_v1: Option<Staker>,
+    pub(crate) staker_v2: Option<Staker>,
 }
 pub(crate) impl StakerAddressAlreadyUsedInOlderVersionFlowImpl of FlowTrait<
     StakerAddressAlreadyUsedInOlderVersionFlow,
@@ -6505,15 +6143,31 @@ pub(crate) impl StakerAddressAlreadyUsedInOlderVersionFlowImpl of FlowTrait<
         system.advance_exit_wait_window();
         system.staker_exit_action(:staker);
 
-        self.staker = Option::Some(staker);
+        self.staker_v1 = Option::Some(staker);
+    }
+
+    fn setup_v2(ref self: StakerAddressAlreadyUsedInOlderVersionFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.staker_exit_intent(:staker);
+        system.advance_exit_wait_window();
+        system.staker_exit_action(:staker);
+
+        self.staker_v2 = Option::Some(staker);
     }
 
     #[feature("safe_dispatcher")]
     fn test(self: StakerAddressAlreadyUsedInOlderVersionFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
-        let staker = self.staker.unwrap();
-        let result = system.safe_stake(:staker, :amount);
+        let staker_v1 = self.staker_v1.unwrap();
+        let staker_v2 = self.staker_v2.unwrap();
+
+        let result = system.safe_stake(staker: staker_v1, :amount);
         assert_panic_with_error(result, StakingError::STAKER_ADDRESS_ALREADY_USED_IN_V1.describe());
+        let result = system.safe_stake(staker: staker_v2, :amount);
+        assert_panic_with_error(result, StakingError::STAKER_ADDRESS_ALREADY_USED.describe());
     }
 }
 
@@ -6802,6 +6456,9 @@ pub(crate) impl FindSigmaMigrationFlowImpl of FlowTrait<FindSigmaMigrationFlow> 
 
     fn test(self: FindSigmaMigrationFlow, ref system: SystemState) {
         let pool = self.pool.unwrap();
+        let expected_class_hash = declare_pool_contract();
+        assert!(get_class_hash(contract_address: pool) == expected_class_hash);
+
         let delegator = self.delegator.unwrap();
         let member_info = system.pool_member_info_v1(:delegator, :pool);
         let expected_member_rewards = self.member_rewards.unwrap();
@@ -6849,6 +6506,9 @@ pub(crate) impl FindSigmaEdgeCasesMigrationFlowImpl of FlowTrait<FindSigmaEdgeCa
 
     fn test(self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState) {
         let pool = self.pool.unwrap();
+        let expected_class_hash = declare_pool_contract();
+        assert!(get_class_hash(contract_address: pool) == expected_class_hash);
+
         let delegator = self.delegator.unwrap();
         let member_info = system.pool_member_info_v1(:delegator, :pool);
         let expected_member_rewards = self.member_rewards.unwrap();
@@ -6891,6 +6551,9 @@ pub(crate) impl FindSigmaMigrationIdxIsOneFlowImpl of FlowTrait<FindSigmaMigrati
 
     fn test(self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState) {
         let pool = self.pool.unwrap();
+        let expected_class_hash = declare_pool_contract();
+        assert!(get_class_hash(contract_address: pool) == expected_class_hash);
+
         let delegator = self.delegator.unwrap();
         let member_info = system.pool_member_info_v1(:delegator, :pool);
         let expected_member_rewards = self.member_rewards.unwrap();
