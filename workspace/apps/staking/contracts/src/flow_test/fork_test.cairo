@@ -563,3 +563,15 @@ fn pre_v3_staker_version_flow_test() {
     let mut flow = flows::StakerVersionFlow { stakers: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_intent_staker_exit_upgrade_flow_test() {
+    let mut flow = flows::MemberIntentStakerExitUpgradeFlow {
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+        delegated_amount: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}

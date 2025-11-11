@@ -6748,3 +6748,70 @@ pub(crate) impl StakerVersionFlowImpl of FlowTrait<StakerVersionFlow> {
         }
     }
 }
+
+/// Flow:
+/// Stake
+/// Delegate
+/// Accrue rewards
+/// Delegator exit intent
+/// Staker exit intent + action
+/// Upgrade to latest version
+/// Delegator exit action
+/// Test balances
+#[derive(Drop, Copy)]
+pub(crate) struct MemberIntentStakerExitUpgradeFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+    pub(crate) delegated_amount: Option<Amount>,
+}
+pub(crate) impl MemberIntentStakerExitUpgradeFlowImpl of MultiVersionFlowTrait<
+    MemberIntentStakerExitUpgradeFlow,
+> {
+    fn versions(self: MemberIntentStakerExitUpgradeFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
+    fn setup(ref self: MemberIntentStakerExitUpgradeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+
+        // Accrue rewards.
+        system.accrue_rewards(:staker);
+
+        // Delegator exit intent and staker exit action.
+        system.delegator_exit_intent(:delegator, :pool, :amount);
+        system.staker_exit_intent(:staker);
+        system.advance_exit_wait_window();
+        system.staker_exit_action(:staker);
+
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_non_zero());
+
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.expected_rewards = Option::Some(unclaimed_rewards);
+        self.delegated_amount = Option::Some(amount);
+    }
+
+    fn test(
+        self: MemberIntentStakerExitUpgradeFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
+        let pool = self.pool.unwrap();
+        let delegator = self.delegator.unwrap();
+        let expected_rewards = self.expected_rewards.unwrap();
+        let delegated_amount = self.delegated_amount.unwrap();
+        system.delegator_exit_action(:delegator, :pool);
+        if (version != V0) {
+            system.delegator_claim_rewards(:delegator, :pool);
+        }
+        assert!(system.token.balance_of(account: delegator.reward.address) == expected_rewards);
+        assert!(system.token.balance_of(account: delegator.delegator.address) == delegated_amount);
+        assert!(system.token.balance_of(account: pool) < 100);
+    }
+}
