@@ -54,9 +54,10 @@ use staking::staking::tests::interface_v1::{
     IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
 };
 use staking::test_utils::constants::{
-    AVG_BLOCK_TIME, BTC_18D_CONFIG, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, EPOCH_DURATION, EPOCH_LENGTH,
-    EPOCH_STARTING_BLOCK, INITIAL_SUPPLY, MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS,
-    STARTING_BLOCK_OFFSET, TESTING_C_NUM, TEST_BTC_DECIMALS, UPGRADE_GOVERNOR,
+    AVG_BLOCK_TIME, BTC_18D_CONFIG, BTC_DECIMALS_18, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2,
+    EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, INITIAL_SUPPLY,
+    MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS, STARTING_BLOCK_OFFSET, TESTING_C_NUM,
+    TEST_BTC_DECIMALS, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
@@ -935,6 +936,7 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
         let btc_token = TokenConfig {
             name: BTC_TOKEN_NAME(),
             symbol: SYMBOL(),
+            decimals: BTC_DECIMALS_18,
             initial_supply: cfg.test_info.initial_supply,
             owner: cfg.test_info.owner_address,
         };
@@ -1224,7 +1226,11 @@ pub(crate) impl SystemImpl of SystemTrait {
 
     fn deploy_new_btc_token(self: SystemState, name: ByteArray, decimals: u8) -> Token {
         let btc_token = TokenConfig {
-            name, symbol: SYMBOL(), initial_supply: INITIAL_SUPPLY.into(), owner: OWNER_ADDRESS(),
+            name,
+            symbol: SYMBOL(),
+            decimals: BTC_DECIMALS_18,
+            initial_supply: INITIAL_SUPPLY.into(),
+            owner: OWNER_ADDRESS(),
         }
             .deploy_btc_token(:decimals);
         btc_token

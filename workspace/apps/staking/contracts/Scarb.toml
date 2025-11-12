@@ -22,7 +22,7 @@ test = "snforge test"
 
 [[test]]
 name = "contracts_unittest"
-build-external-contracts = ["starkware_utils::erc20::erc20_mocks::DualCaseERC20Mock", "starkware_utils::erc20::erc20_mocks::ERC20DecimalsMock"]
+build-external-contracts = ["starkware_utils::erc20::erc20_mocks::DualCaseERC20Mock"]
 
 [tool.fmt]
 sort-module-level-items = true

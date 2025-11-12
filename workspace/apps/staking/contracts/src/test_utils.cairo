@@ -399,19 +399,6 @@ pub(crate) fn initialize_reward_supplier_state(
     state
 }
 
-pub(crate) fn deploy_mock_erc20_contract(
-    initial_supply: u256, owner_address: ContractAddress, name: ByteArray,
-) -> ContractAddress {
-    let mut calldata = ArrayTrait::new();
-    name.serialize(ref calldata);
-    SYMBOL().serialize(ref calldata);
-    initial_supply.serialize(ref calldata);
-    owner_address.serialize(ref calldata);
-    let erc20_contract = snforge_std::declare("DualCaseERC20Mock").unwrap().contract_class();
-    let (token_address, _) = erc20_contract.deploy(@calldata).unwrap();
-    token_address
-}
-
 pub(crate) fn deploy_mock_erc20_decimals_contract(
     initial_supply: u256, owner_address: ContractAddress, name: ByteArray, decimals: u8,
 ) -> ContractAddress {
@@ -421,7 +408,7 @@ pub(crate) fn deploy_mock_erc20_decimals_contract(
     decimals.serialize(ref calldata);
     initial_supply.serialize(ref calldata);
     owner_address.serialize(ref calldata);
-    let erc20_contract = snforge_std::declare("ERC20DecimalsMock").unwrap().contract_class();
+    let erc20_contract = snforge_std::declare("DualCaseERC20Mock").unwrap().contract_class();
     let (token_address, _) = erc20_contract.deploy(@calldata).unwrap();
     token_address
 }
