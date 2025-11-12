@@ -1,10 +1,9 @@
-use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use staking::errors::{Erc20Error, GenericError, InternalError};
+use staking::errors::{GenericError, InternalError};
 use staking::staking::objects::NormalizedAmount;
 use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use staking::types::{Amount, Commission, Index};
 use starknet::syscalls::deploy_syscall;
-use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_contract_address};
+use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::{mul_wide_and_ceil_div, mul_wide_and_div};
 
@@ -86,32 +85,3 @@ pub(crate) fn compute_rewards_rounded_down(
 pub(crate) fn compute_threshold(base_mint_amount: Amount) -> Amount {
     base_mint_amount / 2
 }
-
-#[generate_trait]
-pub(crate) impl CheckedIERC20DispatcherImpl of CheckedIERC20DispatcherTrait {
-    fn checked_transfer_from(
-        self: IERC20Dispatcher, sender: ContractAddress, recipient: ContractAddress, amount: u256,
-    ) -> bool {
-        assert!(amount <= self.balance_of(account: sender), "{}", Erc20Error::INSUFFICIENT_BALANCE);
-        assert!(
-            amount <= self.allowance(owner: sender, spender: get_contract_address()),
-            "{}",
-            Erc20Error::INSUFFICIENT_ALLOWANCE,
-        );
-        let success = self.transfer_from(:sender, :recipient, :amount);
-        assert!(success, "{}", Erc20Error::TRANSFER_FAILED);
-        success
-    }
-
-    fn checked_transfer(self: IERC20Dispatcher, recipient: ContractAddress, amount: u256) -> bool {
-        assert!(
-            amount <= self.balance_of(account: get_contract_address()),
-            "{}",
-            Erc20Error::INSUFFICIENT_BALANCE,
-        );
-        let success = self.transfer(:recipient, :amount);
-        assert!(success, "{}", Erc20Error::TRANSFER_FAILED);
-        success
-    }
-}
-
