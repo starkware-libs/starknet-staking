@@ -198,7 +198,9 @@ pub mod Attestation {
             self._assert_attest_in_window(:target_attestation_block);
 
             // Check the attestation data (correct block hash).
-            let target_block_hash = self.get_target_block_hash(:target_attestation_block);
+            let target_block_hash = get_block_hash_syscall(block_number: target_attestation_block)
+                .unwrap_syscall();
+
             assert!(target_block_hash == block_hash, "{}", Error::ATTEST_WRONG_BLOCK_HASH);
         }
 
@@ -246,12 +248,6 @@ pub mod Attestation {
                 "{}",
                 Error::ATTEST_OUT_OF_WINDOW,
             );
-        }
-
-        fn get_target_block_hash(
-            self: @ContractState, target_attestation_block: BlockNumber,
-        ) -> felt252 {
-            get_block_hash_syscall(block_number: target_attestation_block).unwrap_syscall()
         }
     }
 }
