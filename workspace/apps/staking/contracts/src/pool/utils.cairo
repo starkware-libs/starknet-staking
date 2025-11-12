@@ -8,9 +8,9 @@ use staking::errors::{GenericError, InternalError};
 use staking::pool::objects::TokenRewardsConfig;
 use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::types::{Amount, Epoch, VecIndex};
-use staking::utils::CheckedIERC20DispatcherTrait;
 use starknet::storage::StorageBase;
 use starknet::{ContractAddress, get_contract_address};
+use starkware_utils::erc20::erc20_utils::CheckedIERC20DispatcherTrait;
 use starkware_utils::trace::trace::{Trace, TraceTrait};
 
 /// Transfer funds of the specified amount from the given delegator to the pool.

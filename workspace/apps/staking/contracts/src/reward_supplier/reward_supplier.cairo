@@ -15,7 +15,7 @@ pub mod RewardSupplier {
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use staking::staking::objects::EpochInfoTrait;
     use staking::types::Amount;
-    use staking::utils::{CheckedIERC20DispatcherTrait, compute_threshold};
+    use staking::utils::compute_threshold;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::syscalls::send_message_to_l1_syscall;
     use starknet::{
@@ -23,6 +23,7 @@ pub mod RewardSupplier {
     };
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::erc20::erc20_utils::CheckedIERC20DispatcherTrait;
     use starkware_utils::errors::OptionAuxTrait;
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::ceil_of_division;

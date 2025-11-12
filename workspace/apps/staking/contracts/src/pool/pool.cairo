@@ -34,7 +34,7 @@ pub mod Pool {
     use staking::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
     };
-    use staking::utils::{CheckedIERC20DispatcherTrait, compute_rewards_rounded_down};
+    use staking::utils::compute_rewards_rounded_down;
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
     use starknet::storage::{
@@ -45,6 +45,7 @@ pub mod Pool {
     use starkware_utils::components::replaceability::ReplaceabilityComponent;
     use starkware_utils::components::replaceability::ReplaceabilityComponent::InternalReplaceabilityTrait;
     use starkware_utils::components::roles::RolesComponent;
+    use starkware_utils::erc20::erc20_utils::CheckedIERC20DispatcherTrait;
     use starkware_utils::errors::{Describable, OptionAuxTrait};
     use starkware_utils::interfaces::identity::Identity;
     use starkware_utils::math::utils::mul_wide_and_div;
