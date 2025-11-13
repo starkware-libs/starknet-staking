@@ -1,11 +1,14 @@
 {
   "extends": ["//"],
   "tasks": {
+    "check-flow-tests": {
+      "dependsOn": ["^check-flow-tests"]
+    },
     "test": {
       "dependsOn": []
     },
     "pack": {
-      "dependsOn": ["lint", "build", "test"]
+      "dependsOn": ["lint", "build", "test", "check-flow-tests"]
     }
   }
 }

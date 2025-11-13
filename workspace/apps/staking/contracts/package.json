@@ -1,6 +1,6 @@
 {
   "name": "@staking/contracts",
-  "version": "1.0.1-dev.1008",
+  "version": "1.0.1-dev.1009",
   "private": true,
   "description": "staking contracts",
   "scripts": {
@@ -9,6 +9,7 @@
     "dev": "scarb cairo-run",
     "format": "pnpm sort-package-json && scarb fmt",
     "lint": "scarb fmt --check",
-    "test": "scarb test"
+    "test": "scarb test",
+    "check-flow-tests": "python3 ../../../../scripts/staking/check_all_flows_have_test.py --allow-duplicate-tests"
   }
 }
