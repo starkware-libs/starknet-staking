@@ -6815,3 +6815,32 @@ pub(crate) impl MemberIntentStakerExitUpgradeFlowImpl of MultiVersionFlowTrait<
         assert!(system.token.balance_of(account: pool) < 100);
     }
 }
+
+/// Flow:
+/// Stake
+/// Upgrade
+/// Attempt to get public key
+/// Catch PUBLIC_KEY_NOT_SET
+#[derive(Drop, Copy)]
+pub(crate) struct GetPublicKeyAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl GetPublicKeyAfterUpgradeFlowImpl of FlowTrait<GetPublicKeyAfterUpgradeFlow> {
+    fn setup(ref self: GetPublicKeyAfterUpgradeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: GetPublicKeyAfterUpgradeFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        let result = system.staking.safe_dispatcher().get_current_public_key(:staker_address);
+        assert_panic_with_error(result, StakingError::PUBLIC_KEY_NOT_SET.describe());
+    }
+}

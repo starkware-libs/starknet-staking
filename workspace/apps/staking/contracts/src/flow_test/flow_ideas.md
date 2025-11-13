@@ -5,9 +5,6 @@
 - Exit, upgrade, set public key.
 - Set same public key for 2 different stakers.
 
-## `get_current_public_key`
-- Upgrade, get public key.
-
 ## `get_stakers`
 - Get stakers with staker with zero balance.
 - Staker exit action, get stakers.

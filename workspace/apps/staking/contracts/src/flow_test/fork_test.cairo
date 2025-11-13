@@ -449,3 +449,10 @@ fn pre_v3_staker_version_flow_test() {
     let mut flow = flows::StakerVersionFlow { stakers: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn get_public_key_after_upgrade_flow_test() {
+    let mut flow = flows::GetPublicKeyAfterUpgradeFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
