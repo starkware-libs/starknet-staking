@@ -596,6 +596,8 @@ pub mod Staking {
             Option::Some(self.staker_info_v1(:staker_address))
         }
 
+        // TODO: Handle the panic when a new staker is added before the upgrade to V3 in the same
+        // epoch, and this function is called in the same epoch after the upgrade.
         fn staker_info_v3(self: @ContractState, staker_address: ContractAddress) -> StakerInfoV3 {
             let internal_staker_info = self.internal_staker_info(:staker_address);
             let amount_own = self
