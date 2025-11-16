@@ -36,13 +36,13 @@ use staking::reward_supplier::interface::{
 };
 use staking::staking::interface::{
     CommissionCommitment, IStakingConfigDispatcher, IStakingConfigDispatcherTrait,
-    IStakingConsensusDispatcher, IStakingDispatcher, IStakingDispatcherTrait,
-    IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait, IStakingMigrationSafeDispatcher,
-    IStakingPauseDispatcher, IStakingPauseDispatcherTrait, IStakingPoolDispatcher,
-    IStakingPoolSafeDispatcher, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
-    IStakingTokenManagerDispatcher, IStakingTokenManagerDispatcherTrait,
-    IStakingTokenManagerSafeDispatcher, IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1,
-    StakerInfoV1Trait, StakerPoolInfoV2,
+    IStakingConsensusDispatcher, IStakingConsensusSafeDispatcher, IStakingDispatcher,
+    IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
+    IStakingMigrationSafeDispatcher, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
+    IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
+    IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
+    IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
+    IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::{
     EpochInfo, EpochInfoTrait, NormalizedAmount, StakerVersion, StakerVersionTrait,
@@ -275,6 +275,10 @@ pub(crate) impl StakingImpl of StakingTrait {
 
     fn consensus_dispatcher(self: StakingState) -> IStakingConsensusDispatcher nopanic {
         IStakingConsensusDispatcher { contract_address: self.address }
+    }
+
+    fn consensus_safe_dispatcher(self: StakingState) -> IStakingConsensusSafeDispatcher nopanic {
+        IStakingConsensusSafeDispatcher { contract_address: self.address }
     }
 
     fn token_manager_dispatcher(self: StakingState) -> IStakingTokenManagerDispatcher nopanic {

@@ -463,3 +463,10 @@ fn set_public_key_same_epoch_as_upgrade_flow_test() {
     let mut flow = flows::SetPublicKeySameEpochAsUpgradeFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn get_stakers_after_upgrade_flow_test() {
+    let mut flow = flows::GetStakersAfterUpgradeFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}

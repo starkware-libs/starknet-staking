@@ -111,6 +111,8 @@ pub trait IStakingConsensus<TContractState> {
     /// `STAKING_POWER_BASE_VALUE`.
     /// **Note**: Disregards stakers that either no staking power, which can be either new stakers
     /// or stakers that called `exit_intent`.
+    /// **Note**: Calling this function in the same epoch as the upgrade to V3 may panic.
+    /// This will occur if a new staker was added in that epoch before the upgrade.
     fn get_stakers(
         self: @TContractState, epoch_id: Epoch,
     ) -> Span<(ContractAddress, StakingPower, Option<PublicKey>)>;

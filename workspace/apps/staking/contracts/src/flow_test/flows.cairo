@@ -22,8 +22,9 @@ use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::utils::compute_rewards_rounded_down;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
-    IStakingConsensusDispatcherTrait, IStakingDispatcherTrait, IStakingMigrationSafeDispatcherTrait,
-    IStakingSafeDispatcherTrait, PoolInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+    IStakingConsensusDispatcherTrait, IStakingConsensusSafeDispatcherTrait, IStakingDispatcherTrait,
+    IStakingMigrationSafeDispatcherTrait, IStakingSafeDispatcherTrait, PoolInfo, StakerInfoV1,
+    StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait, StakerVersion};
 use staking::staking::staking::Staking::V3_PREV_CONTRACT_VERSION;
@@ -6984,6 +6985,61 @@ pub(crate) impl SetPublicKeySameEpochAsUpgradeFlowImpl of FlowTrait<
             (staker.staker.address, STRK_WEIGHT_FACTOR, Option::Some(public_key)),
         ]
             .span();
+        assert!(stakers == expected_stakers);
+    }
+}
+
+/// Flow:
+/// Stake
+/// Upgrade (same epoch)
+/// get_stakers (same epoch) (should fail)
+/// Advance epoch
+/// get_stakers (should succeed)
+/// Advance epoch
+/// get_stakers (should succeed)
+#[derive(Drop, Copy)]
+pub(crate) struct GetStakersAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl GetStakersAfterUpgradeFlowImpl of FlowTrait<GetStakersAfterUpgradeFlow> {
+    fn setup_v2(ref self: GetStakersAfterUpgradeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: GetStakersAfterUpgradeFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staking = system.staking.dispatcher();
+        let staking_consensus = system.staking.consensus_dispatcher();
+        let staking_consensus_safe = system.staking.consensus_safe_dispatcher();
+
+        // Test same epoch as upgrade (and stake).
+        let epoch_id = staking.get_current_epoch();
+        let result = staking_consensus_safe.get_stakers(:epoch_id);
+        assert_panic_with_error(result, "Index out of bounds");
+
+        // Test next epoch.
+        let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
+        let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)]
+            .span();
+        assert!(stakers == expected_stakers);
+        system.advance_epoch();
+        let epoch_id = staking.get_current_epoch();
+        let stakers = staking_consensus.get_stakers(:epoch_id);
+        assert!(stakers == expected_stakers);
+
+        // Test next next epoch.
+        let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
+        assert!(stakers == expected_stakers);
+        system.advance_epoch();
+        let epoch_id = staking.get_current_epoch();
+        let stakers = staking_consensus.get_stakers(:epoch_id);
         assert!(stakers == expected_stakers);
     }
 }
