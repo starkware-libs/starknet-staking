@@ -286,7 +286,7 @@ fn test_is_attestation_done_in_curr_epoch_zero_epoch() {
     general_contract_system_deployment(ref :cfg);
     let attestation_contract = cfg.test_info.attestation_contract;
     let attestation_dispatcher = IAttestationDispatcher { contract_address: attestation_contract };
-    attestation_dispatcher.is_attestation_done_in_curr_epoch(staker_address: DUMMY_ADDRESS());
+    attestation_dispatcher.is_attestation_done_in_curr_epoch(staker_address: DUMMY_ADDRESS);
 }
 
 #[test]

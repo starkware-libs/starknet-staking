@@ -232,7 +232,7 @@ fn test_on_receive_caller_not_starkgate() {
         contract_address: reward_supplier_contract,
     };
     cheat_caller_address_once(
-        contract_address: reward_supplier_contract, caller_address: NOT_STARKGATE_ADDRESS(),
+        contract_address: reward_supplier_contract, caller_address: NOT_STARKGATE_ADDRESS,
     );
     reward_supplier_dispatcher
         .on_receive(
@@ -279,7 +279,7 @@ fn test_claim_rewards_assertions() {
     };
 
     // Catch CALLER_IS_NOT_STAKING_CONTRACT.
-    let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS();
+    let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS;
     let amount = Zero::zero();
     cheat_caller_address_once(
         contract_address: reward_supplier, caller_address: not_staking_contract,
@@ -367,7 +367,7 @@ fn test_update_unclaimed_rewards_from_staking_contract_caller_not_staking() {
     let reward_supplier_dispatcher = IRewardSupplierDispatcher {
         contract_address: reward_supplier,
     };
-    let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS();
+    let not_staking_contract = NOT_STAKING_CONTRACT_ADDRESS;
     cheat_caller_address_once(
         contract_address: reward_supplier, caller_address: not_staking_contract,
     );

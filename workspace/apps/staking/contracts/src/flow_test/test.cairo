@@ -1838,7 +1838,7 @@ fn set_same_public_key_for_2_different_stakers_flow_test() {
     let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
     let staker_1 = system.new_staker(:amount);
     let staker_2 = system.new_staker(:amount);
-    let public_key = PUBLIC_KEY();
+    let public_key = PUBLIC_KEY;
     let staking_address = system.staking.address;
     let staking = system.staking.dispatcher();
     let staking_consensus = system.staking.consensus_dispatcher();

@@ -23,11 +23,11 @@ impl RewardsServiceConfigDefault of Default<RewardsServiceConfig> {
     fn default() -> RewardsServiceConfig {
         RewardsServiceConfig {
             rewards_service_address: Zero::zero(),
-            staking_address: STAKING_CONTRACT_ADDRESS(),
-            permissioned_caller: CALLER_ADDRESS(),
+            staking_address: STAKING_CONTRACT_ADDRESS,
+            permissioned_caller: CALLER_ADDRESS,
             last_update_block_number: get_block_number(),
             last_update_block_timestamp: get_block_timestamp(),
-            owner: OWNER_ADDRESS(),
+            owner: OWNER_ADDRESS,
         }
     }
 }

@@ -102,7 +102,7 @@ fn test_pause_not_security_agent() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
-    let non_security_agent = NON_SECURITY_AGENT();
+    let non_security_agent = NON_SECURITY_AGENT;
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: non_security_agent,
     );
@@ -116,7 +116,7 @@ fn test_unpause_not_security_admin() {
     general_contract_system_deployment(ref :cfg);
     let staking_contract = cfg.test_info.staking_contract;
     let staking_pause_dispatcher = IStakingPauseDispatcher { contract_address: staking_contract };
-    let non_security_admin = NON_SECURITY_ADMIN();
+    let non_security_admin = NON_SECURITY_ADMIN;
     cheat_caller_address_once(
         contract_address: staking_contract, caller_address: non_security_admin,
     );
@@ -141,7 +141,7 @@ fn test_increase_stake_when_paused() {
     let staking_dispatcher = IStakingDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.increase_stake(staker_address: DUMMY_ADDRESS(), amount: 0);
+    staking_dispatcher.increase_stake(staker_address: DUMMY_ADDRESS, amount: 0);
 }
 
 #[test]
@@ -153,7 +153,7 @@ fn test_claim_rewards_when_paused() {
     let staking_dispatcher = IStakingDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.claim_rewards(staker_address: DUMMY_ADDRESS());
+    staking_dispatcher.claim_rewards(staker_address: DUMMY_ADDRESS);
 }
 
 #[test]
@@ -177,7 +177,7 @@ fn test_unstake_action_when_paused() {
     let staking_dispatcher = IStakingDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.unstake_action(staker_address: DUMMY_ADDRESS());
+    staking_dispatcher.unstake_action(staker_address: DUMMY_ADDRESS);
 }
 
 #[test]
@@ -189,7 +189,7 @@ fn test_change_reward_address_when_paused() {
     let staking_dispatcher = IStakingDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.change_reward_address(reward_address: DUMMY_ADDRESS());
+    staking_dispatcher.change_reward_address(reward_address: DUMMY_ADDRESS);
 }
 
 #[test]
@@ -214,7 +214,7 @@ fn test_change_operational_address_when_paused() {
     let staking_dispatcher = IStakingDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.change_operational_address(operational_address: DUMMY_ADDRESS());
+    staking_dispatcher.change_operational_address(operational_address: DUMMY_ADDRESS);
 }
 
 #[test]
@@ -226,7 +226,7 @@ fn test_declare_operational_address_when_paused() {
     let staking_dispatcher = IStakingDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.declare_operational_address(staker_address: DUMMY_ADDRESS());
+    staking_dispatcher.declare_operational_address(staker_address: DUMMY_ADDRESS);
 }
 
 #[test]
@@ -250,7 +250,7 @@ fn test_add_stake_from_pool_when_paused() {
     let staking_pool_dispatcher = IStakingPoolDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_pool_dispatcher.add_stake_from_pool(staker_address: DUMMY_ADDRESS(), amount: 0);
+    staking_pool_dispatcher.add_stake_from_pool(staker_address: DUMMY_ADDRESS, amount: 0);
 }
 
 #[test]
@@ -264,7 +264,7 @@ fn test_remove_from_delegation_pool_intent_when_paused() {
     };
     staking_pool_dispatcher
         .remove_from_delegation_pool_intent(
-            staker_address: DUMMY_ADDRESS(), identifier: DUMMY_IDENTIFIER, amount: 0,
+            staker_address: DUMMY_ADDRESS, identifier: DUMMY_IDENTIFIER, amount: 0,
         );
 }
 
@@ -291,8 +291,8 @@ fn test_switch_staking_delegation_pool_when_paused() {
     };
     staking_pool_dispatcher
         .switch_staking_delegation_pool(
-            to_staker: DUMMY_ADDRESS(),
-            to_pool: DUMMY_ADDRESS(),
+            to_staker: DUMMY_ADDRESS,
+            to_pool: DUMMY_ADDRESS,
             switched_amount: 0,
             data: [].span(),
             identifier: DUMMY_IDENTIFIER,
@@ -308,7 +308,7 @@ fn test_update_rewards_from_attestation_contract_when_paused() {
     let staking_dispatcher = IStakingAttestationDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.update_rewards_from_attestation_contract(staker_address: DUMMY_ADDRESS());
+    staking_dispatcher.update_rewards_from_attestation_contract(staker_address: DUMMY_ADDRESS);
 }
 
 #[test]
@@ -345,5 +345,5 @@ fn test_update_rewards_when_paused() {
     let staking_dispatcher = IStakingRewardsManagerDispatcher {
         contract_address: cfg.test_info.staking_contract,
     };
-    staking_dispatcher.update_rewards(staker_address: DUMMY_ADDRESS(), disable_rewards: true);
+    staking_dispatcher.update_rewards(staker_address: DUMMY_ADDRESS, disable_rewards: true);
 }

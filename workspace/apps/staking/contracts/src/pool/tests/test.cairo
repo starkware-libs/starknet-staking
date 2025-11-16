@@ -261,12 +261,12 @@ fn test_add_to_delegation_pool_assertions() {
     // Catch POOL_MEMBER_DOES_NOT_EXIST.
     cheat_caller_address_once(contract_address: pool_contract, caller_address: pool_member);
     let result = pool_safe_dispatcher
-        .add_to_delegation_pool(pool_member: NON_POOL_MEMBER_ADDRESS(), :amount);
+        .add_to_delegation_pool(pool_member: NON_POOL_MEMBER_ADDRESS, :amount);
     assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.describe());
 
     // Catch CALLER_CANNOT_ADD_TO_POOL.
     cheat_caller_address_once(
-        contract_address: pool_contract, caller_address: NON_POOL_MEMBER_ADDRESS(),
+        contract_address: pool_contract, caller_address: NON_POOL_MEMBER_ADDRESS,
     );
     let result = pool_safe_dispatcher.add_to_delegation_pool(:pool_member, :amount);
     assert_panic_with_error(:result, expected_error: Error::CALLER_CANNOT_ADD_TO_POOL.describe());
@@ -349,7 +349,7 @@ fn test_set_staker_removed_caller_is_not_staking_contract() {
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     cheat_caller_address_once(
-        contract_address: test_address(), caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
+        contract_address: test_address(), caller_address: NOT_STAKING_CONTRACT_ADDRESS,
     );
     state.set_staker_removed();
 }
@@ -387,7 +387,7 @@ fn test_change_reward_address() {
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     let pool_member_info_before_change = pool_dispatcher
         .pool_member_info_v1(cfg.test_info.pool_member_address);
-    let other_reward_address = OTHER_REWARD_ADDRESS();
+    let other_reward_address = OTHER_REWARD_ADDRESS;
 
     cheat_caller_address_once(
         contract_address: pool_contract, caller_address: cfg.test_info.pool_member_address,
@@ -425,10 +425,10 @@ fn test_change_reward_address_pool_member_not_exist() {
         governance_admin: cfg.test_info.pool_contract_admin,
     );
     cheat_caller_address_once(
-        contract_address: test_address(), caller_address: NON_POOL_MEMBER_ADDRESS(),
+        contract_address: test_address(), caller_address: NON_POOL_MEMBER_ADDRESS,
     );
     // Reward address is arbitrary because it should fail because of the caller.
-    state.change_reward_address(reward_address: DUMMY_ADDRESS());
+    state.change_reward_address(reward_address: DUMMY_ADDRESS);
 }
 
 #[test]
@@ -921,7 +921,7 @@ fn test_exit_delegation_pool_intent_assertions() {
 
     // Catch POOL_MEMBER_DOES_NOT_EXIST.
     cheat_caller_address_once(
-        contract_address: pool_contract, caller_address: NON_POOL_MEMBER_ADDRESS(),
+        contract_address: pool_contract, caller_address: NON_POOL_MEMBER_ADDRESS,
     );
     let result = pool_safe_dispatcher.exit_delegation_pool_intent(:amount);
     assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.describe());
@@ -1045,7 +1045,7 @@ fn test_exit_delegation_pool_action_assertions() {
 
     // Catch POOL_MEMBER_DOES_NOT_EXIST.
     let result = pool_safe_dispatcher
-        .exit_delegation_pool_action(pool_member: NON_POOL_MEMBER_ADDRESS());
+        .exit_delegation_pool_action(pool_member: NON_POOL_MEMBER_ADDRESS);
     assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.describe());
 
     // Catch MISSING_UNDELEGATE_INTENT.
@@ -1073,8 +1073,8 @@ fn test_switch_delegation_pool() {
     enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     // Create other staker with pool.
     let switch_amount = cfg.pool_member_info._deprecated_amount / 2;
-    cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
-    cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
+    cfg.test_info.staker_address = OTHER_STAKER_ADDRESS;
+    cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS;
     let to_staker_pool_contract = stake_with_strk_pool_enabled(:cfg);
     cheat_caller_address(
         contract_address: pool_contract,
@@ -1087,7 +1087,7 @@ fn test_switch_delegation_pool() {
         .pool_member_info_v1(pool_member: cfg.test_info.pool_member_address);
     let amount_left = pool_dispatcher
         .switch_delegation_pool(
-            to_staker: OTHER_STAKER_ADDRESS(),
+            to_staker: OTHER_STAKER_ADDRESS,
             to_pool: to_staker_pool_contract,
             amount: switch_amount,
         );
@@ -1102,7 +1102,7 @@ fn test_switch_delegation_pool() {
     let mut spy = snforge_std::spy_events();
     let amount_left = pool_dispatcher
         .switch_delegation_pool(
-            to_staker: OTHER_STAKER_ADDRESS(),
+            to_staker: OTHER_STAKER_ADDRESS,
             to_pool: to_staker_pool_contract,
             amount: switch_amount,
         );
@@ -1135,8 +1135,8 @@ fn test_switch_delegation_pool_assertions() {
     let from_pool = stake_with_strk_pool_enabled(:cfg);
     enter_delegation_pool_for_testing_using_dispatcher(pool_contract: from_pool, :cfg, :token);
     // Create other staker with pool.
-    cfg.test_info.staker_address = OTHER_STAKER_ADDRESS();
-    cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS();
+    cfg.test_info.staker_address = OTHER_STAKER_ADDRESS;
+    cfg.staker_info.operational_address = OTHER_OPERATIONAL_ADDRESS;
     let to_pool = stake_with_strk_pool_enabled(:cfg);
     let switch_amount = cfg.pool_member_info._deprecated_amount / 2;
     let pool_dispatcher = IPoolDispatcher { contract_address: from_pool };
@@ -1146,21 +1146,19 @@ fn test_switch_delegation_pool_assertions() {
     // Catch AMOUNT_IS_ZERO.
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
     let result = pool_safe_dispatcher
-        .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: Zero::zero());
+        .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS, :to_pool, amount: Zero::zero());
     assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_IS_ZERO.describe());
 
     // Catch POOL_MEMBER_DOES_NOT_EXIST.
-    cheat_caller_address_once(
-        contract_address: from_pool, caller_address: NON_POOL_MEMBER_ADDRESS(),
-    );
+    cheat_caller_address_once(contract_address: from_pool, caller_address: NON_POOL_MEMBER_ADDRESS);
     let result = pool_safe_dispatcher
-        .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: switch_amount);
+        .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS, :to_pool, amount: switch_amount);
     assert_panic_with_error(:result, expected_error: Error::POOL_MEMBER_DOES_NOT_EXIST.describe());
 
     // Catch MISSING_UNDELEGATE_INTENT.
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
     let result = pool_safe_dispatcher
-        .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: switch_amount);
+        .switch_delegation_pool(to_staker: OTHER_STAKER_ADDRESS, :to_pool, amount: switch_amount);
     assert_panic_with_error(
         :result, expected_error: GenericError::MISSING_UNDELEGATE_INTENT.describe(),
     );
@@ -1171,7 +1169,7 @@ fn test_switch_delegation_pool_assertions() {
     cheat_caller_address_once(contract_address: from_pool, caller_address: pool_member);
     let result = pool_safe_dispatcher
         .switch_delegation_pool(
-            to_staker: OTHER_STAKER_ADDRESS(), :to_pool, amount: switch_amount + 1,
+            to_staker: OTHER_STAKER_ADDRESS, :to_pool, amount: switch_amount + 1,
         );
     assert_panic_with_error(:result, expected_error: GenericError::AMOUNT_TOO_HIGH.describe());
 }
@@ -1187,7 +1185,7 @@ fn test_claim_rewards_pool_member_not_exist() {
         token_address: cfg.test_info.strk_token.contract_address(),
         governance_admin: cfg.test_info.pool_contract_admin,
     );
-    state.claim_rewards(pool_member: NON_POOL_MEMBER_ADDRESS());
+    state.claim_rewards(pool_member: NON_POOL_MEMBER_ADDRESS);
 }
 
 #[test]
@@ -1203,7 +1201,7 @@ fn test_claim_rewards_unauthorized_address() {
 
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     cheat_caller_address_once(
-        contract_address: pool_contract, caller_address: NON_POOL_MEMBER_ADDRESS(),
+        contract_address: pool_contract, caller_address: NON_POOL_MEMBER_ADDRESS,
     );
     pool_dispatcher.claim_rewards(cfg.test_info.pool_member_address);
 }
@@ -1307,7 +1305,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
 
     // Catch CALLER_IS_NOT_STAKING_CONTRACT.
     cheat_caller_address_once(
-        contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
+        contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS,
     );
     let result = pool_safe_dispatcher
         .enter_delegation_pool_from_staking_contract(amount: switch_amount, :data);
@@ -1325,7 +1323,7 @@ fn test_enter_delegation_pool_from_staking_contract_assertions() {
     );
 
     // Catch REWARD_ADDRESS_MISMATCH.
-    let wrong_reward_address = DUMMY_ADDRESS();
+    let wrong_reward_address = DUMMY_ADDRESS;
     let switch_pool_data = SwitchPoolData { pool_member, reward_address: wrong_reward_address };
     let mut data = array![];
     switch_pool_data.serialize(ref data);
@@ -1363,7 +1361,7 @@ fn test_update_rewards_from_staking_contract_caller_not_staking_contract() {
     let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
     cheat_caller_address_once(
-        contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS(),
+        contract_address: pool_contract, caller_address: NOT_STAKING_CONTRACT_ADDRESS,
     );
     pool_dispatcher.update_rewards_from_staking_contract(rewards: 1, pool_balance: 1000);
 }
@@ -1499,7 +1497,7 @@ fn test_pool_member_info_pool_member_doesnt_exist() {
     general_contract_system_deployment(ref :cfg);
     let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolDispatcher { contract_address: pool_contract };
-    pool_dispatcher.pool_member_info_v1(pool_member: NON_POOL_MEMBER_ADDRESS());
+    pool_dispatcher.pool_member_info_v1(pool_member: NON_POOL_MEMBER_ADDRESS);
 }
 
 #[test]
@@ -1584,7 +1582,7 @@ fn test_sanity_storage_versioned_internal_pool_member_info() {
     state
         .pool_member_info
         .write(
-            POOL_MEMBER_ADDRESS(),
+            POOL_MEMBER_ADDRESS,
             Option::Some(
                 InternalPoolMemberInfoTestTrait::new(
                     reward_address: Zero::zero(),
@@ -1601,7 +1599,7 @@ fn test_sanity_storage_versioned_internal_pool_member_info() {
         state
             .new_pool_member_info
             .read(
-                POOL_MEMBER_ADDRESS(),
+                POOL_MEMBER_ADDRESS,
             ) == VInternalPoolMemberInfoTestTrait::new_v0(
                 reward_address: Zero::zero(),
                 amount: Zero::zero(),
@@ -1680,7 +1678,7 @@ fn test_internal_pool_member_info_pool_member_doesnt_exist() {
     general_contract_system_deployment(ref :cfg);
     let pool_contract = stake_with_strk_pool_enabled(:cfg);
     let pool_dispatcher = IPoolMigrationDispatcher { contract_address: pool_contract };
-    pool_dispatcher.internal_pool_member_info(pool_member: NON_POOL_MEMBER_ADDRESS());
+    pool_dispatcher.internal_pool_member_info(pool_member: NON_POOL_MEMBER_ADDRESS);
 }
 
 #[test]

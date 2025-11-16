@@ -1,3 +1,4 @@
+use MainnetAddresses::MAINNET_SECURITY_COUNSEL_ADDRESS;
 use MainnetClassHashes::{
     MAINNET_ATTESTATION_CLASS_HASH_V1, MAINNET_MINTING_CURVE_CLASS_HASH_V0,
     MAINNET_MINTING_CURVE_CLASS_HASH_V2, MAINNET_POOL_CLASS_HASH_V0, MAINNET_POOL_CLASS_HASH_V1,
@@ -55,9 +56,8 @@ use staking::staking::tests::interface_v1::{
 };
 use staking::test_utils::constants::{
     AVG_BLOCK_TIME, BTC_18D_CONFIG, BTC_DECIMALS_18, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2,
-    EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, INITIAL_SUPPLY,
-    MAINNET_SECURITY_COUNSEL_ADDRESS, OWNER_ADDRESS, STARTING_BLOCK_OFFSET, TESTING_C_NUM,
-    TEST_BTC_DECIMALS, UPGRADE_GOVERNOR,
+    EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, INITIAL_SUPPLY, OWNER_ADDRESS,
+    STARTING_BLOCK_OFFSET, TESTING_C_NUM, TEST_BTC_DECIMALS, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
@@ -88,6 +88,11 @@ mod MainnetAddresses {
     pub(crate) fn MAINNET_L2_BRIDGE_ADDRESS() -> ContractAddress {
         0x0594c1582459ea03f77deaf9eb7e3917d6994a03c13405ba42867f83d85f085d.try_into().unwrap()
     }
+
+    pub(crate) const MAINNET_SECURITY_COUNSEL_ADDRESS: ContractAddress =
+        0x663cc699d9c51b7d4d434e06f5982692167546ce525d9155edb476ac9a117d6
+        .try_into()
+        .unwrap();
 }
 
 /// Contains class hashes of mainnet contracts.
@@ -1174,7 +1179,7 @@ pub(crate) impl SystemImpl of SystemTrait {
 
     fn set_pool_for_upgrade(ref self: SystemState, pool_address: ContractAddress) {
         let pool_contract_admin = self.staking.get_pool_contract_admin();
-        let upgrade_governor = UPGRADE_GOVERNOR();
+        let upgrade_governor = UPGRADE_GOVERNOR;
         set_account_as_upgrade_governor(
             contract: pool_address,
             account: upgrade_governor,
@@ -1230,7 +1235,7 @@ pub(crate) impl SystemImpl of SystemTrait {
             symbol: SYMBOL(),
             decimals: BTC_DECIMALS_18,
             initial_supply: INITIAL_SUPPLY.into(),
-            owner: OWNER_ADDRESS(),
+            owner: OWNER_ADDRESS,
         }
             .deploy_btc_token(:decimals);
         btc_token
@@ -1847,7 +1852,7 @@ pub(crate) impl SystemReplaceabilityV1Impl of SystemReplaceabilityV1Trait {
             eic_init_data: array![
                 MAINNET_STAKING_CLASS_HASH_V0().into(), EPOCH_DURATION.into(), EPOCH_LENGTH.into(),
                 STARTING_BLOCK_OFFSET.into(), MAINNET_POOL_CLASS_HASH_V1().into(),
-                self.attestation.unwrap().address.into(), MAINNET_SECURITY_COUNSEL_ADDRESS().into(),
+                self.attestation.unwrap().address.into(), MAINNET_SECURITY_COUNSEL_ADDRESS.into(),
             ]
                 .span(),
         };

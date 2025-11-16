@@ -101,7 +101,7 @@ fn test_set_c_num_unauthorized() {
     };
     let new_c_num = cfg.minting_curve_contract_info.c_num * 2;
     cheat_caller_address_once(
-        contract_address: minting_curve_contract, caller_address: NON_TOKEN_ADMIN(),
+        contract_address: minting_curve_contract, caller_address: NON_TOKEN_ADMIN,
     );
     minting_curve_config_dispatcher.set_c_num(c_num: new_c_num);
 }

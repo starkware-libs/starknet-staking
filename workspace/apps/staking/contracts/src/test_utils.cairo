@@ -23,7 +23,7 @@ use openzeppelin::token::erc20::interface::{
 use snforge_std::{
     CheatSpan, ContractClassTrait, CustomToken, DeclareResultTrait, Token, TokenImpl, TokenTrait,
     cheat_caller_address, set_balance, start_cheat_block_hash_global,
-    start_cheat_block_number_global, start_cheat_block_timestamp_global, test_address,
+    start_cheat_block_number_global, start_cheat_block_timestamp_global,
 };
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
@@ -33,7 +33,6 @@ use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
     IMintingCurveDispatcherTrait, MintingCurveContractInfo,
 };
-use staking::minting_curve::minting_curve::MintingCurve;
 use staking::minting_curve::minting_curve::MintingCurve::C_DENOM;
 use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::pool::interface_v0::PoolMemberInfo;
@@ -51,7 +50,6 @@ use staking::staking::objects::{
     EpochInfo, EpochInfoTrait, InternalStakerInfoLatestTestTrait, NormalizedAmount,
     NormalizedAmountTrait,
 };
-use staking::staking::staking::Staking;
 use staking::staking::staking::Staking::{COMMISSION_DENOMINATOR, DEFAULT_EXIT_WAIT_WINDOW};
 use staking::staking::utils::compute_commission_amount_rounded_down;
 use staking::types::{
@@ -102,10 +100,14 @@ pub(crate) mod constants {
         decimals: 5, min_for_rewards: 10_u128.pow(0), base_value: 10_u128.pow(10),
     };
     pub const BTC_8D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
-        decimals: 8, min_for_rewards: 10_u128.pow(3), base_value: 10_u128.pow(13),
+        decimals: BTC_DECIMALS_8,
+        min_for_rewards: MIN_BTC_FOR_REWARDS_8,
+        base_value: BTC_BASE_VALUE_8,
     };
     pub const BTC_18D_CONFIG: TokenRewardsConfig = TokenRewardsConfig {
-        decimals: 18, min_for_rewards: 10_u128.pow(13), base_value: 10_u128.pow(23),
+        decimals: BTC_DECIMALS_18,
+        min_for_rewards: MIN_BTC_FOR_REWARDS_18,
+        base_value: BTC_BASE_VALUE_18,
     };
 
     pub const TEST_BTC_DECIMALS: u8 = BTC_DECIMALS_8;
@@ -119,17 +121,14 @@ pub(crate) mod constants {
     pub const POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * STRK_IN_FRIS;
     pub const BTC_POOL_MEMBER_STAKE_AMOUNT: Amount = 1000 * TEST_MIN_BTC_FOR_REWARDS;
     pub const COMMISSION: Commission = 500;
-    pub const STAKER_FINAL_INDEX: Index = 10;
     pub const BASE_MINT_AMOUNT: Amount = 1_300_000 * STRK_IN_FRIS;
     pub const BUFFER: Amount = 1000000000000;
     pub const L1_REWARD_SUPPLIER: felt252 = 'L1_REWARD_SUPPLIER';
     pub const DUMMY_IDENTIFIER: felt252 = 'DUMMY_IDENTIFIER';
-    pub const POOL_MEMBER_UNCLAIMED_REWARDS: u128 = 10000000;
-    pub const STAKER_UNCLAIMED_REWARDS: u128 = 10000000;
-    /// number of blocks in one epoch
+    /// Number of blocks in one epoch.
     pub const EPOCH_LENGTH: u32 = 300;
     pub const EPOCH_STARTING_BLOCK: BlockNumber = 463476;
-    /// duration of  one epoch in seconds
+    /// Duration of  one epoch in seconds.
     pub const EPOCH_DURATION: u32 = 9000;
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
     pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
@@ -137,136 +136,80 @@ pub(crate) mod constants {
     pub(crate) const AVG_BLOCK_TIME: Seconds = 3;
     pub(crate) const TESTING_C_NUM: Inflation = 400;
 
+    pub(crate) const CALLER_ADDRESS: ContractAddress = 'CALLER_ADDRESS'.try_into().unwrap();
+    pub(crate) const DUMMY_ADDRESS: ContractAddress = 'DUMMY_ADDRESS'.try_into().unwrap();
+    pub(crate) const STAKER_ADDRESS: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
+    pub(crate) const NON_STAKER_ADDRESS: ContractAddress = 'NON_STAKER_ADDRESS'.try_into().unwrap();
+    pub(crate) const POOL_MEMBER_ADDRESS: ContractAddress = 'POOL_MEMBER_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const NON_POOL_MEMBER_ADDRESS: ContractAddress = 'NON_POOL_MEMBER_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const OTHER_STAKER_ADDRESS: ContractAddress = 'OTHER_STAKER_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const BTC_STAKER_ADDRESS: ContractAddress = 'BTC_STAKER_ADDRESS'.try_into().unwrap();
+    pub(crate) const OPERATIONAL_ADDRESS: ContractAddress = 'OPERATIONAL_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const OTHER_OPERATIONAL_ADDRESS: ContractAddress = 'OTHER_OPERATIONAL_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const OWNER_ADDRESS: ContractAddress = 'OWNER_ADDRESS'.try_into().unwrap();
+    pub(crate) const GOVERNANCE_ADMIN: ContractAddress = 'GOVERNANCE_ADMIN'.try_into().unwrap();
+    pub(crate) const STAKING_CONTRACT_ADDRESS: ContractAddress = 'STAKING_CONTRACT_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const NOT_STAKING_CONTRACT_ADDRESS: ContractAddress = 'NOT_STAKING_CONTRACT_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const POOL_CONTRACT_ADDRESS: ContractAddress = 'POOL_CONTRACT_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const MINTING_CONTRACT_ADDRESS: ContractAddress = 'MINTING_CONTRACT_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const REWARD_SUPPLIER_CONTRACT_ADDRESS: ContractAddress = 'REWARD_SUPPLIER_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS: ContractAddress =
+        'OTHER_REWARD_SUPPLIER_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const STAKER_REWARD_ADDRESS: ContractAddress = 'STAKER_REWARD_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const POOL_MEMBER_REWARD_ADDRESS: ContractAddress = 'POOL_MEMBER_REWARD_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const OTHER_REWARD_ADDRESS: ContractAddress = 'OTHER_REWARD_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const NON_TOKEN_ADMIN: ContractAddress = 'NON_TOKEN_ADMIN'.try_into().unwrap();
+    pub(crate) const NON_SECURITY_ADMIN: ContractAddress = 'NON_SECURITY_ADMIN'.try_into().unwrap();
+    pub(crate) const NON_SECURITY_AGENT: ContractAddress = 'NON_SECURITY_AGENT'.try_into().unwrap();
+    pub(crate) const NON_APP_GOVERNOR: ContractAddress = 'NON_APP_GOVERNOR'.try_into().unwrap();
+    pub(crate) const DUMMY_CLASS_HASH: ClassHash = 'DUMMY_CLASS_HASH'.try_into().unwrap();
+    pub(crate) const POOL_CONTRACT_ADMIN: ContractAddress = 'POOL_CONTRACT_ADMIN'
+        .try_into()
+        .unwrap();
+    pub(crate) const SECURITY_ADMIN: ContractAddress = 'SECURITY_ADMIN'.try_into().unwrap();
+    pub(crate) const SECURITY_AGENT: ContractAddress = 'SECURITY_AGENT'.try_into().unwrap();
+    pub(crate) const TOKEN_ADMIN: ContractAddress = 'TOKEN_ADMIN'.try_into().unwrap();
+    pub(crate) const APP_ROLE_ADMIN: ContractAddress = 'APP_ROLE_ADMIN'.try_into().unwrap();
+    pub(crate) const UPGRADE_GOVERNOR: ContractAddress = 'UPGRADE_GOVERNOR'.try_into().unwrap();
+    pub(crate) const APP_GOVERNOR: ContractAddress = 'APP_GOVERNOR'.try_into().unwrap();
+    pub(crate) const STARKGATE_ADDRESS: ContractAddress = 'STARKGATE_ADDRESS'.try_into().unwrap();
+    pub(crate) const NOT_STARKGATE_ADDRESS: ContractAddress = 'NOT_STARKGATE_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const ATTESTATION_CONTRACT_ADDRESS: ContractAddress = 'ATTESTATION_CONTRACT_ADDRESS'
+        .try_into()
+        .unwrap();
+    pub(crate) const BTC_TOKEN_ADDRESS: ContractAddress = 'BTC_TOKEN_ADDRESS'.try_into().unwrap();
+    pub(crate) const PUBLIC_KEY: PublicKey = 'PUBLIC_KEY';
 
-    pub fn CALLER_ADDRESS() -> ContractAddress {
-        'CALLER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn DUMMY_ADDRESS() -> ContractAddress {
-        'DUMMY_ADDRESS'.try_into().unwrap()
-    }
-    pub fn STAKER_ADDRESS() -> ContractAddress {
-        'STAKER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn NON_STAKER_ADDRESS() -> ContractAddress {
-        'NON_STAKER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn POOL_MEMBER_ADDRESS() -> ContractAddress {
-        'POOL_MEMBER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn OTHER_POOL_MEMBER_ADDRESS() -> ContractAddress {
-        'OTHER_POOL_MEMBER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn NON_POOL_MEMBER_ADDRESS() -> ContractAddress {
-        'NON_POOL_MEMBER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn OTHER_STAKER_ADDRESS() -> ContractAddress {
-        'OTHER_STAKER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn BTC_STAKER_ADDRESS() -> ContractAddress {
-        'BTC_STAKER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn OPERATIONAL_ADDRESS() -> ContractAddress {
-        'OPERATIONAL_ADDRESS'.try_into().unwrap()
-    }
-    pub fn OTHER_OPERATIONAL_ADDRESS() -> ContractAddress {
-        'OTHER_OPERATIONAL_ADDRESS'.try_into().unwrap()
-    }
-    pub fn OWNER_ADDRESS() -> ContractAddress {
-        'OWNER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn GOVERNANCE_ADMIN() -> ContractAddress {
-        'GOVERNANCE_ADMIN'.try_into().unwrap()
-    }
-    pub fn STAKING_CONTRACT_ADDRESS() -> ContractAddress {
-        'STAKING_CONTRACT_ADDRESS'.try_into().unwrap()
-    }
-    pub fn NOT_STAKING_CONTRACT_ADDRESS() -> ContractAddress {
-        'NOT_STAKING_CONTRACT_ADDRESS'.try_into().unwrap()
-    }
-    pub fn POOL_CONTRACT_ADDRESS() -> ContractAddress {
-        'POOL_CONTRACT_ADDRESS'.try_into().unwrap()
-    }
-    pub fn OTHER_POOL_CONTRACT_ADDRESS() -> ContractAddress {
-        'OTHER_POOL_CONTRACT_ADDRESS'.try_into().unwrap()
-    }
-    pub fn MINTING_CONTRACT_ADDRESS() -> ContractAddress {
-        'MINTING_CONTRACT_ADDRESS'.try_into().unwrap()
-    }
-    pub fn REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress {
-        'REWARD_SUPPLIER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS() -> ContractAddress {
-        'OTHER_REWARD_SUPPLIER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn RECIPIENT_ADDRESS() -> ContractAddress {
-        'RECIPIENT_ADDRESS'.try_into().unwrap()
-    }
-    pub fn STAKER_REWARD_ADDRESS() -> ContractAddress {
-        'STAKER_REWARD_ADDRESS'.try_into().unwrap()
-    }
-    pub fn POOL_MEMBER_REWARD_ADDRESS() -> ContractAddress {
-        'POOL_MEMBER_REWARD_ADDRESS'.try_into().unwrap()
-    }
-    pub fn POOL_REWARD_ADDRESS() -> ContractAddress {
-        'POOL_REWARD_ADDRESS'.try_into().unwrap()
-    }
-    pub fn OTHER_REWARD_ADDRESS() -> ContractAddress {
-        'OTHER_REWARD_ADDRESS'.try_into().unwrap()
-    }
-    pub fn SPENDER_ADDRESS() -> ContractAddress {
-        'SPENDER_ADDRESS'.try_into().unwrap()
-    }
-    pub fn NON_TOKEN_ADMIN() -> ContractAddress {
-        'NON_TOKEN_ADMIN'.try_into().unwrap()
-    }
-    pub fn NON_SECURITY_ADMIN() -> ContractAddress {
-        'NON_SECURITY_ADMIN'.try_into().unwrap()
-    }
-    pub fn NON_SECURITY_AGENT() -> ContractAddress {
-        'NON_SECURITY_AGENT'.try_into().unwrap()
-    }
-    pub fn NON_APP_GOVERNOR() -> ContractAddress {
-        'NON_APP_GOVERNOR'.try_into().unwrap()
-    }
-    pub fn STRK_TOKEN_ADDRESS() -> ContractAddress {
-        0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d.try_into().unwrap()
-    }
-    pub fn TOKEN_ADDRESS() -> ContractAddress {
-        'TOKEN_ADDRESS'.try_into().unwrap()
-    }
-    pub fn DUMMY_CLASS_HASH() -> ClassHash {
-        'DUMMY'.try_into().unwrap()
-    }
-    pub fn POOL_CONTRACT_ADMIN() -> ContractAddress {
-        'POOL_CONTRACT_ADMIN'.try_into().unwrap()
-    }
-    pub fn SECURITY_ADMIN() -> ContractAddress {
-        'SECURITY_ADMIN'.try_into().unwrap()
-    }
-    pub fn SECURITY_AGENT() -> ContractAddress {
-        'SECURITY_AGENT'.try_into().unwrap()
-    }
-    pub fn TOKEN_ADMIN() -> ContractAddress {
-        'TOKEN_ADMIN'.try_into().unwrap()
-    }
-    pub fn APP_ROLE_ADMIN() -> ContractAddress {
-        'APP_ROLE_ADMIN'.try_into().unwrap()
-    }
-    pub fn UPGRADE_GOVERNOR() -> ContractAddress {
-        'UPGRADE_GOVERNOR'.try_into().unwrap()
-    }
-    pub fn APP_GOVERNOR() -> ContractAddress {
-        'APP_GOVERNOR'.try_into().unwrap()
-    }
-    pub fn STARKGATE_ADDRESS() -> ContractAddress {
-        'STARKGATE_ADDRESS'.try_into().unwrap()
-    }
-    pub fn NOT_STARKGATE_ADDRESS() -> ContractAddress {
-        'NOT_STARKGATE_ADDRESS'.try_into().unwrap()
-    }
-    pub fn ATTESTATION_CONTRACT_ADDRESS() -> ContractAddress {
-        'ATTESTATION_CONTRACT_ADDRESS'.try_into().unwrap()
-    }
     pub fn DEFAULT_EPOCH_INFO() -> EpochInfo {
         EpochInfoTrait::new(
             epoch_duration: EPOCH_DURATION,
@@ -274,68 +217,13 @@ pub(crate) mod constants {
             starting_block: max(EPOCH_STARTING_BLOCK, get_block_number()),
         )
     }
-    pub(crate) fn MAINNET_SECURITY_COUNSEL_ADDRESS() -> ContractAddress {
-        0x663cc699d9c51b7d4d434e06f5982692167546ce525d9155edb476ac9a117d6.try_into().unwrap()
-    }
-    pub fn BTC_TOKEN_ADDRESS() -> ContractAddress {
-        'BTC_TOKEN_ADDRESS'.try_into().unwrap()
-    }
-    pub fn STRK_TOKEN_NAME() -> ByteArray {
-        "STRK_TOKEN_NAME"
-    }
     pub fn BTC_TOKEN_NAME() -> ByteArray {
         "BTC_TOKEN_NAME"
     }
     pub fn BTC_TOKEN_NAME_2() -> ByteArray {
         "BTC_TOKEN_NAME_2"
     }
-    pub fn DUMMY_BTC_TOKEN_ADDRESS() -> ContractAddress {
-        'DUMMY_BTC_TOKEN_ADDRESS'.try_into().unwrap()
-    }
-    pub fn PUBLIC_KEY() -> PublicKey {
-        'PUBLIC_KEY'
-    }
 }
-pub(crate) fn initialize_staking_state_from_cfg(
-    ref cfg: StakingInitConfig,
-) -> Staking::ContractState {
-    initialize_staking_state(
-        min_stake: cfg.staking_contract_info.min_stake,
-        pool_contract_class_hash: cfg.staking_contract_info.pool_contract_class_hash,
-        reward_supplier: cfg.staking_contract_info.reward_supplier,
-        pool_contract_admin: cfg.test_info.pool_contract_admin,
-        governance_admin: cfg.test_info.governance_admin,
-        prev_class_hash: cfg.staking_contract_info.prev_staking_contract_class_hash,
-        epoch_info: cfg.staking_contract_info.epoch_info,
-        attestation_contract: cfg.test_info.attestation_contract,
-    )
-}
-pub(crate) fn initialize_staking_state(
-    min_stake: Amount,
-    pool_contract_class_hash: ClassHash,
-    reward_supplier: ContractAddress,
-    pool_contract_admin: ContractAddress,
-    governance_admin: ContractAddress,
-    prev_class_hash: ClassHash,
-    epoch_info: EpochInfo,
-    attestation_contract: ContractAddress,
-) -> Staking::ContractState {
-    let mut state = Staking::contract_state_for_testing();
-    cheat_caller_address_once(contract_address: test_address(), caller_address: test_address());
-    Staking::constructor(
-        ref state,
-        :min_stake,
-        :pool_contract_class_hash,
-        :reward_supplier,
-        :pool_contract_admin,
-        :governance_admin,
-        :prev_class_hash,
-        :epoch_info,
-        :attestation_contract,
-    );
-    state
-}
-
 
 pub(crate) fn initialize_pool_state(
     staker_address: ContractAddress,
@@ -346,19 +234,6 @@ pub(crate) fn initialize_pool_state(
     let mut state = Pool::contract_state_for_testing();
     Pool::constructor(
         ref state, :staker_address, :staking_contract, :token_address, :governance_admin,
-    );
-    state
-}
-
-pub(crate) fn initialize_minting_curve_state(
-    staking_contract: ContractAddress,
-    total_supply: Amount,
-    l1_reward_supplier: felt252,
-    governance_admin: ContractAddress,
-) -> MintingCurve::ContractState {
-    let mut state = MintingCurve::contract_state_for_testing();
-    MintingCurve::constructor(
-        ref state, :staking_contract, :total_supply, :l1_reward_supplier, :governance_admin,
     );
     state
 }
@@ -850,29 +725,6 @@ pub(crate) fn general_contract_system_deployment(ref cfg: StakingInitConfig) {
     cfg.test_info.btc_token = custom_decimals_token(token_address: btc_token_address);
 }
 
-pub(crate) fn cheat_reward_for_reward_supplier(
-    reward_supplier: ContractAddress, expected_reward: Amount, token: Token,
-) {
-    fund(target: reward_supplier, amount: expected_reward, :token);
-    snforge_std::store(
-        target: reward_supplier,
-        storage_address: selector!("unclaimed_rewards"),
-        serialized_value: array![expected_reward.into()].span(),
-    );
-}
-
-fn compute_unclaimed_rewards_member(
-    amount: Amount, interest: Index, commission: Commission, base_value: Index,
-) -> Amount {
-    let rewards_including_commission = compute_rewards_rounded_down(
-        :amount, :interest, :base_value,
-    );
-    let commission_amount = _compute_commission_amount_rounded_up(
-        :rewards_including_commission, :commission,
-    );
-    return rewards_including_commission - commission_amount;
-}
-
 /// Assumes the staking contract has already been deployed.
 pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
     let staking_contract = cfg.test_info.staking_contract;
@@ -881,23 +733,6 @@ pub(crate) fn pause_staking_contract(cfg: StakingInitConfig) {
         contract_address: staking_contract, caller_address: cfg.test_info.security_agent,
     );
     staking_pause_dispatcher.pause();
-}
-
-pub(crate) fn add_reward_for_reward_supplier(
-    reward_supplier: ContractAddress, reward: Amount, token: Token,
-) {
-    fund(target: reward_supplier, amount: reward, :token);
-    let current_unclaimed_rewards = *snforge_std::load(
-        target: reward_supplier,
-        storage_address: selector!("unclaimed_rewards"),
-        size: Store::<Amount>::size().into(),
-    )
-        .at(0);
-    snforge_std::store(
-        target: reward_supplier,
-        storage_address: selector!("unclaimed_rewards"),
-        serialized_value: array![current_unclaimed_rewards + reward.into()].span(),
-    );
 }
 
 /// Deserialize an Option<T> from the given data.
@@ -963,20 +798,20 @@ pub(crate) struct StakingInitConfig {
 impl StakingInitConfigDefault of Default<StakingInitConfig> {
     fn default() -> StakingInitConfig {
         let staker_info = InternalStakerInfoLatest {
-            reward_address: STAKER_REWARD_ADDRESS(),
-            operational_address: OPERATIONAL_ADDRESS(),
+            reward_address: STAKER_REWARD_ADDRESS,
+            operational_address: OPERATIONAL_ADDRESS,
             unstake_time: Option::None,
             unclaimed_rewards_own: 0,
             _deprecated_pool_info: Option::Some(
                 InternalStakerPoolInfoLatest {
-                    _deprecated_pool_contract: POOL_CONTRACT_ADDRESS(),
+                    _deprecated_pool_contract: POOL_CONTRACT_ADDRESS,
                     _deprecated_commission: COMMISSION,
                 },
             ),
             _deprecated_commission_commitment: Option::None,
         };
         let pool_member_info = InternalPoolMemberInfoLatest {
-            reward_address: POOL_MEMBER_REWARD_ADDRESS(),
+            reward_address: POOL_MEMBER_REWARD_ADDRESS,
             _deprecated_amount: POOL_MEMBER_STAKE_AMOUNT,
             _deprecated_index: Zero::zero(),
             _unclaimed_rewards_from_v0: Zero::zero(),
@@ -992,48 +827,48 @@ impl StakingInitConfigDefault of Default<StakingInitConfig> {
         };
         let staking_contract_info = StakingContractInfoCfg {
             min_stake: MIN_STAKE,
-            attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
+            attestation_contract: ATTESTATION_CONTRACT_ADDRESS,
             pool_contract_class_hash: declare_pool_contract(),
-            reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS(),
+            reward_supplier: REWARD_SUPPLIER_CONTRACT_ADDRESS,
             exit_wait_window: DEFAULT_EXIT_WAIT_WINDOW,
-            prev_staking_contract_class_hash: DUMMY_CLASS_HASH(),
+            prev_staking_contract_class_hash: DUMMY_CLASS_HASH,
             epoch_info: DEFAULT_EPOCH_INFO(),
         };
         let minting_curve_contract_info = MintingCurveContractInfo {
             c_num: TESTING_C_NUM, c_denom: C_DENOM,
         };
         let test_info = TestInfo {
-            staker_address: STAKER_ADDRESS(),
-            pool_member_address: POOL_MEMBER_ADDRESS(),
-            owner_address: OWNER_ADDRESS(),
-            governance_admin: GOVERNANCE_ADMIN(),
+            staker_address: STAKER_ADDRESS,
+            pool_member_address: POOL_MEMBER_ADDRESS,
+            owner_address: OWNER_ADDRESS,
+            governance_admin: GOVERNANCE_ADMIN,
             initial_supply: INITIAL_SUPPLY.into(),
             staker_initial_balance: STAKER_INITIAL_BALANCE,
             pool_member_initial_balance: POOL_MEMBER_INITIAL_BALANCE,
             pool_member_btc_amount: BTC_POOL_MEMBER_STAKE_AMOUNT,
             strk_pool_enabled: false,
             stake_amount: STAKE_AMOUNT,
-            staking_contract: STAKING_CONTRACT_ADDRESS(),
-            pool_contract_admin: POOL_CONTRACT_ADMIN(),
-            security_admin: SECURITY_ADMIN(),
-            security_agent: SECURITY_AGENT(),
-            token_admin: TOKEN_ADMIN(),
-            app_role_admin: APP_ROLE_ADMIN(),
-            upgrade_governor: UPGRADE_GOVERNOR(),
-            attestation_contract: ATTESTATION_CONTRACT_ADDRESS(),
+            staking_contract: STAKING_CONTRACT_ADDRESS,
+            pool_contract_admin: POOL_CONTRACT_ADMIN,
+            security_admin: SECURITY_ADMIN,
+            security_agent: SECURITY_AGENT,
+            token_admin: TOKEN_ADMIN,
+            app_role_admin: APP_ROLE_ADMIN,
+            upgrade_governor: UPGRADE_GOVERNOR,
+            attestation_contract: ATTESTATION_CONTRACT_ADDRESS,
             attestation_window: MIN_ATTESTATION_WINDOW,
-            app_governor: APP_GOVERNOR(),
+            app_governor: APP_GOVERNOR,
             global_index: Zero::zero(),
             strk_token: Token::STRK,
-            btc_token: custom_decimals_token(token_address: BTC_TOKEN_ADDRESS()),
-            public_key: PUBLIC_KEY(),
+            btc_token: custom_decimals_token(token_address: BTC_TOKEN_ADDRESS),
+            public_key: PUBLIC_KEY,
         };
         let reward_supplier = RewardSupplierInfoV1 {
             base_mint_amount: BASE_MINT_AMOUNT,
-            minting_curve_contract: MINTING_CONTRACT_ADDRESS(),
+            minting_curve_contract: MINTING_CONTRACT_ADDRESS,
             l1_reward_supplier: L1_REWARD_SUPPLIER,
             buffer: BUFFER,
-            starkgate_address: STARKGATE_ADDRESS(),
+            starkgate_address: STARKGATE_ADDRESS,
         };
         StakingInitConfig {
             staker_info,
@@ -1362,7 +1197,7 @@ pub(crate) fn calculate_pool_member_rewards(
 pub(crate) fn compute_rewards_per_unit(
     staking_rewards: Amount, total_stake: Amount, token_address: ContractAddress,
 ) -> Index {
-    let (min_amount_for_rewards, base_value) = get_reward_calculation_params(:token_address);
+    let (min_amount_for_rewards, base_value) = _get_reward_calculation_params(:token_address);
     if total_stake < min_amount_for_rewards {
         return Zero::zero();
     }
@@ -1370,7 +1205,7 @@ pub(crate) fn compute_rewards_per_unit(
         .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
 }
 
-fn get_reward_calculation_params(token_address: ContractAddress) -> (Amount, Amount) {
+fn _get_reward_calculation_params(token_address: ContractAddress) -> (Amount, Amount) {
     let token_dispatcher = IERC20MetadataDispatcher { contract_address: token_address };
     if token_dispatcher.contract_address == STRK_TOKEN_ADDRESS {
         (STRK_IN_FRIS, STRK_BASE_VALUE)
@@ -1396,13 +1231,13 @@ mod tests {
     fn test_compute_rewards_per_unit() {
         let btc_token_address_8 = deploy_mock_erc20_decimals_contract(
             initial_supply: Zero::zero(),
-            owner_address: OWNER_ADDRESS(),
+            owner_address: OWNER_ADDRESS,
             name: BTC_TOKEN_NAME(),
             decimals: BTC_DECIMALS_8,
         );
         let btc_token_address_18 = deploy_mock_erc20_decimals_contract(
             initial_supply: Zero::zero(),
-            owner_address: OWNER_ADDRESS(),
+            owner_address: OWNER_ADDRESS,
             name: BTC_TOKEN_NAME(),
             decimals: BTC_DECIMALS_18,
         );

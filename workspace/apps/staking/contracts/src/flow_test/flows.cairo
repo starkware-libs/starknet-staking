@@ -6876,7 +6876,7 @@ pub(crate) impl ExitUpgradeSetPublicKeyFlowImpl of MultiVersionFlowTrait<
     #[feature("safe_dispatcher")]
     fn test(self: ExitUpgradeSetPublicKeyFlow, ref system: SystemState, version: ReleaseVersion) {
         let staker = self.staker.unwrap();
-        let public_key = PUBLIC_KEY();
+        let public_key = PUBLIC_KEY;
 
         cheat_caller_address_once(
             contract_address: system.staking.address, caller_address: staker.staker.address,
@@ -6916,7 +6916,7 @@ pub(crate) impl IntentUpgradeSetPublicKeyFlowImpl of MultiVersionFlowTrait<
     #[feature("safe_dispatcher")]
     fn test(self: IntentUpgradeSetPublicKeyFlow, ref system: SystemState, version: ReleaseVersion) {
         let staker = self.staker.unwrap();
-        let public_key = PUBLIC_KEY();
+        let public_key = PUBLIC_KEY;
 
         cheat_caller_address_once(
             contract_address: system.staking.address, caller_address: staker.staker.address,
