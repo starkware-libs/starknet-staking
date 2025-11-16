@@ -11,11 +11,10 @@ pub mod RewardSupplier {
     use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking::reward_supplier::errors::Error;
     use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfoV1};
-    use staking::reward_supplier::utils::calculate_btc_rewards;
+    use staking::reward_supplier::utils::{calculate_btc_rewards, compute_threshold};
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use staking::staking::objects::EpochInfoTrait;
     use staking::types::Amount;
-    use staking::utils::compute_threshold;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::syscalls::send_message_to_l1_syscall;
     use starknet::{

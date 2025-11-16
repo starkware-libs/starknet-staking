@@ -27,9 +27,7 @@ use snforge_std::{
 };
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{
-    ALPHA, ALPHA_DENOMINATOR, K, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS,
-};
+use staking::constants::{K, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::errors::InternalError;
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
@@ -41,7 +39,9 @@ use staking::pool::interface::{IPoolDispatcher, IPoolDispatcherTrait};
 use staking::pool::interface_v0::PoolMemberInfo;
 use staking::pool::pool::Pool;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
+use staking::pool::utils::compute_rewards_rounded_down;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::reward_supplier::utils::calculate_btc_rewards;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
     IStakingPauseDispatcherTrait, IStakingTokenManagerDispatcher,
@@ -52,14 +52,11 @@ use staking::staking::objects::{
     NormalizedAmountTrait,
 };
 use staking::staking::staking::Staking;
-use staking::staking::staking::Staking::DEFAULT_EXIT_WAIT_WINDOW;
+use staking::staking::staking::Staking::{COMMISSION_DENOMINATOR, DEFAULT_EXIT_WAIT_WINDOW};
+use staking::staking::utils::compute_commission_amount_rounded_down;
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
     InternalStakerPoolInfoLatest, PublicKey,
-};
-use staking::utils::{
-    compute_commission_amount_rounded_down, compute_commission_amount_rounded_up,
-    compute_rewards_rounded_down,
 };
 use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::components::replaceability::interface::{
@@ -67,7 +64,7 @@ use starkware_utils::components::replaceability::interface::{
 };
 use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::OptionAuxTrait;
-use starkware_utils::math::utils::mul_wide_and_div;
+use starkware_utils::math::utils::{mul_wide_and_ceil_div, mul_wide_and_div};
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
@@ -870,7 +867,7 @@ fn compute_unclaimed_rewards_member(
     let rewards_including_commission = compute_rewards_rounded_down(
         :amount, :interest, :base_value,
     );
-    let commission_amount = compute_commission_amount_rounded_up(
+    let commission_amount = _compute_commission_amount_rounded_up(
         :rewards_including_commission, :commission,
     );
     return rewards_including_commission - commission_amount;
@@ -1088,7 +1085,7 @@ pub(crate) fn strk_pool_update_rewards_v1(
     let rewards_including_commission = compute_rewards_rounded_down(
         amount: pool_member_info.amount, :interest, base_value: STRK_BASE_VALUE,
     );
-    let commission_amount = compute_commission_amount_rounded_up(
+    let commission_amount = _compute_commission_amount_rounded_up(
         :rewards_including_commission, commission: pool_member_info.commission,
     );
     let rewards = rewards_including_commission - commission_amount;
@@ -1097,6 +1094,21 @@ pub(crate) fn strk_pool_update_rewards_v1(
         index: updated_index,
         ..pool_member_info,
     }
+}
+
+/// Compute the commission amount of the staker from the pool rewards.
+///
+/// $$ commission_amount = ceil_of_division(rewards_including_commission * commission,
+/// COMMISSION_DENOMINATOR) $$
+fn _compute_commission_amount_rounded_up(
+    rewards_including_commission: Amount, commission: Commission,
+) -> Amount {
+    mul_wide_and_ceil_div(
+        lhs: rewards_including_commission,
+        rhs: commission.into(),
+        div: COMMISSION_DENOMINATOR.into(),
+    )
+        .expect_with_err(err: InternalError::COMMISSION_ISNT_AMOUNT_TYPE)
 }
 
 // ---- Calculate Rewards - V2 -----
@@ -1334,11 +1346,6 @@ fn calculate_current_block_rewards(
     let strk_block_rewards = strk_epoch_rewards / epoch_len_in_blocks.into();
     let btc_block_rewards = btc_epoch_rewards / epoch_len_in_blocks.into();
     (strk_block_rewards, btc_block_rewards)
-}
-
-fn calculate_btc_rewards(total_rewards: Amount) -> Amount {
-    mul_wide_and_div(lhs: total_rewards, rhs: ALPHA, div: ALPHA_DENOMINATOR)
-        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
 }
 
 /// Calculate pool member rewards given the pool rewards, pool member balance and pool balance.

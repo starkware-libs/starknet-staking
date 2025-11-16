@@ -14,12 +14,12 @@ use staking::reward_supplier::interface::{
     IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfoV1,
 };
 use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::reward_supplier::utils::compute_threshold;
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
 use staking::staking::objects::EpochInfoTrait;
 use staking::test_utils;
 use staking::test_utils::constants::{NOT_STAKING_CONTRACT_ADDRESS, NOT_STARKGATE_ADDRESS};
 use staking::types::Amount;
-use staking::utils::compute_threshold;
 use starknet::{ContractAddress, Store};
 use starkware_utils::errors::Describable;
 use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};

@@ -24,8 +24,8 @@ pub mod Pool {
         PoolMemberBalanceTrait, PoolMemberCheckpoint, PoolMemberCheckpointTrait,
     };
     use staking::pool::utils::{
-        find_sigma_edge_cases, find_sigma_standard_case, get_token_rewards_config,
-        transfer_from_delegator,
+        compute_rewards_rounded_down, find_sigma_edge_cases, find_sigma_standard_case,
+        get_token_rewards_config, transfer_from_delegator,
     };
     use staking::staking::interface::{
         IStakingDispatcher, IStakingDispatcherTrait, IStakingPoolDispatcher,
@@ -34,7 +34,6 @@ pub mod Pool {
     use staking::types::{
         Amount, Commission, Epoch, Index, InternalPoolMemberInfoLatest, VecIndex, Version,
     };
-    use staking::utils::compute_rewards_rounded_down;
     use starknet::class_hash::ClassHash;
     use starknet::event::EventEmitter;
     use starknet::storage::{

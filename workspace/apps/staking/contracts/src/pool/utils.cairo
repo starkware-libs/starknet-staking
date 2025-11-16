@@ -7,12 +7,13 @@ use staking::constants::STRK_TOKEN_ADDRESS;
 use staking::errors::{GenericError, InternalError};
 use staking::pool::objects::TokenRewardsConfig;
 use staking::pool::pool::Pool::STRK_CONFIG;
-use staking::types::{Amount, Epoch, VecIndex};
+use staking::types::{Amount, Epoch, Index, VecIndex};
 use starknet::storage::StorageBase;
 use starknet::{ContractAddress, get_contract_address};
 use starkware_utils::erc20::erc20_utils::CheckedIERC20DispatcherTrait;
+use starkware_utils::errors::OptionAuxTrait;
+use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::trace::trace::{Trace, TraceTrait};
-
 /// Transfer funds of the specified amount from the given delegator to the pool.
 ///
 /// Sufficient approvals of transfer is a pre-condition.
@@ -135,4 +136,18 @@ pub(crate) fn get_token_rewards_config(token_address: ContractAddress) -> TokenR
             base_value: 10_u128.pow(decimals.into() + 5),
         }
     }
+}
+
+/// Compute the rewards from the amount and interest.
+///
+/// $$ rewards = amount * interest / base_value $$
+/// **Note**: The Pool contract’s reward calculation logic uses integer division, discarding
+/// small rounding remainders (dust) without tracking or redistributing them.
+/// This results in negligible reward losses for delegators, as the total distributed rewards
+/// are slightly less than the allocated amount.
+pub(crate) fn compute_rewards_rounded_down(
+    amount: Amount, interest: Index, base_value: Index,
+) -> Amount {
+    mul_wide_and_div(lhs: amount, rhs: interest, div: base_value)
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
 }

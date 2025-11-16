@@ -19,6 +19,7 @@ use staking::pool::interface_v0::{
     PoolMemberInfo, PoolMemberInfoIntoInternalPoolMemberInfoV1Trait, PoolMemberInfoTrait,
 };
 use staking::pool::pool::Pool::STRK_CONFIG;
+use staking::pool::utils::compute_rewards_rounded_down;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     IStakingDispatcherTrait, IStakingMigrationSafeDispatcherTrait, IStakingSafeDispatcherTrait,
@@ -39,7 +40,6 @@ use staking::test_utils::{
     upgrade_implementation,
 };
 use staking::types::{Amount, Commission};
-use staking::utils::compute_rewards_rounded_down;
 use starknet::{ClassHash, ContractAddress, Store};
 use starkware_utils::components::replaceability::interface::{EICData, ImplementationData};
 use starkware_utils::errors::{Describable, ErrorDisplay};

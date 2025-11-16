@@ -3,16 +3,20 @@ use core::num::traits::zero::Zero;
 use core::option::OptionTrait;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_TOKEN_ADDRESS};
-use staking::errors::InternalError;
+use staking::errors::{GenericError, InternalError};
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
 use staking::staking::errors::Error;
 use staking::staking::objects::{NormalizedAmount, NormalizedAmountTrait, UndelegateIntentValue};
+use staking::staking::staking::Staking::COMMISSION_DENOMINATOR;
 use staking::types::{Amount, Commission, Epoch, StakingPower};
-use staking::utils::compute_commission_amount_rounded_down;
 use starknet::storage::StoragePath;
-use starknet::{ContractAddress, get_caller_address, get_contract_address};
+use starknet::syscalls::deploy_syscall;
+use starknet::{
+    ClassHash, ContractAddress, SyscallResultTrait, get_caller_address, get_contract_address,
+};
+use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::storage::iterable_map::{
     IterableMapIntoIterImpl, IterableMapReadAccessImpl, IterableMapWriteAccessImpl,
@@ -71,6 +75,20 @@ pub(crate) fn split_rewards_with_commission(
     (commission_rewards, pool_rewards)
 }
 
+/// Compute the commission amount of the staker from the pool rewards.
+///
+/// $$ commission_amount = rewards_including_commission * commission / COMMISSION_DENOMINATOR $$
+pub(crate) fn compute_commission_amount_rounded_down(
+    rewards_including_commission: Amount, commission: Commission,
+) -> Amount {
+    mul_wide_and_div(
+        lhs: rewards_including_commission,
+        rhs: commission.into(),
+        div: COMMISSION_DENOMINATOR.into(),
+    )
+        .expect_with_err(err: InternalError::COMMISSION_ISNT_AMOUNT_TYPE)
+}
+
 /// Returns the balance at the specified epoch.
 ///
 /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
@@ -126,4 +144,35 @@ pub(crate) fn calculate_staker_total_staking_power(
             .unwrap()
     };
     strk_staking_power + btc_staking_power
+}
+
+/// Computes the new delegated stake based on changing in the intent amount.
+pub(crate) fn compute_new_delegated_stake(
+    old_delegated_stake: NormalizedAmount,
+    old_intent_amount: NormalizedAmount,
+    new_intent_amount: NormalizedAmount,
+) -> NormalizedAmount {
+    let total_amount = old_intent_amount + old_delegated_stake;
+    assert!(new_intent_amount <= total_amount, "{}", GenericError::AMOUNT_TOO_HIGH);
+    total_amount - new_intent_amount
+}
+
+pub(crate) fn deploy_delegation_pool_contract(
+    class_hash: ClassHash,
+    contract_address_salt: felt252,
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    token_address: ContractAddress,
+    governance_admin: ContractAddress,
+) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    staker_address.serialize(ref calldata);
+    staking_contract.serialize(ref calldata);
+    token_address.serialize(ref calldata);
+    governance_admin.serialize(ref calldata);
+    let (pool_address, _) = deploy_syscall(
+        :class_hash, :contract_address_salt, calldata: calldata.span(), deploy_from_zero: false,
+    )
+        .unwrap_syscall();
+    pool_address
 }

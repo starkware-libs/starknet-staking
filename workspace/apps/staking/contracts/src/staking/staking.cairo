@@ -35,14 +35,14 @@ pub mod Staking {
     };
     use staking::staking::utils::{
         assert_caller_is_not_zero, balance_at_epoch, calculate_staker_total_staking_power,
-        claim_from_reward_supplier, get_undelegate_intent_token, is_btc_active,
-        split_rewards_with_commission, strk_token_dispatcher,
+        claim_from_reward_supplier, compute_new_delegated_stake, deploy_delegation_pool_contract,
+        get_undelegate_intent_token, is_btc_active, split_rewards_with_commission,
+        strk_token_dispatcher,
     };
     use staking::types::{
         Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey, StakingPower,
         Version,
     };
-    use staking::utils::{compute_new_delegated_stake, deploy_delegation_pool_contract};
     use starknet::class_hash::ClassHash;
     use starknet::storage::{
         IntoIterRange, Map, Mutable, MutableVecTrait, StoragePath, StoragePathEntry,

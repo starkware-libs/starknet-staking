@@ -7,6 +7,7 @@ use staking::flow_test::utils::{
     SystemTrait, TokenHelperTrait, test_flow_local,
 };
 use staking::pool::pool::Pool;
+use staking::pool::utils::compute_rewards_rounded_down;
 use staking::staking::interface::{IStakingConsensusDispatcherTrait, IStakingDispatcherTrait};
 use staking::staking::utils::STRK_WEIGHT_FACTOR;
 use staking::test_utils::constants::{
@@ -18,7 +19,6 @@ use staking::test_utils::{
     calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
     custom_decimals_token, deploy_mock_erc20_decimals_contract,
 };
-use staking::utils::compute_rewards_rounded_down;
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
