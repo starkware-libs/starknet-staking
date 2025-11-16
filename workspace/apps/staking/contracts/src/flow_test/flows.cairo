@@ -22,11 +22,12 @@ use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::utils::compute_rewards_rounded_down;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
-    IStakingDispatcherTrait, IStakingMigrationSafeDispatcherTrait, IStakingSafeDispatcherTrait,
-    PoolInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+    IStakingConsensusDispatcherTrait, IStakingDispatcherTrait, IStakingMigrationSafeDispatcherTrait,
+    IStakingSafeDispatcherTrait, PoolInfo, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait, StakerVersion};
 use staking::staking::staking::Staking::V3_PREV_CONTRACT_VERSION;
+use staking::staking::utils::STRK_WEIGHT_FACTOR;
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_8D_CONFIG, BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, PUBLIC_KEY,
     STRK_BASE_VALUE, TEST_BTC_DECIMALS, TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
@@ -6923,5 +6924,66 @@ pub(crate) impl IntentUpgradeSetPublicKeyFlowImpl of MultiVersionFlowTrait<
         );
         let result = system.staking.safe_dispatcher().set_public_key(:public_key);
         assert_panic_with_error(result, StakingError::UNSTAKE_IN_PROGRESS.describe());
+    }
+}
+
+/// Flow:
+/// Stake
+/// Upgrade
+/// Set public key (same epoch as upgrade)
+/// Test get_public_key and get_stakers (still same epoch)
+/// Advance K epochs
+/// Test get_public_key and get_stakers
+#[derive(Drop, Copy)]
+pub(crate) struct SetPublicKeySameEpochAsUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl SetPublicKeySameEpochAsUpgradeFlowImpl of FlowTrait<
+    SetPublicKeySameEpochAsUpgradeFlow,
+> {
+    fn setup_v2(ref self: SetPublicKeySameEpochAsUpgradeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.advance_epoch();
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: SetPublicKeySameEpochAsUpgradeFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staking = system.staking.dispatcher();
+        let staking_safe = system.staking.safe_dispatcher();
+        let staking_consensus = system.staking.consensus_dispatcher();
+        let public_key = PUBLIC_KEY;
+
+        // Set public key.
+        cheat_caller_address_once(
+            contract_address: system.staking.address, caller_address: staker.staker.address,
+        );
+        staking.set_public_key(:public_key);
+
+        // Test get_public_key and get_stakers same epoch.
+        let result = staking_safe.get_current_public_key(staker_address: staker.staker.address);
+        assert_panic_with_error(result, StakingError::PUBLIC_KEY_NOT_SET.describe());
+        let stakers = staking_consensus.get_stakers(epoch_id: staking.get_current_epoch());
+        let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)]
+            .span();
+        assert!(stakers == expected_stakers);
+
+        // Test get_public_key and get_stakers after K epochs.
+        system.advance_k_epochs();
+        let actual_public_key = staking
+            .get_current_public_key(staker_address: staker.staker.address);
+        assert!(actual_public_key == public_key);
+        let stakers = staking_consensus.get_stakers(epoch_id: staking.get_current_epoch());
+        let expected_stakers = array![
+            (staker.staker.address, STRK_WEIGHT_FACTOR, Option::Some(public_key)),
+        ]
+            .span();
+        assert!(stakers == expected_stakers);
     }
 }
