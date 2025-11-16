@@ -28,8 +28,8 @@ use staking::staking::interface::{
 use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait, StakerVersion};
 use staking::staking::staking::Staking::V3_PREV_CONTRACT_VERSION;
 use staking::test_utils::constants::{
-    BTC_18D_CONFIG, BTC_8D_CONFIG, BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, STRK_BASE_VALUE,
-    TEST_BTC_DECIMALS, TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
+    BTC_18D_CONFIG, BTC_8D_CONFIG, BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, PUBLIC_KEY,
+    STRK_BASE_VALUE, TEST_BTC_DECIMALS, TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
 };
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
@@ -6842,5 +6842,46 @@ pub(crate) impl GetPublicKeyAfterUpgradeFlowImpl of FlowTrait<GetPublicKeyAfterU
         let staker_address = staker.staker.address;
         let result = system.staking.safe_dispatcher().get_current_public_key(:staker_address);
         assert_panic_with_error(result, StakingError::PUBLIC_KEY_NOT_SET.describe());
+    }
+}
+
+/// Flow:
+/// Stake
+/// Exit
+/// Upgrade
+/// Attempt to set public key
+#[derive(Drop, Copy)]
+pub(crate) struct ExitUpgradeSetPublicKeyFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl ExitUpgradeSetPublicKeyFlowImpl of MultiVersionFlowTrait<
+    ExitUpgradeSetPublicKeyFlow,
+> {
+    fn versions(self: ExitUpgradeSetPublicKeyFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
+    fn setup(ref self: ExitUpgradeSetPublicKeyFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        system.staker_exit_intent(:staker);
+        system.advance_exit_wait_window();
+        system.staker_exit_action(:staker);
+
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: ExitUpgradeSetPublicKeyFlow, ref system: SystemState, version: ReleaseVersion) {
+        let staker = self.staker.unwrap();
+        let public_key = PUBLIC_KEY();
+
+        cheat_caller_address_once(
+            contract_address: system.staking.address, caller_address: staker.staker.address,
+        );
+        let result = system.staking.safe_dispatcher().set_public_key(:public_key);
+        assert_panic_with_error(result, StakingError::STAKER_NOT_EXISTS.describe());
     }
 }

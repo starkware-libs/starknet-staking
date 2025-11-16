@@ -127,3 +127,10 @@ fn member_intent_staker_exit_upgrade_flow_test() {
     };
     test_multi_version_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn exit_upgrade_set_public_key_flow_test() {
+    let mut flow = flows::ExitUpgradeSetPublicKeyFlow { staker: Option::None };
+    test_multi_version_flow_mainnet(ref :flow);
+}
