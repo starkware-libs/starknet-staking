@@ -11,7 +11,8 @@ use staking::pool::utils::compute_rewards_rounded_down;
 use staking::staking::interface::{IStakingConsensusDispatcherTrait, IStakingDispatcherTrait};
 use staking::staking::utils::STRK_WEIGHT_FACTOR;
 use staking::test_utils::constants::{
-    BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS,
+    BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
+    TEST_MIN_BTC_FOR_REWARDS,
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_staker_btc_pool_rewards_v2,
@@ -1824,4 +1825,47 @@ fn get_stakers_multiple_stakers_flow_test() {
     assert!(stakers == expected_stakers);
     let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
     assert!(stakers == expected_stakers);
+}
+
+/// Flow:
+/// Staker 1 stake and set public key.
+/// Staker 2 stake and set the same public key as staker 1.
+/// Test get_stakers.
+#[test]
+fn set_same_public_key_for_2_different_stakers_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let amount = cfg.staking_contract_info.min_stake;
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let staker_1 = system.new_staker(:amount);
+    let staker_2 = system.new_staker(:amount);
+    let public_key = PUBLIC_KEY();
+    let staking_address = system.staking.address;
+    let staking = system.staking.dispatcher();
+    let staking_consensus = system.staking.consensus_dispatcher();
+
+    // Staker 1 stake and set public key.
+    system.stake(staker: staker_1, amount: amount, pool_enabled: false, commission: 200);
+    cheat_caller_address_once(
+        contract_address: staking_address, caller_address: staker_1.staker.address,
+    );
+    staking.set_public_key(:public_key);
+
+    // Staker 2 stake and set public key.
+    system.stake(staker: staker_2, amount: amount, pool_enabled: false, commission: 200);
+    cheat_caller_address_once(
+        contract_address: staking_address, caller_address: staker_2.staker.address,
+    );
+    staking.set_public_key(:public_key);
+
+    // Test get_stakers.
+    system.advance_k_epochs();
+    let expected_stakers = array![
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::Some(public_key)),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::Some(public_key)),
+    ]
+        .span();
+    let epoch_id = staking.get_current_epoch();
+    assert!(staking_consensus.get_stakers(:epoch_id) == expected_stakers);
+    assert!(staking.get_current_public_key(staker_address: staker_1.staker.address) == public_key);
+    assert!(staking.get_current_public_key(staker_address: staker_2.staker.address) == public_key);
 }

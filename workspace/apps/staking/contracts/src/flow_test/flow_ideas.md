@@ -1,7 +1,6 @@
 # Flow Ideas
 ## `set_public_key`
 - Set same epoch as upgrade.
-- Set same public key for 2 different stakers.
 
 ## `get_stakers`
 - Get stakers with staker with zero balance.
