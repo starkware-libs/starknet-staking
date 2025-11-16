@@ -6885,3 +6885,43 @@ pub(crate) impl ExitUpgradeSetPublicKeyFlowImpl of MultiVersionFlowTrait<
         assert_panic_with_error(result, StakingError::STAKER_NOT_EXISTS.describe());
     }
 }
+
+/// Flow:
+/// Stake
+/// Exit intent
+/// Upgrade
+/// Attempt to set public key
+#[derive(Drop, Copy)]
+pub(crate) struct IntentUpgradeSetPublicKeyFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl IntentUpgradeSetPublicKeyFlowImpl of MultiVersionFlowTrait<
+    IntentUpgradeSetPublicKeyFlow,
+> {
+    fn versions(self: IntentUpgradeSetPublicKeyFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
+    fn setup(ref self: IntentUpgradeSetPublicKeyFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.staker_exit_intent(:staker);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: IntentUpgradeSetPublicKeyFlow, ref system: SystemState, version: ReleaseVersion) {
+        let staker = self.staker.unwrap();
+        let public_key = PUBLIC_KEY();
+
+        cheat_caller_address_once(
+            contract_address: system.staking.address, caller_address: staker.staker.address,
+        );
+        let result = system.staking.safe_dispatcher().set_public_key(:public_key);
+        assert_panic_with_error(result, StakingError::UNSTAKE_IN_PROGRESS.describe());
+    }
+}
