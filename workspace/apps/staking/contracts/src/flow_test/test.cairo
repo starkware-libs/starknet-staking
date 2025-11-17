@@ -1957,3 +1957,40 @@ fn get_stakers_staker_exit_intent_flow_test() {
     let stakers = staking_consensus.get_stakers(:epoch_id);
     assert!(stakers == expected_stakers);
 }
+
+/// Flow:
+/// Staker stake
+/// Advance K epochs
+/// Test get_stakers
+/// Staker exit intent
+/// Wait for exit wait window
+/// Staker exit action
+/// Test get_stakers
+#[test]
+fn get_stakers_staker_exit_action_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let amount = system.staking.get_min_stake();
+    let staker = system.new_staker(:amount);
+    system.stake(:staker, :amount, pool_enabled: false, commission: 200);
+    let staking = system.staking.dispatcher();
+    let staking_consensus = system.staking.consensus_dispatcher();
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    assert!(stakers == expected_stakers);
+
+    // Staker exit
+    system.staker_exit_intent(:staker);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    system.staker_exit_action(:staker);
+
+    // Test get_stakers
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    let expected_stakers = array![].span();
+    assert!(stakers == expected_stakers);
+}
