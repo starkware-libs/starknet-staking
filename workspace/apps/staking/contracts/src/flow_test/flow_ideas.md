@@ -1,7 +1,6 @@
 # Flow Ideas
 ## `get_stakers`
 - Staker exit action, get stakers.
-- Staker exit intent, get stakers.
 - Delegate STRK and/or BTC, get stakers.
 - Undelegate, get stakers.
 - Enable / disable tokens, get stakers.
