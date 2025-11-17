@@ -1,28 +1,44 @@
-[workspace]
-members = ["workspace/apps/staking/contracts"]
+[package]
+name = "staking"
+version = "1.14.5"
+edition = "2024_07"
 
-[workspace.dependencies]
+[dependencies]
 starknet = "2.12.0"
-assert_macros = "2.12.0"
 openzeppelin = "2.0.0"
-snforge_std = "0.49.0"
 starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "e1955423808045de868987b8fb0b43f5cbdf5699" }
+
+[dev-dependencies]
+assert_macros = "2.12.0"
+snforge_std = "0.49.0"
 starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "e1955423808045de868987b8fb0b43f5cbdf5699" }
 
 [scripts]
 test = "snforge test"
+
+[lib]
 
 [profile.dev.cairo]
 unstable-add-statements-code-locations-debug-info = true
 unstable-add-statements-functions-debug-info = true
 inlining-strategy = "avoid"
 
-[[workspace.tool.snforge.fork]]
+[[tool.snforge.fork]]
 name = "MAINNET_LATEST"
 
 url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_8"
 
 block_id.tag = "latest"
 
-[workspace.tool.scarb]
+[tool.scarb]
 allow-prebuilt-plugins = ["snforge_std"]
+
+[[test]]
+name = "contracts_unittest"
+build-external-contracts = ["starkware_utils::erc20::erc20_mocks::DualCaseERC20Mock"]
+
+[tool.fmt]
+sort-module-level-items = true
+
+[features]
+fork_test = []
