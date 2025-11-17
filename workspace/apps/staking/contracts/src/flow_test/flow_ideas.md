@@ -1,6 +1,5 @@
 # Flow Ideas
 ## `get_stakers`
-- Get stakers with staker with zero balance.
 - Staker exit action, get stakers.
 - Staker exit intent, get stakers.
 - Delegate STRK and/or BTC, get stakers.
