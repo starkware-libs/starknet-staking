@@ -1869,3 +1869,44 @@ fn set_same_public_key_for_2_different_stakers_flow_test() {
     assert!(staking.get_current_public_key(staker_address: staker_1.staker.address) == public_key);
     assert!(staking.get_current_public_key(staker_address: staker_2.staker.address) == public_key);
 }
+
+/// Flow:
+/// Staker stake
+/// Test get_stakers
+/// Advance epoch
+/// Test get_stakers
+/// Advance epoch
+/// Test get_stakers
+#[test]
+fn get_stakers_zero_balance_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let amount = system.staking.get_min_stake();
+    let staker = system.new_staker(:amount);
+    system.stake(:staker, :amount, pool_enabled: false, commission: 200);
+    let staking = system.staking.dispatcher();
+    let staking_consensus = system.staking.consensus_dispatcher();
+
+    // Test same epoch.
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    let expected_stakers = array![].span();
+    assert!(stakers == expected_stakers);
+
+    // Test next epoch.
+    let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers == expected_stakers);
+    system.advance_epoch();
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+
+    // Test next next epoch.
+    let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
+    let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    assert!(stakers == expected_stakers);
+    system.advance_epoch();
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+}
