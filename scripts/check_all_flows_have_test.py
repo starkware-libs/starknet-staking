@@ -6,7 +6,7 @@ from collections import Counter
 from pprint import pprint
 
 CONTRACTS_FOLDER: Path = (
-    Path(__file__).parent.parent.parent / "workspace/apps/staking/contracts"
+    Path(__file__).parent.parent / "workspace/apps/staking/contracts"
 )
 
 FLOWS_FILE: Path = CONTRACTS_FOLDER / "src/flow_test/flows.cairo"
