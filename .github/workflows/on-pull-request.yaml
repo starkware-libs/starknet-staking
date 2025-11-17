@@ -43,7 +43,7 @@ jobs:
       - uses: codecov/codecov-action@v5.3.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: workspace/apps/staking/contracts/coverage/coverage.lcov
+          files: coverage/coverage.lcov
           fail_ci_if_error: true
 
       - name: Check formatting
