@@ -2347,3 +2347,43 @@ fn get_stakers_enable_disable_btc_tokens_flow_test() {
         .span();
     assert!(stakers == expected_stakers);
 }
+
+/// Flow:
+/// 2 Stakers stake.
+/// Test get_stakers.
+/// Staker 1 increase stake.
+/// Test get_stakers.
+#[test]
+fn get_stakers_increase_stake_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let staking_consensus = system.staking.consensus_dispatcher();
+    let staker_1 = system.new_staker(amount: stake_amount * 2);
+    let staker_2 = system.new_staker(amount: stake_amount);
+    system.stake(staker: staker_1, amount: stake_amount, pool_enabled: false, commission: 200);
+    system.stake(staker: staker_2, amount: stake_amount, pool_enabled: false, commission: 200);
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Staker 1 increase stake.
+    system.increase_stake(staker: staker_1, amount: stake_amount);
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR * 2 / 3, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 3, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+}
