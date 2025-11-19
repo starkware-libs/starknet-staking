@@ -2181,3 +2181,169 @@ fn get_stakers_delegation_undelegation_flow_test() {
         .span();
     assert!(stakers == expected_stakers);
 }
+
+/// Flow:
+/// Staker 1 stake
+/// Staker 2 stake
+/// Delegator delegate strk
+/// Delegator delegate btc 8 decimals to staker 1
+/// Delegator delegate btc 18 decimals to staker 2
+/// Advance K epochs
+/// Test get_stakers
+/// Disable btc 8 decimals
+/// Test get_stakers
+/// Enable btc 8 decimals and disable btc 18 decimals
+/// Test get_stakers
+/// Disable both btc tokens
+/// Test get_stakers
+/// Enable both btc tokens
+/// Test get_stakers
+#[test]
+fn get_stakers_enable_disable_btc_tokens_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let staking_consensus = system.staking.consensus_dispatcher();
+    let strk_delegation_amount = STRK_CONFIG.min_for_rewards;
+    let btc_8d_delegation_amount = BTC_8D_CONFIG.min_for_rewards;
+    let btc_18d_delegation_amount = BTC_18D_CONFIG.min_for_rewards;
+    let staker_1 = system.new_staker(amount: stake_amount);
+    let staker_2 = system.new_staker(amount: stake_amount);
+    let strk_delegator = system.new_delegator(amount: strk_delegation_amount);
+
+    // Setup BTC tokens and delegators.
+    let btc_8d = system
+        .deploy_new_btc_token(name: "BTC 8D Token", decimals: BTC_8D_CONFIG.decimals);
+    let btc_18d = system
+        .deploy_new_btc_token(name: "BTC 18D Token", decimals: BTC_18D_CONFIG.decimals);
+    system.staking.add_token(token_address: btc_8d.contract_address());
+    system.staking.add_token(token_address: btc_18d.contract_address());
+    system.staking.enable_token(token_address: btc_8d.contract_address());
+    system.staking.enable_token(token_address: btc_18d.contract_address());
+    let btc_8d_delegator = system
+        .new_btc_delegator(amount: btc_8d_delegation_amount, token: btc_8d);
+    let btc_18d_delegator = system
+        .new_btc_delegator(amount: btc_18d_delegation_amount, token: btc_18d);
+
+    // Stake and delegate
+    system.stake(staker: staker_1, amount: stake_amount, pool_enabled: true, commission: 200);
+    system.stake(staker: staker_2, amount: stake_amount, pool_enabled: true, commission: 200);
+    let strk_pool = system.staking.get_pool(staker: staker_1);
+    let btc_8d_pool = system
+        .set_open_for_delegation(staker: staker_1, token_address: btc_8d.contract_address());
+    let btc_18d_pool = system
+        .set_open_for_delegation(staker: staker_2, token_address: btc_18d.contract_address());
+    system.delegate(delegator: strk_delegator, pool: strk_pool, amount: strk_delegation_amount);
+    system
+        .delegate_btc(
+            delegator: btc_8d_delegator,
+            pool: btc_8d_pool,
+            amount: btc_8d_delegation_amount,
+            token: btc_8d,
+        );
+    system
+        .delegate_btc(
+            delegator: btc_18d_delegator,
+            pool: btc_18d_pool,
+            amount: btc_18d_delegation_amount,
+            token: btc_18d,
+        );
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let first_staker_strk_staking_power = mul_wide_and_div(
+        lhs: STRK_WEIGHT_FACTOR,
+        rhs: stake_amount + strk_delegation_amount,
+        div: stake_amount * 2 + strk_delegation_amount,
+    )
+        .unwrap();
+    let second_staker_strk_staking_power = mul_wide_and_div(
+        lhs: STRK_WEIGHT_FACTOR, rhs: stake_amount, div: stake_amount * 2 + strk_delegation_amount,
+    )
+        .unwrap();
+    let expected_stakers = array![
+        (
+            staker_1.staker.address,
+            first_staker_strk_staking_power + BTC_WEIGHT_FACTOR / 2,
+            Option::None,
+        ),
+        (
+            staker_2.staker.address,
+            second_staker_strk_staking_power + BTC_WEIGHT_FACTOR / 2,
+            Option::None,
+        ),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Disable btc 8 decimals
+    system.staking.disable_token(token_address: btc_8d.contract_address());
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (staker_1.staker.address, first_staker_strk_staking_power, Option::None),
+        (
+            staker_2.staker.address,
+            second_staker_strk_staking_power + BTC_WEIGHT_FACTOR,
+            Option::None,
+        ),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Enable btc 8 decimals and disable btc 18 decimals
+    system.staking.enable_token(token_address: btc_8d.contract_address());
+    system.staking.disable_token(token_address: btc_18d.contract_address());
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (
+            staker_1.staker.address,
+            first_staker_strk_staking_power + BTC_WEIGHT_FACTOR,
+            Option::None,
+        ),
+        (staker_2.staker.address, second_staker_strk_staking_power, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Disable both btc tokens
+    system.staking.disable_token(token_address: btc_8d.contract_address());
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (staker_1.staker.address, first_staker_strk_staking_power, Option::None),
+        (staker_2.staker.address, second_staker_strk_staking_power, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Enable both btc tokens
+    system.staking.enable_token(token_address: btc_8d.contract_address());
+    system.staking.enable_token(token_address: btc_18d.contract_address());
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (
+            staker_1.staker.address,
+            first_staker_strk_staking_power + BTC_WEIGHT_FACTOR / 2,
+            Option::None,
+        ),
+        (
+            staker_2.staker.address,
+            second_staker_strk_staking_power + BTC_WEIGHT_FACTOR / 2,
+            Option::None,
+        ),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+}
