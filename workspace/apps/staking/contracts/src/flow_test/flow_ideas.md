@@ -1,8 +1,4 @@
 # Flow Ideas
-## `get_stakers`
-- Stake with delegation, get stakers, switch pool, get stakers.
-- Staker without public key.
-
 ## `get_current_staker_info` (name is WIP)
 - Get staker info while staker has zero balance.
 

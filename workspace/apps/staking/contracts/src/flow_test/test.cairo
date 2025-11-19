@@ -2468,3 +2468,120 @@ fn get_stakers_increase_stake_flow_test() {
         .span();
     assert!(stakers == expected_stakers);
 }
+
+/// Flow:
+/// 2 Stakers stake.
+/// Delegate to staker 1.
+/// Test get_stakers.
+/// Delegator full intent.
+/// Test get_stakers.
+/// Delegator switch half of delegation to staker 2.
+/// Test get_stakers.
+/// Delegator switch rest of delegation to staker 2.
+/// Test get_stakers.
+#[test]
+fn get_stakers_switch_delegation_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let staking_consensus = system.staking.consensus_dispatcher();
+    let staker_1 = system.new_staker(amount: stake_amount);
+    let staker_2 = system.new_staker(amount: stake_amount);
+    system.stake(staker: staker_1, amount: stake_amount, pool_enabled: true, commission: 200);
+    system.stake(staker: staker_2, amount: stake_amount, pool_enabled: true, commission: 200);
+    let staker_1_pool = system.staking.get_pool(staker: staker_1);
+    let staker_2_pool = system.staking.get_pool(staker: staker_2);
+
+    // Create delegator and delegate to staker 1.
+    let delegator = system.new_delegator(amount: stake_amount);
+    system.delegate(delegator: delegator, pool: staker_1_pool, amount: stake_amount);
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR * 2 / 3, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 3, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Delegator exit intent.
+    system.delegator_exit_intent(:delegator, pool: staker_1_pool, amount: stake_amount);
+
+    // Test same epoch.
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    assert!(stakers == expected_stakers);
+
+    // Test after K epochs.
+    system.advance_k_epochs();
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Switch delegation pool (half of delegation).
+    system.advance_exit_wait_window();
+    system
+        .switch_delegation_pool(
+            :delegator,
+            from_pool: staker_1_pool,
+            to_staker: staker_2.staker.address,
+            to_pool: staker_2_pool,
+            amount: stake_amount / 2,
+        );
+
+    // Test same epoch.
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    assert!(stakers == expected_stakers);
+
+    // Test after K epochs.
+    system.advance_k_epochs();
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (
+            staker_1.staker.address,
+            mul_wide_and_div(lhs: STRK_WEIGHT_FACTOR, rhs: stake_amount, div: stake_amount * 5 / 2)
+                .unwrap(),
+            Option::None,
+        ),
+        (
+            staker_2.staker.address,
+            mul_wide_and_div(
+                lhs: STRK_WEIGHT_FACTOR, rhs: stake_amount * 3 / 2, div: stake_amount * 5 / 2,
+            )
+                .unwrap(),
+            Option::None,
+        ),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Switch rest of delegation to staker 2.
+    system
+        .switch_delegation_pool(
+            :delegator,
+            from_pool: staker_1_pool,
+            to_staker: staker_2.staker.address,
+            to_pool: staker_2_pool,
+            amount: stake_amount / 2,
+        );
+
+    // Test same epoch.
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    assert!(stakers == expected_stakers);
+
+    // Test after K epochs.
+    system.advance_k_epochs();
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 3, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR * 2 / 3, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+}
+
