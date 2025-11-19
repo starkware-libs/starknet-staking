@@ -23,7 +23,7 @@ use starkware_utils::storage::iterable_map::{
 };
 use starkware_utils::trace::trace::{Trace, TraceTrait};
 
-const STAKING_POWER_BASE_VALUE: u128 = 10_u128.pow(10);
+pub(crate) const STAKING_POWER_BASE_VALUE: u128 = 10_u128.pow(10);
 pub(crate) const STRK_WEIGHT_FACTOR: u128 = STAKING_POWER_BASE_VALUE
     * (ALPHA_DENOMINATOR - ALPHA)
     / ALPHA_DENOMINATOR;
