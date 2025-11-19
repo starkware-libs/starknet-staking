@@ -1,6 +1,5 @@
 # Flow Ideas
 ## `get_stakers`
-- Delegate STRK and/or BTC, get stakers.
 - Undelegate, get stakers.
 - Enable / disable tokens, get stakers.
 - Stake, get stakers, increase stake, get stakers.
