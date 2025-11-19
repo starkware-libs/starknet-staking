@@ -10,7 +10,7 @@ use staking::pool::pool::Pool;
 use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::utils::compute_rewards_rounded_down;
 use staking::staking::interface::{IStakingConsensusDispatcherTrait, IStakingDispatcherTrait};
-use staking::staking::utils::{BTC_WEIGHT_FACTOR, STRK_WEIGHT_FACTOR};
+use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
     TEST_MIN_BTC_FOR_REWARDS,
@@ -2522,3 +2522,29 @@ fn get_stakers_switch_delegation_flow_test() {
     assert!(stakers == expected_stakers);
 }
 
+/// Flow:
+/// Staker stake.
+/// Delegator delegate BTC.
+/// Test staking power in get_stakers is 100%.
+#[test]
+fn get_stakers_staking_power_100_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let btc_delegation_amount = TEST_MIN_BTC_FOR_REWARDS;
+    let staking_consensus = system.staking.consensus_dispatcher();
+    let staker = system.new_staker(amount: stake_amount);
+    system.stake(staker: staker, amount: stake_amount, pool_enabled: true, commission: 200);
+    let btc_pool = system.set_open_for_delegation(staker: staker, token_address: system.btc_token.contract_address());
+    let delegator = system.new_btc_delegator(amount: btc_delegation_amount, token: system.btc_token);
+    system.delegate_btc(delegator: delegator, pool: btc_pool, amount: btc_delegation_amount, token: system.btc_token);
+    system.advance_k_epochs();
+
+    // Test get_stakers.
+    let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
+    let expected_stakers = array![
+        (staker.staker.address, STAKING_POWER_BASE_VALUE, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+}
