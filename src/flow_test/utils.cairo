@@ -1518,6 +1518,12 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
             .update_rewards(staker_address: staker.staker.address, :disable_rewards);
     }
 
+    fn start_consensus_rewards(self: SystemState) {
+        let epoch_id = self.staking.get_current_epoch() + K.into();
+        self.set_consensus_rewards_first_epoch(:epoch_id);
+        self.advance_k_epochs();
+    }
+
     #[feature("safe_dispatcher")]
     fn safe_attest(self: SystemState, staker: Staker) -> Result<(), Array<felt252>> {
         let block_hash = Zero::zero();
