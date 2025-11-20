@@ -6421,8 +6421,12 @@ pub(crate) struct FindSigmaMigrationFlow {
     pub(crate) delegator: Option<Delegator>,
     pub(crate) member_rewards: Option<Amount>,
 }
-pub(crate) impl FindSigmaMigrationFlowImpl of FlowTrait<FindSigmaMigrationFlow> {
-    fn setup_v2(ref self: FindSigmaMigrationFlow, ref system: SystemState) {
+pub(crate) impl FindSigmaMigrationFlowImpl of MultiVersionFlowTrait<FindSigmaMigrationFlow> {
+    fn versions(self: FindSigmaMigrationFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(ref self: FindSigmaMigrationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6456,7 +6460,7 @@ pub(crate) impl FindSigmaMigrationFlowImpl of FlowTrait<FindSigmaMigrationFlow> 
         system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
-    fn test(self: FindSigmaMigrationFlow, ref system: SystemState) {
+    fn test(self: FindSigmaMigrationFlow, ref system: SystemState, version: ReleaseVersion) {
         let pool = self.pool.unwrap();
         let expected_class_hash = declare_pool_contract();
         assert!(get_class_hash(contract_address: pool) == expected_class_hash);
@@ -6479,8 +6483,14 @@ pub(crate) struct FindSigmaEdgeCasesMigrationFlow {
     pub(crate) delegator: Option<Delegator>,
     pub(crate) member_rewards: Option<Amount>,
 }
-pub(crate) impl FindSigmaEdgeCasesMigrationFlowImpl of FlowTrait<FindSigmaEdgeCasesMigrationFlow> {
-    fn setup_v2(ref self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState) {
+pub(crate) impl FindSigmaEdgeCasesMigrationFlowImpl of MultiVersionFlowTrait<
+    FindSigmaEdgeCasesMigrationFlow,
+> {
+    fn versions(self: FindSigmaEdgeCasesMigrationFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(ref self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6506,7 +6516,9 @@ pub(crate) impl FindSigmaEdgeCasesMigrationFlowImpl of FlowTrait<FindSigmaEdgeCa
         system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
-    fn test(self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState) {
+    fn test(
+        self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let pool = self.pool.unwrap();
         let expected_class_hash = declare_pool_contract();
         assert!(get_class_hash(contract_address: pool) == expected_class_hash);
@@ -6529,8 +6541,14 @@ pub(crate) struct FindSigmaMigrationIdxIsOneFlow {
     pub(crate) delegator: Option<Delegator>,
     pub(crate) member_rewards: Option<Amount>,
 }
-pub(crate) impl FindSigmaMigrationIdxIsOneFlowImpl of FlowTrait<FindSigmaMigrationIdxIsOneFlow> {
-    fn setup_v2(ref self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState) {
+pub(crate) impl FindSigmaMigrationIdxIsOneFlowImpl of MultiVersionFlowTrait<
+    FindSigmaMigrationIdxIsOneFlow,
+> {
+    fn versions(self: FindSigmaMigrationIdxIsOneFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(ref self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6551,7 +6569,9 @@ pub(crate) impl FindSigmaMigrationIdxIsOneFlowImpl of FlowTrait<FindSigmaMigrati
         system.set_staker_for_migration(staker_address: staker.staker.address);
     }
 
-    fn test(self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState) {
+    fn test(
+        self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let pool = self.pool.unwrap();
         let expected_class_hash = declare_pool_contract();
         assert!(get_class_hash(contract_address: pool) == expected_class_hash);
