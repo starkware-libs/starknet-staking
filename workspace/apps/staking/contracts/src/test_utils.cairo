@@ -51,6 +51,9 @@ use staking::staking::objects::{
     NormalizedAmountTrait,
 };
 use staking::staking::staking::Staking::{COMMISSION_DENOMINATOR, DEFAULT_EXIT_WAIT_WINDOW};
+use staking::staking::tests::interface_v1::{
+    IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
+};
 use staking::staking::utils::compute_commission_amount_rounded_down;
 use staking::types::{
     Amount, Commission, Index, InternalPoolMemberInfoLatest, InternalStakerInfoLatest,
@@ -910,10 +913,10 @@ pub(crate) fn advance_k_epochs_global() {
     }
 }
 
-// ---- Calculate Rewards - V1 -----
+// ---- Calculate Rewards - V0 (index based) -----
 
 /// Update rewards for STRK pool.
-pub(crate) fn strk_pool_update_rewards_v1(
+pub(crate) fn strk_pool_update_rewards_v0(
     pool_member_info: PoolMemberInfo, updated_index: Index,
 ) -> PoolMemberInfo {
     let interest: Index = updated_index - pool_member_info.index;
@@ -946,7 +949,47 @@ fn _compute_commission_amount_rounded_up(
         .expect_with_err(err: InternalError::COMMISSION_ISNT_AMOUNT_TYPE)
 }
 
-// ---- Calculate Rewards - V2 -----
+// ---- Calculate Rewards - V1 (attestation based) -----
+
+/// Calculate pool rewards for one epoch.
+pub(crate) fn calculate_strk_pool_rewards_v1(
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+) -> Amount {
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
+    let strk_epoch_rewards = _calculate_current_epoch_rewards_v1(
+        :staking_contract, :minting_curve_contract,
+    );
+    let staking_dispatcher = IStakingV1ForTestsDispatcher { contract_address: staking_contract };
+    let strk_total_stake = staking_dispatcher.get_current_total_staking_power();
+    let (_, pool_rewards) = _calculate_staker_strk_rewards_with_balances(
+        amount_own: staker_info.amount_own,
+        pool_amount: staker_info.pool_info.unwrap().amount,
+        commission: staker_info.pool_info.unwrap().commission,
+        :strk_epoch_rewards,
+        :strk_total_stake,
+    );
+    pool_rewards
+}
+
+fn _calculate_current_epoch_rewards_v1(
+    staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
+) -> Amount {
+    let minting_curve_dispatcher = IMintingCurveDispatcher {
+        contract_address: minting_curve_contract,
+    };
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+
+    let yearly_mint = minting_curve_dispatcher.yearly_mint();
+    let epochs_in_year = staking_dispatcher.get_epoch_info().epochs_in_year();
+    let total_rewards = yearly_mint / epochs_in_year.into();
+    total_rewards
+}
+
+
+// ---- Calculate Rewards - V2 (BTC, attestation based) -----
 
 /// Return staker own rewards and STRK pool rewards.
 ///
@@ -980,38 +1023,18 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v2(
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
-    let (strk_epoch_rewards, _) = calculate_current_epoch_rewards(
+    let (strk_epoch_rewards, _) = _calculate_current_epoch_rewards_v2(
         :staking_contract, :minting_curve_contract,
     );
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
     let (strk_curr_total_stake, _) = staking_dispatcher.get_current_total_staking_power();
-    // Calculate staker own rewards.
-    let mut staker_rewards = mul_wide_and_div(
-        lhs: strk_epoch_rewards,
-        rhs: amount_own,
-        div: strk_curr_total_stake.to_strk_native_amount(),
+    _calculate_staker_strk_rewards_with_balances(
+        :amount_own,
+        :pool_amount,
+        :commission,
+        :strk_epoch_rewards,
+        strk_total_stake: strk_curr_total_stake.to_strk_native_amount(),
     )
-        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
-    // Calculate staker STRK pool rewards.
-    let pool_rewards = {
-        if pool_amount.is_non_zero() {
-            let pool_rewards_including_commission = mul_wide_and_div(
-                lhs: strk_epoch_rewards,
-                rhs: pool_amount,
-                div: strk_curr_total_stake.to_strk_native_amount(),
-            )
-                .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
-            let commission_rewards = compute_commission_amount_rounded_down(
-                rewards_including_commission: pool_rewards_including_commission, :commission,
-            );
-            let pool_rewards = pool_rewards_including_commission - commission_rewards;
-            staker_rewards += commission_rewards;
-            pool_rewards
-        } else {
-            Zero::zero()
-        }
-    };
-    (staker_rewards, pool_rewards)
 }
 
 /// Calculate pool rewards for one epoch
@@ -1060,7 +1083,7 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v2(
     token_address: ContractAddress,
 ) -> (Amount, Amount) {
     let pool_balance = to_amount_18_decimals(amount: pool_balance, :token_address);
-    let (_, btc_epoch_rewards) = calculate_current_epoch_rewards(
+    let (_, btc_epoch_rewards) = _calculate_current_epoch_rewards_v2(
         :staking_contract, :minting_curve_contract,
     );
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -1080,7 +1103,18 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v2(
     (commission_rewards, pool_rewards)
 }
 
-// ---- Calculate Rewards - V3 -----
+fn _calculate_current_epoch_rewards_v2(
+    staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
+) -> (Amount, Amount) {
+    let total_rewards = _calculate_current_epoch_rewards_v1(
+        :staking_contract, :minting_curve_contract,
+    );
+    let btc_rewards = calculate_btc_rewards(:total_rewards);
+    let strk_rewards = total_rewards - btc_rewards;
+    (strk_rewards, btc_rewards)
+}
+
+// ---- Calculate Rewards - V3 (consensus rewards) -----
 
 /// Returns (staker_rewards, pool_rewards) for the given balances and commission.
 pub(crate) fn calculate_staker_strk_rewards_with_balances_v3(
@@ -1090,7 +1124,7 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v3(
     staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
-    let (strk_block_rewards, _) = calculate_current_block_rewards(
+    let (strk_block_rewards, _) = _calculate_current_block_rewards_v3(
         :staking_contract, :minting_curve_contract,
     );
     let total_stake = amount_own + pool_amount;
@@ -1119,6 +1153,25 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v3(
     (staker_rewards, pool_rewards)
 }
 
+/// Calculate pool rewards for one epoch.
+pub(crate) fn calculate_strk_pool_rewards_v3(
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+) -> Amount {
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
+    let pool_info = staker_info.pool_info.unwrap();
+    let (_, pool_rewards) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: staker_info.amount_own,
+        pool_amount: pool_info.amount,
+        commission: pool_info.commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    pool_rewards
+}
+
 /// Returns (staker_commission_rewards, BTC_pool_rewards) for the specified
 /// `normalized_pool_balance`, `normalized_staker_total_btc_balance` and `commission`.
 ///
@@ -1131,7 +1184,7 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v3(
     minting_curve_contract: ContractAddress,
     token_address: ContractAddress,
 ) -> (Amount, Amount) {
-    let (_, btc_block_rewards) = calculate_current_block_rewards(
+    let (_, btc_block_rewards) = _calculate_current_block_rewards_v3(
         :staking_contract, :minting_curve_contract,
     );
     // Calculate pool rewards including commission.
@@ -1149,31 +1202,11 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v3(
     (commission_rewards, pool_rewards)
 }
 
-// ---- Calculate Rewards - Helpers -----
 
-/// Used in V2.
-fn calculate_current_epoch_rewards(
+fn _calculate_current_block_rewards_v3(
     staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
-    let minting_curve_dispatcher = IMintingCurveDispatcher {
-        contract_address: minting_curve_contract,
-    };
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-
-    let yearly_mint = minting_curve_dispatcher.yearly_mint();
-    let epochs_in_year = staking_dispatcher.get_epoch_info().epochs_in_year();
-    let total_rewards = yearly_mint / epochs_in_year.into();
-    let btc_rewards = calculate_btc_rewards(:total_rewards);
-    let strk_rewards = total_rewards - btc_rewards;
-
-    (strk_rewards, btc_rewards)
-}
-
-/// Used in V3.
-fn calculate_current_block_rewards(
-    staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
-) -> (Amount, Amount) {
-    let (strk_epoch_rewards, btc_epoch_rewards) = calculate_current_epoch_rewards(
+    let (strk_epoch_rewards, btc_epoch_rewards) = _calculate_current_epoch_rewards_v2(
         :staking_contract, :minting_curve_contract,
     );
     let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
@@ -1181,6 +1214,44 @@ fn calculate_current_block_rewards(
     let strk_block_rewards = strk_epoch_rewards / epoch_len_in_blocks.into();
     let btc_block_rewards = btc_epoch_rewards / epoch_len_in_blocks.into();
     (strk_block_rewards, btc_block_rewards)
+}
+
+// ---- Calculate Rewards - Helpers -----
+
+/// Used in V1 and V2.
+/// Return staker own rewards and STRK pool rewards for the given balances and commission.
+///
+/// Precondition: `strk_total_stake` is not zero.
+pub(crate) fn _calculate_staker_strk_rewards_with_balances(
+    amount_own: Amount,
+    pool_amount: Amount,
+    commission: Commission,
+    strk_epoch_rewards: Amount,
+    strk_total_stake: Amount,
+) -> (Amount, Amount) {
+    // Calculate staker own rewards.
+    let mut staker_rewards = mul_wide_and_div(
+        lhs: strk_epoch_rewards, rhs: amount_own, div: strk_total_stake,
+    )
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
+    // Calculate staker STRK pool rewards.
+    let pool_rewards = {
+        if pool_amount.is_non_zero() {
+            let pool_rewards_including_commission = mul_wide_and_div(
+                lhs: strk_epoch_rewards, rhs: pool_amount, div: strk_total_stake,
+            )
+                .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
+            let commission_rewards = compute_commission_amount_rounded_down(
+                rewards_including_commission: pool_rewards_including_commission, :commission,
+            );
+            let pool_rewards = pool_rewards_including_commission - commission_rewards;
+            staker_rewards += commission_rewards;
+            pool_rewards
+        } else {
+            Zero::zero()
+        }
+    };
+    (staker_rewards, pool_rewards)
 }
 
 /// Calculate pool member rewards given the pool rewards, pool member balance and pool balance.
