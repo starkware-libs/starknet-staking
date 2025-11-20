@@ -1,6 +1,5 @@
 # Flow Ideas
 ## `get_stakers`
-- Undelegate, get stakers.
 - Enable / disable tokens, get stakers.
 - Stake, get stakers, increase stake, get stakers.
 - Stake with delegation, get stakers, switch pool, get stakers.
