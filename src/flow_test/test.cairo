@@ -2755,3 +2755,47 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
 }
+
+/// Flow:
+/// Start consensus rewards.
+/// Staker stake with STRK pool.
+/// Delegator delegate STRK.
+/// Advance K epochs.
+/// update_rewards.
+/// Test staker rewards.
+/// Test delegator rewards.
+/// Advance epoch.
+/// Test delegator rewards.
+#[test]
+fn update_rewards_strk_pool_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    system.start_consensus_rewards();
+    let stake_amount = system.staking.get_min_stake();
+    let delegation_amount = STRK_CONFIG.min_for_rewards;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: delegation_amount);
+    system.delegate(:delegator, :pool, amount: delegation_amount);
+    system.advance_k_epochs();
+
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_staker_rewards, expected_pool_rewards) =
+        calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: delegation_amount,
+        :commission,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+    );
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let delegator_rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(staker_rewards == expected_staker_rewards);
+    assert!(delegator_rewards.is_zero());
+
+    system.advance_epoch();
+    let delegator_rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(delegator_rewards == expected_pool_rewards);
+}
