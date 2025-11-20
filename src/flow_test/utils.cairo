@@ -574,6 +574,12 @@ pub(crate) impl StakingImpl of StakingTrait {
         let config_dispatcher = IStakingConfigDispatcher { contract_address: self.staking.address };
         config_dispatcher.set_consensus_rewards_first_epoch(:epoch_id);
     }
+
+    fn start_consensus_rewards(self: SystemState) {
+        let epoch_id = self.staking.get_current_epoch() + K.into();
+        self.set_consensus_rewards_first_epoch(:epoch_id);
+        self.advance_k_epochs();
+    }
 }
 
 /// The `MintingCurveRoles` struct represents the various roles involved in the minting curve
