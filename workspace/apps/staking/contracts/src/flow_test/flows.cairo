@@ -38,7 +38,7 @@ use staking::test_utils::{
     calculate_staker_strk_rewards_v2, calculate_strk_pool_rewards_v2,
     calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
     declare_pool_contract, declare_pool_eic_contract, declare_staking_contract,
-    load_from_simple_map, load_one_felt, strk_pool_update_rewards_v1, to_amount_18_decimals,
+    load_from_simple_map, load_one_felt, strk_pool_update_rewards_v0, to_amount_18_decimals,
     upgrade_implementation,
 };
 use staking::types::{Amount, Commission};
@@ -1278,7 +1278,7 @@ pub(crate) impl PoolMemberInfoAfterUpgradeFlowImpl of FlowTrait<PoolMemberInfoAf
             .internal_pool_member_info(:delegator, :pool);
         let get_internal_pool_member_info_after_upgrade = system
             .get_internal_pool_member_info(:delegator, :pool);
-        let expected_pool_member_info = strk_pool_update_rewards_v1(
+        let expected_pool_member_info = strk_pool_update_rewards_v0(
             pool_member_info: self.delegator_info.unwrap(),
             updated_index: system.staking.get_global_index(),
         );

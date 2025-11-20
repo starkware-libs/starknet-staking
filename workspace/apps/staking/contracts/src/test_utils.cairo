@@ -910,10 +910,10 @@ pub(crate) fn advance_k_epochs_global() {
     }
 }
 
-// ---- Calculate Rewards - V1 -----
+// ---- Calculate Rewards - V0 (index based) -----
 
 /// Update rewards for STRK pool.
-pub(crate) fn strk_pool_update_rewards_v1(
+pub(crate) fn strk_pool_update_rewards_v0(
     pool_member_info: PoolMemberInfo, updated_index: Index,
 ) -> PoolMemberInfo {
     let interest: Index = updated_index - pool_member_info.index;
