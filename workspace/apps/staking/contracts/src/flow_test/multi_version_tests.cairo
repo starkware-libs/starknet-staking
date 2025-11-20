@@ -141,3 +141,30 @@ fn intent_upgrade_set_public_key_flow_test() {
     let mut flow = flows::IntentUpgradeSetPublicKeyFlow { staker: Option::None };
     test_multi_version_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn find_sigma_migration_flow_test() {
+    let mut flow = flows::FindSigmaMigrationFlow {
+        pool: Option::None, delegator: Option::None, member_rewards: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn find_sigma_edge_cases_migration_flow_test() {
+    let mut flow = flows::FindSigmaEdgeCasesMigrationFlow {
+        pool: Option::None, delegator: Option::None, member_rewards: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn find_sigma_migration_idx_is_one_flow_test() {
+    let mut flow = flows::FindSigmaMigrationIdxIsOneFlow {
+        pool: Option::None, delegator: Option::None, member_rewards: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
