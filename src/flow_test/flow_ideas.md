@@ -40,12 +40,6 @@
 - find sigma: Enter V0, change in V2, catch all ifs.
 - find sigma_edge_cases: catch the comments.
 - find sigma - cover all branches with member from V0, V1, V2(V2 DONE).
-- member from V1(+V2), update balance at V3, pool gets rewards at V3, test rewards. (IDX=0)
-- member from V1(+V2), update balance at V1, update balance at V3, test rewards. (IDX=1=LEN)
-- member from V1(+V2), update balance at V1, pool gets rewards at V1, update balance at V3, test rewards. (IDX=1!=LEN)
-- member from V1(+V2), pool gets rewards at V1, pool gets rewards at V1, update balance at V1, update balance at V3, test rewards (IDX=LEN)
-- member from V1(+V2), pool gets_rewards at V1, pool gets rewards at V1, update balance at V1, pool gets rewards at V3,  update balance at V3, test rewards. (REGULAR CASE)
-- member from V1(+V2), pool gets_rewards at V1, pool gets rewards at V1, update balance at V1, pool gets rewards at V1 same epoch, pool gets rewards at V3,  update balance at V3, test rewards. (REGULAR CASE)
 more ideas:
 - member from V1, pool gets rewards at V1, update balance at V1, update balance at V3, pool gets rewards at V3, test rewards.
 - member from V1, pool gets rewards at V1, pool gets rewards at V3, update balance at V3, test rewards.

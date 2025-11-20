@@ -168,3 +168,63 @@ fn find_sigma_migration_idx_is_one_flow_test() {
     };
     test_multi_version_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_rewards_migration_idx_is_zero_flow_test() {
+    let mut flow = flows::DelegatorRewardsMigrationIdxIsZeroFlow {
+        staker: Option::None, pool: Option::None, delegator: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_rewards_migration_idx_is_one_flow_test() {
+    let mut flow = flows::DelegatorRewardsMigrationIdxIsOneFlow {
+        pool: Option::None, delegator: Option::None, expected_rewards: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_rewards_migration_idx_len_is_one_flow_test() {
+    let mut flow = flows::DelegatorRewardsMigrationIdxLenIsOneFlow {
+        pool: Option::None, delegator: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_rewards_migration_idx_is_len_flow_test() {
+    let mut flow = flows::DelegatorRewardsMigrationIdxIsLenFlow {
+        pool: Option::None, delegator: Option::None, expected_rewards: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_rewards_migration_first_regular_case_flow_test() {
+    let mut flow = flows::DelegatorRewardsMigrationFirstRegularCaseFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_rewards_migration_second_regular_case_flow_test() {
+    let mut flow = flows::DelegatorRewardsMigrationSecondRegularCaseFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
