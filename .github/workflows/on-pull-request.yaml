@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+  merge_group:
+    branches:
+      - main
+
 jobs:
   test:
     uses: ./.github/workflows/test.yaml
