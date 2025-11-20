@@ -7,9 +7,10 @@ use staking::flow_test::utils::{
     SystemTrait, TokenHelperTrait, test_flow_local,
 };
 use staking::pool::pool::Pool;
+use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::utils::compute_rewards_rounded_down;
 use staking::staking::interface::{IStakingConsensusDispatcherTrait, IStakingDispatcherTrait};
-use staking::staking::utils::STRK_WEIGHT_FACTOR;
+use staking::staking::utils::{BTC_WEIGHT_FACTOR, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
     TEST_MIN_BTC_FOR_REWARDS,
@@ -21,6 +22,7 @@ use staking::test_utils::{
     custom_decimals_token, deploy_mock_erc20_decimals_contract,
 };
 use starkware_utils::math::abs::wide_abs_diff;
+use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::Time;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 use crate::types::Amount;
@@ -1868,4 +1870,226 @@ fn set_same_public_key_for_2_different_stakers_flow_test() {
     assert!(staking_consensus.get_stakers(:epoch_id) == expected_stakers);
     assert!(staking.get_current_public_key(staker_address: staker_1.staker.address) == public_key);
     assert!(staking.get_current_public_key(staker_address: staker_2.staker.address) == public_key);
+}
+
+/// Flow:
+/// Staker stake
+/// Test get_stakers
+/// Advance epoch
+/// Test get_stakers
+/// Advance epoch
+/// Test get_stakers
+#[test]
+fn get_stakers_zero_balance_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let amount = system.staking.get_min_stake();
+    let staker = system.new_staker(:amount);
+    system.stake(:staker, :amount, pool_enabled: false, commission: 200);
+    let staking = system.staking.dispatcher();
+    let staking_consensus = system.staking.consensus_dispatcher();
+
+    // Test same epoch.
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    let expected_stakers = array![].span();
+    assert!(stakers == expected_stakers);
+
+    // Test next epoch.
+    let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers == expected_stakers);
+    system.advance_epoch();
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+
+    // Test next next epoch.
+    let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
+    let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    assert!(stakers == expected_stakers);
+    system.advance_epoch();
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+}
+
+/// Flow:
+/// Staker stake
+/// Advance K epochs
+/// Staker exit intent
+/// Test get_stakers
+/// Advance epoch
+/// Test get_stakers
+/// Advance epoch
+/// Test get_stakers
+#[test]
+fn get_stakers_staker_exit_intent_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let amount = system.staking.get_min_stake();
+    let staker = system.new_staker(:amount);
+    system.stake(:staker, :amount, pool_enabled: false, commission: 200);
+    let staking = system.staking.dispatcher();
+    let staking_consensus = system.staking.consensus_dispatcher();
+    system.advance_k_epochs();
+
+    // Staker exit intent
+    system.staker_exit_intent(:staker);
+
+    // Test get_stakers
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    assert!(stakers == expected_stakers);
+
+    // Test next epoch.
+    let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers == expected_stakers);
+    system.advance_epoch();
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+
+    // Test next next epoch.
+    let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
+    let expected_stakers = array![].span();
+    assert!(stakers == expected_stakers);
+    system.advance_epoch();
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+}
+
+/// Flow:
+/// Staker stake
+/// Advance K epochs
+/// Test get_stakers
+/// Staker exit intent
+/// Wait for exit wait window
+/// Staker exit action
+/// Test get_stakers
+#[test]
+fn get_stakers_staker_exit_action_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let amount = system.staking.get_min_stake();
+    let staker = system.new_staker(:amount);
+    system.stake(:staker, :amount, pool_enabled: false, commission: 200);
+    let staking = system.staking.dispatcher();
+    let staking_consensus = system.staking.consensus_dispatcher();
+    system.advance_k_epochs();
+
+    // Test get_stakers
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    assert!(stakers == expected_stakers);
+
+    // Staker exit
+    system.staker_exit_intent(:staker);
+    system.advance_time(time: system.staking.get_exit_wait_window());
+    system.staker_exit_action(:staker);
+
+    // Test get_stakers
+    let epoch_id = staking.get_current_epoch();
+    let stakers = staking_consensus.get_stakers(:epoch_id);
+    let expected_stakers = array![].span();
+    assert!(stakers == expected_stakers);
+}
+
+/// FLow:
+/// 4 Stakers stake.
+/// Delegate STRK and BTC to staker 1
+/// Delegate STRK to staker 2
+/// Delegate BTC to staker 3
+/// Advance K epochs
+/// Test get_stakers
+#[test]
+fn get_stakers_delegation_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let strk_delegation_amount = STRK_CONFIG.min_for_rewards;
+    let btc_delegation_amount = TEST_MIN_BTC_FOR_REWARDS;
+    let staker_1 = system.new_staker(amount: stake_amount);
+    let staker_2 = system.new_staker(amount: stake_amount);
+    let staker_3 = system.new_staker(amount: stake_amount);
+    let staker_4 = system.new_staker(amount: stake_amount);
+    let staking_consensus = system.staking.consensus_dispatcher();
+
+    // Stakers stake.
+    system.stake(staker: staker_1, amount: stake_amount, pool_enabled: true, commission: 200);
+    system.stake(staker: staker_2, amount: stake_amount, pool_enabled: true, commission: 200);
+    system.stake(staker: staker_3, amount: stake_amount, pool_enabled: true, commission: 200);
+    system.stake(staker: staker_4, amount: stake_amount, pool_enabled: false, commission: 200);
+
+    // Setup pools.
+    let staker_1_strk_pool = system.staking.get_pool(staker: staker_1);
+    let staker_1_btc_pool = system
+        .set_open_for_delegation(
+            staker: staker_1, token_address: system.btc_token.contract_address(),
+        );
+    let staker_2_strk_pool = system.staking.get_pool(staker: staker_2);
+    let staker_3_btc_pool = system
+        .set_open_for_delegation(
+            staker: staker_3, token_address: system.btc_token.contract_address(),
+        );
+
+    // Create delegators and delegate.
+    let strk_delegator = system.new_delegator(amount: strk_delegation_amount * 2);
+    let btc_delegator = system
+        .new_btc_delegator(amount: btc_delegation_amount * 2, token: system.btc_token);
+    system
+        .delegate(
+            delegator: strk_delegator, pool: staker_1_strk_pool, amount: strk_delegation_amount,
+        );
+    system
+        .delegate_btc(
+            delegator: btc_delegator,
+            pool: staker_1_btc_pool,
+            amount: btc_delegation_amount,
+            token: system.btc_token,
+        );
+    system
+        .delegate(
+            delegator: strk_delegator, pool: staker_2_strk_pool, amount: strk_delegation_amount,
+        );
+    system
+        .delegate_btc(
+            delegator: btc_delegator,
+            pool: staker_3_btc_pool,
+            amount: btc_delegation_amount,
+            token: system.btc_token,
+        );
+
+    // Test get_stakers.
+    system.advance_k_epochs();
+    let stakers = staking_consensus.get_stakers(system.staking.get_current_epoch());
+    let total_strk_staking_power = stake_amount * 4 + strk_delegation_amount * 2;
+    let staker_with_strk_delegation_staking_power = mul_wide_and_div(
+        lhs: STRK_WEIGHT_FACTOR,
+        rhs: stake_amount + strk_delegation_amount,
+        div: total_strk_staking_power,
+    )
+        .unwrap();
+    let staker_without_strk_delegation_staking_power = mul_wide_and_div(
+        lhs: STRK_WEIGHT_FACTOR, rhs: stake_amount, div: total_strk_staking_power,
+    )
+        .unwrap();
+    let expected_stakers = array![
+        (
+            staker_1.staker.address,
+            staker_with_strk_delegation_staking_power + BTC_WEIGHT_FACTOR / 2,
+            Option::None,
+        ),
+        (staker_2.staker.address, staker_with_strk_delegation_staking_power, Option::None),
+        (
+            staker_3.staker.address,
+            staker_without_strk_delegation_staking_power + BTC_WEIGHT_FACTOR / 2,
+            Option::None,
+        ),
+        (staker_4.staker.address, staker_without_strk_delegation_staking_power, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
 }

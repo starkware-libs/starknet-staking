@@ -1,0 +1,39 @@
+# testing
+coverage
+
+# misc
+.DS_Store
+
+# local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.idea
+.vscode
+.cursorignore
+
+.history
+
+# autoenv
+.in
+.out
+
+#scarb
+target
+
+#foundry
+.snfoundry_cache
+.snfoundry_versioned_programs
+snfoundry_trace
+coverage_report
+
+#python
+venv/
+__pycache__
+
+#vimdiff
+*.orig
+
