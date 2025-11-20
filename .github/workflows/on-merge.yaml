@@ -1,0 +1,11 @@
+name: Main Branch Integration
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yaml
+    secrets: inherit
