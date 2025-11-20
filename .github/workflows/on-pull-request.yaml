@@ -5,6 +5,14 @@ on:
     branches:
       - main
 
+  merge_group:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
 jobs:
   verify_flows:
     runs-on: ubuntu-latest
