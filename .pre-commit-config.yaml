@@ -8,3 +8,15 @@ repos:
         pass_filenames: false
         files: ^Scarb\.toml$
         stages: [pre-commit]
+      - id: ensure-flow-struct-tests
+        name: ensure flow structs have tests
+        entry: scripts/check_all_flows_have_test.py --allow-duplicate-tests
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: cairo-scarb-fmt
+        name: check cairo code is formatted
+        entry: scarb fmt -w --check
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
