@@ -11,6 +11,8 @@ use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::utils::compute_rewards_rounded_down;
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
+    IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
+    IStakingAttestationSafeDispatcher, IStakingAttestationSafeDispatcherTrait,
     IStakingConsensusDispatcherTrait, IStakingDispatcherTrait,
     IStakingRewardsManagerSafeDispatcherTrait,
 };
@@ -2623,6 +2625,140 @@ fn get_stakers_staking_power_100_flow_test() {
     let expected_stakers = array![(staker.staker.address, STAKING_POWER_BASE_VALUE, Option::None)]
         .span();
     assert!(stakers == expected_stakers);
+}
+
+/// Flow:
+/// Staker stake
+/// Update rewards from attestation
+/// Test rewards are distributed
+/// Call update_rewards
+/// Test rewards are not distributed
+/// Set v3 epoch (in 2 epochs)
+/// Update rewards from attestation
+/// Test rewards are distributed
+/// Call update_rewards
+/// Test rewards are not distributed
+/// Advance to v3 epoch
+/// Update rewards from attestation - panic
+/// Call update_rewards
+/// Test rewards are distributed
+/// Advance epoch
+/// Update rewards from attestation - panic
+/// Call update_rewards
+/// Test rewards are distributed
+/// Advance epoch
+/// Update rewards from attestation - panic
+/// Call update_rewards with disable rewards = true
+/// Test rewards are not distributed
+#[test]
+#[feature("safe_dispatcher")]
+fn update_rewards_transition_from_attestation_to_consensus_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let minting_curve_contract = system.minting_curve.address;
+    let staking_contract = system.staking.address;
+    let staker = system.new_staker(amount: stake_amount);
+    let staking_attestation = IStakingAttestationDispatcher { contract_address: staking_contract };
+    let staking_attestation_safe = IStakingAttestationSafeDispatcher {
+        contract_address: staking_contract,
+    };
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
+    system.advance_k_epochs();
+
+    // Update rewards from attestation
+    cheat_caller_address_once(
+        contract_address: system.staking.address,
+        caller_address: system.attestation.unwrap().address,
+    );
+    staking_attestation
+        .update_rewards_from_attestation_contract(staker_address: staker.staker.address);
+    let rewards = system.staker_claim_rewards(:staker);
+    let (expected_rewards_v2, _) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        commission: 200,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(rewards == expected_rewards_v2);
+
+    // Call update_rewards
+    system.update_rewards(:staker, disable_rewards: false);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards == Zero::zero());
+
+    // Set v3 epoch
+    // system.advance_epoch();
+    system
+        .set_consensus_rewards_first_epoch(epoch_id: system.staking.get_current_epoch() + K.into());
+
+    // Update rewards from attestation
+    cheat_caller_address_once(
+        contract_address: system.staking.address,
+        caller_address: system.attestation.unwrap().address,
+    );
+    staking_attestation
+        .update_rewards_from_attestation_contract(staker_address: staker.staker.address);
+    let rewards = system.staker_claim_rewards(:staker);
+    let (expected_rewards_v3, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        commission: 200,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(rewards == expected_rewards_v3);
+
+    // Call update_rewards
+    system.update_rewards(:staker, disable_rewards: false);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards == Zero::zero());
+
+    // Advance to v3 epoch
+    system.advance_k_epochs();
+
+    // Update rewards from attestation - panic
+    let result = staking_attestation_safe
+        .update_rewards_from_attestation_contract(staker_address: staker.staker.address);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::CONSENSUS_REWARDS_IS_ACTIVE.describe(),
+    );
+
+    // Call update_rewards
+    system.update_rewards(:staker, disable_rewards: false);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards == expected_rewards_v3);
+
+    // Advance epoch
+    system.advance_epoch();
+
+    // Update rewards from attestation - panic
+    let result = staking_attestation_safe
+        .update_rewards_from_attestation_contract(staker_address: staker.staker.address);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::CONSENSUS_REWARDS_IS_ACTIVE.describe(),
+    );
+
+    // Call update_rewards
+    system.update_rewards(:staker, disable_rewards: false);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards == expected_rewards_v3);
+
+    // Advance epoch
+    system.advance_epoch();
+
+    // Update rewards from attestation - panic
+    let result = staking_attestation_safe
+        .update_rewards_from_attestation_contract(staker_address: staker.staker.address);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::CONSENSUS_REWARDS_IS_ACTIVE.describe(),
+    );
+
+    // Call update_rewards with disable rewards = true
+    system.update_rewards(:staker, disable_rewards: true);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards == Zero::zero());
 }
 
 /// Flow:
