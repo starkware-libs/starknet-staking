@@ -2932,3 +2932,26 @@ fn update_rewards_strk_pool_flow_test() {
     let delegator_rewards = system.delegator_claim_rewards(:delegator, :pool);
     assert!(delegator_rewards == expected_pool_rewards);
 }
+
+/// Flow:
+/// 2 BTC tokens (A and B) added.
+/// Test tokens.
+/// Enable token A.
+/// Test tokens.
+/// Advance epoch.
+/// Enable token B.
+/// Test tokens.
+/// Advance epoch.
+/// Test tokens.
+/// Disable token A.
+/// Test tokens.
+/// Advance epoch.
+/// Test tokens.
+/// Disable token B.
+/// Test tokens.
+/// Advance epoch.
+/// Test tokens.
+/// Advance epoch.
+/// Test tokens.
+#[test]
+fn enable_disable_btc_tokens_flow_test() {}
