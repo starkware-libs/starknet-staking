@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 from io import BufferedReader
 from re import search
 from argparse import ArgumentParser, Namespace
