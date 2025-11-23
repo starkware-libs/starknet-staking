@@ -39,10 +39,11 @@ use staking::staking::interface::{
     IStakingConsensusDispatcher, IStakingConsensusSafeDispatcher, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     IStakingMigrationSafeDispatcher, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
-    IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
-    IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
-    IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+    IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingRewardsManagerDispatcher,
+    IStakingRewardsManagerDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
+    IStakingTokenManagerDispatcher, IStakingTokenManagerDispatcherTrait,
+    IStakingTokenManagerSafeDispatcher, IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1,
+    StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::{
     EpochInfo, EpochInfoTrait, NormalizedAmount, StakerVersion, StakerVersionTrait,
@@ -289,6 +290,14 @@ pub(crate) impl StakingImpl of StakingTrait {
         self: StakingState,
     ) -> IStakingTokenManagerSafeDispatcher nopanic {
         IStakingTokenManagerSafeDispatcher { contract_address: self.address }
+    }
+
+    fn config_dispatcher(self: StakingState) -> IStakingConfigDispatcher nopanic {
+        IStakingConfigDispatcher { contract_address: self.address }
+    }
+
+    fn rewards_manager_dispatcher(self: StakingState) -> IStakingRewardsManagerDispatcher nopanic {
+        IStakingRewardsManagerDispatcher { contract_address: self.address }
     }
 
     fn is_v0(self: StakingState) -> bool {
@@ -1167,6 +1176,11 @@ pub(crate) impl SystemImpl of SystemTrait {
         }
     }
 
+    /// Advances the block number by the specified amount.
+    fn advance_block_number(self: SystemState, blocks: u64) {
+        advance_block_number_global(:blocks);
+    }
+
     /// Advances the block timestamp by the exit wait window and advance epoch.
     ///
     /// Note: This function is built on the assumption that exit window > `K` epochs.
@@ -1243,6 +1257,13 @@ pub(crate) impl SystemImpl of SystemTrait {
         }
             .deploy_btc_token(:decimals);
         btc_token
+    }
+
+    fn set_consensus_rewards_first_epoch(self: SystemState, epoch_id: Epoch) {
+        cheat_caller_address_once(
+            contract_address: self.staking.address, caller_address: self.staking.roles.app_governor,
+        );
+        self.staking.config_dispatcher().set_consensus_rewards_first_epoch(:epoch_id)
     }
 }
 
@@ -1553,6 +1574,13 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
             self.advance_k_epochs_and_attest(:staker);
             self.advance_epoch();
         }
+    }
+
+    fn update_rewards(self: SystemState, staker: Staker, disable_rewards: bool) {
+        self
+            .staking
+            .rewards_manager_dispatcher()
+            .update_rewards(staker_address: staker.staker.address, :disable_rewards)
     }
 }
 
