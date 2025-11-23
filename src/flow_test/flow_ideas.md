@@ -17,10 +17,6 @@
 
 ## v3 flag
 - update_rewards_from_attestation, update_rewards (not distribute), set_v3_epoch, update_rewards_from_attestation, update_rewards (not distribute), advance epoch to v3 epoch, update_rewards_from_attestation-panic, update_rewards-distribute, advance epoch, update_rewards_from_attestation-panic, update_rewards-distribute, advance epoch, update_rewards_from_attestation-panic, update_rewards with disable rewards-not distribute.
-- disable rewards with v3 off - no rewards, same block - panic
-- disable rewards with v3 on - no rewards, same block - panic
-- not disable rewards with v3 off - no rewards, same block - panic
-- not disable rewards with v3 on - rewards, same block - panic
 
 ## k=1 -> k=2 balances
 - staker with stake, upgrade, increase stake - before upgrade after 1 epoch, after 2 epochs (check also total stake)

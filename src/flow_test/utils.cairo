@@ -39,8 +39,9 @@ use staking::staking::interface::{
     IStakingConsensusDispatcher, IStakingConsensusSafeDispatcher, IStakingDispatcher,
     IStakingDispatcherTrait, IStakingMigrationDispatcher, IStakingMigrationDispatcherTrait,
     IStakingMigrationSafeDispatcher, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
-    IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingSafeDispatcher,
-    IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
+    IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingRewardsManagerDispatcher,
+    IStakingRewardsManagerDispatcherTrait, IStakingRewardsManagerSafeDispatcher,
+    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
     IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
     IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
 };
@@ -338,6 +339,16 @@ pub(crate) impl StakingImpl of StakingTrait {
         IStakingPoolSafeDispatcher { contract_address: self.address }
     }
 
+    fn rewards_manager_dispatcher(self: StakingState) -> IStakingRewardsManagerDispatcher nopanic {
+        IStakingRewardsManagerDispatcher { contract_address: self.address }
+    }
+
+    fn rewards_manager_safe_dispatcher(
+        self: StakingState,
+    ) -> IStakingRewardsManagerSafeDispatcher nopanic {
+        IStakingRewardsManagerSafeDispatcher { contract_address: self.address }
+    }
+
     fn set_roles(self: StakingState) {
         set_account_as_upgrade_governor(
             contract: self.address,
@@ -554,6 +565,14 @@ pub(crate) impl StakingImpl of StakingTrait {
             contract_address: self.address, caller_address: self.roles.token_admin,
         );
         self.safe_token_manager_dispatcher().enable_token(:token_address)
+    }
+
+    fn set_consensus_rewards_first_epoch(self: StakingState, epoch_id: Epoch) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.app_governor,
+        );
+        let config_dispatcher = IStakingConfigDispatcher { contract_address: self.address };
+        config_dispatcher.set_consensus_rewards_first_epoch(:epoch_id);
     }
 }
 
@@ -1553,6 +1572,13 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
             self.advance_k_epochs_and_attest(:staker);
             self.advance_epoch();
         }
+    }
+
+    fn update_rewards(self: SystemState, staker: Staker, disable_rewards: bool) {
+        self
+            .staking
+            .rewards_manager_dispatcher()
+            .update_rewards(staker_address: staker.staker.address, :disable_rewards);
     }
 }
 
