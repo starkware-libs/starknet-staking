@@ -13,6 +13,7 @@
 - disable_rewards = true, advance block, disable_rewards = false, advance block, disable_rewards = true, test rewards.
 - update rewards for some different blocks in the same epoch, test rewards of pool member.
 - staker change balance, attest, change balance, attest, set_v3, change balance, update_rewards, change_balance, update_rewards, test rewards.
+- with member from previous versions.
 
 ## v3 flag
 - update_rewards_from_attestation, update_rewards (not distribute), set_v3_epoch, update_rewards_from_attestation, update_rewards (not distribute), advance epoch to v3 epoch, update_rewards_from_attestation-panic, update_rewards-distribute, advance epoch, update_rewards_from_attestation-panic, update_rewards-distribute, advance epoch, update_rewards_from_attestation-panic, update_rewards with disable rewards-not distribute.
