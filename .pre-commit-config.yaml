@@ -13,3 +13,10 @@ repos:
         language: system
         pass_filenames: false
         stages: [commit]
+      - id: scarb-toml-url-lock
+        name: forbid Scarb.toml rpc url change
+        entry: scripts/check_scarb_url_lock.py
+        language: system
+        pass_filenames: false
+        files: ^Scarb\.toml$
+        stages: [commit]
