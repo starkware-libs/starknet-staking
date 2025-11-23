@@ -3,7 +3,7 @@ use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
 use snforge_std::{Token, TokenImpl, get_class_hash, start_cheat_block_number_global};
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
-use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
+use staking::constants::{ALPHA, ALPHA_DENOMINATOR, K, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::errors::{GenericError, InternalError};
 use staking::flow_test::utils::MainnetClassHashes::{
     MAINNET_POOL_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1,
@@ -35,7 +35,8 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
-    calculate_staker_strk_rewards_v2, calculate_strk_pool_rewards_v2,
+    calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_balances_v3,
+    calculate_strk_pool_rewards_v2, calculate_strk_pool_rewards_v3,
     calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
     declare_pool_contract, declare_pool_eic_contract, declare_staking_contract,
     load_from_simple_map, load_one_felt, strk_pool_update_rewards_v0, to_amount_18_decimals,
@@ -7538,5 +7539,423 @@ pub(crate) impl DelegatorRewardsMigrationSecondRegularCaseFlowImpl of MultiVersi
         let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
         assert_eq!(unclaimed_rewards, expected_rewards);
         assert_eq!(actual_rewards, expected_rewards);
+    }
+}
+
+/// Flow:
+/// Delegator enter in V2.
+/// Some attestations.
+/// Upgrade.
+/// Delegator change balance.
+/// Attest in same epoch and epoch + K.
+/// Set consensus epoch.
+/// Delegator change balance.
+/// Attest in same epoch.
+/// Advance K epochs.
+/// Some update_rewards.
+/// Test rewards of the delegator.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorRewardsAttestationConsensusFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) unclaimed_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorRewardsAttestationConsensusFlowImpl of FlowTrait<
+    DelegatorRewardsAttestationConsensusFlow,
+> {
+    fn setup_v2(ref self: DelegatorRewardsAttestationConsensusFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 4 * amount);
+        system.delegate(:delegator, :pool, :amount);
+
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_non_zero());
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.unclaimed_rewards = Option::Some(unclaimed_rewards);
+    }
+    fn test(self: DelegatorRewardsAttestationConsensusFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut unclaimed_rewards = self.unclaimed_rewards.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let stake_amount = system.staker_info_v1(:staker).amount_own;
+        let mut pool_balance = system.pool_member_info_v1(:delegator, :pool).amount;
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.advance_block_custom_and_attest(:staker, stake: stake_amount + pool_balance);
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs_and_attest(:staker);
+        pool_balance += pool_balance;
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system
+            .staking
+            .set_consensus_rewards_first_epoch(
+                epoch_id: system.staking.get_current_epoch() + K.into(),
+            );
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.advance_block_custom_and_attest(:staker, stake: stake_amount + pool_balance);
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs();
+        system.update_rewards(:staker, disable_rewards: false);
+        system.advance_block_number(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        system.advance_block_number(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        let expected_rewards = calculate_strk_pool_rewards_v3(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += 3 * expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(actual_rewards, unclaimed_rewards);
+    }
+}
+
+
+/// Flow:
+/// Delegator enter in V2.
+/// Delegator change balance in V2
+/// Some attestations.
+/// Upgrade.
+/// Delegator change balance.
+/// Attest in same epoch and epoch + K.
+/// Set consensus epoch.
+/// Delegator change balance.
+/// Attest in same epoch.
+/// Advance K epochs.
+/// Some update_rewards.
+/// Test rewards of the delegator.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorChangeBalanceRewardsAttestationConsensusFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) unclaimed_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorChangeBalanceRewardsAttestationConsensusFlowImpl of FlowTrait<
+    DelegatorChangeBalanceRewardsAttestationConsensusFlow,
+> {
+    fn setup_v2(
+        ref self: DelegatorChangeBalanceRewardsAttestationConsensusFlow, ref system: SystemState,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 4 * amount);
+        system.delegate(:delegator, :pool, amount: amount / 2);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount / 4);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount / 4);
+
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_non_zero());
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.unclaimed_rewards = Option::Some(unclaimed_rewards);
+    }
+    fn test(self: DelegatorChangeBalanceRewardsAttestationConsensusFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut unclaimed_rewards = self.unclaimed_rewards.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let stake_amount = system.staker_info_v1(:staker).amount_own;
+        let mut pool_balance = system.pool_member_info_v1(:delegator, :pool).amount;
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.advance_block_custom_and_attest(:staker, stake: stake_amount + pool_balance);
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs_and_attest(:staker);
+        pool_balance += pool_balance;
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system
+            .staking
+            .set_consensus_rewards_first_epoch(
+                epoch_id: system.staking.get_current_epoch() + K.into(),
+            );
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.advance_block_custom_and_attest(:staker, stake: stake_amount + pool_balance);
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs();
+        system.update_rewards(:staker, disable_rewards: false);
+        system.advance_block_number(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        system.advance_block_number(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        let expected_rewards = calculate_strk_pool_rewards_v3(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += 3 * expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(actual_rewards, unclaimed_rewards);
+    }
+}
+
+/// Flow:
+/// Delegator enter in V2.
+/// Some attestations.
+/// Upgrade.
+/// Start consensus rewards.
+/// Delegator change balance.
+/// Some update_rewards (before and after balance change).
+/// Test rewards of the delegator.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorBeforeUpgradeRewardsConsensusFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) unclaimed_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorBeforeUpgradeRewardsConsensusFlowImpl of FlowTrait<
+    DelegatorBeforeUpgradeRewardsConsensusFlow,
+> {
+    fn setup_v2(ref self: DelegatorBeforeUpgradeRewardsConsensusFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 4 * amount);
+        system.delegate(:delegator, :pool, :amount);
+
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_non_zero());
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.unclaimed_rewards = Option::Some(unclaimed_rewards);
+    }
+    fn test(self: DelegatorBeforeUpgradeRewardsConsensusFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut unclaimed_rewards = self.unclaimed_rewards.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let staker_info = system.staker_info_v1(:staker);
+        let stake_amount = staker_info.amount_own;
+        let commission = staker_info.pool_info.unwrap().commission;
+        let mut pool_balance = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.start_consensus_rewards();
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.update_rewards(:staker, disable_rewards: false);
+        let (_, expected_rewards) = calculate_staker_strk_rewards_with_balances_v3(
+            amount_own: stake_amount,
+            pool_amount: pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs();
+        system.update_rewards(:staker, disable_rewards: false);
+        system.advance_block_number(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        system.advance_block_number(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        let expected_rewards = calculate_strk_pool_rewards_v3(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += 3 * expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(actual_rewards, unclaimed_rewards);
+    }
+}
+
+
+/// Flow:
+/// Delegator enter in V2.
+/// Delegator change balance in V2.
+/// Some attestations.
+/// Upgrade.
+/// Start consensus rewards.
+/// Delegator change balance.
+/// Some update_rewards (before and after balance change).
+/// Test rewards of the delegator.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) unclaimed_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlowImpl of FlowTrait<
+    DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlow,
+> {
+    fn setup_v2(
+        ref self: DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlow, ref system: SystemState,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 4 * amount);
+        system.delegate(:delegator, :pool, amount: amount / 2);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount / 4);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount / 4);
+
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_non_zero());
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.unclaimed_rewards = Option::Some(unclaimed_rewards);
+    }
+    fn test(
+        self: DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlow, ref system: SystemState,
+    ) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut unclaimed_rewards = self.unclaimed_rewards.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let staker_info = system.staker_info_v1(:staker);
+        let stake_amount = staker_info.amount_own;
+        let commission = staker_info.pool_info.unwrap().commission;
+        let mut pool_balance = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.start_consensus_rewards();
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.update_rewards(:staker, disable_rewards: false);
+        let (_, expected_rewards) = calculate_staker_strk_rewards_with_balances_v3(
+            amount_own: stake_amount,
+            pool_amount: pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs();
+        system.update_rewards(:staker, disable_rewards: false);
+        system.advance_block_number(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        system.advance_block_number(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        let expected_rewards = calculate_strk_pool_rewards_v3(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += 3 * expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(actual_rewards, unclaimed_rewards);
     }
 }

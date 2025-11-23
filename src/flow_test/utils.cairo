@@ -1186,6 +1186,11 @@ pub(crate) impl SystemImpl of SystemTrait {
         }
     }
 
+    /// Advances the block number by the specified amount.
+    fn advance_block_number(self: SystemState, blocks: u64) {
+        advance_block_number_global(:blocks);
+    }
+
     /// Advances the block timestamp by the exit wait window and advance epoch.
     ///
     /// Note: This function is built on the assumption that exit window > `K` epochs.
