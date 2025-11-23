@@ -1,9 +1,9 @@
 use ReleaseVersion::{V0, V1, V2};
 use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
-use snforge_std::{TokenImpl, get_class_hash, start_cheat_block_number_global};
+use snforge_std::{Token, TokenImpl, get_class_hash, start_cheat_block_number_global};
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
-use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS};
+use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::errors::{GenericError, InternalError};
 use staking::flow_test::utils::MainnetClassHashes::{
     MAINNET_POOL_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1,
@@ -7061,5 +7061,85 @@ pub(crate) impl GetStakersAfterUpgradeFlowImpl of FlowTrait<GetStakersAfterUpgra
         let epoch_id = staking.get_current_epoch();
         let stakers = staking_consensus.get_stakers(:epoch_id);
         assert!(stakers == expected_stakers);
+    }
+}
+
+/// Flow:
+/// Add tokens A and B
+/// Enable token B
+/// Advance epoch
+/// Enable token A, disable token B
+/// Upgrade to V3
+/// Test tokens
+/// Advance epoch
+/// Test tokens
+/// Disable token A, enable token B
+/// Test tokens
+/// Advance epoch
+/// Test tokens
+/// Advance epoch
+/// Test tokens
+#[derive(Drop, Copy)]
+pub(crate) struct ToggleTokensBeforeAfterUpgradeFlow {
+    pub(crate) token_a: Option<Token>,
+    pub(crate) token_b: Option<Token>,
+}
+pub(crate) impl ToggleTokensBeforeAfterUpgradeFlowImpl of FlowTrait<
+    ToggleTokensBeforeAfterUpgradeFlow,
+> {
+    fn setup_v2(ref self: ToggleTokensBeforeAfterUpgradeFlow, ref system: SystemState) {
+        let token_a = system.deploy_new_btc_token(name: "TOKEN_A", decimals: TEST_BTC_DECIMALS);
+        let token_b = system.deploy_new_btc_token(name: "TOKEN_B", decimals: TEST_BTC_DECIMALS);
+        system.staking.add_token(token_address: token_a.contract_address());
+        system.staking.add_token(token_address: token_b.contract_address());
+        system.staking.enable_token(token_address: token_b.contract_address());
+        system.advance_epoch();
+
+        system.staking.disable_token(token_address: token_b.contract_address());
+        system.staking.enable_token(token_address: token_a.contract_address());
+
+        self.token_a = Option::Some(token_a);
+        self.token_b = Option::Some(token_b);
+    }
+
+    fn test(self: ToggleTokensBeforeAfterUpgradeFlow, ref system: SystemState) {
+        let token_a = self.token_a.unwrap();
+        let token_b = self.token_b.unwrap();
+        let tokens = system.staking.dispatcher().get_tokens();
+        let expected_tokens = array![
+            (STRK_TOKEN_ADDRESS, true), (system.btc_token.contract_address(), true),
+            (token_a.contract_address(), false), (token_b.contract_address(), true),
+        ]
+            .span();
+        assert!(tokens == expected_tokens);
+
+        system.advance_epoch();
+        let tokens = system.staking.dispatcher().get_tokens();
+        let expected_tokens = array![
+            (STRK_TOKEN_ADDRESS, true), (system.btc_token.contract_address(), true),
+            (token_a.contract_address(), true), (token_b.contract_address(), false),
+        ]
+            .span();
+        assert!(tokens == expected_tokens);
+
+        system.staking.disable_token(token_address: token_a.contract_address());
+        system.staking.enable_token(token_address: token_b.contract_address());
+        let tokens = system.staking.dispatcher().get_tokens();
+        assert!(tokens == expected_tokens);
+
+        // Test after 1 epoch.
+        system.advance_epoch();
+        let tokens = system.staking.dispatcher().get_tokens();
+        assert!(tokens == expected_tokens);
+
+        // Test after 2 epochs.
+        system.advance_epoch();
+        let tokens = system.staking.dispatcher().get_tokens();
+        let expected_tokens = array![
+            (STRK_TOKEN_ADDRESS, true), (system.btc_token.contract_address(), true),
+            (token_a.contract_address(), false), (token_b.contract_address(), true),
+        ]
+            .span();
+        assert!(tokens == expected_tokens);
     }
 }
