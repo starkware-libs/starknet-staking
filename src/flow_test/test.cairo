@@ -1,6 +1,6 @@
 use core::num::traits::Zero;
 use snforge_std::TokenImpl;
-use staking::constants::STRK_IN_FRIS;
+use staking::constants::{K, STRK_IN_FRIS};
 use staking::flow_test::flows;
 use staking::flow_test::utils::{
     RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemStakerTrait,
@@ -9,7 +9,11 @@ use staking::flow_test::utils::{
 use staking::pool::pool::Pool;
 use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::utils::compute_rewards_rounded_down;
-use staking::staking::interface::{IStakingConsensusDispatcherTrait, IStakingDispatcherTrait};
+use staking::staking::errors::Error as StakingError;
+use staking::staking::interface::{
+    IStakingConsensusDispatcherTrait, IStakingDispatcherTrait,
+    IStakingRewardsManagerSafeDispatcherTrait,
+};
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
@@ -17,14 +21,17 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_staker_btc_pool_rewards_v2,
-    calculate_staker_strk_rewards_with_balances_v2,
+    calculate_staker_strk_rewards_with_balances_v2, calculate_staker_strk_rewards_with_balances_v3,
     calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
     custom_decimals_token, deploy_mock_erc20_decimals_contract,
 };
+use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::Time;
-use starkware_utils_testing::test_utils::cheat_caller_address_once;
+use starkware_utils_testing::test_utils::{
+    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
+};
 use crate::types::Amount;
 
 #[test]
@@ -2618,4 +2625,131 @@ fn get_stakers_staking_power_100_flow_test() {
     let expected_stakers = array![(staker.staker.address, STAKING_POWER_BASE_VALUE, Option::None)]
         .span();
     assert!(stakers == expected_stakers);
+}
+
+/// Flow:
+/// Staker stake
+/// Disable rewards is true with consensus off - test no rewards
+/// Attempt again same block - panic
+/// Disable rewards is false with consensus off - test no rewards
+/// Attempt again same block - panic
+/// Enable consensus rewards (in K epochs)
+/// Disable rewards is true before consensus epoch - test no rewards
+/// Attempt again same block - panic
+/// Disable rewards is false before consensus epoch - test no rewards
+/// Attempt again same block - panic
+/// Disable rewards is true with consensus on - test no rewards
+/// Attempt again same block - panic
+/// Disable rewards is false with consensus on - test rewards
+/// Attempt again same block - panic
+#[test]
+#[feature("safe_dispatcher")]
+fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+    system.advance_k_epochs();
+
+    // Disable rewards = true with consensus off - no rewards
+    system.update_rewards(:staker, disable_rewards: true);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards.is_zero());
+
+    // Attempt again same block - panic
+    let result = system
+        .staking
+        .rewards_manager_safe_dispatcher()
+        .update_rewards(staker_address: staker.staker.address, disable_rewards: true);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
+    );
+    advance_block_number_global(blocks: 1);
+
+    // Disable rewards = false with consensus off - no rewards
+    system.update_rewards(:staker, disable_rewards: false);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards.is_zero());
+
+    // Attempt again same block - panic
+    let result = system
+        .staking
+        .rewards_manager_safe_dispatcher()
+        .update_rewards(staker_address: staker.staker.address, disable_rewards: false);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
+    );
+    advance_block_number_global(blocks: 1);
+
+    // Enable consensus rewards
+    system
+        .set_consensus_rewards_first_epoch(epoch_id: system.staking.get_current_epoch() + K.into());
+
+    // Disable rewards = true before consensus epoch - no rewards
+    system.update_rewards(:staker, disable_rewards: true);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards.is_zero());
+
+    // Attempt again same block - panic
+    let result = system
+        .staking
+        .rewards_manager_safe_dispatcher()
+        .update_rewards(staker_address: staker.staker.address, disable_rewards: true);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
+    );
+    advance_block_number_global(blocks: 1);
+
+    // Disable rewards = false before consensus epoch - no rewards
+    system.update_rewards(:staker, disable_rewards: false);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards.is_zero());
+
+    // Attempt again same block - panic
+    let result = system
+        .staking
+        .rewards_manager_safe_dispatcher()
+        .update_rewards(staker_address: staker.staker.address, disable_rewards: false);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
+    );
+    system.advance_k_epochs();
+
+    // Disable rewards = true with consensus on - no rewards
+    system.update_rewards(:staker, disable_rewards: true);
+    let rewards = system.staker_claim_rewards(:staker);
+    assert!(rewards.is_zero());
+
+    // Attempt again same block - panic
+    let result = system
+        .staking
+        .rewards_manager_safe_dispatcher()
+        .update_rewards(staker_address: staker.staker.address, disable_rewards: true);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
+    );
+    advance_block_number_global(blocks: 1);
+
+    // Disable rewards = false with consensus on - rewards
+    system.update_rewards(:staker, disable_rewards: false);
+    let rewards = system.staker_claim_rewards(:staker);
+    let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+    );
+    assert!(rewards == expected_rewards);
+
+    // Attempt again same block - panic
+    let result = system
+        .staking
+        .rewards_manager_safe_dispatcher()
+        .update_rewards(staker_address: staker.staker.address, disable_rewards: false);
+    assert_panic_with_error(
+        :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
+    );
 }
