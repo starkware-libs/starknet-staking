@@ -7,4 +7,4 @@ repos:
         language: system
         pass_filenames: false
         files: ^Scarb\.toml$
-        stages: [commit]
+        stages: [pre-commit]
