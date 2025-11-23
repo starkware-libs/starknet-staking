@@ -443,3 +443,12 @@ fn get_stakers_after_upgrade_flow_test() {
     let mut flow = flows::GetStakersAfterUpgradeFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn toggle_tokens_before_after_upgrade_flow_test() {
+    let mut flow = flows::ToggleTokensBeforeAfterUpgradeFlow {
+        token_a: Option::None, token_b: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
