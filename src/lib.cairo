@@ -5,8 +5,8 @@ pub mod errors;
 pub(crate) mod event_test_utils;
 #[cfg(test)]
 mod flow_test;
-pub mod minting_curve;
 pub mod pool;
+pub mod minting_curve;
 pub mod reward_supplier;
 pub mod rewards_service;
 pub mod staking;
