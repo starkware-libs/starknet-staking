@@ -12,3 +12,42 @@ jobs:
 
   check_formatting:
     uses: ./.github/workflows/check_formatting.yaml
+
+  notify-slack:
+    needs: test
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack Notification
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+
+          payload: |
+            text: "CI failed on ${{ github.ref_name }}"   # fallback text
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: ":rotating_light: *CI FAILED on `${{ github.ref_name }}`*"
+
+              - type: "section"
+                fields:
+                  - type: "mrkdwn"
+                    text: "*Workflow:*\n`${{ github.workflow }}`"
+                  - type: "mrkdwn"
+                    text: "*Job:*\n`${{ github.job }}`"
+                  - type: "mrkdwn"
+                    text: "*Commit:*\n`${{ github.sha }}`"
+                  - type: "mrkdwn"
+                    text: "*Author:*\n`${{ github.actor }}`"
+
+              - type: "actions"
+                elements:
+                  - type: "button"
+                    text:
+                      type: "plain_text"
+                      text: "View run"
+                      emoji: true
+                    url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
