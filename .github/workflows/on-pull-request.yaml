@@ -12,3 +12,24 @@ jobs:
 
   check_formatting:
     uses: ./.github/workflows/check_formatting.yaml
+
+  notify-slack:
+    needs: test
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack Notification
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": ":rotating_light: *CI FAILED on main!*",
+              "attachments": [
+                {
+                  "color": "danger",
+                  "text": "Workflow: ${{ github.workflow }}\nJob: ${{ github.job }}\nCommit: ${{ github.sha }}\nAuthor: ${{ github.actor }}"
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
