@@ -1,6 +1,6 @@
 use core::num::traits::Zero;
 use snforge_std::TokenImpl;
-use staking::constants::{K, STRK_IN_FRIS};
+use staking::constants::{K, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::flow_test::flows;
 use staking::flow_test::utils::{
     RewardSupplierTrait, StakingTrait, SystemConfigTrait, SystemDelegatorTrait, SystemStakerTrait,
@@ -2934,24 +2934,98 @@ fn update_rewards_strk_pool_flow_test() {
 }
 
 /// Flow:
-/// 2 BTC tokens (A and B) added.
-/// Test tokens.
-/// Enable token A.
-/// Test tokens.
-/// Advance epoch.
-/// Enable token B.
-/// Test tokens.
-/// Advance epoch.
-/// Test tokens.
-/// Disable token A.
-/// Test tokens.
-/// Advance epoch.
-/// Test tokens.
-/// Disable token B.
-/// Test tokens.
-/// Advance epoch.
-/// Test tokens.
-/// Advance epoch.
-/// Test tokens.
+/// 2 BTC tokens (A and B) added - test tokens
+/// Enable token A - test tokens
+/// Advance epoch - test tokens
+/// Enable token B - test tokens
+/// Advance epoch - test tokens
+/// Disable token A - test tokens
+/// Advance epoch - test tokens
+/// Disable token B - test tokens
+/// Advance epoch - test tokens
+/// Advance epoch - test tokens
 #[test]
-fn enable_disable_btc_tokens_flow_test() {}
+fn enable_disable_btc_tokens_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let default_btc_token = system.btc_token.contract_address();
+    let token_a = system.deploy_new_btc_token(name: "TOKEN_A", decimals: 8);
+    let token_b = system.deploy_new_btc_token(name: "TOKEN_B", decimals: 18);
+    system.advance_k_epochs();
+
+    // Add - test tokens
+    system.staking.add_token(token_address: token_a.contract_address());
+    system.staking.add_token(token_address: token_b.contract_address());
+    let tokens = system.staking.dispatcher().get_tokens();
+    let expected_tokens = [
+        (STRK_TOKEN_ADDRESS, true), (default_btc_token, true), (token_a.contract_address(), false),
+        (token_b.contract_address(), false),
+    ]
+        .span();
+    assert!(tokens == expected_tokens);
+
+    // Enable token A - test tokens
+    system.staking.enable_token(token_address: token_a.contract_address());
+    let tokens = system.staking.dispatcher().get_tokens();
+    assert!(tokens == expected_tokens);
+
+    // Advance epoch - test tokens
+    system.advance_epoch();
+    let tokens = system.staking.dispatcher().get_tokens();
+    assert!(tokens == expected_tokens);
+
+    // Enable token B - test tokens
+    system.staking.enable_token(token_address: token_b.contract_address());
+    let tokens = system.staking.dispatcher().get_tokens();
+    assert!(tokens == expected_tokens);
+
+    // Advance epoch - test tokens
+    system.advance_epoch();
+    let tokens = system.staking.dispatcher().get_tokens();
+    let expected_tokens = [
+        (STRK_TOKEN_ADDRESS, true), (default_btc_token, true), (token_a.contract_address(), true),
+        (token_b.contract_address(), false),
+    ]
+        .span();
+    assert!(tokens == expected_tokens);
+
+    // Disable token A - test tokens
+    system.staking.disable_token(token_address: token_a.contract_address());
+    let tokens = system.staking.dispatcher().get_tokens();
+    assert!(tokens == expected_tokens);
+
+    // Advance epoch - test tokens
+    system.advance_epoch();
+    let tokens = system.staking.dispatcher().get_tokens();
+    let expected_tokens = [
+        (STRK_TOKEN_ADDRESS, true), (default_btc_token, true), (token_a.contract_address(), true),
+        (token_b.contract_address(), true),
+    ]
+        .span();
+    assert!(tokens == expected_tokens);
+
+    // Disable token B - test tokens
+    system.staking.disable_token(token_address: token_b.contract_address());
+    let tokens = system.staking.dispatcher().get_tokens();
+    assert!(tokens == expected_tokens);
+
+    // Advance epoch - test tokens
+    system.advance_epoch();
+    let tokens = system.staking.dispatcher().get_tokens();
+    let expected_tokens = [
+        (STRK_TOKEN_ADDRESS, true), (default_btc_token, true), (token_a.contract_address(), false),
+        (token_b.contract_address(), true),
+    ]
+        .span();
+    assert!(tokens == expected_tokens);
+
+    // Advance epoch - test tokens
+    system.advance_epoch();
+    let tokens = system.staking.dispatcher().get_tokens();
+    let expected_tokens = [
+        (STRK_TOKEN_ADDRESS, true), (default_btc_token, true), (token_a.contract_address(), false),
+        (token_b.contract_address(), false),
+    ]
+        .span();
+    assert!(tokens == expected_tokens);
+}
