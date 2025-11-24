@@ -9,3 +9,12 @@ jobs:
   test:
     uses: ./.github/workflows/test.yaml
     secrets: inherit
+
+  notify-slack:
+    needs: test
+    if: failure()
+    uses: ./.github/workflows/notify-slack.yaml
+    with:
+      context_title: "main branch"
+      failed_job_name: "test"
+    secrets: inherit
