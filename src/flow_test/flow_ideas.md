@@ -58,6 +58,3 @@ more ideas:
 - Member from V0, change balance at V1, no action at V2, test curr balance
 - Member from V2, change balance, upgrade, test curr balance
 - Cover all ifs with migration from: V0, V1, V2.
-
-## k=1 -> k=2 token
-- enable token A and disable token B, next epoch upgrade, test views and rewards.
