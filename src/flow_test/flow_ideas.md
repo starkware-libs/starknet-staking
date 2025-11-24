@@ -91,5 +91,4 @@ more ideas:
 ## k=1 -> k=2 token
 - enable token, update rewards, advance epoch, update rewards, advance epoch, update rewards - token does not get rewards until after 2 epochs
 - same as above with disable (can be implemented together as one test)
-- token A enabled, next epoch token B enabled, next epoch token A disabled, next epoch token B disabled
 - enable token A and disable token B, next epoch upgrade, test views and rewards.
