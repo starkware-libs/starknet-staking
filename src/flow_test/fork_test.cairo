@@ -497,3 +497,19 @@ fn delegator_v0_rewards_v1_change_balance_before_rewards_flow_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn enable_disable_token_before_after_upgrade_flow_test() {
+    let mut flow = flows::EnableDisableTokenBeforeAfterUpgradeFlow {
+        token_a: Option::None,
+        token_b: Option::None,
+        staker: Option::None,
+        pool_a: Option::None,
+        pool_b: Option::None,
+        delegator_a: Option::None,
+        delegator_b: Option::None,
+        delegation_amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
