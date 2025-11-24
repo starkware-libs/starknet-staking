@@ -89,6 +89,4 @@ more ideas:
 - Cover all ifs with migration from: V0, V1, V2.
 
 ## k=1 -> k=2 token
-- enable token, update rewards, advance epoch, update rewards, advance epoch, update rewards - token does not get rewards until after 2 epochs
-- same as above with disable (can be implemented together as one test)
 - enable token A and disable token B, next epoch upgrade, test views and rewards.
