@@ -2096,7 +2096,7 @@ pub(crate) trait FlowTrait<TFlow, +Drop<TFlow>> {
 
 pub(crate) trait MultiVersionFlowTrait<TFlow, +Drop<TFlow>> {
     fn versions(self: TFlow) -> Span<ReleaseVersion>;
-    fn setup(ref self: TFlow, ref system: SystemState);
+    fn setup(ref self: TFlow, ref system: SystemState, version: ReleaseVersion);
     fn test(self: TFlow, ref system: SystemState, version: ReleaseVersion);
 }
 
@@ -2140,15 +2140,15 @@ pub(crate) fn test_multi_version_flow_mainnet<
 
         // Run setup in the requested version.
         if *version == ReleaseVersion::V0 {
-            flow.setup(ref :system);
+            flow.setup(ref :system, version: *version);
         }
         system.deploy_attestation_and_upgrade_contracts_implementation_v1();
         if *version == ReleaseVersion::V1 {
-            flow.setup(ref :system);
+            flow.setup(ref :system, version: *version);
         }
         system.upgrade_contracts_implementation_v2();
         if *version == ReleaseVersion::V2 {
-            flow.setup(ref :system);
+            flow.setup(ref :system, version: *version);
         }
         system.upgrade_contracts_implementation_v3();
 
