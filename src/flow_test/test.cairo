@@ -16,14 +16,16 @@ use staking::staking::interface::{
     IStakingConsensusDispatcherTrait, IStakingDispatcherTrait,
     IStakingRewardsManagerSafeDispatcherTrait,
 };
+use staking::staking::objects::NormalizedAmountTrait;
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
     TEST_MIN_BTC_FOR_REWARDS,
 };
 use staking::test_utils::{
-    StakingInitConfig, calculate_staker_btc_pool_rewards_v2,
-    calculate_staker_strk_rewards_with_balances_v2, calculate_staker_strk_rewards_with_balances_v3,
+    StakingInitConfig, calculate_staker_btc_pool_rewards_v2, calculate_staker_btc_pool_rewards_v3,
+    calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_balances_v2,
+    calculate_staker_strk_rewards_with_balances_v3,
     calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
     custom_decimals_token, deploy_mock_erc20_decimals_contract,
 };
@@ -3119,4 +3121,180 @@ fn staker_change_balance_twice_same_epoch_flow_test() {
     );
     assert!(expected_rewards.is_non_zero());
     assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+}
+
+/// Flow:
+/// Add tokens A and B
+/// Enable token B
+/// Advance K epochs
+/// Enable token A, disable token B
+/// Attest
+/// Advance epoch - test rewards only for token B
+/// Attest
+/// Advance epoch - test rewards only for token B
+/// Attest
+/// Advance epoch - test rewards only for token A
+/// Start consensus rewards
+/// Enable token B, disable token A
+/// update_rewards twice in the same epoch
+/// Advance epoch - test rewards only for token A
+/// update_rewards
+/// Advance epoch - test rewards only for token A
+/// update_rewards
+/// Advance epoch - test rewards only for token B
+#[test]
+fn update_rewards_token_enable_disable_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let token_a_decimals = 8;
+    let token_b_decimals = 18;
+    let token_a = system.deploy_new_btc_token(name: "Token A", decimals: token_a_decimals);
+    let token_b = system.deploy_new_btc_token(name: "Token B", decimals: token_b_decimals);
+    let staking_contract = system.staking.address;
+    let minting_curve_contract = system.minting_curve.address;
+
+    // Setup tokens
+    system.staking.add_token(token_address: token_a.contract_address());
+    system.staking.add_token(token_address: token_b.contract_address());
+    system.staking.enable_token(token_address: token_b.contract_address());
+
+    // Stake and delegate
+    let stake_amount = system.staking.get_min_stake();
+    let delegation_amount_a = BTC_8D_CONFIG.min_for_rewards;
+    let delegation_amount_b = BTC_18D_CONFIG.min_for_rewards;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    let pool_a = system.set_open_for_delegation(:staker, token_address: token_a.contract_address());
+    let pool_b = system.set_open_for_delegation(:staker, token_address: token_b.contract_address());
+    let delegator_a = system.new_btc_delegator(amount: delegation_amount_a, token: token_a);
+    let delegator_b = system.new_btc_delegator(amount: delegation_amount_b, token: token_b);
+    system
+        .delegate_btc(
+            delegator: delegator_a, pool: pool_a, amount: delegation_amount_a, token: token_a,
+        );
+    system
+        .delegate_btc(
+            delegator: delegator_b, pool: pool_b, amount: delegation_amount_b, token: token_b,
+        );
+    system.advance_k_epochs();
+
+    // Enable token A, disable token B
+    system.staking.enable_token(token_address: token_a.contract_address());
+    system.staking.disable_token(token_address: token_b.contract_address());
+
+    // Attest
+    system.advance_block_into_attestation_window(:staker);
+    system.attest(:staker);
+    system.advance_epoch();
+
+    // Calculate rewards
+    let staker_info = system.staker_info_v1(:staker);
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let delegator_a_rewards = system.delegator_claim_rewards(delegator: delegator_a, pool: pool_a);
+    let delegator_b_rewards = system.delegator_claim_rewards(delegator: delegator_b, pool: pool_b);
+    let (expected_staker_rewards, _) = calculate_staker_strk_rewards_v2(
+        :staker_info, :staking_contract, :minting_curve_contract,
+    );
+    assert!(expected_staker_rewards.is_non_zero());
+    let (commission_rewards, expected_delegator_rewards) = calculate_staker_btc_pool_rewards_v2(
+        pool_balance: delegation_amount_b,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: token_b.contract_address(),
+    );
+    assert!(commission_rewards.is_non_zero());
+    assert!(expected_delegator_rewards.is_non_zero());
+
+    // Test rewards
+    assert!(staker_rewards == expected_staker_rewards + commission_rewards);
+    assert!(delegator_a_rewards.is_zero());
+    assert!(delegator_b_rewards == expected_delegator_rewards);
+
+    // Attest - test rewards only for token B
+    system.advance_block_into_attestation_window(:staker);
+    system.attest(:staker);
+    system.advance_epoch();
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let delegator_a_rewards = system.delegator_claim_rewards(delegator: delegator_a, pool: pool_a);
+    let delegator_b_rewards = system.delegator_claim_rewards(delegator: delegator_b, pool: pool_b);
+    assert!(staker_rewards == expected_staker_rewards + commission_rewards);
+    assert!(delegator_a_rewards.is_zero());
+    // Same rewards because the delegation amount is the same (with different decimals).
+    assert!(delegator_b_rewards == expected_delegator_rewards);
+
+    // Attest - test rewards only for token A
+    system.advance_block_into_attestation_window(:staker);
+    system.attest(:staker);
+    system.advance_epoch();
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let delegator_a_rewards = system.delegator_claim_rewards(delegator: delegator_a, pool: pool_a);
+    let delegator_b_rewards = system.delegator_claim_rewards(delegator: delegator_b, pool: pool_b);
+    assert!(staker_rewards == expected_staker_rewards + commission_rewards);
+    assert!(delegator_a_rewards == expected_delegator_rewards);
+    assert!(delegator_b_rewards.is_zero());
+
+    // Start consensus rewards
+    system.start_consensus_rewards();
+
+    // Enable token B, disable token A
+    system.staking.enable_token(token_address: token_b.contract_address());
+    system.staking.disable_token(token_address: token_a.contract_address());
+
+    // Calculate rewards for consensus rewards - for single enabled token.
+    let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(expected_staker_rewards.is_non_zero());
+    let (commission_rewards, expected_delegator_rewards) = calculate_staker_btc_pool_rewards_v3(
+        normalized_pool_balance: NormalizedAmountTrait::from_native_amount(
+            amount: delegation_amount_a, decimals: token_a_decimals,
+        ),
+        normalized_staker_total_btc_balance: NormalizedAmountTrait::from_native_amount(
+            amount: delegation_amount_a, decimals: token_a_decimals,
+        ),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: token_a.contract_address(),
+    );
+    assert!(commission_rewards.is_non_zero());
+    assert!(expected_delegator_rewards.is_non_zero());
+
+    // update_rewards - test rewards only for token A
+    system.update_rewards(:staker, disable_rewards: false);
+    advance_block_number_global(blocks: 1);
+    system.update_rewards(:staker, disable_rewards: false);
+    system.advance_epoch();
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let delegator_a_rewards = system.delegator_claim_rewards(delegator: delegator_a, pool: pool_a);
+    let delegator_b_rewards = system.delegator_claim_rewards(delegator: delegator_b, pool: pool_b);
+    assert!(staker_rewards == expected_staker_rewards * 2 + commission_rewards * 2);
+    assert!(delegator_a_rewards == expected_delegator_rewards * 2);
+    assert!(delegator_b_rewards.is_zero());
+
+    // update_rewards - test rewards only for token A
+    system.update_rewards(:staker, disable_rewards: false);
+    system.advance_epoch();
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let delegator_a_rewards = system.delegator_claim_rewards(delegator: delegator_a, pool: pool_a);
+    let delegator_b_rewards = system.delegator_claim_rewards(delegator: delegator_b, pool: pool_b);
+    assert!(staker_rewards == expected_staker_rewards + commission_rewards);
+    assert!(delegator_a_rewards == expected_delegator_rewards);
+    assert!(delegator_b_rewards.is_zero());
+
+    // update_rewards - test rewards only for token B
+    system.update_rewards(:staker, disable_rewards: false);
+    system.advance_epoch();
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let delegator_a_rewards = system.delegator_claim_rewards(delegator: delegator_a, pool: pool_a);
+    let delegator_b_rewards = system.delegator_claim_rewards(delegator: delegator_b, pool: pool_b);
+    assert!(staker_rewards == expected_staker_rewards + commission_rewards);
+    assert!(delegator_a_rewards.is_zero());
+    assert!(delegator_b_rewards == expected_delegator_rewards);
 }
