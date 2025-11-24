@@ -7066,8 +7066,6 @@ pub(crate) impl GetStakersAfterUpgradeFlowImpl of FlowTrait<GetStakersAfterUpgra
 
 /// Flow:
 /// Add tokens A and B
-/// Enable token B
-/// Advance epoch
 /// Enable token A, disable token B
 /// Upgrade to V3 - test tokens
 /// Advance epoch - test tokens
