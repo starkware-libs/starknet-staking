@@ -3029,3 +3029,8 @@ fn enable_disable_btc_tokens_flow_test() {
         .span();
     assert!(tokens == expected_tokens);
 }
+
+#[test]
+fn test_test() {
+    panic!("test");
+}

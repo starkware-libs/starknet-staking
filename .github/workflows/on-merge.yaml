@@ -9,3 +9,27 @@ jobs:
   test:
     uses: ./.github/workflows/test.yaml
     secrets: inherit
+
+  determine-failed-job:
+    needs: test
+    if: failure()
+    runs-on: ubuntu-latest
+    outputs:
+      job_name: ${{ steps.set-job.outputs.job_name }}
+    steps:
+      - name: Determine failed job
+        id: set-job
+        run: |
+          if [ "${{ needs.test.result }}" == "failure" ]; then
+            echo "job_name=test" >> $GITHUB_OUTPUT
+          fi
+
+  notify-slack:
+    needs: [test, determine-failed-job]
+    if: failure()
+    uses: ./.github/workflows/notify-slack.yaml
+    with:
+      context_title: "main branch"
+      failed_job_name: ${{ needs.determine-failed-job.outputs.job_name }}
+      workflow_run_id: ${{ github.run_id }}
+    secrets: inherit

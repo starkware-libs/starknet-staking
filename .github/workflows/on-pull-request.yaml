@@ -12,3 +12,29 @@ jobs:
 
   check_formatting:
     uses: ./.github/workflows/check_formatting.yaml
+
+  determine-failed-job:
+    needs: [test, check_formatting]
+    if: failure()
+    runs-on: ubuntu-latest
+    outputs:
+      job_name: ${{ steps.set-job.outputs.job_name }}
+    steps:
+      - name: Determine failed job
+        id: set-job
+        run: |
+          if [ "${{ needs.test.result }}" == "failure" ]; then
+            echo "job_name=test" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.check_formatting.result }}" == "failure" ]; then
+            echo "job_name=check_formatting" >> $GITHUB_OUTPUT
+          fi
+
+  notify-slack:
+    needs: [test, check_formatting, determine-failed-job]
+    if: failure()
+    uses: ./.github/workflows/notify-slack.yaml
+    with:
+      context_title: "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+      failed_job_name: ${{ needs.determine-failed-job.outputs.job_name }}
+      workflow_run_id: ${{ github.run_id }}
+    secrets: inherit
