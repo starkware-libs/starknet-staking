@@ -1263,6 +1263,12 @@ pub(crate) impl SystemImpl of SystemTrait {
             .deploy_btc_token(:decimals);
         btc_token
     }
+
+    fn start_consensus_rewards(self: SystemState) {
+        let epoch_id = self.staking.get_current_epoch() + K.into();
+        self.staking.set_consensus_rewards_first_epoch(:epoch_id);
+        self.advance_k_epochs();
+    }
 }
 
 #[generate_trait]
