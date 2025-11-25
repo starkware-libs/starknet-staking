@@ -545,3 +545,20 @@ fn delegator_change_balance_before_upgrade_rewards_consensus_flow_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn balances_delay_flow_test() {
+    let mut flow = flows::BalancesDelayFlow {
+        staker: Option::None,
+        stake_amount: Option::None,
+        commission: Option::None,
+        strk_delegated_amount: Option::None,
+        btc_delegated_amount: Option::None,
+        strk_delegator: Option::None,
+        btc_delegator: Option::None,
+        strk_pool: Option::None,
+        btc_pool: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
