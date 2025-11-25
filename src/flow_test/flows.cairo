@@ -357,16 +357,15 @@ pub(crate) impl DelegatorIntentAfterStakerActionFlowImpl of FlowTrait<
         system.delegator_exit_intent(:delegator, :pool, amount: stake_amount / 2);
         system.delegator_exit_action(:delegator, :pool);
 
+        system.advance_epoch();
+        system.delegator_claim_rewards(:delegator, :pool);
+
         assert!(system.token.balance_of(account: system.staking.address).is_zero());
-        assert!(
-            system.token.balance_of(account: pool) > 100,
-        ); // TODO: Change this after implement calculate_rewards.
+        assert!(system.token.balance_of(account: pool) < 100);
         assert!(system.token.balance_of(account: staker.staker.address) == stake_amount * 2);
         assert!(system.token.balance_of(account: delegator.delegator.address) == stake_amount);
         assert!(system.token.balance_of(account: staker.reward.address).is_non_zero());
-        assert!(
-            system.token.balance_of(account: delegator.reward.address).is_zero(),
-        ); // TODO: Change this after implement calculate_rewards.
+        assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
         assert!(wide_abs_diff(system.reward_supplier.get_unclaimed_rewards(), STRK_IN_FRIS) < 100);
         assert!(
             initial_reward_supplier_balance == system
@@ -906,10 +905,9 @@ pub(crate) impl DelegatorUpdatedAfterStakerUpdateCommissionFlowImpl of FlowTrait
         assert!(system.token.balance_of(account: pool).is_non_zero());
 
         // Delegator claim_rewards.
+        system.advance_epoch();
         system.delegator_claim_rewards(:delegator, :pool);
-        assert!(
-            system.token.balance_of(account: delegator.reward.address) == Zero::zero(),
-        ); // TODO: Change this after implement calculate_rewards.
+        assert!(system.token.balance_of(account: delegator.reward.address).is_non_zero());
         system.advance_k_epochs_and_attest(:staker);
 
         system.delegator_exit_intent(:delegator, :pool, amount: delegated_amount);
