@@ -1,5 +1,0 @@
-pub mod Errors {
-    pub const OWNER_NOT_APP_GOVERNOR: felt252 = 'OWNER_NOT_APP_GOVERNOR';
-    pub const INVALID_BLOCK_NUMBER: felt252 = 'INVALID_BLOCK_NUMBER';
-    pub const INVALID_BLOCK_TIMESTAMP: felt252 = 'INVALID_BLOCK_TIMESTAMP';
-}
