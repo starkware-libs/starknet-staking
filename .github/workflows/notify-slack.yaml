@@ -1,0 +1,51 @@
+name: Notify Slack on Failure
+
+on:
+  workflow_call:
+    inputs:
+      context_title:
+        required: true
+        type: string
+        description: The context title (e.g., "PR #123: Title" or "main branch")
+      failed_job_name:
+        required: true
+        type: string
+        description: The name of the failed job
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: true
+
+jobs:
+  notify-slack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack Notification
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+
+          payload: |
+            text: "@channel CI failed on ${{ inputs.context_title }}"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "<!channel> :rotating_light: *CI FAILED on ${{ inputs.context_title }}*"
+
+              - type: "section"
+                fields:
+                  - type: "mrkdwn"
+                    text: "*Workflow:*\n`${{ github.workflow }}`"
+                  - type: "mrkdwn"
+                    text: "*Failed Job:*\n`${{ inputs.failed_job_name }}`"
+                  - type: "mrkdwn"
+                    text: "*Commit:*\n`${{ github.sha }}`"
+                  - type: "mrkdwn"
+                    text: "*Author:*\n`${{ github.actor }}`"
+
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View failed job run>"
+
