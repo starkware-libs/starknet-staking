@@ -583,3 +583,24 @@ fn staker_v1_change_balance_attest_flow_test() {
     let mut flow = flows::StakerV1ChangeBalanceAttestFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_find_sigma_zero_flow_test() {
+    let mut flow = flows::DelegatorV0FindSigmaZeroFlow {
+        pool: Option::None, delegator: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_rewards_v0_find_sigma_flow_test() {
+    let mut flow = flows::DelegatorRewardsV0FindSigmaFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
