@@ -27,7 +27,6 @@
 
 ## k=1 -> k=2 Migration Member
 - find sigma: Enter V0, change in V1, catch all ifs.
-- find sigma - cover all branches with member from V0.
 more ideas:
 - member from V1, pool gets rewards at V1, update balance at V1, update balance at V3, pool gets rewards at V3, test rewards.
 - member from V1, pool gets rewards at V1, pool gets rewards at V3, update balance at V3, test rewards.
