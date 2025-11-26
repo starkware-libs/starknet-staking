@@ -3029,3 +3029,151 @@ fn enable_disable_btc_tokens_flow_test() {
         .span();
     assert!(tokens == expected_tokens);
 }
+
+/// Flow:
+/// Delegate
+/// update_rewards
+/// Claim rewards - Zero rewards
+/// Advance epoch
+/// Claim rewards - Zero rewards
+/// Advance epoch
+/// Claim rewards - Zero rewards
+#[test]
+fn delegate_claim_rewards_same_epoch_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.start_consensus_rewards();
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: stake_amount);
+    system.delegate(:delegator, :pool, amount: stake_amount);
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker).is_non_zero());
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+}
+
+/// Flow:
+/// Delegate
+/// Advance epoch
+/// update_rewards
+/// Claim rewards - Zero rewards
+/// Advance epoch
+/// Claim rewards - Zero rewards
+#[test]
+fn delegate_claim_rewards_next_epoch_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.start_consensus_rewards();
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: stake_amount);
+    system.delegate(:delegator, :pool, amount: stake_amount);
+    system.advance_epoch();
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker).is_non_zero());
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+}
+
+/// Flow:
+/// Delegate
+/// Advance K epochs
+/// update_rewards
+/// Claim rewards - Zero
+/// Advance epoch
+/// Claim rewards - Non zero
+/// Claim rewards - Zero
+/// Update rewards
+/// Advance block
+/// Claim rewards - Zero
+/// Advance epoch
+/// Claim rewards - Non zero
+#[test]
+fn delegate_claim_after_claim_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.start_consensus_rewards();
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: stake_amount);
+    system.delegate(:delegator, :pool, amount: stake_amount);
+    system.advance_k_epochs();
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker).is_non_zero());
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_non_zero());
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+    system.update_rewards(:staker, disable_rewards: false);
+    advance_block_number_global(blocks: 1);
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_non_zero());
+}
+
+
+/// Flow:
+/// Delegate
+/// Advance K epochs
+/// update_rewards
+/// Claim rewards - Zero
+/// Advance epoch
+/// update_rewards
+/// Advance block
+/// update_rewards
+/// Claim rewards - For prev epoch
+/// Advance epoch
+/// Claim rewards - For prev epoch
+/// Advance epoch
+/// Claim rewards - Zero
+#[test]
+fn delegate_claim_after_claim_with_rewards_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.start_consensus_rewards();
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: stake_amount);
+    system.delegate(:delegator, :pool, amount: stake_amount);
+    system.advance_k_epochs();
+    system.update_rewards(:staker, disable_rewards: false);
+    let (_, expected_rewards) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: stake_amount,
+        :commission,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+    );
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+    system.advance_epoch();
+    system.update_rewards(:staker, disable_rewards: false);
+    advance_block_number_global(blocks: 1);
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.delegator_claim_rewards(:delegator, :pool) == expected_rewards);
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, :pool) == 2 * expected_rewards);
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+}
+
