@@ -6620,6 +6620,101 @@ pub(crate) impl FindSigmaMigrationIdxIsOneFlowImpl of MultiVersionFlowTrait<
     }
 }
 
+/// Flow:
+/// Delegator from V0
+/// Test claim rewards with no rewards
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorV0FindSigmaZeroFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl DelegatorV0FindSigmaZeroFlowImpl of FlowTrait<DelegatorV0FindSigmaZeroFlow> {
+    fn setup(ref self: DelegatorV0FindSigmaZeroFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: amount);
+        system.delegate(:delegator, :pool, amount: amount);
+        self.delegator = Option::Some(delegator);
+        self.pool = Option::Some(pool);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+    fn test(self: DelegatorV0FindSigmaZeroFlow, ref system: SystemState) {
+        let pool = self.pool.unwrap();
+        let delegator = self.delegator.unwrap();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_zero());
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_zero());
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_zero());
+        let rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert!(rewards.is_zero());
+    }
+}
+
+/// Flow:
+/// Delegator from V0
+/// Gets rewards in V0
+/// Gets rewards in V3
+/// Test delegator rewards - cover find sigma cases.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorRewardsV0FindSigmaFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorRewardsV0FindSigmaFlowImpl of FlowTrait<DelegatorRewardsV0FindSigmaFlow> {
+    fn setup(ref self: DelegatorRewardsV0FindSigmaFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: amount);
+        system.delegate(:delegator, :pool, amount: amount);
+        self.staker = Option::Some(staker);
+        self.delegator = Option::Some(delegator);
+        self.pool = Option::Some(pool);
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        let one_week = Time::weeks(count: 1);
+        system.advance_time(time: one_week);
+        system.staking.update_global_index_if_needed();
+        self.expected_rewards = Option::Some(system.delegator_unclaimed_rewards(:delegator, :pool));
+    }
+    fn test(self: DelegatorRewardsV0FindSigmaFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let pool = self.pool.unwrap();
+        let delegator = self.delegator.unwrap();
+        let expected_rewards_v0 = self.expected_rewards.unwrap();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert_eq!(unclaimed_rewards, expected_rewards_v0);
+        system.advance_k_epochs_and_attest(:staker);
+        let expected_rewards = calculate_strk_pool_rewards_v2(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert_eq!(unclaimed_rewards, expected_rewards_v0);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert_eq!(unclaimed_rewards, expected_rewards_v0 + expected_rewards);
+        system.advance_k_epochs_and_attest(:staker);
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert_eq!(unclaimed_rewards, expected_rewards_v0 + expected_rewards);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert_eq!(unclaimed_rewards, expected_rewards_v0 + 2 * expected_rewards);
+    }
+}
 
 // TODO: Implement this flow test.
 // Stake
