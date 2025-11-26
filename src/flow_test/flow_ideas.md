@@ -23,8 +23,6 @@
 - delegate, advance epoch, delegate, advance epoch, claim rewards - only for the first delegation, advance epoch, claim rewards - for all
 - delegator claim after claim
 - delegator claim after claim when exists checkpoint with the current epoch of the first claim
-- staker change balance in each epoch (increase, intent, delegate increase, delegate intent, delegate exit) and attest in each epoch - test rewards (also some epochs with no balance change and some epochs with no attest)
-- staker has multiple pool with multiple delegator each, change balance (staker, strk delegate, btc delegate) and attest in many epochs and test rewards both staker and members
 - test staker claim rewards with more than one balance change in an epoch.
 - member enter, in the same epoch or one epoch after claim (balance is zero).
 
