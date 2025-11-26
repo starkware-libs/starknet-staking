@@ -29,9 +29,6 @@
 - member enter, in the same epoch or one epoch after claim (balance is zero).
 
 ## k=1 -> k=2 Migration Member
-- Member only enter before migration, no rewards to pool at all, upgrade, claim rewards.
-- Member only enter before migration, only one rewards to pool, upgrade, claim rewards.
-- Member change balances before migration, upgrade, one rewards to pool, claim rewards.
 - find_sigma_standard_case: Enter V1, change in V1, catch all ifs.
 - find_sigma_standard_case: Enter V1, change in V2, catch all ifs.
 - find sigma: Enter V0, change in V1, catch all ifs.

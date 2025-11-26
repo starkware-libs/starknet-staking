@@ -228,3 +228,33 @@ fn delegator_rewards_migration_second_regular_case_flow_test() {
     };
     test_multi_version_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_claim_rewards_no_rewards_flow_test() {
+    let mut flow = flows::MemberClaimRewardsNoRewardsFlow {
+        pool: Option::None, delegator: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_claim_rewards_one_rewards_flow_test() {
+    let mut flow = flows::MemberClaimRewardsOneRewardsFlow {
+        pool: Option::None, delegator: Option::None, expected_rewards: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_change_balance_claim_rewards_one_rewards_flow_test() {
+    let mut flow = flows::MemberChangeBalanceClaimRewardsOneRewardsFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        stake_amount: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
