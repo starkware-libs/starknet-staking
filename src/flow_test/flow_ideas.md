@@ -16,7 +16,6 @@
 - with member from previous versions.
 
 ## k=1 -> k=2 Migration Staker
-- staker enter in V0, attest in V1, update balance in V1, attest in V1, attest in V2, update balance in V2, attest in V2, attest in V3, update balance in V3, attest in V3, test rewards.
 - staker in V2, update balance staker+update balance pool, upgrade, attest in current epoch, attest in next epoch, attest in next next epoch
 - staker in V2, advance epoch, update balance staker+update balance pool, advance epoch, update balance staker+update balance pool, upgrade, update balance staker+update balance pool, attest in current epoch, attest in next epoch, attest in next next epoch
 
