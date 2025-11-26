@@ -3,6 +3,7 @@ use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
 use snforge_std::{Token, TokenImpl, get_class_hash, start_cheat_block_number_global};
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
+use staking::attestation::interface::IAttestationSafeDispatcherTrait;
 use staking::constants::{ALPHA, ALPHA_DENOMINATOR, K, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::errors::{GenericError, InternalError};
 use staking::flow_test::utils::MainnetClassHashes::{
@@ -7099,6 +7100,55 @@ pub(crate) impl GetStakersAfterUpgradeFlowImpl of FlowTrait<GetStakersAfterUpgra
         let epoch_id = staking.get_current_epoch();
         let stakers = staking_consensus.get_stakers(:epoch_id);
         assert!(stakers == expected_stakers);
+    }
+}
+
+/// Flow:
+/// Stake
+/// Upgrade
+/// Attempt attest - fail
+/// Advance epoch
+/// Attest - test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct AttestAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl AttestAfterUpgradeFlowImpl of FlowTrait<AttestAfterUpgradeFlow> {
+    fn setup_v2(ref self: AttestAfterUpgradeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        system.stake(:staker, :amount, pool_enabled: false, commission: 200);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: AttestAfterUpgradeFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let attestation_safe = system.attestation.unwrap().safe_dispatcher();
+
+        cheat_caller_address_once(
+            contract_address: system.attestation.unwrap().address,
+            caller_address: staker.operational.address,
+        );
+        let result = attestation_safe.attest(block_hash: Zero::zero());
+        // This error is due to the staker trace having no entry for the previous epoch.
+        // Had the staker been initialized in V3, the error would have been
+        // ATTEST_WITH_ZERO_BALANCE.
+        assert_panic_with_error(:result, expected_error: "Index out of bounds");
+
+        system.advance_epoch();
+        system.advance_block_into_attestation_window(:staker);
+        system.attest(:staker);
+
+        let rewards = system.staker_claim_rewards(:staker);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_v2(
+            staker_info: system.staker_info_v1(:staker),
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        assert!(rewards == expected_rewards);
     }
 }
 
