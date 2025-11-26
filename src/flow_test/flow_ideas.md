@@ -12,15 +12,11 @@
 - update rewards for 2 different blocks in the same epoch - should be same rewards.
 - Change epoch len in blocks - rewards should be changed.
 - disable_rewards = true, advance block, disable_rewards = false, advance block, disable_rewards = true, test rewards.
-- update rewards for some different blocks in the same epoch, test rewards of pool member.
 - staker change balance, attest, change balance, attest, set_v3, change balance, update_rewards, change_balance, update_rewards, test rewards.
 - with member from previous versions.
 
 ## k=1 -> k=2 balances
-- delegator claim rewards when last change is in epoch + 2, then advance epochs and claim again to see no missing rewards
-- same as above, also when there is change in epoch + 1
 - delegate, advance epoch and get rewards for the pool, claim - zero rewards for the delegate
-- delegate, advance epoch, delegate, advance epoch, claim rewards - only for the first delegation, advance epoch, claim rewards - for all
 - delegator claim after claim
 - delegator claim after claim when exists checkpoint with the current epoch of the first claim
 - staker change balance in each epoch (increase, intent, delegate increase, delegate intent, delegate exit) and attest in each epoch - test rewards (also some epochs with no balance change and some epochs with no attest)

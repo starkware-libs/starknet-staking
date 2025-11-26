@@ -1172,6 +1172,25 @@ pub(crate) fn calculate_strk_pool_rewards_v3(
     pool_rewards
 }
 
+/// Calculate strk pool rewards for one epoch for the given pool balance.
+pub(crate) fn calculate_strk_pool_rewards_with_pool_balance_v3(
+    staker_address: ContractAddress,
+    staking_contract: ContractAddress,
+    minting_curve_contract: ContractAddress,
+    pool_balance: Amount,
+) -> Amount {
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_info = staking_dispatcher.staker_info_v1(:staker_address);
+    let (_, pool_rewards) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: staker_info.amount_own,
+        pool_amount: pool_balance,
+        commission: staker_info.pool_info.unwrap().commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    pool_rewards
+}
+
 /// Returns (staker_commission_rewards, BTC_pool_rewards) for the specified
 /// `normalized_pool_balance`, `normalized_staker_total_btc_balance` and `commission`.
 ///
