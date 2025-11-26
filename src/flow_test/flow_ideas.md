@@ -28,12 +28,8 @@
 - member enter, in the same epoch or one epoch after claim (balance is zero).
 
 ## k=1 -> k=2 Migration Member
-- find_sigma_standard_case: Enter V1, change in V1, catch all ifs.
-- find_sigma_standard_case: Enter V1, change in V2, catch all ifs.
 - find sigma: Enter V0, change in V1, catch all ifs.
-- find sigma: Enter V0, change in V2, catch all ifs.
-- find sigma_edge_cases: catch the comments.
-- find sigma - cover all branches with member from V0, V1, V2(V2 DONE).
+- find sigma - cover all branches with member from V0.
 more ideas:
 - member from V1, pool gets rewards at V1, update balance at V1, update balance at V3, pool gets rewards at V3, test rewards.
 - member from V1, pool gets rewards at V1, pool gets rewards at V3, update balance at V3, test rewards.
