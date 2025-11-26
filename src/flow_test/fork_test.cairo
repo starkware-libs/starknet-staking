@@ -446,6 +446,13 @@ fn get_stakers_after_upgrade_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn attest_after_upgrade_flow_test() {
+    let mut flow = flows::AttestAfterUpgradeFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn toggle_tokens_before_after_upgrade_flow_test() {
     let mut flow = flows::ToggleTokensBeforeAfterUpgradeFlow {
         token_a: Option::None, token_b: Option::None,
