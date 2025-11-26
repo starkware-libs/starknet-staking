@@ -34,12 +34,8 @@
 - Member only enter before migration, no rewards to pool at all, upgrade, claim rewards.
 - Member only enter before migration, only one rewards to pool, upgrade, claim rewards.
 - Member change balances before migration, upgrade, one rewards to pool, claim rewards.
-- find_sigma_standard_case: Enter V1, change in V1, catch all ifs.
-- find_sigma_standard_case: Enter V1, change in V2, catch all ifs.
 - find sigma: Enter V0, change in V1, catch all ifs.
-- find sigma: Enter V0, change in V2, catch all ifs.
-- find sigma_edge_cases: catch the comments.
-- find sigma - cover all branches with member from V0, V1, V2(V2 DONE).
+- find sigma - cover all branches with member from V0.
 - member from V0, update balance at V3 before getting rewards, pool gets rewards, test rewards.
 - member from V0, pool gets rewards at V1, update balance at V3 before getting rewards, pool gets rewards, test rewards.
 - member from V0, pool gets rewards at V1, pool gets rewards at V3, update balance, test rewards.
