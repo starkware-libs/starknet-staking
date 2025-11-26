@@ -545,3 +545,45 @@ fn delegator_change_balance_before_upgrade_rewards_consensus_flow_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_from_v2_flow_1_flow_test() {
+    let mut flow = flows::StakerFromV2Flow1 { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_from_v2_flow_2_flow_test() {
+    let mut flow = flows::StakerFromV2Flow2 { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_from_v2_flow_3_flow_test() {
+    let mut flow = flows::StakerFromV2Flow3 { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_from_v2_flow_4_flow_test() {
+    let mut flow = flows::StakerFromV2Flow4 { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_from_v2_flow_5_flow_test() {
+    let mut flow = flows::StakerFromV2Flow5 { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_from_v2_flow_6_flow_test() {
+    let mut flow = flows::StakerFromV2Flow6 { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}

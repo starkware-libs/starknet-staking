@@ -36,12 +36,6 @@ more ideas:
 
 ## k=1 -> k=2 Migration Staker
 - staker enter in V0, attest in V1, update balance in V1, attest in V1, attest in V2, update balance in V2, attest in V2, attest in V3, update balance in V3, attest in V3, test rewards.
-- staker enter in V2, advance epoch, update balance in V2, upgrade to V3, update balance, attest, advance epoch, attest, advance epoch, attest, test rewards
-- staker enter in V2, advance epoch, update balance in V2, upgrade to V3, update balance, attest, advance epoch, update balance, attest, advance epoch, attest, test rewards
-- staker enter in V2, advance epoch, advance epoch, upgrade to V3, update balance, attest, advance epoch, attest, advance epoch, attest, test rewards
-- staker enter in V2, advance epoch, advance epoch, upgrade to V3, attest, update balance,advance epoch, attest, advance epoch, attest, test rewards
-- staker enter in V2, advance epoch, update balance, upgrade to V3, attest, advance epoch, attest, advance epoch, attest, test rewards
-- staker enter in V2, advance epoch, upgrade to V3, advance epoch, attest,
 - staker enter in V0, upgrade to V3, attest
 - staker enter in V0, advance epoch, update balance, upgrade to V3, attest, update balance, advance epoch, attest
 - staker enter in V1, advance epoch, update balance, upgrade to V3, attest, update balance, advance epoch, attest
