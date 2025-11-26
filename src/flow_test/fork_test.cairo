@@ -443,3 +443,48 @@ fn get_stakers_after_upgrade_flow_test() {
     let mut flow = flows::GetStakersAfterUpgradeFlow { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_change_balance_over_versions_flow_test() {
+    let mut flow = flows::DelegatorChangeBalanceOverVersionsFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_from_v0_flow_test() {
+    let mut flow = flows::DelegatorFromV0Flow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_change_balance_before_rewards_flow_test() {
+    let mut flow = flows::DelegatorV0ChangeBalanceBeforeRewardsFlow {
+        staker: Option::None, pool: Option::None, delegator: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_rewards_v1_change_balance_before_rewards_flow_test() {
+    let mut flow = flows::DelegatorV0RewardsV1ChangeBalanceBeforeRewardsFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
