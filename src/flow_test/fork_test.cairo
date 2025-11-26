@@ -545,3 +545,24 @@ fn delegator_change_balance_before_upgrade_rewards_consensus_flow_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_v0_attest_flow_test() {
+    let mut flow = flows::StakerV0AttestFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_v1_attest_flow_test() {
+    let mut flow = flows::StakerV1AttestFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn staker_v1_change_balance_attest_flow_test() {
+    let mut flow = flows::StakerV1ChangeBalanceAttestFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
