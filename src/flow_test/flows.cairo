@@ -3,7 +3,7 @@ use core::num::traits::Zero;
 use core::num::traits::ops::pow::Pow;
 use snforge_std::{Token, TokenImpl, get_class_hash, start_cheat_block_number_global};
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
-use staking::constants::{ALPHA, ALPHA_DENOMINATOR, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
+use staking::constants::{ALPHA, ALPHA_DENOMINATOR, K, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::errors::{GenericError, InternalError};
 use staking::flow_test::utils::MainnetClassHashes::{
     MAINNET_POOL_CLASS_HASH_V1, MAINNET_STAKING_CLASS_HASH_V0, MAINNET_STAKING_CLASS_HASH_V1,
@@ -35,7 +35,9 @@ use staking::test_utils::constants::{
 };
 use staking::test_utils::{
     calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
-    calculate_staker_strk_rewards_v2, calculate_strk_pool_rewards_v2,
+    calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_balances_v2,
+    calculate_staker_strk_rewards_with_balances_v3, calculate_strk_pool_rewards_v1,
+    calculate_strk_pool_rewards_v2, calculate_strk_pool_rewards_v3,
     calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
     declare_pool_contract, declare_pool_eic_contract, declare_staking_contract,
     load_from_simple_map, load_one_felt, strk_pool_update_rewards_v0, to_amount_18_decimals,
@@ -48,7 +50,9 @@ use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::{Time, TimeDelta};
-use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
+use starkware_utils_testing::test_utils::{
+    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
+};
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
@@ -130,7 +134,7 @@ pub(crate) impl PoolUpgradeBasicFlowImpl of MultiVersionFlowTrait<PoolUpgradeBas
         [V1, V2].span()
     }
 
-    fn setup(ref self: PoolUpgradeBasicFlow, ref system: SystemState) {
+    fn setup(ref self: PoolUpgradeBasicFlow, ref system: SystemState, version: ReleaseVersion) {
         let initial_reward_supplier_balance = system
             .token
             .balance_of(account: system.reward_supplier.address);
@@ -1025,7 +1029,7 @@ pub(crate) impl PoolUpgradeFlowImpl of MultiVersionFlowTrait<PoolUpgradeFlow> {
         [V0, V1, V2].span()
     }
 
-    fn setup(ref self: PoolUpgradeFlow, ref system: SystemState) {
+    fn setup(ref self: PoolUpgradeFlow, ref system: SystemState, version: ReleaseVersion) {
         let min_stake = system.staking.get_min_stake();
         let stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: stake_amount * 2);
@@ -1671,7 +1675,11 @@ pub(crate) impl DelegatorExitIntentUpgradeSwitchFlowImpl of MultiVersionFlowTrai
         [V1, V2].span()
     }
 
-    fn setup(ref self: DelegatorExitIntentUpgradeSwitchFlow, ref system: SystemState) {
+    fn setup(
+        ref self: DelegatorExitIntentUpgradeSwitchFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
         let min_stake = system.staking.get_min_stake();
         let initial_stake_amount = min_stake * 2;
         let staker = system.new_staker(amount: initial_stake_amount * 2);
@@ -2933,7 +2941,11 @@ pub(crate) impl IntentDelegatorUpgradeSwitchFlowImpl of MultiVersionFlowTrait<
         [V0, V1, V2].span()
     }
 
-    fn setup(ref self: IntentDelegatorUpgradeSwitchFlow, ref system: SystemState) {
+    fn setup(
+        ref self: IntentDelegatorUpgradeSwitchFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -3122,7 +3134,11 @@ pub(crate) impl IntentDelegatorUpgradeActionFlowImpl of MultiVersionFlowTrait<
         [V0, V1, V2].span()
     }
 
-    fn setup(ref self: IntentDelegatorUpgradeActionFlow, ref system: SystemState) {
+    fn setup(
+        ref self: IntentDelegatorUpgradeActionFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -3232,7 +3248,11 @@ pub(crate) impl StakerWithPoolInIntentMigrationFlowImpl of MultiVersionFlowTrait
         [V1, V2].span()
     }
 
-    fn setup(ref self: StakerWithPoolInIntentMigrationFlow, ref system: SystemState) {
+    fn setup(
+        ref self: StakerWithPoolInIntentMigrationFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -3300,7 +3320,11 @@ pub(crate) impl IntentDelegatorUpgradeIntentFlowImpl of MultiVersionFlowTrait<
         [V0, V1, V2].span()
     }
 
-    fn setup(ref self: IntentDelegatorUpgradeIntentFlow, ref system: SystemState) {
+    fn setup(
+        ref self: IntentDelegatorUpgradeIntentFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -4607,7 +4631,7 @@ pub(crate) impl PoolAttestFlowImpl of MultiVersionFlowTrait<PoolAttestFlow> {
         [V1, V2].span()
     }
 
-    fn setup(ref self: PoolAttestFlow, ref system: SystemState) {
+    fn setup(ref self: PoolAttestFlow, ref system: SystemState, version: ReleaseVersion) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6047,7 +6071,7 @@ pub(crate) impl StakerExitFlowImpl of MultiVersionFlowTrait<StakerExitFlow> {
         [V1, V2].span()
     }
 
-    fn setup(ref self: StakerExitFlow, ref system: SystemState) {
+    fn setup(ref self: StakerExitFlow, ref system: SystemState, version: ReleaseVersion) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6091,7 +6115,11 @@ pub(crate) impl StakerExitIntentAttestAfterMigrationFlowImpl of MultiVersionFlow
         [V1, V2].span()
     }
 
-    fn setup(ref self: StakerExitIntentAttestAfterMigrationFlow, ref system: SystemState) {
+    fn setup(
+        ref self: StakerExitIntentAttestAfterMigrationFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6424,7 +6452,7 @@ pub(crate) impl FindSigmaMigrationFlowImpl of MultiVersionFlowTrait<FindSigmaMig
         [V1, V2].span()
     }
 
-    fn setup(ref self: FindSigmaMigrationFlow, ref system: SystemState) {
+    fn setup(ref self: FindSigmaMigrationFlow, ref system: SystemState, version: ReleaseVersion) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6488,7 +6516,9 @@ pub(crate) impl FindSigmaEdgeCasesMigrationFlowImpl of MultiVersionFlowTrait<
         [V1, V2].span()
     }
 
-    fn setup(ref self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState) {
+    fn setup(
+        ref self: FindSigmaEdgeCasesMigrationFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6546,7 +6576,9 @@ pub(crate) impl FindSigmaMigrationIdxIsOneFlowImpl of MultiVersionFlowTrait<
         [V1, V2].span()
     }
 
-    fn setup(ref self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState) {
+    fn setup(
+        ref self: FindSigmaMigrationIdxIsOneFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6792,7 +6824,11 @@ pub(crate) impl MemberIntentStakerExitUpgradeFlowImpl of MultiVersionFlowTrait<
         [V0, V1, V2].span()
     }
 
-    fn setup(ref self: MemberIntentStakerExitUpgradeFlow, ref system: SystemState) {
+    fn setup(
+        ref self: MemberIntentStakerExitUpgradeFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6881,7 +6917,9 @@ pub(crate) impl ExitUpgradeSetPublicKeyFlowImpl of MultiVersionFlowTrait<
         [V0, V1, V2].span()
     }
 
-    fn setup(ref self: ExitUpgradeSetPublicKeyFlow, ref system: SystemState) {
+    fn setup(
+        ref self: ExitUpgradeSetPublicKeyFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -6922,7 +6960,9 @@ pub(crate) impl IntentUpgradeSetPublicKeyFlowImpl of MultiVersionFlowTrait<
         [V0, V1, V2].span()
     }
 
-    fn setup(ref self: IntentUpgradeSetPublicKeyFlow, ref system: SystemState) {
+    fn setup(
+        ref self: IntentUpgradeSetPublicKeyFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
         let amount = system.staking.get_min_stake();
         let staker = system.new_staker(:amount);
         let commission = 200;
@@ -7137,5 +7177,1396 @@ pub(crate) impl ToggleTokensBeforeAfterUpgradeFlowImpl of FlowTrait<
         ]
             .span();
         assert!(tokens == expected_tokens);
+    }
+}
+
+/// Flow:
+/// Delegator enter in V0
+/// Attest in V1 (pool gets rewards)
+/// Delegator change balance in V1
+/// Attest in V1 (pool gets rewards)
+/// Attest in V3 (pool gets rewards)
+/// Delegator change balance in V3
+/// Attest in V3 (pool gets rewards)
+/// Test delegator rewards
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorChangeBalanceOverVersionsFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorChangeBalanceOverVersionsFlowImpl of FlowTrait<
+    DelegatorChangeBalanceOverVersionsFlow,
+> {
+    fn setup(ref self: DelegatorChangeBalanceOverVersionsFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+
+        let one_week = Time::weeks(count: 1);
+        system.advance_time(time: one_week);
+        system.staking.update_global_index_if_needed();
+
+        let expected_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        self.expected_rewards = Option::Some(expected_rewards);
+
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn setup_v1(ref self: DelegatorChangeBalanceOverVersionsFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        let mut expected_rewards_v1 = calculate_strk_pool_rewards_v1(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+
+        // Partial delegator intent.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount / 2);
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        expected_rewards_v1 +=
+            calculate_strk_pool_rewards_v1(
+                staker_address: staker.staker.address,
+                staking_contract: system.staking.address,
+                minting_curve_contract: system.minting_curve.address,
+            );
+
+        let expected_rewards_v0 = self.expected_rewards.unwrap();
+        self.expected_rewards = Option::Some(expected_rewards_v0 + expected_rewards_v1);
+    }
+
+    fn test(self: DelegatorChangeBalanceOverVersionsFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        let mut expected_rewards_v3 = calculate_strk_pool_rewards_v2(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+
+        // Zero delegator intent.
+        system.delegator_exit_intent(:delegator, :pool, amount: Zero::zero());
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        expected_rewards_v3 +=
+            calculate_strk_pool_rewards_v2(
+                staker_address: staker.staker.address,
+                staking_contract: system.staking.address,
+                minting_curve_contract: system.minting_curve.address,
+            );
+
+        // Test rewards.
+        system.advance_epoch();
+        let expected_rewards = self.expected_rewards.unwrap() + expected_rewards_v3;
+        assert!(
+            wide_abs_diff(
+                system.delegator_unclaimed_rewards(:delegator, :pool), expected_rewards,
+            ) < 10,
+        );
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let pool_balance = system.token.balance_of(account: pool);
+        assert!(pool_balance < 10);
+        assert_eq!(wide_abs_diff(actual_rewards, expected_rewards), pool_balance.into());
+        assert_eq!(
+            system.token.balance_of(account: delegator.reward.address), actual_rewards.into(),
+        );
+    }
+}
+
+/// Flow:
+/// Delegator enter in V0.
+/// Attest in V1 (pool gets rewards).
+/// Attest in V2 (pool gets rewards).
+/// Attest in V3 (pool gets rewards).
+/// test rewards with view function.
+/// Delegator change balance in V3.
+/// Attest in V3 (pool gets rewards).
+/// Test delegator rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorFromV0Flow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorFromV0FlowImpl of FlowTrait<DelegatorFromV0Flow> {
+    fn setup(ref self: DelegatorFromV0Flow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+
+        let one_week = Time::weeks(count: 1);
+        system.advance_time(time: one_week);
+        system.staking.update_global_index_if_needed();
+
+        let expected_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        self.expected_rewards = Option::Some(expected_rewards);
+
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn setup_v1(ref self: DelegatorFromV0Flow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        let expected_rewards_v1 = calculate_strk_pool_rewards_v1(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+
+        let expected_rewards = self.expected_rewards.unwrap() + expected_rewards_v1;
+        self.expected_rewards = Option::Some(expected_rewards);
+    }
+
+    fn setup_v2(ref self: DelegatorFromV0Flow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        let expected_rewards_v2 = calculate_strk_pool_rewards_v2(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+
+        let expected_rewards = self.expected_rewards.unwrap() + expected_rewards_v2;
+        self.expected_rewards = Option::Some(expected_rewards);
+    }
+
+    fn test(self: DelegatorFromV0Flow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        let expected_rewards_v3 = calculate_strk_pool_rewards_v2(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+
+        // Test rewards with view function.
+        system.advance_epoch();
+        let mut expected_rewards = self.expected_rewards.unwrap() + expected_rewards_v3;
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert_eq!(unclaimed_rewards, expected_rewards);
+
+        // Delegator change balance.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount / 2);
+
+        // Test rewards with view function.
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert_eq!(unclaimed_rewards, expected_rewards);
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        expected_rewards +=
+            calculate_strk_pool_rewards_v2(
+                staker_address: staker.staker.address,
+                staking_contract: system.staking.address,
+                minting_curve_contract: system.minting_curve.address,
+            );
+
+        // Test delegator rewards.
+        system.advance_epoch();
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let pool_balance = system.token.balance_of(account: pool);
+        assert!(pool_balance < 10);
+        assert_eq!(actual_rewards, expected_rewards);
+        assert_eq!(
+            system.token.balance_of(account: delegator.reward.address), actual_rewards.into(),
+        );
+    }
+}
+
+/// Flow:
+/// Delegator enter in V0.
+/// Delegator change balance in V3.
+/// Attest in V3 (pool gets rewards).
+/// Test delegator rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorV0ChangeBalanceBeforeRewardsFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl DelegatorV0ChangeBalanceBeforeRewardsFlowImpl of FlowTrait<
+    DelegatorV0ChangeBalanceBeforeRewardsFlow,
+> {
+    fn setup(ref self: DelegatorV0ChangeBalanceBeforeRewardsFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(self: DelegatorV0ChangeBalanceBeforeRewardsFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+
+        // Delegator change balance.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount / 2);
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        let expected_rewards = calculate_strk_pool_rewards_v2(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+
+        // Test delegator rewards.
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let pool_balance = system.token.balance_of(account: pool);
+        assert!(pool_balance < 10);
+        assert_eq!(unclaimed_rewards, actual_rewards);
+        assert_eq!(actual_rewards, expected_rewards);
+        assert_eq!(
+            system.token.balance_of(account: delegator.reward.address), actual_rewards.into(),
+        );
+    }
+}
+
+/// Flow:
+/// Delegator enter in V0.
+/// Attest in V1 (pool gets rewards).
+/// Delegator change balance in V3.
+/// Attest in V3 (pool gets rewards).
+/// Test delegator rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorV0RewardsV1ChangeBalanceBeforeRewardsFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorV0RewardsV1ChangeBalanceBeforeRewardsFlowImpl of FlowTrait<
+    DelegatorV0RewardsV1ChangeBalanceBeforeRewardsFlow,
+> {
+    fn setup(
+        ref self: DelegatorV0RewardsV1ChangeBalanceBeforeRewardsFlow, ref system: SystemState,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn setup_v1(
+        ref self: DelegatorV0RewardsV1ChangeBalanceBeforeRewardsFlow, ref system: SystemState,
+    ) {
+        let staker = self.staker.unwrap();
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        let expected_rewards = calculate_strk_pool_rewards_v1(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        self.expected_rewards = Option::Some(expected_rewards);
+    }
+
+    fn test(self: DelegatorV0RewardsV1ChangeBalanceBeforeRewardsFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let expected_rewards_v1 = self.expected_rewards.unwrap();
+
+        // Delegator change balance.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.delegator_exit_intent(:delegator, :pool, amount: delegator_amount / 2);
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        let expected_rewards = calculate_strk_pool_rewards_v2(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+
+        // Test delegator rewards.
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let pool_balance = system.token.balance_of(account: pool);
+        assert!(pool_balance < 10);
+        assert_eq!(unclaimed_rewards, actual_rewards);
+        assert_eq!(actual_rewards, expected_rewards_v1 + expected_rewards);
+        assert_eq!(
+            system.token.balance_of(account: delegator.reward.address), actual_rewards.into(),
+        );
+    }
+}
+
+/// Flow:
+/// Delegator enter in V1/V2.
+/// Delegator change balance in V3.
+/// Attest in V3 (pool gets rewards).
+/// Test delegator rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorRewardsMigrationIdxIsZeroFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl DelegatorRewardsMigrationIdxIsZeroFlowImpl of MultiVersionFlowTrait<
+    DelegatorRewardsMigrationIdxIsZeroFlow,
+> {
+    fn versions(self: DelegatorRewardsMigrationIdxIsZeroFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(
+        ref self: DelegatorRewardsMigrationIdxIsZeroFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 2 * amount);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_epoch();
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(
+        self: DelegatorRewardsMigrationIdxIsZeroFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+
+        // Delegator change balance.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount);
+
+        // Pool gets rewards.
+        system.advance_k_epochs_and_attest(:staker);
+        let expected_rewards = calculate_strk_pool_rewards_v2(
+            staker_address: staker.staker.address,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+
+        // Test delegator rewards.
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let pool_balance = system.token.balance_of(account: pool);
+        assert!(pool_balance < 10);
+        assert_eq!(unclaimed_rewards, actual_rewards);
+        assert_eq!(actual_rewards, expected_rewards);
+        assert_eq!(
+            system.token.balance_of(account: delegator.reward.address), actual_rewards.into(),
+        );
+    }
+}
+
+/// Flow:
+/// Delegator enter in V1/V2.
+/// Delegator change balance in same version.
+/// Delegator change balance in V3.
+/// Test delegator rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorRewardsMigrationIdxLenIsOneFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl DelegatorRewardsMigrationIdxLenIsOneFlowImpl of MultiVersionFlowTrait<
+    DelegatorRewardsMigrationIdxLenIsOneFlow,
+> {
+    fn versions(self: DelegatorRewardsMigrationIdxLenIsOneFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(
+        ref self: DelegatorRewardsMigrationIdxLenIsOneFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 3 * amount);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_epoch();
+        system.increase_delegate(:delegator, :pool, amount: amount);
+        system.advance_epoch();
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(
+        self: DelegatorRewardsMigrationIdxLenIsOneFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+
+        // Delegator change balance.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 2);
+        system.advance_epoch();
+
+        // Test delegator rewards.
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_zero());
+        assert!(actual_rewards.is_zero());
+    }
+}
+
+/// Flow:
+/// Delegator enter in V1/V2.
+/// Delegator change balance in same version.
+/// Attest in same version (pool gets rewards).
+/// Delegator change balance in V3.
+/// Test delegator rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorRewardsMigrationIdxIsOneFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorRewardsMigrationIdxIsOneFlowImpl of MultiVersionFlowTrait<
+    DelegatorRewardsMigrationIdxIsOneFlow,
+> {
+    fn versions(self: DelegatorRewardsMigrationIdxIsOneFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(
+        ref self: DelegatorRewardsMigrationIdxIsOneFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 3 * amount);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_epoch();
+        system.increase_delegate(:delegator, :pool, amount: amount);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        let expected_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(expected_rewards.is_non_zero());
+        self.expected_rewards = Option::Some(expected_rewards);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(
+        self: DelegatorRewardsMigrationIdxIsOneFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+
+        // Delegator change balance.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 2);
+        system.advance_epoch();
+
+        // Test delegator rewards.
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let expected_rewards = self.expected_rewards.unwrap();
+        assert_eq!(unclaimed_rewards, expected_rewards);
+        assert_eq!(actual_rewards, expected_rewards);
+    }
+}
+
+
+/// Flow:
+/// Delegator enter in V1/V2.
+/// Attest in same version (pool gets rewards).
+/// Attest in same version (pool gets rewards).
+/// Delegator change balance in same version.
+/// Delegator change balance in V3.
+/// Test delegator rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorRewardsMigrationIdxIsLenFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorRewardsMigrationIdxIsLenFlowImpl of MultiVersionFlowTrait<
+    DelegatorRewardsMigrationIdxIsLenFlow,
+> {
+    fn versions(self: DelegatorRewardsMigrationIdxIsLenFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(
+        ref self: DelegatorRewardsMigrationIdxIsLenFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 3 * amount);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount);
+        system.advance_epoch();
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        let expected_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(expected_rewards.is_non_zero());
+        self.expected_rewards = Option::Some(expected_rewards);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(
+        self: DelegatorRewardsMigrationIdxIsLenFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+
+        // Delegator change balance.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 2);
+        system.advance_epoch();
+
+        // Test delegator rewards.
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        let expected_rewards = self.expected_rewards.unwrap();
+        assert_eq!(unclaimed_rewards, expected_rewards);
+        assert_eq!(actual_rewards, expected_rewards);
+    }
+}
+
+/// Flow:
+/// Delegator enter in V1/V2.
+/// Attest in same version (pool gets rewards).
+/// Attest in same version (pool gets rewards).
+/// Delegator change balance in same version.
+/// Attest in V3 (pool gets rewards).
+/// Delegator change balance in V3.
+/// Test delegator rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorRewardsMigrationFirstRegularCaseFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorRewardsMigrationFirstRegularCaseFlowImpl of MultiVersionFlowTrait<
+    DelegatorRewardsMigrationFirstRegularCaseFlow,
+> {
+    fn versions(self: DelegatorRewardsMigrationFirstRegularCaseFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(
+        ref self: DelegatorRewardsMigrationFirstRegularCaseFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 3 * amount);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount);
+        system.advance_epoch();
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        let expected_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(expected_rewards.is_non_zero());
+        self.expected_rewards = Option::Some(expected_rewards);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(
+        self: DelegatorRewardsMigrationFirstRegularCaseFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut expected_rewards = self.expected_rewards.unwrap();
+
+        system.advance_k_epochs_and_attest(:staker);
+        expected_rewards +=
+            calculate_strk_pool_rewards_v2(
+                staker_address: staker.staker.address,
+                staking_contract: system.staking.address,
+                minting_curve_contract: system.minting_curve.address,
+            );
+
+        // Delegator change balance.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 2);
+        system.advance_epoch();
+
+        // Test delegator rewards.
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(unclaimed_rewards, expected_rewards);
+        assert_eq!(actual_rewards, expected_rewards);
+    }
+}
+
+
+/// Flow:
+/// Delegator enter in V1/V2.
+/// Attest in same version (pool gets rewards).
+/// Attest in same version (pool gets rewards).
+/// Delegator change balance in same version.
+/// Attest in same epoch same version (pool gets rewards).
+/// Attest in V3 (pool gets rewards).
+/// Delegator change balance in V3.
+/// Test delegator rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorRewardsMigrationSecondRegularCaseFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorRewardsMigrationSecondRegularCaseFlowImpl of MultiVersionFlowTrait<
+    DelegatorRewardsMigrationSecondRegularCaseFlow,
+> {
+    fn versions(self: DelegatorRewardsMigrationSecondRegularCaseFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+
+    fn setup(
+        ref self: DelegatorRewardsMigrationSecondRegularCaseFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 3 * amount);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, :amount);
+        system.advance_block_custom_and_attest(:staker, stake: amount * 2);
+        system.advance_epoch();
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        let expected_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(expected_rewards.is_non_zero());
+        self.expected_rewards = Option::Some(expected_rewards);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(
+        self: DelegatorRewardsMigrationSecondRegularCaseFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut expected_rewards = self.expected_rewards.unwrap();
+
+        system.advance_k_epochs_and_attest(:staker);
+        expected_rewards +=
+            calculate_strk_pool_rewards_v2(
+                staker_address: staker.staker.address,
+                staking_contract: system.staking.address,
+                minting_curve_contract: system.minting_curve.address,
+            );
+
+        // Delegator change balance.
+        let delegator_amount = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.add_to_delegation_pool(:delegator, :pool, amount: delegator_amount / 2);
+        system.advance_epoch();
+
+        // Test delegator rewards.
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(unclaimed_rewards, expected_rewards);
+        assert_eq!(actual_rewards, expected_rewards);
+    }
+}
+
+/// Flow:
+/// Delegator enter in V2.
+/// Some attestations.
+/// Upgrade.
+/// Delegator change balance.
+/// Attest in same epoch and epoch + K.
+/// Set consensus epoch.
+/// Delegator change balance.
+/// Attest in same epoch.
+/// Advance K epochs.
+/// Some update_rewards.
+/// Test rewards of the delegator.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorRewardsAttestationConsensusFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) unclaimed_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorRewardsAttestationConsensusFlowImpl of FlowTrait<
+    DelegatorRewardsAttestationConsensusFlow,
+> {
+    fn setup_v2(ref self: DelegatorRewardsAttestationConsensusFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 4 * amount);
+        system.delegate(:delegator, :pool, :amount);
+
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_non_zero());
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.unclaimed_rewards = Option::Some(unclaimed_rewards);
+    }
+    fn test(self: DelegatorRewardsAttestationConsensusFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut unclaimed_rewards = self.unclaimed_rewards.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let stake_amount = system.staker_info_v1(:staker).amount_own;
+        let mut pool_balance = system.pool_member_info_v1(:delegator, :pool).amount;
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.advance_block_custom_and_attest(:staker, stake: stake_amount + pool_balance);
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs_and_attest(:staker);
+        pool_balance += pool_balance;
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system
+            .staking
+            .set_consensus_rewards_first_epoch(
+                epoch_id: system.staking.get_current_epoch() + K.into(),
+            );
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.advance_block_custom_and_attest(:staker, stake: stake_amount + pool_balance);
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs();
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_block_number_global(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_block_number_global(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        let expected_rewards = calculate_strk_pool_rewards_v3(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += 3 * expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(actual_rewards, unclaimed_rewards);
+    }
+}
+
+
+/// Flow:
+/// Delegator enter in V2.
+/// Delegator change balance in V2
+/// Some attestations.
+/// Upgrade.
+/// Delegator change balance.
+/// Attest in same epoch and epoch + K.
+/// Set consensus epoch.
+/// Delegator change balance.
+/// Attest in same epoch.
+/// Advance K epochs.
+/// Some update_rewards.
+/// Test rewards of the delegator.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorChangeBalanceRewardsAttestationConsensusFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) unclaimed_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorChangeBalanceRewardsAttestationConsensusFlowImpl of FlowTrait<
+    DelegatorChangeBalanceRewardsAttestationConsensusFlow,
+> {
+    fn setup_v2(
+        ref self: DelegatorChangeBalanceRewardsAttestationConsensusFlow, ref system: SystemState,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 4 * amount);
+        system.delegate(:delegator, :pool, amount: amount / 2);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount / 4);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount / 4);
+
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_non_zero());
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.unclaimed_rewards = Option::Some(unclaimed_rewards);
+    }
+    fn test(self: DelegatorChangeBalanceRewardsAttestationConsensusFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut unclaimed_rewards = self.unclaimed_rewards.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let stake_amount = system.staker_info_v1(:staker).amount_own;
+        let mut pool_balance = system.pool_member_info_v1(:delegator, :pool).amount;
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.advance_block_custom_and_attest(:staker, stake: stake_amount + pool_balance);
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs_and_attest(:staker);
+        pool_balance += pool_balance;
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system
+            .staking
+            .set_consensus_rewards_first_epoch(
+                epoch_id: system.staking.get_current_epoch() + K.into(),
+            );
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.advance_block_custom_and_attest(:staker, stake: stake_amount + pool_balance);
+        let expected_rewards = calculate_strk_pool_rewards_with_pool_balance_v2(
+            staker_address: staker.staker.address,
+            :staking_contract,
+            :minting_curve_contract,
+            :pool_balance,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs();
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_block_number_global(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_block_number_global(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        let expected_rewards = calculate_strk_pool_rewards_v3(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += 3 * expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(actual_rewards, unclaimed_rewards);
+    }
+}
+
+/// Flow:
+/// Delegator enter in V2.
+/// Some attestations.
+/// Upgrade.
+/// Start consensus rewards.
+/// Delegator change balance.
+/// Some update_rewards (before and after balance change).
+/// Test rewards of the delegator.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorBeforeUpgradeRewardsConsensusFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) unclaimed_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorBeforeUpgradeRewardsConsensusFlowImpl of FlowTrait<
+    DelegatorBeforeUpgradeRewardsConsensusFlow,
+> {
+    fn setup_v2(ref self: DelegatorBeforeUpgradeRewardsConsensusFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 4 * amount);
+        system.delegate(:delegator, :pool, :amount);
+
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_non_zero());
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.unclaimed_rewards = Option::Some(unclaimed_rewards);
+    }
+    fn test(self: DelegatorBeforeUpgradeRewardsConsensusFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut unclaimed_rewards = self.unclaimed_rewards.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let staker_info = system.staker_info_v1(:staker);
+        let stake_amount = staker_info.amount_own;
+        let commission = staker_info.pool_info.unwrap().commission;
+        let mut pool_balance = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.start_consensus_rewards();
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.update_rewards(:staker, disable_rewards: false);
+        let (_, expected_rewards) = calculate_staker_strk_rewards_with_balances_v3(
+            amount_own: stake_amount,
+            pool_amount: pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs();
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_block_number_global(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_block_number_global(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        let expected_rewards = calculate_strk_pool_rewards_v3(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += 3 * expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(actual_rewards, unclaimed_rewards);
+    }
+}
+
+
+/// Flow:
+/// Delegator enter in V2.
+/// Delegator change balance in V2.
+/// Some attestations.
+/// Upgrade.
+/// Start consensus rewards.
+/// Delegator change balance.
+/// Some update_rewards (before and after balance change).
+/// Test rewards of the delegator.
+#[derive(Drop, Copy)]
+pub(crate) struct DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) unclaimed_rewards: Option<Amount>,
+}
+pub(crate) impl DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlowImpl of FlowTrait<
+    DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlow,
+> {
+    fn setup_v2(
+        ref self: DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlow, ref system: SystemState,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: 4 * amount);
+        system.delegate(:delegator, :pool, amount: amount / 2);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount / 4);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, amount: amount / 4);
+
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_k_epochs_and_attest(:staker);
+        system.advance_epoch();
+        let unclaimed_rewards = system.delegator_unclaimed_rewards(:delegator, :pool);
+        assert!(unclaimed_rewards.is_non_zero());
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        self.unclaimed_rewards = Option::Some(unclaimed_rewards);
+    }
+    fn test(
+        self: DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlow, ref system: SystemState,
+    ) {
+        let staker = self.staker.unwrap();
+        let delegator = self.delegator.unwrap();
+        let pool = self.pool.unwrap();
+        let mut unclaimed_rewards = self.unclaimed_rewards.unwrap();
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+        let staker_info = system.staker_info_v1(:staker);
+        let stake_amount = staker_info.amount_own;
+        let commission = staker_info.pool_info.unwrap().commission;
+        let mut pool_balance = system.pool_member_info_v1(:delegator, :pool).amount;
+        system.start_consensus_rewards();
+
+        system.add_to_delegation_pool(:delegator, :pool, amount: pool_balance);
+        system.update_rewards(:staker, disable_rewards: false);
+        let (_, expected_rewards) = calculate_staker_strk_rewards_with_balances_v3(
+            amount_own: stake_amount,
+            pool_amount: pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+
+        system.advance_k_epochs();
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_block_number_global(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_block_number_global(blocks: 1);
+        system.update_rewards(:staker, disable_rewards: false);
+        let expected_rewards = calculate_strk_pool_rewards_v3(
+            staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
+        );
+        assert!(expected_rewards.is_non_zero());
+        unclaimed_rewards += 3 * expected_rewards;
+        system.advance_epoch();
+        assert_eq!(system.delegator_unclaimed_rewards(:delegator, :pool), unclaimed_rewards);
+        let actual_rewards = system.delegator_claim_rewards(:delegator, :pool);
+        assert_eq!(actual_rewards, unclaimed_rewards);
+    }
+}
+
+/// Flow:
+/// Member only enter before migration, no rewards to pool at all, upgrade, claim rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct MemberClaimRewardsNoRewardsFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+}
+pub(crate) impl MemberClaimRewardsNoRewardsFlowImpl of MultiVersionFlowTrait<
+    MemberClaimRewardsNoRewardsFlow,
+> {
+    fn versions(self: MemberClaimRewardsNoRewardsFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+    fn setup(
+        ref self: MemberClaimRewardsNoRewardsFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+    fn test(
+        self: MemberClaimRewardsNoRewardsFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
+        let pool = self.pool.unwrap();
+        let delegator = self.delegator.unwrap();
+        assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+        system.advance_epoch();
+        assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+        system.advance_epoch();
+        assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+    }
+}
+
+/// Flow:
+/// Member only enter before migration, only one rewards to pool, upgrade, claim rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct MemberClaimRewardsOneRewardsFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) expected_rewards: Option<Amount>,
+}
+pub(crate) impl MemberClaimRewardsOneRewardsFlowImpl of MultiVersionFlowTrait<
+    MemberClaimRewardsOneRewardsFlow,
+> {
+    fn versions(self: MemberClaimRewardsOneRewardsFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+    fn setup(
+        ref self: MemberClaimRewardsOneRewardsFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_k_epochs_and_attest(:staker);
+        let expected_rewards = if version == V1 {
+            calculate_strk_pool_rewards_v1(
+                staker_address: staker.staker.address,
+                staking_contract: system.staking.address,
+                minting_curve_contract: system.minting_curve.address,
+            )
+        } else {
+            calculate_strk_pool_rewards_v2(
+                staker_address: staker.staker.address,
+                staking_contract: system.staking.address,
+                minting_curve_contract: system.minting_curve.address,
+            )
+        };
+        self.expected_rewards = Option::Some(expected_rewards);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+    fn test(
+        self: MemberClaimRewardsOneRewardsFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
+        let pool = self.pool.unwrap();
+        let delegator = self.delegator.unwrap();
+        let expected_rewards = self.expected_rewards.unwrap();
+        assert!(system.delegator_unclaimed_rewards(:delegator, :pool).is_zero());
+        system.advance_epoch();
+        assert!(system.delegator_unclaimed_rewards(:delegator, :pool) == expected_rewards);
+        system.advance_epoch();
+        assert!(system.delegator_unclaimed_rewards(:delegator, :pool) == expected_rewards);
+    }
+}
+/// Flow:
+/// Member change balances before migration, upgrade, one rewards to pool, claim rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct MemberChangeBalanceClaimRewardsOneRewardsFlow {
+    pub(crate) pool: Option<ContractAddress>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) staker: Option<Staker>,
+    pub(crate) stake_amount: Option<Amount>,
+}
+pub(crate) impl MemberChangeBalanceClaimRewardsOneRewardsFlowImpl of MultiVersionFlowTrait<
+    MemberChangeBalanceClaimRewardsOneRewardsFlow,
+> {
+    fn versions(self: MemberChangeBalanceClaimRewardsOneRewardsFlow) -> Span<ReleaseVersion> {
+        [V1, V2].span()
+    }
+    fn setup(
+        ref self: MemberChangeBalanceClaimRewardsOneRewardsFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        let delegator = system.new_delegator(amount: amount * 4);
+        system.delegate(:delegator, :pool, :amount);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, :amount);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, :amount);
+        system.advance_epoch();
+        system.add_to_delegation_pool(:delegator, :pool, :amount);
+        self.stake_amount = Option::Some(amount);
+        self.staker = Option::Some(staker);
+        self.pool = Option::Some(pool);
+        self.delegator = Option::Some(delegator);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+    fn test(
+        self: MemberChangeBalanceClaimRewardsOneRewardsFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let pool = self.pool.unwrap();
+        let delegator = self.delegator.unwrap();
+        let staker = self.staker.unwrap();
+        let stake_amount = self.stake_amount.unwrap();
+        let commission = system.staker_info_v1(:staker).pool_info.unwrap().commission;
+        system.advance_block_custom_and_attest(:staker, stake: stake_amount * 4);
+        let (expected_staker_rewards, expected_pool_rewards) =
+            calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: stake_amount,
+            pool_amount: stake_amount * 3,
+            :commission,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        assert!(expected_staker_rewards.is_non_zero());
+        assert!(expected_pool_rewards.is_non_zero());
+        assert!(system.staker_claim_rewards(:staker) == expected_staker_rewards);
+        assert!(system.delegator_unclaimed_rewards(:delegator, :pool).is_zero());
+        system.advance_epoch();
+        assert!(
+            wide_abs_diff(
+                system.delegator_unclaimed_rewards(:delegator, :pool), expected_pool_rewards,
+            ) <= 1,
+        );
+        system.advance_epoch();
+        assert!(
+            wide_abs_diff(
+                system.delegator_unclaimed_rewards(:delegator, :pool), expected_pool_rewards,
+            ) <= 1,
+        );
     }
 }

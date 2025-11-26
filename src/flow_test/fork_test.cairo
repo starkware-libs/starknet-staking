@@ -452,3 +452,96 @@ fn toggle_tokens_before_after_upgrade_flow_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_change_balance_over_versions_flow_test() {
+    let mut flow = flows::DelegatorChangeBalanceOverVersionsFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_from_v0_flow_test() {
+    let mut flow = flows::DelegatorFromV0Flow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_change_balance_before_rewards_flow_test() {
+    let mut flow = flows::DelegatorV0ChangeBalanceBeforeRewardsFlow {
+        staker: Option::None, pool: Option::None, delegator: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_rewards_v1_change_balance_before_rewards_flow_test() {
+    let mut flow = flows::DelegatorV0RewardsV1ChangeBalanceBeforeRewardsFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_rewards_attestation_consensus_flow_test() {
+    let mut flow = flows::DelegatorRewardsAttestationConsensusFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_change_balance_rewards_attestation_consensus_flow_test() {
+    let mut flow = flows::DelegatorChangeBalanceRewardsAttestationConsensusFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_before_upgrade_rewards_consensus_flow_test() {
+    let mut flow = flows::DelegatorBeforeUpgradeRewardsConsensusFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_change_balance_before_upgrade_rewards_consensus_flow_test() {
+    let mut flow = flows::DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
