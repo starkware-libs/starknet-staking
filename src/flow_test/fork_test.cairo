@@ -524,3 +524,24 @@ fn delegator_change_balance_before_upgrade_rewards_consensus_flow_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_find_sigma_zero_flow_test() {
+    let mut flow = flows::DelegatorV0FindSigmaZeroFlow {
+        pool: Option::None, delegator: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_rewards_v0_find_sigma_flow_test() {
+    let mut flow = flows::DelegatorRewardsV0FindSigmaFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        expected_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
