@@ -19,10 +19,6 @@
 ## k=1 -> k=2 balances
 - delegator claim rewards when last change is in epoch + 2, then advance epochs and claim again to see no missing rewards
 - same as above, also when there is change in epoch + 1
-- delegate, advance epoch and get rewards for the pool, claim - zero rewards for the delegate
-- delegator claim after claim
-- delegator claim after claim when exists checkpoint with the current epoch of the first claim
-- member enter, in the same epoch or one epoch after claim (balance is zero).
 
 ## k=1 -> k=2 Migration Member
 - find sigma: Enter V0, change in V1, catch all ifs.
