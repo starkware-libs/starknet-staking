@@ -19,8 +19,8 @@ use staking::staking::interface::{
 use staking::staking::objects::NormalizedAmountTrait;
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
-    BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
-    TEST_MIN_BTC_FOR_REWARDS,
+    BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, EPOCH_DURATION, EPOCH_LENGTH, PUBLIC_KEY,
+    STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS,
 };
 use staking::test_utils::{
     StakingInitConfig, calculate_staker_btc_pool_rewards_v2, calculate_staker_btc_pool_rewards_v3,
@@ -3341,4 +3341,41 @@ fn update_rewards_same_epoch_flow_test() {
     system.update_rewards(:staker, disable_rewards: false);
     let staker_rewards = system.staker_claim_rewards(:staker);
     assert!(staker_rewards == expected_rewards);
+}
+
+/// Flow:
+/// Staker stake.
+/// Start consensus rewards.
+/// update rewards
+/// Advance epoch
+/// Increase epoch length in blocks.
+/// update rewards - test rewards are smaller.
+/// Decrease epoch length in blocks.
+/// Advance epoch
+/// update rewards - test rewards are larger.
+#[test]
+fn update_rewards_epoch_length_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+    system.start_consensus_rewards();
+
+    system.update_rewards(:staker, disable_rewards: false);
+    let default_length_rewards = system.staker_claim_rewards(:staker);
+
+    system.staking.set_epoch_info(epoch_duration: EPOCH_DURATION, epoch_length: EPOCH_LENGTH + 1);
+    system.advance_epoch();
+    system.update_rewards(:staker, disable_rewards: false);
+    let increased_length_rewards = system.staker_claim_rewards(:staker);
+
+    system.staking.set_epoch_info(epoch_duration: EPOCH_DURATION, epoch_length: EPOCH_LENGTH - 1);
+    system.advance_epoch();
+    system.update_rewards(:staker, disable_rewards: false);
+    let decreased_length_rewards = system.staker_claim_rewards(:staker);
+
+    assert!(increased_length_rewards < default_length_rewards);
+    assert!(default_length_rewards < decreased_length_rewards);
 }

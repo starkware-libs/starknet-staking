@@ -5,7 +5,6 @@
 - member change balance and test with view of current epoch balance
 
 ## `update_rewards`
-- Change epoch len in blocks - rewards should be changed.
 - disable_rewards = true, advance block, disable_rewards = false, advance block, disable_rewards = true, test rewards.
 - update rewards for some different blocks in the same epoch, test rewards of pool member.
 - staker change balance, attest, change balance, attest, set_v3, change balance, update_rewards, change_balance, update_rewards, test rewards.
