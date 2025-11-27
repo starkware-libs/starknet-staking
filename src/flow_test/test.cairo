@@ -16,7 +16,7 @@ use staking::staking::interface::{
     IStakingConsensusDispatcherTrait, IStakingDispatcherTrait,
     IStakingRewardsManagerSafeDispatcherTrait,
 };
-use staking::staking::objects::NormalizedAmountTrait;
+use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait};
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
     AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
@@ -3798,4 +3798,59 @@ fn update_rewards_disable_rewards_intermittently_flow_test() {
         minting_curve_contract: system.minting_curve.address,
     );
     assert!(rewards == expected_rewards);
+}
+
+/// Flow:
+/// Staker stake.
+/// Delegator delegate.
+/// Start consensus rewards.
+/// update_rewards
+/// Advance quarter of epoch length in blocks
+/// update_rewards
+/// Advance quarter of epoch length in blocks
+/// update_rewards
+/// Advance quarter of epoch length in blocks
+/// update_rewards - test staker and delegator rewards.
+#[test]
+fn update_rewards_delegator_rewards_same_epoch_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let delegation_amount = STRK_CONFIG.min_for_rewards;
+    let quarter_epoch_length = (system.staking.get_epoch_info().epoch_len_in_blocks() / 4).into();
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: delegation_amount);
+    system.delegate(:delegator, :pool, amount: delegation_amount);
+    system.start_consensus_rewards();
+
+    system.update_rewards(:staker, disable_rewards: false);
+    advance_blocks(
+        blocks: quarter_epoch_length, block_duration: AVG_BLOCK_DURATION * quarter_epoch_length,
+    );
+    system.update_rewards(:staker, disable_rewards: false);
+    advance_blocks(
+        blocks: quarter_epoch_length, block_duration: AVG_BLOCK_DURATION * quarter_epoch_length,
+    );
+    system.update_rewards(:staker, disable_rewards: false);
+    advance_blocks(
+        blocks: quarter_epoch_length, block_duration: AVG_BLOCK_DURATION * quarter_epoch_length,
+    );
+    system.update_rewards(:staker, disable_rewards: false);
+
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let (expected_single_block_staker_rewards, expected_single_block_delegator_rewards) =
+        calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: delegation_amount,
+        :commission,
+        minting_curve_contract: system.minting_curve.address,
+    );
+    assert!(staker_rewards == expected_single_block_staker_rewards * 4);
+
+    system.advance_epoch();
+    let delegator_rewards = system.delegator_claim_rewards(:delegator, :pool);
+    assert!(delegator_rewards == expected_single_block_delegator_rewards * 4);
 }
