@@ -3366,3 +3366,61 @@ fn staker_multiple_pools_multiple_delegators_flow_test() {
     assert!(system.token.balance_of(account: strk_pool) < 10);
     assert!(system.token.balance_of(account: btc_pool) < 10);
 }
+
+/// Flow:
+/// Delegate
+/// Advance epoch
+/// Increase delegate
+/// Advance epoch
+/// Attest
+/// Advance epoch
+/// Claim rewards - only for the first delegation
+/// Attest
+/// Advance epoch
+/// Claim rewards - for all
+#[test]
+fn delegate_increase_delegate_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let staking_contract = system.staking.address;
+    let minting_curve_contract = system.minting_curve.address;
+    let stake_amount = system.staking.get_min_stake();
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_k_epochs();
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: 2 * stake_amount);
+    system.delegate(:delegator, :pool, amount: stake_amount);
+    system.advance_epoch();
+    system.increase_delegate(:delegator, :pool, amount: stake_amount);
+    system.advance_epoch();
+    system.advance_block_custom_and_attest(:staker, stake: 2 * stake_amount);
+    let (expected_staker_rewards, expected_pool_rewards) =
+        calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: stake_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(expected_staker_rewards.is_non_zero());
+    assert!(expected_pool_rewards.is_non_zero());
+    assert!(system.staker_claim_rewards(:staker) == expected_staker_rewards);
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, :pool) == expected_pool_rewards);
+    system.advance_block_custom_and_attest(:staker, stake: 3 * stake_amount);
+    let (expected_staker_rewards, expected_pool_rewards) =
+        calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: 2 * stake_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(expected_staker_rewards.is_non_zero());
+    assert!(expected_pool_rewards.is_non_zero());
+    assert!(system.staker_claim_rewards(:staker) == expected_staker_rewards);
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, :pool) == expected_pool_rewards);
+}
