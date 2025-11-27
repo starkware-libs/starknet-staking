@@ -41,9 +41,10 @@ use staking::staking::interface::{
     IStakingMigrationSafeDispatcher, IStakingPauseDispatcher, IStakingPauseDispatcherTrait,
     IStakingPoolDispatcher, IStakingPoolSafeDispatcher, IStakingRewardsManagerDispatcher,
     IStakingRewardsManagerDispatcherTrait, IStakingRewardsManagerSafeDispatcher,
-    IStakingSafeDispatcher, IStakingSafeDispatcherTrait, IStakingTokenManagerDispatcher,
-    IStakingTokenManagerDispatcherTrait, IStakingTokenManagerSafeDispatcher,
-    IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1, StakerInfoV1Trait, StakerPoolInfoV2,
+    IStakingRewardsManagerSafeDispatcherTrait, IStakingSafeDispatcher, IStakingSafeDispatcherTrait,
+    IStakingTokenManagerDispatcher, IStakingTokenManagerDispatcherTrait,
+    IStakingTokenManagerSafeDispatcher, IStakingTokenManagerSafeDispatcherTrait, StakerInfoV1,
+    StakerInfoV1Trait, StakerPoolInfoV2,
 };
 use staking::staking::objects::{
     EpochInfo, EpochInfoTrait, NormalizedAmount, StakerVersion, StakerVersionTrait,
@@ -1585,6 +1586,16 @@ pub(crate) impl SystemStakerImpl of SystemStakerTrait {
             .staking
             .rewards_manager_dispatcher()
             .update_rewards(staker_address: staker.staker.address, :disable_rewards);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn safe_update_rewards(
+        self: SystemState, staker: Staker, disable_rewards: bool,
+    ) -> Result<(), Array<felt252>> {
+        self
+            .staking
+            .rewards_manager_safe_dispatcher()
+            .update_rewards(staker_address: staker.staker.address, :disable_rewards)
     }
 }
 

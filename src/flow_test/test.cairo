@@ -3264,3 +3264,46 @@ fn staker_change_balance_twice_same_epoch_flow_test() {
     assert!(expected_rewards.is_non_zero());
     assert!(system.staker_claim_rewards(:staker) == expected_rewards);
 }
+
+/// Flow:
+/// Staker stake.
+/// Start consensus rewards.
+/// Staker exit intent.
+/// update_rewards - test rewards.
+/// Advance epoch.
+/// update_rewards - test rewards.
+/// Advance epoch.
+/// update_rewards - test no rewards.
+#[test]
+fn update_rewards_staker_intent_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let staking_contract = system.staking.address;
+    let minting_curve_contract = system.minting_curve.address;
+    let stake_amount = system.staking.get_min_stake();
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+    system.start_consensus_rewards();
+
+    system.staker_exit_intent(:staker);
+    system.update_rewards(:staker, disable_rewards: false);
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(staker_rewards == expected_rewards);
+
+    system.advance_epoch();
+    system.update_rewards(:staker, disable_rewards: false);
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    assert!(staker_rewards == expected_rewards);
+
+    system.advance_epoch();
+    let result = system.safe_update_rewards(:staker, disable_rewards: false);
+    assert_panic_with_error(:result, expected_error: StakingError::INVALID_STAKER.describe());
+}
