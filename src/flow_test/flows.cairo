@@ -9064,3 +9064,86 @@ pub(crate) impl StakerV1ChangeBalanceAttestFlowImpl of FlowTrait<StakerV1ChangeB
         assert!(system.staker_claim_rewards(:staker) == expected_rewards);
     }
 }
+
+/// Flow:
+/// Staker stake.
+/// Delegator delegate.
+/// Upgrade to V3.
+/// Start consensus rewards.
+/// update_rewards - test rewards.
+#[derive(Drop, Copy)]
+pub(crate) struct UpdateRewardsWithOldDelegatorFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) stake_amount: Option<Amount>,
+    pub(crate) commission: Option<Commission>,
+    pub(crate) delegator: Option<Delegator>,
+    pub(crate) delegated_amount: Option<Amount>,
+    pub(crate) pool: Option<ContractAddress>,
+}
+pub(crate) impl UpdateRewardsWithOldDelegatorFlowImpl of MultiVersionFlowTrait<
+    UpdateRewardsWithOldDelegatorFlow,
+> {
+    fn versions(self: UpdateRewardsWithOldDelegatorFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
+    fn setup(
+        ref self: UpdateRewardsWithOldDelegatorFlow,
+        ref system: SystemState,
+        version: ReleaseVersion,
+    ) {
+        let stake_amount = system.staking.get_min_stake();
+        let delegated_amount = STRK_CONFIG.min_for_rewards;
+        let staker = system.new_staker(amount: stake_amount);
+        let commission = 200;
+        let delegator = system.new_delegator(amount: delegated_amount);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        let pool = system.staking.get_pool(:staker);
+        system.delegate(:delegator, :pool, amount: delegated_amount);
+
+        system.set_pool_for_upgrade(pool_address: pool);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.stake_amount = Option::Some(stake_amount);
+        self.commission = Option::Some(commission);
+        self.delegator = Option::Some(delegator);
+        self.delegated_amount = Option::Some(delegated_amount);
+        self.pool = Option::Some(pool);
+    }
+
+    fn test(
+        self: UpdateRewardsWithOldDelegatorFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
+        let staker = self.staker.unwrap();
+        let stake_amount = self.stake_amount.unwrap();
+        let commission = self.commission.unwrap();
+        let delegator = self.delegator.unwrap();
+        let delegated_amount = self.delegated_amount.unwrap();
+        let pool = self.pool.unwrap();
+
+        system.start_consensus_rewards();
+        system.update_rewards(:staker, disable_rewards: false);
+
+        // Calculate expected rewards.
+        let (expected_staker_rewards, expected_delegator_rewards) =
+            calculate_staker_strk_rewards_with_balances_v3(
+            amount_own: stake_amount,
+            pool_amount: delegated_amount,
+            :commission,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        assert!(expected_staker_rewards.is_non_zero());
+        assert!(expected_delegator_rewards.is_non_zero());
+
+        // Test staker rewards.
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(staker_rewards == expected_staker_rewards);
+
+        // Test delegator rewards.
+        system.advance_epoch();
+        let delegator_rewards = system.delegator_claim_rewards(delegator: delegator, pool: pool);
+        assert!(delegator_rewards == expected_delegator_rewards);
+    }
+}
