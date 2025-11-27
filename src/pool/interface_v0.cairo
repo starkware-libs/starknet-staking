@@ -12,14 +12,12 @@ use starkware_utils::time::time::Timestamp;
 /// Pool V0 interface.
 #[starknet::interface]
 pub trait IPoolV0<TContractState> {
+    /// In use for converting member info from V0 to V1.
     fn pool_member_info(self: @TContractState, pool_member: ContractAddress) -> PoolMemberInfo;
+    /// Only for testing.
     fn get_pool_member_info(
         self: @TContractState, pool_member: ContractAddress,
     ) -> Option<PoolMemberInfo>;
-    fn enter_delegation_pool(
-        ref self: TContractState, reward_address: ContractAddress, amount: Amount,
-    );
-    fn exit_delegation_pool_intent(ref self: TContractState, amount: Amount);
 }
 
 /// Pool member info used in V0.
