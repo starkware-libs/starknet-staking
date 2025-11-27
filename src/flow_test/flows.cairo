@@ -9116,6 +9116,294 @@ pub(crate) impl StakerV1ChangeBalanceAttestFlowImpl of FlowTrait<StakerV1ChangeB
 }
 
 /// Flow:
+/// Epoch 0:
+///     Staker stake
+/// Epoch 1:
+///     Staker increase stake
+///     Delegators delegate STRK and BTC
+/// Epoch 2:
+///     Staker increase stake
+///     Delegators increase delegation STRK and BTC
+///     Upgrade
+///     Staker increase stake
+///     Delegators increase delegation STRK and BTC
+///     Test total staking power - according to Epoch 1
+///     Test staker balance with attestation rewards - according to Epoch 1
+/// Epoch 2:
+///     Test delegator balances with attestation rewards - according to Epoch 1
+///     Test total staking power - according to Epoch 2 (pre-upgrade)
+///     Test staker balance with attestation rewards - according to Epoch 2 (pre-upgrade)
+/// Epoch 3:
+///     Test delegator balances with attestation rewards - according to Epoch 2 (pre-upgrade)
+///     Test total staking power - according to Epoch 2 (post-upgrade)
+///     Test staker balance with attestation rewards - according to Epoch 2 (post-upgrade)
+/// Epoch 4:
+///     Test delegator balances with attestation rewards - according to Epoch 2 (post-upgrade)
+#[derive(Drop, Copy)]
+pub(crate) struct BalancesDelayMoreBalanceChangeFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) stake_amount: Option<Amount>,
+    pub(crate) commission: Option<Commission>,
+    pub(crate) strk_delegated_amount: Option<Amount>,
+    pub(crate) btc_delegated_amount: Option<Amount>,
+    pub(crate) strk_delegator: Option<Delegator>,
+    pub(crate) btc_delegator: Option<Delegator>,
+    pub(crate) strk_pool: Option<ContractAddress>,
+    pub(crate) btc_pool: Option<ContractAddress>,
+}
+pub(crate) impl BalancesDelayMoreBalanceChangeFlowImpl of FlowTrait<
+    BalancesDelayMoreBalanceChangeFlow,
+> {
+    fn setup_v2(ref self: BalancesDelayMoreBalanceChangeFlow, ref system: SystemState) {
+        let stake_amount = system.staking.get_min_stake();
+        let strk_delegated_amount = STRK_CONFIG.min_for_rewards;
+        let btc_delegated_amount = TEST_MIN_BTC_FOR_REWARDS;
+        let staker = system.new_staker(amount: stake_amount * 4);
+        let commission = 200;
+        let strk_delegator = system.new_delegator(amount: strk_delegated_amount * 3);
+        let btc_delegator = system
+            .new_btc_delegator(amount: btc_delegated_amount * 3, token: system.btc_token);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+        let strk_pool = system.staking.get_pool(:staker);
+        let btc_pool = system
+            .set_open_for_delegation(:staker, token_address: system.btc_token.contract_address());
+
+        system.advance_epoch(); // Epoch 0 - > 1
+        system.increase_stake(:staker, amount: stake_amount);
+        system.delegate(delegator: strk_delegator, pool: strk_pool, amount: strk_delegated_amount);
+        system
+            .delegate_btc(
+                delegator: btc_delegator,
+                pool: btc_pool,
+                amount: btc_delegated_amount,
+                token: system.btc_token,
+            );
+
+        system.advance_epoch(); // Epoch 1 - > 2
+        system.increase_stake(:staker, amount: stake_amount);
+        system
+            .increase_delegate(
+                delegator: strk_delegator, pool: strk_pool, amount: strk_delegated_amount,
+            );
+        system
+            .increase_delegate_btc(
+                delegator: btc_delegator,
+                pool: btc_pool,
+                amount: btc_delegated_amount,
+                token: system.btc_token,
+            );
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.stake_amount = Option::Some(stake_amount);
+        self.commission = Option::Some(commission);
+        self.strk_delegated_amount = Option::Some(strk_delegated_amount);
+        self.btc_delegated_amount = Option::Some(btc_delegated_amount);
+        self.strk_delegator = Option::Some(strk_delegator);
+        self.btc_delegator = Option::Some(btc_delegator);
+        self.strk_pool = Option::Some(strk_pool);
+        self.btc_pool = Option::Some(btc_pool);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: BalancesDelayMoreBalanceChangeFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let stake_amount = self.stake_amount.unwrap();
+        let commission = self.commission.unwrap();
+        let strk_delegated_amount = self.strk_delegated_amount.unwrap();
+        let btc_delegated_amount = self.btc_delegated_amount.unwrap();
+        let strk_delegator = self.strk_delegator.unwrap();
+        let btc_delegator = self.btc_delegator.unwrap();
+        let strk_pool = self.strk_pool.unwrap();
+        let btc_pool = self.btc_pool.unwrap();
+
+        let staking_contract = system.staking.address;
+        let minting_curve_contract = system.minting_curve.address;
+
+        // Increase stake and delegations.
+        system.increase_stake(:staker, amount: stake_amount);
+        system
+            .increase_delegate(
+                delegator: strk_delegator, pool: strk_pool, amount: strk_delegated_amount,
+            );
+        system
+            .increase_delegate_btc(
+                delegator: btc_delegator,
+                pool: btc_pool,
+                amount: btc_delegated_amount,
+                token: system.btc_token,
+            );
+
+        // Initialize variables for Epoch 1.
+        let mut staker_stake = stake_amount * 2;
+        let mut strk_pool_balance = strk_delegated_amount;
+        let mut btc_pool_balance = btc_delegated_amount;
+
+        // Test total staking power - according to Epoch 1.
+        let total_staking_power = system.staking.get_current_total_staking_power_v2();
+        let expected_total_staking_power = (
+            NormalizedAmountTrait::from_strk_native_amount(staker_stake + strk_pool_balance),
+            NormalizedAmountTrait::from_native_amount(btc_pool_balance, TEST_BTC_DECIMALS),
+        );
+        assert!(total_staking_power == expected_total_staking_power);
+
+        // Calculate expected rewards - according to Epoch 1.
+        let (expected_staker_rewards, expected_strk_pool_rewards) =
+            calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: staker_stake,
+            pool_amount: strk_pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        assert!(expected_staker_rewards.is_non_zero());
+        assert!(expected_strk_pool_rewards.is_non_zero());
+        let (expected_btc_commission_rewards, expected_btc_pool_rewards) =
+            calculate_staker_btc_pool_rewards_v2(
+            pool_balance: btc_pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: system.btc_token.contract_address(),
+        );
+        assert!(expected_btc_commission_rewards.is_non_zero());
+        assert!(expected_btc_pool_rewards.is_non_zero());
+
+        // Test staker balance with attestation rewards - according to Epoch 1.
+        system
+            .advance_block_into_attestation_window_custom_stake(
+                staker_address: staker.staker.address, stake: staker_stake + strk_pool_balance,
+            );
+        system.attest(:staker);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(staker_rewards == expected_staker_rewards + expected_btc_commission_rewards);
+
+        // Advance epoch - test delegator balances with attestation rewards - according to Epoch 1.
+        system.advance_epoch(); // Epoch 2 - > 3
+        let strk_delegator_rewards = system
+            .delegator_claim_rewards(delegator: strk_delegator, pool: strk_pool);
+        let btc_delegator_rewards = system
+            .delegator_claim_rewards(delegator: btc_delegator, pool: btc_pool);
+        assert!(strk_delegator_rewards == expected_strk_pool_rewards);
+        assert!(btc_delegator_rewards == expected_btc_pool_rewards);
+
+        // Update variables for Epoch 2 (pre-upgrade).
+        staker_stake += stake_amount;
+        strk_pool_balance += strk_delegated_amount;
+        btc_pool_balance += btc_delegated_amount;
+
+        // Test total staking power - according to Epoch 2 (pre-upgrade).
+        let total_staking_power = system.staking.get_current_total_staking_power_v2();
+        let expected_total_staking_power = (
+            NormalizedAmountTrait::from_strk_native_amount(staker_stake + strk_pool_balance),
+            NormalizedAmountTrait::from_native_amount(btc_pool_balance, TEST_BTC_DECIMALS),
+        );
+        assert!(total_staking_power == expected_total_staking_power);
+
+        // Calculate expected rewards - according to Epoch 2 (pre-upgrade).
+        let prev_staker_rewards = expected_staker_rewards;
+        let (expected_staker_rewards, expected_strk_pool_rewards) =
+            calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: staker_stake,
+            pool_amount: strk_pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        assert!(expected_staker_rewards != prev_staker_rewards);
+        assert!(expected_strk_pool_rewards.is_non_zero());
+        let (expected_btc_commission_rewards, expected_btc_pool_rewards) =
+            calculate_staker_btc_pool_rewards_v2(
+            pool_balance: btc_pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: system.btc_token.contract_address(),
+        );
+        assert!(expected_btc_commission_rewards.is_non_zero());
+        assert!(expected_btc_pool_rewards.is_non_zero());
+
+        // Test staker balance with attestation rewards - according to Epoch 2 (pre-upgrade).
+        system
+            .advance_block_into_attestation_window_custom_stake(
+                staker_address: staker.staker.address, stake: staker_stake + strk_pool_balance,
+            );
+        system.attest(:staker);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(staker_rewards == expected_staker_rewards + expected_btc_commission_rewards);
+
+        // Advance epoch - test delegator balances with attestation rewards - according to Epoch 2
+        // (pre-upgrade).
+        system.advance_epoch(); // Epoch 3 - > 4
+        let strk_delegator_rewards = system
+            .delegator_claim_rewards(delegator: strk_delegator, pool: strk_pool);
+        let btc_delegator_rewards = system
+            .delegator_claim_rewards(delegator: btc_delegator, pool: btc_pool);
+        assert!(strk_delegator_rewards == expected_strk_pool_rewards);
+        assert!(btc_delegator_rewards == expected_btc_pool_rewards);
+
+        // Update variables for Epoch 2 (post-upgrade).
+        staker_stake += stake_amount;
+        strk_pool_balance += strk_delegated_amount;
+        btc_pool_balance += btc_delegated_amount;
+
+        // Test total staking power - according to Epoch 2 (post-upgrade).
+        let total_staking_power = system.staking.get_current_total_staking_power_v2();
+        let expected_total_staking_power = (
+            NormalizedAmountTrait::from_strk_native_amount(staker_stake + strk_pool_balance),
+            NormalizedAmountTrait::from_native_amount(btc_pool_balance, TEST_BTC_DECIMALS),
+        );
+        assert!(total_staking_power == expected_total_staking_power);
+
+        // Calculate expected rewards - according to Epoch 2 (post-upgrade).
+        let prev_staker_rewards = expected_staker_rewards;
+        let prev_strk_pool_rewards = expected_strk_pool_rewards;
+        let prev_btc_commission_rewards = expected_btc_commission_rewards;
+        let prev_btc_pool_rewards = expected_btc_pool_rewards;
+        let (expected_staker_rewards, expected_strk_pool_rewards) =
+            calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: staker_stake,
+            pool_amount: strk_pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+        );
+        assert!(expected_staker_rewards != prev_staker_rewards);
+        assert!(expected_strk_pool_rewards != prev_strk_pool_rewards);
+        let (expected_btc_commission_rewards, expected_btc_pool_rewards) =
+            calculate_staker_btc_pool_rewards_v2(
+            pool_balance: btc_pool_balance,
+            :commission,
+            :staking_contract,
+            :minting_curve_contract,
+            token_address: system.btc_token.contract_address(),
+        );
+        assert!(expected_btc_commission_rewards != prev_btc_commission_rewards);
+        assert!(expected_btc_pool_rewards != prev_btc_pool_rewards);
+
+        // Test staker balance with attestation rewards - according to Epoch 2 (post-upgrade).
+        system
+            .advance_block_into_attestation_window_custom_stake(
+                staker_address: staker.staker.address, stake: staker_stake + strk_pool_balance,
+            );
+        system.attest(:staker);
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(staker_rewards == expected_staker_rewards + expected_btc_commission_rewards);
+
+        // Advance epoch - test delegator balances with attestation rewards - according to Epoch 2
+        // (post-upgrade).
+        system.advance_epoch(); // Epoch 4 - > 5
+        let strk_delegator_rewards = system
+            .delegator_claim_rewards(delegator: strk_delegator, pool: strk_pool);
+        let btc_delegator_rewards = system
+            .delegator_claim_rewards(delegator: btc_delegator, pool: btc_pool);
+        assert!(wide_abs_diff(strk_delegator_rewards, expected_strk_pool_rewards) <= 1);
+        assert!(btc_delegator_rewards == expected_btc_pool_rewards);
+    }
+}
+
+/// Flow:
 /// Add tokens A and B
 /// Delegate for both tokens
 /// Enable token A, disable token B

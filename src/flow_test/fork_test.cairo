@@ -614,6 +614,23 @@ fn delegator_rewards_v0_find_sigma_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn balances_delay_more_balance_change_flow_test() {
+    let mut flow = flows::BalancesDelayMoreBalanceChangeFlow {
+        staker: Option::None,
+        stake_amount: Option::None,
+        commission: Option::None,
+        strk_delegated_amount: Option::None,
+        btc_delegated_amount: Option::None,
+        strk_delegator: Option::None,
+        btc_delegator: Option::None,
+        strk_pool: Option::None,
+        btc_pool: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn enable_disable_token_before_after_upgrade_flow_test() {
     let mut flow = flows::EnableDisableTokenBeforeAfterUpgradeFlow {
         token_a: Option::None,
