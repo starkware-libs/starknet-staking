@@ -3033,6 +3033,51 @@ fn update_rewards_multiple_btc_pools_flow_test() {
 }
 
 /// Flow:
+/// Start consensus rewards.
+/// Staker stake with STRK pool.
+/// Open BTC pool.
+/// Advance K epochs.
+/// update_rewards.
+/// Test staker rewards.
+#[test]
+fn update_rewards_empty_pools_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    let staking_contract = system.staking.address;
+    let minting_curve_contract = system.minting_curve.address;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    let strk_pool = system.staking.get_pool(:staker);
+    let btc_pool = system
+        .set_open_for_delegation(:staker, token_address: system.btc_token.contract_address());
+    system.start_consensus_rewards();
+
+    system.update_rewards(:staker, disable_rewards: false);
+
+    // Calculate expected rewards.
+    let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(expected_staker_rewards.is_non_zero());
+
+    // Claim rewards - test staker rewards
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    assert!(staker_rewards == expected_staker_rewards);
+
+    // Test pool balances
+    let strk_pool_balance = system.token.balance_of(account: strk_pool);
+    let btc_pool_balance = system.token.balance_of(account: btc_pool);
+    assert!(strk_pool_balance.is_zero());
+    assert!(btc_pool_balance.is_zero());
+}
+
+/// Flow:
 /// 2 BTC tokens (A and B) added - test tokens
 /// Enable token A - test tokens
 /// Advance epoch - test tokens
