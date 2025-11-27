@@ -22,7 +22,6 @@
 
 ## k=1 -> k=2 Migration Member
 - find sigma: Enter V0, change in V1, catch all ifs.
-- find sigma - cover all branches with member from V0.
 more ideas:
 - member from V1, pool gets rewards at V1, update balance at V1, update balance at V3, pool gets rewards at V3, test rewards.
 - member from V1, pool gets rewards at V1, pool gets rewards at V3, update balance at V3, test rewards.
@@ -36,11 +35,6 @@ more ideas:
 - staker enter in V2, advance epoch, advance epoch, upgrade to V3, attest, update balance,advance epoch, attest, advance epoch, attest, test rewards
 - staker enter in V2, advance epoch, update balance, upgrade to V3, attest, advance epoch, attest, advance epoch, attest, test rewards
 - staker enter in V2, advance epoch, upgrade to V3, advance epoch, attest,
-- staker enter in V0, upgrade to V3, attest
-- staker enter in V0, advance epoch, update balance, upgrade to V3, attest, update balance, advance epoch, attest
-- staker enter in V1, advance epoch, update balance, upgrade to V3, attest, update balance, advance epoch, attest
-- staker enter in V0, advance epoch, update balance, advance epoch, update balance, upgrade to V3, attest
-- staker enter in V1, advance epoch, update balance, advance epoch, update balance, upgrade to V3, attest
 - staker in V2, update balance staker+update balance pool, upgrade, attest in current epoch, attest in next epoch, attest in next next epoch
 - staker in V2, advance epoch, update balance staker+update balance pool, advance epoch, update balance staker+update balance pool, upgrade, update balance staker+update balance pool, attest in current epoch, attest in next epoch, attest in next next epoch
 
