@@ -1610,13 +1610,8 @@ pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
         );
-        if self.staking.is_v0() {
-            let pool_dispatcher = IPoolV0Dispatcher { contract_address: pool };
-            pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
-        } else {
-            let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-            pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
-        }
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.enter_delegation_pool(reward_address: delegator.reward.address, :amount)
     }
 
     fn delegate_btc(
@@ -1666,13 +1661,8 @@ pub(crate) impl SystemDelegatorImpl of SystemDelegatorTrait {
         cheat_caller_address_once(
             contract_address: pool, caller_address: delegator.delegator.address,
         );
-        if self.staking.is_v0() {
-            let pool_dispatcher = IPoolV0Dispatcher { contract_address: pool };
-            pool_dispatcher.exit_delegation_pool_intent(:amount)
-        } else {
-            let pool_dispatcher = IPoolDispatcher { contract_address: pool };
-            pool_dispatcher.exit_delegation_pool_intent(:amount)
-        }
+        let pool_dispatcher = IPoolDispatcher { contract_address: pool };
+        pool_dispatcher.exit_delegation_pool_intent(:amount)
     }
 
     #[feature("safe_dispatcher")]
