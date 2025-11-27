@@ -16,13 +16,14 @@ use staking::staking::interface::{
     IStakingConsensusDispatcherTrait, IStakingDispatcherTrait,
     IStakingRewardsManagerSafeDispatcherTrait,
 };
+use staking::staking::objects::NormalizedAmountTrait;
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
     BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
     TEST_MIN_BTC_FOR_REWARDS,
 };
 use staking::test_utils::{
-    StakingInitConfig, calculate_staker_btc_pool_rewards_v2,
+    StakingInitConfig, calculate_staker_btc_pool_rewards_v2, calculate_staker_btc_pool_rewards_v3,
     calculate_staker_strk_rewards_with_balances_v2, calculate_staker_strk_rewards_with_balances_v3,
     calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
     custom_decimals_token, deploy_mock_erc20_decimals_contract,
@@ -2931,6 +2932,104 @@ fn update_rewards_strk_pool_flow_test() {
     system.advance_epoch();
     let delegator_rewards = system.delegator_claim_rewards(:delegator, :pool);
     assert!(delegator_rewards == expected_pool_rewards);
+}
+
+/// Flow:
+/// Staker stake.
+/// Open BTC pool 8 decimals.
+/// Open BTC pool 18 decimals.
+/// Delegator delegate BTC 8 decimals.
+/// Delegator delegate BTC 18 decimals.
+/// Start consensus rewards.
+/// update_rewards.
+/// Test staker rewards.
+/// Test delegator rewards.
+/// Advance epoch.
+/// Test delegator rewards.
+#[test]
+fn update_rewards_multiple_btc_pools_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let delegation_amount_8 = BTC_8D_CONFIG.min_for_rewards;
+    let delegation_amount_18 = BTC_18D_CONFIG.min_for_rewards;
+
+    // Setup tokens.
+    let token_8 = system
+        .deploy_new_btc_token(name: "BTC_8D_TOKEN", decimals: BTC_8D_CONFIG.decimals);
+    let token_18 = system
+        .deploy_new_btc_token(name: "BTC_18D_TOKEN", decimals: BTC_18D_CONFIG.decimals);
+    system.staking.add_token(token_address: token_8.contract_address());
+    system.staking.add_token(token_address: token_18.contract_address());
+    system.staking.enable_token(token_address: token_8.contract_address());
+    system.staking.enable_token(token_address: token_18.contract_address());
+
+    // Stake and open pools.
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    let staking_contract = system.staking.address;
+    let minting_curve_contract = system.minting_curve.address;
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+    system.set_commission(:staker, :commission);
+    let pool_8 = system.set_open_for_delegation(:staker, token_address: token_8.contract_address());
+    let pool_18 = system
+        .set_open_for_delegation(:staker, token_address: token_18.contract_address());
+    let delegator_8 = system.new_btc_delegator(amount: delegation_amount_8, token: token_8);
+    let delegator_18 = system.new_btc_delegator(amount: delegation_amount_18, token: token_18);
+    system
+        .delegate_btc(
+            delegator: delegator_8, pool: pool_8, amount: delegation_amount_8, token: token_8,
+        );
+    system
+        .delegate_btc(
+            delegator: delegator_18, pool: pool_18, amount: delegation_amount_18, token: token_18,
+        );
+
+    system.start_consensus_rewards();
+    system.update_rewards(:staker, disable_rewards: false);
+
+    // Calculate expected rewards.
+    let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(expected_staker_rewards.is_non_zero());
+    let normalized_delegation_amount = NormalizedAmountTrait::from_native_amount(
+        amount: delegation_amount_8, decimals: BTC_8D_CONFIG.decimals,
+    );
+    let normalized_total_btc_balance = NormalizedAmountTrait::from_native_amount(
+        amount: delegation_amount_8 * 2, decimals: BTC_8D_CONFIG.decimals,
+    );
+    let (expected_commission_rewards, expected_pool_rewards) = calculate_staker_btc_pool_rewards_v3(
+        normalized_pool_balance: normalized_delegation_amount,
+        normalized_staker_total_btc_balance: normalized_total_btc_balance,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: system.btc_token.contract_address(),
+    );
+    assert!(expected_commission_rewards.is_non_zero());
+    assert!(expected_pool_rewards.is_non_zero());
+
+    // Claim rewards - test staker and delegator rewards
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    let delegator_rewards_8 = system.delegator_claim_rewards(delegator: delegator_8, pool: pool_8);
+    let delegator_rewards_18 = system
+        .delegator_claim_rewards(delegator: delegator_18, pool: pool_18);
+    assert!(staker_rewards == expected_staker_rewards + expected_commission_rewards * 2);
+    assert!(delegator_rewards_8.is_zero());
+    assert!(delegator_rewards_18.is_zero());
+
+    // Advance epoch - test delegator rewards
+    system.advance_epoch();
+    let delegator_rewards_8 = system.delegator_claim_rewards(delegator: delegator_8, pool: pool_8);
+    let delegator_rewards_18 = system
+        .delegator_claim_rewards(delegator: delegator_18, pool: pool_18);
+    assert!(delegator_rewards_8 == expected_pool_rewards);
+    assert!(delegator_rewards_18 == expected_pool_rewards);
 }
 
 /// Flow:
