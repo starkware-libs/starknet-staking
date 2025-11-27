@@ -14,7 +14,6 @@ use staking::staking::interface::{
     IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
     IStakingAttestationSafeDispatcher, IStakingAttestationSafeDispatcherTrait,
     IStakingConsensusDispatcherTrait, IStakingDispatcherTrait,
-    IStakingRewardsManagerSafeDispatcherTrait,
 };
 use staking::staking::objects::NormalizedAmountTrait;
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
@@ -2793,10 +2792,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert!(rewards.is_zero());
 
     // Attempt again same block - panic
-    let result = system
-        .staking
-        .rewards_manager_safe_dispatcher()
-        .update_rewards(staker_address: staker.staker.address, disable_rewards: true);
+    let result = system.safe_update_rewards(:staker, disable_rewards: true);
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
@@ -2808,10 +2804,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert!(rewards.is_zero());
 
     // Attempt again same block - panic
-    let result = system
-        .staking
-        .rewards_manager_safe_dispatcher()
-        .update_rewards(staker_address: staker.staker.address, disable_rewards: false);
+    let result = system.safe_update_rewards(:staker, disable_rewards: false);
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
@@ -2828,10 +2821,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert!(rewards.is_zero());
 
     // Attempt again same block - panic
-    let result = system
-        .staking
-        .rewards_manager_safe_dispatcher()
-        .update_rewards(staker_address: staker.staker.address, disable_rewards: true);
+    let result = system.safe_update_rewards(:staker, disable_rewards: true);
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
@@ -2843,10 +2833,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert!(rewards.is_zero());
 
     // Attempt again same block - panic
-    let result = system
-        .staking
-        .rewards_manager_safe_dispatcher()
-        .update_rewards(staker_address: staker.staker.address, disable_rewards: false);
+    let result = system.safe_update_rewards(:staker, disable_rewards: false);
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
@@ -2858,10 +2845,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert!(rewards.is_zero());
 
     // Attempt again same block - panic
-    let result = system
-        .staking
-        .rewards_manager_safe_dispatcher()
-        .update_rewards(staker_address: staker.staker.address, disable_rewards: true);
+    let result = system.safe_update_rewards(:staker, disable_rewards: true);
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
@@ -2881,10 +2865,7 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
     assert!(rewards == expected_rewards);
 
     // Attempt again same block - panic
-    let result = system
-        .staking
-        .rewards_manager_safe_dispatcher()
-        .update_rewards(staker_address: staker.staker.address, disable_rewards: false);
+    let result = system.safe_update_rewards(:staker, disable_rewards: false);
     assert_panic_with_error(
         :result, expected_error: StakingError::REWARDS_ALREADY_UPDATED.describe(),
     );
