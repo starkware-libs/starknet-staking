@@ -4,9 +4,6 @@
 - staker change balance and test with view of current epoch balance
 - member change balance and test with view of current epoch balance
 
-## `update_rewards`
-- with member from previous versions.
-
 ## k=1 -> k=2 balances
 - delegator claim rewards when last change is in epoch + 2, then advance epochs and claim again to see no missing rewards
 - same as above, also when there is change in epoch + 1
