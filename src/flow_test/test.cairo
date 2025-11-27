@@ -3120,3 +3120,249 @@ fn staker_change_balance_twice_same_epoch_flow_test() {
     assert!(expected_rewards.is_non_zero());
     assert!(system.staker_claim_rewards(:staker) == expected_rewards);
 }
+
+/// Flow:
+/// Staker stake with STRK pool and BTC pool
+/// 2 delegators to STRK pool
+/// 2 delegators to BTC pool
+/// Change balance (staker increase, delegate enter, delegate increase, delegate intent) and attest
+/// in each epoch.
+/// Test rewards
+#[test]
+fn staker_multiple_pools_multiple_delegators_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let staking_contract = system.staking.address;
+    let minting_curve_contract = system.minting_curve.address;
+    let stake_amount = system.staking.get_min_stake();
+    let strk_amount = STRK_CONFIG.min_for_rewards;
+    let btc_amount = TEST_MIN_BTC_FOR_REWARDS;
+    let btc_token = system.btc_token;
+    let staker = system.new_staker(amount: 10 * stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    let strk_pool = system.staking.get_pool(:staker);
+    let btc_pool = system
+        .set_open_for_delegation(:staker, token_address: btc_token.contract_address());
+    let strk_delegator_1 = system.new_delegator(amount: 10 * strk_amount);
+    let strk_delegator_2 = system.new_delegator(amount: 10 * strk_amount);
+    let btc_delegator_1 = system.new_btc_delegator(amount: 10 * btc_amount, token: btc_token);
+    let btc_delegator_2 = system.new_btc_delegator(amount: 10 * btc_amount, token: btc_token);
+    let mut total_staker_rewards = Zero::zero();
+    let mut total_strk_delegator_1_rewards = Zero::zero();
+    let mut total_strk_delegator_2_rewards = Zero::zero();
+    let mut total_btc_delegator_1_rewards = Zero::zero();
+    let mut total_btc_delegator_2_rewards = Zero::zero();
+
+    system.advance_k_epochs();
+
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount);
+    let (staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    system.delegate(delegator: strk_delegator_1, pool: strk_pool, amount: strk_amount);
+    system.delegate(delegator: strk_delegator_2, pool: strk_pool, amount: strk_amount);
+
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount);
+    total_staker_rewards += staker_rewards;
+    system
+        .add_to_delegation_pool(delegator: strk_delegator_1, pool: strk_pool, amount: strk_amount);
+    system
+        .delegate_btc(
+            delegator: btc_delegator_1, pool: btc_pool, amount: btc_amount, token: btc_token,
+        );
+
+    system.advance_epoch();
+
+    system
+        .delegate_btc(
+            delegator: btc_delegator_2, pool: btc_pool, amount: btc_amount, token: btc_token,
+        );
+    system.delegator_exit_intent(delegator: strk_delegator_1, pool: strk_pool, amount: strk_amount);
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + 2 * strk_amount);
+    let (staker_rewards, strk_pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: 2 * strk_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_delegator_1_rewards += strk_pool_rewards / 2;
+    total_strk_delegator_2_rewards += strk_pool_rewards / 2;
+
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + 3 * strk_amount);
+    let (staker_rewards, strk_pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: 3 * strk_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_delegator_1_rewards += strk_pool_rewards * 2 / 3;
+    total_strk_delegator_2_rewards += strk_pool_rewards / 3;
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
+        pool_balance: btc_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token.contract_address(),
+    );
+    total_staker_rewards += commission_rewards;
+    total_btc_delegator_1_rewards += btc_pool_rewards;
+    system.increase_stake(:staker, amount: stake_amount);
+    system
+        .increase_delegate_btc(
+            delegator: btc_delegator_1, pool: btc_pool, amount: btc_amount, token: btc_token,
+        );
+
+    system.advance_epoch();
+
+    system.delegator_exit_intent(delegator: btc_delegator_2, pool: btc_pool, amount: btc_amount);
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount + 2 * strk_amount);
+    let (staker_rewards, strk_pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: 2 * strk_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_delegator_1_rewards += strk_pool_rewards / 2;
+    total_strk_delegator_2_rewards += strk_pool_rewards / 2;
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
+        pool_balance: 2 * btc_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token.contract_address(),
+    );
+    total_staker_rewards += commission_rewards;
+    total_btc_delegator_1_rewards += btc_pool_rewards / 2;
+    total_btc_delegator_2_rewards += btc_pool_rewards / 2;
+
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, stake: 2 * stake_amount + 2 * strk_amount);
+    let (staker_rewards, strk_pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: 2 * stake_amount,
+        pool_amount: 2 * strk_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_delegator_1_rewards += strk_pool_rewards / 2;
+    total_strk_delegator_2_rewards += strk_pool_rewards / 2;
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
+        pool_balance: 3 * btc_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token.contract_address(),
+    );
+    total_staker_rewards += commission_rewards;
+    total_btc_delegator_1_rewards += btc_pool_rewards * 2 / 3;
+    total_btc_delegator_2_rewards += btc_pool_rewards / 3;
+
+    system.advance_epoch();
+
+    system
+        .add_to_delegation_pool(delegator: strk_delegator_2, pool: strk_pool, amount: strk_amount);
+    system.advance_block_custom_and_attest(:staker, stake: 2 * stake_amount + 2 * strk_amount);
+    let (staker_rewards, strk_pool_rewards) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: 2 * stake_amount,
+        pool_amount: 2 * strk_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    total_staker_rewards += staker_rewards;
+    total_strk_delegator_1_rewards += strk_pool_rewards / 2;
+    total_strk_delegator_2_rewards += strk_pool_rewards / 2;
+    let (commission_rewards, btc_pool_rewards) = calculate_staker_btc_pool_rewards_v2(
+        pool_balance: 2 * btc_amount,
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+        token_address: btc_token.contract_address(),
+    );
+    total_staker_rewards += commission_rewards;
+    total_btc_delegator_1_rewards += btc_pool_rewards;
+
+    system.advance_epoch();
+
+    system.delegator_exit_intent(delegator: strk_delegator_2, pool: strk_pool, amount: strk_amount);
+    system.advance_block_custom_and_attest(:staker, stake: 2 * stake_amount + 2 * strk_amount);
+    total_staker_rewards += staker_rewards;
+    total_strk_delegator_1_rewards += strk_pool_rewards / 2;
+    total_strk_delegator_2_rewards += strk_pool_rewards / 2;
+    total_staker_rewards += commission_rewards;
+    total_btc_delegator_1_rewards += btc_pool_rewards;
+
+    system.advance_epoch();
+    system.advance_epoch();
+
+    system.advance_block_custom_and_attest(:staker, stake: 2 * stake_amount + 2 * strk_amount);
+    total_staker_rewards += staker_rewards;
+    total_strk_delegator_1_rewards += strk_pool_rewards / 2;
+    total_strk_delegator_2_rewards += strk_pool_rewards / 2;
+    total_staker_rewards += commission_rewards;
+    total_btc_delegator_1_rewards += btc_pool_rewards;
+
+    // Test staker rewards.
+    let staker_rewards = system.staker_claim_rewards(:staker);
+    assert_eq!(staker_rewards, total_staker_rewards);
+    // Test balances of the pools (Allow small difference due to rounding).
+    assert!(
+        wide_abs_diff(
+            system.token.balance_of(account: strk_pool),
+            total_strk_delegator_1_rewards + total_strk_delegator_2_rewards,
+        ) <= 10,
+    );
+    assert!(
+        wide_abs_diff(
+            system.token.balance_of(account: btc_pool),
+            total_btc_delegator_1_rewards + total_btc_delegator_2_rewards,
+        ) <= 10,
+    );
+    // Test delegator rewards (Allow small difference due to rounding).
+    system.advance_epoch();
+    assert!(
+        wide_abs_diff(
+            system.delegator_claim_rewards(delegator: strk_delegator_1, pool: strk_pool),
+            total_strk_delegator_1_rewards,
+        ) <= 10,
+    );
+    assert!(
+        wide_abs_diff(
+            system.delegator_claim_rewards(delegator: strk_delegator_2, pool: strk_pool),
+            total_strk_delegator_2_rewards,
+        ) <= 10,
+    );
+    assert!(
+        wide_abs_diff(
+            system.delegator_claim_rewards(delegator: btc_delegator_1, pool: btc_pool),
+            total_btc_delegator_1_rewards,
+        ) <= 10,
+    );
+    assert!(
+        wide_abs_diff(
+            system.delegator_claim_rewards(delegator: btc_delegator_2, pool: btc_pool),
+            total_btc_delegator_2_rewards,
+        ) <= 10,
+    );
+    // Test remaining balance in pools.
+    assert!(system.token.balance_of(account: strk_pool) < 10);
+    assert!(system.token.balance_of(account: btc_pool) < 10);
+}
