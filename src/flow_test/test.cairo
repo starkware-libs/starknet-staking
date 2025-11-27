@@ -3029,3 +3029,94 @@ fn enable_disable_btc_tokens_flow_test() {
         .span();
     assert!(tokens == expected_tokens);
 }
+
+/// Flow:
+/// Staker stake
+/// Advance K epochs
+/// Staker increase stake
+/// Staker increase stake again
+/// Staker attest and claim rewards - test rewards.
+/// Advance epoch
+/// Staker attest and claim rewards - test rewards.
+/// Advance epoch
+/// Staker attest and claim rewards - test rewards.
+/// Start consensus rewards
+/// Staker increase stake
+/// Staker increase stake again
+/// Update rewards and claim rewards - test rewards.
+/// Advance epoch
+/// Update rewards and claim rewards - test rewards.
+/// Advance epoch
+/// Update rewards and claim rewards - test rewards.
+#[test]
+fn staker_change_balance_twice_same_epoch_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let staking_contract = system.staking.address;
+    let minting_curve_contract = system.minting_curve.address;
+    let stake_amount = system.staking.get_min_stake();
+    let staker = system.new_staker(amount: stake_amount * 3);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.advance_k_epochs();
+    system.increase_stake(:staker, amount: stake_amount / 2);
+    system.increase_stake(:staker, amount: stake_amount / 2);
+
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount);
+    let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(expected_rewards.is_non_zero());
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    system.advance_epoch();
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount);
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    system.advance_epoch();
+    system.advance_block_custom_and_attest(:staker, stake: stake_amount * 2);
+    let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+        amount_own: stake_amount * 2,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(expected_rewards.is_non_zero());
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    system.start_consensus_rewards();
+    system.increase_stake(:staker, amount: stake_amount / 2);
+    system.increase_stake(:staker, amount: stake_amount / 2);
+
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount * 2,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(expected_rewards.is_non_zero());
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    system.advance_epoch();
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    system.advance_epoch();
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount * 3,
+        pool_amount: Zero::zero(),
+        :commission,
+        :staking_contract,
+        :minting_curve_contract,
+    );
+    assert!(expected_rewards.is_non_zero());
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+}
