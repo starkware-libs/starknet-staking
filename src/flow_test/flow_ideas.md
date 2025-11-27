@@ -34,7 +34,6 @@ more ideas:
 - staker enter in V2, advance epoch, advance epoch, upgrade to V3, attest, update balance,advance epoch, attest, advance epoch, attest, test rewards
 - staker enter in V2, advance epoch, update balance, upgrade to V3, attest, advance epoch, attest, advance epoch, attest, test rewards
 - staker enter in V2, advance epoch, upgrade to V3, advance epoch, attest,
-- staker in V2, advance epoch, update balance staker+update balance pool, advance epoch, update balance staker+update balance pool, upgrade, update balance staker+update balance pool, attest in current epoch, attest in next epoch, attest in next next epoch
 
 ## pool member balance at curr epoch migration
 - Member from V0, no actions in V1 or V2, test curr balance
