@@ -9264,3 +9264,108 @@ pub(crate) impl EnableDisableTokenBeforeAfterUpgradeFlowImpl of FlowTrait<
         assert!(rewards_b.is_zero());
     }
 }
+
+/// Flow:
+/// Staker stake
+/// Accrue rewards
+/// Upgrade to V1
+/// Attest
+/// Increase stake
+/// Attest
+/// Upgrade to V2
+/// Attest
+/// Increase stake
+/// Attest
+/// Upgrade to V3
+/// Attest
+/// Increase stake
+/// Attest
+/// Test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct AccrueRewardsDifferentBalancesAcrossVersionsFlow {
+    pub(crate) staker: Option<Staker>,
+    pub(crate) stake_amount: Option<Amount>,
+    pub(crate) v2_rewards: Option<Amount>,
+}
+pub(crate) impl AccrueRewardsDifferentBalancesAcrossVersionsFlowImpl of FlowTrait<
+    AccrueRewardsDifferentBalancesAcrossVersionsFlow,
+> {
+    fn setup(ref self: AccrueRewardsDifferentBalancesAcrossVersionsFlow, ref system: SystemState) {
+        let stake_amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: stake_amount * 5);
+
+        system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 200);
+        system.accrue_rewards(:staker);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+        self.stake_amount = Option::Some(stake_amount);
+    }
+
+    fn setup_v1(
+        ref self: AccrueRewardsDifferentBalancesAcrossVersionsFlow, ref system: SystemState,
+    ) {
+        let staker = self.staker.unwrap();
+        let stake_amount = self.stake_amount.unwrap();
+
+        system.accrue_rewards(:staker);
+        system.increase_stake(:staker, amount: stake_amount);
+        system.accrue_rewards(:staker);
+    }
+
+    fn setup_v2(
+        ref self: AccrueRewardsDifferentBalancesAcrossVersionsFlow, ref system: SystemState,
+    ) {
+        let staker = self.staker.unwrap();
+        let stake_amount = self.stake_amount.unwrap();
+
+        system.accrue_rewards(:staker);
+        system.increase_stake(:staker, amount: stake_amount);
+        system.accrue_rewards(:staker);
+
+        self.v2_rewards = Option::Some(system.staker_info_v1(:staker).unclaimed_rewards_own);
+    }
+
+    fn test(self: AccrueRewardsDifferentBalancesAcrossVersionsFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let stake_amount = self.stake_amount.unwrap();
+        let v2_rewards = self.v2_rewards.unwrap();
+        let mut v3_rewards = Zero::zero();
+
+        system.accrue_rewards(:staker);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: stake_amount * 3,
+            pool_amount: Zero::zero(),
+            commission: 200,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        v3_rewards += expected_rewards;
+
+        system.increase_stake(:staker, amount: stake_amount);
+        system.accrue_rewards(:staker);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: stake_amount * 4,
+            pool_amount: Zero::zero(),
+            commission: 200,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        v3_rewards += expected_rewards;
+
+        system.increase_stake(:staker, amount: stake_amount);
+        system.start_consensus_rewards();
+        system.update_rewards(:staker, disable_rewards: false);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+            amount_own: stake_amount * 5,
+            pool_amount: Zero::zero(),
+            commission: 200,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        v3_rewards += expected_rewards;
+
+        let staker_rewards = system.staker_claim_rewards(:staker);
+        assert!(staker_rewards == v2_rewards + v3_rewards);
+    }
+}

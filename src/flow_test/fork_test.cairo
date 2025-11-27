@@ -627,3 +627,12 @@ fn enable_disable_token_before_after_upgrade_flow_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn accrue_rewards_different_balances_across_versions_flow_test() {
+    let mut flow = flows::AccrueRewardsDifferentBalancesAcrossVersionsFlow {
+        staker: Option::None, stake_amount: Option::None, v2_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
