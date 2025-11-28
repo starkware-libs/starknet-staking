@@ -3825,3 +3825,39 @@ fn update_rewards_epoch_length_flow_test() {
     assert!(increased_length_rewards < default_length_rewards);
     assert!(default_length_rewards < decreased_length_rewards);
 }
+
+/// Flow:
+/// Staker stake.
+/// Start consensus rewards.
+/// update rewards with disable_rewards = true.
+/// Advance block.
+/// update rewards with disable_rewards = false.
+/// Advance block.
+/// update rewards with disable_rewards = true.
+/// Test rewards only for one block.
+#[test]
+fn update_rewards_disable_rewards_intermittently_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let stake_amount = system.staking.get_min_stake();
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+    system.start_consensus_rewards();
+
+    system.update_rewards(:staker, disable_rewards: true);
+    advance_block_number_global(blocks: 1);
+    system.update_rewards(:staker, disable_rewards: false);
+    advance_block_number_global(blocks: 1);
+    system.update_rewards(:staker, disable_rewards: true);
+
+    let rewards = system.staker_claim_rewards(:staker);
+    let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        :commission,
+        staking_contract: system.staking.address,
+        minting_curve_contract: system.minting_curve.address,
+    );
+    assert!(rewards == expected_rewards);
+}
