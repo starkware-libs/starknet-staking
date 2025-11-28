@@ -5,7 +5,6 @@
 - member change balance and test with view of current epoch balance
 
 ## `update_rewards`
-- staker change balance, attest, change balance, attest, set_v3, change balance, update_rewards, change_balance, update_rewards, test rewards.
 - with member from previous versions.
 
 ## k=1 -> k=2 balances
