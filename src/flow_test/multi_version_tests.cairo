@@ -258,3 +258,17 @@ fn member_change_balance_claim_rewards_one_rewards_flow_test() {
     };
     test_multi_version_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn update_rewards_with_old_delegator_flow_test() {
+    let mut flow = flows::UpdateRewardsWithOldDelegatorFlow {
+        staker: Option::None,
+        stake_amount: Option::None,
+        commission: Option::None,
+        delegator: Option::None,
+        delegated_amount: Option::None,
+        pool: Option::None,
+    };
+    test_multi_version_flow_mainnet(ref :flow);
+}
