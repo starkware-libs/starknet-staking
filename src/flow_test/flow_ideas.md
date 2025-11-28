@@ -5,7 +5,6 @@
 - member change balance and test with view of current epoch balance
 
 ## `update_rewards`
-- staker with empty pool (STRK + BTC).
 - staker immediately/one epoch after he called intent.
 - update rewards for 2 different blocks in the same epoch - should be same rewards.
 - Change epoch len in blocks - rewards should be changed.
