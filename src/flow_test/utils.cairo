@@ -32,6 +32,7 @@ use staking::pool::interface::{
 };
 use staking::pool::interface_v0::{IPoolV0Dispatcher, IPoolV0DispatcherTrait, PoolMemberInfo};
 use staking::reward_supplier::interface::{
+    BlockDurationConfig, IRewardSupplierConfigDispatcher, IRewardSupplierConfigDispatcherTrait,
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
 use staking::reward_supplier::reward_supplier::RewardSupplier::{
@@ -699,6 +700,8 @@ impl MintingCurveImpl of MintingCurveTrait {
 #[derive(Drop, Copy)]
 pub(crate) struct RewardSupplierRoles {
     pub upgrade_governor: ContractAddress,
+    pub app_role_admin: ContractAddress,
+    pub app_governor: ContractAddress,
 }
 
 /// The `RewardSupplierConfig` struct represents the configuration settings for the reward supplier
@@ -790,6 +793,10 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
         reward_supplier
     }
 
+    fn config_dispatcher(self: RewardSupplierState) -> IRewardSupplierConfigDispatcher nopanic {
+        IRewardSupplierConfigDispatcher { contract_address: self.address }
+    }
+
     fn dispatcher(self: RewardSupplierState) -> IRewardSupplierDispatcher nopanic {
         IRewardSupplierDispatcher { contract_address: self.address }
     }
@@ -800,6 +807,16 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
             account: self.roles.upgrade_governor,
             governance_admin: self.governance_admin,
         );
+        set_account_as_app_role_admin(
+            contract: self.address,
+            account: self.roles.app_role_admin,
+            governance_admin: self.governance_admin,
+        );
+        set_account_as_app_governor(
+            contract: self.address,
+            account: self.roles.app_governor,
+            app_role_admin: self.roles.app_role_admin,
+        );
     }
 
     fn get_unclaimed_rewards(self: RewardSupplierState) -> Amount {
@@ -808,6 +825,15 @@ pub(crate) impl RewardSupplierImpl of RewardSupplierTrait {
 
     fn calculate_current_epoch_rewards(self: RewardSupplierState) -> (Amount, Amount) {
         self.dispatcher().calculate_current_epoch_rewards()
+    }
+
+    fn set_block_duration_config(
+        self: RewardSupplierState, block_duration_config: BlockDurationConfig,
+    ) {
+        cheat_caller_address_once(
+            contract_address: self.address, caller_address: self.roles.app_governor,
+        );
+        self.config_dispatcher().set_block_duration_config(:block_duration_config);
     }
 }
 
@@ -1006,7 +1032,11 @@ pub(crate) impl SystemConfigImpl of SystemConfigTrait {
             l1_reward_supplier: cfg.reward_supplier.l1_reward_supplier,
             starkgate_address: cfg.reward_supplier.starkgate_address,
             governance_admin: cfg.test_info.governance_admin,
-            roles: RewardSupplierRoles { upgrade_governor: cfg.test_info.upgrade_governor },
+            roles: RewardSupplierRoles {
+                upgrade_governor: cfg.test_info.upgrade_governor,
+                app_role_admin: cfg.test_info.app_role_admin,
+                app_governor: cfg.test_info.app_governor,
+            },
         };
         let attestation = AttestationConfig {
             governance_admin: cfg.test_info.governance_admin,

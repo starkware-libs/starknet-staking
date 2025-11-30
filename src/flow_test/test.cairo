@@ -9,6 +9,10 @@ use staking::flow_test::utils::{
 use staking::pool::pool::Pool;
 use staking::pool::pool::Pool::STRK_CONFIG;
 use staking::pool::utils::compute_rewards_rounded_down;
+use staking::reward_supplier::interface::BlockDurationConfig;
+use staking::reward_supplier::reward_supplier::RewardSupplier::{
+    BLOCK_DURATION_SCALE, DEFAULT_AVG_BLOCK_DURATION, DEFAULT_BLOCK_DURATION_CONFIG,
+};
 use staking::staking::errors::Error as StakingError;
 use staking::staking::interface::{
     IStakingAttestationDispatcher, IStakingAttestationDispatcherTrait,
@@ -16,16 +20,18 @@ use staking::staking::interface::{
     IStakingConsensusDispatcherTrait, IStakingDispatcherTrait,
     IStakingRewardsManagerSafeDispatcherTrait,
 };
+use staking::staking::objects::EpochInfoTrait;
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
-    AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
-    TEST_MIN_BTC_FOR_REWARDS,
+    AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, EPOCH_DURATION, PUBLIC_KEY,
+    STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS,
 };
 use staking::test_utils::{
-    StakingInitConfig, advance_blocks, calculate_staker_btc_pool_rewards_v2,
-    calculate_staker_strk_rewards_with_balances_v2, calculate_staker_strk_rewards_with_balances_v3,
+    StakingInitConfig, advance_blocks, calculate_current_block_rewards_with_avg_block_time_v3,
+    calculate_staker_btc_pool_rewards_v2, calculate_staker_strk_rewards_with_balances_v2,
+    calculate_staker_strk_rewards_with_balances_v3,
     calculate_strk_pool_rewards_with_pool_balance_v2, compute_rewards_per_unit,
-    custom_decimals_token, deploy_mock_erc20_decimals_contract,
+    custom_decimals_token, deploy_mock_erc20_decimals_contract, split_pool_rewards,
 };
 use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
@@ -3561,4 +3567,427 @@ fn delegate_claim_after_claim_with_rewards_flow_test() {
     assert!(system.delegator_claim_rewards(:delegator, :pool) == 2 * expected_rewards);
     system.advance_epoch();
     assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
+}
+
+/// Flow: Advance blocks with different block times and test the avg is calculated correctly.
+#[test]
+fn test_avg_block_duration_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    system.advance_epoch();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, :commission);
+    system.set_commission(:staker, :commission);
+    let btc_pool = system
+        .set_open_for_delegation(:staker, token_address: system.btc_token.contract_address());
+    let btc_amount = TEST_MIN_BTC_FOR_REWARDS;
+    let delegator = system.new_btc_delegator(amount: btc_amount, token: system.btc_token);
+    system.delegate_btc(:delegator, pool: btc_pool, amount: btc_amount, token: system.btc_token);
+    system.start_consensus_rewards();
+    let epoch_length: u64 = system.staking.get_epoch_info().epoch_len_in_blocks().into();
+    let mut total_btc_rewards = Zero::zero();
+    // Test with default balue.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_strk_rewards, expected_btc_rewards) =
+        calculate_current_block_rewards_with_avg_block_time_v3(
+        minting_curve_contract: system.minting_curve.address,
+        avg_block_time: DEFAULT_AVG_BLOCK_DURATION,
+    );
+    let (expected_commission_rewards, expected_pool_rewards) = split_pool_rewards(
+        rewards_with_commission: expected_btc_rewards, :commission,
+    );
+    assert!(
+        system.staker_claim_rewards(:staker) == expected_strk_rewards + expected_commission_rewards,
+    );
+    total_btc_rewards += expected_pool_rewards;
+    assert!(system.token.balance_of(account: btc_pool) == total_btc_rewards);
+    // Test with 2 sec/block.
+    let block_duration = 2;
+    advance_blocks(blocks: epoch_length / 3, :block_duration);
+    advance_blocks(blocks: epoch_length / 3, block_duration: block_duration + 1);
+    advance_blocks(blocks: epoch_length / 3, block_duration: block_duration - 1);
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_strk_rewards, expected_btc_rewards) =
+        calculate_current_block_rewards_with_avg_block_time_v3(
+        minting_curve_contract: system.minting_curve.address,
+        avg_block_time: block_duration * BLOCK_DURATION_SCALE,
+    );
+    let (expected_commission_rewards, expected_pool_rewards) = split_pool_rewards(
+        rewards_with_commission: expected_btc_rewards, :commission,
+    );
+    assert!(
+        system.staker_claim_rewards(:staker) == expected_strk_rewards + expected_commission_rewards,
+    );
+    total_btc_rewards += expected_pool_rewards;
+    assert!(system.token.balance_of(account: btc_pool) == total_btc_rewards);
+    // Test with 2.5 sec/block.
+    advance_blocks(blocks: epoch_length / 2, block_duration: 2);
+    advance_blocks(blocks: epoch_length / 2, block_duration: 3);
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_strk_rewards, expected_btc_rewards) =
+        calculate_current_block_rewards_with_avg_block_time_v3(
+        minting_curve_contract: system.minting_curve.address,
+        avg_block_time: 5 * BLOCK_DURATION_SCALE / 2,
+    );
+    let (expected_commission_rewards, expected_pool_rewards) = split_pool_rewards(
+        rewards_with_commission: expected_btc_rewards, :commission,
+    );
+    assert!(
+        system.staker_claim_rewards(:staker) == expected_strk_rewards + expected_commission_rewards,
+    );
+    total_btc_rewards += expected_pool_rewards;
+    assert!(system.token.balance_of(account: btc_pool) == total_btc_rewards);
+    system.advance_epoch();
+    assert!(system.delegator_claim_rewards(:delegator, pool: btc_pool) == total_btc_rewards);
+}
+
+/// Flow: update_rewards for blocks in same epoch - test same rewards.
+#[test]
+fn test_update_rewards_same_epoch_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    system.advance_epoch();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    let commission = 200;
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, :commission);
+    system.start_consensus_rewards();
+    let pool = system.staking.get_pool(:staker);
+    let delegator = system.new_delegator(amount: stake_amount);
+    system.delegate(:delegator, :pool, amount: stake_amount);
+    let btc_pool = system
+        .set_open_for_delegation(:staker, token_address: system.btc_token.contract_address());
+    let btc_amount = TEST_MIN_BTC_FOR_REWARDS;
+    let delegator = system.new_btc_delegator(amount: btc_amount, token: system.btc_token);
+    system.delegate_btc(:delegator, pool: btc_pool, amount: btc_amount, token: system.btc_token);
+    let epoch_length = system.staking.get_epoch_info().epoch_len_in_blocks();
+    let mut blocks_till_next_epoch = epoch_length.into();
+    system.update_rewards(:staker, disable_rewards: false);
+    let mut staker_rewards = system.staker_claim_rewards(:staker);
+    // Same epoch - same rewards.
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 1;
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    advance_blocks(blocks: 100, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 100;
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    // Next epoch - different rewards due to block duration change.
+    advance_blocks(blocks: blocks_till_next_epoch, block_duration: AVG_BLOCK_DURATION - 1);
+    blocks_till_next_epoch = epoch_length.into();
+    system.update_rewards(:staker, disable_rewards: false);
+    let mut prev_staker_rewards = staker_rewards;
+    staker_rewards = system.staker_claim_rewards(:staker);
+    assert_ne!(staker_rewards, prev_staker_rewards);
+    // Same epoch - same rewards.
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 1;
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    advance_blocks(blocks: 100, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 100;
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    // Next epoch - different rewards due to balance change.
+    advance_blocks(blocks: blocks_till_next_epoch, block_duration: AVG_BLOCK_DURATION - 1);
+    blocks_till_next_epoch = epoch_length.into();
+    system.update_rewards(:staker, disable_rewards: false);
+    prev_staker_rewards = staker_rewards;
+    staker_rewards = system.staker_claim_rewards(:staker);
+    assert_ne!(staker_rewards, prev_staker_rewards);
+    let mut strk_pool_rewards = system.token.balance_of(account: pool);
+    let mut btc_pool_rewards = system.token.balance_of(account: btc_pool);
+    // Same epoch - same rewards.
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 1;
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    assert!(system.token.balance_of(account: pool) == 2 * strk_pool_rewards);
+    assert!(system.token.balance_of(account: btc_pool) == 2 * btc_pool_rewards);
+    advance_blocks(blocks: 100, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 100;
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    assert!(system.token.balance_of(account: pool) == 3 * strk_pool_rewards);
+    assert!(system.token.balance_of(account: btc_pool) == 3 * btc_pool_rewards);
+    // Next epoch - different rewards due to block duration change.
+    advance_blocks(blocks: blocks_till_next_epoch, block_duration: AVG_BLOCK_DURATION);
+    system.update_rewards(:staker, disable_rewards: false);
+    prev_staker_rewards = staker_rewards;
+    staker_rewards = system.staker_claim_rewards(:staker);
+    assert_ne!(staker_rewards, prev_staker_rewards);
+    let prev_strk_pool_rewards = strk_pool_rewards;
+    let prev_btc_pool_rewards = btc_pool_rewards;
+    strk_pool_rewards = system.token.balance_of(account: pool) - 3 * prev_strk_pool_rewards;
+    btc_pool_rewards = system.token.balance_of(account: btc_pool) - 3 * prev_btc_pool_rewards;
+    assert_ne!(strk_pool_rewards, prev_strk_pool_rewards);
+    assert_ne!(btc_pool_rewards, prev_btc_pool_rewards);
+    // Same epoch - same rewards.
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    assert!(
+        system.token.balance_of(account: pool)
+            - prev_strk_pool_rewards * 3 == 2 * strk_pool_rewards,
+    );
+    assert!(
+        system.token.balance_of(account: btc_pool)
+            - prev_btc_pool_rewards * 3 == 2 * btc_pool_rewards,
+    );
+    advance_blocks(blocks: 100, block_duration: AVG_BLOCK_DURATION);
+    system.update_rewards(:staker, disable_rewards: false);
+    assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    assert!(
+        system.token.balance_of(account: pool)
+            - prev_strk_pool_rewards * 3 == 3 * strk_pool_rewards,
+    );
+    assert!(
+        system.token.balance_of(account: btc_pool)
+            - prev_btc_pool_rewards * 3 == 3 * btc_pool_rewards,
+    );
+}
+
+/// Flow: Update rewards is not called:
+/// 1. Miss block
+/// 2. Miss first block in epoch
+/// 3. Miss epoch
+#[test]
+fn test_update_rewards_miss_blocks_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    system.advance_epoch();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 0);
+    system.start_consensus_rewards();
+    // Set epoch length to 10.
+    let epoch_length = 10;
+    system.staking.set_epoch_info(epoch_duration: EPOCH_DURATION, :epoch_length);
+    system.advance_epoch();
+    let mut blocks_till_next_epoch = epoch_length;
+    // Miss block in epoch.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (block_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
+        amount_own: stake_amount,
+        pool_amount: Zero::zero(),
+        commission: Zero::zero(),
+        minting_curve_contract: system.minting_curve.address,
+    );
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 1;
+    system.update_rewards(:staker, disable_rewards: false);
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 1;
+    system.update_rewards(:staker, disable_rewards: false);
+    advance_blocks(blocks: 2, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 2;
+    while blocks_till_next_epoch.is_non_zero() {
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+        blocks_till_next_epoch -= 1;
+    }
+    assert!(system.staker_claim_rewards(:staker) == (epoch_length.into() - 1) * block_rewards);
+    // New epoch - Miss first blocks in epoch.
+    blocks_till_next_epoch = epoch_length.into();
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+    blocks_till_next_epoch -= 1;
+    while blocks_till_next_epoch.is_non_zero() {
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+        blocks_till_next_epoch -= 1;
+    }
+    assert!(system.staker_claim_rewards(:staker) == (epoch_length.into() - 1) * block_rewards);
+    // New epoch - Miss epoch.
+    system.advance_epoch();
+    assert!(system.staker_claim_rewards(:staker) == Zero::zero());
+    // New epoch - Called every block.
+    blocks_till_next_epoch = epoch_length.into();
+    while blocks_till_next_epoch.is_non_zero() {
+        system.update_rewards(:staker, disable_rewards: false);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
+        blocks_till_next_epoch -= 1;
+    }
+    assert!(system.staker_claim_rewards(:staker) == epoch_length.into() * block_rewards);
+}
+
+/// Flow: Set block time config and test rewards after.
+#[test]
+fn test_set_block_time_config_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let minting_curve_contract = system.minting_curve.address;
+    system.advance_epoch();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 0);
+    system.start_consensus_rewards();
+    let epoch_length = system.staking.get_epoch_info().epoch_len_in_blocks().into();
+    let default_min_duration = DEFAULT_BLOCK_DURATION_CONFIG.min_block_duration
+        / BLOCK_DURATION_SCALE;
+    let default_max_duration = DEFAULT_BLOCK_DURATION_CONFIG.max_block_duration
+        / BLOCK_DURATION_SCALE;
+    // Rewards by default duration.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: DEFAULT_AVG_BLOCK_DURATION,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    advance_blocks(blocks: epoch_length, block_duration: default_max_duration + 1);
+    // Rewards by max duration.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: default_max_duration * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    // Set block time config - increase max duration.
+    let new_block_duration_config = BlockDurationConfig {
+        min_block_duration: default_min_duration * BLOCK_DURATION_SCALE,
+        max_block_duration: (default_max_duration + 2) * BLOCK_DURATION_SCALE,
+    };
+    system
+        .reward_supplier
+        .set_block_duration_config(block_duration_config: new_block_duration_config);
+
+    advance_blocks(blocks: epoch_length, block_duration: default_max_duration + 1);
+    // Rewards by default_max_duration + 1.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: (default_max_duration + 1) * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    // Set back to default duration.
+    system
+        .reward_supplier
+        .set_block_duration_config(block_duration_config: DEFAULT_BLOCK_DURATION_CONFIG);
+
+    advance_blocks(blocks: epoch_length, block_duration: default_max_duration + 1);
+    // Rewards by max duration.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: default_max_duration * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    // Set block time config - decrease min duration.
+    let new_block_duration_config = BlockDurationConfig {
+        min_block_duration: (default_min_duration - 1) * BLOCK_DURATION_SCALE,
+        max_block_duration: default_max_duration * BLOCK_DURATION_SCALE,
+    };
+    system
+        .reward_supplier
+        .set_block_duration_config(block_duration_config: new_block_duration_config);
+
+    advance_blocks(blocks: epoch_length, block_duration: default_min_duration - 1);
+    // Rewards by default_min_duration - 1.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: (default_min_duration - 1) * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    // Set back to default duration.
+    system
+        .reward_supplier
+        .set_block_duration_config(block_duration_config: DEFAULT_BLOCK_DURATION_CONFIG);
+
+    advance_blocks(blocks: epoch_length, block_duration: default_min_duration - 1);
+    // Rewards by default_min_duration.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: default_min_duration * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+}
+
+/// Flow: Set epoch length and test rewards after.
+#[test]
+fn test_set_epoch_length_rewards_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let minting_curve_contract = system.minting_curve.address;
+    system.advance_epoch();
+    let min_stake = system.staking.get_min_stake();
+    let stake_amount = min_stake * 2;
+    let staker = system.new_staker(amount: stake_amount);
+    system.stake(:staker, amount: stake_amount, pool_enabled: false, commission: 0);
+    system.start_consensus_rewards();
+    // Update rewards by default duration.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: DEFAULT_AVG_BLOCK_DURATION,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    // Set epoch length to smaller value.
+    let epoch_length = system.staking.get_epoch_info().epoch_len_in_blocks();
+    system.staking.set_epoch_info(epoch_duration: EPOCH_DURATION, epoch_length: epoch_length - 100);
+
+    advance_blocks(blocks: epoch_length.into(), block_duration: 2);
+    // Rewards by 2 sec/block.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: 2 * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    // Set epoch length to bigger value.
+    system.staking.set_epoch_info(epoch_duration: EPOCH_DURATION, epoch_length: epoch_length + 100);
+
+    advance_blocks(blocks: epoch_length.into() - 100, block_duration: 4);
+    // Rewards by 4 sec/block.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: 4 * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    // Set epoch length to same value.
+    system.staking.set_epoch_info(epoch_duration: EPOCH_DURATION, epoch_length: epoch_length + 100);
+
+    advance_blocks(blocks: epoch_length.into() + 100, block_duration: 3);
+    // Rewards by 3 sec/block.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: 3 * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    advance_blocks(blocks: epoch_length.into() + 100, block_duration: 4);
+    // Rewards by 4 sec/block.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: 4 * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    // Set epoch duration.
+    system
+        .staking
+        .set_epoch_info(epoch_duration: EPOCH_DURATION + 100, epoch_length: epoch_length + 100);
+
+    advance_blocks(blocks: epoch_length.into() + 100, block_duration: 3);
+    // Rewards by 3 sec/block.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: 3 * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
+
+    advance_blocks(blocks: epoch_length.into() + 100, block_duration: 3);
+    // Rewards by 3 sec/block.
+    system.update_rewards(:staker, disable_rewards: false);
+    let (expected_rewards, _) = calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: 3 * BLOCK_DURATION_SCALE,
+    );
+    assert!(system.staker_claim_rewards(:staker) == expected_rewards);
 }
