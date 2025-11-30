@@ -4,12 +4,30 @@ use starknet::{ContractAddress, EthAddress};
 #[starknet::interface]
 pub trait IRewardSupplier<TContractState> {
     /// Returns ([`Amount`](staking::types::Amount), [`Amount`](staking::types::Amount)) of rewards
-    /// for the current epoch, for STRK and BTC respectively.
+    /// for the current epoch, for STRK and BTC respectively (in FRI).
+    /// Used for attestation rewards.
     ///
     /// #### Internal calls:
     /// - [`minting_curve::minting_curve::interface::IMintingCurve::yearly_mint`]
     /// - [`staking::staking::interface::IStaking::get_epoch_info`]
     fn calculate_current_epoch_rewards(self: @TContractState) -> (Amount, Amount);
+    /// Returns ([`Amount`](staking::types::Amount), [`Amount`](staking::types::Amount)) of rewards
+    /// for block in the current epoch, for STRK and BTC respectively (in FRI).
+    /// Used for the consensus rewards.
+    ///
+    /// This function is called once per epoch. It updates `avg_block_duration` and returns (STRK,
+    /// BTC) block rewards for the current epoch.
+    ///
+    /// #### Errors:
+    /// -
+    /// [`CALLER_IS_NOT_STAKING_CONTRACT`](staking::errors::GenericError::CALLER_IS_NOT_STAKING_CONTRACT)
+    ///
+    /// #### Access control:
+    /// Only staking contract.
+    ///
+    /// #### Internal calls:
+    /// - [`minting_curve::minting_curve::interface::IMintingCurve::yearly_mint`]
+    fn update_current_epoch_block_rewards(ref self: TContractState) -> (Amount, Amount);
     /// Updates the unclaimed rewards from the staking contract.
     ///
     /// #### Emits:

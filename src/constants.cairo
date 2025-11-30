@@ -16,3 +16,6 @@ pub(crate) const K: u8 = 2;
 pub(crate) const ALPHA: u128 = 25;
 /// Denominator used to scale `ALPHA` when computing BTC and STRK weights.
 pub(crate) const ALPHA_DENOMINATOR: u128 = 100;
+
+/// Number of seconds in one year.
+pub(crate) const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
