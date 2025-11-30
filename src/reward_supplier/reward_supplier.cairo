@@ -10,7 +10,9 @@ pub mod RewardSupplier {
     use staking::errors::{GenericError, InternalError};
     use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking::reward_supplier::errors::Error;
-    use staking::reward_supplier::interface::{Events, IRewardSupplier, RewardSupplierInfoV1};
+    use staking::reward_supplier::interface::{
+        BlockDurationConfig, Events, IRewardSupplier, IRewardSupplierConfig, RewardSupplierInfoV1,
+    };
     use staking::reward_supplier::utils::{calculate_btc_rewards, compute_threshold};
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use staking::staking::objects::EpochInfoTrait;
@@ -33,6 +35,10 @@ pub mod RewardSupplier {
     pub(crate) const BLOCK_DURATION_SCALE: u64 = 100;
     /// Default avg block duration.
     pub(crate) const DEFAULT_AVG_BLOCK_DURATION: u64 = 3 * BLOCK_DURATION_SCALE;
+    /// Default block duration configuration.
+    pub(crate) const DEFAULT_BLOCK_DURATION_CONFIG: BlockDurationConfig = BlockDurationConfig {
+        min_block_duration: 2 * BLOCK_DURATION_SCALE, max_block_duration: 5 * BLOCK_DURATION_SCALE,
+    };
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -76,7 +82,7 @@ pub mod RewardSupplier {
         l1_reward_supplier: felt252,
         /// Token bridge address.
         starkgate_address: ContractAddress,
-        /// Average block duration in units of 1 / BLOCK_TIME_SCALE seconds.
+        /// Average block duration in units of 1 / BLOCK_DURATION_SCALE seconds.
         // TODO: Initial in EIC.
         // TODO: Setter.
         // TODO: View?
@@ -84,6 +90,9 @@ pub mod RewardSupplier {
         /// The latest block data used for average block duration calculation.
         /// Updated at the start of each epoch.
         block_snapshot: (BlockNumber, Timestamp),
+        /// Configuration for block duration calculation.
+        // TODO: Initial in EIC.
+        block_duration_config: BlockDurationConfig,
     }
 
     #[event]
@@ -123,6 +132,7 @@ pub mod RewardSupplier {
         self.l1_reward_supplier.write(l1_reward_supplier);
         self.starkgate_address.write(starkgate_address);
         self.avg_block_duration.write(DEFAULT_AVG_BLOCK_DURATION);
+        self.block_duration_config.write(DEFAULT_BLOCK_DURATION_CONFIG);
     }
 
     #[abi(embed_v0)]
@@ -254,6 +264,35 @@ pub mod RewardSupplier {
 
         fn get_alpha(self: @ContractState) -> u128 {
             ALPHA
+        }
+
+        fn get_block_duration_config(self: @ContractState) -> BlockDurationConfig {
+            self.block_duration_config.read()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl RewardSupplierConfigImpl of IRewardSupplierConfig<ContractState> {
+        fn set_block_duration_config(
+            ref self: ContractState, block_duration_config: BlockDurationConfig,
+        ) {
+            self.roles.only_app_governor();
+            // TODO: Emit event?
+            // Assert that block_time_config is valid.
+            // TODO: More validations?
+            assert!(
+                block_duration_config.min_block_duration > 0,
+                "{}",
+                Error::INVALID_MIN_MAX_BLOCK_DURATION,
+            );
+            assert!(
+                block_duration_config
+                    .min_block_duration <= block_duration_config
+                    .max_block_duration,
+                "{}",
+                Error::INVALID_MIN_MAX_BLOCK_DURATION,
+            );
+            self.block_duration_config.write(block_duration_config);
         }
     }
 
