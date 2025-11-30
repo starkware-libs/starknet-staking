@@ -30,11 +30,12 @@ use staking::staking::objects::{EpochInfoTrait, NormalizedAmountTrait, StakerVer
 use staking::staking::staking::Staking::V3_PREV_CONTRACT_VERSION;
 use staking::staking::utils::STRK_WEIGHT_FACTOR;
 use staking::test_utils::constants::{
-    BTC_18D_CONFIG, BTC_8D_CONFIG, BTC_DECIMALS_18, BTC_DECIMALS_8, EPOCH_DURATION, PUBLIC_KEY,
-    STRK_BASE_VALUE, TEST_BTC_DECIMALS, TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
+    AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_8D_CONFIG, BTC_DECIMALS_18, BTC_DECIMALS_8,
+    EPOCH_DURATION, PUBLIC_KEY, STRK_BASE_VALUE, TEST_BTC_DECIMALS, TEST_MIN_BTC_FOR_REWARDS,
+    TEST_ONE_BTC,
 };
 use staking::test_utils::{
-    calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
+    advance_blocks, calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
     calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_balances_v2,
     calculate_staker_strk_rewards_with_balances_v3, calculate_strk_pool_rewards_v1,
     calculate_strk_pool_rewards_v2, calculate_strk_pool_rewards_v3,
@@ -50,9 +51,7 @@ use starkware_utils::errors::{Describable, ErrorDisplay};
 use starkware_utils::math::abs::wide_abs_diff;
 use starkware_utils::math::utils::mul_wide_and_div;
 use starkware_utils::time::time::{Time, TimeDelta};
-use starkware_utils_testing::test_utils::{
-    advance_block_number_global, assert_panic_with_error, cheat_caller_address_once,
-};
+use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 
 /// Flow - Basic Stake:
 /// Staker - Stake with pool - cover if pool_enabled=true
@@ -8173,9 +8172,9 @@ pub(crate) impl DelegatorRewardsAttestationConsensusFlowImpl of FlowTrait<
 
         system.advance_k_epochs();
         system.update_rewards(:staker, disable_rewards: false);
-        advance_block_number_global(blocks: 1);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
         system.update_rewards(:staker, disable_rewards: false);
-        advance_block_number_global(blocks: 1);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
         system.update_rewards(:staker, disable_rewards: false);
         let expected_rewards = calculate_strk_pool_rewards_v3(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
@@ -8297,9 +8296,9 @@ pub(crate) impl DelegatorChangeBalanceRewardsAttestationConsensusFlowImpl of Flo
 
         system.advance_k_epochs();
         system.update_rewards(:staker, disable_rewards: false);
-        advance_block_number_global(blocks: 1);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
         system.update_rewards(:staker, disable_rewards: false);
-        advance_block_number_global(blocks: 1);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
         system.update_rewards(:staker, disable_rewards: false);
         let expected_rewards = calculate_strk_pool_rewards_v3(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
@@ -8371,7 +8370,6 @@ pub(crate) impl DelegatorBeforeUpgradeRewardsConsensusFlowImpl of FlowTrait<
             amount_own: stake_amount,
             pool_amount: pool_balance,
             :commission,
-            :staking_contract,
             :minting_curve_contract,
         );
         assert!(expected_rewards.is_non_zero());
@@ -8381,9 +8379,9 @@ pub(crate) impl DelegatorBeforeUpgradeRewardsConsensusFlowImpl of FlowTrait<
 
         system.advance_k_epochs();
         system.update_rewards(:staker, disable_rewards: false);
-        advance_block_number_global(blocks: 1);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
         system.update_rewards(:staker, disable_rewards: false);
-        advance_block_number_global(blocks: 1);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
         system.update_rewards(:staker, disable_rewards: false);
         let expected_rewards = calculate_strk_pool_rewards_v3(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
@@ -8465,7 +8463,6 @@ pub(crate) impl DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlowImpl of F
             amount_own: stake_amount,
             pool_amount: pool_balance,
             :commission,
-            :staking_contract,
             :minting_curve_contract,
         );
         assert!(expected_rewards.is_non_zero());
@@ -8475,9 +8472,9 @@ pub(crate) impl DelegatorChangeBalanceBeforeUpgradeRewardsConsensusFlowImpl of F
 
         system.advance_k_epochs();
         system.update_rewards(:staker, disable_rewards: false);
-        advance_block_number_global(blocks: 1);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
         system.update_rewards(:staker, disable_rewards: false);
-        advance_block_number_global(blocks: 1);
+        advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
         system.update_rewards(:staker, disable_rewards: false);
         let expected_rewards = calculate_strk_pool_rewards_v3(
             staker_address: staker.staker.address, :staking_contract, :minting_curve_contract,
