@@ -9064,3 +9064,325 @@ pub(crate) impl StakerV1ChangeBalanceAttestFlowImpl of FlowTrait<StakerV1ChangeB
         assert!(system.staker_claim_rewards(:staker) == expected_rewards);
     }
 }
+
+
+/// Flow:
+/// Staker enter in V2, advance epoch, update balance in V2
+/// Upgrade
+/// update balance, attest, advance epoch, attest, advance epoch, attest, test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct StakerFromV2Flow1 {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerFromV2Flow1Impl of FlowTrait<StakerFromV2Flow1> {
+    fn setup_v2(ref self: StakerFromV2Flow1, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 3);
+        system.stake(:staker, :amount, pool_enabled: false, commission: 0);
+        system.advance_epoch();
+        system.increase_stake(:staker, :amount);
+        self.staker = Option::Some(staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(self: StakerFromV2Flow1, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let amount = system.staker_info_v1(:staker).amount_own / 2;
+        let mut staker_rewards = Zero::zero();
+        system.increase_stake(:staker, :amount);
+        system.advance_block_custom_and_attest(:staker, stake: amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: 2 * amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: 2 * amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: 3 * amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: 3 * amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    }
+}
+
+/// Flow:
+/// Staker enter in V2, advance epoch, update balance in V2
+/// Upgrade
+/// Update balance, attest, advance epoch, update balance, attest, advance epoch, attest, test
+/// rewards
+#[derive(Drop, Copy)]
+pub(crate) struct StakerFromV2Flow2 {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerFromV2Flow2Impl of FlowTrait<StakerFromV2Flow2> {
+    fn setup_v2(ref self: StakerFromV2Flow2, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 4);
+        system.stake(:staker, :amount, pool_enabled: false, commission: 0);
+        system.advance_epoch();
+        system.increase_stake(:staker, :amount);
+        self.staker = Option::Some(staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(self: StakerFromV2Flow2, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let amount = system.staker_info_v1(:staker).amount_own / 2;
+        let mut staker_rewards = Zero::zero();
+        system.increase_stake(:staker, :amount);
+        system.advance_block_custom_and_attest(:staker, stake: amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.advance_epoch();
+        system.increase_stake(:staker, :amount);
+        system.advance_block_custom_and_attest(:staker, stake: 2 * amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: 2 * amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: 3 * amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: 3 * amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    }
+}
+
+/// Flow:
+/// Staker enter in V2, advance epoch, advance epoch
+/// Upgrade
+/// Update balance, attest, advance epoch, attest, advance epoch, attest, test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct StakerFromV2Flow3 {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerFromV2Flow3Impl of FlowTrait<StakerFromV2Flow3> {
+    fn setup_v2(ref self: StakerFromV2Flow3, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 2);
+        system.stake(:staker, :amount, pool_enabled: false, commission: 0);
+        system.advance_epoch();
+        system.advance_epoch();
+        self.staker = Option::Some(staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(self: StakerFromV2Flow3, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let amount = system.staker_info_v1(:staker).amount_own;
+        let mut staker_rewards = Zero::zero();
+        system.increase_stake(:staker, :amount);
+        system.advance_block_custom_and_attest(:staker, stake: amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: 2 * amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: 2 * amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    }
+}
+
+/// Flow:
+/// Staker enter in V2, advance epoch, advance epoch
+/// Upgrade
+/// Attest, update_balance, advance epoch, attest, advance epoch, attest, test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct StakerFromV2Flow4 {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerFromV2Flow4Impl of FlowTrait<StakerFromV2Flow4> {
+    fn setup_v2(ref self: StakerFromV2Flow4, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 2);
+        system.stake(:staker, :amount, pool_enabled: false, commission: 0);
+        system.advance_epoch();
+        system.advance_epoch();
+        self.staker = Option::Some(staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(self: StakerFromV2Flow4, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let amount = system.staker_info_v1(:staker).amount_own;
+        let mut staker_rewards = Zero::zero();
+        system.advance_block_custom_and_attest(:staker, stake: amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.increase_stake(:staker, :amount);
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: 2 * amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: 2 * amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    }
+}
+
+/// Flow:
+/// Staker enter in V2, advance epoch, update balance
+/// Upgrade
+/// Attest, advance epoch, attest, advance epoch, attest, test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct StakerFromV2Flow5 {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerFromV2Flow5Impl of FlowTrait<StakerFromV2Flow5> {
+    fn setup_v2(ref self: StakerFromV2Flow5, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount * 2);
+        system.stake(:staker, :amount, pool_enabled: false, commission: 0);
+        system.advance_epoch();
+        system.increase_stake(:staker, :amount);
+        self.staker = Option::Some(staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(self: StakerFromV2Flow5, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let amount = system.staker_info_v1(:staker).amount_own / 2;
+        let mut staker_rewards = Zero::zero();
+        system.advance_block_custom_and_attest(:staker, stake: amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: 2 * amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: 2 * amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: 2 * amount);
+        let (expected_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: 2 * amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        staker_rewards += expected_rewards;
+        assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    }
+}
+
+
+/// Flow:
+/// Staker enter in V2, advance epoch
+/// Upgrade to V3
+/// Advance epoch, attest, test rewards
+#[derive(Drop, Copy)]
+pub(crate) struct StakerFromV2Flow6 {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl StakerFromV2Flow6Impl of FlowTrait<StakerFromV2Flow6> {
+    fn setup_v2(ref self: StakerFromV2Flow6, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(amount: amount);
+        system.stake(:staker, :amount, pool_enabled: false, commission: 0);
+        system.advance_epoch();
+        self.staker = Option::Some(staker);
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+    }
+
+    fn test(self: StakerFromV2Flow6, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let amount = system.staker_info_v1(:staker).amount_own;
+        system.advance_epoch();
+        system.advance_block_custom_and_attest(:staker, stake: amount);
+        let (staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v2(
+            amount_own: amount,
+            pool_amount: 0,
+            commission: 0,
+            staking_contract: system.staking.address,
+            minting_curve_contract: system.minting_curve.address,
+        );
+        assert!(system.staker_claim_rewards(:staker) == staker_rewards);
+    }
+}
