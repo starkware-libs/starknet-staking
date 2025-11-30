@@ -34,6 +34,9 @@ use staking::pool::interface_v0::{IPoolV0Dispatcher, IPoolV0DispatcherTrait, Poo
 use staking::reward_supplier::interface::{
     IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
 };
+use staking::reward_supplier::reward_supplier::RewardSupplier::{
+    DEFAULT_AVG_BLOCK_DURATION, DEFAULT_BLOCK_DURATION_CONFIG,
+};
 use staking::staking::interface::{
     CommissionCommitment, IStakingConfigDispatcher, IStakingConfigDispatcherTrait,
     IStakingConsensusDispatcher, IStakingConsensusSafeDispatcher, IStakingDispatcher,
@@ -56,15 +59,15 @@ use staking::staking::tests::interface_v1::{
     IStakingV1ForTestsDispatcher, IStakingV1ForTestsDispatcherTrait,
 };
 use staking::test_utils::constants::{
-    AVG_BLOCK_TIME, BTC_18D_CONFIG, BTC_DECIMALS_18, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2,
+    AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_DECIMALS_18, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2,
     EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, INITIAL_SUPPLY, OWNER_ADDRESS,
     STARTING_BLOCK_OFFSET, TESTING_C_NUM, TEST_BTC_DECIMALS, UPGRADE_GOVERNOR,
 };
 use staking::test_utils::{
     StakingInitConfig, approve, calculate_block_offset, custom_decimals_token,
-    declare_pool_contract, declare_pool_eic_contract, declare_staking_contract,
-    declare_staking_eic_contract, deploy_mock_erc20_decimals_contract, fund, load_from_simple_map,
-    upgrade_implementation,
+    declare_pool_contract, declare_pool_eic_contract, declare_reward_supplier_contract,
+    declare_reward_supplier_eic_contract, declare_staking_contract, declare_staking_eic_contract,
+    deploy_mock_erc20_decimals_contract, fund, load_from_simple_map, upgrade_implementation,
 };
 use staking::types::{
     Amount, BlockNumber, Commission, Epoch, Index, Inflation, InternalPoolMemberInfoLatest,
@@ -1166,7 +1169,7 @@ pub(crate) impl SystemImpl of SystemTrait {
         if current_block < EPOCH_STARTING_BLOCK {
             let blocks = EPOCH_STARTING_BLOCK - current_block;
             advance_block_number_global(:blocks);
-            self.advance_time(time: TimeDelta { seconds: blocks * AVG_BLOCK_TIME });
+            self.advance_time(time: TimeDelta { seconds: blocks * AVG_BLOCK_DURATION });
         } else {
             let epoch_info = self.staking.get_epoch_info();
             /// Note: This calculation of the next epoch's starting block may be incorrect
@@ -1175,7 +1178,7 @@ pub(crate) impl SystemImpl of SystemTrait {
                 + epoch_info.epoch_len_in_blocks().into();
             let blocks = next_epoch_starting_block - current_block;
             advance_block_number_global(:blocks);
-            self.advance_time(time: TimeDelta { seconds: blocks * AVG_BLOCK_TIME });
+            self.advance_time(time: TimeDelta { seconds: blocks * AVG_BLOCK_DURATION });
         }
     }
 
@@ -2030,6 +2033,7 @@ pub(crate) impl SystemReplaceabilityV3Impl of SystemReplaceabilityV3Trait {
     fn upgrade_contracts_implementation_v3(self: SystemState) {
         self.staking.pause();
         self.upgrade_staking_implementation_v3();
+        self.upgrade_reward_supplier_implementation_v3();
         for staker_address in self.staker_addresses {
             self.staker_migration(staker_address: *staker_address);
         }
@@ -2054,10 +2058,29 @@ pub(crate) impl SystemReplaceabilityV3Impl of SystemReplaceabilityV3Trait {
             upgrade_governor: self.staking.roles.upgrade_governor,
         );
     }
-}
 
-fn declare_reward_supplier_contract() -> ClassHash {
-    *snforge_std::declare("RewardSupplier").unwrap().contract_class().class_hash
+    /// Upgrades the staking contract in the system state with a local implementation.
+    fn upgrade_reward_supplier_implementation_v3(self: SystemState) {
+        let eic_data = EICData {
+            eic_hash: declare_reward_supplier_eic_contract(),
+            eic_init_data: array![
+                DEFAULT_AVG_BLOCK_DURATION.into(),
+                DEFAULT_BLOCK_DURATION_CONFIG.min_block_duration.into(),
+                DEFAULT_BLOCK_DURATION_CONFIG.max_block_duration.into(),
+            ]
+                .span(),
+        };
+        let implementation_data = ImplementationData {
+            impl_hash: declare_reward_supplier_contract(),
+            eic_data: Option::Some(eic_data),
+            final: false,
+        };
+        upgrade_implementation(
+            contract_address: self.reward_supplier.address,
+            :implementation_data,
+            upgrade_governor: self.reward_supplier.roles.upgrade_governor,
+        );
+    }
 }
 
 fn declare_minting_curve_contract() -> ClassHash {

@@ -57,6 +57,8 @@ pub(crate) enum InternalError {
     UNEXPECTED_INTERNAL_MEMBER_INFO_VERSION,
     INVALID_REWARDS_TRACE_IDX,
     MISSING_CLASS_HASH,
+    INVALID_BLOCK_NUMBER,
+    INVALID_BLOCK_TIMESTAMP,
 }
 
 impl DescribableInternalError of Describable<InternalError> {
@@ -73,6 +75,8 @@ impl DescribableInternalError of Describable<InternalError> {
             InternalError::UNEXPECTED_INTERNAL_MEMBER_INFO_VERSION => "Unexpected VInternalPoolMemberInfo version",
             InternalError::INVALID_REWARDS_TRACE_IDX => "Invalid cumulative rewards trace idx",
             InternalError::MISSING_CLASS_HASH => "Missing class hash",
+            InternalError::INVALID_BLOCK_NUMBER => "Invalid block number",
+            InternalError::INVALID_BLOCK_TIMESTAMP => "Invalid block timestamp",
         }
     }
 }

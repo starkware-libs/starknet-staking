@@ -1,6 +1,6 @@
 use constants::{
-    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, AVG_BLOCK_TIME, BASE_MINT_AMOUNT,
-    BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8,
+    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, AVG_BLOCK_DURATION,
+    BASE_MINT_AMOUNT, BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8,
     BTC_POOL_MEMBER_STAKE_AMOUNT, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION,
     DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN,
     INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_BTC_FOR_REWARDS_18,
@@ -27,7 +27,7 @@ use snforge_std::{
 };
 use staking::attestation::attestation::Attestation::MIN_ATTESTATION_WINDOW;
 use staking::attestation::interface::{IAttestationDispatcher, IAttestationDispatcherTrait};
-use staking::constants::{K, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
+use staking::constants::{K, SECONDS_IN_YEAR, STARTING_EPOCH, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
 use staking::errors::InternalError;
 use staking::minting_curve::interface::{
     IMintingCurveConfigDispatcher, IMintingCurveConfigDispatcherTrait, IMintingCurveDispatcher,
@@ -40,6 +40,7 @@ use staking::pool::pool::Pool;
 use staking::pool::pool_member_balance_trace::trace::PoolMemberCheckpointTrait;
 use staking::pool::utils::compute_rewards_rounded_down;
 use staking::reward_supplier::reward_supplier::RewardSupplier;
+use staking::reward_supplier::reward_supplier::RewardSupplier::BLOCK_DURATION_SCALE;
 use staking::reward_supplier::utils::calculate_btc_rewards;
 use staking::staking::interface::{
     IStakingDispatcher, IStakingDispatcherTrait, IStakingPauseDispatcher,
@@ -66,7 +67,7 @@ use starkware_utils::components::replaceability::interface::{
 use starkware_utils::constants::SYMBOL;
 use starkware_utils::errors::OptionAuxTrait;
 use starkware_utils::math::utils::{mul_wide_and_ceil_div, mul_wide_and_div};
-use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
+use starkware_utils::time::time::{Seconds, Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::{
     advance_block_number_global, cheat_caller_address_once, set_account_as_app_governor,
     set_account_as_app_role_admin, set_account_as_security_admin, set_account_as_security_agent,
@@ -136,7 +137,7 @@ pub(crate) mod constants {
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
     pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
     pub(crate) const TEST_ONE_BTC: Amount = 10_u128.pow(TEST_BTC_DECIMALS.into());
-    pub(crate) const AVG_BLOCK_TIME: Seconds = 3;
+    pub(crate) const AVG_BLOCK_DURATION: Seconds = 3;
     pub(crate) const TESTING_C_NUM: Inflation = 400;
 
     pub(crate) const CALLER_ADDRESS: ContractAddress = 'CALLER_ADDRESS'.try_into().unwrap();
@@ -382,6 +383,21 @@ pub(crate) fn deploy_reward_supplier_contract(cfg: StakingInitConfig) -> Contrac
     cfg.test_info.governance_admin.serialize(ref calldata);
     let reward_supplier_contract = snforge_std::declare("RewardSupplier").unwrap().contract_class();
     let (reward_supplier_contract_address, _) = reward_supplier_contract.deploy(@calldata).unwrap();
+    set_account_as_app_role_admin(
+        contract: reward_supplier_contract_address,
+        account: cfg.test_info.app_role_admin,
+        governance_admin: cfg.test_info.governance_admin,
+    );
+    set_account_as_app_governor(
+        contract: reward_supplier_contract_address,
+        account: cfg.test_info.app_governor,
+        app_role_admin: cfg.test_info.app_role_admin,
+    );
+    set_account_as_upgrade_governor(
+        contract: reward_supplier_contract_address,
+        account: cfg.test_info.upgrade_governor,
+        governance_admin: cfg.test_info.governance_admin,
+    );
     reward_supplier_contract_address
 }
 
@@ -413,12 +429,20 @@ pub(crate) fn declare_pool_contract() -> ClassHash {
     *snforge_std::declare("Pool").unwrap().contract_class().class_hash
 }
 
+pub(crate) fn declare_reward_supplier_contract() -> ClassHash {
+    *snforge_std::declare("RewardSupplier").unwrap().contract_class().class_hash
+}
+
 pub(crate) fn declare_staking_eic_contract() -> ClassHash {
     *snforge_std::declare("StakingEIC").unwrap().contract_class().class_hash
 }
 
 pub(crate) fn declare_pool_eic_contract() -> ClassHash {
     *snforge_std::declare("PoolEIC").unwrap().contract_class().class_hash
+}
+
+pub(crate) fn declare_reward_supplier_eic_contract() -> ClassHash {
+    *snforge_std::declare("RewardSupplierEIC").unwrap().contract_class().class_hash
 }
 
 /// Upgrades implementation of the given contract.
@@ -903,7 +927,7 @@ pub(crate) fn advance_time_global(time: TimeDelta) {
 /// Advance one epoch.
 pub(crate) fn advance_epoch_global() {
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
-    advance_time_global(time: TimeDelta { seconds: EPOCH_LENGTH.into() * AVG_BLOCK_TIME });
+    advance_time_global(time: TimeDelta { seconds: EPOCH_LENGTH.into() * AVG_BLOCK_DURATION });
 }
 
 /// Advance `K` epochs.
@@ -911,6 +935,20 @@ pub(crate) fn advance_k_epochs_global() {
     for _ in 0..K {
         advance_epoch_global();
     }
+}
+
+/// Advance one epoch with the given `block_time` per block.
+pub(crate) fn advance_epoch_global_custom_time(block_time: TimeDelta) {
+    advance_block_number_global(blocks: EPOCH_LENGTH.into());
+    let time = TimeDelta { seconds: block_time.seconds * EPOCH_LENGTH.into() };
+    advance_time_global(:time);
+}
+
+/// Advance the block number by the given `blocks` and the timestamp by the given `block_duration`
+/// in seconds * `blocks`.
+pub(crate) fn advance_blocks(blocks: u64, block_duration: Seconds) {
+    advance_block_number_global(:blocks);
+    advance_time_global(time: TimeDelta { seconds: block_duration * blocks });
 }
 
 // ---- Calculate Rewards - V0 (index based) -----
@@ -1121,12 +1159,9 @@ pub(crate) fn calculate_staker_strk_rewards_with_balances_v3(
     amount_own: Amount,
     pool_amount: Amount,
     commission: Commission,
-    staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
-    let (strk_block_rewards, _) = _calculate_current_block_rewards_v3(
-        :staking_contract, :minting_curve_contract,
-    );
+    let (strk_block_rewards, _) = calculate_current_block_rewards_v3(:minting_curve_contract);
     let total_stake = amount_own + pool_amount;
     // Calculate staker own rewards.
     let mut staker_rewards = mul_wide_and_div(
@@ -1166,7 +1201,6 @@ pub(crate) fn calculate_strk_pool_rewards_v3(
         amount_own: staker_info.amount_own,
         pool_amount: pool_info.amount,
         commission: pool_info.commission,
-        :staking_contract,
         :minting_curve_contract,
     );
     pool_rewards
@@ -1199,13 +1233,10 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v3(
     normalized_pool_balance: NormalizedAmount,
     normalized_staker_total_btc_balance: NormalizedAmount,
     commission: Commission,
-    staking_contract: ContractAddress,
     minting_curve_contract: ContractAddress,
     token_address: ContractAddress,
 ) -> (Amount, Amount) {
-    let (_, btc_block_rewards) = _calculate_current_block_rewards_v3(
-        :staking_contract, :minting_curve_contract,
-    );
+    let (_, btc_block_rewards) = calculate_current_block_rewards_v3(:minting_curve_contract);
     // Calculate pool rewards including commission.
     let pool_rewards_including_commission = mul_wide_and_div(
         lhs: btc_block_rewards,
@@ -1222,17 +1253,33 @@ pub(crate) fn calculate_staker_btc_pool_rewards_v3(
 }
 
 
-fn _calculate_current_block_rewards_v3(
-    staking_contract: ContractAddress, minting_curve_contract: ContractAddress,
+/// Calculate block rewards for the current epoch. Use `AVG_BLOCK_TIME` (default value for testing)
+/// for `avg_block_time`.
+pub(crate) fn calculate_current_block_rewards_v3(
+    minting_curve_contract: ContractAddress,
 ) -> (Amount, Amount) {
-    let (strk_epoch_rewards, btc_epoch_rewards) = _calculate_current_epoch_rewards_v2(
-        :staking_contract, :minting_curve_contract,
-    );
-    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
-    let epoch_len_in_blocks = staking_dispatcher.get_epoch_info().epoch_len_in_blocks();
-    let strk_block_rewards = strk_epoch_rewards / epoch_len_in_blocks.into();
-    let btc_block_rewards = btc_epoch_rewards / epoch_len_in_blocks.into();
-    (strk_block_rewards, btc_block_rewards)
+    calculate_current_block_rewards_with_avg_block_time_v3(
+        :minting_curve_contract, avg_block_time: AVG_BLOCK_DURATION * BLOCK_DURATION_SCALE,
+    )
+}
+
+/// Calculate block rewards for the current epoch based on the given `avg_block_time`.
+pub(crate) fn calculate_current_block_rewards_with_avg_block_time_v3(
+    minting_curve_contract: ContractAddress, avg_block_time: u64,
+) -> (Amount, Amount) {
+    let minting_curve_dispatcher = IMintingCurveDispatcher {
+        contract_address: minting_curve_contract,
+    };
+    let yearly_mint = minting_curve_dispatcher.yearly_mint();
+    let total_rewards = mul_wide_and_div(
+        lhs: yearly_mint,
+        rhs: avg_block_time.into(),
+        div: BLOCK_DURATION_SCALE.into() * SECONDS_IN_YEAR.into(),
+    )
+        .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
+    let btc_rewards = calculate_btc_rewards(:total_rewards);
+    let strk_rewards = total_rewards - btc_rewards;
+    (strk_rewards, btc_rewards)
 }
 
 // ---- Calculate Rewards - Helpers -----
