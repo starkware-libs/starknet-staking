@@ -1244,7 +1244,8 @@ pub(crate) fn calculate_current_block_rewards_v3(
     )
 }
 
-/// Calculate block rewards for the current epoch based on the given `avg_block_time`.
+/// Calculate block rewards for the current epoch based on the given `avg_block_time` (in 1 /
+/// BLOCK_DURATION_SCALE seconds).
 pub(crate) fn calculate_current_block_rewards_with_avg_block_time_v3(
     minting_curve_contract: ContractAddress, avg_block_time: u64,
 ) -> (Amount, Amount) {
@@ -1307,6 +1308,17 @@ pub(crate) fn calculate_pool_member_rewards(
 ) -> Amount {
     mul_wide_and_div(lhs: pool_member_balance, rhs: pool_rewards, div: pool_balance)
         .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW)
+}
+
+/// Split pool rewards into commission and pool rewards.
+pub(crate) fn split_pool_rewards(
+    rewards_with_commission: Amount, commission: Commission,
+) -> (Amount, Amount) {
+    let commission_rewards = compute_commission_amount_rounded_down(
+        rewards_including_commission: rewards_with_commission, :commission,
+    );
+    let pool_rewards = rewards_with_commission - commission_rewards;
+    (commission_rewards, pool_rewards)
 }
 
 /// Compute the rewards for the pool trace.

@@ -50,12 +50,6 @@ more ideas:
 - same as above with disable (can be implemented together as one test)
 - enable token A and disable token B, next epoch upgrade, test views and rewards.
 
-## block rewards by timestamp
-- advance blocks with different block times and check the avg is calculated correctly
-- update_rewards for blocks in same epoch - same rewards, then advance epoch, different rewards, update rewards for blocks in same epoch - same rewards.
-- update rewards is not called every block, still rewards is updated correctly (miss block, miss first block in epoch, miss epoch)
-- set block time config and test rewards after
-
 ## rewards by timestamp - migration
 - set_consensus_rewards to future epoch, call update_rewards before consensus epoch and after, test rewards.
 - set_consensus_rewards to future epoch, call update_rewards only after consensus epoch, test rewards.
