@@ -1404,7 +1404,12 @@ pub mod Staking {
                 Error::REWARDS_ALREADY_UPDATED,
             );
 
-            // Assert staker exists.
+            // Assert staker exists and active.
+            // Staker is considered to exist from the moment of `stake` (when `InternalStakerInfo`
+            // struct is created) until the calling to `unstake_action` (when `InternalStakerInfo`
+            // struct is deleted).
+            // Staker remains active until the intent period begins, i.e. K epochs after
+            // `unstake_intent` is called.
             let staker_info = self.internal_staker_info(:staker_address);
             let curr_epoch = self.get_current_epoch();
             assert!(
@@ -1418,7 +1423,9 @@ pub mod Staking {
                 .get_staker_total_strk_btc_balance_at_epoch(
                     :staker_address, :staker_pool_info, epoch_id: curr_epoch,
                 );
-            // Assert staker has balance.
+            // Assert staker has non-zero balance.
+            // Staker exists with zero balance for the first K epochs after `stake`, then the stake
+            // becomes effective.
             assert!(staker_total_strk_balance.is_non_zero(), "{}", Error::INVALID_STAKER);
 
             // Update last block rewards.
