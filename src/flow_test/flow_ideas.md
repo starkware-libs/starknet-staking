@@ -15,13 +15,6 @@
 - staker change balance, attest, change balance, attest, set_v3, change balance, update_rewards, change_balance, update_rewards, test rewards.
 - with member from previous versions.
 
-## k=1 -> k=2 Migration Member
-- find sigma: Enter V0, change in V1, catch all ifs.
-more ideas:
-- member from V1, pool gets rewards at V1, update balance at V1, update balance at V3, pool gets rewards at V3, test rewards.
-- member from V1, pool gets rewards at V1, pool gets rewards at V3, update balance at V3, test rewards.
-- member from V1, pool gets rewards at V1, pool gets rewards at V3, test rewards.
-
 ## k=1 -> k=2 Migration Staker
 - staker enter in V0, attest in V1, update balance in V1, attest in V1, attest in V2, update balance in V2, attest in V2, attest in V3, update balance in V3, attest in V3, test rewards.
 - staker in V2, update balance staker+update balance pool, upgrade, attest in current epoch, attest in next epoch, attest in next next epoch

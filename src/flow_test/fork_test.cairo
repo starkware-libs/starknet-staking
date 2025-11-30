@@ -646,3 +646,75 @@ fn staker_from_v2_flow_6_flow_test() {
     let mut flow = flows::StakerFromV2Flow6 { staker: Option::None };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_from_v1_flow_1_flow_test() {
+    let mut flow = flows::MemberFromV1Flow1 {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_from_v1_flow_2_flow_test() {
+    let mut flow = flows::MemberFromV1Flow2 {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_from_v1_flow_3_flow_test() {
+    let mut flow = flows::MemberFromV1Flow3 {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_v1_rewards_once_flow_test() {
+    let mut flow = flows::DelegatorV0V1RewardsOnceFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_v1_rewards_flow_test() {
+    let mut flow = flows::DelegatorV0V1RewardsFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_v1_no_rewards_flow_test() {
+    let mut flow = flows::DelegatorV0V1NoRewardsFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
