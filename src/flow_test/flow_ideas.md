@@ -15,10 +15,6 @@
 - staker change balance, attest, change balance, attest, set_v3, change balance, update_rewards, change_balance, update_rewards, test rewards.
 - with member from previous versions.
 
-## k=1 -> k=2 Migration Staker
-- staker in V2, update balance staker+update balance pool, upgrade, attest in current epoch, attest in next epoch, attest in next next epoch
-- staker in V2, advance epoch, update balance staker+update balance pool, advance epoch, update balance staker+update balance pool, upgrade, update balance staker+update balance pool, attest in current epoch, attest in next epoch, attest in next next epoch
-
 ## pool member balance at curr epoch migration
 - Member from V0, no actions in V1 or V2, test curr balance
 - Member from V1, no actions in V2, test curr balance
