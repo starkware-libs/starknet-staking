@@ -37,18 +37,20 @@ Following [Starknet SNIP 18](https://community.starknet.io/t/snip-18-staking-s-f
 Staking is a work in progress.
 
 ## Dependencies
-The project is build with [Turbo repo](https://turbo.build/) and [pnpm](https://pnpm.io/).  
-Turbo's installation process will also install the cairo dependencies such as [Scarb](https://docs.swmansion.com/scarb/) and [Starknet foundry](https://foundry-rs.github.io/starknet-foundry/index.html).
+- [Scarb](https://docs.swmansion.com/scarb/)
+- [Starknet foundry](https://foundry-rs.github.io/starknet-foundry/index.html) (optional - for testing)
 
 ## Installation
-Clone the repo and from within the projects root folder run:
+Install the dependencies (either using [asdf](https://asdf-vm.com/) or any other way),
+clone the repo and from within the project's root folder run:
 ```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-nvm install 20
-curl -fsSL https://get.pnpm.io/install.sh | sh -
-pnpm install turbo --global
-pnpm install
+scarb build
 ```
+for a development build or
+```bash
+scarb --release build
+```
+for a release build.
 
 ## Implementation specification
 Specs document found [here](docs/spec.md)
