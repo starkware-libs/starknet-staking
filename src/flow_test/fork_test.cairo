@@ -555,8 +555,8 @@ fn delegator_change_balance_before_upgrade_rewards_consensus_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
-fn balances_delay_flow_test() {
-    let mut flow = flows::BalancesDelayFlow {
+fn balances_delay_1_pool_trace_entry_flow_test() {
+    let mut flow = flows::BalancesDelay1PoolTraceEntryFlow {
         staker: Option::None,
         stake_amount: Option::None,
         commission: Option::None,
@@ -722,6 +722,40 @@ fn delegator_v0_v1_no_rewards_flow_test() {
         pool: Option::None,
         delegator: Option::None,
         unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn balances_delay_2_pool_trace_entries_flow_test() {
+    let mut flow = flows::BalancesDelay2PoolTraceEntriesFlow {
+        staker: Option::None,
+        stake_amount: Option::None,
+        commission: Option::None,
+        strk_delegated_amount: Option::None,
+        btc_delegated_amount: Option::None,
+        strk_delegator: Option::None,
+        btc_delegator: Option::None,
+        strk_pool: Option::None,
+        btc_pool: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn balances_delay_upgrade_attest_flow_test() {
+    let mut flow = flows::BalancesDelayUpgradeAttestFlow {
+        staker: Option::None,
+        stake_amount: Option::None,
+        commission: Option::None,
+        strk_delegated_amount: Option::None,
+        btc_delegated_amount: Option::None,
+        strk_delegator: Option::None,
+        btc_delegator: Option::None,
+        strk_pool: Option::None,
+        btc_pool: Option::None,
     };
     test_flow_mainnet(ref :flow);
 }
