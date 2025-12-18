@@ -1,6 +1,6 @@
 use constants::{
-    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, AVG_BLOCK_TIME, BASE_MINT_AMOUNT,
-    BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8,
+    APP_GOVERNOR, APP_ROLE_ADMIN, ATTESTATION_CONTRACT_ADDRESS, AVG_BLOCK_DURATION,
+    BASE_MINT_AMOUNT, BTC_BASE_VALUE_18, BTC_BASE_VALUE_8, BTC_DECIMALS_18, BTC_DECIMALS_8,
     BTC_POOL_MEMBER_STAKE_AMOUNT, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BUFFER, COMMISSION,
     DEFAULT_EPOCH_INFO, DUMMY_CLASS_HASH, EPOCH_LENGTH, EPOCH_STARTING_BLOCK, GOVERNANCE_ADMIN,
     INITIAL_SUPPLY, L1_REWARD_SUPPLIER, MINTING_CONTRACT_ADDRESS, MIN_BTC_FOR_REWARDS_18,
@@ -136,7 +136,7 @@ pub(crate) mod constants {
     pub const STARTING_BLOCK_OFFSET: u64 = 0;
     pub(crate) const UNPOOL_TIME: Timestamp = Timestamp { seconds: 1 };
     pub(crate) const TEST_ONE_BTC: Amount = 10_u128.pow(TEST_BTC_DECIMALS.into());
-    pub(crate) const AVG_BLOCK_TIME: Seconds = 3;
+    pub(crate) const AVG_BLOCK_DURATION: Seconds = 3;
     pub(crate) const TESTING_C_NUM: Inflation = 400;
 
     pub(crate) const CALLER_ADDRESS: ContractAddress = 'CALLER_ADDRESS'.try_into().unwrap();
@@ -903,7 +903,7 @@ pub(crate) fn advance_time_global(time: TimeDelta) {
 /// Advance one epoch.
 pub(crate) fn advance_epoch_global() {
     advance_block_number_global(blocks: EPOCH_LENGTH.into());
-    advance_time_global(time: TimeDelta { seconds: EPOCH_LENGTH.into() * AVG_BLOCK_TIME });
+    advance_time_global(time: TimeDelta { seconds: EPOCH_LENGTH.into() * AVG_BLOCK_DURATION });
 }
 
 /// Advance `K` epochs.

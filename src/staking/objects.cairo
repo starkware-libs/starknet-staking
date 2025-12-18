@@ -1,7 +1,7 @@
 use core::cmp::max;
 use core::num::traits::{Pow, Zero};
 use core::ops::{AddAssign, SubAssign};
-use staking::constants::{STARTING_EPOCH, STRK_TOKEN_ADDRESS};
+use staking::constants::{SECONDS_IN_YEAR, STARTING_EPOCH, STRK_TOKEN_ADDRESS};
 use staking::errors::GenericError;
 use staking::staking::errors::Error;
 use staking::staking::interface::{
@@ -19,8 +19,6 @@ use starkware_utils::storage::iterable_map::{
     IterableMapWriteAccessImpl,
 };
 use starkware_utils::time::time::{Time, TimeDelta, Timestamp};
-
-const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
 
 #[derive(Hash, Drop, Serde, Copy, starknet::Store)]
 pub(crate) struct UndelegateIntentKey {
