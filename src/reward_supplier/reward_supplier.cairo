@@ -6,7 +6,7 @@ pub mod RewardSupplier {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use staking::constants::{ALPHA, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
+    use staking::constants::{ALPHA, SECONDS_IN_YEAR, STRK_IN_FRIS, STRK_TOKEN_ADDRESS};
     use staking::errors::{GenericError, InternalError};
     use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
     use staking::reward_supplier::errors::Error;
@@ -14,7 +14,7 @@ pub mod RewardSupplier {
     use staking::reward_supplier::utils::{calculate_btc_rewards, compute_threshold};
     use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
     use staking::staking::objects::EpochInfoTrait;
-    use staking::types::Amount;
+    use staking::types::{Amount, BlockNumber};
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::syscalls::send_message_to_l1_syscall;
     use starknet::{
@@ -25,9 +25,14 @@ pub mod RewardSupplier {
     use starkware_utils::erc20::erc20_utils::CheckedIERC20DispatcherTrait;
     use starkware_utils::errors::OptionAuxTrait;
     use starkware_utils::interfaces::identity::Identity;
-    use starkware_utils::math::utils::ceil_of_division;
+    use starkware_utils::math::utils::{ceil_of_division, mul_wide_and_div};
+    use starkware_utils::time::time::Timestamp;
     pub const CONTRACT_IDENTITY: felt252 = 'Reward Supplier';
     pub const CONTRACT_VERSION: felt252 = '3.0.0';
+    /// Scale factor for block duration measurements. 100 implies granularity of 100th of second.
+    pub(crate) const BLOCK_DURATION_SCALE: u64 = 100;
+    /// Default avg block duration.
+    pub(crate) const DEFAULT_AVG_BLOCK_DURATION: u64 = 3 * BLOCK_DURATION_SCALE;
 
     component!(path: ReplaceabilityComponent, storage: replaceability, event: ReplaceabilityEvent);
     component!(path: RolesComponent, storage: roles, event: RolesEvent);
@@ -71,6 +76,14 @@ pub mod RewardSupplier {
         l1_reward_supplier: felt252,
         /// Token bridge address.
         starkgate_address: ContractAddress,
+        /// Average block duration in units of 1 / BLOCK_TIME_SCALE seconds.
+        // TODO: Initial in EIC.
+        // TODO: Setter.
+        // TODO: View?
+        avg_block_duration: u64,
+        /// The latest block data used for average block duration calculation.
+        /// Updated at the start of each epoch.
+        block_snapshot: (BlockNumber, Timestamp),
     }
 
     #[event]
@@ -109,6 +122,7 @@ pub mod RewardSupplier {
         self.minting_curve_dispatcher.contract_address.write(minting_curve_contract);
         self.l1_reward_supplier.write(l1_reward_supplier);
         self.starkgate_address.write(starkgate_address);
+        self.avg_block_duration.write(DEFAULT_AVG_BLOCK_DURATION);
     }
 
     #[abi(embed_v0)]
@@ -136,6 +150,30 @@ pub mod RewardSupplier {
             let btc_rewards = calculate_btc_rewards(:total_rewards);
             let strk_rewards = total_rewards - btc_rewards;
 
+            (strk_rewards, btc_rewards)
+        }
+
+        // TODO: Emit event?
+        fn update_current_epoch_block_rewards(ref self: ContractState) -> (Amount, Amount) {
+            let staking_contract = self.staking_contract.read();
+            assert!(
+                get_caller_address() == staking_contract,
+                "{}",
+                GenericError::CALLER_IS_NOT_STAKING_CONTRACT,
+            );
+            self.set_avg_block_duration();
+            // Calculate block rewards for the current epoch.
+            let minting_curve_dispatcher = self.minting_curve_dispatcher.read();
+            let yearly_mint = minting_curve_dispatcher.yearly_mint();
+            let avg_block_duration = self.avg_block_duration.read();
+            let total_rewards = mul_wide_and_div(
+                lhs: yearly_mint,
+                rhs: avg_block_duration.into(),
+                div: BLOCK_DURATION_SCALE.into() * SECONDS_IN_YEAR.into(),
+            )
+                .expect_with_err(err: InternalError::REWARDS_COMPUTATION_OVERFLOW);
+            let btc_rewards = calculate_btc_rewards(:total_rewards);
+            let strk_rewards = total_rewards - btc_rewards;
             (strk_rewards, btc_rewards)
         }
 
@@ -258,6 +296,44 @@ pub mod RewardSupplier {
             let payload: Span<felt252> = array![self.base_mint_amount.read().into()].span();
             let to_address = self.l1_reward_supplier.read();
             send_message_to_l1_syscall(:to_address, :payload).unwrap_syscall();
+        }
+
+        fn set_avg_block_duration(ref self: ContractState) {
+            let current_block_number = starknet::get_block_number();
+            let current_timestamp = starknet::get_block_timestamp();
+            let (snapshot_block_number, snapshot_timestamp) = self.block_snapshot.read();
+            // Sanity asserts.
+            assert!(
+                current_block_number > snapshot_block_number,
+                "{}",
+                InternalError::INVALID_BLOCK_NUMBER,
+            );
+            assert!(
+                current_timestamp > snapshot_timestamp.into(),
+                "{}",
+                InternalError::INVALID_BLOCK_TIMESTAMP,
+            );
+            self
+                .block_snapshot
+                .write((current_block_number, Timestamp { seconds: current_timestamp }));
+            // If this is the first time we're setting the block snapshot, can't calculate avg block
+            // time yet.
+            if snapshot_block_number.is_zero() || snapshot_timestamp.is_zero() {
+                return;
+            }
+            let time_delta = current_timestamp - snapshot_timestamp.into();
+            // *Note*: `num_blocks` should match the epoch length in blocks. This calculation is
+            // expected to run on the first block of each epoch, assuming `update_rewards` is called
+            // every block.
+            // We calculate `num_blocks` instead of using the configured value to keep the average
+            // accurate even if some calls are missed.
+            let num_blocks = current_block_number - snapshot_block_number;
+            let calculated_block_duration = mul_wide_and_div(
+                lhs: time_delta, rhs: BLOCK_DURATION_SCALE, div: num_blocks,
+            )
+                .expect_with_err(err: Error::BLOCK_DURATION_OVERFLOW);
+            // TODO: Adjust calculated_block_duration with MIN_BLOCK_TIME and MAX_BLOCK_TIME.
+            self.avg_block_duration.write(calculated_block_duration);
         }
     }
 }
