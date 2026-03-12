@@ -15,26 +15,9 @@
 - staker change balance, attest, change balance, attest, set_v3, change balance, update_rewards, change_balance, update_rewards, test rewards.
 - with member from previous versions.
 
-## k=1 -> k=2 Migration Member
-- find sigma: Enter V0, change in V1, catch all ifs.
-more ideas:
-- member from V1, pool gets rewards at V1, update balance at V1, update balance at V3, pool gets rewards at V3, test rewards.
-- member from V1, pool gets rewards at V1, pool gets rewards at V3, update balance at V3, test rewards.
-- member from V1, pool gets rewards at V1, pool gets rewards at V3, test rewards.
-
-## k=1 -> k=2 Migration Staker
-- staker enter in V0, attest in V1, update balance in V1, attest in V1, attest in V2, update balance in V2, attest in V2, attest in V3, update balance in V3, attest in V3, test rewards.
-- staker in V2, update balance staker+update balance pool, upgrade, attest in current epoch, attest in next epoch, attest in next next epoch
-- staker in V2, advance epoch, update balance staker+update balance pool, advance epoch, update balance staker+update balance pool, upgrade, update balance staker+update balance pool, attest in current epoch, attest in next epoch, attest in next next epoch
-
 ## pool member balance at curr epoch migration
 - Member from V0, no actions in V1 or V2, test curr balance
 - Member from V1, no actions in V2, test curr balance
 - Member from V0, change balance at V1, no action at V2, test curr balance
 - Member from V2, change balance, upgrade, test curr balance
 - Cover all ifs with migration from: V0, V1, V2.
-
-## k=1 -> k=2 token
-- enable token, update rewards, advance epoch, update rewards, advance epoch, update rewards - token does not get rewards until after 2 epochs
-- same as above with disable (can be implemented together as one test)
-- enable token A and disable token B, next epoch upgrade, test views and rewards.

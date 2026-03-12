@@ -446,6 +446,13 @@ fn get_stakers_after_upgrade_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
+fn attest_after_upgrade_flow_test() {
+    let mut flow = flows::AttestAfterUpgradeFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
 fn toggle_tokens_before_after_upgrade_flow_test() {
     let mut flow = flows::ToggleTokensBeforeAfterUpgradeFlow {
         token_a: Option::None, token_b: Option::None,
@@ -548,8 +555,8 @@ fn delegator_change_balance_before_upgrade_rewards_consensus_flow_test() {
 
 #[test]
 #[fork("MAINNET_LATEST")]
-fn balances_delay_flow_test() {
-    let mut flow = flows::BalancesDelayFlow {
+fn balances_delay_1_pool_trace_entry_flow_test() {
+    let mut flow = flows::BalancesDelay1PoolTraceEntryFlow {
         staker: Option::None,
         stake_amount: Option::None,
         commission: Option::None,
@@ -644,5 +651,136 @@ fn staker_from_v2_flow_5_flow_test() {
 #[fork("MAINNET_LATEST")]
 fn staker_from_v2_flow_6_flow_test() {
     let mut flow = flows::StakerFromV2Flow6 { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_from_v1_flow_1_flow_test() {
+    let mut flow = flows::MemberFromV1Flow1 {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_from_v1_flow_2_flow_test() {
+    let mut flow = flows::MemberFromV1Flow2 {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn member_from_v1_flow_3_flow_test() {
+    let mut flow = flows::MemberFromV1Flow3 {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_v1_rewards_once_flow_test() {
+    let mut flow = flows::DelegatorV0V1RewardsOnceFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_v1_rewards_flow_test() {
+    let mut flow = flows::DelegatorV0V1RewardsFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn delegator_v0_v1_no_rewards_flow_test() {
+    let mut flow = flows::DelegatorV0V1NoRewardsFlow {
+        staker: Option::None,
+        pool: Option::None,
+        delegator: Option::None,
+        unclaimed_rewards: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn balances_delay_2_pool_trace_entries_flow_test() {
+    let mut flow = flows::BalancesDelay2PoolTraceEntriesFlow {
+        staker: Option::None,
+        stake_amount: Option::None,
+        commission: Option::None,
+        strk_delegated_amount: Option::None,
+        btc_delegated_amount: Option::None,
+        strk_delegator: Option::None,
+        btc_delegator: Option::None,
+        strk_pool: Option::None,
+        btc_pool: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn balances_delay_upgrade_attest_flow_test() {
+    let mut flow = flows::BalancesDelayUpgradeAttestFlow {
+        staker: Option::None,
+        stake_amount: Option::None,
+        commission: Option::None,
+        strk_delegated_amount: Option::None,
+        btc_delegated_amount: Option::None,
+        strk_delegator: Option::None,
+        btc_delegator: Option::None,
+        strk_pool: Option::None,
+        btc_pool: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn enable_disable_token_before_after_upgrade_flow_test() {
+    let mut flow = flows::EnableDisableTokenBeforeAfterUpgradeFlow {
+        token_a: Option::None,
+        token_b: Option::None,
+        staker: Option::None,
+        pool_a: Option::None,
+        pool_b: Option::None,
+        delegator_a: Option::None,
+        delegator_b: Option::None,
+        delegation_amount: Option::None,
+    };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn accrue_rewards_different_balances_across_versions_flow_test() {
+    let mut flow = flows::AccrueRewardsDifferentBalancesAcrossVersionsFlow {
+        staker: Option::None, stake_amount: Option::None, rewards: Option::None,
+    };
     test_flow_mainnet(ref :flow);
 }
