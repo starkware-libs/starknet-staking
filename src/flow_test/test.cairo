@@ -2723,11 +2723,7 @@ fn update_rewards_transition_from_attestation_to_consensus_flow_test() {
     system.update_rewards(:staker, disable_rewards: false);
     let rewards = system.staker_claim_rewards(:staker);
     let (expected_rewards_v3, _) = calculate_staker_strk_rewards_with_balances_v3(
-        amount_own: stake_amount,
-        pool_amount: Zero::zero(),
-        :commission,
-        :staking_contract,
-        :minting_curve_contract,
+        amount_own: stake_amount, pool_amount: Zero::zero(), :commission, :minting_curve_contract,
     );
     assert!(expected_rewards_v3.is_non_zero());
     assert!(rewards == expected_rewards_v3);
@@ -2876,7 +2872,6 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
         amount_own: stake_amount,
         pool_amount: Zero::zero(),
         :commission,
-        staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
     );
     assert!(expected_rewards.is_non_zero());
@@ -2923,7 +2918,6 @@ fn update_rewards_strk_pool_flow_test() {
         amount_own: stake_amount,
         pool_amount: delegation_amount,
         :commission,
-        staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
     );
     let staker_rewards = system.staker_claim_rewards(:staker);
@@ -3101,7 +3095,6 @@ fn staker_change_balance_twice_same_epoch_flow_test() {
         amount_own: stake_amount * 2,
         pool_amount: Zero::zero(),
         :commission,
-        :staking_contract,
         :minting_curve_contract,
     );
     assert!(expected_rewards.is_non_zero());
@@ -3117,7 +3110,6 @@ fn staker_change_balance_twice_same_epoch_flow_test() {
         amount_own: stake_amount * 3,
         pool_amount: Zero::zero(),
         :commission,
-        :staking_contract,
         :minting_curve_contract,
     );
     assert!(expected_rewards.is_non_zero());
@@ -3560,7 +3552,6 @@ fn delegate_claim_after_claim_with_rewards_flow_test() {
         amount_own: stake_amount,
         pool_amount: stake_amount,
         :commission,
-        staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
     );
     assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
@@ -3812,11 +3803,7 @@ fn update_rewards_token_enable_disable_flow_test() {
 
     // Calculate rewards for consensus rewards - for single enabled token.
     let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
-        amount_own: stake_amount,
-        pool_amount: Zero::zero(),
-        :commission,
-        :staking_contract,
-        :minting_curve_contract,
+        amount_own: stake_amount, pool_amount: Zero::zero(), :commission, :minting_curve_contract,
     );
     assert!(expected_staker_rewards.is_non_zero());
     let (commission_rewards, expected_delegator_rewards) = calculate_staker_btc_pool_rewards_v3(
@@ -3827,7 +3814,6 @@ fn update_rewards_token_enable_disable_flow_test() {
             amount: delegation_amount_a, decimals: token_a_decimals,
         ),
         :commission,
-        :staking_contract,
         :minting_curve_contract,
         token_address: token_a.contract_address(),
     );
