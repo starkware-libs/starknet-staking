@@ -19,13 +19,13 @@ use staking::staking::interface::{
 use staking::staking::objects::NormalizedAmountTrait;
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
-    BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
+    AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
     TEST_MIN_BTC_FOR_REWARDS,
 };
 use staking::test_utils::{
-    StakingInitConfig, calculate_staker_btc_pool_rewards_v2, calculate_staker_btc_pool_rewards_v3,
-    calculate_staker_strk_rewards_v2, calculate_staker_strk_rewards_with_balances_v2,
-    calculate_staker_strk_rewards_with_balances_v3,
+    StakingInitConfig, advance_blocks, calculate_staker_btc_pool_rewards_v2,
+    calculate_staker_btc_pool_rewards_v3, calculate_staker_strk_rewards_v2,
+    calculate_staker_strk_rewards_with_balances_v2, calculate_staker_strk_rewards_with_balances_v3,
     calculate_strk_pool_rewards_with_pool_balance_v2,
     calculate_strk_pool_rewards_with_pool_balance_v3, compute_rewards_per_unit,
     custom_decimals_token, deploy_mock_erc20_decimals_contract,
@@ -2723,11 +2723,7 @@ fn update_rewards_transition_from_attestation_to_consensus_flow_test() {
     system.update_rewards(:staker, disable_rewards: false);
     let rewards = system.staker_claim_rewards(:staker);
     let (expected_rewards_v3, _) = calculate_staker_strk_rewards_with_balances_v3(
-        amount_own: stake_amount,
-        pool_amount: Zero::zero(),
-        :commission,
-        :staking_contract,
-        :minting_curve_contract,
+        amount_own: stake_amount, pool_amount: Zero::zero(), :commission, :minting_curve_contract,
     );
     assert!(expected_rewards_v3.is_non_zero());
     assert!(rewards == expected_rewards_v3);
@@ -2876,7 +2872,6 @@ fn update_rewards_disable_rewards_consensus_rewards_flow_test() {
         amount_own: stake_amount,
         pool_amount: Zero::zero(),
         :commission,
-        staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
     );
     assert!(expected_rewards.is_non_zero());
@@ -2923,7 +2918,6 @@ fn update_rewards_strk_pool_flow_test() {
         amount_own: stake_amount,
         pool_amount: delegation_amount,
         :commission,
-        staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
     );
     let staker_rewards = system.staker_claim_rewards(:staker);
@@ -3101,7 +3095,6 @@ fn staker_change_balance_twice_same_epoch_flow_test() {
         amount_own: stake_amount * 2,
         pool_amount: Zero::zero(),
         :commission,
-        :staking_contract,
         :minting_curve_contract,
     );
     assert!(expected_rewards.is_non_zero());
@@ -3117,7 +3110,6 @@ fn staker_change_balance_twice_same_epoch_flow_test() {
         amount_own: stake_amount * 3,
         pool_amount: Zero::zero(),
         :commission,
-        :staking_contract,
         :minting_curve_contract,
     );
     assert!(expected_rewards.is_non_zero());
@@ -3560,7 +3552,6 @@ fn delegate_claim_after_claim_with_rewards_flow_test() {
         amount_own: stake_amount,
         pool_amount: stake_amount,
         :commission,
-        staking_contract: system.staking.address,
         minting_curve_contract: system.minting_curve.address,
     );
     assert!(system.delegator_claim_rewards(:delegator, :pool).is_zero());
@@ -3662,7 +3653,7 @@ fn delegator_claim_rewards_after_change_balance_flow_test() {
         minting_curve_contract: system.minting_curve.address,
         :pool_balance,
     );
-    advance_block_number_global(blocks: 1);
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
     system.update_rewards(:staker, disable_rewards: false);
     let rewards = system.delegator_claim_rewards(:delegator, :pool);
     assert!(rewards == expected_rewards);
@@ -3670,14 +3661,14 @@ fn delegator_claim_rewards_after_change_balance_flow_test() {
     let rewards = system.delegator_claim_rewards(:delegator, :pool);
     assert!(rewards == expected_rewards_v3 * 2);
     system.update_rewards(:staker, disable_rewards: false);
-    advance_block_number_global(blocks: 1);
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
     system.update_rewards(:staker, disable_rewards: false);
     system.advance_epoch();
     pool_balance += delegation_amount;
     system.update_rewards(:staker, disable_rewards: false);
     let rewards = system.delegator_claim_rewards(:delegator, :pool);
     assert!(rewards == expected_rewards_v3 * 2);
-    advance_block_number_global(blocks: 1);
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
     system.update_rewards(:staker, disable_rewards: false);
     system.advance_epoch();
     let expected_rewards_v3 = calculate_strk_pool_rewards_with_pool_balance_v3(
@@ -3812,11 +3803,7 @@ fn update_rewards_token_enable_disable_flow_test() {
 
     // Calculate rewards for consensus rewards - for single enabled token.
     let (expected_staker_rewards, _) = calculate_staker_strk_rewards_with_balances_v3(
-        amount_own: stake_amount,
-        pool_amount: Zero::zero(),
-        :commission,
-        :staking_contract,
-        :minting_curve_contract,
+        amount_own: stake_amount, pool_amount: Zero::zero(), :commission, :minting_curve_contract,
     );
     assert!(expected_staker_rewards.is_non_zero());
     let (commission_rewards, expected_delegator_rewards) = calculate_staker_btc_pool_rewards_v3(
@@ -3827,7 +3814,6 @@ fn update_rewards_token_enable_disable_flow_test() {
             amount: delegation_amount_a, decimals: token_a_decimals,
         ),
         :commission,
-        :staking_contract,
         :minting_curve_contract,
         token_address: token_a.contract_address(),
     );
@@ -3836,7 +3822,7 @@ fn update_rewards_token_enable_disable_flow_test() {
 
     // update_rewards - test rewards only for token A
     system.update_rewards(:staker, disable_rewards: false);
-    advance_block_number_global(blocks: 1);
+    advance_blocks(blocks: 1, block_duration: AVG_BLOCK_DURATION);
     system.update_rewards(:staker, disable_rewards: false);
     system.advance_epoch();
     let staker_rewards = system.staker_claim_rewards(:staker);
