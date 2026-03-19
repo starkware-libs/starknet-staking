@@ -59,6 +59,8 @@
     - [get\_total\_stake\_for\_token](#get_total_stake_for_token)
     - [set\_public\_key](#set_public_key)
     - [get\_current\_public\_key](#get_current_public_key)
+    - [set\_peer\_id](#set_peer_id)
+    - [get\_current\_peer\_id](#get_current_peer_id)
     - [get\_current\_epoch\_data](#get_current_epoch_data)
     - [update\_rewards](#update_rewards)
     - [get\_stakers](#get_stakers)
@@ -91,6 +93,7 @@
     - [Token Enabled](#token-enabled)
     - [Token Disabled](#token-disabled)
     - [Public Key Set](#public-key-set)
+    - [Peer Id Set](#peer-id-set)
     - [Consensus Rewards First Epoch Set](#consensus-rewards-first-epoch-set)
 - [Pool contract](#pool-contract)
   - [Functions](#functions-1)
@@ -1571,6 +1574,42 @@ Returns the current public key for the specified staker.
 Any address.
 #### logic <!-- omit from toc -->
 
+### set_peer_id
+```rust
+fn set_peer_id(ref self: ContractState, peer_id: PeerId)
+```
+#### description <!-- omit from toc -->
+Sets the peer ID for the caller. Changes take effect after K epochs.
+#### emits <!-- omit from toc -->
+1. [Peer Id Set](#peer-id-set)
+#### errors <!-- omit from toc -->
+1. [CONTRACT\_IS\_PAUSED](#contract_is_paused)
+2. [CALLER\_IS\_ZERO\_ADDRESS](#caller_is_zero_address)
+3. [INVALID\_PEER\_ID](#invalid_peer_id)
+4. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+5. [UNSTAKE\_IN\_PROGRESS](#unstake_in_progress)
+6. [PEER\_ID\_SET\_IN\_PROGRESS](#peer_id_set_in_progress)
+7. [PEER\_ID\_MUST\_DIFFER](#peer_id_must_differ)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Only staker address.
+#### logic <!-- omit from toc -->
+
+### get_current_peer_id
+```rust
+fn get_current_peer_id(self: @ContractState, staker_address: ContractAddress) -> PeerId
+```
+#### description <!-- omit from toc -->
+Returns the current peer ID for the specified staker.
+#### emits <!-- omit from toc -->
+#### errors <!-- omit from toc -->
+1. [STAKER\_NOT\_EXISTS](#staker_not_exists)
+2. [PEER\_ID\_NOT\_SET](#peer_id_not_set)
+#### pre-condition <!-- omit from toc -->
+#### access control <!-- omit from toc -->
+Any address.
+#### logic <!-- omit from toc -->
+
 ### get_current_epoch_data
 ```rust
 fn get_current_epoch_data(self: @ContractState) -> (Epoch, BlockNumber, u32)
@@ -1614,10 +1653,10 @@ Only starkware sequencer.
 
 ### get_stakers
 ```rust
-fn get_stakers(self: @TContractState, epoch_id: Epoch) -> Span<(ContractAddress, StakingPower, Option<PublicKey>)>
+fn get_stakers(self: @TContractState, epoch_id: Epoch) -> Span<(ContractAddress, StakingPower, Option<PublicKey>, Option<PeerId>)>
 ```
 #### description <!-- omit from toc -->
-Returns a span of (staker_address, staking_power, Option<public_key>) for all stakers
+Returns a span of (staker_address, staking_power, Option<public_key>, Option<peer_id>) for all stakers
 for the given `epoch_id`.
 **Note**: The staking power is the relative weight of the staker's stake
 out of the total stake, including pooled stake (STRK and BTC), multiplied by
@@ -1821,6 +1860,12 @@ Any address.
 | -------------- | ------------------------ | ----- |
 | staker_address | address                  | ✅    |
 | public_key     | [PublicKey](#publickey)  | ❌    |
+
+### Peer Id Set
+| data           | type                 | keyed |
+| -------------- | -------------------- | ----- |
+| staker_address | address              | ✅    |
+| peer_id        | [PeerId](#peerid)    | ❌    |
 
 ### Consensus Rewards First Epoch Set
 | data                   | type                     | keyed |
@@ -2819,6 +2864,18 @@ Only token admin.
 ### PUBLIC_KEY_NOT_SET
 "Public key is not set"
 
+### PEER_ID_SET_IN_PROGRESS
+"Peer ID set is in progress"
+
+### PEER_ID_MUST_DIFFER
+"Peer ID is already set to provided value"
+
+### INVALID_PEER_ID
+"Peer ID is invalid"
+
+### PEER_ID_NOT_SET
+"Peer ID is not set"
+
 ### ATTEST_WITH_ZERO_BALANCE
 "Cannot attest with zero balance"
 
@@ -2979,6 +3036,9 @@ Epoch: u64
 
 ### PublicKey
 PublicKey: felt252
+
+### PeerId
+PeerId: u256
 
 ### BlockNumber
 BlockNumber: u64
