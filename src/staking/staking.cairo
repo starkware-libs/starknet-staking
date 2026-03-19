@@ -40,8 +40,8 @@ pub mod Staking {
         strk_token_dispatcher,
     };
     use staking::types::{
-        Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey, StakingPower,
-        Version,
+        Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PeerId, PublicKey,
+        StakingPower, Version,
     };
     use starknet::class_hash::ClassHash;
     use starknet::storage::{
@@ -174,6 +174,11 @@ pub mod Staking {
         /// which the `new_public_key` is valid. Up until `activation_epoch`, the
         /// `old_public_key` is valid.
         public_key: Map<ContractAddress, (Epoch, PublicKey, PublicKey)>,
+        /// Map staker address to (activation_epoch, old_peer_id, new_peer_id).
+        /// Similarly to `public_key`, the `activation_epoch` is the first epoch from
+        /// which the `new_peer_id` is valid. Up until `activation_epoch`, the
+        /// `old_peer_id` is valid.
+        peer_id: Map<ContractAddress, (Epoch, PeerId, PeerId)>,
         /// Map staker address to the epoch when the unstake intent takes effect.
         /// **Note**: Stakers that called `unstake_intent` before V3 will not have this record.
         // TODO: Consider view function.
@@ -234,6 +239,7 @@ pub mod Staking {
         TokenEnabled: TokenManagerEvents::TokenEnabled,
         TokenDisabled: TokenManagerEvents::TokenDisabled,
         PublicKeySet: Events::PublicKeySet,
+        PeerIdSet: Events::PeerIdSet,
     }
 
     #[constructor]
@@ -854,6 +860,31 @@ pub mod Staking {
                 .get_public_key_at_epoch(:staker_address, epoch_id: self.get_current_epoch())
                 .expect_with_err(Error::PUBLIC_KEY_NOT_SET)
         }
+
+        fn set_peer_id(ref self: ContractState, peer_id: PeerId) {
+            self.general_prerequisites();
+            assert!(peer_id.is_non_zero(), "{}", Error::INVALID_PEER_ID);
+            let staker_address = get_caller_address();
+            let staker_info = self.internal_staker_info(:staker_address);
+            assert!(staker_info.unstake_time.is_none(), "{}", Error::UNSTAKE_IN_PROGRESS);
+
+            let (curr_activation_epoch, _, prev_peer_id) = self.peer_id.read(staker_address);
+            let curr_epoch = self.get_current_epoch();
+            assert!(curr_epoch >= curr_activation_epoch, "{}", Error::PEER_ID_SET_IN_PROGRESS);
+            assert!(prev_peer_id != peer_id, "{}", Error::PEER_ID_MUST_DIFFER);
+
+            let new_activation_epoch = self.get_epoch_plus_k();
+            self.peer_id.write(staker_address, (new_activation_epoch, prev_peer_id, peer_id));
+            self.emit(Events::PeerIdSet { staker_address, peer_id });
+        }
+
+        fn get_current_peer_id(self: @ContractState, staker_address: ContractAddress) -> PeerId {
+            // Assert the staker exists.
+            self.internal_staker_info(:staker_address);
+            self
+                .get_peer_id_at_epoch(:staker_address, epoch_id: self.get_current_epoch())
+                .expect_with_err(Error::PEER_ID_NOT_SET)
+        }
     }
 
     #[abi(embed_v0)]
@@ -869,7 +900,7 @@ pub mod Staking {
 
         fn get_stakers(
             self: @ContractState, epoch_id: Epoch,
-        ) -> Span<(ContractAddress, StakingPower, Option<PublicKey>)> {
+        ) -> Span<(ContractAddress, StakingPower, Option<PublicKey>, Option<PeerId>)> {
             let curr_epoch = self.get_current_epoch();
             assert!(
                 curr_epoch <= epoch_id && epoch_id < curr_epoch + K.into(),
@@ -880,7 +911,10 @@ pub mod Staking {
             let (strk_total_stake, btc_total_stake) = self
                 .get_total_staking_power_at_epoch(:epoch_id);
 
-            let mut stakers: Array<(ContractAddress, StakingPower, Option<PublicKey>)> = array![];
+            let mut stakers: Array<
+                (ContractAddress, StakingPower, Option<PublicKey>, Option<PeerId>),
+            > =
+                array![];
             for staker_address_ptr in self.stakers.into_iter_full_range() {
                 let staker_address = staker_address_ptr.read();
                 if !self.is_staker_active(:staker_address, :epoch_id) {
@@ -896,7 +930,8 @@ pub mod Staking {
                 }
 
                 let public_key = self.get_public_key_at_epoch(:staker_address, :epoch_id);
-                stakers.append((staker_address, staking_power, public_key));
+                let peer_id = self.get_peer_id_at_epoch(:staker_address, :epoch_id);
+                stakers.append((staker_address, staking_power, public_key, peer_id));
             }
             stakers.span()
         }
@@ -2213,6 +2248,28 @@ pub mod Staking {
             };
             if current_pk.is_non_zero() {
                 Some(current_pk)
+            } else {
+                None
+            }
+        }
+
+        /// Returns the peer ID for `staker_address` at `epoch_id`,
+        /// or `None` if the peer ID is not set.
+        ///
+        /// Preconditions:
+        /// 1. The staker exists.
+        /// 2. `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
+        fn get_peer_id_at_epoch(
+            self: @ContractState, staker_address: ContractAddress, epoch_id: Epoch,
+        ) -> Option<PeerId> {
+            let (activation_epoch, old_pid, new_pid) = self.peer_id.read(staker_address);
+            let current_pid = if epoch_id >= activation_epoch {
+                new_pid
+            } else {
+                old_pid
+            };
+            if current_pid.is_non_zero() {
+                Some(current_pid)
             } else {
                 None
             }

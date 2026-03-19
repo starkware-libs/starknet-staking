@@ -258,3 +258,17 @@ fn member_change_balance_claim_rewards_one_rewards_flow_test() {
     };
     test_multi_version_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn exit_upgrade_set_peer_id_flow_test() {
+    let mut flow = flows::ExitUpgradeSetPeerIdFlow { staker: Option::None };
+    test_multi_version_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn intent_upgrade_set_peer_id_flow_test() {
+    let mut flow = flows::IntentUpgradeSetPeerIdFlow { staker: Option::None };
+    test_multi_version_flow_mainnet(ref :flow);
+}

@@ -9,7 +9,7 @@ use staking::staking::interface::{
     IStakingRewardsManagerDispatcherTrait,
 };
 use staking::test_utils::constants::{
-    DUMMY_ADDRESS, DUMMY_IDENTIFIER, NON_SECURITY_ADMIN, NON_SECURITY_AGENT,
+    DUMMY_ADDRESS, DUMMY_IDENTIFIER, NON_SECURITY_ADMIN, NON_SECURITY_AGENT, PEER_ID,
 };
 use staking::test_utils::{
     StakingInitConfig, general_contract_system_deployment, load_one_felt, pause_staking_contract,
@@ -334,6 +334,18 @@ fn test_set_public_key_when_paused() {
         contract_address: cfg.test_info.staking_contract,
     };
     staking_dispatcher.set_public_key(public_key: cfg.test_info.public_key);
+}
+
+#[test]
+#[should_panic(expected: "Contract is paused")]
+fn test_set_peer_id_when_paused() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    pause_staking_contract(:cfg);
+    let staking_dispatcher = IStakingDispatcher {
+        contract_address: cfg.test_info.staking_contract,
+    };
+    staking_dispatcher.set_peer_id(peer_id: PEER_ID);
 }
 
 #[test]
