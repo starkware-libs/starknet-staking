@@ -5,8 +5,9 @@ use Staking::{
 use constants::{
     BTC_STAKER_ADDRESS, BTC_TOKEN_ADDRESS, BTC_TOKEN_NAME, BTC_TOKEN_NAME_2, CALLER_ADDRESS,
     DUMMY_ADDRESS, DUMMY_IDENTIFIER, EPOCH_DURATION, EPOCH_LENGTH, EPOCH_STARTING_BLOCK,
-    NON_APP_GOVERNOR, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS,
-    OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, UNPOOL_TIME,
+    NON_APP_GOVERNOR, NON_STAKER_ADDRESS, NON_TOKEN_ADMIN, OTHER_OPERATIONAL_ADDRESS, OTHER_PEER_ID,
+    OTHER_REWARD_ADDRESS, OTHER_REWARD_SUPPLIER_CONTRACT_ADDRESS, OTHER_STAKER_ADDRESS, PEER_ID,
+    UNPOOL_TIME,
 };
 use core::num::traits::Zero;
 use core::option::OptionTrait;
@@ -17,7 +18,8 @@ use event_test_utils::{
     assert_declare_operational_address_event, assert_delete_staker_event,
     assert_epoch_info_changed_event, assert_exit_wait_window_changed_event,
     assert_minimum_stake_changed_event, assert_new_delegation_pool_event, assert_new_staker_event,
-    assert_public_key_set_event, assert_remove_from_delegation_pool_action_event,
+    assert_peer_id_set_event, assert_public_key_set_event,
+    assert_remove_from_delegation_pool_action_event,
     assert_remove_from_delegation_pool_intent_event, assert_reward_supplier_changed_event,
     assert_rewards_supplied_to_delegation_pool_event, assert_stake_delegated_balance_changed_event,
     assert_stake_own_balance_changed_event, assert_staker_exit_intent_event,
@@ -5917,7 +5919,9 @@ fn test_get_stakers() {
     assert!(stakers.len() == 0);
 
     let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
-    let expected_stakers = array![(staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key))]
+    let expected_stakers = array![
+        (staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key), Option::None),
+    ]
         .span();
     assert!(stakers == expected_stakers);
 
@@ -5949,7 +5953,8 @@ fn test_get_stakers_before_after_set_public_key() {
     let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
     // TODO: Consider testing with staker amount when the view function is implemented.
     let (strk_staking_power, _) = staking_dispatcher.get_current_total_staking_power();
-    let expected_stakers = array![(staker_address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    let expected_stakers = array![(staker_address, STRK_WEIGHT_FACTOR, Option::None, Option::None)]
+        .span();
     assert!(stakers == expected_stakers);
     assert!(strk_staking_power == NormalizedAmountTrait::from_strk_native_amount(stake_amount));
 
@@ -5969,7 +5974,9 @@ fn test_get_stakers_before_after_set_public_key() {
     advance_epoch_global();
     let epoch_id = staking_dispatcher.get_current_epoch();
     let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
-    let expected_stakers = array![(staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key))]
+    let expected_stakers = array![
+        (staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key), Option::None),
+    ]
         .span();
     assert!(stakers == expected_stakers);
 }
@@ -6051,4 +6058,454 @@ fn test_get_stakers_invalid_epoch() {
     assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
     let result = staking_consensus_safe_dispatcher.get_stakers(epoch_id: epoch_id + 2);
     assert_panic_with_error(:result, expected_error: Error::INVALID_EPOCH.describe());
+}
+
+#[test]
+fn test_set_peer_id() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let peer_id: u256 = PEER_ID;
+    stake_for_testing_using_dispatcher(:cfg);
+    let mut spy = snforge_std::spy_events();
+
+    // Set and test.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(:peer_id);
+    advance_k_epochs_global();
+    let returned_peer_id = staking_dispatcher.get_current_peer_id(:staker_address);
+    assert!(returned_peer_id == peer_id);
+
+    // Test event.
+    let events = spy.get_events().emitted_by(staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "set_peer_id");
+    assert_peer_id_set_event(spied_event: events[0], :staker_address, :peer_id);
+}
+
+#[test]
+#[should_panic(expected: "Peer ID is not set")]
+fn test_get_current_peer_id_before_set() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    stake_for_testing_using_dispatcher(:cfg);
+    staking_dispatcher.get_current_peer_id(:staker_address);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_get_current_peer_id() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let peer_id_1: u256 = PEER_ID;
+    let peer_id_2: u256 = OTHER_PEER_ID;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    // Set peer id.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(peer_id: peer_id_1);
+
+    // Test same epoch.
+    let result = staking_safe_dispatcher.get_current_peer_id(:staker_address);
+    assert_panic_with_error(:result, expected_error: Error::PEER_ID_NOT_SET.describe());
+
+    // Test next epoch.
+    advance_epoch_global();
+    let result = staking_safe_dispatcher.get_current_peer_id(:staker_address);
+    assert_panic_with_error(:result, expected_error: Error::PEER_ID_NOT_SET.describe());
+
+    // Test next next epoch.
+    advance_epoch_global();
+    let returned_peer_id = staking_dispatcher.get_current_peer_id(:staker_address);
+    assert!(returned_peer_id == peer_id_1);
+
+    // Change peer id.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(peer_id: peer_id_2);
+
+    // Test same epoch.
+    let returned_peer_id = staking_dispatcher.get_current_peer_id(:staker_address);
+    assert!(returned_peer_id == peer_id_1);
+
+    // Test next epoch.
+    advance_epoch_global();
+    let returned_peer_id = staking_dispatcher.get_current_peer_id(:staker_address);
+    assert!(returned_peer_id == peer_id_1);
+
+    // Test next next epoch.
+    advance_epoch_global();
+    let returned_peer_id = staking_dispatcher.get_current_peer_id(:staker_address);
+    assert!(returned_peer_id == peer_id_2);
+}
+
+#[test]
+#[should_panic(expected: "Peer ID is invalid")]
+fn test_set_peer_id_invalid_peer_id() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let peer_id: u256 = Zero::zero();
+
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(:peer_id);
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_set_peer_id_staker_does_not_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let peer_id: u256 = PEER_ID;
+
+    staking_dispatcher.set_peer_id(:peer_id);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_peer_id_while_peer_id_set_in_progress() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let peer_id_1: u256 = PEER_ID;
+    let peer_id_2: u256 = OTHER_PEER_ID;
+
+    stake_for_testing_using_dispatcher(:cfg);
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(4),
+    );
+    staking_dispatcher.set_peer_id(peer_id: peer_id_1);
+    let result = staking_safe_dispatcher.set_peer_id(peer_id: peer_id_2);
+    assert_panic_with_error(:result, expected_error: Error::PEER_ID_SET_IN_PROGRESS.describe());
+
+    advance_epoch_global();
+    let result = staking_safe_dispatcher.set_peer_id(peer_id: peer_id_2);
+    assert_panic_with_error(:result, expected_error: Error::PEER_ID_SET_IN_PROGRESS.describe());
+
+    advance_epoch_global();
+    staking_dispatcher.set_peer_id(peer_id: peer_id_2);
+    advance_k_epochs_global();
+    let returned_peer_id = staking_dispatcher.get_current_peer_id(:staker_address);
+    assert!(returned_peer_id == peer_id_2);
+}
+
+#[test]
+#[should_panic(expected: "Peer ID is already set to provided value")]
+fn test_set_peer_id_same_peer_id() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let peer_id: u256 = PEER_ID;
+
+    stake_for_testing_using_dispatcher(:cfg);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(:peer_id);
+
+    advance_k_epochs_global();
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(:peer_id);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_peer_id_while_unstake_in_progress() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_safe_dispatcher = IStakingSafeDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let peer_id: u256 = PEER_ID;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(3),
+    );
+    let unstake_time = staking_dispatcher.unstake_intent();
+
+    // Test before unstake window ends.
+    let result = staking_safe_dispatcher.set_peer_id(:peer_id);
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
+
+    // Test after unstake window ends.
+    start_cheat_block_timestamp_global(
+        block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into(),
+    );
+    let result = staking_safe_dispatcher.set_peer_id(:peer_id);
+    assert_panic_with_error(:result, expected_error: Error::UNSTAKE_IN_PROGRESS.describe());
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_set_peer_id_staker_left() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let peer_id: u256 = PEER_ID;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    let unstake_time = staking_dispatcher.unstake_intent();
+    start_cheat_block_timestamp_global(
+        block_timestamp: unstake_time.add(delta: Time::seconds(count: 1)).into(),
+    );
+    staking_dispatcher.unstake_action(:staker_address);
+
+    staking_dispatcher.set_peer_id(:peer_id);
+}
+
+#[test]
+#[should_panic(expected: "Staker does not exist")]
+fn test_get_current_peer_id_staker_does_not_exist() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    staking_dispatcher.get_current_peer_id(staker_address: cfg.test_info.staker_address);
+}
+
+#[test]
+fn test_get_stakers_before_after_set_peer_id() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    let stake_amount = cfg.test_info.stake_amount;
+    let peer_id: u256 = PEER_ID;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    advance_k_epochs_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+
+    // Test before peer id is set.
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let (strk_staking_power, _) = staking_dispatcher.get_current_total_staking_power();
+    let expected_stakers = array![(staker_address, STRK_WEIGHT_FACTOR, Option::None, Option::None)]
+        .span();
+    assert!(stakers == expected_stakers);
+    assert!(strk_staking_power == NormalizedAmountTrait::from_strk_native_amount(stake_amount));
+
+    // Set peer id.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(:peer_id);
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    advance_epoch_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    advance_epoch_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![
+        (staker_address, STRK_WEIGHT_FACTOR, Option::None, Option::Some(peer_id)),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+}
+
+#[test]
+fn test_get_stakers_with_public_key_and_peer_id() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key = cfg.test_info.public_key;
+    let peer_id: u256 = PEER_ID;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    // Advance K epochs so staker has staking power.
+    advance_k_epochs_global();
+
+    // Set both public key and peer id in the same epoch.
+    cheat_caller_address(
+        contract_address: staking_contract,
+        caller_address: staker_address,
+        span: CheatSpan::TargetCalls(2),
+    );
+    staking_dispatcher.set_public_key(:public_key);
+    staking_dispatcher.set_peer_id(:peer_id);
+
+    // Before activation: staker is active but neither key/id is set yet.
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![(staker_address, STRK_WEIGHT_FACTOR, Option::None, Option::None)]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // After K epochs: both are set.
+    advance_k_epochs_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![
+        (staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key), Option::Some(peer_id)),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+}
+
+#[test]
+fn test_get_stakers_with_only_public_key_no_peer_id() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key = cfg.test_info.public_key;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    // Set only public key, no peer id.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_public_key(:public_key);
+
+    advance_k_epochs_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![
+        (staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key), Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+}
+
+#[test]
+fn test_get_stakers_with_only_peer_id_no_public_key() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    let peer_id: u256 = PEER_ID;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    // Set only peer id, no public key.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(:peer_id);
+
+    advance_k_epochs_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![
+        (staker_address, STRK_WEIGHT_FACTOR, Option::None, Option::Some(peer_id)),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+}
+
+#[test]
+fn test_get_stakers_set_public_key_then_peer_id_different_epochs() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staking_consensus_dispatcher = IStakingConsensusDispatcher {
+        contract_address: staking_contract,
+    };
+    let staker_address = cfg.test_info.staker_address;
+    let public_key = cfg.test_info.public_key;
+    let peer_id: u256 = PEER_ID;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    // Set public key first.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_public_key(:public_key);
+
+    // Advance K epochs so public key is active.
+    advance_k_epochs_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![
+        (staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key), Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Now set peer id.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(:peer_id);
+
+    // Peer id not yet active, public key still active.
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+
+    // Advance K epochs so peer id is also active.
+    advance_k_epochs_global();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![
+        (staker_address, STRK_WEIGHT_FACTOR, Option::Some(public_key), Option::Some(peer_id)),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+}
+
+#[test]
+fn test_set_peer_id_cycle_back_to_original() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let staking_contract = cfg.test_info.staking_contract;
+    let staking_dispatcher = IStakingDispatcher { contract_address: staking_contract };
+    let staker_address = cfg.test_info.staker_address;
+    let peer_id_a: u256 = PEER_ID;
+    let peer_id_b: u256 = OTHER_PEER_ID;
+    stake_for_testing_using_dispatcher(:cfg);
+
+    // Set peer_id to A.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(peer_id: peer_id_a);
+    advance_k_epochs_global();
+    assert!(staking_dispatcher.get_current_peer_id(:staker_address) == peer_id_a);
+
+    // Change to B.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(peer_id: peer_id_b);
+    advance_k_epochs_global();
+    assert!(staking_dispatcher.get_current_peer_id(:staker_address) == peer_id_b);
+
+    // Cycle back to A.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address);
+    staking_dispatcher.set_peer_id(peer_id: peer_id_a);
+    advance_k_epochs_global();
+    assert!(staking_dispatcher.get_current_peer_id(:staker_address) == peer_id_a);
 }

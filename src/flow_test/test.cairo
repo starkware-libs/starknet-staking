@@ -19,8 +19,8 @@ use staking::staking::interface::{
 use staking::staking::objects::NormalizedAmountTrait;
 use staking::staking::utils::{BTC_WEIGHT_FACTOR, STAKING_POWER_BASE_VALUE, STRK_WEIGHT_FACTOR};
 use staking::test_utils::constants::{
-    AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, PUBLIC_KEY, STRK_BASE_VALUE,
-    TEST_MIN_BTC_FOR_REWARDS,
+    AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_5D_CONFIG, BTC_8D_CONFIG, OTHER_PEER_ID, PEER_ID,
+    PUBLIC_KEY, STRK_BASE_VALUE, TEST_MIN_BTC_FOR_REWARDS, THIRD_PEER_ID,
 };
 use staking::test_utils::{
     StakingInitConfig, advance_blocks, calculate_staker_btc_pool_rewards_v2,
@@ -1802,8 +1802,8 @@ fn get_stakers_multiple_stakers_flow_test() {
     assert!(stakers == expected_stakers);
     let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
     let expected_stakers = array![
-        (staker_address_1, STRK_WEIGHT_FACTOR * 1 / 3, Option::Some(public_key_1)),
-        (staker_address_2, STRK_WEIGHT_FACTOR * 2 / 3, Option::None),
+        (staker_address_1, STRK_WEIGHT_FACTOR * 1 / 3, Option::Some(public_key_1), Option::None),
+        (staker_address_2, STRK_WEIGHT_FACTOR * 2 / 3, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -1817,9 +1817,9 @@ fn get_stakers_multiple_stakers_flow_test() {
     assert!(stakers == expected_stakers);
     let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
     let expected_stakers = array![
-        (staker_address_1, STRK_WEIGHT_FACTOR * 1 / 6, Option::Some(public_key_1)),
-        (staker_address_2, STRK_WEIGHT_FACTOR * 2 / 6, Option::Some(public_key_2)),
-        (staker_address_3, STRK_WEIGHT_FACTOR * 3 / 6, Option::Some(public_key_3)),
+        (staker_address_1, STRK_WEIGHT_FACTOR * 1 / 6, Option::Some(public_key_1), Option::None),
+        (staker_address_2, STRK_WEIGHT_FACTOR * 2 / 6, Option::Some(public_key_2), Option::None),
+        (staker_address_3, STRK_WEIGHT_FACTOR * 3 / 6, Option::Some(public_key_3), Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -1868,8 +1868,8 @@ fn set_same_public_key_for_2_different_stakers_flow_test() {
     // Test get_stakers.
     system.advance_k_epochs();
     let expected_stakers = array![
-        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::Some(public_key)),
-        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::Some(public_key)),
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::Some(public_key), Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::Some(public_key), Option::None),
     ]
         .span();
     let epoch_id = staking.get_current_epoch();
@@ -1911,7 +1911,10 @@ fn get_stakers_zero_balance_flow_test() {
 
     // Test next next epoch.
     let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
-    let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    let expected_stakers = array![
+        (staker.staker.address, STRK_WEIGHT_FACTOR, Option::None, Option::None),
+    ]
+        .span();
     assert!(stakers == expected_stakers);
     system.advance_epoch();
     let epoch_id = staking.get_current_epoch();
@@ -1945,7 +1948,10 @@ fn get_stakers_staker_exit_intent_flow_test() {
     // Test get_stakers
     let epoch_id = staking.get_current_epoch();
     let stakers = staking_consensus.get_stakers(:epoch_id);
-    let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    let expected_stakers = array![
+        (staker.staker.address, STRK_WEIGHT_FACTOR, Option::None, Option::None),
+    ]
+        .span();
     assert!(stakers == expected_stakers);
 
     // Test next epoch.
@@ -1988,7 +1994,10 @@ fn get_stakers_staker_exit_action_flow_test() {
     // Test get_stakers
     let epoch_id = staking.get_current_epoch();
     let stakers = staking_consensus.get_stakers(:epoch_id);
-    let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)].span();
+    let expected_stakers = array![
+        (staker.staker.address, STRK_WEIGHT_FACTOR, Option::None, Option::None),
+    ]
+        .span();
     assert!(stakers == expected_stakers);
 
     // Staker exit
@@ -2087,14 +2096,26 @@ fn get_stakers_delegation_flow_test() {
             staker_1.staker.address,
             staker_with_strk_delegation_staking_power + BTC_WEIGHT_FACTOR / 2,
             Option::None,
+            Option::None,
         ),
-        (staker_2.staker.address, staker_with_strk_delegation_staking_power, Option::None),
+        (
+            staker_2.staker.address,
+            staker_with_strk_delegation_staking_power,
+            Option::None,
+            Option::None,
+        ),
         (
             staker_3.staker.address,
             staker_without_strk_delegation_staking_power + BTC_WEIGHT_FACTOR / 2,
             Option::None,
+            Option::None,
         ),
-        (staker_4.staker.address, staker_without_strk_delegation_staking_power, Option::None),
+        (
+            staker_4.staker.address,
+            staker_without_strk_delegation_staking_power,
+            Option::None,
+            Option::None,
+        ),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2135,8 +2156,8 @@ fn get_stakers_delegation_undelegation_flow_test() {
     // Test current epoch.
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
     let expected_stakers = array![
-        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
-        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2154,6 +2175,7 @@ fn get_stakers_delegation_undelegation_flow_test() {
             )
                 .unwrap(),
             Option::None,
+            Option::None,
         ),
         (
             staker_2.staker.address,
@@ -2163,6 +2185,7 @@ fn get_stakers_delegation_undelegation_flow_test() {
                 div: stake_amount * 2 + strk_delegation_amount,
             )
                 .unwrap(),
+            Option::None,
             Option::None,
         ),
     ]
@@ -2189,6 +2212,7 @@ fn get_stakers_delegation_undelegation_flow_test() {
             )
                 .unwrap(),
             Option::None,
+            Option::None,
         ),
         (
             staker_2.staker.address,
@@ -2198,6 +2222,7 @@ fn get_stakers_delegation_undelegation_flow_test() {
                 div: stake_amount * 2 + strk_delegation_amount * 2 / 3,
             )
                 .unwrap(),
+            Option::None,
             Option::None,
         ),
     ]
@@ -2229,8 +2254,8 @@ fn get_stakers_delegation_undelegation_flow_test() {
     system.advance_k_epochs();
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
     let expected_stakers = array![
-        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
-        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2334,10 +2359,12 @@ fn get_stakers_enable_disable_btc_tokens_flow_test() {
             staker_1.staker.address,
             first_staker_strk_staking_power + BTC_WEIGHT_FACTOR / 2,
             Option::None,
+            Option::None,
         ),
         (
             staker_2.staker.address,
             second_staker_strk_staking_power + BTC_WEIGHT_FACTOR / 2,
+            Option::None,
             Option::None,
         ),
     ]
@@ -2355,10 +2382,11 @@ fn get_stakers_enable_disable_btc_tokens_flow_test() {
     system.advance_k_epochs();
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
     let expected_stakers = array![
-        (staker_1.staker.address, first_staker_strk_staking_power, Option::None),
+        (staker_1.staker.address, first_staker_strk_staking_power, Option::None, Option::None),
         (
             staker_2.staker.address,
             second_staker_strk_staking_power + BTC_WEIGHT_FACTOR,
+            Option::None,
             Option::None,
         ),
     ]
@@ -2381,8 +2409,9 @@ fn get_stakers_enable_disable_btc_tokens_flow_test() {
             staker_1.staker.address,
             first_staker_strk_staking_power + BTC_WEIGHT_FACTOR,
             Option::None,
+            Option::None,
         ),
-        (staker_2.staker.address, second_staker_strk_staking_power, Option::None),
+        (staker_2.staker.address, second_staker_strk_staking_power, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2398,8 +2427,8 @@ fn get_stakers_enable_disable_btc_tokens_flow_test() {
     system.advance_k_epochs();
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
     let expected_stakers = array![
-        (staker_1.staker.address, first_staker_strk_staking_power, Option::None),
-        (staker_2.staker.address, second_staker_strk_staking_power, Option::None),
+        (staker_1.staker.address, first_staker_strk_staking_power, Option::None, Option::None),
+        (staker_2.staker.address, second_staker_strk_staking_power, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2420,10 +2449,12 @@ fn get_stakers_enable_disable_btc_tokens_flow_test() {
             staker_1.staker.address,
             first_staker_strk_staking_power + BTC_WEIGHT_FACTOR / 2,
             Option::None,
+            Option::None,
         ),
         (
             staker_2.staker.address,
             second_staker_strk_staking_power + BTC_WEIGHT_FACTOR / 2,
+            Option::None,
             Option::None,
         ),
     ]
@@ -2451,8 +2482,8 @@ fn get_stakers_increase_stake_flow_test() {
     // Test get_stakers
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
     let expected_stakers = array![
-        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
-        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2468,8 +2499,8 @@ fn get_stakers_increase_stake_flow_test() {
     system.advance_k_epochs();
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
     let expected_stakers = array![
-        (staker_1.staker.address, STRK_WEIGHT_FACTOR * 2 / 3, Option::None),
-        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 3, Option::None),
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR * 2 / 3, Option::None, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 3, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2506,8 +2537,8 @@ fn get_stakers_switch_delegation_flow_test() {
     // Test get_stakers
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
     let expected_stakers = array![
-        (staker_1.staker.address, STRK_WEIGHT_FACTOR * 2 / 3, Option::None),
-        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 3, Option::None),
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR * 2 / 3, Option::None, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 3, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2523,8 +2554,8 @@ fn get_stakers_switch_delegation_flow_test() {
     system.advance_k_epochs();
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
     let expected_stakers = array![
-        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
-        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None),
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2553,6 +2584,7 @@ fn get_stakers_switch_delegation_flow_test() {
             mul_wide_and_div(lhs: STRK_WEIGHT_FACTOR, rhs: stake_amount, div: stake_amount * 5 / 2)
                 .unwrap(),
             Option::None,
+            Option::None,
         ),
         (
             staker_2.staker.address,
@@ -2560,6 +2592,7 @@ fn get_stakers_switch_delegation_flow_test() {
                 lhs: STRK_WEIGHT_FACTOR, rhs: stake_amount * 3 / 2, div: stake_amount * 5 / 2,
             )
                 .unwrap(),
+            Option::None,
             Option::None,
         ),
     ]
@@ -2584,8 +2617,8 @@ fn get_stakers_switch_delegation_flow_test() {
     system.advance_k_epochs();
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
     let expected_stakers = array![
-        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 3, Option::None),
-        (staker_2.staker.address, STRK_WEIGHT_FACTOR * 2 / 3, Option::None),
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 3, Option::None, Option::None),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR * 2 / 3, Option::None, Option::None),
     ]
         .span();
     assert!(stakers == expected_stakers);
@@ -2616,7 +2649,9 @@ fn get_stakers_staking_power_100_flow_test() {
 
     // Test get_stakers.
     let stakers = staking_consensus.get_stakers(epoch_id: system.staking.get_current_epoch());
-    let expected_stakers = array![(staker.staker.address, STAKING_POWER_BASE_VALUE, Option::None)]
+    let expected_stakers = array![
+        (staker.staker.address, STAKING_POWER_BASE_VALUE, Option::None, Option::None),
+    ]
         .span();
     assert!(stakers == expected_stakers);
 }
@@ -3841,4 +3876,139 @@ fn update_rewards_token_enable_disable_flow_test() {
     assert!(delegator_a_rewards.is_zero());
     // Same rewards because the delegation amount is the same (with different decimals).
     assert!(delegator_b_rewards == expected_delegator_rewards);
+}
+
+/// Flow:
+/// Staker 1 stake and set peer id.
+/// Staker 2 stake and set the same peer id as staker 1.
+/// Test get_stakers.
+#[test]
+fn set_same_peer_id_for_2_different_stakers_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let amount = cfg.staking_contract_info.min_stake;
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let staker_1 = system.new_staker(:amount);
+    let staker_2 = system.new_staker(:amount);
+    let peer_id: u256 = PEER_ID;
+    let staking_address = system.staking.address;
+    let staking = system.staking.dispatcher();
+    let staking_consensus = system.staking.consensus_dispatcher();
+
+    // Staker 1 stake and set peer id.
+    system.stake(staker: staker_1, amount: amount, pool_enabled: false, commission: 200);
+    cheat_caller_address_once(
+        contract_address: staking_address, caller_address: staker_1.staker.address,
+    );
+    staking.set_peer_id(:peer_id);
+
+    // Staker 2 stake and set peer id.
+    system.stake(staker: staker_2, amount: amount, pool_enabled: false, commission: 200);
+    cheat_caller_address_once(
+        contract_address: staking_address, caller_address: staker_2.staker.address,
+    );
+    staking.set_peer_id(:peer_id);
+
+    // Test get_stakers.
+    system.advance_k_epochs();
+    let expected_stakers = array![
+        (staker_1.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::Some(peer_id)),
+        (staker_2.staker.address, STRK_WEIGHT_FACTOR / 2, Option::None, Option::Some(peer_id)),
+    ]
+        .span();
+    let epoch_id = staking.get_current_epoch();
+    assert!(staking_consensus.get_stakers(:epoch_id) == expected_stakers);
+    assert!(staking.get_current_peer_id(staker_address: staker_1.staker.address) == peer_id);
+    assert!(staking.get_current_peer_id(staker_address: staker_2.staker.address) == peer_id);
+}
+
+/// Flow:
+/// Staker 1 stake and set peer id.
+/// Staker 2 stake.
+/// Advance epoch. Staker 2 set peer id. Staker 3 stake and set peer id.
+/// Advance epochs and verify get_stakers at each stage.
+#[test]
+fn get_stakers_multiple_stakers_peer_id_flow_test() {
+    let cfg: StakingInitConfig = Default::default();
+    let mut system = SystemConfigTrait::basic_stake_flow_cfg(:cfg).deploy();
+    let staking_contract = system.staking.address;
+    let staking_dispatcher = system.staking.dispatcher();
+    let staking_consensus_dispatcher = system.staking.consensus_dispatcher();
+    let stake_amount_1 = system.staking.get_min_stake();
+    let stake_amount_2 = stake_amount_1 * 2;
+    let stake_amount_3 = stake_amount_1 * 3;
+    let staker_1 = system.new_staker(amount: stake_amount_1);
+    let staker_2 = system.new_staker(amount: stake_amount_2);
+    let staker_3 = system.new_staker(amount: stake_amount_3);
+    let staker_address_1 = staker_1.staker.address;
+    let staker_address_2 = staker_2.staker.address;
+    let staker_address_3 = staker_3.staker.address;
+    let peer_id_1: u256 = PEER_ID;
+    let peer_id_2: u256 = OTHER_PEER_ID;
+    let peer_id_3: u256 = THIRD_PEER_ID;
+
+    // Staker 1 stake and set peer id.
+    system.stake(staker: staker_1, amount: stake_amount_1, pool_enabled: false, commission: 200);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address_1);
+    staking_dispatcher.set_peer_id(peer_id: peer_id_1);
+
+    // Staker 2 stake.
+    system.stake(staker: staker_2, amount: stake_amount_2, pool_enabled: false, commission: 200);
+
+    // Test first + second epoch.
+    let epoch_id = staking_dispatcher.get_current_epoch();
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    let expected_stakers = array![].span();
+    assert!(stakers == expected_stakers);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    system.advance_epoch();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+
+    // Staker 2 set peer id.
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address_2);
+    staking_dispatcher.set_peer_id(peer_id: peer_id_2);
+
+    // Staker 3 stake and set peer id.
+    system.stake(staker: staker_3, amount: stake_amount_3, pool_enabled: false, commission: 200);
+    cheat_caller_address_once(contract_address: staking_contract, caller_address: staker_address_3);
+    staking_dispatcher.set_peer_id(peer_id: peer_id_3);
+
+    // Test second + third epoch.
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    let expected_stakers = array![
+        (staker_address_1, STRK_WEIGHT_FACTOR * 1 / 3, Option::None, Option::Some(peer_id_1)),
+        (staker_address_2, STRK_WEIGHT_FACTOR * 2 / 3, Option::None, Option::None),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    system.advance_epoch();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+
+    // Test third + fourth epoch.
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    let expected_stakers = array![
+        (staker_address_1, STRK_WEIGHT_FACTOR * 1 / 6, Option::None, Option::Some(peer_id_1)),
+        (staker_address_2, STRK_WEIGHT_FACTOR * 2 / 6, Option::None, Option::Some(peer_id_2)),
+        (staker_address_3, STRK_WEIGHT_FACTOR * 3 / 6, Option::None, Option::Some(peer_id_3)),
+    ]
+        .span();
+    assert!(stakers == expected_stakers);
+
+    // Advance epoch.
+    system.advance_epoch();
+    let epoch_id = staking_dispatcher.get_current_epoch();
+
+    // Test fourth + fifth epoch.
+    let stakers = staking_consensus_dispatcher.get_stakers(:epoch_id);
+    assert!(stakers == expected_stakers);
+    let stakers = staking_consensus_dispatcher.get_stakers(epoch_id: epoch_id + 1);
+    assert!(stakers == expected_stakers);
 }

@@ -784,3 +784,17 @@ fn accrue_rewards_different_balances_across_versions_flow_test() {
     };
     test_flow_mainnet(ref :flow);
 }
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn get_peer_id_after_upgrade_flow_test() {
+    let mut flow = flows::GetPeerIdAfterUpgradeFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}
+
+#[test]
+#[fork("MAINNET_LATEST")]
+fn set_peer_id_same_epoch_as_upgrade_flow_test() {
+    let mut flow = flows::SetPeerIdSameEpochAsUpgradeFlow { staker: Option::None };
+    test_flow_mainnet(ref :flow);
+}

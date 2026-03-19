@@ -7,7 +7,7 @@ use staking::staking::interface::{
     ConfigEvents as StakingConfigEvents, Events as StakingEvents, PauseEvents as StakingPauseEvents,
     TokenManagerEvents as StakingTokenManagerEvents,
 };
-use staking::types::{Amount, Commission, Epoch, Inflation, PublicKey};
+use staking::types::{Amount, Commission, Epoch, Inflation, PeerId, PublicKey};
 use starknet::ContractAddress;
 use starkware_utils::time::time::{TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::assert_expected_event_emitted;
@@ -634,6 +634,18 @@ pub(crate) fn assert_public_key_set_event(
         :expected_event,
         expected_event_selector: @selector!("PublicKeySet"),
         expected_event_name: "PublicKeySet",
+    );
+}
+
+pub(crate) fn assert_peer_id_set_event(
+    spied_event: @(ContractAddress, Event), staker_address: ContractAddress, peer_id: PeerId,
+) {
+    let expected_event = StakingEvents::PeerIdSet { staker_address, peer_id };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("PeerIdSet"),
+        expected_event_name: "PeerIdSet",
     );
 }
 

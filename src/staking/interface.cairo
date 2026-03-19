@@ -2,7 +2,8 @@ use core::num::traits::Zero;
 use staking::staking::errors::Error;
 use staking::staking::objects::{AttestationInfo, EpochInfo, NormalizedAmount};
 use staking::types::{
-    Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PublicKey, StakingPower,
+    Amount, BlockNumber, Commission, Epoch, InternalStakerInfoLatest, PeerId, PublicKey,
+    StakingPower,
 };
 use starknet::{ClassHash, ContractAddress};
 use starkware_utils::errors::OptionAuxTrait;
@@ -98,14 +99,18 @@ pub trait IStaking<TContractState> {
     fn set_public_key(ref self: TContractState, public_key: PublicKey);
     /// Get the current public key for the given `staker_address`.
     fn get_current_public_key(self: @TContractState, staker_address: ContractAddress) -> PublicKey;
+    /// Set the peer ID for the calling staker.
+    fn set_peer_id(ref self: TContractState, peer_id: PeerId);
+    /// Get the current peer ID for the given `staker_address`.
+    fn get_current_peer_id(self: @TContractState, staker_address: ContractAddress) -> PeerId;
 }
 
 #[starknet::interface]
 pub trait IStakingConsensus<TContractState> {
     /// Returns (epoch_id, epoch_starting_block, epoch_length) for the current epoch.
     fn get_current_epoch_data(self: @TContractState) -> (Epoch, BlockNumber, u32);
-    /// Returns a span of (staker_address, staking_power, Option<public_key>) for all stakers
-    /// for the given `epoch_id` (`curr_epoch <= epoch_id < curr_epoch + K`).
+    /// Returns a span of (staker_address, staking_power, Option<public_key>, Option<peer_id>)
+    /// for all stakers for the given `epoch_id` (`curr_epoch <= epoch_id < curr_epoch + K`).
     /// **Note**: The staking power is the relative weight of the staker's stake
     /// out of the total stake, including pooled stake (STRK and BTC), multiplied by
     /// `STAKING_POWER_BASE_VALUE`.
@@ -115,7 +120,7 @@ pub trait IStakingConsensus<TContractState> {
     /// This will occur if a new staker was added in that epoch before the upgrade.
     fn get_stakers(
         self: @TContractState, epoch_id: Epoch,
-    ) -> Span<(ContractAddress, StakingPower, Option<PublicKey>)>;
+    ) -> Span<(ContractAddress, StakingPower, Option<PublicKey>, Option<PeerId>)>;
 }
 
 // **Note**: This trait must be reimplemented in the next version of the contract.
@@ -306,7 +311,7 @@ pub trait IStakingRewardsManager<TContractState> {
 }
 
 pub mod Events {
-    use staking::types::{Amount, Commission, Epoch, PublicKey};
+    use staking::types::{Amount, Commission, Epoch, PeerId, PublicKey};
     use starknet::ContractAddress;
     use starkware_utils::time::time::Timestamp;
     #[derive(Debug, Drop, PartialEq, starknet::Event)]
@@ -477,6 +482,13 @@ pub mod Events {
         #[key]
         pub staker_address: ContractAddress,
         pub public_key: PublicKey,
+    }
+
+    #[derive(Debug, Drop, PartialEq, starknet::Event)]
+    pub struct PeerIdSet {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub peer_id: PeerId,
     }
 }
 

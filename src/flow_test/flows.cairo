@@ -32,8 +32,8 @@ use staking::staking::staking::Staking::V3_PREV_CONTRACT_VERSION;
 use staking::staking::utils::STRK_WEIGHT_FACTOR;
 use staking::test_utils::constants::{
     AVG_BLOCK_DURATION, BTC_18D_CONFIG, BTC_8D_CONFIG, BTC_DECIMALS_18, BTC_DECIMALS_8,
-    EPOCH_DURATION, PUBLIC_KEY, STRK_BASE_VALUE, TEST_BTC_DECIMALS, TEST_MIN_BTC_FOR_REWARDS,
-    TEST_ONE_BTC,
+    EPOCH_DURATION, PEER_ID, PUBLIC_KEY, STRK_BASE_VALUE, TEST_BTC_DECIMALS,
+    TEST_MIN_BTC_FOR_REWARDS, TEST_ONE_BTC,
 };
 use staking::test_utils::{
     advance_blocks, calculate_pool_member_rewards, calculate_staker_btc_pool_rewards_v2,
@@ -7124,7 +7124,9 @@ pub(crate) impl SetPublicKeySameEpochAsUpgradeFlowImpl of FlowTrait<
         let result = staking_safe.get_current_public_key(staker_address: staker.staker.address);
         assert_panic_with_error(result, StakingError::PUBLIC_KEY_NOT_SET.describe());
         let stakers = staking_consensus.get_stakers(epoch_id: staking.get_current_epoch());
-        let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)]
+        let expected_stakers = array![
+            (staker.staker.address, STRK_WEIGHT_FACTOR, Option::None, Option::None),
+        ]
             .span();
         assert!(stakers == expected_stakers);
 
@@ -7135,7 +7137,177 @@ pub(crate) impl SetPublicKeySameEpochAsUpgradeFlowImpl of FlowTrait<
         assert!(actual_public_key == public_key);
         let stakers = staking_consensus.get_stakers(epoch_id: staking.get_current_epoch());
         let expected_stakers = array![
-            (staker.staker.address, STRK_WEIGHT_FACTOR, Option::Some(public_key)),
+            (staker.staker.address, STRK_WEIGHT_FACTOR, Option::Some(public_key), Option::None),
+        ]
+            .span();
+        assert!(stakers == expected_stakers);
+    }
+}
+
+/// Flow:
+/// Stake
+/// Upgrade
+/// Attempt to get peer id
+/// Catch PEER_ID_NOT_SET
+#[derive(Drop, Copy)]
+pub(crate) struct GetPeerIdAfterUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl GetPeerIdAfterUpgradeFlowImpl of FlowTrait<GetPeerIdAfterUpgradeFlow> {
+    fn setup(ref self: GetPeerIdAfterUpgradeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: GetPeerIdAfterUpgradeFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staker_address = staker.staker.address;
+        let result = system.staking.safe_dispatcher().get_current_peer_id(:staker_address);
+        assert_panic_with_error(result, StakingError::PEER_ID_NOT_SET.describe());
+    }
+}
+
+/// Flow:
+/// Stake
+/// Exit
+/// Upgrade
+/// Attempt to set peer id
+#[derive(Drop, Copy)]
+pub(crate) struct ExitUpgradeSetPeerIdFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl ExitUpgradeSetPeerIdFlowImpl of MultiVersionFlowTrait<ExitUpgradeSetPeerIdFlow> {
+    fn versions(self: ExitUpgradeSetPeerIdFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
+    fn setup(ref self: ExitUpgradeSetPeerIdFlow, ref system: SystemState, version: ReleaseVersion) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: true, :commission);
+        system.staker_exit_intent(:staker);
+        system.advance_exit_wait_window();
+        system.staker_exit_action(:staker);
+
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: ExitUpgradeSetPeerIdFlow, ref system: SystemState, version: ReleaseVersion) {
+        let staker = self.staker.unwrap();
+        let peer_id = PEER_ID;
+
+        cheat_caller_address_once(
+            contract_address: system.staking.address, caller_address: staker.staker.address,
+        );
+        let result = system.staking.safe_dispatcher().set_peer_id(:peer_id);
+        assert_panic_with_error(result, StakingError::STAKER_NOT_EXISTS.describe());
+    }
+}
+
+/// Flow:
+/// Stake
+/// Exit intent
+/// Upgrade
+/// Attempt to set peer id
+#[derive(Drop, Copy)]
+pub(crate) struct IntentUpgradeSetPeerIdFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl IntentUpgradeSetPeerIdFlowImpl of MultiVersionFlowTrait<
+    IntentUpgradeSetPeerIdFlow,
+> {
+    fn versions(self: IntentUpgradeSetPeerIdFlow) -> Span<ReleaseVersion> {
+        [V0, V1, V2].span()
+    }
+
+    fn setup(
+        ref self: IntentUpgradeSetPeerIdFlow, ref system: SystemState, version: ReleaseVersion,
+    ) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.staker_exit_intent(:staker);
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: IntentUpgradeSetPeerIdFlow, ref system: SystemState, version: ReleaseVersion) {
+        let staker = self.staker.unwrap();
+        let peer_id = PEER_ID;
+
+        cheat_caller_address_once(
+            contract_address: system.staking.address, caller_address: staker.staker.address,
+        );
+        let result = system.staking.safe_dispatcher().set_peer_id(:peer_id);
+        assert_panic_with_error(result, StakingError::UNSTAKE_IN_PROGRESS.describe());
+    }
+}
+
+/// Flow:
+/// Stake
+/// Upgrade
+/// Set peer id (same epoch as upgrade)
+/// Test get_peer_id and get_stakers (still same epoch)
+/// Advance K epochs
+/// Test get_peer_id and get_stakers
+#[derive(Drop, Copy)]
+pub(crate) struct SetPeerIdSameEpochAsUpgradeFlow {
+    pub(crate) staker: Option<Staker>,
+}
+pub(crate) impl SetPeerIdSameEpochAsUpgradeFlowImpl of FlowTrait<SetPeerIdSameEpochAsUpgradeFlow> {
+    fn setup_v2(ref self: SetPeerIdSameEpochAsUpgradeFlow, ref system: SystemState) {
+        let amount = system.staking.get_min_stake();
+        let staker = system.new_staker(:amount);
+        let commission = 200;
+        system.stake(:staker, :amount, pool_enabled: false, :commission);
+        system.advance_epoch();
+
+        system.set_staker_for_migration(staker_address: staker.staker.address);
+        self.staker = Option::Some(staker);
+    }
+
+    #[feature("safe_dispatcher")]
+    fn test(self: SetPeerIdSameEpochAsUpgradeFlow, ref system: SystemState) {
+        let staker = self.staker.unwrap();
+        let staking = system.staking.dispatcher();
+        let staking_safe = system.staking.safe_dispatcher();
+        let staking_consensus = system.staking.consensus_dispatcher();
+        let peer_id = PEER_ID;
+
+        // Set peer id.
+        cheat_caller_address_once(
+            contract_address: system.staking.address, caller_address: staker.staker.address,
+        );
+        staking.set_peer_id(:peer_id);
+
+        // Test get_peer_id and get_stakers same epoch.
+        let result = staking_safe.get_current_peer_id(staker_address: staker.staker.address);
+        assert_panic_with_error(result, StakingError::PEER_ID_NOT_SET.describe());
+        let stakers = staking_consensus.get_stakers(epoch_id: staking.get_current_epoch());
+        let expected_stakers = array![
+            (staker.staker.address, STRK_WEIGHT_FACTOR, Option::None, Option::None),
+        ]
+            .span();
+        assert!(stakers == expected_stakers);
+
+        // Test get_peer_id and get_stakers after K epochs.
+        system.advance_k_epochs();
+        let actual_peer_id = staking.get_current_peer_id(staker_address: staker.staker.address);
+        assert!(actual_peer_id == peer_id);
+        let stakers = staking_consensus.get_stakers(epoch_id: staking.get_current_epoch());
+        let expected_stakers = array![
+            (staker.staker.address, STRK_WEIGHT_FACTOR, Option::None, Option::Some(peer_id)),
         ]
             .span();
         assert!(stakers == expected_stakers);
@@ -7179,7 +7351,9 @@ pub(crate) impl GetStakersAfterUpgradeFlowImpl of FlowTrait<GetStakersAfterUpgra
 
         // Test next epoch.
         let stakers = staking_consensus.get_stakers(epoch_id: epoch_id + 1);
-        let expected_stakers = array![(staker.staker.address, STRK_WEIGHT_FACTOR, Option::None)]
+        let expected_stakers = array![
+            (staker.staker.address, STRK_WEIGHT_FACTOR, Option::None, Option::None),
+        ]
             .span();
         assert!(stakers == expected_stakers);
         system.advance_epoch();
