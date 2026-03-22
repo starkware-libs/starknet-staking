@@ -11,13 +11,17 @@ use snforge_std::{
 use staking::constants::{ALPHA, ALPHA_DENOMINATOR, SECONDS_IN_YEAR, STRK_IN_FRIS};
 use staking::errors::{GenericError, InternalError};
 use staking::minting_curve::interface::{IMintingCurveDispatcher, IMintingCurveDispatcherTrait};
+use staking::reward_supplier::errors::Error;
 use staking::reward_supplier::interface::{
-    IRewardSupplier, IRewardSupplierDispatcher, IRewardSupplierDispatcherTrait,
-    IRewardSupplierSafeDispatcher, IRewardSupplierSafeDispatcherTrait, RewardSupplierInfoV1,
+    BlockDurationConfig, IRewardSupplier, IRewardSupplierConfigDispatcher,
+    IRewardSupplierConfigDispatcherTrait, IRewardSupplierConfigSafeDispatcher,
+    IRewardSupplierConfigSafeDispatcherTrait, IRewardSupplierDispatcher,
+    IRewardSupplierDispatcherTrait, IRewardSupplierSafeDispatcher,
+    IRewardSupplierSafeDispatcherTrait, RewardSupplierInfoV1,
 };
 use staking::reward_supplier::reward_supplier::RewardSupplier;
 use staking::reward_supplier::reward_supplier::RewardSupplier::{
-    BLOCK_DURATION_SCALE, DEFAULT_AVG_BLOCK_DURATION,
+    BLOCK_DURATION_SCALE, DEFAULT_AVG_BLOCK_DURATION, DEFAULT_BLOCK_DURATION_CONFIG,
 };
 use staking::reward_supplier::utils::compute_threshold;
 use staking::staking::interface::{IStakingDispatcher, IStakingDispatcherTrait};
@@ -40,7 +44,6 @@ use test_utils::{
     general_contract_system_deployment, initialize_reward_supplier_state_from_cfg, load_one_felt,
     stake_for_testing_using_dispatcher,
 };
-
 
 #[test]
 fn test_identity() {
@@ -532,5 +535,70 @@ fn test_update_current_epoch_block_rewards_assertions() {
     let result = reward_supplier_safe_dispatcher.update_current_epoch_block_rewards();
     assert_panic_with_error(
         :result, expected_error: InternalError::INVALID_BLOCK_TIMESTAMP.describe(),
+    );
+}
+
+#[test]
+fn test_get_block_duration_config() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let block_duration_config = reward_supplier_dispatcher.get_block_duration_config();
+    assert!(block_duration_config == DEFAULT_BLOCK_DURATION_CONFIG);
+}
+
+#[test]
+fn test_set_block_duration_config() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_dispatcher = IRewardSupplierDispatcher {
+        contract_address: reward_supplier,
+    };
+    let reward_supplier_config_dispatcher = IRewardSupplierConfigDispatcher {
+        contract_address: reward_supplier,
+    };
+    let app_governor = cfg.test_info.app_governor;
+    let block_duration_config = BlockDurationConfig {
+        min_block_duration: 90, max_block_duration: 350,
+    };
+    assert!(reward_supplier_dispatcher.get_block_duration_config() != block_duration_config);
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    reward_supplier_config_dispatcher.set_block_duration_config(:block_duration_config);
+    assert!(reward_supplier_dispatcher.get_block_duration_config() == block_duration_config);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_set_block_duration_config_assertions() {
+    let mut cfg: StakingInitConfig = Default::default();
+    general_contract_system_deployment(ref :cfg);
+    let reward_supplier = cfg.staking_contract_info.reward_supplier;
+    let reward_supplier_config_safe_dispatcher = IRewardSupplierConfigSafeDispatcher {
+        contract_address: reward_supplier,
+    };
+    let app_governor = cfg.test_info.app_governor;
+    let mut block_duration_config = DEFAULT_BLOCK_DURATION_CONFIG;
+    // Catch ONLY_APP_GOVERNOR.
+    let result = reward_supplier_config_safe_dispatcher
+        .set_block_duration_config(:block_duration_config);
+    assert_panic_with_error(:result, expected_error: "ONLY_APP_GOVERNOR");
+    // Catch INVALID_MIN_MAX_BLOCK_DURATION.
+    block_duration_config.min_block_duration = block_duration_config.max_block_duration + 1;
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let result = reward_supplier_config_safe_dispatcher
+        .set_block_duration_config(:block_duration_config);
+    assert_panic_with_error(
+        :result, expected_error: Error::INVALID_MIN_MAX_BLOCK_DURATION.describe(),
+    );
+    block_duration_config.min_block_duration = 0;
+    cheat_caller_address_once(contract_address: reward_supplier, caller_address: app_governor);
+    let result = reward_supplier_config_safe_dispatcher
+        .set_block_duration_config(:block_duration_config);
+    assert_panic_with_error(
+        :result, expected_error: Error::INVALID_MIN_MAX_BLOCK_DURATION.describe(),
     );
 }

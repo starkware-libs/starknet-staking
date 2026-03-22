@@ -5,6 +5,7 @@ pub enum Error {
     ON_RECEIVE_NOT_FROM_STARKGATE,
     UNEXPECTED_TOKEN,
     BLOCK_DURATION_OVERFLOW,
+    INVALID_MIN_MAX_BLOCK_DURATION,
 }
 
 impl DescribableError of Describable<Error> {
@@ -13,6 +14,7 @@ impl DescribableError of Describable<Error> {
             Error::ON_RECEIVE_NOT_FROM_STARKGATE => "Only StarkGate can call on_receive",
             Error::UNEXPECTED_TOKEN => "Unexpected token",
             Error::BLOCK_DURATION_OVERFLOW => "Block duration calculation overflow",
+            Error::INVALID_MIN_MAX_BLOCK_DURATION => "Invalid min/max block duration",
         }
     }
 }
